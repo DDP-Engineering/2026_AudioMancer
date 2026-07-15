@@ -9,4 +9,4 @@ Additional operator cleanup instructions:
 
 {source_window_block}
 
-Return JSON only. Preserve meaningful and ambiguous text as exact source slices. Whitespace-only gaps may be omitted. Every omitted source gap containing non-whitespace must be authorized by an intervening high-confidence header, footer, or noise decision.
+Return JSON only. Copy every block exactly from the source in strict forward order. Cover every non-whitespace source character exactly once. You may omit whitespace-only gaps because the application restores them exactly. Classify meaningful or ambiguous content as story.

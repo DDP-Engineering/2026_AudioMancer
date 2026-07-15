@@ -180,21 +180,26 @@
       "REQ-NFR-015"
     ]
   },
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators": {
+    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators",
+    "requirement_ids": [
+      "REQ-FUNC-060"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering": {
+    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering",
+    "requirement_ids": [
+      "REQ-FUNC-059"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_schema_and_budget_target_four_pages_with_output_reservation": {
     "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_schema_and_budget_target_four_pages_with_output_reservation",
     "requirement_ids": [
       "REQ-NFR-019"
     ]
   },
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_response_contract_has_six_artifact_types_without_version_or_action": {
-    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_response_contract_has_six_artifact_types_without_version_or_action",
-    "requirement_ids": [
-      "REQ-FUNC-059",
-      "REQ-FUNC-060"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gap_is_recorded_and_accepted": {
-    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gap_is_recorded_and_accepted",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_restored_exactly": {
+    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_restored_exactly",
     "requirement_ids": [
       "REQ-FUNC-058"
     ]
@@ -223,12 +228,6 @@
       "REQ-FUNC-002"
     ]
   },
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_preserves_low_confidence_removals": {
-    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_preserves_low_confidence_removals",
-    "requirement_ids": [
-      "REQ-FUNC-002"
-    ]
-  },
   "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_prompt_includes_language_script_and_neighbor_context": {
     "id": "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_prompt_includes_language_script_and_neighbor_context",
     "requirement_ids": [
@@ -237,6 +236,12 @@
   },
   "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_rejects_profiles_with_no_input_budget": {
     "id": "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_rejects_profiles_with_no_input_budget",
+    "requirement_ids": [
+      "REQ-FUNC-002"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_replaces_low_confidence_non_story": {
+    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_replaces_low_confidence_non_story",
     "requirement_ids": [
       "REQ-FUNC-002"
     ]

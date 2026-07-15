@@ -9,11 +9,12 @@
 """
 @file test_ai_cleanup_contract.py
 @brief Red/green checks for exact-source AI Cleanup blocks.
-@details Verifies SPEC-AIC-001 through SPEC-AIC-005 and durable requirements
-         REQ-FUNC-058 through REQ-FUNC-060 plus REQ-NFR-019.
+@details Verifies exact ordered source slices, deterministic artifact replacement,
+         whitespace reconstruction, checkpoint invalidation, and durable
+         requirements REQ-FUNC-058 through REQ-FUNC-060 plus REQ-NFR-019.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-14
-@version 0.1.0
+@date 2026-07-15
+@version 1.2.0
 """
 
 # IMPORTS
@@ -47,12 +48,12 @@ def _payload(window_id: str, blocks: list[dict[str, object]]) -> dict[str, objec
     """
     @brief      Build one cleanup response fixture.
     @param[in]  window_id Expected cleanup window identity.
-    @param[in]  blocks Ordered response blocks.
+    @param[in]  blocks Ordered cleanup response blocks.
     @return     Cleanup response payload.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-14
-    @version    0.1.0
+    @date       2026-07-15
+    @version    0.2.0
     """
     return {"window_id": window_id, "text_blocks": blocks}
 
@@ -64,12 +65,16 @@ def _block(
     confidence: str = "high",
 ) -> dict[str, object]:
     """
-    @brief      Build one cleanup block fixture.
-    @return     Cleanup response block.
+    @brief      Build one exact-source cleanup block fixture.
+    @param[in]  block_id Sequential cleanup block identifier.
+    @param[in]  text Exact source text for the block.
+    @param[in]  artifact_type Cleanup artifact classification.
+    @param[in]  confidence Model confidence metadata.
+    @return     Cleanup response block payload.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-14
-    @version    0.1.0
+    @date       2026-07-15
+    @version    0.2.0
     """
     return {
         "text_block_id": block_id,
@@ -79,10 +84,14 @@ def _block(
     }
 
 
-def test_cleanup_validation_preserves_exact_order_and_accepts_advisory_removal_text() -> None:
+def test_cleanup_validation_preserves_exact_order_for_every_block() -> None:
     """
-    @brief      Handle test cleanup validation preserves exact order and accepts advisory removal text.
-    @version    1.0.0
+    @brief      Verify every returned block is an exact ordered source slice.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     pages = ai_cleanup_service._build_source_pages(
         ai_cleanup_service._canonicalize_source_text(
@@ -92,9 +101,9 @@ def test_cleanup_validation_preserves_exact_order_and_accepts_advisory_removal_t
     response = _payload(
         "cleanup-window-0001",
         [
-            _block(1, "advisory text need not match", "noise"),
+            _block(1, "Page 1 ", "noise"),
             _block(2, "It was a sunny day.\n", "story"),
-            _block(3, "also advisory", "header"),
+            _block(3, "The Warhound\n", "header"),
             _block(4, "The street was quiet.\n", "story"),
         ],
     )
@@ -116,13 +125,13 @@ def test_cleanup_validation_preserves_exact_order_and_accepts_advisory_removal_t
     ("blocks", "error_match"),
     [
         ([_block(1, "It was a bright day.\n", "story")], "exact source slice"),
-        ([_block(1, "sunny day.\n", "story")], "unexplained source gap"),
+        ([_block(1, "page.\n", "story")], "unexplained source gap"),
         (
             [
                 _block(1, "Second page.\n", "story"),
                 _block(2, "First page.\n", "story"),
             ],
-            "exact source slice",
+            "unexplained source gap",
         ),
         ([_block(2, "First page.\n", "story")], "sequential"),
     ],
@@ -132,8 +141,14 @@ def test_cleanup_validation_rejects_changed_unexplained_or_reordered_preserved_t
     error_match: str,
 ) -> None:
     """
-    @brief      Handle test cleanup validation rejects changed unexplained or reordered preserved text.
-    @version    1.0.0
+    @brief      Verify changed, skipped, reordered, or misnumbered source blocks are rejected.
+    @param[in]  blocks Ordered cleanup response blocks.
+    @param[in]  error_match Expected validation-error message fragment.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     pages = ai_cleanup_service._build_source_pages("First page.\n\n\f\n\nSecond page.\n")
 
@@ -145,17 +160,21 @@ def test_cleanup_validation_rejects_changed_unexplained_or_reordered_preserved_t
         )
 
 
-def test_cleanup_removal_policy_preserves_medium_confidence_and_warns_for_entire_page() -> None:
+def test_cleanup_removal_policy_ignores_confidence() -> None:
     """
-    @brief      Handle test cleanup removal policy preserves medium confidence and warns for entire page.
-    @version    1.0.0
+    @brief      Verify confidence does not change artifact-specific rendering.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
     """
     pages = ai_cleanup_service._build_source_pages("Page 1\n\n\f\n\nDiscarded title page\n")
     response = _payload(
         "cleanup-window-0001",
         [
             _block(1, "Page 1\n", "noise", "medium"),
-            _block(2, "copied removal text is advisory", "noise", "high"),
+            _block(2, "Discarded title page\n", "noise", "low"),
         ],
     )
 
@@ -165,14 +184,19 @@ def test_cleanup_removal_policy_preserves_medium_confidence_and_warns_for_entire
         "cleanup-window-0001",
     )
 
-    assert [item["text_block"] for item in validated["preserved_blocks"]] == ["Page 1\n"]
+    assert validated["preserved_blocks"] == []
+    assert validated["reconstructed_text"] == ""
     assert any(detail["kind"] == "entire_page_removed" for detail in validated["warning_details"])
 
 
 def test_cleanup_prompt_uses_once_canonicalized_source_inside_resolved_markers() -> None:
     """
-    @brief      Handle test cleanup prompt uses once canonicalized source inside resolved markers.
-    @version    1.0.0
+    @brief      Verify the prompt contains canonical source text once between stable markers.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     canonical = ai_cleanup_service._canonicalize_source_text("Prima pagin?.\r\n\r\n\f\r\n\r\nA doua pagin?.\r\n")
     pages = ai_cleanup_service._build_source_pages(canonical)
@@ -195,8 +219,12 @@ def test_cleanup_prompt_uses_once_canonicalized_source_inside_resolved_markers()
 
 def test_cleanup_schema_and_budget_target_four_pages_with_output_reservation() -> None:
     """
-    @brief      Handle test cleanup contract and budget target four pages with output reservation.
-    @version    1.0.0
+    @brief      Verify cleanup budgeting targets four pages while reserving response capacity.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     schema = ai_cleanup_service._build_response_schema()
     assert set(schema["properties"]) == {"window_id", "text_blocks"}
@@ -221,8 +249,12 @@ def test_cleanup_schema_and_budget_target_four_pages_with_output_reservation() -
 
 def test_cleanup_budget_rejects_profile_that_cannot_return_one_page() -> None:
     """
-    @brief      Handle test cleanup budget rejects profile that cannot return one page.
-    @version    1.0.0
+    @brief      Verify insufficient response capacity rejects even a one-page window.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     pages = ai_cleanup_service._build_source_pages("A long enough source page for JSON output reservation.\n")
 
@@ -242,8 +274,12 @@ def test_cleanup_budget_rejects_profile_that_cannot_return_one_page() -> None:
 
 def test_cleanup_checkpoint_compatibility_requires_schema_and_input_identity() -> None:
     """
-    @brief      Verify SPEC-AIC-005 and REQ-FUNC-060 checkpoint compatibility.
-    @version    1.0.0
+    @brief      Verify checkpoint compatibility requires current contract and input identities.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     compatible = {
         "contract_fingerprint": ai_cleanup_service._CONTRACT_FINGERPRINT,
@@ -269,18 +305,27 @@ def test_cleanup_checkpoint_compatibility_requires_schema_and_input_identity() -
     )
 
 
-def test_ai_cleanup_integration_uses_current_contract_and_preserves_story(
+def test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators(
     mock_extracted_project,
     mock_prompt_environment,
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup integration uses cleanup contract and preserves inline story.
-    @version    1.0.0
+    @brief      Verify SPEC-AICR-003, SPEC-AICR-004, and REQ-FUNC-060 reconstruction.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
     """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_bytes(b"Copyright 2026 Example. It was a sunny day.\r\n")
+    extracted_path.write_bytes(
+        b"HEADER\r\n\r\nFirst paragraph.\r\n\r\n* * *\r\n\r\nChapter 2\r\n\r\nSecond paragraph.\r\n"
+    )
     (mock_prompt_environment / "text_cleanup_user.txt").write_text(
         "Window: {window_id}\nLanguage: {source_language_hint}\nScript: {dominant_script_hint}\n"
         "{source_window_block}\nInstructions: {additional_cleanup_instructions}",
@@ -289,18 +334,29 @@ def test_ai_cleanup_integration_uses_current_contract_and_preserves_story(
 
     def _fake_chat_json(_profile, _system_prompt, user_prompt, **kwargs):
         """
-        @brief      Handle fake chat json.
-        @version    1.0.0
+        @brief      Return an exact-source cleanup provider response fixture.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system_prompt Unused cleanup system prompt.
+        @param[in]  user_prompt Rendered cleanup user prompt.
+        @param[in]  kwargs Provider call options, including the response schema.
+        @return     Provider-compatible cleanup result payload.
+        @exception  AssertionError Raised when provider-call contract assertions fail.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    1.1.0
         """
-        assert "Copyright 2026 Example. It was a sunny day.\n" in user_prompt
+        assert "HEADER\n\nFirst paragraph.\n\n* * *\n\nChapter 2\n\nSecond paragraph.\n" in user_prompt
         assert kwargs["response_schema_name"] == "text_cleanup_blocks"
         assert "schema_version" not in kwargs["response_schema"]["properties"]
         return {
             "payload": _payload(
                 "cleanup-window-0001",
                 [
-                    _block(1, "advisory", "noise"),
-                    _block(2, "It was a sunny day.\n", "story"),
+                    _block(1, "HEADER", "header", "low"),
+                    _block(2, "First paragraph.", "story"),
+                    _block(3, "* * *", "separator", "medium"),
+                    _block(4, "Chapter 2", "heading"),
+                    _block(5, "Second paragraph.", "story"),
                 ],
             ),
             "usage": {"input_tokens": 10, "output_tokens": 8, "total_tokens": 18, "usage_available": True},
@@ -311,10 +367,13 @@ def test_ai_cleanup_integration_uses_current_contract_and_preserves_story(
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    assert cleaned_path.read_text(encoding="utf-8") == "It was a sunny day.\n"
+    assert cleaned_path.read_text(encoding="utf-8") == (
+        "\n\nFirst paragraph.\n\n\n\n\n\n\n\n\n\nSecond paragraph.\n"
+    )
     assert "schema_version" not in report
-    assert report["removed_character_count"] == len("Copyright 2026 Example. ")
-    assert report["validated_window_decisions"][0]["removed_ranges"][0]["text"] == ("Copyright 2026 Example. ")
+    assert report["removed_character_count"] == len("HEADER") + len("* * *") + len("Chapter 2")
+    assert report["restored_whitespace_character_count"] == 9
+    assert report["validated_window_decisions"][0]["removed_ranges"][0]["text"] == "HEADER"
     state = json.loads(
         (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
             encoding="utf-8"
@@ -325,8 +384,12 @@ def test_ai_cleanup_integration_uses_current_contract_and_preserves_story(
 
 def test_cleanup_window_contract_uses_one_canonical_source_without_page_indices() -> None:
     """
-    @brief      Verify SPEC-AIC-001 and REQ-FUNC-058 use one canonical window source.
-    @version    1.0.0
+    @brief      Verify the provider contract uses one canonical source without page indices.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     source = "1\n\nStory one.\n\n2\n\nStory two.\n"
     pages = ai_cleanup_service._build_source_pages(source)
@@ -335,7 +398,7 @@ def test_cleanup_window_contract_uses_one_canonical_source_without_page_indices(
         [
             {
                 "text_block_id": 1,
-                "text_block": "printed page number",
+                "text_block": "1\n\n",
                 "artifact_type": "noise",
                 "confidence": "high",
             },
@@ -347,7 +410,7 @@ def test_cleanup_window_contract_uses_one_canonical_source_without_page_indices(
             },
             {
                 "text_block_id": 3,
-                "text_block": "printed page number",
+                "text_block": "2\n\n",
                 "artifact_type": "noise",
                 "confidence": "high",
             },
@@ -397,23 +460,39 @@ def test_cleanup_window_contract_uses_one_canonical_source_without_page_indices(
 
 def test_cleanup_runtime_uses_only_neutral_cleanup_prompt_names(monkeypatch) -> None:
     """
-    @brief      Verify SPEC-AIC-003 and REQ-FUNC-060 use neutral prompt names only.
-    @version    1.0.0
+    @brief      Verify runtime prompt lookup uses only neutral cleanup prompt names.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     validated_names: list[tuple[str, ...]] = []
     rendered_names: list[str] = []
 
     def _validate(names: list[str]) -> None:
         """
-        @brief      Capture prompt names passed to validation.
-        @version    1.0.0
+        @brief      Capture prompt names passed to template validation.
+        @param[in]  names Prompt template names to validate.
+        @return     None.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    1.1.0
         """
         validated_names.append(tuple(names))
 
     def _render(name: str, _values: dict[str, object]) -> str:
         """
-        @brief      Capture the selected prompt template name.
-        @version    1.0.0
+        @brief      Capture the selected prompt name and return placeholder text.
+        @param[in]  name Prompt template name.
+        @param[in]  _values Unused prompt substitution values.
+        @return     Rendered placeholder prompt text.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    1.1.0
         """
         rendered_names.append(name)
         return "rendered prompt"
@@ -444,8 +523,12 @@ def test_cleanup_runtime_uses_only_neutral_cleanup_prompt_names(monkeypatch) -> 
 
 def test_response_contract_has_six_artifact_types_without_version_or_action() -> None:
     """
-    @brief      Verify SPEC-AIC-002, SPEC-AIC-003, REQ-FUNC-059, and REQ-FUNC-060.
-    @version    1.0.0
+    @brief      Verify the response schema has six artifact types and no version or action.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     schema = ai_cleanup_service._build_response_schema()
     assert set(schema["required"]) == {"window_id", "text_blocks"}
@@ -468,32 +551,77 @@ def test_response_contract_has_six_artifact_types_without_version_or_action() ->
     }
 
 
-def test_whitespace_only_source_gap_is_recorded_and_accepted() -> None:
+def test_whitespace_only_source_gaps_are_restored_exactly() -> None:
     """
-    @brief      Verify SPEC-AIC-001 and REQ-FUNC-058 whitespace normalization.
-    @version    1.0.0
+    @brief      Verify SPEC-AICR-001 and REQ-FUNC-058 whitespace restoration.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
-    pages = ai_cleanup_service._build_source_pages("Story paragraph.\n\n* * *\nNext paragraph.\n")
+    source = "First paragraph.\n\nSecond paragraph.\n"
+    pages = ai_cleanup_service._build_source_pages(source)
     response = _payload(
         "cleanup-window-0001",
         [
-            _block(1, "Story paragraph.\n", "story"),
-            _block(2, "* * *\n", "separator"),
-            _block(3, "Next paragraph.\n", "story"),
+            _block(1, "First paragraph.", "story"),
+            _block(2, "Second paragraph.", "story"),
         ],
     )
 
     validated = ai_cleanup_service._validate_response(response, pages, "cleanup-window-0001")
 
-    assert validated["preserved_text"] == "Story paragraph.\n* * *\nNext paragraph.\n"
-    assert validated["normalized_whitespace_character_count"] == 1
-    assert validated["normalized_whitespace_ranges"] == [
+    assert validated["reconstructed_text"] == source
+    assert validated["restored_whitespace_character_count"] == 3
+    assert validated["restored_whitespace_ranges"] == [
         {
-            "source_window_start": len("Story paragraph.\n"),
-            "source_window_end": len("Story paragraph.\n\n"),
+            "source_window_start": len("First paragraph."),
+            "source_window_end": len("First paragraph.\n\n"),
+            "text": "\n\n",
+            "reason": "restored_whitespace_gap",
+        },
+        {
+            "source_window_start": len("First paragraph.\n\nSecond paragraph."),
+            "source_window_end": len(source),
             "text": "\n",
-            "reason": "whitespace_only_gap",
-        }
+            "reason": "restored_whitespace_gap",
+        },
+    ]
+
+
+def test_artifact_types_apply_deterministic_rendering() -> None:
+    """
+    @brief      Verify SPEC-AICR-004 and REQ-FUNC-059 artifact rendering.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
+    """
+    source = "HeaderStory.SeparatorHeadingFooterNoise"
+    pages = ai_cleanup_service._build_source_pages(source)
+    response = _payload(
+        "cleanup-window-0001",
+        [
+            _block(1, "Header", "header", "low"),
+            _block(2, "Story.", "story", "low"),
+            _block(3, "Separator", "separator", "low"),
+            _block(4, "Heading", "heading", "medium"),
+            _block(5, "Footer", "footer", "medium"),
+            _block(6, "Noise", "noise", "high"),
+        ],
+    )
+
+    validated = ai_cleanup_service._validate_response(response, pages, "cleanup-window-0001")
+
+    assert validated["reconstructed_text"] == "Story.\n\n\n\n"
+    assert [item["replacement"] for item in validated["removed_ranges"]] == [
+        "",
+        "\n\n",
+        "\n\n",
+        "",
+        "",
     ]
 
 

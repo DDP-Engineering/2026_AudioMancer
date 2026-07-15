@@ -10,14 +10,15 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 ## 1. Purpose
 
 AI Cleanup consumes canonical extracted text and uses an explicitly selected
-OpenAI-compatible provider to choose conservative removable artifacts without
-allowing retained text to be rewritten.
+OpenAI-compatible provider to classify exact source slices without allowing
+source text to be rewritten.
 
 ## 2. Responsibilities
 
-- Own canonical cleanup-window prompts, strict response validation, conservative
-  removal policy, output-aware budgeting, validated-window resume, reports,
-  warnings, whitespace normalization evidence, and operator-review evidence.
+- Own canonical cleanup-window prompts, strict response validation,
+  deterministic artifact rendering, exact whitespace-gap reconstruction,
+  output-aware budgeting, validated-window resume, reports, warnings, and
+  operator-review evidence.
 - Do not own extraction, deterministic cleanup, downstream processing, profile
   editing, or proof that model-selected deletions are correct.
 
@@ -31,7 +32,8 @@ response adapter is present.
 Internal page-aware units are used only for budgeting and review warnings. Each
 provider request contains one concatenated canonical source window. Returned
 blocks have no version, action, page, or segment identity fields and are
-validated globally as exact forward source slices.
+validated globally as exact forward source slices. Omitted gaps must be
+whitespace-only and are restored exactly from source positions.
 
 ## 4. Dependencies
 
@@ -56,10 +58,14 @@ Relevant requirements are `REQ-FUNC-002`, `REQ-NFR-002`, `REQ-NFR-004`,
 `REQ-FUNC-059`, `REQ-FUNC-060`, and `REQ-NFR-019`.
 
 The response contains only `window_id` and sequential `text_blocks`. Each block
-contains only ID, text, one of six artifact types, and confidence. High-confidence
-`header`, `footer`, and `noise` may remove non-whitespace source; `separator`,
-`heading`, and `story`, plus all medium/low-confidence blocks, are preserved.
-Whitespace-only gaps are accepted as recorded normalization evidence.
+contains only ID, text, one of six artifact types, and confidence. Every
+block must be an exact ordered source slice. `story` is retained exactly;
+`separator` and `heading` are each replaced with exactly two LF characters;
+`header`, `footer`, and `noise` are removed without replacement whitespace,
+regardless of confidence. Confidence is review
+metadata only. Omitted whitespace-only gaps are restored exactly, omitted
+non-whitespace is rejected, and final window assembly does not trim or collapse
+the reconstructed text.
 
 Checkpoints use an internal contract fingerprint. Obsolete or changed-input
 state restarts at window one without legacy interpretation; changed model
@@ -82,6 +88,7 @@ delivery.
 
 ## 9. Limitations And Future Work
 
-Exact slice validation proves retained-text fidelity but not deletion
-correctness. Broad removals remain warnings and require operator comparison.
+Exact slice validation proves source fidelity but not classification
+correctness. Broad artifact removals remain warnings and require operator
+comparison.
 Requests remain sequential and OpenAI-compatible.

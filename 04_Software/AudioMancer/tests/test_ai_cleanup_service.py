@@ -10,11 +10,11 @@
 """
 @file test_ai_cleanup_service.py
 @brief Integration checks for AI-assisted cleanup.
-@details Verifies the AI Cleanup block contract service, artifacts, prompt windows,
-         warnings, budgeting, persistence, restart, and resume contracts.
+@details Verifies the AI Cleanup block contract, deterministic reconstruction,
+         artifacts, prompts, budgeting, persistence, restart, and resume behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-14
-@version 1.0.0
+@date 2026-07-15
+@version 1.2.0
 """
 
 # IMPORTS
@@ -51,8 +51,13 @@ _WINDOW_PATTERN = re.compile(
 
 def _configure_cleanup_prompts(prompt_root) -> None:
     """
-    @brief      Handle configure cleanup prompts.
-    @version    1.0.0
+    @brief      Write minimal cleanup prompt fixtures.
+    @param[in]  prompt_root Prompt template directory.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     (prompt_root / "text_cleanup_system.txt").write_text("AI cleanup system prompt.", encoding="utf-8")
     (prompt_root / "text_cleanup_user.txt").write_text(
@@ -69,8 +74,16 @@ def _block(
     confidence: str = "high",
 ) -> dict[str, object]:
     """
-    @brief      Handle block.
-    @version    1.0.0
+    @brief      Build one cleanup response block fixture.
+    @param[in]  block_id Sequential cleanup block identifier.
+    @param[in]  text Exact source text for the block.
+    @param[in]  artifact_type Cleanup artifact classification.
+    @param[in]  confidence Model confidence metadata.
+    @return     Cleanup response block payload.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return {
         "text_block_id": block_id,
@@ -82,16 +95,28 @@ def _block(
 
 def _payload(window_id: str, blocks: list[dict[str, object]]) -> dict[str, object]:
     """
-    @brief      Handle payload.
-    @version    1.0.0
+    @brief      Build one cleanup response payload fixture.
+    @param[in]  window_id Expected cleanup window identity.
+    @param[in]  blocks Ordered cleanup response blocks.
+    @return     Cleanup response payload.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return {"window_id": window_id, "text_blocks": blocks}
 
 
 def _keep_all_payload(user_prompt: str, window_index: int) -> dict[str, object]:
     """
-    @brief      Handle keep all payload.
-    @version    1.0.0
+    @brief      Build a story-only payload from the rendered source window.
+    @param[in]  user_prompt Rendered cleanup user prompt.
+    @param[in]  window_index One-based cleanup window index.
+    @return     Provider-compatible cleanup result payload.
+    @exception  AssertionError Raised when the prompt omits canonical source markers.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     match = _WINDOW_PATTERN.search(user_prompt)
     if match is None:
@@ -104,14 +129,28 @@ def _keep_all_payload(user_prompt: str, window_index: int) -> dict[str, object]:
 
 def _install_keep_all_provider(monkeypatch, captured_prompts: list[str] | None = None) -> None:
     """
-    @brief      Handle install keep all provider.
-    @version    1.0.0
+    @brief      Install a provider fixture that retains each complete source window.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  captured_prompts Optional list that records rendered prompts.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
 
     def _fake_chat_json(_profile, _system_prompt, user_prompt, **kwargs):
         """
-        @brief      Return exact story blocks for the displayed pages.
-        @version    1.0.0
+        @brief      Return a deterministic cleanup provider response fixture.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system_prompt Unused cleanup system prompt.
+        @param[in]  user_prompt Rendered cleanup user prompt.
+        @param[in]  kwargs Provider call options, including the response schema.
+        @return     Provider-compatible cleanup result payload.
+        @exception  AssertionError Raised when provider-call contract assertions fail.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    1.1.0
         """
         if captured_prompts is not None:
             captured_prompts.append(user_prompt)
@@ -126,8 +165,13 @@ def _install_keep_all_provider(monkeypatch, captured_prompts: list[str] | None =
 
 def _extracted_path(project_root):
     """
-    @brief      Handle extracted path.
-    @version    1.0.0
+    @brief      Resolve the extracted-text artifact path for a test project.
+    @param[in]  project_root Active test-project root.
+    @return     Extracted-text artifact path.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
 
@@ -138,8 +182,15 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     monkeypatch,
 ) -> None:
     """
-    @brief      Verify REQ-FUNC-060 output, report, state, and transaction-log artifacts.
-    @version    1.0.0
+    @brief      Verify AI Cleanup writes cleaned text, report, state, metadata, and log artifacts.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -162,7 +213,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     ("source", "preserved", "expected"),
     [
         ("Copyright 2026. It was sunny.\n", "It was sunny.\n", "It was sunny.\n"),
-        ("It was sunny. Page 4\n", "It was sunny. ", "It was sunny.\n"),
+        ("It was sunny. Page 4\n", "It was sunny. ", "It was sunny. "),
         ("Header\n\nNarration.\n", "Narration.\n", "Narration.\n"),
     ],
 )
@@ -175,8 +226,18 @@ def test_ai_cleanup_text_transformations(
     expected: str,
 ) -> None:
     """
-    @brief      Handle test ai cleanup text transformations.
-    @version    1.0.0
+    @brief      Verify prefix and suffix noise is removed without replacement whitespace.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  source Canonical source fixture text.
+    @param[in]  preserved Exact story slice retained from the source.
+    @param[in]  expected Expected reconstructed cleanup text.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -184,14 +245,22 @@ def test_ai_cleanup_text_transformations(
 
     def _fake_chat_json(_profile, _system, _user, **_kwargs):
         """
-        @brief      Return ordered prefix or suffix removal fixtures.
-        @version    1.0.0
+        @brief      Return a deterministic cleanup provider response fixture.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system Unused cleanup system prompt.
+        @param[in]  _user Unused cleanup user prompt.
+        @param[in]  _kwargs Unused provider call options.
+        @return     Provider-compatible cleanup result payload.
+        @exception  AssertionError Raised when provider-call contract assertions fail.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    1.1.0
         """
-        blocks = (
-            [_block(1, preserved), _block(2, "advisory", "noise")]
-            if source.startswith(preserved)
-            else [_block(1, "advisory", "noise"), _block(2, preserved)]
-        )
+        if source.startswith(preserved):
+            blocks = [_block(1, preserved), _block(2, source[len(preserved) :], "noise")]
+        else:
+            preserved_start = source.index(preserved)
+            blocks = [_block(1, source[:preserved_start], "noise"), _block(2, preserved)]
         return {
             "payload": _payload("cleanup-window-0001", blocks),
             "usage": {},
@@ -208,19 +277,38 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup corrects invalid tail labels and persists warnings.
-    @version    1.0.0
+    @brief      Verify inconsistent repeated classifications produce persisted warnings.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
     _extracted_path(project_root).write_text("Header\nStory one.\n\n\f\n\nHeader\nStory two.\n", encoding="utf-8")
 
     def _fake_chat_json(_profile, _system, _user, **_kwargs):
+        """
+        @brief      Return a deterministic cleanup provider response fixture.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system Unused cleanup system prompt.
+        @param[in]  _user Unused cleanup user prompt.
+        @param[in]  _kwargs Unused provider call options.
+        @return     Provider-compatible cleanup result payload.
+        @exception  AssertionError Raised when provider-call contract assertions fail.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
         return {
             "payload": _payload(
                 "cleanup-window-0001",
                 [
-                    _block(1, "advisory", "header"),
+                    _block(1, "Header\n", "header"),
                     _block(2, "Story one.\n"),
                     _block(3, "Header\n", "story"),
                     _block(4, "Story two.\n"),
@@ -240,16 +328,38 @@ def test_ai_cleanup_uses_artifact_type_and_confidence_without_action(
     monkeypatch,
 ) -> None:
     """
-    @brief      Verify artifact type and confidence determine preservation.
-    @version    1.0.0
+    @brief      Verify artifact type controls output while confidence remains metadata.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
     _extracted_path(project_root).write_text("Page 1 Story.\n", encoding="utf-8")
 
     def _fake_chat_json(_profile, _system, _user, **_kwargs):
+        """
+        @brief      Return a deterministic cleanup provider response fixture.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system Unused cleanup system prompt.
+        @param[in]  _user Unused cleanup user prompt.
+        @param[in]  _kwargs Unused provider call options.
+        @return     Provider-compatible cleanup result payload.
+        @exception  AssertionError Raised when provider-call contract assertions fail.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
         return {
-            "payload": _payload("cleanup-window-0001", [_block(1, "x", "noise"), _block(2, "Story.\n")]),
+            "payload": _payload(
+                "cleanup-window-0001",
+                [_block(1, "Page 1 ", "noise"), _block(2, "Story.\n")],
+            ),
             "usage": {},
         }
 
@@ -264,8 +374,15 @@ def test_ai_cleanup_ignores_legacy_label_only_schema(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup ignores legacy label only schema.
-    @version    1.0.0
+    @brief      Verify legacy label-only responses are rejected.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -279,29 +396,39 @@ def test_ai_cleanup_ignores_legacy_label_only_schema(
         ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
 
-def test_ai_cleanup_preserves_low_confidence_removals(
+def test_ai_cleanup_replaces_low_confidence_non_story(
     mock_extracted_project,
     mock_prompt_environment,
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup preserves low confidence removals.
-    @version    1.0.0
+    @brief      Verify low-confidence noise is removed without replacement whitespace.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
-    _extracted_path(project_root).write_text("Page 1\n", encoding="utf-8")
+    _extracted_path(project_root).write_text("Page 1\nStory.\n", encoding="utf-8")
 
     monkeypatch.setattr(
         ai_cleanup_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "payload": _payload("cleanup-window-0001", [_block(1, "Page 1\n", "noise", "low")]),
+            "payload": _payload(
+                "cleanup-window-0001",
+                [_block(1, "Page 1\n", "noise", "low"), _block(2, "Story.\n")],
+            ),
             "usage": {},
         },
     )
     ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == "Page 1\n"
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == "Story.\n"
 
 
 def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
@@ -310,8 +437,15 @@ def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup prompt includes language script and neighbor context.
-    @version    1.0.0
+    @brief      Verify cleanup prompts include language, script, and canonical window context.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -333,8 +467,15 @@ def test_ai_cleanup_appends_operator_instructions_to_prompt_and_state(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup appends operator instructions to prompt and state.
-    @version    1.0.0
+    @brief      Verify operator instructions are rendered and persisted.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -359,8 +500,15 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup splits long input into multiple windows.
-    @version    1.0.0
+    @brief      Verify long source text is processed through multiple bounded windows.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -380,8 +528,13 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
 
 def test_ai_cleanup_rejects_profiles_with_no_input_budget(mock_prompt_environment) -> None:
     """
-    @brief      Handle test ai cleanup rejects profiles with no input budget.
-    @version    1.0.0
+    @brief      Verify profiles without usable input capacity are rejected.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     _configure_cleanup_prompts(mock_prompt_environment)
     pages = ai_cleanup_service._build_source_pages("A source page.\n")
@@ -401,8 +554,12 @@ def test_ai_cleanup_rejects_profiles_with_no_input_budget(mock_prompt_environmen
 
 def test_ai_cleanup_small_context_limits_unit_windows() -> None:
     """
-    @brief      Handle test ai cleanup small context limits unit windows.
-    @version    1.0.0
+    @brief      Verify small model contexts constrain cleanup window size.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     pages = ai_cleanup_service._build_source_pages("\n\n\f\n\n".join(("word " * 100) + "\n" for _ in range(3)))
     windows = ai_cleanup_service._build_windows(
@@ -422,8 +579,13 @@ def test_ai_cleanup_small_context_limits_unit_windows() -> None:
 
 def test_ai_cleanup_online_profile_uses_direct_context_fraction_without_unit_cap(mock_prompt_environment) -> None:
     """
-    @brief      Handle test ai cleanup online profile uses direct context fraction without unit cap.
-    @version    1.0.0
+    @brief      Verify online profiles derive budget directly from the configured context.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     _configure_cleanup_prompts(mock_prompt_environment)
     budget = ai_cleanup_service._build_budget_metadata(
@@ -440,8 +602,15 @@ def test_ai_cleanup_resumes_with_new_model_settings(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup resumes with new model settings.
-    @version    1.0.0
+    @brief      Verify compatible checkpoints resume with updated model settings.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -452,8 +621,16 @@ def test_ai_cleanup_resumes_with_new_model_settings(
 
     def _first_provider(_profile, _system, user_prompt, **kwargs):
         """
-        @brief      Stop after the first validated window for resume verification.
-        @version    1.0.0
+        @brief      Return the first-window provider fixture and fail on unexpected calls.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system Unused cleanup system prompt.
+        @param[in]  user_prompt Rendered cleanup user prompt.
+        @param[in]  kwargs Provider call options, including the response schema.
+        @return     Provider-compatible cleanup result payload.
+        @exception  AssertionError Raised when provider-call contract assertions fail.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    1.1.0
         """
         nonlocal calls
         calls += 1
@@ -480,8 +657,15 @@ def test_ai_cleanup_restarts_when_extracted_text_changes(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup restarts when extracted text changes.
-    @version    1.0.0
+    @brief      Verify changed extracted text invalidates prior cleanup checkpoints.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
@@ -508,8 +692,15 @@ def test_ai_cleanup_tolerates_corrupt_state_and_restarts(
     monkeypatch,
 ) -> None:
     """
-    @brief      Handle test ai cleanup tolerates corrupt state and restarts.
-    @version    1.0.0
+    @brief      Verify corrupt cleanup state is ignored and processing restarts.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)

@@ -11,10 +11,12 @@
 @file ai_cleanup_service.py
 @brief AI-assisted text cleanup service for AudioMancer.
 @details Presents each cleanup window as one canonical source string, validates
-         exact forward-preserved blocks, and persists resumable review artifacts.
+         every returned block as an exact forward source slice, restores omitted
+         whitespace, renders artifacts deterministically, and persists
+         resumable operator-review evidence.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-14
-@version 1.0.0
+@date 2026-07-15
+@version 1.2.0
 """
 
 # IMPORTS
@@ -54,13 +56,23 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 _LOGGER = get_component_logger("ai_cleanup")
 _PAGE_SEPARATOR = "\n\f\n\n"
 _CONTRACT_FINGERPRINT = hashlib.sha256(
-    b"window_id|text_blocks|text_block_id|text_block|artifact_type:footer,header,heading,noise,separator,story|confidence:high,medium,low"
+    b"window_id|all-blocks-exact|whitespace:restore-exact|artifact-output:header-empty,footer-empty,noise-empty,separator-two-lf,heading-two-lf,story-exact|confidence:high,medium,low"
 ).hexdigest()
 _SYSTEM_PROMPT_NAME = "text_cleanup_system"
 _USER_PROMPT_NAME = "text_cleanup_user"
 _ARTIFACT_TYPES = frozenset({"header", "footer", "noise", "separator", "heading", "story"})
-_REMOVABLE_ARTIFACT_TYPES = frozenset({"header", "footer", "noise"})
+_NON_DISPLAY_ARTIFACT_TYPES = _ARTIFACT_TYPES - {"story"}
+_ARTIFACT_REPLACEMENTS = {
+    "header": "",
+    "footer": "",
+    "noise": "",
+    "separator": "\n\n",
+    "heading": "\n\n",
+}
 _CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
+
+# DATA MODELS / TYPEDEFINITIONS
+
 CleanupReportPayload = dict[str, object]
 OperationStatePayload = dict[str, object]
 SourcePagePayload = dict[str, object]
@@ -84,15 +96,16 @@ def clean_text(
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  cancel_requested Optional cancellation callback.
+    @param[in]  progress_callback Optional operation progress callback.
+    @param[in]  cancel_requested Optional cooperative cancellation callback.
     @param[in]  additional_cleanup_instructions Optional operator cleanup rules.
-    @return     Persisted cleanup report payload.
+    @return     Persisted AI Cleanup report payload.
     @exception  FileNotFoundError Raised when extracted text is missing.
     @exception  ValueError Raised for invalid input, response, or model budget.
+    @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-14
-    @version    1.0.0
+    @date       2026-07-15
+    @version    1.1.0
     """
     root = Path(project_root)
     _validate_request(manifest, ai_profile_payload)
@@ -285,7 +298,7 @@ def clean_text(
         for block in list(window_result.get("preserved_blocks", []))
         if isinstance(block, dict)
     ]
-    cleaned_text = _format_cleaned_text("".join(str(block["text_block"]) for block in preserved_blocks))
+    cleaned_text = "".join(str(window_result["reconstructed_text"]) for window_result in completed_windows)
     if not cleaned_text.strip():
         raise ValueError("AI-assisted cleanup removed all usable text.")
     write_text_atomic(output_path, cleaned_text)
@@ -301,11 +314,11 @@ def clean_text(
         }
     )
     removed_character_count = sum(int(item.get("removed_character_count", 0)) for item in completed_windows)
-    normalized_whitespace_character_count = sum(
-        int(item.get("normalized_whitespace_character_count", 0)) for item in completed_windows
+    restored_whitespace_character_count = sum(
+        int(item.get("restored_whitespace_character_count", 0)) for item in completed_windows
     )
-    whitespace_gap_count = sum(int(item.get("whitespace_gap_count", 0)) for item in completed_windows)
-    removal_decision_count = sum(int(item.get("removal_decision_count", 0)) for item in completed_windows)
+    restored_whitespace_gap_count = sum(int(item.get("restored_whitespace_gap_count", 0)) for item in completed_windows)
+    artifact_replacement_count = sum(int(item.get("artifact_replacement_count", 0)) for item in completed_windows)
     warnings = [
         str(detail.get("message", "")).strip() for detail in warning_details if str(detail.get("message", "")).strip()
     ]
@@ -314,10 +327,10 @@ def clean_text(
         "warnings": warnings,
         "warning_details": warning_details,
         "paragraph_count": len(paragraphs),
-        "removed_line_count": removal_decision_count,
+        "removed_line_count": artifact_replacement_count,
         "removed_character_count": removed_character_count,
-        "normalized_whitespace_character_count": normalized_whitespace_character_count,
-        "whitespace_gap_count": whitespace_gap_count,
+        "restored_whitespace_character_count": restored_whitespace_character_count,
+        "restored_whitespace_gap_count": restored_whitespace_gap_count,
         "detected_chapter_count": cleanup_text_analysis_service.count_detected_chapters(paragraphs),
         "page_break_repair_count": int(cleanup_metadata.get("page_break_repair_count", 0)),
         "weak_boundary_count": int(cleanup_metadata.get("weak_boundary_count", 0)),
@@ -330,7 +343,7 @@ def clean_text(
         "validated_window_decisions": completed_windows,
         "source_page_count": len(pages),
         "preserved_block_count": len(preserved_blocks),
-        "removal_decision_count": removal_decision_count,
+        "artifact_replacement_count": artifact_replacement_count,
         "token_usage": token_usage,
         "budget_metadata": budget_metadata,
         "additional_cleanup_instructions": instructions,
@@ -388,13 +401,13 @@ def clean_text(
 @trace_function(_LOGGER)
 def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
     """
-    @brief      Load one optional cleanup operation-state payload.
+    @brief      Load the persisted AI Cleanup operation state.
     @param[in]  project_root Active project root folder.
-    @return     Persisted cleanup state or `None`.
+    @return     Persisted operation state, or None when absent.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-14
-    @version    1.0.0
+    @date       2026-07-15
+    @version    1.1.0
     """
     return load_operation_state_payload(project_root, "cleanup", config.CLEANUP_STATE_FILE_NAME)
 
@@ -404,16 +417,26 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
 
 def _canonicalize_source_text(text: str) -> str:
     """
-    @brief      Handle canonicalize source text.
-    @version    1.0.0
+    @brief      Canonicalize source newlines to LF exactly once.
+    @param[in]  text Source text value.
+    @return     Source text with CRLF and CR normalized to LF.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return str(text).replace("\r\n", "\n").replace("\r", "\n")
 
 
 def _build_source_pages(canonical_text: str) -> list[SourcePagePayload]:
     """
-    @brief      Handle build source pages.
-    @version    1.0.0
+    @brief      Build page-aware source units from canonical text.
+    @param[in]  canonical_text Once-canonicalized source text.
+    @return     Ordered source page payloads with canonical offsets.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     canonical = _canonicalize_source_text(canonical_text)
     raw_pages = canonical.split(_PAGE_SEPARATOR)
@@ -443,8 +466,17 @@ def _render_cleanup_user_prompt(
     additional_cleanup_instructions: str,
 ) -> str:
     """
-    @brief      Render one canonical cleanup-window prompt.
-    @version    1.0.0
+    @brief      Render one canonical cleanup-window user prompt.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  window_id Cleanup window identifier.
+    @param[in]  source_language_hint Detected source-language hint.
+    @param[in]  dominant_script_hint Detected dominant-script hint.
+    @param[in]  additional_cleanup_instructions Optional operator cleanup rules.
+    @return     Rendered cleanup user prompt.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return prompt_template_service.render_prompt(
         _USER_PROMPT_NAME,
@@ -460,16 +492,26 @@ def _render_cleanup_user_prompt(
 
 def _source_window_prompt_block(pages: list[SourcePagePayload]) -> str:
     """
-    @brief      Wrap one concatenated canonical source window in stable markers.
-    @version    1.0.0
+    @brief      Wrap one source window in stable prompt markers.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @return     Marked canonical source-window text.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return f"<<< SOURCE WINDOW START >>>\n{_window_source_text(pages)}<<< SOURCE WINDOW END >>>"
 
 
 def _window_source_text(pages: list[SourcePagePayload]) -> str:
     """
-    @brief      Concatenate ordered source units without provider-visible identities.
-    @version    1.0.0
+    @brief      Concatenate ordered source units without provider identities.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @return     Concatenated canonical source-window text.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return "".join(str(page["text"]) for page in pages)
 
@@ -477,9 +519,11 @@ def _window_source_text(pages: list[SourcePagePayload]) -> str:
 def _build_response_schema() -> dict[str, object]:
     """
     @brief      Build the strict canonical-window response schema.
-    @return     Provider structured-output schema for AI Cleanup blocks.
+    @return     Provider structured-output schema.
     @exception  None.
-    @version    1.0.0
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return {
         "type": "object",
@@ -517,13 +561,15 @@ def _validate_response(
     expected_window_id: str,
 ) -> ValidatedWindowPayload:
     """
-    @brief      Validate blocks globally against one canonical source window.
-    @param[in]  response_payload Provider JSON object.
-    @param[in]  pages Ordered source pages or safe source segments.
-    @param[in]  expected_window_id Requested cleanup-window identifier.
-    @return     Preserved blocks, removals, normalization evidence, and warnings.
-    @exception  ValueError Raised when the response violates the cleanup contract.
-    @version    1.0.0
+    @brief      Validate and reconstruct one canonical source window.
+    @param[in]  response_payload Provider JSON response object.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  expected_window_id Window identifier expected for the response.
+    @return     Validated reconstructed window payload.
+    @exception  ValueError Raised when the provider response violates the cleanup contract.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
     """
     allowed_response_fields = {"window_id", "text_blocks"}
     if set(response_payload) != allowed_response_fields:
@@ -564,7 +610,6 @@ def _validate_response(
                 "text_block": text_block,
                 "artifact_type": artifact_type,
                 "confidence": confidence,
-                "remove": confidence == "high" and artifact_type in _REMOVABLE_ARTIFACT_TYPES,
             }
         )
 
@@ -572,59 +617,56 @@ def _validate_response(
     preserved_blocks: list[dict[str, object]] = []
     preserved_spans: list[tuple[int, int]] = []
     removed_ranges: list[dict[str, object]] = []
-    normalized_whitespace_ranges: list[dict[str, object]] = []
-    all_removal_decisions: list[dict[str, object]] = []
-    pending_removals: list[dict[str, object]] = []
+    restored_whitespace_ranges: list[dict[str, object]] = []
+    output_fragments: list[str] = []
     cursor = 0
+
     for block in normalized_blocks:
-        if bool(block["remove"]):
-            pending_removals.append(block)
-            all_removal_decisions.append(block)
-            continue
         exact_text = str(block["text_block"])
         match_index = source_text.find(exact_text, cursor)
         if match_index < 0:
-            raise ValueError("Preserved text is not an exact source slice or leaves an unexplained source gap.")
+            raise ValueError("AI cleanup text_block is not an exact source slice in forward source order.")
         if match_index > cursor:
             gap_text = source_text[cursor:match_index]
-            if gap_text.isspace():
-                normalized_whitespace_ranges.append(
-                    {
-                        "source_window_start": cursor,
-                        "source_window_end": match_index,
-                        "text": gap_text,
-                        "reason": "whitespace_only_gap",
-                    }
-                )
-            elif pending_removals:
-                removed_ranges.append(_removed_range(cursor, match_index, gap_text, pending_removals))
-            else:
+            if not gap_text.isspace():
                 raise ValueError(
                     "AI cleanup response leaves an unexplained source gap or violates exact source slice order."
                 )
-        preserved_blocks.append({key: value for key, value in block.items() if key != "remove"})
-        preserved_spans.append((match_index, match_index + len(exact_text)))
-        cursor = match_index + len(exact_text)
-        pending_removals = []
+            output_fragments.append(gap_text)
+            restored_whitespace_ranges.append(
+                {
+                    "source_window_start": cursor,
+                    "source_window_end": match_index,
+                    "text": gap_text,
+                    "reason": "restored_whitespace_gap",
+                }
+            )
+
+        block_end = match_index + len(exact_text)
+        if block["artifact_type"] in _NON_DISPLAY_ARTIFACT_TYPES:
+            removed_ranges.append(_removed_range(match_index, block_end, exact_text, block))
+            output_fragments.append(_ARTIFACT_REPLACEMENTS[str(block["artifact_type"])])
+        else:
+            preserved_blocks.append(dict(block))
+            preserved_spans.append((match_index, block_end))
+            output_fragments.append(exact_text)
+        cursor = block_end
 
     if cursor < len(source_text):
         gap_text = source_text[cursor:]
-        if gap_text.isspace():
-            normalized_whitespace_ranges.append(
-                {
-                    "source_window_start": cursor,
-                    "source_window_end": len(source_text),
-                    "text": gap_text,
-                    "reason": "whitespace_only_gap",
-                }
+        if not gap_text.isspace():
+            raise ValueError(
+                "AI cleanup response leaves an unexplained source gap or violates exact source slice order."
             )
-        else:
-            gap_decisions = pending_removals if preserved_blocks else all_removal_decisions
-            if not gap_decisions:
-                raise ValueError(
-                    "AI cleanup response leaves an unexplained source gap or violates exact source slice order."
-                )
-            removed_ranges.append(_removed_range(cursor, len(source_text), gap_text, gap_decisions))
+        output_fragments.append(gap_text)
+        restored_whitespace_ranges.append(
+            {
+                "source_window_start": cursor,
+                "source_window_end": len(source_text),
+                "text": gap_text,
+                "reason": "restored_whitespace_gap",
+            }
+        )
 
     warning_details: list[dict[str, object]] = []
     source_offset = 0
@@ -648,7 +690,7 @@ def _validate_response(
             )
 
     removed_character_count = sum(len(str(item["text"])) for item in removed_ranges)
-    normalized_whitespace_character_count = sum(len(str(item["text"])) for item in normalized_whitespace_ranges)
+    restored_whitespace_character_count = sum(len(str(item["text"])) for item in restored_whitespace_ranges)
     total_characters = len(source_text)
     if total_characters and removed_character_count / total_characters > 0.55:
         warning_details.append(
@@ -679,13 +721,13 @@ def _validate_response(
     warning_details.extend(_repeated_classification_warnings(preserved_blocks, removed_ranges))
     return {
         "preserved_blocks": preserved_blocks,
-        "preserved_text": "".join(str(item["text_block"]) for item in preserved_blocks),
+        "reconstructed_text": "".join(output_fragments),
         "removed_ranges": removed_ranges,
-        "normalized_whitespace_ranges": normalized_whitespace_ranges,
+        "restored_whitespace_ranges": restored_whitespace_ranges,
         "removed_character_count": removed_character_count,
-        "normalized_whitespace_character_count": normalized_whitespace_character_count,
-        "whitespace_gap_count": len(normalized_whitespace_ranges),
-        "removal_decision_count": len(all_removal_decisions),
+        "restored_whitespace_character_count": restored_whitespace_character_count,
+        "restored_whitespace_gap_count": len(restored_whitespace_ranges),
+        "artifact_replacement_count": len(removed_ranges),
         "warning_details": warning_details,
         "response_block_count": len(normalized_blocks),
     }
@@ -695,25 +737,31 @@ def _removed_range(
     start: int,
     end: int,
     text: str,
-    decisions: list[dict[str, object]],
+    block: dict[str, object],
 ) -> dict[str, object]:
     """
-    @brief      Describe one removed range in canonical window coordinates.
-    @version    1.0.0
+    @brief      Describe one deterministically rendered non-story source slice.
+    @param[in]  start Inclusive canonical-window source offset.
+    @param[in]  end Exclusive canonical-window source offset.
+    @param[in]  text Source text value.
+    @param[in]  block Validated non-story response block.
+    @return     Structured artifact-rendering range.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
     """
     return {
         "source_window_start": start,
         "source_window_end": end,
         "text": text,
-        "decisions": [
-            {
-                "text_block_id": item["text_block_id"],
-                "artifact_type": item["artifact_type"],
-                "confidence": item["confidence"],
-                "advisory_text_block": item["text_block"],
-            }
-            for item in decisions
-        ],
+        "replacement": _ARTIFACT_REPLACEMENTS[str(block["artifact_type"])],
+        "decision": {
+            "text_block_id": block["text_block_id"],
+            "artifact_type": block["artifact_type"],
+            "confidence": block["confidence"],
+            "text_block": block["text_block"],
+        },
     }
 
 
@@ -722,8 +770,14 @@ def _repeated_classification_warnings(
     removed_ranges: list[dict[str, object]],
 ) -> list[dict[str, object]]:
     """
-    @brief      Handle repeated classification warnings.
-    @version    1.0.0
+    @brief      Build warnings for text classified as both story and artifact.
+    @param[in]  preserved_blocks Validated story blocks.
+    @param[in]  removed_ranges Exact non-story source ranges.
+    @return     Structured repeated-classification warnings.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     preserved = {str(block["text_block"]).strip() for block in preserved_blocks if str(block["text_block"]).strip()}
     removed = {str(item["text"]).strip() for item in removed_ranges if str(item["text"]).strip()}
@@ -746,8 +800,15 @@ def _build_budget_metadata(
     user_prompt_shell: str,
 ) -> dict[str, object]:
     """
-    @brief      Handle build cleanup budget metadata.
-    @version    1.0.0
+    @brief      Build model-context budgeting metadata for cleanup windows.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  system_prompt Rendered cleanup system prompt.
+    @param[in]  user_prompt_shell Rendered user-prompt shell without source pages.
+    @return     Cleanup model-budget metadata.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     context_window = int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW))
     max_output_tokens = int(ai_profile_payload.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS))
@@ -771,8 +832,14 @@ def _build_windows(
     budget_metadata: dict[str, object],
 ) -> list[dict[str, object]]:
     """
-    @brief      Handle build cleanup windows.
-    @version    1.0.0
+    @brief      Partition source units into budget-safe cleanup windows.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  budget_metadata Cleanup model-budget metadata.
+    @return     Ordered budget-safe cleanup windows.
+    @exception  ValueError Raised when even one source unit cannot fit model limits.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     if not pages:
         return []
@@ -810,8 +877,14 @@ def _window_budget_estimate(
     budget: dict[str, object],
 ) -> dict[str, int]:
     """
-    @brief      Handle window budget estimate.
-    @version    1.0.0
+    @brief      Estimate prompt and response tokens for one candidate window.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  budget Cleanup model-budget metadata.
+    @return     Candidate-window token estimate.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     source_tokens = _estimate_text_tokens(_window_source_text(pages))
     output_tokens = max(
@@ -835,8 +908,14 @@ def _window_budget_estimate(
 
 def _window_estimate_fits(estimate: dict[str, int], budget: dict[str, object]) -> bool:
     """
-    @brief      Handle window estimate fits.
-    @version    1.0.0
+    @brief      Check whether one window estimate fits model limits.
+    @param[in]  estimate Candidate-window token estimate.
+    @param[in]  budget Cleanup model-budget metadata.
+    @return     True when the candidate fits all model limits.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return estimate["estimated_output_tokens"] <= int(budget.get("max_output_tokens", 0)) and estimate[
         "estimated_context_tokens"
@@ -845,8 +924,13 @@ def _window_estimate_fits(estimate: dict[str, int], budget: dict[str, object]) -
 
 def _split_page_at_boundary(page: SourcePagePayload) -> list[SourcePagePayload]:
     """
-    @brief      Handle split page at boundary.
-    @version    1.0.0
+    @brief      Split one oversized source unit at an existing newline.
+    @param[in]  page Source page or safe-segment payload.
+    @return     One or two source segments split at an existing newline.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     text = str(page["text"])
     boundaries = [index + 1 for index, character in enumerate(text) if character == "\n" and index + 1 < len(text)]
@@ -861,8 +945,13 @@ def _split_page_at_boundary(page: SourcePagePayload) -> list[SourcePagePayload]:
 
 def _renumber_source_pages(pages: list[SourcePagePayload]) -> None:
     """
-    @brief      Handle renumber source pages.
-    @version    1.0.0
+    @brief      Renumber source units and recompute canonical offsets.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     offset = 0
     for source_index, page in enumerate(pages, start=1):
@@ -878,8 +967,15 @@ def _checkpoint_is_compatible(
     instructions_fingerprint: str,
 ) -> bool:
     """
-    @brief      Handle cleanup checkpoint is compatible.
-    @version    1.0.0
+    @brief      Check checkpoint compatibility with the current cleanup contract.
+    @param[in]  checkpoint Persisted cleanup checkpoint payload.
+    @param[in]  input_fingerprint Canonical input-text fingerprint.
+    @param[in]  instructions_fingerprint Operator-instructions fingerprint.
+    @return     True when checkpoint and current contract identities match.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return (
         checkpoint.get("contract_fingerprint") == _CONTRACT_FINGERPRINT
@@ -894,8 +990,14 @@ def _restored_completed_windows(
     windows: list[dict[str, object]],
 ) -> list[ValidatedWindowPayload]:
     """
-    @brief      Handle restored completed windows.
-    @version    1.0.0
+    @brief      Restore the valid leading sequence of checkpointed windows.
+    @param[in]  checkpoint Persisted cleanup checkpoint payload.
+    @param[in]  windows Current ordered cleanup windows.
+    @return     Valid leading sequence of checkpointed window results.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     restored: list[ValidatedWindowPayload] = []
     items = checkpoint.get("completed_windows", [])
@@ -910,14 +1012,22 @@ def _restored_completed_windows(
             break
         if not isinstance(item.get("preserved_blocks"), list):
             break
+        if not isinstance(item.get("reconstructed_text"), str):
+            break
         restored.append(dict(item))
     return restored
 
 
 def _build_model_settings(profile: dict[str, object], budget: dict[str, object]) -> dict[str, object]:
     """
-    @brief      Handle build model settings.
-    @version    1.0.0
+    @brief      Build persisted model settings for the cleanup run.
+    @param[in]  profile Selected AI profile payload.
+    @param[in]  budget Cleanup model-budget metadata.
+    @return     Persistable model-settings payload.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return {
         "ai_profile_id": str(profile.get("id", "")),
@@ -934,8 +1044,14 @@ def _update_model_settings_history(
     existing_state: dict[str, object], model_settings: dict[str, object]
 ) -> list[dict[str, object]]:
     """
-    @brief      Handle update model settings history.
-    @version    1.0.0
+    @brief      Append changed model settings to persisted history.
+    @param[in]  existing_state Previously persisted cleanup state.
+    @param[in]  model_settings Current persisted model settings.
+    @return     Updated model-settings history.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     value = _state_metadata(existing_state).get("model_settings_history", [])
     history = [dict(item) for item in value if isinstance(item, dict)] if isinstance(value, list) else []
@@ -971,8 +1087,35 @@ def _write_state(
     removed_character_count: int | None = None,
 ) -> OperationStatePayload:
     """
-    @brief      Handle write state.
-    @version    1.0.0
+    @brief      Persist one complete AI Cleanup operation-state snapshot.
+    @param[in]  state_path Cleanup operation-state file path.
+    @param[in]  status Operation status value.
+    @param[in]  progress_current Completed cleanup-window count.
+    @param[in]  progress_total Total cleanup-window count.
+    @param[in]  root Resolved project root path.
+    @param[in]  output_path Cleaned-text output path.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  completed_at Optional operation completion timestamp.
+    @param[in]  profile_id Selected AI profile identifier.
+    @param[in]  log_relative_path Project-relative AI transaction log path.
+    @param[in]  input_fingerprint Canonical input-text fingerprint.
+    @param[in]  instructions Normalized operator cleanup instructions.
+    @param[in]  instructions_fingerprint Operator-instructions fingerprint.
+    @param[in]  completed_windows Fully validated cleanup-window results.
+    @param[in]  token_usage Accumulated provider token usage.
+    @param[in]  budget_metadata Cleanup model-budget metadata.
+    @param[in]  model_settings Current persisted model settings.
+    @param[in]  model_settings_history Persisted model-settings history.
+    @param[in]  warning_details Structured cleanup warning details.
+    @param[in]  report_path Optional cleanup-report path.
+    @param[in]  detected_language Optional detected output language.
+    @param[in]  paragraph_count Optional reconstructed paragraph count.
+    @param[in]  removed_character_count Optional replaced source-character count.
+    @return     Persisted operation-state payload.
+    @exception  OSError Raised when atomic state persistence fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     metadata: dict[str, object] = {
         "started_at": started_at,
@@ -1038,8 +1181,28 @@ def _write_checkpoint_state(
     model_settings_history: list[dict[str, object]],
 ) -> None:
     """
-    @brief      Handle write checkpoint state.
-    @version    1.0.0
+    @brief      Persist resumable state after cancellation or failure.
+    @param[in]  state_path Cleanup operation-state file path.
+    @param[in]  status Operation status value.
+    @param[in]  root Resolved project root path.
+    @param[in]  output_path Cleaned-text output path.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  profile_id Selected AI profile identifier.
+    @param[in]  log_relative_path Project-relative AI transaction log path.
+    @param[in]  input_fingerprint Canonical input-text fingerprint.
+    @param[in]  instructions Normalized operator cleanup instructions.
+    @param[in]  instructions_fingerprint Operator-instructions fingerprint.
+    @param[in]  completed_windows Fully validated cleanup-window results.
+    @param[in]  windows Current ordered cleanup windows.
+    @param[in]  token_usage Accumulated provider token usage.
+    @param[in]  budget_metadata Cleanup model-budget metadata.
+    @param[in]  model_settings Current persisted model settings.
+    @param[in]  model_settings_history Persisted model-settings history.
+    @return     None.
+    @exception  OSError Raised when atomic checkpoint persistence fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     _write_state(
         state_path,
@@ -1068,8 +1231,13 @@ def _combined_warning_details(
     completed_windows: list[ValidatedWindowPayload],
 ) -> list[dict[str, object]]:
     """
-    @brief      Handle combined warning details.
-    @version    1.0.0
+    @brief      Flatten warning details from validated cleanup windows.
+    @param[in]  completed_windows Fully validated cleanup-window results.
+    @return     Flattened structured warning details.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return [
         dict(detail)
@@ -1081,8 +1249,13 @@ def _combined_warning_details(
 
 def _restored_token_usage(existing_state: dict[str, object]) -> dict[str, object]:
     """
-    @brief      Handle restored token usage.
-    @version    1.0.0
+    @brief      Restore accumulated token usage from prior state.
+    @param[in]  existing_state Previously persisted cleanup state.
+    @return     Restored or empty token-usage payload.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     usage = _state_metadata(existing_state).get("token_usage")
     return dict(usage) if isinstance(usage, dict) else token_usage_service.empty_token_usage()
@@ -1090,8 +1263,13 @@ def _restored_token_usage(existing_state: dict[str, object]) -> dict[str, object
 
 def _state_metadata(state: dict[str, object]) -> dict[str, object]:
     """
-    @brief      Handle state metadata.
-    @version    1.0.0
+    @brief      Return a defensive copy of operation-state metadata.
+    @param[in]  state Operation-state payload.
+    @return     Defensive operation-state metadata copy.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     metadata = state.get("metadata")
     return dict(metadata) if isinstance(metadata, dict) else {}
@@ -1099,8 +1277,14 @@ def _state_metadata(state: dict[str, object]) -> dict[str, object]:
 
 def _validate_request(manifest: dict[str, object], profile: dict[str, object]) -> None:
     """
-    @brief      Handle validate request.
-    @version    1.0.0
+    @brief      Validate project and AI profile prerequisites.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  profile Selected AI profile payload.
+    @return     None.
+    @exception  ValueError Raised when project or AI profile prerequisites are invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     if not isinstance(manifest.get("source_document"), dict):
         raise ValueError("No imported source is available for AI-assisted cleanup.")
@@ -1110,43 +1294,53 @@ def _validate_request(manifest: dict[str, object], profile: dict[str, object]) -
 
 def _normalize_instructions(value: object) -> str:
     """
-    @brief      Handle normalize instructions.
-    @version    1.0.0
+    @brief      Canonicalize and trim operator cleanup instructions.
+    @param[in]  value Raw operator-instructions value.
+    @return     Canonical trimmed operator instructions.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return _canonicalize_source_text(str(value or "")).strip()
 
 
-def _format_cleaned_text(text: str) -> str:
-    """
-    @brief      Handle format cleaned text.
-    @version    1.0.0
-    """
-    normalized = _canonicalize_source_text(text).replace("\f", "")
-    normalized = re.sub(r"[ \t]+\n", "\n", normalized)
-    normalized = re.sub(r"\n[ \t]*\n(?:[ \t]*\n)+", "\n\n", normalized)
-    return normalized.strip() + "\n"
-
-
 def _estimate_text_tokens(text: str) -> int:
     """
-    @brief      Handle estimate text tokens.
-    @version    1.0.0
+    @brief      Estimate token usage from UTF-8 byte length.
+    @param[in]  text Source text value.
+    @return     Estimated token count.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return max(1, math.ceil(len(str(text).encode("utf-8")) / 4))
 
 
 def _fingerprint(text: str) -> str:
     """
-    @brief      Handle fingerprint.
-    @version    1.0.0
+    @brief      Build a stable SHA-256 text fingerprint.
+    @param[in]  text Source text value.
+    @return     Lowercase hexadecimal SHA-256 digest.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     return hashlib.sha256(str(text).encode("utf-8")).hexdigest()
 
 
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     """
-    @brief      Handle build ai log path.
-    @version    1.0.0
+    @brief      Build the project-local AI transaction log path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  started_at Operation start timestamp.
+    @return     Project-local AI transaction log path.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
     """
     token = re.sub(r"[^0-9A-Za-z]+", "", started_at)[:24] or "cleanup"
     return project_root / config.ai_transaction_log_file_name("cleanup", token)

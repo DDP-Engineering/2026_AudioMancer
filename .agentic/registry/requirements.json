@@ -179,7 +179,7 @@
   },
   "REQ-FUNC-002": {
     "created_on": "2026-06-09 09:50",
-    "last_updated": "2026-06-12 10:04",
+    "last_updated": "2026-07-14 20:35",
     "line_number": 13,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_writes_cleanup_artifacts_and_log",
@@ -187,7 +187,7 @@
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings",
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_uses_artifact_type_and_confidence_without_action",
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_ignores_legacy_label_only_schema",
-      "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_preserves_low_confidence_removals",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_replaces_low_confidence_non_story",
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_prompt_includes_language_script_and_neighbor_context",
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_appends_operator_instructions_to_prompt_and_state",
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_splits_long_input_into_multiple_windows",
@@ -1635,13 +1635,13 @@
   },
   "REQ-FUNC-058": {
     "created_on": "2026-07-14 20:55",
-    "last_updated": "2026-07-14 19:01",
+    "last_updated": "2026-07-14 20:31",
     "line_number": 69,
     "linked_tests": [
-      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gap_is_recorded_and_accepted"
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_restored_exactly"
     ],
     "priority": "Must",
-    "rationale": "Prevents printed page numbers from being confused with protocol routing while allowing harmless formatting whitespace to be normalized without permitting retained text to be rewritten, duplicated, reordered, or silently omitted.",
+    "rationale": "Makes paragraph and spacing preservation independent of whether the model includes separators inside adjacent block text while rejecting invented, changed, overlapping, reordered, or unexplained non-whitespace content.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/prompts/text_cleanup_system.txt",
@@ -1649,20 +1649,20 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-058",
-    "requirement": "AI Cleanup shall accept only responses whose window identity, sequential block IDs, non-empty text, six artifact types, and confidence values are valid; the provider contract shall contain no schema version, action, page, or segment identity, every preserved block shall match an exact non-overlapping forward slice of the window's single once-canonicalized source string, whitespace-only source gaps shall be recorded as deterministic normalization evidence, and every discarded gap containing non-whitespace shall be authorized by at least one intervening high-confidence removable decision.",
+    "requirement": "AI Cleanup shall accept only responses whose window identity, sequential block IDs, non-empty text, six artifact types, and confidence values are valid; the provider contract shall contain no version, action, page, or segment identity, every response block shall match an exact non-overlapping forward slice of the window's once-canonicalized source string, every omitted gap shall contain whitespace only, and that exact canonical whitespace shall be restored at its source position in reconstructed output.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused AI Cleanup contract and integration suite passed: 32 tests."
+    "verification": "Focused exact whitespace reconstruction test passes in the pinned uv environment."
   },
   "REQ-FUNC-059": {
     "created_on": "2026-07-14 19:20",
-    "last_updated": "2026-07-14 19:01",
+    "last_updated": "2026-07-14 21:34",
     "line_number": 70,
     "linked_tests": [
-      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_response_contract_has_six_artifact_types_without_version_or_action"
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering"
     ],
     "priority": "Must",
-    "rationale": "Uses one artifact field as the semantic decision input and a conservative confidence policy, without a redundant action field.",
+    "rationale": "Deterministically preserves structural paragraph boundaries only for separators and headings while fully removing display noise, without allowing model-generated replacement text or confidence to change output behavior.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
@@ -1670,20 +1670,20 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-059",
-    "requirement": "AI Cleanup shall classify each block as exactly `header`, `footer`, `noise`, `separator`, `heading`, or `story`; it shall remove only high-confidence `header`, `footer`, and `noise`, preserve `separator`, `heading`, and `story` at every confidence, preserve every medium/low-confidence block, and emit prominent human-review warnings for broad-prefix and entire-page removals. Story includes narration, dialogue, attribution, epigraph, verse, and other meaningful book text.",
+    "requirement": "AI Cleanup shall classify each exact source block as `header`, `footer`, `noise`, `separator`, `heading`, or `story`; `story` shall emit its exact source slice, `separator` and `heading` shall each emit exactly two LF characters, and `header`, `footer`, and `noise` shall emit nothing, in response order and regardless of confidence. Confidence remains review metadata and no action field is used.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused AI Cleanup contract and integration suite passed: 32 tests."
+    "verification": "Focused deterministic artifact rendering test passes in the pinned uv environment."
   },
   "REQ-FUNC-060": {
     "created_on": "2026-07-14 20:55",
-    "last_updated": "2026-07-14 19:01",
+    "last_updated": "2026-07-14 20:31",
     "line_number": 71,
     "linked_tests": [
-      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_response_contract_has_six_artifact_types_without_version_or_action"
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators"
     ],
     "priority": "Must",
-    "rationale": "Keeps prompt validation, paid-provider resume, and operator review consistent with one unversioned provider contract while rejecting obsolete persisted state.",
+    "rationale": "Keeps prompt validation, paid-provider resume, deterministic reconstruction, and operator review consistent with one current unversioned contract while rejecting obsolete persisted state.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
@@ -1694,10 +1694,10 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-060",
-    "requirement": "AI Cleanup shall canonicalize CRLF to LF once, concatenate each page-aware or safely segmented window into one canonical source string presented exactly once inside resolved window markers, use only the operation-neutral `text_cleanup_system` and `text_cleanup_user` prompts with no legacy prompt-name fallback, checkpoint only fully validated current-contract windows, reject incompatible or changed-input checkpoints using an internal contract fingerprint, allow changed-profile resume only at the next untouched validated window, and preserve original extraction, cleaned text, decisions, normalization evidence, warnings, state, model history, and transaction log for side-by-side human review and manual correction. No legacy response, prompt, taxonomy, checkpoint, or public-entry-point compatibility is required.",
+    "requirement": "AI Cleanup shall canonicalize CRLF to LF once, present each page-aware or safely segmented window exactly once through `text_cleanup_system` and `text_cleanup_user`, reconstruct final output from validated source positions without trimming or collapsing restored whitespace or deterministic artifact separators, checkpoint only fully validated current-contract windows, reject incompatible or changed-input checkpoints using an internal contract fingerprint, and retain review artifacts and resumable progress. No legacy response, prompt, taxonomy, checkpoint, or public-entry-point compatibility is required.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused AI Cleanup contract and integration suite passed: 32 tests."
+    "verification": "Focused final assembly integration test passes in the pinned uv environment."
   },
   "REQ-NFR-001": {
     "created_on": "2026-06-09 09:50",

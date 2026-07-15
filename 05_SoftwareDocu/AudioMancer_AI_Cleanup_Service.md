@@ -11,10 +11,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 AI Cleanup is the optional AI-assisted branch of Text Cleanup. It sends each
 bounded cleanup window to an OpenAI-compatible model as one canonical source
-string and accepts retained text only as exact forward source slices. The
-original extraction and detailed review evidence remain available because exact
-slice validation does not prove that model-selected deletions are semantically
-correct.
+string and accepts every returned block only as an exact forward source
+slice. The original extraction and detailed review evidence remain available
+because exact-slice validation does not prove that model classifications are
+semantically correct.
 
 ## 2. Responsibilities
 
@@ -23,9 +23,9 @@ correct.
 - concatenate each request window into one provider-visible source string
 - reserve input and output capacity for source repeated in structured JSON
 - validate ordered response blocks globally against the canonical window
-- accept omitted whitespace-only gaps as recorded normalization evidence
-- remove only high-confidence `header`, `footer`, and `noise` ranges
-- preserve `separator`, `heading`, and `story` plus every medium/low-confidence block
+- restore every omitted whitespace-only gap exactly at its validated source position
+- retain `story` exactly, replace `separator` and `heading` with two LF characters, and remove `header`, `footer`, and `noise` without replacement whitespace
+- treat confidence as review metadata that never changes deterministic output handling
 - warn for entire-page, high-ratio, fragmented, inconsistent, or long removals
 - checkpoint only fully validated windows and reject obsolete checkpoints
 - persist cleaned text, report, state, metadata, model history, and transaction logs
@@ -50,12 +50,15 @@ High-level flow:
 4. Select budget-safe windows and concatenate each window's unit text.
 5. Render that string once between `SOURCE WINDOW` markers.
 6. Request the current strict JSON shape and validate identity, sequential IDs,
-   exact fields, enum values, non-empty blocks, forward slices, whitespace gaps,
-   and authorized non-whitespace gaps.
-7. Persist each fully validated window before continuing.
-8. Concatenate preserved blocks and apply deterministic final formatting.
-9. Persist final artifacts, clear the checkpoint, advance to
-   `text_chunking_ready`, and require human review.
+   exact fields, enum values, non-empty blocks, forward slices, and
+   whitespace-only omitted gaps.
+7. Reconstruct each window from validated source positions, restoring omitted
+   whitespace exactly, replacing `separator` and `heading` slices with `\n\n`,
+   and removing `header`, `footer`, and `noise` slices without replacement text.
+8. Persist each fully validated reconstructed window before continuing.
+9. Concatenate reconstructed windows without trimming or collapsing whitespace.
+10. Persist final artifacts, clear the checkpoint, advance to
+    `text_chunking_ready`, and require human review.
 
 ## 4. Dependencies
 
@@ -104,16 +107,25 @@ narration, dialogue, attribution, epigraphs, verse, and other meaningful book
 text. Printed page numbers, copyright notices, and unreadable extraction/OCR
 garbage are represented as `noise`.
 
-`artifact_type` and `confidence` determine handling. High-confidence `header`,
-`footer`, and `noise` are removal decisions. `separator`, `heading`, and `story`
-are always preserved; every medium/low-confidence block is also preserved.
-Removal-decision text is advisory, while retained text must match an exact,
-non-overlapping forward source slice.
+Every block, including a non-story artifact, must match an exact,
+non-overlapping forward source slice. `artifact_type` alone determines output:
+`story` is retained exactly; `separator` and `heading` are each replaced with
+exactly two LF characters (`\n\n`); and `header`, `footer`, and `noise` are
+removed without contributing replacement text or whitespace.
+`confidence` is persisted only as review metadata.
 
-An omitted whitespace-only range is accepted and stored in
-`normalized_whitespace_ranges` with canonical window coordinates. An omitted
-range containing non-whitespace requires an intervening high-confidence
-removal decision and is stored in `removed_ranges`.
+A model may omit a source gap only when the complete gap is whitespace. The
+validator stores such gaps in `restored_whitespace_ranges` with canonical
+window coordinates and inserts their exact source text into the reconstructed
+window. Any omitted non-whitespace rejects the response. Final assembly
+concatenates each window's `reconstructed_text` without trimming, blank-line
+collapse, or other formatting.
+
+`removed_ranges` records the exact source coordinates, original text,
+deterministic replacement (empty or two LF), artifact type, and confidence for
+every non-story block. Aggregate report fields include `artifact_replacement_count`,
+`restored_whitespace_gap_count`, and
+`restored_whitespace_character_count`.
 
 Interrupted or failed cleanup stores only fully validated windows. Checkpoints
 contain an internal contract fingerprint plus input, instruction, and window
@@ -163,8 +175,8 @@ behavior is tracked by `REQ-FUNC-058`, `REQ-FUNC-059`, `REQ-FUNC-060`, and
 
 ## 10. Limitations And Future Work
 
-- Exact forward-slice validation cannot prove semantic deletion correctness.
-- Broad and entire-page removals remain warnings under the approved policy.
+- Exact forward-slice validation cannot prove semantic classification correctness.
+- Broad and entire-page artifact removals remain warnings under the approved policy.
 - Requests are sequential and cancellation is cooperative around provider calls.
 - Provider JSON repair remains best effort before strict validation.
 - The response-expansion factor defaults to `2.0` and should change only with

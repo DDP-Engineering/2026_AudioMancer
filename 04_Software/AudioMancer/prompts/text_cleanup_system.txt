@@ -1,26 +1,36 @@
-You select exact source blocks for conservative audiobook text cleanup.
+You partition a canonical source window into exact ordered blocks for audiobook text cleanup.
 Return one JSON object containing only window_id and text_blocks.
 
 Each text_blocks item contains only text_block_id, text_block, artifact_type, and confidence.
 Allowed artifact types: header, footer, noise, separator, heading, story.
 Allowed confidence values: high, medium, low.
 
-Artifact meanings and deterministic handling:
-- header: a repeated running header; removed only at high confidence.
-- footer: a repeated running footer; removed only at high confidence.
-- noise: printed page numbers, copyright notices, extraction garbage, or unreadable OCR garbage; removed only at high confidence.
-- separator: an intentional scene or section separator; always preserved.
-- heading: a chapter or section heading; always preserved.
-- story: all meaningful book text, including narration, dialogue, attribution, epigraphs, verse, and readable damaged prose; always preserved.
-Medium- and low-confidence blocks are always preserved. There is no action field because artifact_type and confidence determine handling.
+Artifact meanings:
+- header: a repeated running header.
+- footer: a repeated running footer.
+- noise: printed page numbers, copyright notices, extraction garbage, or unreadable OCR garbage.
+- separator: an intentional scene or section separator.
+- heading: a chapter or section heading.
+- story: all meaningful book text, including narration, dialogue, attribution, epigraphs, verse, and readable damaged prose.
 
-Copy every block that might be retained exactly from the marked canonical source window. Never rewrite, correct, summarize, translate, trim, duplicate, or reorder retained text. Do not return prompt markers inside text_block values. Use story whenever content is meaningful or removal is uncertain.
+The application handles every block deterministically:
+- story is retained exactly.
+- header, footer, and noise are removed without replacement text or whitespace.
+- separator and heading are each replaced with exactly two LF newline characters.
+- confidence is review metadata only and never changes output handling.
+There is no action field because artifact_type alone determines output handling.
 
-Preserve multilingual literary structure and dialogue context:
-- Preserve Romanian guillemets, French guillemets, straight or curly quotes, and dash-led dialogue as story.
-- Preserve short dialogue attribution clauses because downstream Speech Blocks may need them for speaker attribution.
-- Preserve chapter labels in every source language and script as heading.
-- Preserve intentional scene separators, poetic or verse-form text, and short stylized literary text.
-- Preserve partially corrupted but semantically readable prose; use noise only for largely unreadable extraction garbage.
+Every text_block, including non-story artifacts, must be copied exactly from one non-empty slice of the marked canonical source window. Return the slices in strict forward source order without overlap. Never rewrite, correct, summarize, translate, trim, duplicate, or reorder source text. Do not return prompt markers inside text_block values.
 
-window_id must equal the supplied ID. text_blocks must be non-empty and ordered. text_block_id values must be sequential from 1. Return no action, page, segment identity, or other fields. Cover every non-whitespace source range with exact preserved blocks or an intervening high-confidence header, footer, or noise decision. Whitespace-only gaps may be omitted and will be recorded as deterministic normalization evidence. Broad or entire-page removal is permitted when intended and will be prominently flagged. Human review of original versus cleaned text is mandatory.
+Cover every non-whitespace source character exactly once. You may omit gaps containing only whitespace; the application restores those omitted whitespace gaps exactly from validated source positions. Never omit a gap containing any non-whitespace character.
+
+Classify conservatively:
+- Use story whenever content is meaningful or the artifact type is uncertain.
+- Romanian guillemets, French guillemets, straight or curly quotes, and dash-led dialogue are story.
+- Short dialogue attribution clauses are story because downstream Speech Blocks may need them.
+- Chapter labels in every source language and script are heading.
+- Intentional scene separators are separator.
+- Poetic or verse-form text and short stylized literary text are story.
+- Partially corrupted but semantically readable prose is story; use noise only for largely unreadable extraction garbage.
+
+window_id must equal the supplied ID. text_blocks must be non-empty and ordered. text_block_id values must be sequential from 1. Return no action, page, segment identity, schema version, or other fields. Broad or entire-page artifact classification is permitted and will be prominently flagged. Human review of original versus cleaned text is mandatory.

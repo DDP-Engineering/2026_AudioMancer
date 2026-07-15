@@ -1,56 +1,37 @@
 {
-  "change-2026-07-14T152610Z-7ea5f798": {
+  "change-2026-07-14T201113Z-fad3760c": {
     "check_ids": [
-      "CHECK-AIC-001",
-      "CHECK-AIC-002",
-      "CHECK-AIC-003",
-      "CHECK-AIC-004",
-      "CHECK-AIC-005",
-      "CHECK-AIC-006",
-      "CHECK-AIC-007",
-      "CHECK-AIC-008",
-      "CHECK-AIC-009",
-      "CHECK-AIC-010"
+      "CHECK-AICR-001",
+      "CHECK-AICR-002",
+      "CHECK-AICR-003",
+      "CHECK-AICR-004"
     ],
     "intent": {
-      "created_at": "2026-07-14T15:26:10+00:00",
+      "created_at": "2026-07-14T20:11:13+00:00",
       "id": "I-0001",
       "kind": "change",
-      "scope_hint": [
-        ".agentic",
-        "04_Software/AudioMancer/prompts"
-      ],
-      "statement": "Replace AI-assisted cleanup with the lossless-preserved-text block selection algorithm defined in 0_Planning/AI_Cleanup_Lossless_Block_Replacement_Plan.md.",
+      "scope_hint": [],
+      "statement": "Deterministically replace every header, footer, noise, separator, and heading AI Cleanup block with exactly two newline characters while retaining story text in source order.",
       "status": "draft"
     },
-    "report_path": ".agentic/runs/change-2026-07-14T152610Z-7ea5f798/report.md",
-    "run_id": "change-2026-07-14T152610Z-7ea5f798",
+    "report_path": ".agentic/runs/change-2026-07-14T201113Z-fad3760c/report.md",
+    "run_id": "change-2026-07-14T201113Z-fad3760c",
     "spec_ids": [
-      "SPEC-AIC-001",
-      "SPEC-AIC-002",
-      "SPEC-AIC-003",
-      "SPEC-AIC-004",
-      "SPEC-AIC-005"
+      "SPEC-AICR-001",
+      "SPEC-AICR-002",
+      "SPEC-AICR-003",
+      "SPEC-AICR-004"
     ],
-    "stage": "delivery",
+    "stage": "validation",
     "touched_paths": [
-      ".agentic/components.toml",
       ".agentic/knowledge/components/ai_cleanup.md",
       ".agentic/requirements/functional.md",
-      ".agentic/requirements/non_functional.md",
-      "04_Software/AudioMancer/prompts/text_cleanup_lossless_system.txt",
-      "04_Software/AudioMancer/prompts/text_cleanup_lossless_user.txt",
       "04_Software/AudioMancer/prompts/text_cleanup_system.txt",
       "04_Software/AudioMancer/prompts/text_cleanup_user.txt",
-      "04_Software/AudioMancer/src/audiomancer/config.py",
-      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_lossless_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
-      "04_Software/AudioMancer/tests/test_ai_cleanup_lossless_blocks.py",
       "04_Software/AudioMancer/tests/test_ai_cleanup_service.py",
-      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md",
-      "05_SoftwareDocu/AudioMancer_Ai_Cleanup_Lossless_Service.md",
-      "05_SoftwareDocu/README.md"
+      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ]
   }
 }
