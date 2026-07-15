@@ -26,7 +26,8 @@ flags, notes, preview text, selected targets, and reset-state calculations.
 
 - build Home workflow stage statuses from manifest operations and active
   operation state
-- build Text Cleanup extraction/cleanup previews and reset manifests
+- build Text Cleanup extraction/cleanup previews, retained AI spacing
+  eligibility and selection state, and reset manifests
 - select AI profile state for cleanup, translation, and character discovery
 - derive AI Translation page state from chunking and translation artifacts
 - derive Characters and Character Voices page state from persisted reports,
@@ -54,6 +55,7 @@ Main public entrypoints:
 - `home_presenter_service.stage_reached_index(...)`
 - `text_cleanup_state_service.build_text_cleanup_state(...)`
 - `text_cleanup_state_service.save_cleaned_text_edit(...)`
+- `text_cleanup_state_service.apply_ai_cleanup_spacing(...)`
 - `text_cleanup_state_service.build_manifest_after_operation_reset(...)`
 - `ai_translation_state_service.build_ai_translation_state(...)`
 - `ai_translation_state_service.build_ai_translation_notes(...)`
@@ -72,7 +74,7 @@ controllers can apply without duplicating workflow rules.
 Internal dependencies:
 
 - `audiomancer.config`
-- workflow services such as `deterministic_cleanup_service`,
+- workflow services such as `ai_cleanup_service`, `deterministic_cleanup_service`,
   `deterministic_chunking_service`, `ai_translation_service`,
   `character_discovery_service`, `character_voices_service`,
   `narrator_definition_service`, `audio_blocks_service`, and
@@ -98,7 +100,8 @@ Outputs:
 
 - view-state dictionaries for page `apply_*_state(...)` methods
 - localized notes and status lines
-- updated manifest dictionaries after manual cleanup edits or operation resets
+- updated manifest dictionaries after manual cleanup edits, retained AI spacing
+  application, or operation resets
 - preview text snippets loaded from project artifacts
 
 ## 6. Data Contracts
@@ -111,6 +114,8 @@ include:
 - selected AI profile IDs and readiness messages
 - `can_start`, `can_reset`, `can_generate`, and similar enablement flags
 - preview text and warning/note lines
+- Text Cleanup `can_apply_ai_spacing` and complete
+  `selected_spacing_categories` values
 - selected character, narrator, language, and audio assembly summary values
 - Audio Assembly Scene Ambience inclusion state and readiness counts after the
   current inclusion filter is applied
@@ -119,12 +124,19 @@ Manual cleanup edits atomically persist the edited text and compact cleanup
 state, then reset downstream operations through the shared operation-runtime
 reset policy.
 
+Retained AI spacing is available only for completed current-contract
+`ai_assisted` cleanup state. Applying a complete category selection rebuilds
+cleaned text through `ai_cleanup_service`, preserves the current cleanup report
+and state, resets non-preserved downstream operations, and returns the manifest
+to `text_cleanup_ready`. Manual-edit state disables this path.
+
 ## 7. Workflow Integration
 
 These helpers sit between controllers/pages and workflow services. Controllers
 load the active manifest, call the state helper, then pass the result to the
-page. When an operator edits cleaned text or resets a workflow step, the helper
-returns the manifest changes needed by the workspace layer.
+page. When an operator edits cleaned text, reapplies AI spacing, or resets a
+workflow step, the helper returns the manifest changes needed by the workspace
+layer.
 
 ## 8. Usage
 
@@ -141,6 +153,8 @@ Focused tests:
 
 - `tests/test_home_presenter_service.py`
 - `tests/test_text_cleanup_state_service.py`
+- `tests/test_text_cleanup_page.py`
+- `tests/test_text_cleanup_ui_controller.py`
 - `tests/test_ai_translation_state_service.py`
 - `tests/test_character_discovery_state_service.py`
 - `tests/test_character_voices_state_service.py`

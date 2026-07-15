@@ -11,10 +11,11 @@
 @brief Text extraction and cleanup page for AudioMancer.
 @details Provides the operator-facing extraction and deterministic cleanup
          state plus manual cleaned-text editing for the current
-         text-processing slice, including local preview text search.
+         text-processing slice, including local preview text search and
+         retained AI Cleanup spacing selection.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.4
+@version 0.10.0
 """
 
 # IMPORTS
@@ -22,7 +23,9 @@
 from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QInputDialog,
@@ -37,6 +40,11 @@ from PySide6.QtWidgets import (
 
 from audiomancer import config
 from audiomancer.services import ui_state_service
+
+# CONSTANTS
+
+_SPACING_CATEGORY_ORDER = ("heading", "separator", "noise", "header", "footer")
+_DEFAULT_SPACING_CATEGORIES = frozenset({"heading", "separator"})
 
 # PUBLIC API
 
@@ -54,6 +62,7 @@ class TextCleanupPage(QWidget):
     extract_requested = Signal()
     clean_requested = Signal()
     ai_clean_requested = Signal(str)
+    apply_spacing_requested = Signal(object)
     save_cleaned_text_requested = Signal(str)
 
     def __init__(self, parent=None) -> None:
@@ -64,7 +73,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-06-09
-        @version    0.7.4
+        @version    0.9.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -72,6 +81,7 @@ class TextCleanupPage(QWidget):
         self._can_extract = False
         self._can_clean = False
         self._can_ai_clean = False
+        self._can_apply_ai_spacing = False
         self._has_cleaned_text = False
         self._editing_cleaned_text = False
         self._has_ai_profiles = False
@@ -126,20 +136,41 @@ class TextCleanupPage(QWidget):
         self._cleaned_text_edit.setReadOnly(True)
         self._install_preview_find_context_menu(self._cleaned_text_edit)
         cleaned_layout.addWidget(self._cleaned_text_edit)
-        cleaned_action_row = QHBoxLayout()
-        cleaned_action_row.addStretch(1)
+        cleaned_controls_layout = QGridLayout()
+        cleaned_controls_layout.setContentsMargins(0, 0, 0, 0)
+        cleaned_controls_layout.setColumnStretch(3, 1)
+        self._cleaned_controls_layout = cleaned_controls_layout
+        self._spacing_selector_layout = cleaned_controls_layout
+        self._spacing_label = QLabel("Insert new line for:", self)
+        cleaned_controls_layout.addWidget(self._spacing_label, 0, 0)
+        self._spacing_checkboxes: dict[str, QCheckBox] = {}
+        for category, label, row, column in (
+            ("heading", "Heading", 0, 1),
+            ("separator", "Separator", 0, 2),
+            ("noise", "Noise", 1, 1),
+            ("header", "Header", 1, 2),
+            ("footer", "Footer", 1, 3),
+        ):
+            checkbox = QCheckBox(label, self)
+            checkbox.setChecked(category in _DEFAULT_SPACING_CATEGORIES)
+            self._spacing_checkboxes[category] = checkbox
+            cleaned_controls_layout.addWidget(checkbox, row, column)
+
+        self._apply_spacing_button = QPushButton("Apply Spacing")
+        self._apply_spacing_button.clicked.connect(self._emit_apply_spacing_requested)
+        cleaned_controls_layout.addWidget(self._apply_spacing_button, 1, 0)
         self._edit_cleaned_button = QPushButton("Edit")
         self._edit_cleaned_button.clicked.connect(self._begin_cleaned_text_edit)
-        cleaned_action_row.addWidget(self._edit_cleaned_button)
+        cleaned_controls_layout.addWidget(self._edit_cleaned_button, 0, 4)
         self._save_cleaned_button = QPushButton("Save")
         self._save_cleaned_button.clicked.connect(self._emit_save_cleaned_text_requested)
-        cleaned_action_row.addWidget(self._save_cleaned_button)
-        cleaned_layout.addLayout(cleaned_action_row)
+        cleaned_controls_layout.addWidget(self._save_cleaned_button, 1, 4)
+        cleaned_layout.addLayout(cleaned_controls_layout)
 
         self._preview_splitter.addWidget(extracted_group)
         self._preview_splitter.addWidget(cleaned_group)
         self._preview_splitter.setStretchFactor(0, 1)
-        self._preview_splitter.setStretchFactor(1, 1)
+        self._preview_splitter.setStretchFactor(1, 2)
         layout.addWidget(self._preview_splitter, 6)
 
         status_group = QWidget(self)
@@ -204,6 +235,8 @@ class TextCleanupPage(QWidget):
         can_extract: bool,
         can_clean: bool,
         can_ai_clean: bool,
+        can_apply_ai_spacing: bool = False,
+        selected_spacing_categories: list[str] | None = None,
     ) -> None:
         """
         @brief      Refresh the page from extraction-state inputs.
@@ -213,20 +246,30 @@ class TextCleanupPage(QWidget):
         @param[in]  can_extract True when extraction may run.
         @param[in]  can_clean True when deterministic cleanup may run.
         @param[in]  can_ai_clean True when AI-assisted cleanup may run.
+        @param[in]  can_apply_ai_spacing True when retained AI decisions can be reapplied.
+        @param[in]  selected_spacing_categories Persisted complete non-story spacing selection.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.4.1
+        @version    0.5.0
         """
         self._can_extract = can_extract
         self._can_clean = can_clean
         self._can_ai_clean = can_ai_clean
+        self._can_apply_ai_spacing = can_apply_ai_spacing
         self._has_cleaned_text = bool((cleaned_text or "").strip())
         self._editing_cleaned_text = False
         self._extracted_text_edit.setPlainText(extracted_text or "")
         self._cleaned_text_edit.setPlainText(cleaned_text or "")
         self._cleaned_text_edit.setReadOnly(True)
+        selected_categories = (
+            _DEFAULT_SPACING_CATEGORIES
+            if selected_spacing_categories is None
+            else {str(category) for category in selected_spacing_categories}
+        )
+        for category, checkbox in self._spacing_checkboxes.items():
+            checkbox.setChecked(category in selected_categories)
         self._status_edit.setPlainText("\n".join(notes))
         self._apply_button_state()
 
@@ -314,6 +357,17 @@ class TextCleanupPage(QWidget):
         current_value = self._ai_profile_combo.currentData()
         return None if current_value in (None, "") else str(current_value)
 
+    def current_spacing_categories(self) -> list[str]:
+        """
+        @brief      Return the complete selected non-story AI spacing category list.
+        @return     Selected category names in stable display order.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
+        return [category for category in _SPACING_CATEGORY_ORDER if self._spacing_checkboxes[category].isChecked()]
+
     def set_busy(self, is_busy: bool, operation_name: str | None = None) -> None:
         """
         @brief      Disable page actions while one long-running operation is active.
@@ -336,7 +390,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.4.0
+        @version    0.5.0
         """
         self._extract_button.setEnabled(self._project_active and self._can_extract and not self._busy)
         self._clean_button.setEnabled(self._project_active and self._can_clean and not self._busy)
@@ -356,6 +410,17 @@ class TextCleanupPage(QWidget):
         self._save_cleaned_button.setEnabled(
             self._project_active and self._has_cleaned_text and not self._busy and self._editing_cleaned_text
         )
+        spacing_enabled = (
+            self._project_active
+            and self._has_cleaned_text
+            and self._can_apply_ai_spacing
+            and not self._busy
+            and not self._editing_cleaned_text
+        )
+        self._spacing_label.setEnabled(spacing_enabled)
+        self._apply_spacing_button.setEnabled(spacing_enabled)
+        for checkbox in self._spacing_checkboxes.values():
+            checkbox.setEnabled(spacing_enabled)
 
     def _apply_preview_splitter_minimums(self) -> None:
         """
@@ -384,7 +449,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-06-09
-        @version    0.5.2
+        @version    0.6.0
         """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>")
@@ -394,6 +459,10 @@ class TextCleanupPage(QWidget):
         self._ai_clean_button.setText(ui_state_service.translate("text_cleanup.ai_clean", language))
         self._edit_cleaned_button.setText(ui_state_service.translate("text_cleanup.edit_cleaned", language))
         self._save_cleaned_button.setText(ui_state_service.translate("text_cleanup.save_cleaned", language))
+        self._spacing_label.setText(ui_state_service.translate("text_cleanup.spacing_label", language))
+        self._apply_spacing_button.setText(ui_state_service.translate("text_cleanup.apply_spacing", language))
+        for category, checkbox in self._spacing_checkboxes.items():
+            checkbox.setText(ui_state_service.translate(f"text_cleanup.spacing_{category}", language))
         self._extracted_group.setTitle(ui_state_service.translate("text_cleanup.extracted_group", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_cleanup.cleaned_group", language))
         if not self._has_ai_profiles:
@@ -414,6 +483,18 @@ class TextCleanupPage(QWidget):
         profile_id = self.current_ai_profile_id()
         if profile_id is not None:
             self.ai_clean_requested.emit(profile_id)
+
+    def _emit_apply_spacing_requested(self) -> None:
+        """
+        @brief      Emit one retained AI Cleanup spacing reapplication request.
+        @return     None.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
+        if self._can_apply_ai_spacing and not self._busy and not self._editing_cleaned_text:
+            self.apply_spacing_requested.emit(self.current_spacing_categories())
 
     def _install_preview_find_context_menu(self, editor: QPlainTextEdit) -> None:
         """

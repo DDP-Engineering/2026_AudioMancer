@@ -20,7 +20,7 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QGroupBox, QMessageBox, QWidget
+from PySide6.QtWidgets import QGridLayout, QGroupBox, QMessageBox, QWidget
 
 from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
@@ -327,6 +327,97 @@ def test_text_cleanup_page_emits_selected_ai_profile(qtbot) -> None:
     page._ai_clean_button.click()
 
     assert emitted_profile_ids == ["profile_2"]
+
+
+def test_text_cleanup_page_exposes_selectable_ai_spacing_controls(qtbot) -> None:
+    """
+    @brief      Verify AISP-003 and REQ-UX-036 spacing controls and multi-selection signal.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_processing_state(
+        extracted_text="Raw text",
+        cleaned_text="Clean text",
+        notes=["AI cleanup completed"],
+        can_extract=True,
+        can_clean=True,
+        can_ai_clean=True,
+        can_apply_ai_spacing=True,
+        selected_spacing_categories=["heading", "separator"],
+    )
+
+    assert list(page._spacing_checkboxes) == ["heading", "separator", "noise", "header", "footer"]
+    assert "story" not in page._spacing_checkboxes
+    assert page.current_spacing_categories() == ["heading", "separator"]
+    assert all(page._spacing_selector_layout.indexOf(widget) >= 0 for widget in page._spacing_checkboxes.values())
+    assert page._cleaned_controls_layout.indexOf(page._apply_spacing_button) >= 0
+    assert page._cleaned_controls_layout.indexOf(page._edit_cleaned_button) >= 0
+    assert page._cleaned_controls_layout.indexOf(page._save_cleaned_button) >= 0
+    assert page._apply_spacing_button.isEnabled() is True
+
+    emitted_selections: list[list[str]] = []
+    page.apply_spacing_requested.connect(emitted_selections.append)
+    page._spacing_checkboxes["noise"].setChecked(True)
+    page._apply_spacing_button.click()
+
+    assert emitted_selections == [["heading", "separator", "noise"]]
+    page.set_busy(True)
+    assert page._apply_spacing_button.isEnabled() is False
+    assert all(checkbox.isEnabled() is False for checkbox in page._spacing_checkboxes.values())
+
+
+def test_text_cleanup_page_uses_two_row_spacing_and_action_grid(qtbot) -> None:
+    """
+    @brief      Verify AICU-005 and REQ-UX-036 exact two-row cleaned-preview controls.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.2.0
+    """
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.resize(1040, 660)
+    page.show()
+    qtbot.waitUntil(page.isVisible)
+    qtbot.wait(10)
+
+    controls = page._cleaned_controls_layout
+
+    def _position(widget) -> tuple[int, int, int, int]:
+        """
+        @brief      Return the grid position occupied by one cleaned-preview control.
+        @param[in]  widget Control registered in the cleaned-preview grid.
+        @return     Row, column, row-span, and column-span tuple.
+        @exception  AssertionError Raised when the control is absent.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
+        index = controls.indexOf(widget)
+        assert index >= 0
+        return controls.getItemPosition(index)
+
+    assert isinstance(controls, QGridLayout)
+    assert controls.rowCount() == 2
+    assert _position(page._spacing_label) == (0, 0, 1, 1)
+    assert _position(page._spacing_checkboxes["heading"]) == (0, 1, 1, 1)
+    assert _position(page._spacing_checkboxes["separator"]) == (0, 2, 1, 1)
+    assert _position(page._edit_cleaned_button) == (0, 4, 1, 1)
+    assert _position(page._apply_spacing_button) == (1, 0, 1, 1)
+    assert _position(page._spacing_checkboxes["noise"]) == (1, 1, 1, 1)
+    assert _position(page._spacing_checkboxes["header"]) == (1, 2, 1, 1)
+    assert _position(page._spacing_checkboxes["footer"]) == (1, 3, 1, 1)
+    assert _position(page._save_cleaned_button) == (1, 4, 1, 1)
+    assert controls.minimumSize().width() <= page._cleaned_group.width()
 
 
 # END OF FILE

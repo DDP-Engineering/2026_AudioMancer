@@ -12,11 +12,11 @@
 @brief AI-assisted text cleanup service for AudioMancer.
 @details Presents each cleanup window as one canonical source string, validates
          every returned block as an exact forward source slice, restores omitted
-         whitespace, renders artifacts deterministically, and persists
-         resumable operator-review evidence.
+         whitespace, renders artifacts with an operator-selectable spacing set,
+         and persists resumable operator-review evidence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-15
-@version 1.2.0
+@version 1.3.0
 """
 
 # IMPORTS
@@ -44,6 +44,7 @@ from audiomancer.services.operation_runtime_service import (
     build_operation_state_payload,
     load_operation_state_file,
     load_operation_state_payload,
+    load_optional_json_artifact,
     raise_if_cancelled,
     relative_to_project,
 )
@@ -56,12 +57,13 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 _LOGGER = get_component_logger("ai_cleanup")
 _PAGE_SEPARATOR = "\n\f\n\n"
 _CONTRACT_FINGERPRINT = hashlib.sha256(
-    b"window_id|all-blocks-exact|whitespace:restore-exact|artifact-output:header-empty,footer-empty,noise-empty,separator-two-lf,heading-two-lf,story-exact|confidence:high,medium,low"
+    b"window_id|all-blocks-exact-with-source-ranges|whitespace:restore-exact|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator,story-exact|confidence:high,medium,low"
 ).hexdigest()
 _SYSTEM_PROMPT_NAME = "text_cleanup_system"
 _USER_PROMPT_NAME = "text_cleanup_user"
 _ARTIFACT_TYPES = frozenset({"header", "footer", "noise", "separator", "heading", "story"})
 _NON_DISPLAY_ARTIFACT_TYPES = _ARTIFACT_TYPES - {"story"}
+_DEFAULT_SPACING_CATEGORIES = frozenset({"heading", "separator"})
 _ARTIFACT_REPLACEMENTS = {
     "header": "",
     "footer": "",
@@ -80,6 +82,123 @@ ValidatedWindowPayload = dict[str, object]
 
 
 # PUBLIC API
+
+
+def default_spacing_categories() -> list[str]:
+    """
+    @brief      Return the deterministic default AI Cleanup spacing selection.
+    @return     Sorted non-story category names selected by default.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    return sorted(_DEFAULT_SPACING_CATEGORIES)
+
+
+def selected_spacing_categories(report_payload: dict[str, object] | None) -> list[str]:
+    """
+    @brief      Return a compatible report's persisted spacing selection or the default.
+    @param[in]  report_payload Optional AI Cleanup report payload.
+    @return     Sorted validated non-story spacing categories.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    if not isinstance(report_payload, dict):
+        return default_spacing_categories()
+    try:
+        return sorted(_normalize_spacing_categories(report_payload.get("selected_spacing_categories", [])))
+    except ValueError:
+        return default_spacing_categories()
+
+
+def spacing_selection_available(report_payload: dict[str, object] | None) -> bool:
+    """
+    @brief      Return whether a report supports deterministic spacing reapplication.
+    @param[in]  report_payload Optional cleanup report payload.
+    @return     True for one current compatible completed AI Cleanup report.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    if not isinstance(report_payload, dict):
+        return False
+    if report_payload.get("cleanup_mode") != "ai_assisted":
+        return False
+    if report_payload.get("reconstruction_contract_fingerprint") != _CONTRACT_FINGERPRINT:
+        return False
+    decisions = report_payload.get("validated_window_decisions")
+    if not isinstance(decisions, list) or not decisions or not all(isinstance(item, dict) for item in decisions):
+        return False
+    try:
+        _normalize_spacing_categories(report_payload.get("selected_spacing_categories", []))
+        for decision in decisions:
+            _render_validated_window(dict(decision), _DEFAULT_SPACING_CATEGORIES)
+    except (KeyError, TypeError, ValueError):
+        return False
+    return True
+
+
+@trace_function(_LOGGER)
+def apply_spacing_selection(
+    project_root: str | Path,
+    selected_categories: object,
+) -> CleanupReportPayload:
+    """
+    @brief      Rebuild and persist cleaned text from retained AI decisions.
+    @param[in]  project_root Active project root folder.
+    @param[in]  selected_categories Complete selected non-story category collection.
+    @return     Updated persisted AI Cleanup report payload.
+    @exception  ValueError Raised when the selection or retained report is incompatible.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    root = Path(project_root)
+    spacing_categories = _normalize_spacing_categories(selected_categories)
+    report_path = build_operation_output_path(root, "cleanup", config.CLEANUP_REPORT_FILE_NAME)
+    raw_report = load_optional_json_artifact(report_path)
+    report = dict(raw_report) if isinstance(raw_report, dict) else None
+    if not spacing_selection_available(report):
+        raise ValueError("Compatible completed AI Cleanup decisions are unavailable for spacing reapplication.")
+
+    raw_decisions = report.get("validated_window_decisions", [])
+    rendered_decisions = [
+        _render_validated_window(dict(decision), spacing_categories)
+        for decision in raw_decisions
+        if isinstance(decision, dict)
+    ]
+    cleaned_text = "".join(str(decision["reconstructed_text"]) for decision in rendered_decisions)
+    if not cleaned_text.strip():
+        raise ValueError("The selected AI Cleanup spacing policy removed all usable text.")
+
+    output_path = build_operation_output_path(root, "cleanup", config.CLEANED_TEXT_FILE_NAME)
+    write_text_atomic(output_path, cleaned_text)
+    cleanup_metadata = cleanup_metadata_service.write_minimal_cleanup_metadata(root, cleaned_text, "ai_assisted")
+    paragraphs = [part.strip() for part in re.split(r"\n[ \t]*\n+", cleaned_text.strip()) if part.strip()]
+    report["validated_window_decisions"] = rendered_decisions
+    report["selected_spacing_categories"] = sorted(spacing_categories)
+    report["paragraph_count"] = len(paragraphs)
+    report["detected_language"] = cleanup_text_analysis_service.detect_language(cleaned_text)
+    report["detected_chapter_count"] = cleanup_text_analysis_service.count_detected_chapters(paragraphs)
+    report["page_break_repair_count"] = int(cleanup_metadata.get("page_break_repair_count", 0))
+    report["weak_boundary_count"] = int(cleanup_metadata.get("weak_boundary_count", 0))
+    report["spacing_replacement_count"] = sum(
+        1
+        for decision in rendered_decisions
+        for item in list(decision.get("removed_ranges", []))
+        if isinstance(item, dict) and item.get("replacement") == "\n\n"
+    )
+    write_json_atomic(report_path, report)
+    _LOGGER.info(
+        "Applied AI cleanup spacing categories=%s replacements=%d",
+        ",".join(sorted(spacing_categories)) or "none",
+        report["spacing_replacement_count"],
+    )
+    return report
 
 
 @trace_function(_LOGGER)
@@ -335,6 +454,8 @@ def clean_text(
         "page_break_repair_count": int(cleanup_metadata.get("page_break_repair_count", 0)),
         "weak_boundary_count": int(cleanup_metadata.get("weak_boundary_count", 0)),
         "cleanup_mode": "ai_assisted",
+        "reconstruction_contract_fingerprint": _CONTRACT_FINGERPRINT,
+        "selected_spacing_categories": default_spacing_categories(),
         "ai_profile_id": profile_id,
         "model_settings": model_settings,
         "model_settings_history": model_settings_history,
@@ -344,6 +465,12 @@ def clean_text(
         "source_page_count": len(pages),
         "preserved_block_count": len(preserved_blocks),
         "artifact_replacement_count": artifact_replacement_count,
+        "spacing_replacement_count": sum(
+            1
+            for decision in completed_windows
+            for item in list(decision.get("removed_ranges", []))
+            if isinstance(item, dict) and item.get("replacement") == "\n\n"
+        ),
         "token_usage": token_usage,
         "budget_metadata": budget_metadata,
         "additional_cleanup_instructions": instructions,
@@ -647,7 +774,13 @@ def _validate_response(
             removed_ranges.append(_removed_range(match_index, block_end, exact_text, block))
             output_fragments.append(_ARTIFACT_REPLACEMENTS[str(block["artifact_type"])])
         else:
-            preserved_blocks.append(dict(block))
+            preserved_blocks.append(
+                {
+                    **block,
+                    "source_window_start": match_index,
+                    "source_window_end": block_end,
+                }
+            )
             preserved_spans.append((match_index, block_end))
             output_fragments.append(exact_text)
         cursor = block_end
@@ -719,7 +852,7 @@ def _validate_response(
             }
         )
     warning_details.extend(_repeated_classification_warnings(preserved_blocks, removed_ranges))
-    return {
+    validated_window = {
         "preserved_blocks": preserved_blocks,
         "reconstructed_text": "".join(output_fragments),
         "removed_ranges": removed_ranges,
@@ -730,7 +863,111 @@ def _validate_response(
         "artifact_replacement_count": len(removed_ranges),
         "warning_details": warning_details,
         "response_block_count": len(normalized_blocks),
+        "source_window_length": len(source_text),
     }
+    return _render_validated_window(validated_window, _DEFAULT_SPACING_CATEGORIES)
+
+
+def _render_validated_window(
+    window_payload: ValidatedWindowPayload,
+    selected_categories: object,
+) -> ValidatedWindowPayload:
+    """
+    @brief      Reconstruct one retained validated window for a complete spacing selection.
+    @param[in]  window_payload Retained exact-source validation decision payload.
+    @param[in]  selected_categories Complete selected non-story category collection.
+    @return     Copied window payload with updated replacements and reconstructed text.
+    @exception  ValueError Raised when retained ranges are missing, overlapping, or incompatible.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    spacing_categories = _normalize_spacing_categories(selected_categories)
+    source_length = window_payload.get("source_window_length")
+    if type(source_length) is not int or source_length < 0:
+        raise ValueError("Retained AI Cleanup window length is missing or invalid.")
+
+    fragments: list[tuple[int, int, str]] = []
+    rendered_ranges: list[dict[str, object]] = []
+    for raw_range in list(window_payload.get("removed_ranges", [])):
+        if not isinstance(raw_range, dict):
+            raise ValueError("Retained AI Cleanup artifact range is invalid.")
+        decision = raw_range.get("decision")
+        if not isinstance(decision, dict):
+            raise ValueError("Retained AI Cleanup artifact decision is missing.")
+        artifact_type = str(decision.get("artifact_type", ""))
+        replacement = "\n\n" if artifact_type in spacing_categories else ""
+        rendered_range = {**raw_range, "replacement": replacement}
+        rendered_ranges.append(rendered_range)
+        fragments.append(
+            (
+                int(rendered_range["source_window_start"]),
+                int(rendered_range["source_window_end"]),
+                replacement,
+            )
+        )
+
+    for raw_block in list(window_payload.get("preserved_blocks", [])):
+        if not isinstance(raw_block, dict):
+            raise ValueError("Retained AI Cleanup story block is invalid.")
+        fragments.append(
+            (
+                int(raw_block["source_window_start"]),
+                int(raw_block["source_window_end"]),
+                str(raw_block["text_block"]),
+            )
+        )
+
+    for raw_gap in list(window_payload.get("restored_whitespace_ranges", [])):
+        if not isinstance(raw_gap, dict):
+            raise ValueError("Retained AI Cleanup whitespace range is invalid.")
+        fragments.append(
+            (
+                int(raw_gap["source_window_start"]),
+                int(raw_gap["source_window_end"]),
+                "",
+            )
+        )
+
+    fragments.sort(key=lambda item: (item[0], item[1]))
+    cursor = 0
+    output_fragments: list[str] = []
+    for start, end, output_text in fragments:
+        if start != cursor or end <= start:
+            raise ValueError("Retained AI Cleanup source ranges are incomplete or overlapping.")
+        cursor = end
+        output_fragments.append(output_text)
+    if cursor != source_length:
+        raise ValueError("Retained AI Cleanup source ranges do not cover the validated window.")
+
+    return {
+        **window_payload,
+        "removed_ranges": rendered_ranges,
+        "reconstructed_text": "".join(output_fragments),
+        "selected_spacing_categories": sorted(spacing_categories),
+    }
+
+
+def _normalize_spacing_categories(selected_categories: object) -> frozenset[str]:
+    """
+    @brief      Validate one complete non-story AI Cleanup spacing selection.
+    @param[in]  selected_categories Raw selected category collection.
+    @return     Normalized immutable category set.
+    @exception  ValueError Raised for scalar, unknown, or story selections.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    if isinstance(selected_categories, (str, bytes)) or not isinstance(
+        selected_categories,
+        (list, tuple, set, frozenset),
+    ):
+        raise ValueError("AI Cleanup spacing categories must be a collection.")
+    normalized = frozenset(str(item).strip().casefold() for item in selected_categories if str(item).strip())
+    unsupported = normalized - _NON_DISPLAY_ARTIFACT_TYPES
+    if unsupported:
+        raise ValueError(f"Unsupported AI Cleanup spacing categories: {', '.join(sorted(unsupported))}.")
+    return normalized
 
 
 def _removed_range(
@@ -755,7 +992,7 @@ def _removed_range(
         "source_window_start": start,
         "source_window_end": end,
         "text": text,
-        "replacement": _ARTIFACT_REPLACEMENTS[str(block["artifact_type"])],
+        "replacement": "\n\n" if block["artifact_type"] in _DEFAULT_SPACING_CATEGORIES else "",
         "decision": {
             "text_block_id": block["text_block_id"],
             "artifact_type": block["artifact_type"],

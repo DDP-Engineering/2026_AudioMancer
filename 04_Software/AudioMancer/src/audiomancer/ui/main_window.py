@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-23
-@version 1.47.8
+@version 1.48.0
 """
 
 # IMPORTS
@@ -792,6 +792,12 @@ class MainWindow(QMainWindow):
             lambda profile_id: text_cleanup_ui_controller.handle_ai_cleanup_requested(
                 self,
                 profile_id,
+            )
+        )
+        self._text_cleanup_page.apply_spacing_requested.connect(
+            lambda selected_categories: text_cleanup_ui_controller.handle_apply_ai_cleanup_spacing_requested(
+                self,
+                selected_categories,
             )
         )
         self._text_cleanup_page.save_cleaned_text_requested.connect(

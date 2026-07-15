@@ -10,12 +10,12 @@
 @file text_cleanup_ui_controller.py
 @brief Text Cleanup page UI controller for AudioMancer.
 @details Handles extraction, deterministic cleanup, and AI-assisted cleanup
-         workflows, including manual cleaned-text saves, progress dialog
-         lifecycle, cancellation, rerun confirmations, and manifest
-         synchronization for the Text Cleanup page.
+         workflows, including retained AI spacing reapplication, manual
+         cleaned-text saves, progress dialog lifecycle, cancellation, rerun
+         confirmations, and manifest synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.4
+@version 0.10.0
 """
 
 # IMPORTS
@@ -167,7 +167,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-30
-    @version    0.5.2
+    @version    0.6.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -216,6 +216,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
             return
         additional_cleanup_instructions = prompt_ai_cleanup_instructions(window, current_language)
         if additional_cleanup_instructions is None:
+            window._text_cleanup_page.set_busy(False)
             return
         if cleanup_status == "completed":
             if not confirm_ai_cleanup_rerun(window, current_language):
@@ -290,6 +291,45 @@ def handle_save_cleaned_text_requested(window: "MainWindow", cleaned_text: str) 
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.cleaned_text_saved", current_language),
+    )
+
+
+def handle_apply_ai_cleanup_spacing_requested(
+    window: "MainWindow",
+    selected_categories: list[str],
+) -> None:
+    """
+    @brief      Reapply retained AI Cleanup decisions with the selected spacing categories.
+    @param[in]  window Active main window shell.
+    @param[in]  selected_categories Complete selected non-story category list.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    preview_scroll_state = window._text_cleanup_page.preview_scroll_state()
+    try:
+        updated_manifest = text_cleanup_state_service.apply_ai_cleanup_spacing(
+            window._current_project_root,
+            window._current_manifest,
+            selected_categories,
+        )
+    except ValueError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    window.show_project_state(window._current_project_root, updated_manifest)
+    window._text_cleanup_page.restore_preview_scroll_state(preview_scroll_state)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.ai_cleanup_spacing_applied", current_language),
     )
 
 

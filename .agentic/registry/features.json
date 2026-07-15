@@ -1,37 +1,30 @@
 {
-  "change-2026-07-14T201113Z-fad3760c": {
+  "change-2026-07-15T111333Z-46add1a2": {
     "check_ids": [
-      "CHECK-AICR-001",
-      "CHECK-AICR-002",
-      "CHECK-AICR-003",
-      "CHECK-AICR-004"
+      "CHECK-REL-1-6-5"
     ],
     "intent": {
-      "created_at": "2026-07-14T20:11:13+00:00",
+      "created_at": "2026-07-15T11:13:33+00:00",
       "id": "I-0001",
       "kind": "change",
       "scope_hint": [],
-      "statement": "Deterministically replace every header, footer, noise, separator, and heading AI Cleanup block with exactly two newline characters while retaining story text in source order.",
+      "statement": "Prepare AudioMancer 1.6.5 release metadata for the completed AI Cleanup selectable-spacing work: update CHANGELOG, project/package/lock/test versions, and English/Romanian offline help versions and cleanup guidance.",
       "status": "draft"
     },
-    "report_path": ".agentic/runs/change-2026-07-14T201113Z-fad3760c/report.md",
-    "run_id": "change-2026-07-14T201113Z-fad3760c",
+    "report_path": ".agentic/runs/change-2026-07-15T111333Z-46add1a2/report.md",
+    "run_id": "change-2026-07-15T111333Z-46add1a2",
     "spec_ids": [
-      "SPEC-AICR-001",
-      "SPEC-AICR-002",
-      "SPEC-AICR-003",
-      "SPEC-AICR-004"
+      "REL-1-6-5"
     ],
     "stage": "validation",
     "touched_paths": [
-      ".agentic/knowledge/components/ai_cleanup.md",
-      ".agentic/requirements/functional.md",
-      "04_Software/AudioMancer/prompts/text_cleanup_system.txt",
-      "04_Software/AudioMancer/prompts/text_cleanup_user.txt",
-      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
-      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
-      "04_Software/AudioMancer/tests/test_ai_cleanup_service.py",
-      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
+      "04_Software/AudioMancer/pyproject.toml",
+      "04_Software/AudioMancer/src/audiomancer/__init__.py",
+      "04_Software/AudioMancer/tests/test_package_import.py",
+      "04_Software/AudioMancer/uv.lock",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html",
+      "CHANGELOG.md"
     ]
   }
 }

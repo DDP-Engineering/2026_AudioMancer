@@ -1,0 +1,250 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "Every current release-version surface reads 1.6.5; the changelog accurately summarizes the delivered cleanup work; both help bundles identify help and application version 1.6.5 and explain selectable spacing; version smoke and documentation checks pass; delivery preflight passes."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-15T11:13:56+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "CHANGELOG.md",
+      "04_Software/AudioMancer/pyproject.toml",
+      "04_Software/AudioMancer/src/audiomancer/__init__.py",
+      "04_Software/AudioMancer/uv.lock",
+      "04_Software/AudioMancer/tests/test_package_import.py",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html"
+    ],
+    "reason": "This is a coordinated patch-version metadata and operator-documentation update following accepted implementation, with deterministic cross-file validation and no external release action.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "CHANGELOG.md, AudioMancer package metadata and lockfile, package version smoke test, and English/Romanian offline help indexes. No packaging, archive generation, Git tag, commit, push, PR, or publication."
+    ],
+    "source": "User approval of implementation followed by request to update changelog and assign versions to the project and help files on 2026-07-15.",
+    "understanding": "Assign AudioMancer version 1.6.5 as the next patch release, create a dated 1.6.5 changelog entry for the completed AI Cleanup selector, spacing, cancellation, and layout work, keep pyproject/package/uv.lock/test metadata aligned, and version plus update both offline help bundles to describe the operator-facing controls."
+  },
+  "change_units": [
+    {
+      "evidence": [],
+      "id": "REL-1-6-5",
+      "touched_paths": [
+        "CHANGELOG.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REL-1-6-5",
+      "touched_paths": [
+        "04_Software/AudioMancer/pyproject.toml"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REL-1-6-5",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/__init__.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REL-1-6-5",
+      "touched_paths": [
+        "04_Software/AudioMancer/uv.lock"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REL-1-6-5",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_package_import.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REL-1-6-5",
+      "touched_paths": [
+        "05_SoftwareDocu/UserGuide/index.html"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REL-1-6-5",
+      "touched_paths": [
+        "05_SoftwareDocu/UserGuide_ro/index.html"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-TEST-001",
+        "REQ-REL-003"
+      ],
+      "cites_spec": [
+        "REL-1-6-5"
+      ],
+      "command": "uv run pytest -q -p no:cacheprovider tests/test_package_import.py",
+      "green_evidence": "E-0002",
+      "id": "CHECK-REL-1-6-5",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_package_import.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    }
+  ],
+  "decisions": [],
+  "defects": [],
+  "evidence": [
+    {
+      "command": "uv run pytest -q -p no:cacheprovider tests/test_package_import.py",
+      "created_at": "2026-07-15T11:15:41+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_package_import.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Version smoke test fails as expected: test/help contract expects 1.6.5 while package export and remaining release surfaces still report 1.6.4.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --frozen --no-sync pytest -q -p no:cacheprovider tests/test_package_import.py",
+      "created_at": "2026-07-15T11:19:32+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_package_import.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "AudioMancer 1.6.5 release smoke passed: pyproject, package export, lockfile, test expectation, and both offline help version surfaces align.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "rg -n 1.6.4 <release metadata and help files>",
+      "created_at": "2026-07-15T11:19:32+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "scan",
+      "path": "CHANGELOG.md;04_Software/AudioMancer;05_SoftwareDocu/UserGuide;05_SoftwareDocu/UserGuide_ro",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Release-surface scan confirms current metadata and both help bundles use 1.6.5; 1.6.4 remains only in historical changelog entries and unrelated internal source documentation versions.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --frozen --no-sync pytest -q -p no:cacheprovider tests/test_package_import.py <five help lifecycle tests>",
+      "created_at": "2026-07-15T11:20:34+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_package_import.py;04_Software/AudioMancer/tests/test_main_window_lifecycle.py",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Release metadata and offline-help integration validation passed: 6 tests cover aligned 1.6.5 metadata and English/Romanian help resolution/opening.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "audit_documentation.py --changed-only; audit_codestyle.py --changed-only; ruff check; ruff format --check; py_compile; git diff --check",
+      "created_at": "2026-07-15T11:20:34+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "scan",
+      "path": "CHANGELOG.md;04_Software/AudioMancer;05_SoftwareDocu/UserGuide;05_SoftwareDocu/UserGuide_ro",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed-only documentation and Python codestyle audits report no issues; Ruff check/format, py_compile, encoding inspection, and diff whitespace check pass.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-15T11:20:35+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-15T11:20:35+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-15T11:20:36+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-15T11:20:36+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-15T11:13:33+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [],
+    "statement": "Prepare AudioMancer 1.6.5 release metadata for the completed AI Cleanup selectable-spacing work: update CHANGELOG, project/package/lock/test versions, and English/Romanian offline help versions and cleanup guidance.",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-15T111333Z-46add1a2",
+  "spec_items": [
+    {
+      "examples": [
+        "pyproject.toml, audiomancer.__version__, uv.lock, EXPECTED_VERSION, both help titles/version boxes, and CHANGELOG identify 1.6.5."
+      ],
+      "id": "REL-1-6-5",
+      "statement": "AudioMancer release metadata, package export, lockfile, version smoke expectation, and English/Romanian help version labels shall align at 1.6.5, with a dated changelog entry and help guidance for the delivered AI Cleanup spacing controls.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

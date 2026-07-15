@@ -1635,13 +1635,14 @@
   },
   "REQ-FUNC-058": {
     "created_on": "2026-07-14 20:55",
-    "last_updated": "2026-07-14 20:31",
+    "last_updated": "2026-07-15 09:05",
     "line_number": 69,
     "linked_tests": [
-      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_restored_exactly"
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_retained_for_spacing_rendering",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering"
     ],
     "priority": "Must",
-    "rationale": "Makes paragraph and spacing preservation independent of whether the model includes separators inside adjacent block text while rejecting invented, changed, overlapping, reordered, or unexplained non-whitespace content.",
+    "rationale": "Preserves source validation and review provenance independently of whether the model includes separators inside adjacent block text while rejecting invented, changed, overlapping, reordered, or unexplained non-whitespace content.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/prompts/text_cleanup_system.txt",
@@ -1649,35 +1650,36 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-058",
-    "requirement": "AI Cleanup shall accept only responses whose window identity, sequential block IDs, non-empty text, six artifact types, and confidence values are valid; the provider contract shall contain no version, action, page, or segment identity, every response block shall match an exact non-overlapping forward slice of the window's once-canonicalized source string, every omitted gap shall contain whitespace only, and that exact canonical whitespace shall be restored at its source position in reconstructed output.",
+    "requirement": "AI Cleanup shall accept only responses whose window identity, sequential block IDs, non-empty text, six artifact types, and confidence values are valid; the provider contract shall contain no version, action, page, or segment identity, every response block shall match an exact non-overlapping forward slice of the window's once-canonicalized source string, and every omitted gap shall contain whitespace only and remain retained with its exact canonical coordinates for deterministic reconstruction.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused exact whitespace reconstruction test passes in the pinned uv environment."
+    "verification": "Focused whitespace-gap validation and retained-decision rendering tests pass in the pinned uv environment."
   },
   "REQ-FUNC-059": {
     "created_on": "2026-07-14 19:20",
-    "last_updated": "2026-07-14 21:34",
+    "last_updated": "2026-07-15 09:05",
     "line_number": 70,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering"
     ],
     "priority": "Must",
-    "rationale": "Deterministically preserves structural paragraph boundaries only for separators and headings while fully removing display noise, without allowing model-generated replacement text or confidence to change output behavior.",
+    "rationale": "Lets the operator choose every non-Story source of blank-line spacing without allowing model-generated replacement text or confidence to change output behavior.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
       "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-059",
-    "requirement": "AI Cleanup shall classify each exact source block as `header`, `footer`, `noise`, `separator`, `heading`, or `story`; `story` shall emit its exact source slice, `separator` and `heading` shall each emit exactly two LF characters, and `header`, `footer`, and `noise` shall emit nothing, in response order and regardless of confidence. Confidence remains review metadata and no action field is used.",
+    "requirement": "AI Cleanup shall classify each exact source block as `header`, `footer`, `noise`, `separator`, `heading`, or `story`; `story` shall always emit its exact source slice, while each non-story block shall emit exactly two LF characters when its category belongs to the complete operator-selected spacing set and shall emit nothing otherwise, in response order and regardless of confidence. Whitespace-only gaps between retained blocks shall emit no spacing, so an empty selection removes all controllable inter-block blank lines. The default spacing set shall be `heading` plus `separator`; confidence remains review metadata and no action field is used.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused deterministic artifact rendering test passes in the pinned uv environment."
+    "verification": "Focused selectable artifact and whitespace-gap rendering tests pass in the pinned uv environment."
   },
   "REQ-FUNC-060": {
     "created_on": "2026-07-14 20:55",
-    "last_updated": "2026-07-14 20:31",
+    "last_updated": "2026-07-15 09:12",
     "line_number": 71,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators"
@@ -1694,10 +1696,31 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-060",
-    "requirement": "AI Cleanup shall canonicalize CRLF to LF once, present each page-aware or safely segmented window exactly once through `text_cleanup_system` and `text_cleanup_user`, reconstruct final output from validated source positions without trimming or collapsing restored whitespace or deterministic artifact separators, checkpoint only fully validated current-contract windows, reject incompatible or changed-input checkpoints using an internal contract fingerprint, and retain review artifacts and resumable progress. No legacy response, prompt, taxonomy, checkpoint, or public-entry-point compatibility is required.",
+    "requirement": "AI Cleanup shall canonicalize CRLF to LF once, present each page-aware or safely segmented window exactly once through `text_cleanup_system` and `text_cleanup_user`, reconstruct final output from complete validated source positions using exact Story slices and the operator-selected artifact spacing policy, checkpoint only fully validated current-contract windows, reject incompatible or changed-input checkpoints using an internal contract fingerprint, and retain review artifacts and resumable progress. No legacy response, prompt, taxonomy, checkpoint, or public-entry-point compatibility is required.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
     "verification": "Focused final assembly integration test passes in the pinned uv environment."
+  },
+  "REQ-FUNC-061": {
+    "created_on": "2026-07-15 07:42",
+    "last_updated": "2026-07-15 09:05",
+    "line_number": 72,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider"
+    ],
+    "priority": "Must",
+    "rationale": "Lets operators compare and adjust category spacing safely without paying for another AI run, accumulating newlines, or overwriting later manual edits.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
+    ],
+    "req_id": "REQ-FUNC-061",
+    "requirement": "A completed compatible AI Cleanup shall retain enough validated source-position decisions to reapply any complete non-story spacing selection without another model request; reapplication shall be idempotent, persist the selected categories and rebuilt cleaned text, preserve exact Story text and source order, and reset non-preserved downstream outputs as a cleaned-text revision. Reapplication shall be unavailable after manual cleaned-text editing or when compatible completed AI decisions are absent.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Focused retained-decision spacing reapplication test passes in the pinned uv environment."
   },
   "REQ-NFR-001": {
     "created_on": "2026-06-09 09:50",
@@ -3395,5 +3418,46 @@
     "source_file": ".agentic/requirements/ux_workflow.md",
     "status": "Active",
     "verification": "Focused pytest run: tests/test_ai_settings_page.py::test_ai_settings_page_timeout_accepts_65535_seconds"
+  },
+  "REQ-UX-036": {
+    "created_on": "2026-07-15 07:42",
+    "last_updated": "2026-07-15 09:05",
+    "line_number": 47,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls",
+      "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_uses_two_row_spacing_and_action_grid",
+      "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_applies_spacing_and_refreshes_project_state"
+    ],
+    "priority": "Must",
+    "rationale": "Makes the AI Cleanup spacing policy visible and adjustable at the point where operators compare and review cleaned text while fitting the default desktop layout without compressing controls.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"
+    ],
+    "req_id": "REQ-UX-036",
+    "requirement": "The Cleaned Text Preview shall show independently selectable `Heading`, `Separator`, `Noise`, `Header`, and `Footer` spacing checkboxes in one two-row grid beneath the preview. Row one shall contain the Insert new line label, Heading, Separator, and Edit; row two shall contain Apply Spacing below the label, Noise, Header, Footer, and Save below Edit. It shall expose no `Story` checkbox, default Heading and Separator to selected, allow multiple selections, restore the persisted applied selection, and enable Apply Spacing only for compatible completed AI Cleanup output while the page is neither busy nor editing.",
+    "source_file": ".agentic/requirements/ux_workflow.md",
+    "status": "Active",
+    "verification": "Focused Text Cleanup page and controller spacing tests pass in the pinned uv environment."
+  },
+  "REQ-UX-037": {
+    "created_on": "2026-07-15 08:20",
+    "last_updated": "2026-07-15 06:33",
+    "line_number": 48,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_cancelled_optional_instructions_restore_action_state"
+    ],
+    "priority": "Must",
+    "rationale": "Prevents a cancelled optional prompt from leaving the operator unable to retry the AI Cleanup action.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py"
+    ],
+    "req_id": "REQ-UX-037",
+    "requirement": "Cancelling the optional AI Cleanup instructions dialog shall leave the Text Cleanup page ready to start AI-assisted cleanup whenever the normal project, extracted-text, and profile prerequisites still hold; it shall not start, reset, or mutate cleanup state.",
+    "source_file": ".agentic/requirements/ux_workflow.md",
+    "status": "Active",
+    "verification": "Focused Text Cleanup controller tests pass in the pinned uv environment."
   }
 }

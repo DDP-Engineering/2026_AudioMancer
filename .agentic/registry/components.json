@@ -5,7 +5,7 @@
       "adoption_status": "baseline-usable",
       "criticality": "high",
       "name": "ai_cleanup",
-      "notes": "Owns AI-assisted Text Cleanup selection, prompt/response validation, cleanup-specific budgeting, checkpoint/report integration, and operator review behavior. Exact shared support files are in scope only for cleanup-specific contracts. High criticality reflects semantic deletion risk; conservative removal policy, retained source artifacts, warnings, deterministic validation, and human review are required. Baseline established 2026-07-14 from active requirements, focused deterministic tests, component documentation, and clean traceability/coverage audits.",
+      "notes": "Owns AI-assisted Text Cleanup selection, prompt/response validation, operator-selected artifact spacing, cleanup-specific budgeting, checkpoint/report integration, and operator review behavior. Exact shared support files are in scope only for cleanup-specific contracts. High criticality reflects semantic deletion risk; conservative removal policy, retained source artifacts, warnings, deterministic validation, and human review are required. Baseline established 2026-07-14 from active requirements, focused deterministic tests, component documentation, and clean traceability/coverage audits.",
       "owner": "",
       "paths": [
         "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
@@ -13,7 +13,10 @@
         "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
         "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
         "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+        "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
         "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+        "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+        "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
         "04_Software/AudioMancer/src/audiomancer/config.py",
         "04_Software/AudioMancer/prompts/text_cleanup_system.txt",
         "04_Software/AudioMancer/prompts/text_cleanup_user.txt",
@@ -22,6 +25,7 @@
         "04_Software/AudioMancer/tests/test_ai_budget_service.py",
         "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py",
         "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
+        "04_Software/AudioMancer/tests/test_text_cleanup_page.py",
         "04_Software/AudioMancer/tests/test_atomic_io_contracts.py",
         "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md",
         ".agentic/knowledge/components/ai_cleanup.md",
@@ -33,6 +37,7 @@
         "04_Software/AudioMancer/tests/test_ai_budget_service.py",
         "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py",
         "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
+        "04_Software/AudioMancer/tests/test_text_cleanup_page.py",
         "04_Software/AudioMancer/tests/test_atomic_io_contracts.py"
       ]
     }

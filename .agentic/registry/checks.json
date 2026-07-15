@@ -186,9 +186,16 @@
       "REQ-FUNC-060"
     ]
   },
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider": {
+    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider",
+    "requirement_ids": [
+      "REQ-FUNC-061"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering": {
     "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering",
     "requirement_ids": [
+      "REQ-FUNC-058",
       "REQ-FUNC-059"
     ]
   },
@@ -198,8 +205,8 @@
       "REQ-NFR-019"
     ]
   },
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_restored_exactly": {
-    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_restored_exactly",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_retained_for_spacing_rendering": {
+    "id": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_retained_for_spacing_rendering",
     "requirement_ids": [
       "REQ-FUNC-058"
     ]
@@ -4411,6 +4418,12 @@
       "REQ-UX-026"
     ]
   },
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls": {
+    "id": "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls",
+    "requirement_ids": [
+      "REQ-UX-036"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_find_next_uses_last_preview_search": {
     "id": "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_find_next_uses_last_preview_search",
     "requirement_ids": [
@@ -4440,6 +4453,12 @@
     "requirement_ids": [
       "REQ-UX-026",
       "REQ-UX-032"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_uses_two_row_spacing_and_action_grid": {
+    "id": "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_uses_two_row_spacing_and_action_grid",
+    "requirement_ids": [
+      "REQ-UX-036"
     ]
   },
   "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_manifest_after_character_discovery_reset_can_preserve_narrator_definition": {
@@ -4500,6 +4519,18 @@
     "id": "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations",
     "requirement_ids": [
       "REQ-UX-027"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_applies_spacing_and_refreshes_project_state": {
+    "id": "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_applies_spacing_and_refreshes_project_state",
+    "requirement_ids": [
+      "REQ-UX-036"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_cancelled_optional_instructions_restore_action_state": {
+    "id": "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_cancelled_optional_instructions_restore_action_state",
+    "requirement_ids": [
+      "REQ-UX-037"
     ]
   },
   "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_extract_request_uses_controller_start": {

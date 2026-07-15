@@ -19,6 +19,8 @@
 
 # IMPORTS
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import text_cleanup_ui_controller
@@ -273,6 +275,95 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
     assert cleanup_call_kwargs[0]["additional_cleanup_instructions"] == "Keep glossary terms unchanged."
 
 
+def test_text_cleanup_ui_controller_cancelled_optional_instructions_restore_action_state(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify AICU-001 and REQ-UX-037 restore cleanup actions after prompt cancellation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ControllerAiCleanupPromptCancelProject",
+        tmp_path,
+    )
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    settings_payload = dict(default_settings_payload)
+    settings_payload["llm_profiles"] = [
+        {
+            "id": "profile_1",
+            "label": "Cleanup Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+            "discovered_model_name": "",
+            "discovered_context_window": None,
+            "discovery_succeeded": False,
+            "discovery_message": "",
+            "user_overrode_model_name": False,
+            "user_overrode_context_window": False,
+        }
+    ]
+    settings_payload["default_ai_cleanup_profile_id"] = "profile_1"
+    window = MainWindow(settings_payload=settings_payload)
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window._text_cleanup_page.set_processing_state(
+        extracted_text="Paragraph one.",
+        cleaned_text=None,
+        notes=["Cleanup ready"],
+        can_extract=True,
+        can_clean=True,
+        can_ai_clean=True,
+    )
+    window._text_cleanup_page.set_ai_profiles([("Cleanup Profile", "profile_1")], "profile_1")
+
+    monkeypatch.setattr(text_cleanup_ui_controller, "confirm_ai_cleanup_start", lambda *_args: True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "start_operation",
+        lambda *_args, **_kwargs: pytest.fail("must not start"),
+    )
+
+    def _cancel_prompt(*_args):
+        window._text_cleanup_page.set_busy(True, "AI-Assisted Cleanup")
+        return None
+
+    monkeypatch.setattr(text_cleanup_ui_controller, "prompt_ai_cleanup_instructions", _cancel_prompt)
+
+    text_cleanup_ui_controller.handle_ai_cleanup_requested(window, "profile_1")
+
+    assert window._active_operation_kind is None
+    assert window._text_cleanup_page._busy is False
+    assert window._text_cleanup_page._ai_clean_button.isEnabled() is True
+
+
 def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
     monkeypatch,
     qtbot,
@@ -443,6 +534,65 @@ def test_text_cleanup_ui_controller_save_cleaned_text_updates_project_state(
     assert window._current_manifest["current_stage"] == "text_cleanup_ready"
     assert restored_scroll_states == [{"extracted": (42, 3), "cleaned": (7, 1)}]
     assert status_messages == ["Cleaned text saved."]
+
+
+def test_text_cleanup_ui_controller_applies_spacing_and_refreshes_project_state(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify AISP-002/AISP-003 and REQ-FUNC-061 controller spacing application.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ControllerSpacingProject", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, manifest)
+    applied_selections: list[list[str]] = []
+
+    def _apply_spacing(_project_root, current_manifest, selected_categories):
+        """Capture the spacing request and return a refreshed manifest fixture."""
+        applied_selections.append(list(selected_categories))
+        return {**current_manifest, "current_stage": "text_cleanup_ready"}
+
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_state_service,
+        "apply_ai_cleanup_spacing",
+        _apply_spacing,
+    )
+    monkeypatch.setattr(window._text_cleanup_page, "preview_scroll_state", lambda: {"cleaned": (9, 2)})
+    restored_scroll_states: list[dict[str, tuple[int, int]]] = []
+    monkeypatch.setattr(
+        window._text_cleanup_page,
+        "restore_preview_scroll_state",
+        restored_scroll_states.append,
+    )
+    status_messages: list[str] = []
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda _window, message: status_messages.append(message),
+    )
+
+    text_cleanup_ui_controller.handle_apply_ai_cleanup_spacing_requested(
+        window,
+        ["heading", "noise", "footer"],
+    )
+
+    assert applied_selections == [["heading", "noise", "footer"]]
+    assert window._current_manifest["current_stage"] == "text_cleanup_ready"
+    assert restored_scroll_states == [{"cleaned": (9, 2)}]
+    assert status_messages == ["AI cleanup spacing applied."]
 
 
 # END OF FILE

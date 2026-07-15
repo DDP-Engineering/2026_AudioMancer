@@ -367,9 +367,7 @@ def test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators(
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    assert cleaned_path.read_text(encoding="utf-8") == (
-        "\n\nFirst paragraph.\n\n\n\n\n\n\n\n\n\nSecond paragraph.\n"
-    )
+    assert cleaned_path.read_text(encoding="utf-8") == ("First paragraph.\n\n\n\nSecond paragraph.")
     assert "schema_version" not in report
     assert report["removed_character_count"] == len("HEADER") + len("* * *") + len("Chapter 2")
     assert report["restored_whitespace_character_count"] == 9
@@ -551,9 +549,9 @@ def test_response_contract_has_six_artifact_types_without_version_or_action() ->
     }
 
 
-def test_whitespace_only_source_gaps_are_restored_exactly() -> None:
+def test_whitespace_only_source_gaps_are_retained_for_spacing_rendering() -> None:
     """
-    @brief      Verify SPEC-AICR-001 and REQ-FUNC-058 whitespace restoration.
+    @brief      Verify AICU-004 and REQ-FUNC-058 retained whitespace-gap rendering.
     @return     None.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
@@ -572,7 +570,7 @@ def test_whitespace_only_source_gaps_are_restored_exactly() -> None:
 
     validated = ai_cleanup_service._validate_response(response, pages, "cleanup-window-0001")
 
-    assert validated["reconstructed_text"] == source
+    assert validated["reconstructed_text"] == "First paragraph.Second paragraph."
     assert validated["restored_whitespace_character_count"] == 3
     assert validated["restored_whitespace_ranges"] == [
         {
@@ -592,7 +590,7 @@ def test_whitespace_only_source_gaps_are_restored_exactly() -> None:
 
 def test_artifact_types_apply_deterministic_rendering() -> None:
     """
-    @brief      Verify SPEC-AICR-004 and REQ-FUNC-059 artifact rendering.
+    @brief      Verify AISP-001 and REQ-FUNC-059 selectable artifact rendering.
     @return     None.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
@@ -623,6 +621,118 @@ def test_artifact_types_apply_deterministic_rendering() -> None:
         "",
         "",
     ]
+
+    selected_rendering = ai_cleanup_service._render_validated_window(
+        validated,
+        {"header", "footer", "noise"},
+    )
+
+    assert selected_rendering["reconstructed_text"] == "\n\nStory.\n\n\n\n"
+    assert [item["replacement"] for item in selected_rendering["removed_ranges"]] == [
+        "\n\n",
+        "",
+        "",
+        "\n\n",
+        "\n\n",
+    ]
+
+    for selected_category in ("header", "separator", "heading", "footer", "noise"):
+        category_rendering = ai_cleanup_service._render_validated_window(
+            validated,
+            {selected_category},
+        )
+        rendered_by_category = {
+            str(item["decision"]["artifact_type"]): item["replacement"] for item in category_rendering["removed_ranges"]
+        }
+
+        assert rendered_by_category[selected_category] == "\n\n"
+        assert all(
+            replacement == "" for category, replacement in rendered_by_category.items() if category != selected_category
+        )
+
+    empty_rendering = ai_cleanup_service._render_validated_window(validated, set())
+    assert empty_rendering["reconstructed_text"] == "Story."
+    assert all(item["replacement"] == "" for item in empty_rendering["removed_ranges"])
+
+
+def test_ai_cleanup_spacing_reapplication_persists_selection_without_provider(
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify AISP-002 and REQ-FUNC-061 retained-decision spacing reapplication.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.write_text("Header\n\nStory.\nFooter\nNoise", encoding="utf-8")
+    (mock_prompt_environment / "text_cleanup_user.txt").write_text(
+        "Window: {window_id}\nLanguage: {source_language_hint}\nScript: {dominant_script_hint}\n"
+        "{source_window_block}\nInstructions: {additional_cleanup_instructions}",
+        encoding="utf-8",
+    )
+
+    provider_call_count = 0
+
+    def _fake_chat_json(*_args, **_kwargs):
+        """
+        @brief      Return one exact-source classification response.
+        @return     Provider-compatible cleanup response fixture.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
+        nonlocal provider_call_count
+        provider_call_count += 1
+        return {
+            "payload": _payload(
+                "cleanup-window-0001",
+                [
+                    _block(1, "Header", "header"),
+                    _block(2, "Story.", "story"),
+                    _block(3, "Footer", "footer"),
+                    _block(4, "Noise", "noise"),
+                ],
+            ),
+            "usage": {},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+    ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    assert provider_call_count == 1
+
+    monkeypatch.setattr(
+        ai_cleanup_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: pytest.fail("Spacing reapplication must not call the provider."),
+    )
+    first_report = ai_cleanup_service.apply_spacing_selection(project_root, {"header", "noise"})
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    first_text = cleaned_path.read_text(encoding="utf-8")
+    second_report = ai_cleanup_service.apply_spacing_selection(project_root, {"noise", "header"})
+
+    assert first_text == "\n\nStory.\n\n"
+    assert cleaned_path.read_text(encoding="utf-8") == first_text
+    assert first_report["selected_spacing_categories"] == ["header", "noise"]
+    assert second_report["selected_spacing_categories"] == ["header", "noise"]
+    empty_report = ai_cleanup_service.apply_spacing_selection(project_root, set())
+    assert cleaned_path.read_text(encoding="utf-8") == "Story."
+    assert empty_report["selected_spacing_categories"] == []
+    persisted_report = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_REPORT_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert persisted_report["selected_spacing_categories"] == []
 
 
 # END OF FILE

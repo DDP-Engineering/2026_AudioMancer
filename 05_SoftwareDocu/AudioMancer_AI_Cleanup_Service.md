@@ -108,11 +108,14 @@ text. Printed page numbers, copyright notices, and unreadable extraction/OCR
 garbage are represented as `noise`.
 
 Every block, including a non-story artifact, must match an exact,
-non-overlapping forward source slice. `artifact_type` alone determines output:
-`story` is retained exactly; `separator` and `heading` are each replaced with
-exactly two LF characters (`\n\n`); and `header`, `footer`, and `noise` are
-removed without contributing replacement text or whitespace.
-`confidence` is persisted only as review metadata.
+non-overlapping forward source slice. `story` is always retained exactly. Each
+non-story block is replaced with exactly two LF characters (`\n\n`) when its
+category belongs to the complete operator-selected spacing set and contributes
+no output otherwise. Retained whitespace-only gaps between source blocks also
+contribute no output, so deselecting every category removes all controllable
+inter-block blank lines without altering Story text. The default set is
+`heading` plus `separator`. `confidence` remains review metadata and does not
+affect rendering.
 
 A model may omit a source gap only when the complete gap is whitespace. The
 validator stores such gaps in `restored_whitespace_ranges` with canonical
@@ -121,11 +124,23 @@ window. Any omitted non-whitespace rejects the response. Final assembly
 concatenates each window's `reconstructed_text` without trimming, blank-line
 collapse, or other formatting.
 
-`removed_ranges` records the exact source coordinates, original text,
-deterministic replacement (empty or two LF), artifact type, and confidence for
-every non-story block. Aggregate report fields include `artifact_replacement_count`,
-`restored_whitespace_gap_count`, and
-`restored_whitespace_character_count`.
+`preserved_blocks`, `removed_ranges`, and `restored_whitespace_ranges` retain
+complete exact-source window coverage. `removed_ranges` records original text,
+current replacement (empty or two LF), artifact type, and confidence; retained
+whitespace gaps provide validation and review provenance but render as empty
+spacing.
+`reconstruction_contract_fingerprint` identifies reports compatible with
+spacing reapplication, while `selected_spacing_categories` persists the
+complete applied set. Aggregate report fields include
+`artifact_replacement_count`, `spacing_replacement_count`,
+`restored_whitespace_gap_count`, and `restored_whitespace_character_count`.
+
+`apply_spacing_selection()` validates the selected set, reloads only a current
+compatible completed AI report, rebuilds every window from retained source
+ranges, and atomically rewrites `clean_text.txt`, cleanup metadata, and the
+report. It performs no provider request and repeated application of the same
+set is byte-identical. Reports created under an older reconstruction contract,
+deterministic cleanup reports, and manual-edit state cannot be reapplied.
 
 Interrupted or failed cleanup stores only fully validated windows. Checkpoints
 contain an internal contract fingerprint plus input, instruction, and window
@@ -138,8 +153,17 @@ resume at the next untouched validated window. Completed state sets
 
 Text Extraction supplies canonical input. The Text Cleanup controller provides
 profile selection, progress, cancellation, previews, rerun confirmation, and
-manual Save. Successful cleanup advances to `text_chunking_ready`, where
-chunking consumes the reviewed `clean_text.txt`.
+manual Save. Cancelling the optional AI-instructions dialog clears temporary
+page busy state without starting or resetting cleanup, so the operator can
+retry immediately. The Cleaned Text Preview shows the five non-story spacing
+checkboxes and actions in one compact two-row grid: label, Heading, Separator,
+and Edit on row one; Apply Spacing, Noise, Header, Footer, and Save on row two.
+Heading and Separator start selected; Story is never selectable.
+Reapplication resets non-preserved downstream outputs as a cleaned-text
+revision and returns the project to `text_cleanup_ready`. Manual Save changes
+cleanup mode to `manual_edit`, which disables later spacing reapplication.
+Successful initial cleanup advances to `text_chunking_ready`, where chunking
+consumes the reviewed `clean_text.txt`.
 
 ## 8. Usage
 
@@ -152,12 +176,20 @@ report = ai_cleanup_service.clean_text(
     ai_profile_payload,
     additional_cleanup_instructions="Preserve glossary names exactly.",
 )
+
+report = ai_cleanup_service.apply_spacing_selection(
+    project_root,
+    {"heading", "separator", "noise"},
+)
 ```
 
 The operator compares the original and cleaned previews and corrects semantic
 removal mistakes before downstream use.
 
 ## 9. Validation And Tests
+
+Implementation review: selectable retained-decision spacing behavior and UI
+integration were reviewed against the final source on 2026-07-15.
 
 Primary coverage:
 
@@ -166,12 +198,13 @@ Primary coverage:
 - `04_Software/AudioMancer/tests/test_ai_budget_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
 - `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
 - provider and prompt-template tests
 
 Run tests and style checks through the pinned `uv` environment. Durable
-behavior is tracked by `REQ-FUNC-058`, `REQ-FUNC-059`, `REQ-FUNC-060`, and
-`REQ-NFR-019`.
+behavior is tracked by `REQ-FUNC-058`, `REQ-FUNC-059`, `REQ-FUNC-060`,
+`REQ-FUNC-061`, `REQ-UX-036`, `REQ-UX-037`, and `REQ-NFR-019`.
 
 ## 10. Limitations And Future Work
 
@@ -181,3 +214,5 @@ behavior is tracked by `REQ-FUNC-058`, `REQ-FUNC-059`, `REQ-FUNC-060`, and
 - Provider JSON repair remains best effort before strict validation.
 - The response-expansion factor defaults to `2.0` and should change only with
   measured evaluation evidence.
+- Spacing reapplication is intentionally unavailable for reports created before
+  retained complete source coordinates were introduced.
