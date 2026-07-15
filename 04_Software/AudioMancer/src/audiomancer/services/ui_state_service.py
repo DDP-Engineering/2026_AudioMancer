@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.57.2
+@version 0.58.0
 """
 
 # ruff: noqa: E501
@@ -152,6 +152,7 @@ _UI_STRINGS = {
         "status.text_cleaned": "Text cleaned.",
         "status.cleaned_text_saved": "Cleaned text saved.",
         "status.text_ai_cleaned": "AI-assisted cleanup completed.",
+        "status.ai_cleanup_spacing_applied": "AI cleanup spacing applied.",
         "status.text_chunked": "Text chunked.",
         "status.text_ai_chunked": "Text chunked with AI.",
         "status.chunk_saved": "Chunk saved.",
@@ -336,6 +337,13 @@ _UI_STRINGS = {
         "text_cleanup.ai_clean": "AI-Assisted Cleanup",
         "text_cleanup.edit_cleaned": "Edit",
         "text_cleanup.save_cleaned": "Save",
+        "text_cleanup.spacing_label": "Insert new line for:",
+        "text_cleanup.spacing_heading": "Heading",
+        "text_cleanup.spacing_separator": "Separator",
+        "text_cleanup.spacing_noise": "Noise",
+        "text_cleanup.spacing_header": "Header",
+        "text_cleanup.spacing_footer": "Footer",
+        "text_cleanup.apply_spacing": "Apply Spacing",
         "text_cleanup.find": "Find",
         "text_cleanup.find_next": "Find Next",
         "text_cleanup.find_title": "Find Text",
@@ -1181,6 +1189,7 @@ _UI_STRINGS = {
         "status.text_cleaned": "Textul a fost curatat.",
         "status.cleaned_text_saved": "Textul curatat a fost salvat.",
         "status.text_ai_cleaned": "Curatarea asistata de AI a fost finalizata.",
+        "status.ai_cleanup_spacing_applied": "Spatierea curatarii AI a fost aplicata.",
         "status.text_chunked": "Textul a fost segmentat.",
         "status.text_ai_chunked": "Textul a fost segmentat cu AI.",
         "status.chunk_saved": "Segmentul a fost salvat.",
@@ -1365,6 +1374,13 @@ _UI_STRINGS = {
         "text_cleanup.ai_clean": "Curatare Asistata de AI",
         "text_cleanup.edit_cleaned": "Editeaza",
         "text_cleanup.save_cleaned": "Salveaza",
+        "text_cleanup.spacing_label": "Insereaza linie noua pentru:",
+        "text_cleanup.spacing_heading": "Titlu",
+        "text_cleanup.spacing_separator": "Separator",
+        "text_cleanup.spacing_noise": "Zgomot",
+        "text_cleanup.spacing_header": "Antet",
+        "text_cleanup.spacing_footer": "Subsol",
+        "text_cleanup.apply_spacing": "Aplica Spatierea",
         "text_cleanup.find": "Cauta",
         "text_cleanup.find_next": "Cauta Urmatorul",
         "text_cleanup.find_title": "Cauta Text",

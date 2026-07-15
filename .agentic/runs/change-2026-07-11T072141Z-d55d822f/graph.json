@@ -1,0 +1,117 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "Revised Intent Alignment is complete when the manifest describes the parallel target, protects the legacy workspace, separates copied workflow infrastructure from fresh project state, excludes Git and legacy product artifacts, defines the later structural/workflow verification contract, and pauses for the exact new-application license before Requirement work."
+    ],
+    "assumptions": [
+      "The exact target project root is D:\\Temp\\AudioMancer_Next and the minimal internal application root is 04_Software/AudioMancer_Next.",
+      "Preserve the current verified workflow version; do not perform a workflow-template upgrade during bootstrap.",
+      "The human owns all Git initialization and delivery actions; Codex will not create a .git directory in the target."
+    ],
+    "created_at": "2026-07-11T07:34:29+00:00",
+    "decision": "pause",
+    "open_questions": [
+      "Which exact license and notices should govern the AudioMancer_Next project root and new application implementation?"
+    ],
+    "planned_paths": [
+      "D:/Temp/AudioMancer_Next/.agentic/",
+      "D:/Temp/AudioMancer_Next/.codex/",
+      "D:/Temp/AudioMancer_Next/.claude/",
+      "D:/Temp/AudioMancer_Next/.opencode/",
+      "D:/Temp/AudioMancer_Next/.pi/",
+      "D:/Temp/AudioMancer_Next/.qwen/",
+      "D:/Temp/AudioMancer_Next/0_Planning/",
+      "D:/Temp/AudioMancer_Next/01_Documentation/",
+      "D:/Temp/AudioMancer_Next/02_Tools/",
+      "D:/Temp/AudioMancer_Next/04_Software/AudioMancer_Next/",
+      "D:/Temp/AudioMancer_Next/05_SoftwareDocu/",
+      "D:/Temp/AudioMancer_Next/07_Delivery/",
+      "D:/Temp/AudioMancer_Next/09_Others/",
+      "D:/Temp/AudioMancer_Next/AGENTS.md"
+    ],
+    "reason": "The target is now non-destructive and Git-free, but copying root workflow instructions would carry license language into a new project. Ticket 01 requires the application license to be chosen by the human, so folder creation must wait.",
+    "recommended_responses": [
+      "If DDP Engineering confirms this policy, use PolyForm Noncommercial 1.0.0 consistently for the project root and new application while retaining the copied workflow infrastructure license; otherwise provide the exact approved license and notice text. No choice will be assumed."
+    ],
+    "risk": "medium",
+    "scope": [
+      "In scope: revise the manifest and workflow alignment now; in later approved gates define checks and create the separate AudioMancer_Next folder structure with preserved generic workflow infrastructure and fresh project state. Out of scope: modifying or resetting the legacy implementation, copying legacy product code or contracts, implementing product behavior, initializing or operating Git, committing, tagging, pushing, publishing, merging, packaging, or releasing."
+    ],
+    "source": "User follow-up 2026-07-11: no Git actions; create a separate D:\\Temp\\AudioMancer_Next workspace and preserve the agentic workflow",
+    "understanding": "Ticket 01 is now a non-destructive parallel greenfield bootstrap. The legacy D:\\TEMP\\2026_AudioMancer workspace remains untouched as reference. After the workflow gates are approved, Codex will create D:\\Temp\\AudioMancer_Next with a fresh numbered project layout, preserve the verified generic agentic engine and platform adapters, create fresh project-specific workflow state, copy only approved planning inputs, and exclude all legacy application, requirement, run, documentation, delivery, compatibility, cache, and Git state."
+  },
+  "change_units": [],
+  "checks": [],
+  "decisions": [],
+  "defects": [],
+  "evidence": [
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 audit traceability; .\\\\.agentic\\\\tools\\\\run.ps1 audit coverage",
+      "created_at": "2026-07-11T07:24:58+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "scan",
+      "path": ".agentic/requirements",
+      "result": "pass",
+      "stage": "alignment",
+      "status": "active",
+      "summary": "Ticket 01 intake audits passed against the legacy baseline: traceability and coverage reported no issues before reset planning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-11T07:24:58+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "note",
+      "path": "0_Planning/Agentic_Reimplementation_Tickets/01_PROPOSED_RESET_MANIFEST.md",
+      "result": "info",
+      "stage": "alignment",
+      "status": "active",
+      "summary": "Proposed reset manifest inventories every top-level repository area, separates preserved workflow/planning inputs from approval-gated reset/archive/delete classes, and records all five mandatory human decisions; no reset action was performed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 impact --json <all tracked legacy Python source files>",
+      "created_at": "2026-07-11T07:25:24+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer/src",
+      "result": "info",
+      "stage": "alignment",
+      "status": "active",
+      "summary": "Whole-source reset impact scan covered 93 Python files and mapped 122 unique legacy requirements plus 807 linked tests; 9 source files were reported uncovered. These are legacy contracts to retire/archive under the approved reset, not contracts silently preserved in the new implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-11T07:34:29+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "decision",
+      "path": "0_Planning/Agentic_Reimplementation_Tickets/01_PROPOSED_RESET_MANIFEST.md",
+      "result": "info",
+      "stage": "alignment",
+      "status": "active",
+      "summary": "Human redirected Ticket 01 from an in-place destructive reset to a non-destructive parallel greenfield workspace named AudioMancer_Next under D:\\\\Temp, retained the current verified agentic workflow, and reserved all Git operations for the human.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-11T07:21:41+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [],
+    "statement": "Ticket 01 controlled greenfield reset: prepare an approval-gated reset manifest that preserves verified agentic workflow infrastructure and legacy Git history while proposing removal, archival, or recreation of legacy application state only after explicit human approval.",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-11T072141Z-d55d822f",
+  "spec_items": [],
+  "stage": "alignment"
+}

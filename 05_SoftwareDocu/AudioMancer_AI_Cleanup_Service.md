@@ -9,127 +9,76 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 ## 1. Purpose
 
-Provides the AI-assisted cleanup slice for `AudioMancer`.
-
-It gives the `Text Cleanup` page one second cleanup mode that consumes the
-canonical extracted text, calls one configured AI provider through the profile
-selected in `AI Settings`, writes the cleaned result back into the shared
-root-level cleanup artifact set, and keeps one resumable checkpoint plus one
-per-run AI transaction log.
+AI Cleanup is the optional AI-assisted branch of Text Cleanup. It sends each
+bounded cleanup window to an OpenAI-compatible model as one canonical source
+string and accepts every returned block only as an exact forward source
+slice. The original extraction and detailed review evidence remain available
+because exact-slice validation does not prove that model classifications are
+semantically correct.
 
 ## 2. Responsibilities
 
-- populate the `Text Cleanup` AI profile selector from enabled AI settings
-- start AI-assisted cleanup from the selected profile
-- confirm that AI cleanup can take longer before the run starts
-- collect optional operator-supplied cleanup rules in a word-wrapped text box
-  before a fresh AI cleanup run and append them to each AI cleanup prompt
-- confirm destructive reruns when cleanup is already completed
-- resume interrupted AI cleanup with the currently selected model settings,
-  the original operator-supplied cleanup rules, and without the destructive
-  rerun confirmation
-- load prompts from the application-root `prompts/` folder
-- call OpenAI-compatible `/v1/chat/completions` endpoints with the configured
-  model, timeout, temperature, and max-token settings, while retrying with
-  `max_completion_tokens` when one remote API explicitly rejects `max_tokens`
-- keep cancel requests responsive while one provider call is still waiting for
-  the model response
-- retry transient provider failures conservatively
-- normalize model JSON output before parsing and attempt one conservative
-  malformed-JSON repair pass when the assistant content is not valid JSON
-- persist canonical `clean_text.txt`, structure-only
-  `clean_text_metadata.json`, `cleanup_report.json`, and
-  `cleanup_state.json` through atomic persistence helpers
-- append project-local AI transaction records to
-  `log_ai_cleanup_<timestamp>.log`
-- allow the operator to manually edit and save the shared cleaned-text output
-  from the `Text Cleanup` page after AI cleanup completes
-- provide right-click `Find` search in both extracted-text and cleaned-text
-  preview windows
+- canonicalize source newlines once from CRLF or CR to LF
+- use extraction page boundaries and safe newline segments for window sizing
+- concatenate each request window into one provider-visible source string
+- reserve input and output capacity for source repeated in structured JSON
+- validate ordered response blocks globally against the canonical window
+- restore every omitted whitespace-only gap exactly at its validated source position
+- retain `story` exactly, replace `separator` and `heading` with two LF characters, and remove `header`, `footer`, and `noise` without replacement whitespace
+- treat confidence as review metadata that never changes deterministic output handling
+- warn for entire-page, high-ratio, fragmented, inconsistent, or long removals
+- checkpoint only fully validated windows and reject obsolete checkpoints
+- persist cleaned text, report, state, metadata, model history, and transaction logs
+- keep the original extraction for operator review and manual correction
 
-It does not own AI profile editing, model discovery, text extraction,
-chunking, translation, or character discovery.
+It does not own extraction, deterministic cleanup, AI profile editing, chunking,
+translation, or semantic proof that removed content was unwanted.
 
 ## 3. Implementation Overview
 
-The component is implemented in:
-
-- `04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
-- `04_Software/AudioMancer/prompts/text_cleanup_system.txt`
-- `04_Software/AudioMancer/prompts/text_cleanup_user.txt`
-
-Main public entrypoints:
-
-- `text_cleanup_ui_controller.handle_ai_cleanup_requested(window, profile_id)`
-- `ai_cleanup_service.clean_text(project_root, manifest, ai_profile_payload, ...)`
-- `llm_provider_service.chat_json(profile_payload, system_prompt, user_prompt, ...)`
-- `prompt_template_service.load_prompt(...)`
-- `prompt_template_service.render_prompt(...)`
+The single implementation and application entry point is
+`04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py`.
+Runtime prompts are `04_Software/AudioMancer/prompts/text_cleanup_system.txt`
+and `04_Software/AudioMancer/prompts/text_cleanup_user.txt`. There is no
+secondary cleanup implementation, legacy prompt fallback, or response adapter.
 
 High-level flow:
 
-1. `TextCleanupPage` emits `ai_clean_requested(profile_id)`.
-2. `text_cleanup_ui_controller` validates the active project, extracted-text
-   prerequisite, and currently selected AI profile.
-3. The controller shows the AI-length warning popup, asks for optional extra
-   cleanup instructions, and, when needed, the destructive cleanup-rerun
-   confirmation.
-4. The shared modal progress dialog starts through the existing blocking
-   operation flow.
-5. `ai_cleanup_service` loads prompt files, splits extracted text into
-   paragraph-like units, windows them to fit the selected profile budget,
-   computes source-language and dominant-script hints, adds previous and next
-   unit context plus any operator instructions for each classified unit, and
-   resumes from stored unit classifications when the extracted-text and
-   operator-instruction fingerprints still match.
-6. `llm_provider_service` sends one chat-completion request per window,
-   retries one compatibility-adjusted request when a provider rejects
-   `max_tokens`, attempts one follow-up JSON-repair request when the returned
-   assistant content is malformed, appends request or response or failure
-   records to the operation-local AI log, and keeps polling for cancellation
-   while the provider request runs in a small helper thread.
-7. The AI cleanup service accepts only the current artifact/action/confidence
-   schema, ignores legacy label-only cleanup intent, preserves `keep` decisions
-   and low-confidence removals conservatively, removes only high-confidence or
-   medium-confidence removable artifacts, rebuilds the cleaned text, writes the
-   shared cleanup artifacts, stores `mode="ai_assisted"` in the cleanup
-   operation state, and syncs the compact cleanup summary into
-   `project.json.operations.cleanup` during initial running, cancelled,
-   failed, and completed transitions.
-8. On success, the service advances the workflow stage to
-   `text_chunking_ready` and persists the detected original language in
-   `project.json`.
-9. Manual edits to the cleaned text require a downstream impact confirmation
-   before the editor unlocks, then save back to `clean_text.txt` and reset
-   downstream workflow state from chunking onward while preserving the
-   extracted-text preview scroll position.
+1. Validate the project source and selected AI profile.
+2. Decode the UTF-8 extraction and canonicalize newlines.
+3. Build page-aware units, splitting oversized units only at existing newlines.
+4. Select budget-safe windows and concatenate each window's unit text.
+5. Render that string once between `SOURCE WINDOW` markers.
+6. Request the current strict JSON shape and validate identity, sequential IDs,
+   exact fields, enum values, non-empty blocks, forward slices, and
+   whitespace-only omitted gaps.
+7. Reconstruct each window from validated source positions, restoring omitted
+   whitespace exactly, replacing `separator` and `heading` slices with `\n\n`,
+   and removing `header`, `footer`, and `noise` slices without replacement text.
+8. Persist each fully validated reconstructed window before continuing.
+9. Concatenate reconstructed windows without trimming or collapsing whitespace.
+10. Persist final artifacts, clear the checkpoint, advance to
+    `text_chunking_ready`, and require human review.
 
 ## 4. Dependencies
 
-- Internal dependencies:
-  `audiomancer.config`, `audiomancer.services.settings_service`,
-  `audiomancer.services.operation_runtime_service`,
-  `audiomancer.services.project_workspace_service`,
-  `audiomancer.services.ui_state_service`,
-  `audiomancer.ui.controllers.misc_ui_controller`
-- External dependencies:
-  Python standard library for JSON, hashing, regex, datetimes, filesystem
-  access, and `urllib`; `langdetect`; `PySide6`
+Internal dependencies include `audiomancer.config`, prompt templates, provider
+JSON transport, token usage, cleanup metadata and text analysis, operation
+runtime helpers, atomic persistence, project workspace synchronization, logging,
+and the Text Cleanup UI controller.
+
+External behavior depends on the Python runtime, `langdetect`, PySide6 through
+the UI, and an operator-selected OpenAI-compatible endpoint.
 
 ## 5. Inputs And Outputs
 
 Inputs:
 
-- active project root folder
-- current `project.json` manifest with `source_document`
-- root-level `extracted_text.txt` produced by Text Extraction
-- selected enabled AI profile from `settings.json`
-- prompt files in `04_Software/AudioMancer/prompts/`
-- optional progress callback and cancellation callback
+- active project root and manifest containing `source_document`
+- root-level UTF-8 `extracted_text.txt`
+- selected enabled AI profile with context and output limits
+- `text_cleanup_system.txt` and `text_cleanup_user.txt`
+- optional operator instructions, progress callback, and cancellation callback
 
 Outputs:
 
@@ -138,160 +87,132 @@ Outputs:
 - `cleanup_report.json`
 - `cleanup_state.json`
 - `log_ai_cleanup_<timestamp>.log`
-- updated `project.json` cleanup operation entry with `mode="ai_assisted"`
-- updated `project.json` stage `text_chunking_ready` after successful cleanup
-- updated `project.json` stage `text_cleanup_ready` after a manual
-  cleaned-text edit
+- synchronized `project.json.operations.cleanup`
+- project stage `text_chunking_ready` after success
+
+The source `extracted_text.txt` remains unchanged.
 
 ## 6. Data Contracts
 
-Current prompt contract:
+The provider object contains exactly the supplied `window_id` and a non-empty
+ordered `text_blocks` array. Each response block contains exactly:
 
-- `text_cleanup_system.txt` owns the allowed cleanup artifact types, actions,
-  confidence values, and required JSON response shape
-- `text_cleanup_user.txt` must expose the `{units_block}` placeholder and may
-  also use `{source_language_hint}`, `{dominant_script_hint}`, and
-  `{unit_count}`; when it does not expose
-  `{additional_cleanup_instructions}`, operator-supplied cleanup rules are
-  appended after template rendering
-- each current-schema result item contains `unit_id`, `artifact_type`,
-  `action`, `confidence`, and a short `reason`
-- legacy result items containing only `unit_id` and `label`, or
-  `artifact_type` without `action`, are not accepted as cleanup intent; use
-  `artifact_type`, `action`, and `confidence`
-- ambiguous units should use `artifact_type="unknown"` and `action="keep"` so
-  the cleaned text preserves content unless removal is high-confidence
+- sequential `text_block_id`
+- non-empty `text_block`
+- `artifact_type`: `header`, `footer`, `noise`, `separator`, `heading`, or `story`
+- `confidence`: `high`, `medium`, or `low`
 
-Current AI cleanup report fields extend the shared cleanup report with:
+There is no response version, action, page, or segment field. `story` includes
+narration, dialogue, attribution, epigraphs, verse, and other meaningful book
+text. Printed page numbers, copyright notices, and unreadable extraction/OCR
+garbage are represented as `noise`.
 
-- `cleanup_mode`
-- `ai_profile_id`
-- `model_settings`
-- `model_settings_history`
-- `ai_log_relative_path`
-- `additional_cleanup_instructions`
-- `additional_cleanup_instructions_fingerprint`
+Every block, including a non-story artifact, must match an exact,
+non-overlapping forward source slice. `story` is always retained exactly. Each
+non-story block is replaced with exactly two LF characters (`\n\n`) when its
+category belongs to the complete operator-selected spacing set and contributes
+no output otherwise. Retained whitespace-only gaps between source blocks also
+contribute no output, so deselecting every category removes all controllable
+inter-block blank lines without altering Story text. The default set is
+`heading` plus `separator`. `confidence` remains review metadata and does not
+affect rendering.
 
-Current AI cleanup operation-state invariants:
+A model may omit a source gap only when the complete gap is whitespace. The
+validator stores such gaps in `restored_whitespace_ranges` with canonical
+window coordinates and inserts their exact source text into the reconstructed
+window. Any omitted non-whitespace rejects the response. Final assembly
+concatenates each window's `reconstructed_text` without trimming, blank-line
+collapse, or other formatting.
 
-- the operation kind remains `cleanup`; AI cleanup does not create a separate
-  workflow folder
-- `mode` is `ai_assisted`
-- `resume_checkpoint` stores `completed_window_count`,
-  `total_window_count`, `input_fingerprint`, concrete `model_settings`, and
-  accumulated unit classifications plus the additional-instruction fingerprint
-- incomplete running or cancelled state keeps the classifications, input
-  fingerprint, model settings, additional-instruction fingerprint, token
-  usage, warning details, and AI log path needed to continue
-- malformed or truncated cleanup state loads as no usable checkpoint and starts
-  a clean AI cleanup run with a logged warning instead of crashing the next run
-- provider or cleanup failures persist `status="failed"` with the latest
-  resumable checkpoint and compact manifest summary before re-raising
-- completed state removes resume-only classifications by writing
-  `resume_checkpoint: null`; final model settings, token usage, warning
-  details, and AI log path remain in `cleanup_report.json` and operation
-  metadata
-- resume identity is based on the extracted-text fingerprint, stored
-  additional-instruction fingerprint, and stored unit classifications, not the
-  earlier profile id; if the operator selects another enabled model/profile
-  before resuming, the remaining units use that selected model's name,
-  temperature, context window, and output-token budget with the original
-  operator-supplied cleanup rules
-- `metadata.ai_log_relative_path` points to the per-run AI transaction log
-- `clean_text_metadata.json` stores paragraph order, ids, line spans,
-  page-break flags, and warning flags only; it does not persist paragraph
-  `text`, which downstream readers rebuild from canonical `clean_text.txt`
+`preserved_blocks`, `removed_ranges`, and `restored_whitespace_ranges` retain
+complete exact-source window coverage. `removed_ranges` records original text,
+current replacement (empty or two LF), artifact type, and confidence; retained
+whitespace gaps provide validation and review provenance but render as empty
+spacing.
+`reconstruction_contract_fingerprint` identifies reports compatible with
+spacing reapplication, while `selected_spacing_categories` persists the
+complete applied set. Aggregate report fields include
+`artifact_replacement_count`, `spacing_replacement_count`,
+`restored_whitespace_gap_count`, and `restored_whitespace_character_count`.
 
-Current AI transaction log behavior:
+`apply_spacing_selection()` validates the selected set, reloads only a current
+compatible completed AI report, rebuilds every window from retained source
+ranges, and atomically rewrites `clean_text.txt`, cleanup metadata, and the
+report. It performs no provider request and repeated application of the same
+set is byte-identical. Reports created under an older reconstruction contract,
+deterministic cleanup reports, and manual-edit state cannot be reapplied.
 
-- one `.log` file is created per AI cleanup run
-- each line is one JSON object with timestamped request, response, or failure
-  metadata
-- parse-failure and repair records now retain the raw assistant message
-  content to support postmortem diagnosis of malformed JSON outputs
+Interrupted or failed cleanup stores only fully validated windows. Checkpoints
+contain an internal contract fingerprint plus input, instruction, and window
+fingerprints. A checkpoint with any other contract or changed input restarts at
+window one; no obsolete state is interpreted or migrated. A changed profile may
+resume at the next untouched validated window. Completed state sets
+`resume_checkpoint` to null.
 
 ## 7. Workflow Integration
 
-Upstream:
-
-- `AI Settings` provides the enabled profile list and
-  `default_ai_cleanup_profile_id`
-- `text_extraction_service.extract_text(...)` provides the canonical extracted
-  text input
-
-Downstream:
-
-- the shared cleanup preview and notes on the `Text Cleanup` page
-- chunking consumes the same `clean_text.txt`
-- confirmed AI cleanup reruns reset chunking, translation, and
-  character-discovery data
-- manual cleaned-text edits reset chunking and all later workflow artifacts
+Text Extraction supplies canonical input. The Text Cleanup controller provides
+profile selection, progress, cancellation, previews, rerun confirmation, and
+manual Save. Cancelling the optional AI-instructions dialog clears temporary
+page busy state without starting or resetting cleanup, so the operator can
+retry immediately. The Cleaned Text Preview shows the five non-story spacing
+checkboxes and actions in one compact two-row grid: label, Heading, Separator,
+and Edit on row one; Apply Spacing, Noise, Header, Footer, and Save on row two.
+Heading and Separator start selected; Story is never selectable.
+Reapplication resets non-preserved downstream outputs as a cleaned-text
+revision and returns the project to `text_cleanup_ready`. Manual Save changes
+cleanup mode to `manual_edit`, which disables later spacing reapplication.
+Successful initial cleanup advances to `text_chunking_ready`, where chunking
+consumes the reviewed `clean_text.txt`.
 
 ## 8. Usage
-
-Operator flow:
-
-- configure and save at least one enabled AI profile in `AI Settings`
-- open `Text Cleanup`
-- select the desired AI profile
-- press `AI-Assisted Cleanup`
-- confirm the AI-length warning
-- enter optional extra cleanup rules in the word-wrapped prompt box, or leave
-  it empty for the standard cleanup prompt
-- use `Edit` and `Save` under the cleaned text preview for manual corrections
-- right-click either text preview and choose `Find` to search within that
-  preview
-- confirm the destructive rerun warning when cleanup was already completed
-
-Service call pattern:
 
 ```python
 from audiomancer.services import ai_cleanup_service
 
-report_payload = ai_cleanup_service.clean_text(
+report = ai_cleanup_service.clean_text(
     project_root,
     manifest,
     ai_profile_payload,
-    additional_cleanup_instructions="Preserve glossary terms exactly.",
+    additional_cleanup_instructions="Preserve glossary names exactly.",
+)
+
+report = ai_cleanup_service.apply_spacing_selection(
+    project_root,
+    {"heading", "separator", "noise"},
 )
 ```
 
+The operator compares the original and cleaned previews and corrects semantic
+removal mistakes before downstream use.
+
 ## 9. Validation And Tests
 
-Automated tests:
+Implementation review: selectable retained-decision spacing behavior and UI
+integration were reviewed against the final source on 2026-07-15.
 
+Primary coverage:
+
+- `04_Software/AudioMancer/tests/test_ai_cleanup_contract.py`
 - `04_Software/AudioMancer/tests/test_ai_cleanup_service.py`
-- `04_Software/AudioMancer/tests/test_llm_provider_service.py`
-- `04_Software/AudioMancer/tests/test_prompt_template_service.py`
-- `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `04_Software/AudioMancer/tests/test_ai_budget_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
+- provider and prompt-template tests
 
-Documentation audit status: reviewed against the current implementation on
-2026-06-12 for atomic persistence, corrupt-state restart, and failed terminal
-cleanup state behavior.
-
-Minimum validation after a change:
-
-- `uv run python -m py_compile <changed_file.py>`
-- focused `uv run pytest` for AI cleanup service, provider service, prompt
-  service, cleanup page, and cleanup controller tests
+Run tests and style checks through the pinned `uv` environment. Durable
+behavior is tracked by `REQ-FUNC-058`, `REQ-FUNC-059`, `REQ-FUNC-060`,
+`REQ-FUNC-061`, `REQ-UX-036`, `REQ-UX-037`, and `REQ-NFR-019`.
 
 ## 10. Limitations And Future Work
 
-- the provider flow currently assumes an OpenAI-compatible
-  `/v1/chat/completions` interface for requests, even though it now tolerates
-  providers that require `max_completion_tokens` instead of `max_tokens`
-- AI cleanup runs through the shared threaded modal-operation runner; provider
-  requests still complete sequentially within the worker and honor cancellation
-  only at cooperative checkpoints
-- transaction logs are newline-delimited JSON records inside a `.log` file, not
-  a richer indexed audit store
-- canceling during an in-flight provider call is cooperative; the shell stops
-  waiting immediately, but the abandoned background HTTP call may still finish
-  on its own shortly after
-- malformed JSON repair still depends on best-effort normalization and one
-  follow-up repair prompt; it is not yet equivalent to strict schema-enforced
-  structured output
-- AI cleanup currently classifies paragraph-like units only; it does not yet
-  reuse deterministic page-aware heuristics during the AI phase
+- Exact forward-slice validation cannot prove semantic classification correctness.
+- Broad and entire-page artifact removals remain warnings under the approved policy.
+- Requests are sequential and cancellation is cooperative around provider calls.
+- Provider JSON repair remains best effort before strict validation.
+- The response-expansion factor defaults to `2.0` and should change only with
+  measured evaluation evidence.
+- Spacing reapplication is intentionally unavailable for reports created before
+  retained complete source coordinates were introduced.

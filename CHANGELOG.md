@@ -10,6 +10,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-07-15
+
+### Added
+
+- Added independently selectable `Heading`, `Separator`, `Noise`, `Header`,
+  and `Footer` newline-spacing controls beneath Cleaned Text Preview. Operators
+  can apply one or multiple categories without another AI provider request;
+  `Story` remains exact and is never selectable.
+
+### Changed
+
+- AI Cleanup now retains validated exact-source block decisions so spacing can
+  be reapplied deterministically, with `Heading` and `Separator` selected by
+  default.
+- Project package metadata, `audiomancer.__version__`, the lockfile, and the
+  release-version smoke test were updated to `1.6.5`.
+- Offline English and Romanian help bundles were updated to version `1.6.5`
+  and document the selectable AI Cleanup spacing workflow.
+
+### Fixed
+
+- Deselecting every spacing category now removes all controllable inter-block
+  blank lines while preserving exact Story text and source order.
+- Cancelling the optional AI Cleanup instructions prompt no longer leaves the
+  AI-assisted cleanup button disabled.
+- Cleaned-preview spacing controls now occupy exactly two rows, with Edit and
+  Save vertically aligned at the right for a usable desktop layout.
+
 ## [1.6.4] - 2026-07-08
 
 ### Changed

@@ -1,10 +1,12 @@
-Classify the following extracted text units.
+Partition this canonical source window into ordered AI Cleanup blocks.
 
+Window ID: {window_id}
 Source language hint: {source_language_hint}
 Dominant script hint: {dominant_script_hint}
-Literary preservation priority: high
-Unit count: {unit_count}
 
-{units_block}
+Additional operator cleanup instructions:
+{additional_cleanup_instructions}
 
-Return JSON only.
+{source_window_block}
+
+Return JSON only. Copy every block exactly from the source in strict forward order. Cover every non-whitespace source character exactly once. You may omit whitespace-only gaps because the application restores them exactly. Classify meaningful or ambiguous content as story.

@@ -11,10 +11,10 @@
 @brief Text-cleanup page state helpers for AudioMancer.
 @details Builds the extracted/cleaned preview state, operator notes, and
          manifest reset payloads used by the Text Cleanup page workflows,
-         including manual cleaned-text edits.
+         including manual edits and retained AI spacing reapplication.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.13.2
+@version 0.14.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_cleanup_service,
     ai_state_note_service,
     cleanup_metadata_service,
     deterministic_cleanup_service,
@@ -52,7 +53,7 @@ def build_text_cleanup_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.4
+    @version    0.2.0
     """
     if project_root is None or manifest is None:
         return {
@@ -62,6 +63,8 @@ def build_text_cleanup_state(
             "can_extract": False,
             "can_clean": False,
             "can_ai_clean": False,
+            "can_apply_ai_spacing": False,
+            "selected_spacing_categories": ai_cleanup_service.default_spacing_categories(),
         }
 
     extracted_text = read_optional_project_text(project_root, config.EXTRACTED_TEXT_FILE_NAME)
@@ -73,6 +76,12 @@ def build_text_cleanup_state(
     )
     cleanup_report_payload = deterministic_cleanup_service.load_cleanup_report(project_root)
     cleanup_operation_state = deterministic_cleanup_service.load_operation_state(project_root)
+    can_apply_ai_spacing = (
+        isinstance(cleanup_operation_state, dict)
+        and cleanup_operation_state.get("status") == "completed"
+        and cleanup_operation_state.get("mode") == "ai_assisted"
+        and ai_cleanup_service.spacing_selection_available(cleanup_report_payload)
+    )
     return {
         "extracted_text": extracted_text,
         "cleaned_text": cleaned_text,
@@ -87,6 +96,8 @@ def build_text_cleanup_state(
         "can_extract": home_presenter_service.source_document_name(manifest) is not None,
         "can_clean": extracted_text is not None,
         "can_ai_clean": extracted_text is not None,
+        "can_apply_ai_spacing": can_apply_ai_spacing,
+        "selected_spacing_categories": ai_cleanup_service.selected_spacing_categories(cleanup_report_payload),
     }
 
 
@@ -164,6 +175,42 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
         project_root,
         "cleanup",
         manual_state,
+        current_stage="text_cleanup_ready",
+    )
+
+
+def apply_ai_cleanup_spacing(
+    project_root: Path,
+    manifest: dict[str, object],
+    selected_categories: object,
+) -> dict[str, object]:
+    """
+    @brief      Persist one retained-decision AI spacing selection and reset downstream state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  selected_categories Complete selected non-story category collection.
+    @return     Updated manifest payload.
+    @exception  ValueError Raised when compatible AI decisions are unavailable.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    ai_cleanup_service.apply_spacing_selection(project_root, selected_categories)
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "cleanup",
+        include_current=False,
+        preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
+    )
+    updated_manifest = build_manifest_after_cleanup_edit(manifest)
+    project_workspace_service.save_manifest(updated_manifest, project_root)
+    cleanup_state = deterministic_cleanup_service.load_operation_state(project_root)
+    if not isinstance(cleanup_state, dict) or cleanup_state.get("mode") != "ai_assisted":
+        raise ValueError("Compatible completed AI Cleanup state is unavailable for spacing reapplication.")
+    return project_workspace_service.sync_manifest_operation_summary(
+        project_root,
+        "cleanup",
+        cleanup_state,
         current_stage="text_cleanup_ready",
     )
 

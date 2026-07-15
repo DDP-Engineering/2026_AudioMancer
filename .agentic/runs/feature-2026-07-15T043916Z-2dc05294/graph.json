@@ -1,0 +1,541 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "The cleaned preview action row contains five independently selectable non-story category checkboxes, an Apply Spacing button, and the existing Edit and Save buttons on one row; story is absent.",
+      "Heading and separator are checked by default, multiple selections are accepted, and Apply Spacing is disabled when compatible completed AI-cleanup decisions are unavailable or while editing/busy.",
+      "Apply Spacing rebuilds output without an AI request, emits exactly two LF characters for each selected artifact occurrence, removes unselected non-story artifacts, preserves story/source ordering and canonical whitespace, and is idempotent.",
+      "The applied selection and cleaned text persist across page refresh, downstream state is reset safely, and focused service, state, controller, page, traceability, coverage, style, and documentation checks pass."
+    ],
+    "assumptions": [
+      "Heading and separator are selected by default so a newly completed AI cleanup preserves the current output behavior until the operator chooses otherwise.",
+      "Apply Spacing uses the current checkbox set as the complete selection: each selected non-story category emits exactly two LF characters and every unselected non-story category emits nothing.",
+      "Spacing is rebuilt idempotently from retained canonical source positions and validated AI decisions rather than modifying the preview text in place or calling the model again.",
+      "The control is available only for a completed compatible AI cleanup; a manual cleaned-text edit removes that eligibility so applying spacing cannot overwrite later manual edits.",
+      "Applying spacing persists the selected categories, refreshes the preview, and resets non-preserved downstream artifacts in the same way as a cleaned-text revision."
+    ],
+    "created_at": "2026-07-15T04:40:37+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
+      "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py",
+      "04_Software/AudioMancer/tests/test_text_cleanup_page.py",
+      "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
+      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md",
+      ".agentic/requirements/functional.md",
+      ".agentic/requirements/ux_workflow.md",
+      ".agentic/components.toml",
+      ".agentic/knowledge/components/ai_cleanup.md"
+    ],
+    "reason": "The operation is deterministic, local, reversible by changing the selection and reapplying, preserves exact story text and the retained extraction, defaults to current behavior, and is covered by focused rendering and UI tests.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "AI Cleanup artifact rendering/reapplication, retained cleanup report/state needed for deterministic re-rendering, Text Cleanup page controls and controller wiring, localized labels, downstream reset/persistence behavior, focused tests, impacted durable functional/UX requirements, AI Cleanup component map/knowledge, and component documentation. No AI taxonomy or prompt change, no model rerun, no story checkbox, and no chunking or downstream algorithm change."
+    ],
+    "source": "User request 2026-07-15: selectable AI Cleanup newline categories and Apply Spacing controls under the cleaned-text preview.",
+    "understanding": "Add an operator-controlled post-cleanup spacing step for the five non-story AI classifications. The cleaned-text action row will show heading, separator, noise, header, and footer checkboxes plus Apply Spacing beside the existing Edit and Save controls. Applying spacing will deterministically rebuild and persist cleaned text from the retained exact-source AI classification result, inserting exactly two LF characters for selected artifact categories and no characters for unselected non-story categories; story remains exact and is never selectable."
+  },
+  "change_units": [
+    {
+      "evidence": [],
+      "id": "CU-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-002",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-003",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-004",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-005",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/main_window.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-007",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-008",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_text_cleanup_page.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-009",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-010",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-011",
+      "touched_paths": [
+        ".agentic/requirements/functional.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-012",
+      "touched_paths": [
+        ".agentic/requirements/ux_workflow.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-013",
+      "touched_paths": [
+        ".agentic/components.toml"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-014",
+      "touched_paths": [
+        ".agentic/knowledge/components/ai_cleanup.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-015",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Page_State_Support_Services.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-016",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_UI_State_Service.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-017",
+      "touched_paths": [
+        "04_Software/AudioMancer/settings.json"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-018",
+      "touched_paths": [
+        ".agentic/registry/checks.json"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-019",
+      "touched_paths": [
+        ".agentic/registry/components.json"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-020",
+      "touched_paths": [
+        ".agentic/registry/features.json"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-021",
+      "touched_paths": [
+        ".agentic/registry/requirements.json"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-059"
+      ],
+      "cites_spec": [
+        "AISP-001"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering",
+      "green_evidence": "E-0006",
+      "id": "CHK-AISP-001",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering",
+      "red_evidence": "E-0003",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-061"
+      ],
+      "cites_spec": [
+        "AISP-002"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider",
+      "green_evidence": "E-0007",
+      "id": "CHK-AISP-002",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-036"
+      ],
+      "cites_spec": [
+        "AISP-003"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls 04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_applies_spacing_and_refreshes_project_state",
+      "green_evidence": "E-0008",
+      "id": "CHK-AISP-003",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls",
+      "red_evidence": "E-0005",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-15T04:47:58+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "User approved autonomous continuation after reviewing alignment; requirement specs and durable rows are complete and the expected missing-check invariant will be resolved in the check gate."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0009 -> E-0010",
+      "created_at": "2026-07-15T05:32:10+00:00",
+      "id": "D-0002",
+      "question": "Evidence superseded",
+      "rationale": "The full-suite product tests passed; its only failures were caused by an operator credential stored in tracked settings.json, and the focused rerun proves those exact hygiene failures are corrected."
+    }
+  ],
+  "defects": [],
+  "evidence": [
+    {
+      "command": "agentic audit traceability; agentic audit coverage; agentic impact planned AI Cleanup paths",
+      "created_at": "2026-07-15T04:40:36+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "scan",
+      "path": ".agentic/requirements",
+      "result": "pass",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Traceability and coverage are clean. Planned AI Cleanup service, state, controller, and page paths map to active REQ-FUNC-002, REQ-FUNC-058 through REQ-FUNC-060, REQ-UX-026, and REQ-UX-027 with focused linked tests.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-15T04:47:41+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "decision",
+      "path": ".agentic/requirements/functional.md;.agentic/requirements/ux_workflow.md",
+      "result": "info",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "AISP-001 through AISP-003 revise REQ-FUNC-059 and add REQ-FUNC-061 plus REQ-UX-036 for selectable deterministic spacing, idempotent retained-decision reapplication, persistence, safe downstream reset, and the five-checkbox UI.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest focused spacing checks",
+      "created_at": "2026-07-15T04:54:32+00:00",
+      "failure_kind": "product",
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Selectable artifact rendering is absent: ai_cleanup_service has no retained-window renderer accepting an operator spacing set.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest focused spacing checks",
+      "created_at": "2026-07-15T04:54:32+00:00",
+      "failure_kind": "product",
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "AI spacing reapplication is absent: completed validated decisions cannot be reapplied and persisted without a provider call.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest focused spacing checks",
+      "created_at": "2026-07-15T04:54:32+00:00",
+      "failure_kind": "product",
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Text Cleanup page/controller spacing flow is absent: state arguments, five checkboxes, Apply Spacing signal, state service, and handler do not exist.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest focused AI Cleanup suite",
+      "created_at": "2026-07-15T05:10:10+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Selectable category rendering passes and preserves default Heading plus Separator output.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest focused AI Cleanup suite",
+      "created_at": "2026-07-15T05:10:10+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Compatible retained decisions reapply and persist idempotently without a provider call.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest focused Text Cleanup UI suite",
+      "created_at": "2026-07-15T05:10:10+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Five non-story checkboxes, Apply Spacing, multi-selection, busy-state disablement, controller refresh, and localized status flow pass.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-15T05:32:09+00:00",
+      "failure_kind": "operator",
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/settings.json",
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Full regression completed with 882 passed, 1 skipped, and only two config-hygiene failures caused by a pre-existing populated API credential in tracked settings.json.",
+      "supersede_reason": "The full-suite product tests passed; its only failures were caused by an operator credential stored in tracked settings.json, and the focused rerun proves those exact hygiene failures are corrected.",
+      "superseded_by": "E-0010"
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest focused config hygiene rerun",
+      "created_at": "2026-07-15T05:32:10+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_config_hygiene.py",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "After sanitizing tracked settings.json, both previously failing credential-hygiene tests pass; all other 882 full-suite tests had already passed with one skip.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer ruff check 04_Software/AudioMancer",
+      "created_at": "2026-07-15T05:32:10+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "note",
+      "path": "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Repository-wide Ruff reports one pre-existing unrelated import-order issue in character_voices_state_service.py; changed-only codestyle audit and every feature-touched Python file pass Ruff.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-15T05:32:18+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-15T05:32:18+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-15T05:32:19+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-15T05:32:20+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-15T05:36:27+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Validation complete: 65 focused integration tests passed; full regression produced 882 passes and 1 skip, with its only two credential-hygiene failures passing on focused correction; changed-only documentation and codestyle audits, touched-file Ruff and py_compile, workflow gates, traceability, coverage, registry, secret, and diff checks pass.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-15T05:36:59+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Delivery preflight passed: all blocking invariants hold; traceability, coverage, registry, component, secret, and working-tree blocker checks have no blocking findings. No commit, push, PR, merge, or publish action was performed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-15T04:39:16+00:00",
+    "id": "I-0001",
+    "kind": "feature",
+    "scope_hint": [],
+    "statement": "Let the operator select one or more non-story AI Cleanup artifact categories (heading, separator, noise, header, footer) and apply newline spacing from controls beside Edit and Save under the cleaned-text preview.",
+    "status": "draft"
+  },
+  "run_id": "feature-2026-07-15T043916Z-2dc05294",
+  "spec_items": [
+    {
+      "examples": [
+        "With heading, noise, and footer selected, those artifact occurrences each emit two LF characters while separator and header emit nothing; story text and restored canonical whitespace remain exact."
+      ],
+      "id": "AISP-001",
+      "statement": "AI Cleanup renders story blocks exactly and renders each non-story artifact block as two LF characters only when its category belongs to the complete spacing selection; all other non-story blocks render as empty.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "AISP-002",
+      "statement": "Applying an AI Cleanup spacing selection rebuilds cleaned text idempotently from compatible retained validated source-position decisions, persists the selection and output, performs no provider call, and resets non-preserved downstream artifacts.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "Repeated application of the same selection produces byte-identical clean_text.txt content and zero provider requests."
+    },
+    {
+      "examples": [
+        "A deterministic cleanup or manually edited cleanup shows the controls but cannot apply spacing; a completed compatible AI cleanup can select one or multiple categories and apply them."
+      ],
+      "id": "AISP-003",
+      "statement": "The Cleaned Text Preview action row exposes five independently selectable non-story category checkboxes and Apply Spacing beside Edit and Save, defaults heading and separator to selected, restores persisted selection, excludes story, and disables reapplication without compatible AI output or while busy/editing.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

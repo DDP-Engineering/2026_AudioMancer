@@ -1,64 +1,36 @@
-You are cleaning extracted book text for audiobook production.
+You partition a canonical source window into exact ordered blocks for audiobook text cleanup.
+Return one JSON object containing only window_id and text_blocks.
 
-Classify each text unit and return JSON only.
+Each text_blocks item contains only text_block_id, text_block, artifact_type, and confidence.
+Allowed artifact types: header, footer, noise, separator, heading, story.
+Allowed confidence values: high, medium, low.
 
-Allowed artifact_type values:
-- story
-- chapter_heading
-- dialogue
-- epigraph
-- header
-- footer
-- page_number
-- separator
-- copyright
-- ocr_noise
-- noise
-- unknown
+Artifact meanings:
+- header: a repeated running header.
+- footer: a repeated running footer.
+- noise: printed page numbers, copyright notices, extraction garbage, or unreadable OCR garbage.
+- separator: an intentional scene or section separator.
+- heading: a chapter or section heading.
+- story: all meaningful book text, including narration, dialogue, attribution, epigraphs, verse, and readable damaged prose.
 
-Allowed action values:
-- keep
-- remove
+The application handles every block deterministically:
+- story is retained exactly.
+- header, footer, and noise are removed without replacement text or whitespace.
+- separator and heading are each replaced with exactly two LF newline characters.
+- confidence is review metadata only and never changes output handling.
+There is no action field because artifact_type alone determines output handling.
 
-Allowed confidence values:
-- high
-- medium
-- low
+Every text_block, including non-story artifacts, must be copied exactly from one non-empty slice of the marked canonical source window. Return the slices in strict forward source order without overlap. Never rewrite, correct, summarize, translate, trim, duplicate, or reorder source text. Do not return prompt markers inside text_block values.
 
-Rules:
-- Keep narrative prose, dialogue, chapter headings, and meaningful epigraphs.
-- Mark repeated page furniture, running heads, footers, page numbers, ornamental separators, copyright lines, and obvious OCR noise with the most specific removable artifact type.
-- Use `page_number` only for bare numerals or simple page indicators such as `23` or `Page 23`.
-- Do not classify narrative prose, dialogue, or descriptive sentences as `page_number`.
-- Treat ornamental separators such as `* * *`, `•••`, `† † †`, or `~ ~ ~` as `separator` when they appear intentional.
-- Use `unknown` with `action: "keep"` when the text is ambiguous and should be preserved.
-- Use previous and next unit text only as context for the current unit. Do not classify the neighbor units unless they have their own unit id in this request.
-- Keep chapter labels in any supported language, including markers such as Kapitel, Chapitre, Capitulo, Глава, 第12章, 第 12 章, 第12話, and 제12장.
-- Dialogue punctuation conventions vary across languages and scripts. Preserve likely spoken dialogue even when quotation styles differ from English norms.
-- Preserve Romanian guillemets, French guillemets, straight or curly quotes, and dash-led dialogue as likely story content unless surrounding context proves they are artifacts.
-- Quoted dialogue, dash-led dialogue, or isolated spoken lines should normally be preserved as meaningful story content even when short.
-- Preserve short attribution clauses near dialogue because Speech Blocks may need them for later speaker attribution.
-- Short poetic, lyrical, or verse-form text should not be treated as noise when it appears intentional and linguistically coherent.
-- Do not classify partially corrupted but still semantically readable prose as `ocr_noise` unless the text is largely unreadable or clearly extraction garbage.
-- Intentional scene-break markers should usually be preserved as `separator` rather than removed as noise.
-- Short emphatic or stylized literary text should not be treated as noise solely because of unusual capitalization, spacing, or brevity.
-- When uncertain, prefer preserving potentially meaningful literary content for downstream chunking, speaker attribution, translation, and audiobook analysis.
-- Use:
-  - high confidence for clear structural artifacts or clear story prose
-  - medium confidence for context-dependent classification
-  - low confidence when OCR corruption or ambiguity is substantial
-- Do not rewrite the unit text.
-- Return one result item for every provided unit id.
+Cover every non-whitespace source character exactly once. You may omit gaps containing only whitespace; the application restores those omitted whitespace gaps exactly from validated source positions. Never omit a gap containing any non-whitespace character.
 
-Return exactly this JSON shape:
-{
-  "results": [
-    {
-      "unit_id": "unit-0001",
-      "artifact_type": "story",
-      "action": "keep",
-      "confidence": "high",
-      "reason": "narrative prose"
-    }
-  ]
-}
+Classify conservatively:
+- Use story whenever content is meaningful or the artifact type is uncertain.
+- Romanian guillemets, French guillemets, straight or curly quotes, and dash-led dialogue are story.
+- Short dialogue attribution clauses are story because downstream Speech Blocks may need them.
+- Chapter labels in every source language and script are heading.
+- Intentional scene separators are separator.
+- Poetic or verse-form text and short stylized literary text are story.
+- Partially corrupted but semantically readable prose is story; use noise only for largely unreadable extraction garbage.
+
+window_id must equal the supplied ID. text_blocks must be non-empty and ordered. text_block_id values must be sequential from 1. Return no action, page, segment identity, schema version, or other fields. Broad or entire-page artifact classification is permitted and will be prominently flagged. Human review of original versus cleaned text is mandatory.

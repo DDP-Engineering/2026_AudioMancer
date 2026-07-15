@@ -9,24 +9,27 @@
 # -----------------------------------------------------------------------------
 """
 @file ai_cleanup_service.py
-@brief AI-assisted text cleanup helpers for AudioMancer.
-@details Consumes canonical extracted text, classifies cleanup units through
-         one configured AI profile, persists cleanup artifacts, and supports
-         resumable window-based progress plus AI transaction logs.
+@brief AI-assisted text cleanup service for AudioMancer.
+@details Presents each cleanup window as one canonical source string, validates
+         every returned block as an exact forward source slice, restores omitted
+         whitespace, renders artifacts with an operator-selectable spacing set,
+         and persists resumable operator-review evidence.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.9.3
+@date 2026-07-15
+@version 1.3.0
 """
 
 # IMPORTS
 
+from __future__ import annotations
+
 import hashlib
+import math
 from pathlib import Path
 import re
 
 from audiomancer import config
 from audiomancer.services import (
-    ai_budget_service,
     cleanup_metadata_service,
     cleanup_text_analysis_service,
     llm_provider_service,
@@ -41,93 +44,164 @@ from audiomancer.services.operation_runtime_service import (
     build_operation_state_payload,
     load_operation_state_file,
     load_operation_state_payload,
+    load_optional_json_artifact,
     raise_if_cancelled,
     relative_to_project,
 )
-from audiomancer.services.operation_runtime_service import (
-    emit_progress_update as _emit_progress,
-)
+from audiomancer.services.operation_runtime_service import emit_progress_update as _emit_progress
 from audiomancer.services.persistence_service import write_json_atomic, write_text_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
-# @brief Component logger used by the AI-assisted cleanup workflow.
-_AI_CLEANUP_LOGGER = get_component_logger("ai_cleanup")
-# @brief Supported chapter-heading detection patterns reused during cleanup summary building.
-_CHAPTER_PATTERNS = (
-    re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
-    re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
-)
-# @brief Conservative page-number matcher used for unit splitting and label validation.
-_PAGE_NUMBER_PATTERN = re.compile(r"^(?:page\s+)?\d+(?:\s*/\s*\d+)?$", re.IGNORECASE)
-# @brief Decorative-separator matcher used for unit splitting and label validation.
-_SEPARATOR_PATTERN = re.compile(r"^[*#=_~.\-]{3,}$|^(?:[*#=_~.\-]\s+){2,}[*#=_~.\-]?$")
-# @brief Sentence-terminal matcher used to decide whether wrapped lines should join.
-_PARAGRAPH_TERMINAL_PATTERN = re.compile(r'[.!?\u2026](?:["\')\]\}]+)?$')
-# @brief Dialogue formatter rule that inserts line breaks before continued spoken text.
-_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(
-    r'([:;.!?\u2026]["ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â»ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â\']?)\s+-\s+(?=[A-ZÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â½ÃƒÆ’Ã‹â€ Ãƒâ€¹Ã…â€œÃƒÆ’Ã‹â€ Ãƒâ€¦Ã‚Â¡])'
-)  # noqa: E501
-# @brief Dialogue formatter rule that inserts line breaks after attributions and pauses.
-_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(
-    r"([,:])\s+-\s+(?=[A-ZÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â½ÃƒÆ’Ã‹â€ Ãƒâ€¹Ã…â€œÃƒÆ’Ã‹â€ Ãƒâ€¦Ã‚Â¡])"
-)  # noqa: E501
-# @brief Labels that preserve one cleanup unit in the final cleaned output.
-_KEEP_LABELS = {"story", "unknown"}
-# @brief Labels that remove one cleanup unit from the final cleaned output.
-_REMOVABLE_LABELS = {
-    "header",
-    "footer",
-    "page_number",
-    "separator",
-    "copyright",
-    "noise",
-    "remove",
+_LOGGER = get_component_logger("ai_cleanup")
+_PAGE_SEPARATOR = "\n\f\n\n"
+_CONTRACT_FINGERPRINT = hashlib.sha256(
+    b"window_id|all-blocks-exact-with-source-ranges|whitespace:restore-exact|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator,story-exact|confidence:high,medium,low"
+).hexdigest()
+_SYSTEM_PROMPT_NAME = "text_cleanup_system"
+_USER_PROMPT_NAME = "text_cleanup_user"
+_ARTIFACT_TYPES = frozenset({"header", "footer", "noise", "separator", "heading", "story"})
+_NON_DISPLAY_ARTIFACT_TYPES = _ARTIFACT_TYPES - {"story"}
+_DEFAULT_SPACING_CATEGORIES = frozenset({"heading", "separator"})
+_ARTIFACT_REPLACEMENTS = {
+    "header": "",
+    "footer": "",
+    "noise": "",
+    "separator": "\n\n",
+    "heading": "\n\n",
 }
-# @brief New AI cleanup artifact types accepted from the prompt contract.
-_ARTIFACT_TYPES = {
-    "story",
-    "chapter_heading",
-    "dialogue",
-    "epigraph",
-    "header",
-    "footer",
-    "page_number",
-    "separator",
-    "copyright",
-    "ocr_noise",
-    "noise",
-    "unknown",
-}
-# @brief Artifact types treated as removable when the action is omitted.
-_REMOVABLE_ARTIFACT_TYPES = {
-    "header",
-    "footer",
-    "page_number",
-    "separator",
-    "copyright",
-    "ocr_noise",
-    "noise",
-}
-# @brief Confidence values accepted from the AI cleanup prompt contract.
-_CONFIDENCE_VALUES = {"high", "medium", "low"}
-# @brief Removal-ratio threshold above which one cleanup window is flagged as suspicious.
-_MAX_REMOVAL_RATIO_WARNING = 0.55
-# @brief Tail length inspected for late-window alternating label drift.
-_SUSPICIOUS_ALTERNATION_WINDOW = 8
-# @brief Persisted cleanup report payload type used by the UI and manifest sync.
+_CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
+
+# DATA MODELS / TYPEDEFINITIONS
+
 CleanupReportPayload = dict[str, object]
-# @brief Persisted AI cleanup operation-state payload type.
 OperationStatePayload = dict[str, object]
-TokenUsagePayload = dict[str, object]
-BudgetMetadataPayload = dict[str, int]
+SourcePagePayload = dict[str, object]
+ValidatedWindowPayload = dict[str, object]
 
 
 # PUBLIC API
 
 
-@trace_function(_AI_CLEANUP_LOGGER)
+def default_spacing_categories() -> list[str]:
+    """
+    @brief      Return the deterministic default AI Cleanup spacing selection.
+    @return     Sorted non-story category names selected by default.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    return sorted(_DEFAULT_SPACING_CATEGORIES)
+
+
+def selected_spacing_categories(report_payload: dict[str, object] | None) -> list[str]:
+    """
+    @brief      Return a compatible report's persisted spacing selection or the default.
+    @param[in]  report_payload Optional AI Cleanup report payload.
+    @return     Sorted validated non-story spacing categories.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    if not isinstance(report_payload, dict):
+        return default_spacing_categories()
+    try:
+        return sorted(_normalize_spacing_categories(report_payload.get("selected_spacing_categories", [])))
+    except ValueError:
+        return default_spacing_categories()
+
+
+def spacing_selection_available(report_payload: dict[str, object] | None) -> bool:
+    """
+    @brief      Return whether a report supports deterministic spacing reapplication.
+    @param[in]  report_payload Optional cleanup report payload.
+    @return     True for one current compatible completed AI Cleanup report.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    if not isinstance(report_payload, dict):
+        return False
+    if report_payload.get("cleanup_mode") != "ai_assisted":
+        return False
+    if report_payload.get("reconstruction_contract_fingerprint") != _CONTRACT_FINGERPRINT:
+        return False
+    decisions = report_payload.get("validated_window_decisions")
+    if not isinstance(decisions, list) or not decisions or not all(isinstance(item, dict) for item in decisions):
+        return False
+    try:
+        _normalize_spacing_categories(report_payload.get("selected_spacing_categories", []))
+        for decision in decisions:
+            _render_validated_window(dict(decision), _DEFAULT_SPACING_CATEGORIES)
+    except (KeyError, TypeError, ValueError):
+        return False
+    return True
+
+
+@trace_function(_LOGGER)
+def apply_spacing_selection(
+    project_root: str | Path,
+    selected_categories: object,
+) -> CleanupReportPayload:
+    """
+    @brief      Rebuild and persist cleaned text from retained AI decisions.
+    @param[in]  project_root Active project root folder.
+    @param[in]  selected_categories Complete selected non-story category collection.
+    @return     Updated persisted AI Cleanup report payload.
+    @exception  ValueError Raised when the selection or retained report is incompatible.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    root = Path(project_root)
+    spacing_categories = _normalize_spacing_categories(selected_categories)
+    report_path = build_operation_output_path(root, "cleanup", config.CLEANUP_REPORT_FILE_NAME)
+    raw_report = load_optional_json_artifact(report_path)
+    report = dict(raw_report) if isinstance(raw_report, dict) else None
+    if not spacing_selection_available(report):
+        raise ValueError("Compatible completed AI Cleanup decisions are unavailable for spacing reapplication.")
+
+    raw_decisions = report.get("validated_window_decisions", [])
+    rendered_decisions = [
+        _render_validated_window(dict(decision), spacing_categories)
+        for decision in raw_decisions
+        if isinstance(decision, dict)
+    ]
+    cleaned_text = "".join(str(decision["reconstructed_text"]) for decision in rendered_decisions)
+    if not cleaned_text.strip():
+        raise ValueError("The selected AI Cleanup spacing policy removed all usable text.")
+
+    output_path = build_operation_output_path(root, "cleanup", config.CLEANED_TEXT_FILE_NAME)
+    write_text_atomic(output_path, cleaned_text)
+    cleanup_metadata = cleanup_metadata_service.write_minimal_cleanup_metadata(root, cleaned_text, "ai_assisted")
+    paragraphs = [part.strip() for part in re.split(r"\n[ \t]*\n+", cleaned_text.strip()) if part.strip()]
+    report["validated_window_decisions"] = rendered_decisions
+    report["selected_spacing_categories"] = sorted(spacing_categories)
+    report["paragraph_count"] = len(paragraphs)
+    report["detected_language"] = cleanup_text_analysis_service.detect_language(cleaned_text)
+    report["detected_chapter_count"] = cleanup_text_analysis_service.count_detected_chapters(paragraphs)
+    report["page_break_repair_count"] = int(cleanup_metadata.get("page_break_repair_count", 0))
+    report["weak_boundary_count"] = int(cleanup_metadata.get("weak_boundary_count", 0))
+    report["spacing_replacement_count"] = sum(
+        1
+        for decision in rendered_decisions
+        for item in list(decision.get("removed_ranges", []))
+        if isinstance(item, dict) and item.get("replacement") == "\n\n"
+    )
+    write_json_atomic(report_path, report)
+    _LOGGER.info(
+        "Applied AI cleanup spacing categories=%s replacements=%d",
+        ",".join(sorted(spacing_categories)) or "none",
+        report["spacing_replacement_count"],
+    )
+    return report
+
+
+@trace_function(_LOGGER)
 def clean_text(
     project_root: str | Path,
     manifest: dict[str, object],
@@ -137,146 +211,109 @@ def clean_text(
     additional_cleanup_instructions: str | None = None,
 ) -> CleanupReportPayload:
     """
-    @brief      Run AI-assisted cleanup for one active project.
+    @brief      Run strict exact-source AI cleanup for one project.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  progress_callback Optional progress callback for the modal popup.
-    @param[in]  cancel_requested Optional zero-argument cancellation callback.
-    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
-    @return     Cleanup report payload for the persisted AI cleanup artifacts.
-    @exception  FileNotFoundError Raised when the extracted input is missing.
-    @exception  ValueError Raised on missing profile data or unusable cleanup output.
+    @param[in]  progress_callback Optional operation progress callback.
+    @param[in]  cancel_requested Optional cooperative cancellation callback.
+    @param[in]  additional_cleanup_instructions Optional operator cleanup rules.
+    @return     Persisted AI Cleanup report payload.
+    @exception  FileNotFoundError Raised when extracted text is missing.
+    @exception  ValueError Raised for invalid input, response, or model budget.
+    @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.6.3
+    @date       2026-07-15
+    @version    1.1.0
     """
-    resolved_project_root = Path(project_root)
-    source_document = manifest.get("source_document")
-    if not isinstance(source_document, dict):
-        raise ValueError("No imported source is available for AI-assisted cleanup.")
-    profile_id = str(ai_profile_payload.get("id", "")).strip()
-    model_name = str(ai_profile_payload.get("model_name", "")).strip()
-    base_url = str(ai_profile_payload.get("base_url", "")).strip()
-    if not profile_id or not model_name or not base_url:
-        raise ValueError("AI-assisted cleanup requires a valid enabled AI profile.")
-
-    extracted_path = resolved_project_root / config.EXTRACTED_TEXT_FILE_NAME
+    root = Path(project_root)
+    _validate_request(manifest, ai_profile_payload)
+    profile_id = str(ai_profile_payload["id"]).strip()
+    extracted_path = root / config.EXTRACTED_TEXT_FILE_NAME
     if not extracted_path.is_file():
         raise FileNotFoundError(f"Extracted text is missing: {extracted_path}")
-
-    input_text = extracted_path.read_text(encoding="utf-8")
+    input_text = _canonicalize_source_text(extracted_path.read_bytes().decode("utf-8"))
     if not input_text.strip():
         raise ValueError("Extracted text does not contain any content to clean.")
 
-    _ = source_document
-    input_snapshot_path = extracted_path
-
-    output_path = build_operation_output_path(
-        resolved_project_root,
-        "cleanup",
-        config.CLEANED_TEXT_FILE_NAME,
-    )
-    report_path = build_operation_output_path(
-        resolved_project_root,
-        "cleanup",
-        config.CLEANUP_REPORT_FILE_NAME,
-    )
-    state_path = build_operation_output_path(
-        resolved_project_root,
-        "cleanup",
-        config.CLEANUP_STATE_FILE_NAME,
-    )
-
-    prompt_template_service.validate_required_prompts(["text_cleanup_system", "text_cleanup_user"])
-    units = _build_cleanup_units(input_text)
-    if not units:
-        raise ValueError("Extracted text does not contain any cleanup units.")
-
-    language_hint = _language_hint_for_text(input_text)
+    output_path = build_operation_output_path(root, "cleanup", config.CLEANED_TEXT_FILE_NAME)
+    report_path = build_operation_output_path(root, "cleanup", config.CLEANUP_REPORT_FILE_NAME)
+    state_path = build_operation_output_path(root, "cleanup", config.CLEANUP_STATE_FILE_NAME)
+    prompt_template_service.validate_required_prompts([_SYSTEM_PROMPT_NAME, _USER_PROMPT_NAME])
+    system_prompt = prompt_template_service.render_prompt(_SYSTEM_PROMPT_NAME, {})
+    language_hint = cleanup_text_analysis_service.detect_language(input_text) or "unknown"
     script_hint = cleanup_text_analysis_service.classify_text_script(input_text)
-    system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
     existing_state = load_operation_state_file(state_path) or {}
-    additional_cleanup_instructions = _resolve_additional_cleanup_instructions(
-        additional_cleanup_instructions,
-        existing_state,
+    persisted_instructions = _state_metadata(existing_state).get("additional_cleanup_instructions", "")
+    instructions = _normalize_instructions(
+        persisted_instructions if additional_cleanup_instructions is None else additional_cleanup_instructions
     )
-    additional_cleanup_instructions_fingerprint = _compute_prompt_fingerprint(additional_cleanup_instructions)
-    budget_metadata = _build_budget_metadata(
-        ai_profile_payload,
-        language_hint,
-        script_hint,
-        system_prompt,
-        additional_cleanup_instructions,
-    )
-    input_fingerprint = _compute_input_fingerprint(input_text)
-    windows = _build_windows(units, budget_metadata)
-    total_windows = len(windows)
+    input_fingerprint = _fingerprint(input_text)
+    instructions_fingerprint = _fingerprint(instructions)
+    checkpoint_value = existing_state.get("resume_checkpoint")
+    checkpoint = checkpoint_value if isinstance(checkpoint_value, dict) else {}
+    resume_compatible = _checkpoint_is_compatible(checkpoint, input_fingerprint, instructions_fingerprint)
+    pages = _build_source_pages(input_text)
+    prompt_shell = _render_cleanup_user_prompt([], "cleanup-window-0000", language_hint, script_hint, instructions)
+    budget_metadata = _build_budget_metadata(ai_profile_payload, system_prompt, prompt_shell)
+    windows = _build_windows(pages, budget_metadata)
     model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
-    classifications, log_relative_path, resume_is_compatible = _restore_resume_state(
-        existing_state,
-        input_fingerprint,
-        additional_cleanup_instructions_fingerprint,
-    )
-    started_at = str(existing_state.get("started_at") or _utc_now_iso()) if resume_is_compatible else _utc_now_iso()
-    start_window_index = _first_incomplete_window_index(windows, classifications)
-    warning_details = _restore_warning_details(existing_state) if resume_is_compatible else []
-    token_usage = _restore_token_usage(existing_state) if classifications else token_usage_service.empty_token_usage()
-    model_settings_history = _updated_model_settings_history(
-        existing_state if resume_is_compatible else {},
-        model_settings,
-        profile_id,
-    )
-    if not log_relative_path:
-        log_path = _build_ai_log_path(resolved_project_root, started_at)
-        log_relative_path = relative_to_project(resolved_project_root, log_path)
-    else:
-        log_path = resolved_project_root / log_relative_path
+    model_settings_history = _update_model_settings_history(existing_state if resume_compatible else {}, model_settings)
+    completed_windows = _restored_completed_windows(checkpoint, windows) if resume_compatible else []
+    existing_metadata = _state_metadata(existing_state)
+    started_at = str(existing_metadata.get("started_at") or _utc_now_iso()) if resume_compatible else _utc_now_iso()
+    log_relative_path = str(existing_metadata.get("log_relative_path", "")).strip() if resume_compatible else ""
+    log_path = root / log_relative_path if log_relative_path else _build_ai_log_path(root, started_at)
+    log_relative_path = relative_to_project(root, log_path)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     if not log_path.exists():
         write_text_atomic(log_path, "")
-
-    _write_running_state(
+    token_usage = (
+        _restored_token_usage(existing_state) if completed_windows else token_usage_service.empty_token_usage()
+    )
+    _LOGGER.info(
+        "Starting AI cleanup profile_id=%s pages=%d windows=%d resume_window=%d",
+        profile_id,
+        len(pages),
+        len(windows),
+        len(completed_windows) + 1,
+    )
+    _write_state(
         state_path,
-        resolved_project_root,
-        input_snapshot_path,
+        "running",
+        len(completed_windows),
+        len(windows),
+        root,
         output_path,
         started_at,
-        start_window_index,
-        total_windows,
+        None,
         profile_id,
         log_relative_path,
         input_fingerprint,
-        classifications,
-        warning_details,
+        instructions,
+        instructions_fingerprint,
+        completed_windows,
         token_usage,
         budget_metadata,
         model_settings,
         model_settings_history,
-        additional_cleanup_instructions,
+        _combined_warning_details(completed_windows),
     )
     _emit_progress(
         progress_callback,
-        progress_current=start_window_index,
-        progress_total=total_windows,
-        message="Resuming AI-assisted cleanup..." if start_window_index > 0 else "AI-assisted cleanup in progress...",
-        token_usage=token_usage,
+        len(completed_windows),
+        len(windows),
+        "Resuming AI-assisted cleanup..." if completed_windows else "AI-assisted cleanup in progress...",
+        token_usage,
     )
-
-    last_progress_current = start_window_index
     try:
-        for window_index in range(start_window_index, total_windows):
+        for zero_index in range(len(completed_windows), len(windows)):
             raise_if_cancelled(cancel_requested)
-            window_units = units[windows[window_index]["start_index"] : windows[window_index]["end_index"] + 1]
+            window = windows[zero_index]
+            window_number = zero_index + 1
+            window_id = f"cleanup-window-{window_number:04d}"
             user_prompt = _render_cleanup_user_prompt(
-                _cleanup_prompt_variables(
-                    units,
-                    windows[window_index]["start_index"],
-                    windows[window_index]["end_index"],
-                    language_hint,
-                    script_hint,
-                    additional_cleanup_instructions,
-                )
+                list(window["pages"]), window_id, language_hint, script_hint, instructions
             )
             response_result = llm_provider_service.chat_json(
                 ai_profile_payload,
@@ -287,173 +324,186 @@ def clean_text(
                     "operation_kind": "cleanup",
                     "stage_label": "ai_cleanup",
                     "profile_id": profile_id,
-                    "window_index": window_index + 1,
-                    "window_total": total_windows,
+                    "window_index": window_number,
+                    "window_total": len(windows),
+                    "window_id": window_id,
                 },
                 cancel_requested=cancel_requested,
+                response_schema=_build_response_schema(),
+                response_schema_name="text_cleanup_blocks",
             )
-            response_payload = dict(response_result.get("payload", {}))
-            token_usage = token_usage_service.merge_token_usage(
-                token_usage,
-                response_result.get("usage"),
-            )
-            _apply_response_labels(
-                classifications,
-                response_payload,
-                window_units,
-                warning_details,
-                window_index + 1,
-            )
-            last_progress_current = window_index + 1
-            _write_running_state(
+            payload = response_result.get("payload")
+            if not isinstance(payload, dict):
+                raise ValueError("AI cleanup response must be one JSON object.")
+            window_pages = list(window["pages"])
+            validated = _validate_response(payload, window_pages, window_id)
+            validated["window_id"] = window_id
+            validated["source_window_fingerprint"] = _fingerprint(_window_source_text(window_pages))
+            completed_windows.append(validated)
+            token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
+            _write_state(
                 state_path,
-                resolved_project_root,
-                input_snapshot_path,
+                "running",
+                window_number,
+                len(windows),
+                root,
                 output_path,
                 started_at,
-                last_progress_current,
-                total_windows,
+                None,
                 profile_id,
                 log_relative_path,
                 input_fingerprint,
-                classifications,
-                warning_details,
+                instructions,
+                instructions_fingerprint,
+                completed_windows,
                 token_usage,
                 budget_metadata,
                 model_settings,
                 model_settings_history,
-                additional_cleanup_instructions,
+                _combined_warning_details(completed_windows),
             )
             _emit_progress(
                 progress_callback,
-                progress_current=last_progress_current,
-                progress_total=total_windows,
-                message="AI-assisted cleanup in progress...",
-                token_usage=token_usage,
+                window_number,
+                len(windows),
+                "AI-assisted cleanup in progress...",
+                token_usage,
             )
     except OperationCancelledError:
-        _write_running_state(
+        _write_checkpoint_state(
             state_path,
-            resolved_project_root,
-            input_snapshot_path,
+            "cancelled",
+            root,
             output_path,
             started_at,
-            last_progress_current,
-            total_windows,
             profile_id,
             log_relative_path,
             input_fingerprint,
-            classifications,
-            warning_details,
+            instructions,
+            instructions_fingerprint,
+            completed_windows,
+            windows,
             token_usage,
             budget_metadata,
             model_settings,
             model_settings_history,
-            additional_cleanup_instructions,
-            status="cancelled",
-            completed_at=_utc_now_iso(),
         )
         raise
     except Exception:
-        _write_running_state(
+        _LOGGER.exception("AI cleanup failed after %d validated windows", len(completed_windows))
+        _write_checkpoint_state(
             state_path,
-            resolved_project_root,
-            input_snapshot_path,
+            "failed",
+            root,
             output_path,
             started_at,
-            last_progress_current,
-            total_windows,
             profile_id,
             log_relative_path,
             input_fingerprint,
-            classifications,
-            warning_details,
+            instructions,
+            instructions_fingerprint,
+            completed_windows,
+            windows,
             token_usage,
             budget_metadata,
             model_settings,
             model_settings_history,
-            additional_cleanup_instructions,
-            status="failed",
-            completed_at=_utc_now_iso(),
         )
         raise
 
-    kept_units = [unit for unit in units if classifications.get(unit["unit_id"], "unknown") in _KEEP_LABELS]
-    cleaned_paragraphs = [
-        _normalize_unit_paragraph_text(str(unit["text"])) for unit in kept_units if str(unit["text"]).strip()
+    preserved_blocks = [
+        block
+        for window_result in completed_windows
+        for block in list(window_result.get("preserved_blocks", []))
+        if isinstance(block, dict)
     ]
-    cleaned_paragraphs = [paragraph for paragraph in cleaned_paragraphs if paragraph.strip()]
-    cleaned_paragraphs = _merge_adjacent_continuation_paragraphs(cleaned_paragraphs)
-    if not cleaned_paragraphs:
+    cleaned_text = "".join(str(window_result["reconstructed_text"]) for window_result in completed_windows)
+    if not cleaned_text.strip():
         raise ValueError("AI-assisted cleanup removed all usable text.")
-
-    cleaned_text = "\n\n".join(cleaned_paragraphs).strip() + "\n"
     write_text_atomic(output_path, cleaned_text)
-    metadata_payload = cleanup_metadata_service.write_minimal_cleanup_metadata(
-        resolved_project_root,
-        cleaned_text,
-        "ai_assisted",
+    cleanup_metadata = cleanup_metadata_service.write_minimal_cleanup_metadata(root, cleaned_text, "ai_assisted")
+    paragraphs = [part.strip() for part in re.split(r"\n[ \t]*\n+", cleaned_text.strip()) if part.strip()]
+    detected_language = cleanup_text_analysis_service.detect_language(cleaned_text)
+    warning_details = _combined_warning_details(completed_windows)
+    warning_details.append(
+        {
+            "kind": "human_review_required",
+            "severity": "warning",
+            "message": "Compare cleaned text with the retained original extraction before downstream use.",
+        }
     )
-    detected_language = _detect_language(cleaned_text)
-    chapter_count = _count_detected_chapters(cleaned_paragraphs)
-    warning_details.extend(
-        _build_final_output_warning_details(
-            cleaned_paragraphs,
-            classifications,
-            units,
-        )
+    removed_character_count = sum(int(item.get("removed_character_count", 0)) for item in completed_windows)
+    restored_whitespace_character_count = sum(
+        int(item.get("restored_whitespace_character_count", 0)) for item in completed_windows
     )
-    warnings = _build_cleanup_warnings(detected_language, chapter_count, warning_details)
-    report_payload: CleanupReportPayload = {
+    restored_whitespace_gap_count = sum(int(item.get("restored_whitespace_gap_count", 0)) for item in completed_windows)
+    artifact_replacement_count = sum(int(item.get("artifact_replacement_count", 0)) for item in completed_windows)
+    warnings = [
+        str(detail.get("message", "")).strip() for detail in warning_details if str(detail.get("message", "")).strip()
+    ]
+    report: CleanupReportPayload = {
         "detected_language": detected_language,
         "warnings": warnings,
         "warning_details": warning_details,
-        "paragraph_count": len(cleaned_paragraphs),
-        "removed_line_count": max(0, len(units) - len(kept_units)),
-        "detected_chapter_count": chapter_count,
-        "page_break_repair_count": int(metadata_payload.get("page_break_repair_count", 0)),
-        "weak_boundary_count": int(metadata_payload.get("weak_boundary_count", 0)),
+        "paragraph_count": len(paragraphs),
+        "removed_line_count": artifact_replacement_count,
+        "removed_character_count": removed_character_count,
+        "restored_whitespace_character_count": restored_whitespace_character_count,
+        "restored_whitespace_gap_count": restored_whitespace_gap_count,
+        "detected_chapter_count": cleanup_text_analysis_service.count_detected_chapters(paragraphs),
+        "page_break_repair_count": int(cleanup_metadata.get("page_break_repair_count", 0)),
+        "weak_boundary_count": int(cleanup_metadata.get("weak_boundary_count", 0)),
         "cleanup_mode": "ai_assisted",
+        "reconstruction_contract_fingerprint": _CONTRACT_FINGERPRINT,
+        "selected_spacing_categories": default_spacing_categories(),
         "ai_profile_id": profile_id,
         "model_settings": model_settings,
         "model_settings_history": model_settings_history,
         "ai_log_relative_path": log_relative_path,
-        "window_count": total_windows,
+        "window_count": len(windows),
+        "validated_window_decisions": completed_windows,
+        "source_page_count": len(pages),
+        "preserved_block_count": len(preserved_blocks),
+        "artifact_replacement_count": artifact_replacement_count,
+        "spacing_replacement_count": sum(
+            1
+            for decision in completed_windows
+            for item in list(decision.get("removed_ranges", []))
+            if isinstance(item, dict) and item.get("replacement") == "\n\n"
+        ),
         "token_usage": token_usage,
         "budget_metadata": budget_metadata,
-        "additional_cleanup_instructions": additional_cleanup_instructions,
-        "additional_cleanup_instructions_fingerprint": additional_cleanup_instructions_fingerprint,
+        "additional_cleanup_instructions": instructions,
+        "additional_cleanup_instructions_fingerprint": instructions_fingerprint,
     }
-    write_json_atomic(report_path, report_payload)
-    completed_state = _build_operation_state(
-        resolved_project_root,
-        input_snapshot_path,
+    write_json_atomic(report_path, report)
+    completed_state = _write_state(
+        state_path,
+        "completed",
+        len(windows),
+        len(windows),
+        root,
         output_path,
-        report_path,
-        cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
-        status="completed",
-        progress_current=total_windows,
-        progress_total=total_windows,
-        started_at=started_at,
-        completed_at=None,
-        warnings=warnings,
-        profile_id=profile_id,
-        log_relative_path=log_relative_path,
-        input_fingerprint=input_fingerprint,
-        classifications=None,
-        warning_details=warning_details,
+        started_at,
+        _utc_now_iso(),
+        profile_id,
+        log_relative_path,
+        input_fingerprint,
+        instructions,
+        instructions_fingerprint,
+        None,
+        token_usage,
+        budget_metadata,
+        model_settings,
+        model_settings_history,
+        warning_details,
+        report_path=report_path,
         detected_language=detected_language,
-        paragraph_count=len(cleaned_paragraphs),
-        chapter_count=chapter_count,
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        model_settings=model_settings,
-        model_settings_history=model_settings_history,
-        additional_cleanup_instructions=additional_cleanup_instructions,
+        paragraph_count=len(paragraphs),
+        removed_character_count=removed_character_count,
     )
-    write_json_atomic(state_path, completed_state)
     project_workspace_service.sync_manifest_operation_summary(
-        resolved_project_root,
+        root,
         "cleanup",
         completed_state,
         current_stage="text_chunking_ready",
@@ -461,24 +511,30 @@ def clean_text(
     )
     _emit_progress(
         progress_callback,
-        progress_current=total_windows,
-        progress_total=total_windows,
-        message="AI-assisted cleanup completed.",
-        token_usage=token_usage,
+        len(windows),
+        len(windows),
+        "AI-assisted cleanup completed; human review is required.",
+        token_usage,
     )
-    return report_payload
+    _LOGGER.info(
+        "Completed AI cleanup windows=%d preserved_blocks=%d removed_characters=%d",
+        len(windows),
+        len(preserved_blocks),
+        removed_character_count,
+    )
+    return report
 
 
-@trace_function(_AI_CLEANUP_LOGGER)
+@trace_function(_LOGGER)
 def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
     """
-    @brief      Load one optional cleanup operation-state payload.
+    @brief      Load the persisted AI Cleanup operation state.
     @param[in]  project_root Active project root folder.
-    @return     Persisted cleanup operation-state payload or `None`.
-    @exception  None
+    @return     Persisted operation state, or None when absent.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
+    @date       2026-07-15
+    @version    1.1.0
     """
     return load_operation_state_payload(project_root, "cleanup", config.CLEANUP_STATE_FILE_NAME)
 
@@ -486,1373 +542,1045 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
 # LOCAL HELPERS
 
 
-def _build_cleanup_units(text: str) -> list[dict[str, object]]:
+def _canonicalize_source_text(text: str) -> str:
     """
-    @brief      Build the cleanup units.
-    @param[in]  text Value for `text`.
-    @return     Derived helper result.
+    @brief      Canonicalize source newlines to LF exactly once.
+    @param[in]  text Source text value.
+    @return     Source text with CRLF and CR normalized to LF.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    units: list[dict[str, object]] = []
-    next_index = 1
-    for block in re.split(r"\n{2,}", normalized):
-        for normalized_block in _split_cleanup_block(block):
-            units.append(
+    return str(text).replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _build_source_pages(canonical_text: str) -> list[SourcePagePayload]:
+    """
+    @brief      Build page-aware source units from canonical text.
+    @param[in]  canonical_text Once-canonicalized source text.
+    @return     Ordered source page payloads with canonical offsets.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    canonical = _canonicalize_source_text(canonical_text)
+    raw_pages = canonical.split(_PAGE_SEPARATOR)
+    pages: list[SourcePagePayload] = []
+    source_offset = 0
+    for zero_index, page_text in enumerate(raw_pages):
+        pages.append(
+            {
+                "source_page_index": zero_index + 1,
+                "source_kind": "page",
+                "text": page_text,
+                "source_start": source_offset,
+                "source_end": source_offset + len(page_text),
+            }
+        )
+        source_offset += len(page_text)
+        if zero_index < len(raw_pages) - 1:
+            source_offset += len(_PAGE_SEPARATOR)
+    return pages
+
+
+def _render_cleanup_user_prompt(
+    pages: list[SourcePagePayload],
+    window_id: str,
+    source_language_hint: str,
+    dominant_script_hint: str,
+    additional_cleanup_instructions: str,
+) -> str:
+    """
+    @brief      Render one canonical cleanup-window user prompt.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  window_id Cleanup window identifier.
+    @param[in]  source_language_hint Detected source-language hint.
+    @param[in]  dominant_script_hint Detected dominant-script hint.
+    @param[in]  additional_cleanup_instructions Optional operator cleanup rules.
+    @return     Rendered cleanup user prompt.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    return prompt_template_service.render_prompt(
+        _USER_PROMPT_NAME,
+        {
+            "window_id": window_id,
+            "source_language_hint": source_language_hint,
+            "dominant_script_hint": dominant_script_hint,
+            "additional_cleanup_instructions": additional_cleanup_instructions or "None.",
+            "source_window_block": _source_window_prompt_block(pages),
+        },
+    )
+
+
+def _source_window_prompt_block(pages: list[SourcePagePayload]) -> str:
+    """
+    @brief      Wrap one source window in stable prompt markers.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @return     Marked canonical source-window text.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    return f"<<< SOURCE WINDOW START >>>\n{_window_source_text(pages)}<<< SOURCE WINDOW END >>>"
+
+
+def _window_source_text(pages: list[SourcePagePayload]) -> str:
+    """
+    @brief      Concatenate ordered source units without provider identities.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @return     Concatenated canonical source-window text.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    return "".join(str(page["text"]) for page in pages)
+
+
+def _build_response_schema() -> dict[str, object]:
+    """
+    @brief      Build the strict canonical-window response schema.
+    @return     Provider structured-output schema.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["window_id", "text_blocks"],
+        "properties": {
+            "window_id": {"type": "string", "minLength": 1},
+            "text_blocks": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "text_block_id",
+                        "text_block",
+                        "artifact_type",
+                        "confidence",
+                    ],
+                    "properties": {
+                        "text_block_id": {"type": "integer", "minimum": 1},
+                        "text_block": {"type": "string", "minLength": 1},
+                        "artifact_type": {"type": "string", "enum": sorted(_ARTIFACT_TYPES)},
+                        "confidence": {"type": "string", "enum": sorted(_CONFIDENCE_VALUES)},
+                    },
+                },
+            },
+        },
+    }
+
+
+def _validate_response(
+    response_payload: dict[str, object],
+    pages: list[SourcePagePayload],
+    expected_window_id: str,
+) -> ValidatedWindowPayload:
+    """
+    @brief      Validate and reconstruct one canonical source window.
+    @param[in]  response_payload Provider JSON response object.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  expected_window_id Window identifier expected for the response.
+    @return     Validated reconstructed window payload.
+    @exception  ValueError Raised when the provider response violates the cleanup contract.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
+    """
+    allowed_response_fields = {"window_id", "text_blocks"}
+    if set(response_payload) != allowed_response_fields:
+        raise ValueError("AI cleanup response contains unsupported fields or is missing required fields.")
+    if response_payload.get("window_id") != expected_window_id:
+        raise ValueError("AI cleanup response window_id does not match the request.")
+    raw_blocks = response_payload.get("text_blocks")
+    if not isinstance(raw_blocks, list) or not raw_blocks:
+        raise ValueError("AI cleanup response text_blocks must be a non-empty array.")
+
+    allowed_block_fields = {
+        "text_block_id",
+        "text_block",
+        "artifact_type",
+        "confidence",
+    }
+    normalized_blocks: list[dict[str, object]] = []
+    for expected_id, item in enumerate(raw_blocks, start=1):
+        if not isinstance(item, dict):
+            raise ValueError("Every AI cleanup text block must be one JSON object.")
+        if set(item) != allowed_block_fields:
+            raise ValueError("AI cleanup response block contains unsupported fields or is missing required fields.")
+        block_id = item.get("text_block_id")
+        if type(block_id) is not int or block_id != expected_id:
+            raise ValueError("AI cleanup text_block_id values must be sequential starting at 1.")
+        text_block = item.get("text_block")
+        if not isinstance(text_block, str) or not text_block:
+            raise ValueError("AI cleanup text_block values must be non-empty strings.")
+        artifact_type = item.get("artifact_type")
+        confidence = item.get("confidence")
+        if artifact_type not in _ARTIFACT_TYPES:
+            raise ValueError("AI cleanup response contains an unsupported artifact_type.")
+        if confidence not in _CONFIDENCE_VALUES:
+            raise ValueError("AI cleanup response contains an unsupported confidence value.")
+        normalized_blocks.append(
+            {
+                "text_block_id": block_id,
+                "text_block": text_block,
+                "artifact_type": artifact_type,
+                "confidence": confidence,
+            }
+        )
+
+    source_text = _window_source_text(pages)
+    preserved_blocks: list[dict[str, object]] = []
+    preserved_spans: list[tuple[int, int]] = []
+    removed_ranges: list[dict[str, object]] = []
+    restored_whitespace_ranges: list[dict[str, object]] = []
+    output_fragments: list[str] = []
+    cursor = 0
+
+    for block in normalized_blocks:
+        exact_text = str(block["text_block"])
+        match_index = source_text.find(exact_text, cursor)
+        if match_index < 0:
+            raise ValueError("AI cleanup text_block is not an exact source slice in forward source order.")
+        if match_index > cursor:
+            gap_text = source_text[cursor:match_index]
+            if not gap_text.isspace():
+                raise ValueError(
+                    "AI cleanup response leaves an unexplained source gap or violates exact source slice order."
+                )
+            output_fragments.append(gap_text)
+            restored_whitespace_ranges.append(
                 {
-                    "unit_id": f"unit-{next_index:04d}",
-                    "text": normalized_block,
-                    "estimated_tokens": _estimate_text_tokens(normalized_block) + 32,
+                    "source_window_start": cursor,
+                    "source_window_end": match_index,
+                    "text": gap_text,
+                    "reason": "restored_whitespace_gap",
                 }
             )
-            next_index += 1
-    return units
+
+        block_end = match_index + len(exact_text)
+        if block["artifact_type"] in _NON_DISPLAY_ARTIFACT_TYPES:
+            removed_ranges.append(_removed_range(match_index, block_end, exact_text, block))
+            output_fragments.append(_ARTIFACT_REPLACEMENTS[str(block["artifact_type"])])
+        else:
+            preserved_blocks.append(
+                {
+                    **block,
+                    "source_window_start": match_index,
+                    "source_window_end": block_end,
+                }
+            )
+            preserved_spans.append((match_index, block_end))
+            output_fragments.append(exact_text)
+        cursor = block_end
+
+    if cursor < len(source_text):
+        gap_text = source_text[cursor:]
+        if not gap_text.isspace():
+            raise ValueError(
+                "AI cleanup response leaves an unexplained source gap or violates exact source slice order."
+            )
+        output_fragments.append(gap_text)
+        restored_whitespace_ranges.append(
+            {
+                "source_window_start": cursor,
+                "source_window_end": len(source_text),
+                "text": gap_text,
+                "reason": "restored_whitespace_gap",
+            }
+        )
+
+    warning_details: list[dict[str, object]] = []
+    source_offset = 0
+    for page in pages:
+        page_index = int(page["source_page_index"])
+        page_text = str(page["text"])
+        page_start = source_offset
+        page_end = page_start + len(page_text)
+        source_offset = page_end
+        has_preserved_text = any(
+            span_start < page_end and span_end > page_start for span_start, span_end in preserved_spans
+        )
+        if page_text and not has_preserved_text:
+            warning_details.append(
+                {
+                    "kind": "entire_page_removed",
+                    "severity": "warning",
+                    "source_page_index": page_index,
+                    "message": f"AI cleanup removed all content of source page/segment {page_index}.",
+                }
+            )
+
+    removed_character_count = sum(len(str(item["text"])) for item in removed_ranges)
+    restored_whitespace_character_count = sum(len(str(item["text"])) for item in restored_whitespace_ranges)
+    total_characters = len(source_text)
+    if total_characters and removed_character_count / total_characters > 0.55:
+        warning_details.append(
+            {
+                "kind": "high_removal_ratio",
+                "severity": "warning",
+                "message": "AI cleanup removed more than 55% of the canonical source window.",
+            }
+        )
+    for removed_range in removed_ranges:
+        removed_text = str(removed_range["text"])
+        if len(removed_text) >= 240 and len(removed_text.split()) >= 25:
+            warning_details.append(
+                {
+                    "kind": "long_prose_like_removal",
+                    "severity": "warning",
+                    "message": "AI cleanup removed a long prose-like range; compare it with the original.",
+                }
+            )
+    if len(normalized_blocks) > max(32, total_characters // 20):
+        warning_details.append(
+            {
+                "kind": "fragmented_model_output",
+                "severity": "warning",
+                "message": "AI cleanup returned unusually fragmented block output.",
+            }
+        )
+    warning_details.extend(_repeated_classification_warnings(preserved_blocks, removed_ranges))
+    validated_window = {
+        "preserved_blocks": preserved_blocks,
+        "reconstructed_text": "".join(output_fragments),
+        "removed_ranges": removed_ranges,
+        "restored_whitespace_ranges": restored_whitespace_ranges,
+        "removed_character_count": removed_character_count,
+        "restored_whitespace_character_count": restored_whitespace_character_count,
+        "restored_whitespace_gap_count": len(restored_whitespace_ranges),
+        "artifact_replacement_count": len(removed_ranges),
+        "warning_details": warning_details,
+        "response_block_count": len(normalized_blocks),
+        "source_window_length": len(source_text),
+    }
+    return _render_validated_window(validated_window, _DEFAULT_SPACING_CATEGORIES)
 
 
-def _normalize_unit_paragraph_text(unit_text: str) -> str:
+def _render_validated_window(
+    window_payload: ValidatedWindowPayload,
+    selected_categories: object,
+) -> ValidatedWindowPayload:
     """
-    @brief      Normalize the unit paragraph text.
-    @param[in]  unit_text Text value for `unit_text`.
-    @return     Derived helper result.
+    @brief      Reconstruct one retained validated window for a complete spacing selection.
+    @param[in]  window_payload Retained exact-source validation decision payload.
+    @param[in]  selected_categories Complete selected non-story category collection.
+    @return     Copied window payload with updated replacements and reconstructed text.
+    @exception  ValueError Raised when retained ranges are missing, overlapping, or incompatible.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
+    @date       2026-07-15
     @version    0.1.0
     """
-    normalized_lines = [
-        re.sub(r"\s+", " ", raw_line).strip()
-        for raw_line in unit_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    ]
-    paragraph_lines: list[tuple[str, bool]] = []
-    merge_with_previous_line = False
-    for line_index, normalized_line in enumerate(normalized_lines):
-        if not normalized_line:
-            continue
-        paragraph_lines.append((normalized_line, merge_with_previous_line))
-        next_line = _next_content_line(normalized_lines, line_index + 1)
-        merge_with_previous_line = _should_continue_paragraph(normalized_line, next_line)
-    return _format_dialogue_lines(_compose_paragraph_text(paragraph_lines))
+    spacing_categories = _normalize_spacing_categories(selected_categories)
+    source_length = window_payload.get("source_window_length")
+    if type(source_length) is not int or source_length < 0:
+        raise ValueError("Retained AI Cleanup window length is missing or invalid.")
+
+    fragments: list[tuple[int, int, str]] = []
+    rendered_ranges: list[dict[str, object]] = []
+    for raw_range in list(window_payload.get("removed_ranges", [])):
+        if not isinstance(raw_range, dict):
+            raise ValueError("Retained AI Cleanup artifact range is invalid.")
+        decision = raw_range.get("decision")
+        if not isinstance(decision, dict):
+            raise ValueError("Retained AI Cleanup artifact decision is missing.")
+        artifact_type = str(decision.get("artifact_type", ""))
+        replacement = "\n\n" if artifact_type in spacing_categories else ""
+        rendered_range = {**raw_range, "replacement": replacement}
+        rendered_ranges.append(rendered_range)
+        fragments.append(
+            (
+                int(rendered_range["source_window_start"]),
+                int(rendered_range["source_window_end"]),
+                replacement,
+            )
+        )
+
+    for raw_block in list(window_payload.get("preserved_blocks", [])):
+        if not isinstance(raw_block, dict):
+            raise ValueError("Retained AI Cleanup story block is invalid.")
+        fragments.append(
+            (
+                int(raw_block["source_window_start"]),
+                int(raw_block["source_window_end"]),
+                str(raw_block["text_block"]),
+            )
+        )
+
+    for raw_gap in list(window_payload.get("restored_whitespace_ranges", [])):
+        if not isinstance(raw_gap, dict):
+            raise ValueError("Retained AI Cleanup whitespace range is invalid.")
+        fragments.append(
+            (
+                int(raw_gap["source_window_start"]),
+                int(raw_gap["source_window_end"]),
+                "",
+            )
+        )
+
+    fragments.sort(key=lambda item: (item[0], item[1]))
+    cursor = 0
+    output_fragments: list[str] = []
+    for start, end, output_text in fragments:
+        if start != cursor or end <= start:
+            raise ValueError("Retained AI Cleanup source ranges are incomplete or overlapping.")
+        cursor = end
+        output_fragments.append(output_text)
+    if cursor != source_length:
+        raise ValueError("Retained AI Cleanup source ranges do not cover the validated window.")
+
+    return {
+        **window_payload,
+        "removed_ranges": rendered_ranges,
+        "reconstructed_text": "".join(output_fragments),
+        "selected_spacing_categories": sorted(spacing_categories),
+    }
 
 
-def _build_windows(
-    units: list[dict[str, object]],
-    budget_metadata: BudgetMetadataPayload,
-) -> list[dict[str, int]]:
+def _normalize_spacing_categories(selected_categories: object) -> frozenset[str]:
     """
-    @brief      Build context-budgeted AI cleanup request windows.
-    @param[in]  units Value for `units`.
-    @param[in]  budget_metadata Context-budget metadata for the selected profile.
-    @return     Derived helper result.
+    @brief      Validate one complete non-story AI Cleanup spacing selection.
+    @param[in]  selected_categories Raw selected category collection.
+    @return     Normalized immutable category set.
+    @exception  ValueError Raised for scalar, unknown, or story selections.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.3.0
+    @date       2026-07-15
+    @version    0.1.0
     """
-    text_budget = int(budget_metadata["text_budget_tokens"])
-    max_window_units = int(budget_metadata["max_window_units"])
-    windows: list[dict[str, int]] = []
-    start_index = 0
-    while start_index < len(units):
-        current_budget = 0
-        current_unit_count = 0
-        end_index = start_index - 1
-        while end_index + 1 < len(units):
-            next_tokens = _estimate_text_tokens(_build_units_block(units, end_index + 1, end_index + 1))
-            if next_tokens > text_budget:
-                raise ValueError("One AI cleanup unit exceeds the configured usable input budget.")
-            if max_window_units > 0 and current_unit_count >= max_window_units and end_index >= start_index:
-                break
-            if current_budget + next_tokens > text_budget and end_index >= start_index:
-                break
-            current_budget += next_tokens
-            end_index += 1
-            current_unit_count += 1
-        windows.append({"start_index": start_index, "end_index": end_index})
-        start_index = end_index + 1
-    return windows
+    if isinstance(selected_categories, (str, bytes)) or not isinstance(
+        selected_categories,
+        (list, tuple, set, frozenset),
+    ):
+        raise ValueError("AI Cleanup spacing categories must be a collection.")
+    normalized = frozenset(str(item).strip().casefold() for item in selected_categories if str(item).strip())
+    unsupported = normalized - _NON_DISPLAY_ARTIFACT_TYPES
+    if unsupported:
+        raise ValueError(f"Unsupported AI Cleanup spacing categories: {', '.join(sorted(unsupported))}.")
+    return normalized
+
+
+def _removed_range(
+    start: int,
+    end: int,
+    text: str,
+    block: dict[str, object],
+) -> dict[str, object]:
+    """
+    @brief      Describe one deterministically rendered non-story source slice.
+    @param[in]  start Inclusive canonical-window source offset.
+    @param[in]  end Exclusive canonical-window source offset.
+    @param[in]  text Source text value.
+    @param[in]  block Validated non-story response block.
+    @return     Structured artifact-rendering range.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.2.0
+    """
+    return {
+        "source_window_start": start,
+        "source_window_end": end,
+        "text": text,
+        "replacement": "\n\n" if block["artifact_type"] in _DEFAULT_SPACING_CATEGORIES else "",
+        "decision": {
+            "text_block_id": block["text_block_id"],
+            "artifact_type": block["artifact_type"],
+            "confidence": block["confidence"],
+            "text_block": block["text_block"],
+        },
+    }
+
+
+def _repeated_classification_warnings(
+    preserved_blocks: list[dict[str, object]],
+    removed_ranges: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """
+    @brief      Build warnings for text classified as both story and artifact.
+    @param[in]  preserved_blocks Validated story blocks.
+    @param[in]  removed_ranges Exact non-story source ranges.
+    @return     Structured repeated-classification warnings.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    preserved = {str(block["text_block"]).strip() for block in preserved_blocks if str(block["text_block"]).strip()}
+    removed = {str(item["text"]).strip() for item in removed_ranges if str(item["text"]).strip()}
+    repeated = sorted(preserved & removed)
+    if not repeated:
+        return []
+    return [
+        {
+            "kind": "inconsistent_repeated_text_classification",
+            "severity": "warning",
+            "message": "Identical repeated source text was both preserved and removed in one window.",
+            "example": repeated[0][:160],
+        }
+    ]
 
 
 def _build_budget_metadata(
     ai_profile_payload: dict[str, object],
-    language_hint: str,
-    script_hint: str,
     system_prompt: str,
-    additional_cleanup_instructions: str,
-) -> BudgetMetadataPayload:
-    """
-    @brief      Build context-window budget metadata for AI cleanup.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  language_hint Detected source-language hint.
-    @param[in]  script_hint Detected dominant-script hint.
-    @param[in]  system_prompt Rendered system prompt.
-    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
-    @return     Context-budget metadata used for request-window construction.
-    @exception  ValueError Raised when context and output settings leave too little input room.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.3.0
-    """
-    prompt_user_shell = _render_cleanup_user_prompt(
-        {
-            "source_language_hint": language_hint,
-            "dominant_script_hint": script_hint,
-            "units_block": "(none)",
-            "unit_count": 0,
-            "additional_cleanup_instructions": additional_cleanup_instructions,
-        }
-    )
-    budget_metadata = ai_budget_service.context_budget_metadata(
-        ai_profile_payload,
-        f"{system_prompt}\n\n{prompt_user_shell}",
-        config.DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS,
-        config.DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION,
-        config.DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION,
-        config.DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS,
-        "AI-assisted cleanup cannot run because the selected AI profile context window "
-        "and max output tokens leave too little room for cleanup input",
-        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
-    )
-    max_window_units = (
-        0
-        if ai_budget_service.uses_online_text_budget(ai_profile_payload)
-        else config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS
-    )
-    return {**budget_metadata, "max_window_units": max_window_units}
-
-
-def _build_model_settings(
-    ai_profile_payload: dict[str, object],
-    budget_metadata: BudgetMetadataPayload,
+    user_prompt_shell: str,
 ) -> dict[str, object]:
     """
-    @brief      Build the concrete AI model settings stored with cleanup state.
+    @brief      Build model-context budgeting metadata for cleanup windows.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  budget_metadata Context-budget metadata derived from the profile.
-    @return     JSON-ready model settings payload.
+    @param[in]  system_prompt Rendered cleanup system prompt.
+    @param[in]  user_prompt_shell Rendered user-prompt shell without source pages.
+    @return     Cleanup model-budget metadata.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
+    context_window = int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW))
+    max_output_tokens = int(ai_profile_payload.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS))
+    safety_margin = max(
+        config.DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS,
+        math.ceil(context_window * config.DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION),
+    )
     return {
-        "backend_kind": str(ai_profile_payload.get("backend_kind", "")).strip(),
-        "base_url": str(ai_profile_payload.get("base_url", "")).strip(),
-        "model_name": str(ai_profile_payload.get("model_name", "")).strip(),
-        "temperature": ai_profile_payload.get("temperature"),
-        "context_window": int(budget_metadata.get("context_window", 0)),
-        "max_output_tokens": int(budget_metadata.get("max_output_tokens", 0)),
+        "context_window": context_window,
+        "max_output_tokens": max_output_tokens,
+        "prompt_budget_tokens": _estimate_text_tokens(system_prompt) + _estimate_text_tokens(user_prompt_shell),
+        "safety_margin_tokens": safety_margin,
+        "response_expansion_factor": config.DEFAULT_AI_CLEANUP_RESPONSE_EXPANSION_FACTOR,
+        "target_page_count": config.DEFAULT_AI_CLEANUP_TARGET_PAGE_COUNT,
+        "block_overhead_tokens": config.DEFAULT_AI_CLEANUP_BLOCK_OVERHEAD_TOKENS,
     }
 
 
-def _updated_model_settings_history(
-    existing_state: dict[str, object],
-    model_settings: dict[str, object],
-    profile_id: str,
+def _build_windows(
+    pages: list[SourcePagePayload],
+    budget_metadata: dict[str, object],
 ) -> list[dict[str, object]]:
     """
-    @brief      Return model-settings history with the current settings appended once.
-    @param[in]  existing_state Existing cleanup operation state.
-    @param[in]  model_settings Current selected model settings.
-    @param[in]  profile_id Current selected profile identifier.
-    @return     Ordered model-settings history.
+    @brief      Partition source units into budget-safe cleanup windows.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  budget_metadata Cleanup model-budget metadata.
+    @return     Ordered budget-safe cleanup windows.
+    @exception  ValueError Raised when even one source unit cannot fit model limits.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    metadata = existing_state.get("metadata", {})
-    existing_history = []
-    if isinstance(metadata, dict):
-        raw_history = metadata.get("model_settings_history", [])
-        if isinstance(raw_history, list):
-            existing_history = [dict(item) for item in raw_history if isinstance(item, dict)]
-    current_item = {"profile_id": profile_id, **dict(model_settings)}
-    if not existing_history or existing_history[-1] != current_item:
-        existing_history.append(current_item)
-    return existing_history
-
-
-def _restore_resume_state(
-    existing_state: dict[str, object],
-    input_fingerprint: str,
-    additional_cleanup_instructions_fingerprint: str,
-) -> tuple[dict[str, str], str | None, bool]:
-    """
-    @brief      Restore the resume state.
-    @param[in]  existing_state Value for `existing_state`.
-    @param[in]  input_fingerprint Value for `input_fingerprint`.
-    @param[in]  additional_cleanup_instructions_fingerprint Operator instruction fingerprint.
-    @return     Stored classifications, existing log path, and compatibility flag.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.4.0
-    """
-    resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        metadata = {}
-    log_relative_path = metadata.get("ai_log_relative_path")
-    stored_instruction_fingerprint = str(
-        metadata.get("additional_cleanup_instructions_fingerprint")
-        or resume_checkpoint.get("additional_cleanup_instructions_fingerprint")
-        or _compute_prompt_fingerprint("")
-    )
-    if (
-        existing_state.get("mode") != "ai_assisted"
-        or str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint
-        or stored_instruction_fingerprint != additional_cleanup_instructions_fingerprint
-    ):
-        return {}, None, False
-    stored_classifications = resume_checkpoint.get("classifications", {})
-    if not isinstance(stored_classifications, dict):
-        return {}, log_relative_path if isinstance(log_relative_path, str) else None, True
-    return (
-        {str(unit_id): str(label) for unit_id, label in stored_classifications.items() if str(unit_id).strip()},
-        log_relative_path if isinstance(log_relative_path, str) else None,
-        True,
-    )
-
-
-def _first_incomplete_window_index(
-    windows: list[dict[str, int]],
-    classifications: dict[str, str],
-) -> int:
-    """
-    @brief      Find the first request window containing an unclassified unit.
-    @param[in]  windows Current context-budgeted cleanup windows.
-    @param[in]  classifications Stored classifications by unit id.
-    @return     Zero-based window index.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    if not classifications:
-        return 0
-    for window_index, window_payload in enumerate(windows):
-        start_index = int(window_payload["start_index"])
-        end_index = int(window_payload["end_index"])
-        for unit_index in range(start_index, end_index + 1):
-            if f"unit-{unit_index + 1:04d}" not in classifications:
-                return window_index
-    return len(windows)
-
-
-def _restore_warning_details(existing_state: dict[str, object]) -> list[dict[str, object]]:
-    """
-    @brief      Restore the warning details.
-    @param[in]  existing_state Value for `existing_state`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
+    if not pages:
         return []
-    raw_items = metadata.get("warning_details", [])
-    if not isinstance(raw_items, list):
-        return []
-    return [dict(item) for item in raw_items if isinstance(item, dict)]
+    working_pages = [dict(page) for page in pages]
+    target_count = max(1, int(budget_metadata.get("target_page_count", 4)))
+    windows: list[dict[str, object]] = []
+    page_offset = 0
+    while page_offset < len(working_pages):
+        selected: list[SourcePagePayload] = []
+        selected_estimate: dict[str, int] | None = None
+        while page_offset + len(selected) < len(working_pages) and len(selected) < target_count:
+            candidate = selected + [working_pages[page_offset + len(selected)]]
+            estimate = _window_budget_estimate(candidate, budget_metadata)
+            if not _window_estimate_fits(estimate, budget_metadata):
+                break
+            selected = candidate
+            selected_estimate = estimate
+        if not selected or selected_estimate is None:
+            page = working_pages[page_offset]
+            replacements = _split_page_at_boundary(page)
+            if len(replacements) == 1:
+                raise ValueError(
+                    "AI cleanup profile has insufficient output capacity for the smallest source page/segment."
+                )
+            working_pages = working_pages[:page_offset] + replacements + working_pages[page_offset + 1 :]
+            _renumber_source_pages(working_pages)
+            continue
+        windows.append({"pages": selected, **selected_estimate})
+        page_offset += len(selected)
+    return windows
 
 
-def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
+def _window_budget_estimate(
+    pages: list[SourcePagePayload],
+    budget: dict[str, object],
+) -> dict[str, int]:
     """
-    @brief      Restore the token usage.
-    @param[in]  existing_state Value for `existing_state`.
-    @return     Derived helper result.
+    @brief      Estimate prompt and response tokens for one candidate window.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @param[in]  budget Cleanup model-budget metadata.
+    @return     Candidate-window token estimate.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return token_usage_service.empty_token_usage()
-    return token_usage_service.restore_token_usage(metadata.get("token_usage"))
-
-
-def _render_cleanup_user_prompt(variables: dict[str, object]) -> str:
-    """
-    @brief      Render the AI cleanup user prompt with backward-compatible variables.
-    @param[in]  variables Preferred prompt variables.
-    @return     Rendered AI cleanup user prompt.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.3.0
-    """
-    template = prompt_template_service.load_prompt("text_cleanup_user")
-    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
-    rendered_prompt = prompt_template_service.render_prompt(
-        "text_cleanup_user",
-        {key: value for key, value in variables.items() if key in placeholder_names},
+    source_tokens = _estimate_text_tokens(_window_source_text(pages))
+    output_tokens = max(
+        1,
+        math.ceil(source_tokens * float(budget.get("response_expansion_factor", 2.0)))
+        + len(pages) * int(budget.get("block_overhead_tokens", 256))
+        + 64,
     )
-    additional_cleanup_instructions = _normalized_additional_cleanup_instructions(
-        variables.get("additional_cleanup_instructions")
+    context_tokens = (
+        int(budget.get("prompt_budget_tokens", 0))
+        + source_tokens
+        + output_tokens
+        + int(budget.get("safety_margin_tokens", 0))
     )
-    if additional_cleanup_instructions and "additional_cleanup_instructions" not in placeholder_names:
-        rendered_prompt = _append_additional_cleanup_instructions(
-            rendered_prompt,
-            additional_cleanup_instructions,
-        )
-    return rendered_prompt
-
-
-def _cleanup_prompt_variables(
-    units: list[dict[str, object]],
-    start_index: int,
-    end_index: int,
-    language_hint: str,
-    script_hint: str,
-    additional_cleanup_instructions: str,
-) -> dict[str, object]:
-    """
-    @brief      Build AI cleanup prompt variables with language and neighbor context.
-    @param[in]  units Ordered cleanup units.
-    @param[in]  start_index First window unit index.
-    @param[in]  end_index Last window unit index.
-    @param[in]  language_hint Detected source-language hint.
-    @param[in]  script_hint Detected dominant-script hint.
-    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
-    @return     Prompt variable mapping.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.2.0
-    """
-    window_units = units[start_index : end_index + 1]
     return {
-        "source_language_hint": language_hint,
-        "dominant_script_hint": script_hint,
-        "units_block": _build_units_block(units, start_index, end_index),
-        "unit_count": len(window_units),
-        "additional_cleanup_instructions": additional_cleanup_instructions,
+        "estimated_source_tokens": source_tokens,
+        "estimated_output_tokens": output_tokens,
+        "estimated_context_tokens": context_tokens,
     }
 
 
-def _resolve_additional_cleanup_instructions(
-    additional_cleanup_instructions: str | None,
-    existing_state: dict[str, object],
-) -> str:
+def _window_estimate_fits(estimate: dict[str, int], budget: dict[str, object]) -> bool:
     """
-    @brief      Resolve the operator cleanup rules for a new or resumed AI cleanup run.
-    @param[in]  additional_cleanup_instructions New operator instructions or None when resuming.
-    @param[in]  existing_state Existing cleanup operation state.
-    @return     Normalized operator cleanup instructions.
+    @brief      Check whether one window estimate fits model limits.
+    @param[in]  estimate Candidate-window token estimate.
+    @param[in]  budget Cleanup model-budget metadata.
+    @return     True when the candidate fits all model limits.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.2
+    @date       2026-07-15
+    @version    1.1.0
     """
-    if additional_cleanup_instructions is not None:
-        return _normalized_additional_cleanup_instructions(additional_cleanup_instructions)
-    if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
-        "cancelled",
-        "running",
-        "failed",
-    }:
-        return ""
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return ""
-    return _normalized_additional_cleanup_instructions(metadata.get("additional_cleanup_instructions"))
+    return estimate["estimated_output_tokens"] <= int(budget.get("max_output_tokens", 0)) and estimate[
+        "estimated_context_tokens"
+    ] <= int(budget.get("context_window", 0))
 
 
-def _normalized_additional_cleanup_instructions(value: object) -> str:
+def _split_page_at_boundary(page: SourcePagePayload) -> list[SourcePagePayload]:
     """
-    @brief      Normalize optional operator cleanup rules for prompt insertion and state storage.
-    @param[in]  value Candidate instruction text.
-    @return     Trimmed instruction text.
+    @brief      Split one oversized source unit at an existing newline.
+    @param[in]  page Source page or safe-segment payload.
+    @return     One or two source segments split at an existing newline.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    if value is None:
-        return ""
-    return str(value).strip()
+    text = str(page["text"])
+    boundaries = [index + 1 for index, character in enumerate(text) if character == "\n" and index + 1 < len(text)]
+    if not boundaries:
+        return [page]
+    boundary = min(boundaries, key=lambda value: abs(value - len(text) // 2))
+    return [
+        {**page, "source_kind": "segment", "text": text[:boundary]},
+        {**page, "source_kind": "segment", "text": text[boundary:]},
+    ]
 
 
-def _append_additional_cleanup_instructions(prompt_text: str, additional_cleanup_instructions: str) -> str:
+def _renumber_source_pages(pages: list[SourcePagePayload]) -> None:
     """
-    @brief      Append operator cleanup rules to one rendered AI cleanup prompt.
-    @param[in]  prompt_text Rendered prompt template text.
-    @param[in]  additional_cleanup_instructions Normalized operator rules.
-    @return     Prompt text with an additional-rules section.
+    @brief      Renumber source units and recompute canonical offsets.
+    @param[in]  pages Ordered source page or safe-segment payloads.
+    @return     None.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    if not additional_cleanup_instructions:
-        return prompt_text
-    return f"{prompt_text.rstrip()}\n\nAdditional operator cleanup instructions:\n{additional_cleanup_instructions}\n"
+    offset = 0
+    for source_index, page in enumerate(pages, start=1):
+        page["source_page_index"] = source_index
+        page["source_start"] = offset
+        offset += len(str(page["text"]))
+        page["source_end"] = offset
 
 
-def _build_units_block(units: list[dict[str, object]], start_index: int, end_index: int) -> str:
-    """
-    @brief      Build the units block with neighboring context.
-    @param[in]  units Ordered cleanup units.
-    @param[in]  start_index First window unit index.
-    @param[in]  end_index Last window unit index.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    blocks: list[str] = []
-    for unit_index in range(start_index, end_index + 1):
-        unit = units[unit_index]
-        previous_text = "" if unit_index <= 0 else str(units[unit_index - 1]["text"])
-        next_text = "" if unit_index + 1 >= len(units) else str(units[unit_index + 1]["text"])
-        blocks.append(
-            "\n".join(
-                [
-                    f"unit_id: {unit['unit_id']}",
-                    f"previous_unit_text: {_prompt_context_text(previous_text)}",
-                    f"unit_text: {unit['text']}",
-                    f"next_unit_text: {_prompt_context_text(next_text)}",
-                ]
-            )
-        )
-    return "\n\n".join(blocks)
-
-
-def _prompt_context_text(text: str) -> str:
-    """
-    @brief      Trim one neighbor context text fragment for prompt inclusion.
-    @param[in]  text Neighbor unit text.
-    @return     Trimmed prompt context text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    normalized = re.sub(r"\s+", " ", str(text)).strip()
-    if len(normalized) <= 240:
-        return normalized or "(none)"
-    return normalized[:237].rstrip() + "..."
-
-
-def _language_hint_for_text(text: str) -> str:
-    """
-    @brief      Build one source-language hint for the AI cleanup prompt.
-    @param[in]  text Extracted text.
-    @return     Detected language code or `unknown`.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    return _detect_language(text) or "unknown"
-
-
-def _compose_paragraph_text(lines: list[tuple[str, bool]]) -> str:
-    """
-    @brief      Compose the paragraph text.
-    @param[in]  lines Value for `lines`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    if not lines:
-        return ""
-    first_line, _joined_with_previous = lines[0]
-    paragraph_text = first_line.strip()
-    for current_line, join_with_previous in lines[1:]:
-        separator = " " if join_with_previous else "\n"
-        paragraph_text += separator + current_line.strip()
-    return paragraph_text.strip()
-
-
-def _format_dialogue_lines(paragraph_text: str) -> str:
-    """
-    @brief      Format the dialogue lines.
-    @param[in]  paragraph_text Text value for `paragraph_text`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return cleanup_text_analysis_service.format_dialogue_lines(paragraph_text)
-
-
-def _merge_adjacent_continuation_paragraphs(paragraphs: list[str]) -> list[str]:
-    """
-    @brief      Merge the adjacent continuation paragraphs.
-    @param[in]  paragraphs Value for `paragraphs`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    merged_paragraphs: list[str] = []
-    for paragraph in paragraphs:
-        normalized_paragraph = paragraph.strip()
-        if not normalized_paragraph:
-            continue
-        if merged_paragraphs and _should_continue_after_paragraph(
-            merged_paragraphs[-1],
-            normalized_paragraph,
-        ):
-            merged_paragraphs[-1] = _format_dialogue_lines(
-                merged_paragraphs[-1].rstrip() + " " + normalized_paragraph.lstrip()
-            )
-            continue
-        merged_paragraphs.append(normalized_paragraph)
-    return merged_paragraphs
-
-
-def _should_continue_after_paragraph(
-    current_paragraph: str,
-    next_paragraph: str,
+def _checkpoint_is_compatible(
+    checkpoint: dict[str, object],
+    input_fingerprint: str,
+    instructions_fingerprint: str,
 ) -> bool:
     """
-    @brief      Determine whether continue after paragraph.
-    @param[in]  current_paragraph Value for `current_paragraph`.
-    @param[in]  next_paragraph Value for `next_paragraph`.
-    @return     True when the helper condition is satisfied.
+    @brief      Check checkpoint compatibility with the current cleanup contract.
+    @param[in]  checkpoint Persisted cleanup checkpoint payload.
+    @param[in]  input_fingerprint Canonical input-text fingerprint.
+    @param[in]  instructions_fingerprint Operator-instructions fingerprint.
+    @return     True when checkpoint and current contract identities match.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    current_lines = [
-        line.strip() for line in current_paragraph.replace("\r\n", "\n").replace("\r", "\n").split("\n") if line.strip()
-    ]
-    next_lines = [
-        line.strip() for line in next_paragraph.replace("\r\n", "\n").replace("\r", "\n").split("\n") if line.strip()
-    ]
-    if not current_lines or not next_lines:
-        return False
-    return _should_continue_paragraph(current_lines[-1], next_lines[0])
-
-
-def _should_continue_paragraph(current_last_line: str, next_line: str | None) -> bool:
-    """
-    @brief      Determine whether continue paragraph.
-    @param[in]  current_last_line Value for `current_last_line`.
-    @param[in]  next_line Value for `next_line`.
-    @return     True when the helper condition is satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    if next_line is None:
-        return False
-    if _detect_chapter_label(next_line) is not None:
-        return False
-    if next_line.startswith("- "):
-        return False
-    current_text = current_last_line.strip()
-    if not current_text:
-        return False
-    if current_text.endswith(":"):
-        return False
-    return current_text.endswith("-") or not _PARAGRAPH_TERMINAL_PATTERN.search(current_text)
-
-
-def _next_content_line(lines: list[str], start_index: int) -> str | None:
-    """
-    @brief      Resolve the next content line.
-    @param[in]  lines Value for `lines`.
-    @param[in]  start_index Value for `start_index`.
-    @return     Resolved helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    for normalized_line in lines[start_index:]:
-        if normalized_line:
-            return normalized_line
-    return None
-
-
-def _apply_response_labels(
-    classifications: dict[str, str],
-    response_payload: dict[str, object],
-    window_units: list[dict[str, object]],
-    warning_details: list[dict[str, object]],
-    window_index: int,
-) -> None:
-    """
-    @brief      Normalize one AI cleanup response conservatively before labels are committed.
-    @param[in,out] classifications Accumulated cleanup classifications.
-    @param[in]     response_payload Structured AI response payload.
-    @param[in]     window_units Ordered cleanup units in the current window.
-    @param[in,out] warning_details Accumulated structured warning details.
-    @param[in]     window_index One-based cleanup window index.
-    @return       None.
-    @exception    ValueError Raised when the AI response does not contain a valid results list.
-    @author       Eng. Dan Dumitru Pasare
-    @date         2026-04-07
-    @version      0.2.0
-    """
-    results = response_payload.get("results", [])
-    if not isinstance(results, list):
-        raise ValueError("AI cleanup response does not contain a valid results list.")
-    window_unit_map = {str(unit["unit_id"]): str(unit["text"]) for unit in window_units}
-    window_classifications: dict[str, dict[str, str]] = {}
-    for item in results:
-        if not isinstance(item, dict):
-            continue
-        unit_id = str(item.get("unit_id", "")).strip()
-        if not unit_id:
-            continue
-        if unit_id not in window_unit_map:
-            _append_warning_detail(
-                warning_details,
-                kind="invalid_result_unit",
-                message=(
-                    f"AI cleanup returned an unknown unit id '{unit_id}' in window {window_index}; "
-                    "the result item was ignored."
-                ),
-                window_index=window_index,
-                unit_id=unit_id,
-            )
-            continue
-        window_classifications[unit_id] = _classification_from_result_item(item)
-    normalized_labels = _normalize_window_labels(
-        window_units,
-        window_classifications,
-        warning_details,
-        window_index,
+    return (
+        checkpoint.get("contract_fingerprint") == _CONTRACT_FINGERPRINT
+        and checkpoint.get("input_fingerprint") == input_fingerprint
+        and checkpoint.get("additional_cleanup_instructions_fingerprint") == instructions_fingerprint
+        and isinstance(checkpoint.get("completed_windows"), list)
     )
-    for unit in window_units:
-        unit_id = str(unit["unit_id"])
-        classifications[unit_id] = normalized_labels.get(unit_id, "unknown")
 
 
-def _write_running_state(
+def _restored_completed_windows(
+    checkpoint: dict[str, object],
+    windows: list[dict[str, object]],
+) -> list[ValidatedWindowPayload]:
+    """
+    @brief      Restore the valid leading sequence of checkpointed windows.
+    @param[in]  checkpoint Persisted cleanup checkpoint payload.
+    @param[in]  windows Current ordered cleanup windows.
+    @return     Valid leading sequence of checkpointed window results.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    restored: list[ValidatedWindowPayload] = []
+    items = checkpoint.get("completed_windows", [])
+    if not isinstance(items, list):
+        return restored
+    for zero_index, item in enumerate(items):
+        if zero_index >= len(windows) or not isinstance(item, dict):
+            break
+        expected_id = f"cleanup-window-{zero_index + 1:04d}"
+        expected_fingerprint = _fingerprint(_window_source_text(list(windows[zero_index]["pages"])))
+        if item.get("window_id") != expected_id or item.get("source_window_fingerprint") != expected_fingerprint:
+            break
+        if not isinstance(item.get("preserved_blocks"), list):
+            break
+        if not isinstance(item.get("reconstructed_text"), str):
+            break
+        restored.append(dict(item))
+    return restored
+
+
+def _build_model_settings(profile: dict[str, object], budget: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Build persisted model settings for the cleanup run.
+    @param[in]  profile Selected AI profile payload.
+    @param[in]  budget Cleanup model-budget metadata.
+    @return     Persistable model-settings payload.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    return {
+        "ai_profile_id": str(profile.get("id", "")),
+        "backend_kind": str(profile.get("backend_kind", "")),
+        "model_name": str(profile.get("model_name", "")),
+        "context_window": int(budget["context_window"]),
+        "max_output_tokens": int(budget["max_output_tokens"]),
+        "temperature": float(profile.get("temperature", config.DEFAULT_LLM_TEMPERATURE)),
+        "response_expansion_factor": float(budget["response_expansion_factor"]),
+    }
+
+
+def _update_model_settings_history(
+    existing_state: dict[str, object], model_settings: dict[str, object]
+) -> list[dict[str, object]]:
+    """
+    @brief      Append changed model settings to persisted history.
+    @param[in]  existing_state Previously persisted cleanup state.
+    @param[in]  model_settings Current persisted model settings.
+    @return     Updated model-settings history.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    value = _state_metadata(existing_state).get("model_settings_history", [])
+    history = [dict(item) for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+    if not history or history[-1] != model_settings:
+        history.append(dict(model_settings))
+    return history
+
+
+def _write_state(
     state_path: Path,
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    started_at: str,
-    progress_current: int,
-    progress_total: int,
-    profile_id: str,
-    log_relative_path: str,
-    input_fingerprint: str,
-    classifications: dict[str, str],
-    warning_details: list[dict[str, object]],
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    model_settings: dict[str, object],
-    model_settings_history: list[dict[str, object]],
-    additional_cleanup_instructions: str,
-    status: str = "running",
-    completed_at: str | None = None,
-) -> None:
-    """
-    @brief      Write the running state.
-    @param[in]  state_path Operation-state file path.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Input snapshot file path.
-    @param[in]  output_path Output file path.
-    @param[in]  started_at Value for `started_at`.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  profile_id Profile identifier.
-    @param[in]  log_relative_path Path for `log_relative_path`.
-    @param[in]  input_fingerprint Value for `input_fingerprint`.
-    @param[in]  classifications Value for `classifications`.
-    @param[in]  warning_details Value for `warning_details`.
-    @param[in]  token_usage Value for `token_usage`.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  model_settings Current selected model settings.
-    @param[in]  model_settings_history Ordered selected-model settings history.
-    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
-    @param[in]  status Operation status token.
-    @param[in]  completed_at Optional completion timestamp for terminal incomplete states.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.5.1
-    """
-    warning_messages = _warning_messages_from_details(warning_details)
-    running_state = _build_operation_state(
-        project_root,
-        input_snapshot_path,
-        output_path,
-        report_path=None,
-        metadata_path=None,
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        started_at=started_at,
-        completed_at=completed_at,
-        warnings=warning_messages,
-        profile_id=profile_id,
-        log_relative_path=log_relative_path,
-        input_fingerprint=input_fingerprint,
-        classifications=classifications,
-        warning_details=warning_details,
-        detected_language=None,
-        paragraph_count=None,
-        chapter_count=None,
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        model_settings=model_settings,
-        model_settings_history=model_settings_history,
-        additional_cleanup_instructions=additional_cleanup_instructions,
-    )
-    write_json_atomic(state_path, running_state)
-    if status != "running" or progress_current == 0:
-        project_workspace_service.sync_manifest_operation_summary(project_root, "cleanup", running_state)
-
-
-def _warning_messages_from_details(warning_details: list[dict[str, object]]) -> list[str]:
-    """
-    @brief      Build compact warning messages from persisted warning details.
-    @param[in]  warning_details Detailed AI cleanup warning records.
-    @return     Ordered warning message list.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
-    """
-    return [str(item.get("message", "")).strip() for item in warning_details if str(item.get("message", "")).strip()]
-
-
-def _build_operation_state(
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    report_path: Path | None,
-    metadata_path: Path | None,
     status: str,
     progress_current: int,
     progress_total: int,
+    root: Path,
+    output_path: Path,
     started_at: str,
     completed_at: str | None,
-    warnings: list[str],
     profile_id: str,
     log_relative_path: str,
     input_fingerprint: str,
-    classifications: dict[str, str] | None,
-    warning_details: list[dict[str, object]],
-    detected_language: str | None,
-    paragraph_count: int | None,
-    chapter_count: int | None,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
+    instructions: str,
+    instructions_fingerprint: str,
+    completed_windows: list[ValidatedWindowPayload] | None,
+    token_usage: dict[str, object],
+    budget_metadata: dict[str, object],
     model_settings: dict[str, object],
     model_settings_history: list[dict[str, object]],
-    additional_cleanup_instructions: str,
+    warning_details: list[dict[str, object]],
+    *,
+    report_path: Path | None = None,
+    detected_language: str | None = None,
+    paragraph_count: int | None = None,
+    removed_character_count: int | None = None,
 ) -> OperationStatePayload:
     """
-    @brief      Build the operation state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Input snapshot file path.
-    @param[in]  output_path Output file path.
-    @param[in]  report_path Report file path.
-    @param[in]  status Value for `status`.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  started_at Value for `started_at`.
-    @param[in]  completed_at Value for `completed_at`.
-    @param[in]  warnings Value for `warnings`.
-    @param[in]  profile_id Profile identifier.
-    @param[in]  log_relative_path Path for `log_relative_path`.
-    @param[in]  input_fingerprint Value for `input_fingerprint`.
-    @param[in]  classifications Value for `classifications`.
-    @param[in]  warning_details Value for `warning_details`.
-    @param[in]  detected_language Value for `detected_language`.
-    @param[in]  paragraph_count Value for `paragraph_count`.
-    @param[in]  chapter_count Value for `chapter_count`.
-    @param[in]  token_usage Value for `token_usage`.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  model_settings Current selected model settings.
-    @param[in]  model_settings_history Ordered selected-model settings history.
-    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
-    @return     Derived helper result.
+    @brief      Persist one complete AI Cleanup operation-state snapshot.
+    @param[in]  state_path Cleanup operation-state file path.
+    @param[in]  status Operation status value.
+    @param[in]  progress_current Completed cleanup-window count.
+    @param[in]  progress_total Total cleanup-window count.
+    @param[in]  root Resolved project root path.
+    @param[in]  output_path Cleaned-text output path.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  completed_at Optional operation completion timestamp.
+    @param[in]  profile_id Selected AI profile identifier.
+    @param[in]  log_relative_path Project-relative AI transaction log path.
+    @param[in]  input_fingerprint Canonical input-text fingerprint.
+    @param[in]  instructions Normalized operator cleanup instructions.
+    @param[in]  instructions_fingerprint Operator-instructions fingerprint.
+    @param[in]  completed_windows Fully validated cleanup-window results.
+    @param[in]  token_usage Accumulated provider token usage.
+    @param[in]  budget_metadata Cleanup model-budget metadata.
+    @param[in]  model_settings Current persisted model settings.
+    @param[in]  model_settings_history Persisted model-settings history.
+    @param[in]  warning_details Structured cleanup warning details.
+    @param[in]  report_path Optional cleanup-report path.
+    @param[in]  detected_language Optional detected output language.
+    @param[in]  paragraph_count Optional reconstructed paragraph count.
+    @param[in]  removed_character_count Optional replaced source-character count.
+    @return     Persisted operation-state payload.
+    @exception  OSError Raised when atomic state persistence fails.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.4.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    additional_cleanup_instructions_fingerprint = _compute_prompt_fingerprint(additional_cleanup_instructions)
-    _ = project_root
-    _ = input_snapshot_path
-    _ = output_path
-    _ = report_path
-    _ = metadata_path
-    return build_operation_state_payload(
+    metadata: dict[str, object] = {
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "ai_profile_id": profile_id,
+        "input_relative_path": relative_to_project(root, root / config.EXTRACTED_TEXT_FILE_NAME),
+        "output_relative_path": relative_to_project(root, output_path),
+        "log_relative_path": log_relative_path,
+        "input_fingerprint": input_fingerprint,
+        "additional_cleanup_instructions": instructions,
+        "additional_cleanup_instructions_fingerprint": instructions_fingerprint,
+        "token_usage": token_usage,
+        "budget_metadata": budget_metadata,
+        "model_settings": model_settings,
+        "model_settings_history": model_settings_history,
+        "warning_details": warning_details,
+    }
+    if report_path is not None:
+        metadata["report_relative_path"] = relative_to_project(root, report_path)
+    if detected_language is not None:
+        metadata["detected_language"] = detected_language
+    if paragraph_count is not None:
+        metadata["paragraph_count"] = paragraph_count
+    if removed_character_count is not None:
+        metadata["removed_character_count"] = removed_character_count
+    checkpoint = None
+    if completed_windows is not None:
+        checkpoint = {
+            "contract_fingerprint": _CONTRACT_FINGERPRINT,
+            "input_fingerprint": input_fingerprint,
+            "additional_cleanup_instructions_fingerprint": instructions_fingerprint,
+            "completed_windows": completed_windows,
+        }
+    state = build_operation_state_payload(
         status=status,
         progress_current=progress_current,
         progress_total=progress_total,
         mode="ai_assisted",
-        warning_count=len(warnings),
-        metadata={
-            "warnings": list(warnings),
-            "warning_details": [dict(item) for item in warning_details],
-            "detected_language": detected_language,
-            "paragraph_count": paragraph_count,
-            "detected_chapter_count": chapter_count,
-            "ai_profile_id": profile_id,
-            "model_settings": dict(model_settings),
-            "model_settings_history": [dict(item) for item in model_settings_history],
-            "ai_log_relative_path": log_relative_path,
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-            "budget_metadata": dict(budget_metadata),
-            "additional_cleanup_instructions": additional_cleanup_instructions,
-            "additional_cleanup_instructions_fingerprint": additional_cleanup_instructions_fingerprint,
-        },
-        resume_checkpoint={
-            "completed_window_count": progress_current,
-            "total_window_count": progress_total,
-            "input_fingerprint": input_fingerprint,
-            "classifications": None if classifications is None else dict(classifications),
-            "model_settings": dict(model_settings),
-            "additional_cleanup_instructions_fingerprint": additional_cleanup_instructions_fingerprint,
-        }
-        if status != "completed"
-        else None,
+        warning_count=len(warning_details),
+        metadata=metadata,
+        resume_checkpoint=checkpoint,
     )
+    write_json_atomic(state_path, state)
+    return state
 
 
-def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
+def _write_checkpoint_state(
+    state_path: Path,
+    status: str,
+    root: Path,
+    output_path: Path,
+    started_at: str,
+    profile_id: str,
+    log_relative_path: str,
+    input_fingerprint: str,
+    instructions: str,
+    instructions_fingerprint: str,
+    completed_windows: list[ValidatedWindowPayload],
+    windows: list[dict[str, object]],
+    token_usage: dict[str, object],
+    budget_metadata: dict[str, object],
+    model_settings: dict[str, object],
+    model_settings_history: list[dict[str, object]],
+) -> None:
     """
-    @brief      Build the ai log path.
-    @param[in]  project_root Active project root folder.
-    @param[in]  started_at Value for `started_at`.
-    @return     Derived helper result.
+    @brief      Persist resumable state after cancellation or failure.
+    @param[in]  state_path Cleanup operation-state file path.
+    @param[in]  status Operation status value.
+    @param[in]  root Resolved project root path.
+    @param[in]  output_path Cleaned-text output path.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  profile_id Selected AI profile identifier.
+    @param[in]  log_relative_path Project-relative AI transaction log path.
+    @param[in]  input_fingerprint Canonical input-text fingerprint.
+    @param[in]  instructions Normalized operator cleanup instructions.
+    @param[in]  instructions_fingerprint Operator-instructions fingerprint.
+    @param[in]  completed_windows Fully validated cleanup-window results.
+    @param[in]  windows Current ordered cleanup windows.
+    @param[in]  token_usage Accumulated provider token usage.
+    @param[in]  budget_metadata Cleanup model-budget metadata.
+    @param[in]  model_settings Current persisted model settings.
+    @param[in]  model_settings_history Persisted model-settings history.
+    @return     None.
+    @exception  OSError Raised when atomic checkpoint persistence fails.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    started_fragment = started_at.replace(":", "").replace("+00:00", "").replace("T", "_")
-    return build_operation_output_path(
-        project_root,
-        "cleanup",
-        config.ai_transaction_log_file_name("cleanup", started_fragment),
+    _write_state(
+        state_path,
+        status,
+        len(completed_windows),
+        len(windows),
+        root,
+        output_path,
+        started_at,
+        _utc_now_iso(),
+        profile_id,
+        log_relative_path,
+        input_fingerprint,
+        instructions,
+        instructions_fingerprint,
+        completed_windows,
+        token_usage,
+        budget_metadata,
+        model_settings,
+        model_settings_history,
+        _combined_warning_details(completed_windows),
     )
+
+
+def _combined_warning_details(
+    completed_windows: list[ValidatedWindowPayload],
+) -> list[dict[str, object]]:
+    """
+    @brief      Flatten warning details from validated cleanup windows.
+    @param[in]  completed_windows Fully validated cleanup-window results.
+    @return     Flattened structured warning details.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    return [
+        dict(detail)
+        for window in completed_windows
+        for detail in list(window.get("warning_details", []))
+        if isinstance(detail, dict)
+    ]
+
+
+def _restored_token_usage(existing_state: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Restore accumulated token usage from prior state.
+    @param[in]  existing_state Previously persisted cleanup state.
+    @return     Restored or empty token-usage payload.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    usage = _state_metadata(existing_state).get("token_usage")
+    return dict(usage) if isinstance(usage, dict) else token_usage_service.empty_token_usage()
+
+
+def _state_metadata(state: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Return a defensive copy of operation-state metadata.
+    @param[in]  state Operation-state payload.
+    @return     Defensive operation-state metadata copy.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    metadata = state.get("metadata")
+    return dict(metadata) if isinstance(metadata, dict) else {}
+
+
+def _validate_request(manifest: dict[str, object], profile: dict[str, object]) -> None:
+    """
+    @brief      Validate project and AI profile prerequisites.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  profile Selected AI profile payload.
+    @return     None.
+    @exception  ValueError Raised when project or AI profile prerequisites are invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    if not isinstance(manifest.get("source_document"), dict):
+        raise ValueError("No imported source is available for AI-assisted cleanup.")
+    if any(not str(profile.get(field, "")).strip() for field in ("id", "model_name", "base_url")):
+        raise ValueError("AI-assisted cleanup requires a valid enabled AI profile.")
+
+
+def _normalize_instructions(value: object) -> str:
+    """
+    @brief      Canonicalize and trim operator cleanup instructions.
+    @param[in]  value Raw operator-instructions value.
+    @return     Canonical trimmed operator instructions.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    1.1.0
+    """
+    return _canonicalize_source_text(str(value or "")).strip()
 
 
 def _estimate_text_tokens(text: str) -> int:
     """
-    @brief      Execute the estimate text tokens helper.
-    @param[in]  text Value for `text`.
-    @return     Helper result.
+    @brief      Estimate token usage from UTF-8 byte length.
+    @param[in]  text Source text value.
+    @return     Estimated token count.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    return ai_budget_service.estimate_text_tokens(text)
+    return max(1, math.ceil(len(str(text).encode("utf-8")) / 4))
 
 
-def _compute_input_fingerprint(text: str) -> str:
+def _fingerprint(text: str) -> str:
     """
-    @brief      Execute the compute input fingerprint helper.
-    @param[in]  text Value for `text`.
-    @return     Helper result.
+    @brief      Build a stable SHA-256 text fingerprint.
+    @param[in]  text Source text value.
+    @return     Lowercase hexadecimal SHA-256 digest.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return hashlib.sha256(str(text).encode("utf-8")).hexdigest()
 
 
-def _compute_prompt_fingerprint(prompt_text: str) -> str:
+def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     """
-    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
-    @param[in]  prompt_text Operator prompt-rule text.
-    @return     SHA-256 fingerprint for the prompt-rule text.
+    @brief      Build the project-local AI transaction log path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  started_at Operation start timestamp.
+    @return     Project-local AI transaction log path.
+    @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
+    @date       2026-07-15
+    @version    1.1.0
     """
-    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
-
-
-def _build_cleanup_warnings(
-    detected_language: str | None,
-    chapter_count: int,
-    warning_details: list[dict[str, object]],
-) -> list[str]:
-    """
-    @brief      Build the cleanup warnings.
-    @param[in]  detected_language Value for `detected_language`.
-    @param[in]  chapter_count Value for `chapter_count`.
-    @param[in]  warning_details Value for `warning_details`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    warnings: list[str] = []
-    if detected_language is None:
-        warnings.append("Language detection did not produce a stable value.")
-    if chapter_count == 0:
-        warnings.append(
-            "No explicit chapter or scene headings were detected; chunking will rely on sequential paragraph order."
-        )
-    warnings.extend(
-        str(item.get("message", "")).strip() for item in warning_details if str(item.get("message", "")).strip()
-    )
-    return warnings
-
-
-def _count_detected_chapters(paragraph_texts: list[str]) -> int:
-    """
-    @brief      Count the detected chapters.
-    @param[in]  paragraph_texts Value for `paragraph_texts`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return cleanup_text_analysis_service.count_detected_chapters(paragraph_texts)
-
-
-def _detect_chapter_label(paragraph_text: str) -> str | None:
-    """
-    @brief      Detect the chapter label.
-    @param[in]  paragraph_text Text value for `paragraph_text`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return cleanup_text_analysis_service.detect_chapter_label(paragraph_text)
-
-
-def _detect_language(text: str) -> str | None:
-    """
-    @brief      Detect the language.
-    @param[in]  text Value for `text`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return cleanup_text_analysis_service.detect_language(text)
-
-
-def _split_cleanup_block(block: str) -> list[str]:
-    """
-    @brief      Execute the split cleanup block helper.
-    @param[in]  block Value for `block`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_lines = [
-        re.sub(r"\s+", " ", raw_line).strip()
-        for raw_line in block.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    ]
-    segments: list[str] = []
-    story_buffer: list[str] = []
-    for normalized_line in normalized_lines:
-        if not normalized_line:
-            continue
-        if _looks_like_page_number(normalized_line) or _looks_like_separator_line(normalized_line):
-            if story_buffer:
-                segments.append("\n".join(story_buffer).strip())
-                story_buffer = []
-            segments.append(normalized_line)
-            continue
-        story_buffer.append(normalized_line)
-    if story_buffer:
-        segments.append("\n".join(story_buffer).strip())
-    return [segment for segment in segments if segment.strip()]
-
-
-def _normalize_window_labels(
-    window_units: list[dict[str, object]],
-    window_classifications: dict[str, dict[str, str]],
-    warning_details: list[dict[str, object]],
-    window_index: int,
-) -> dict[str, str]:
-    """
-    @brief      Normalize the window labels.
-    @param[in]  window_units Value for `window_units`.
-    @param[in]  window_classifications AI classification payloads by unit id.
-    @param[in]  warning_details Value for `warning_details`.
-    @param[in]  window_index Current window index.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    normalized_labels: dict[str, str] = {}
-    removal_count = 0
-    for unit in window_units:
-        unit_id = str(unit["unit_id"])
-        unit_text = str(unit["text"])
-        classification = window_classifications.get(unit_id, _unknown_classification())
-        corrected_label = _normalize_label_for_unit(
-            unit_text,
-            classification,
-            warning_details,
-            window_index,
-            unit_id,
-        )
-        normalized_labels[unit_id] = corrected_label
-        if corrected_label in _REMOVABLE_LABELS:
-            removal_count += 1
-    _append_suspicious_window_warnings(
-        window_units,
-        normalized_labels,
-        removal_count,
-        warning_details,
-        window_index,
-    )
-    return normalized_labels
-
-
-def _classification_from_result_item(item: dict[str, object]) -> dict[str, str]:
-    """
-    @brief      Normalize one AI cleanup result item into the internal classification shape.
-    @param[in]  item Raw AI result item.
-    @return     Classification with label, confidence, artifact type, action, and reason.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.2.0
-    """
-    artifact_type = str(item.get("artifact_type", "")).strip().lower()
-    if artifact_type not in _ARTIFACT_TYPES:
-        artifact_type = ""
-    action = str(item.get("action", "")).strip().lower()
-    if action not in {"keep", "remove"}:
-        action = ""
-    confidence = str(item.get("confidence", "")).strip().lower()
-    if confidence not in _CONFIDENCE_VALUES:
-        confidence = "medium"
-    label = _label_from_artifact_action(artifact_type, action)
-    return {
-        "label": label,
-        "confidence": confidence,
-        "artifact_type": artifact_type or label,
-        "action": action or ("remove" if label in _REMOVABLE_LABELS else "keep"),
-        "reason": str(item.get("reason", "")).strip(),
-    }
-
-
-def _label_from_artifact_action(artifact_type: str, action: str) -> str:
-    """
-    @brief      Derive the internal cleanup label from the prompt schema.
-    @param[in]  artifact_type Normalized artifact type.
-    @param[in]  action Normalized keep/remove action.
-    @return     Internal cleanup label.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.2.0
-    """
-    if action == "keep":
-        return "story" if artifact_type not in {"unknown", ""} else "unknown"
-    if action == "remove":
-        if artifact_type == "ocr_noise":
-            return "noise"
-        if artifact_type in _REMOVABLE_LABELS:
-            return artifact_type
-        return "unknown"
-    return "unknown"
-
-
-def _unknown_classification() -> dict[str, str]:
-    """
-    @brief      Return the default preserve classification.
-    @return     Unknown classification payload.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    return {
-        "label": "unknown",
-        "confidence": "medium",
-        "artifact_type": "unknown",
-        "action": "keep",
-        "reason": "",
-    }
-
-
-def _normalize_label_for_unit(
-    unit_text: str,
-    classification: dict[str, str],
-    warning_details: list[dict[str, object]],
-    window_index: int,
-    unit_id: str,
-) -> str:
-    """
-    @brief      Normalize the label for unit.
-    @param[in]  unit_text Text value for `unit_text`.
-    @param[in]  classification Normalized AI classification payload.
-    @param[in]  warning_details Value for `warning_details`.
-    @param[in]  window_index Current window index.
-    @param[in]  unit_id Identifier for `unit_id`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    normalized_text = unit_text.strip()
-    label = classification["label"]
-    confidence = classification["confidence"]
-    artifact_type = classification["artifact_type"]
-    action = classification["action"]
-    if _looks_like_page_number(normalized_text):
-        if label != "page_number":
-            _append_warning_detail(
-                warning_details,
-                kind="page_number_label_corrected",
-                message=(
-                    f"AI cleanup corrected one page-number classification in window {window_index} "
-                    "to preserve cleanup quality."
-                ),
-                window_index=window_index,
-                unit_id=unit_id,
-                original_label=label,
-                original_artifact_type=artifact_type,
-                original_action=action,
-                corrected_label="page_number",
-                confidence=confidence,
-                reason=classification.get("reason", ""),
-            )
-        return "page_number"
-    if _looks_like_separator_line(normalized_text):
-        if label != "separator":
-            _append_warning_detail(
-                warning_details,
-                kind="separator_label_corrected",
-                message=(
-                    f"AI cleanup corrected one separator classification in window {window_index} "
-                    "to preserve cleanup quality."
-                ),
-                window_index=window_index,
-                unit_id=unit_id,
-                original_label=label,
-                original_artifact_type=artifact_type,
-                original_action=action,
-                corrected_label="separator",
-                confidence=confidence,
-                reason=classification.get("reason", ""),
-            )
-        return "separator"
-    if action == "remove" and label == "unknown":
-        _append_warning_detail(
-            warning_details,
-            kind="unsupported_removal_artifact_preserved",
-            message=(
-                f"AI cleanup preserved one unsupported removal artifact in window {window_index} for operator review."
-            ),
-            window_index=window_index,
-            unit_id=unit_id,
-            original_label=label,
-            original_artifact_type=artifact_type,
-            original_action=action,
-            corrected_label="unknown",
-            confidence=confidence,
-            reason=classification.get("reason", ""),
-        )
-        return "unknown"
-    if label in _REMOVABLE_LABELS and confidence == "low":
-        _append_warning_detail(
-            warning_details,
-            kind="low_confidence_removal_preserved",
-            message=(
-                f"AI cleanup preserved one low-confidence removable label in window {window_index} for operator review."
-            ),
-            window_index=window_index,
-            unit_id=unit_id,
-            original_label=label,
-            corrected_label="unknown",
-            confidence=confidence,
-            reason=classification.get("reason", ""),
-        )
-        return "unknown"
-    if label == "page_number":
-        _append_warning_detail(
-            warning_details,
-            kind="invalid_page_number_label_corrected",
-            message=(
-                f"AI cleanup corrected one invalid page-number label in window {window_index} "
-                "and preserved the text for review."
-            ),
-            window_index=window_index,
-            unit_id=unit_id,
-            original_label=label,
-            corrected_label="unknown",
-            confidence=confidence,
-        )
-        return "unknown"
-    if label == "separator":
-        _append_warning_detail(
-            warning_details,
-            kind="invalid_separator_label_corrected",
-            message=(
-                f"AI cleanup corrected one invalid separator label in window {window_index} "
-                "and preserved the text for review."
-            ),
-            window_index=window_index,
-            unit_id=unit_id,
-            original_label=label,
-            corrected_label="unknown",
-            confidence=confidence,
-        )
-        return "unknown"
-    return label
-
-
-def _append_suspicious_window_warnings(
-    window_units: list[dict[str, object]],
-    labels: dict[str, str],
-    removal_count: int,
-    warning_details: list[dict[str, object]],
-    window_index: int,
-) -> None:
-    """
-    @brief      Append the suspicious window warnings.
-    @param[in]  window_units Value for `window_units`.
-    @param[in]  labels Value for `labels`.
-    @param[in]  removal_count Value for `removal_count`.
-    @param[in]  warning_details Value for `warning_details`.
-    @param[in]  window_index Current window index.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    total_units = max(len(window_units), 1)
-    removal_ratio = removal_count / total_units
-    if removal_ratio >= _MAX_REMOVAL_RATIO_WARNING:
-        _append_warning_detail(
-            warning_details,
-            kind="high_removal_ratio_detected",
-            message=(
-                f"AI cleanup removed or classified {removal_count} of {total_units} units in window {window_index}; "
-                "review the cleaned output before chunking."
-            ),
-            window_index=window_index,
-            removal_count=removal_count,
-            unit_count=total_units,
-            removal_ratio=round(removal_ratio, 3),
-        )
-
-    classification_tail: list[str] = []
-    for unit in window_units[-_SUSPICIOUS_ALTERNATION_WINDOW:]:
-        unit_text = str(unit["text"]).strip()
-        unit_id = str(unit["unit_id"])
-        if _looks_like_page_number(unit_text) or _looks_like_separator_line(unit_text):
-            classification_tail.append("artifact")
-        elif labels.get(unit_id, "unknown") in _REMOVABLE_LABELS:
-            classification_tail.append("removed_story_like")
-        else:
-            classification_tail.append("kept_story_like")
-    flip_count = sum(
-        1
-        for current, following in zip(
-            classification_tail,
-            classification_tail[1:],
-            strict=False,
-        )
-        if current != following
-    )
-    if len(classification_tail) >= 6 and flip_count >= len(classification_tail) - 2:
-        _append_warning_detail(
-            warning_details,
-            kind="suspicious_label_drift_detected",
-            message=(
-                f"AI cleanup detected one suspicious late-window label pattern in window {window_index}; "
-                "the affected text was preserved conservatively where needed."
-            ),
-            window_index=window_index,
-            classification_tail=classification_tail,
-        )
-
-
-def _build_final_output_warning_details(
-    cleaned_paragraphs: list[str],
-    classifications: dict[str, str],
-    units: list[dict[str, object]],
-) -> list[dict[str, object]]:
-    """
-    @brief      Build the final output warning details.
-    @param[in]  cleaned_paragraphs Value for `cleaned_paragraphs`.
-    @param[in]  classifications Value for `classifications`.
-    @param[in]  units Value for `units`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    warning_details: list[dict[str, object]] = []
-    surviving_page_number_count = sum(
-        1 for paragraph in cleaned_paragraphs if _looks_like_page_number(paragraph.strip())
-    )
-    if surviving_page_number_count > 0:
-        warning_details.append(
-            {
-                "kind": "numeric_artifacts_remained",
-                "message": (
-                    f"AI cleanup left {surviving_page_number_count} page-number-like paragraph(s) "
-                    "in the cleaned output; review the result before chunking."
-                ),
-                "surviving_page_number_count": surviving_page_number_count,
-            }
-        )
-    story_like_removed_count = sum(
-        1
-        for unit in units
-        if classifications.get(str(unit["unit_id"]), "unknown") in _REMOVABLE_LABELS
-        and not _looks_like_page_number(str(unit["text"]).strip())
-        and not _looks_like_separator_line(str(unit["text"]).strip())
-    )
-    if story_like_removed_count > 0:
-        warning_details.append(
-            {
-                "kind": "story_like_units_removed",
-                "message": (
-                    f"AI cleanup removed {story_like_removed_count} non-trivial unit(s); "
-                    "review the cleaned text if important content appears to be missing."
-                ),
-                "story_like_removed_count": story_like_removed_count,
-            }
-        )
-    return warning_details
-
-
-def _append_warning_detail(
-    warning_details: list[dict[str, object]],
-    *,
-    kind: str,
-    message: str,
-    **metadata: object,
-) -> None:
-    """
-    @brief      Append the warning detail.
-    @param[in]  warning_details Value for `warning_details`.
-    @param[in]  kind Value for `kind`.
-    @param[in]  message Operator-facing message text.
-    @param[in]  metadata Value for `metadata`.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    for existing in warning_details:
-        if (
-            str(existing.get("kind", "")) == kind
-            and str(existing.get("message", "")) == message
-            and all(existing.get(key) == value for key, value in metadata.items())
-        ):
-            return
-    warning_details.append({"kind": kind, "message": message, **metadata})
-
-
-def _looks_like_page_number(text: str) -> bool:
-    """
-    @brief      Determine whether page number.
-    @param[in]  text Value for `text`.
-    @return     True when the helper condition is satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return bool(_PAGE_NUMBER_PATTERN.fullmatch(text.strip()))
-
-
-def _looks_like_separator_line(text: str) -> bool:
-    """
-    @brief      Determine whether separator line.
-    @param[in]  text Value for `text`.
-    @return     True when the helper condition is satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized = text.strip()
-    return bool(normalized) and bool(_SEPARATOR_PATTERN.fullmatch(normalized))
+    token = re.sub(r"[^0-9A-Za-z]+", "", started_at)[:24] or "cleanup"
+    return project_root / config.ai_transaction_log_file_name("cleanup", token)
 
 
 # END OF FILE

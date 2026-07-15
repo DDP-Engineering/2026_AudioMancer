@@ -115,6 +115,10 @@ Supported text-scale keys are defined by `_UI_SCALE_FACTORS`:
 
 Unknown language codes fall back to `config.DEFAULT_LANGUAGE`. Unknown string
 keys fall back to the default-language value and finally to the key itself.
+Text Cleanup spacing uses the `text_cleanup.spacing_*`,
+`text_cleanup.apply_spacing`, and `status.ai_cleanup_spacing_applied` keys in
+both supported languages for the five non-story categories and completion
+feedback.
 The theme `font` payload controls labels, buttons, and other interface
 controls. The theme `text_font` payload is emitted into the stylesheet for
 multi-line `QTextEdit` and `QPlainTextEdit` windows used for book text,
@@ -147,6 +151,9 @@ settings-dialog entries also cover the Settings `Apply`/`OK` flow and the AI
 Settings plus TTS Settings `Save`/`OK` flow in both English and Romanian. The
 Settings catalog also includes the shared scroll-step label used by the
 settings-backed UI scroll service.
+Text Cleanup entries cover the Insert new line label, Heading, Separator,
+Noise, Header, Footer, Apply Spacing, and the applied-status message in English
+and Romanian.
 
 Because all operator-facing labels are centralized here, UI text changes must
 update both English and Romanian catalog entries in the same implementation
@@ -179,10 +186,13 @@ Documentation audit status:
 
 - reviewed against the current implementation on 2026-06-08
 - Character Voices selector cleanup reviewed on 2026-07-03
+- AI Cleanup selectable spacing labels reviewed on 2026-07-15
 
 Focused tests:
 
 - `04_Software/AudioMancer/tests/test_ui_state_service.py`
+- `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
 
 The v2 translation-catalog test verifies that the English and Romanian catalogs
 contain the selective-impact labels, dialog titles, confirmation messages, and

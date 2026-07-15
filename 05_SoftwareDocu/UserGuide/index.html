@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v1.6.4</title>
+    <title>AudioMancer User Guide v1.6.5</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 1.6.4</p>
-                    <p><strong>Application version:</strong> 1.6.4</p>
+                    <p><strong>Help version:</strong> 1.6.5</p>
+                    <p><strong>Application version:</strong> 1.6.5</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -332,7 +332,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Extract source text from supported documents.</li>
-                    <li>Run deterministic cleanup or AI-assisted cleanup; for a fresh AI cleanup run, add optional extra prompt rules when the instructions box appears.</li>
+                    <li>Run deterministic cleanup or AI-assisted cleanup; for a fresh AI cleanup run, add optional extra prompt rules when the instructions box appears. Cancelling that optional prompt leaves AI-assisted cleanup ready to start again.</li>
+                    <li>After AI cleanup completes, select any combination of <strong>Heading</strong>, <strong>Separator</strong>, <strong>Noise</strong>, <strong>Header</strong>, and <strong>Footer</strong>, then press <strong>Apply Spacing</strong>. Story text is never selectable and remains exact. Deselect every category to remove all controllable inter-block blank lines; reapplying uses retained decisions and does not call the AI provider again.</li>
                     <li>Edit the cleaned text directly to manually improve wording, fix OCR errors, or correct formatting. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
                     <li>Approve the cleaned text only after review; approved text unlocks Text Chunking.</li>
                     <li>Drag the divider between extracted and cleaned previews; each preview keeps at least one third of the page width.</li>
