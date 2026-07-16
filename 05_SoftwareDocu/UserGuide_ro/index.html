@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ghid AudioMancer v1.6.6</title>
+    <title>Ghid AudioMancer v1.6.7</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Bun venit</h2>
                 <div class="version-box">
-                    <p><strong>Versiune ajutor:</strong> 1.6.6</p>
-                    <p><strong>Versiune aplicatie:</strong> 1.6.6</p>
+                    <p><strong>Versiune ajutor:</strong> 1.6.7</p>
+                    <p><strong>Versiune aplicatie:</strong> 1.6.7</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -371,6 +371,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Genereaza segmente determinist sau cu asistenta AI.</li>
                     <li>Pentru o rulare AI noua de segmentare, adauga reguli optionale suplimentare cand apare caseta de instructiuni cu word wrap.</li>
                     <li>Alege strategia AI: <strong>Paragraph</strong> pentru ferestre stabile de paragrafe, <strong>Meaning</strong> pentru unitati semantice sau <strong>Scene</strong> pentru limite apropiate de scene.</li>
+                    <li>Daca AI nu returneaza o impartire utilizabila pentru o fereastra nefinala, AudioMancer pastreaza intreaga fereastra ca un singur segment si raporteaza fallback-ul la nivelul operatiei. Un context AI mai mare poate produce limite mai naturale.</li>
                     <li>Inspecteaza fiecare segment generat.</li>
                     <li>Editeaza rezultatul generat cand textul sau impartirea trebuie corectate manual. Confirma mesajul de impact inainte de editare deoarece salvarile pot afecta datele etapelor urmatoare.</li>
                     <li>Foloseste <strong>Insert</strong> pentru a adauga un segment gol dupa segmentul selectat, apoi salveaza textul dorit in segmentul nou.</li>
@@ -378,7 +379,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Confirma inserarile si stergerile numai dupa ce citesti mesajul de impact. AudioMancer pastreaza traducerile, Blocurile de vorbire si Blocurile audio neafectate unde este posibil, dar reseteaza Asamblarea audio deoarece ordinea continutului final s-a schimbat.</li>
                     <li>Aproba segmentele pentru a debloca traducerea, personajele si Blocurile de vorbire.</li>
                     <li>Trage separatorul dintre zona de referinta/lista si previzualizarea segmentului selectat; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe segmentarea si continua mai tarziu din acelasi proiect.</li>
+                    <li>Intrerupe segmentarea si continua mai tarziu de la urmatorul paragraf neprocesat. Checkpoint-urile create de vechea segmentare pe baza de identificatori pornesc din nou de la inceput.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare text">

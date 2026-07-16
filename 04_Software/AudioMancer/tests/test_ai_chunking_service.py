@@ -325,7 +325,15 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
         ai_chunking_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "payload": {"break_after_unit_ids": ["paragraph-0002"]},
+            "payload": {
+                "chunks": [
+                    {
+                        "start_paragraph": 1,
+                        "start_text": "CHAPTER I",
+                        "break_after_paragraph": 2,
+                    }
+                ]
+            },
             "usage": {"input_tokens": 25, "output_tokens": 5, "total_tokens": 30, "usage_available": True},
         },
     )
@@ -416,7 +424,15 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
         """
         captured_user_prompts.append(user_prompt)
         return {
-            "payload": {"break_after_unit_ids": ["paragraph-0001"]},
+            "payload": {
+                "chunks": [
+                    {
+                        "start_paragraph": 1,
+                        "start_text": "Paragraph one.",
+                        "break_after_paragraph": 1,
+                    }
+                ]
+            },
             "usage": {"input_tokens": 10, "output_tokens": 4, "total_tokens": 14, "usage_available": True},
         }
 
@@ -488,7 +504,15 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
         ai_chunking_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "payload": {"break_after_unit_ids": ["paragraph-9999"]},
+            "payload": {
+                "chunks": [
+                    {
+                        "start_paragraph": 1,
+                        "start_text": "wrong anchor",
+                        "break_after_paragraph": 1,
+                    }
+                ]
+            },
             "usage": {"input_tokens": 15, "output_tokens": 4, "total_tokens": 19, "usage_available": True},
         },
     )
@@ -518,9 +542,9 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
     assert "Paragraph two." in chunks[0]["text"]
 
 
-def test_ai_chunking_uses_cleanup_metadata_paragraph_ids(tmp_path, monkeypatch) -> None:
+def test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify AI chunking sends stable metadata paragraph ids to the model.
+    @brief      Verify AI chunking sends absolute numbers while preserving cleanup provenance.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -588,7 +612,15 @@ def test_ai_chunking_uses_cleanup_metadata_paragraph_ids(tmp_path, monkeypatch) 
         """
         captured_prompt["text"] = user_prompt
         return {
-            "payload": {"break_after_unit_ids": ["paragraph-0042"]},
+            "payload": {
+                "chunks": [
+                    {
+                        "start_paragraph": 1,
+                        "start_text": "Visible first. Visible second.",
+                        "break_after_paragraph": 1,
+                    }
+                ]
+            },
             "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
         }
 
@@ -613,7 +645,8 @@ def test_ai_chunking_uses_cleanup_metadata_paragraph_ids(tmp_path, monkeypatch) 
     )
 
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
-    assert "paragraph-0042" in captured_prompt["text"]
+    assert "Paragraph 1\n" in captured_prompt["text"]
+    assert "paragraph-0042" not in captured_prompt["text"]
     assert chunks[0]["cleanup_joined_across_page_break"] is True
 
 
@@ -661,7 +694,15 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
 
     responses = iter(
         [
-            {"break_after_unit_ids": ["paragraph-0002"]},
+            {
+                "chunks": [
+                    {
+                        "start_paragraph": 1,
+                        "start_text": "Paragraph 1.",
+                        "break_after_paragraph": 20,
+                    }
+                ]
+            },
             operation_runtime_service.OperationCancelledError("stop"),
         ]
     )
@@ -714,12 +755,21 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["status"] == "cancelled"
     assert state_payload["progress_current"] == 1
+    assert state_payload["resume_checkpoint"]["next_paragraph"] == 21
 
     monkeypatch.setattr(
         ai_chunking_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "payload": {"break_after_unit_ids": ["paragraph-0039"]},
+            "payload": {
+                "chunks": [
+                    {
+                        "start_paragraph": 21,
+                        "start_text": "Paragraph 21.",
+                        "break_after_paragraph": 39,
+                    }
+                ]
+            },
             "usage": {
                 "input_tokens": 30,
                 "output_tokens": 5,
@@ -754,11 +804,10 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     assert completed_state["progress_current"] == 2
 
 
-def test_ai_running_state_reuses_prebuilt_chunks(tmp_path, monkeypatch) -> None:
+def test_ai_running_state_reuses_prebuilt_chunks(tmp_path) -> None:
     """
     @brief      Verify REQ-NFR-015 AI checkpoint state does not rebuild already prepared chunks.
     @param[in]  tmp_path Pytest temporary directory fixture.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -782,31 +831,15 @@ def test_ai_running_state_reuses_prebuilt_chunks(tmp_path, monkeypatch) -> None:
         }
     ]
 
-    def _unexpected_chunk_rebuild(*_args, **_kwargs):
-        """
-        @brief      Fail when state persistence rebuilds chunks that were supplied by the caller.
-        @return     None.
-        @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
-        """
-        raise AssertionError("state persistence should reuse prebuilt chunks")
-
-    monkeypatch.setattr(ai_chunking_service, "_build_chunks_from_break_ids", _unexpected_chunk_rebuild)
-
-    ai_chunking_service._write_running_state(
+    ai_chunking_service._write_descriptor_state(
         state_path=state_path,
         project_root=project_root,
         input_snapshot_path=input_path,
         output_path=output_path,
-        report_path=None,
         started_at="2026-06-10T12:00:00+00:00",
         progress_current=1,
         progress_total=1,
-        warnings=[],
-        paragraph_records=[],
-        committed_break_ids=[],
+        chunks=chunks,
         profile_id="profile_1",
         semantic_strategy="paragraph",
         input_fingerprint="fingerprint",
@@ -827,9 +860,9 @@ def test_ai_running_state_reuses_prebuilt_chunks(tmp_path, monkeypatch) -> None:
             "temperature": 0.2,
         },
         profile_usage_history=[],
-        completed_unit_count=1,
-        additional_chunking_instructions="",
-        chunks=chunks,
+        next_paragraph=2,
+        additional_chunking_instructions_fingerprint=ai_chunking_service._compute_prompt_fingerprint(""),
+        context_window_fallback_count=0,
     )
 
     state_payload = json.loads(state_path.read_text(encoding="utf-8"))
@@ -837,9 +870,9 @@ def test_ai_running_state_reuses_prebuilt_chunks(tmp_path, monkeypatch) -> None:
     assert state_payload["metadata"]["detected_chapter_count"] == 1
 
 
-def test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count(tmp_path, monkeypatch) -> None:
+def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify old AI chunking checkpoints without completed-unit counts are not resumed.
+    @brief      Verify old break-ID AI chunking checkpoints are not resumed.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -891,7 +924,15 @@ def test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count(tmp_pat
     }
     responses = iter(
         [
-            {"break_after_unit_ids": ["paragraph-0002"]},
+            {
+                "chunks": [
+                    {
+                        "start_paragraph": 1,
+                        "start_text": "Paragraph 1.",
+                        "break_after_paragraph": 20,
+                    }
+                ]
+            },
             operation_runtime_service.OperationCancelledError("stop"),
         ]
     )
@@ -920,9 +961,9 @@ def test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count(tmp_pat
     state_path = project_root / config.CHUNKING_STATE_FILE_NAME
     state_payload = json.loads(state_path.read_text(encoding="utf-8"))
     checkpoint = dict(state_payload["resume_checkpoint"])
-    checkpoint.pop("completed_unit_count", None)
+    checkpoint.pop("next_paragraph", None)
     checkpoint["completed_last_unit_id"] = "paragraph-0020"
-    checkpoint["budget_metadata"] = dict(state_payload["metadata"]["budget_metadata"])
+    checkpoint["committed_break_ids"] = ["paragraph-0020"]
     state_payload["resume_checkpoint"] = checkpoint
     state_path.write_text(json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -939,7 +980,7 @@ def test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count(tmp_pat
         """
         captured_prompts.append(user_prompt)
         return {
-            "payload": {"break_after_unit_ids": ["paragraph-0039"]},
+            "payload": {"chunks": []},
             "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
         }
 
@@ -948,8 +989,8 @@ def test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count(tmp_pat
     ai_chunking_service.chunk_text(project_root, manifest, profile, "paragraph")
 
     assert captured_prompts
-    assert "paragraph-0001" in captured_prompts[0]
-    assert "paragraph-0021" not in captured_prompts[0]
+    assert "Paragraph 1\n" in captured_prompts[0]
+    assert "Paragraph 21\n" not in captured_prompts[0]
 
 
 def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, monkeypatch) -> None:
@@ -1006,7 +1047,15 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     }
     responses = iter(
         [
-            {"break_after_unit_ids": ["paragraph-0002"]},
+            {
+                "chunks": [
+                    {
+                        "start_paragraph": 1,
+                        "start_text": "Paragraph 1.",
+                        "break_after_paragraph": 20,
+                    }
+                ]
+            },
             operation_runtime_service.OperationCancelledError("stop"),
         ]
     )
@@ -1047,7 +1096,15 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
         """
         captured_prompts.append(user_prompt)
         return {
-            "payload": {"break_after_unit_ids": ["paragraph-0039"]},
+            "payload": {
+                "chunks": [
+                    {
+                        "start_paragraph": 21,
+                        "start_text": "Paragraph 21.",
+                        "break_after_paragraph": 39,
+                    }
+                ]
+            },
             "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
         }
 
@@ -1064,8 +1121,8 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     report_payload = ai_chunking_service.chunk_text(project_root, manifest, second_profile, "paragraph")
 
     assert captured_prompts
-    assert "paragraph-0001" not in captured_prompts[0]
-    assert "paragraph-0021" in captured_prompts[0]
+    assert "Paragraph 1\n" not in captured_prompts[0]
+    assert "Paragraph 21\n" in captured_prompts[0]
     assert report_payload["ai_profile_id"] == "profile_2"
     assert report_payload["model_name"] == "qwen3-14b"
     assert report_payload["context_window"] == 8192

@@ -10,6 +10,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.7] - 2026-07-16
+
+### Changed
+
+- AI Chunking now requests ordered absolute-paragraph chunk descriptors and
+  validates their structure, range, and source anchors before committing them.
+- Start-anchor validation now accepts five consecutive normalized matching
+  words, while keeping short paragraph anchors fully matched and all descriptor
+  ordering checks strict.
+- Project package metadata, `audiomancer.__version__`, the lockfile, release
+  smoke test, and offline English and Romanian help bundles were updated to
+  `1.6.7`.
+
+### Fixed
+
+- AI Chunking no longer discards otherwise valid model boundaries merely
+  because a copied start anchor is shorter than eight words or differs only in
+  harmless casing, punctuation, whitespace, or Unicode compatibility form.
+
 ## [1.6.6] - 2026-07-16
 
 ### Changed

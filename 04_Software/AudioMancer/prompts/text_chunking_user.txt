@@ -1,6 +1,6 @@
 Determine chunk boundaries for these ordered paragraphs using the "{strategy}" strategy.
 
-Decide after which paragraph ids a chunk should end.
+Describe the semantic chunks that begin inside this requested paragraph window.
 Use the paragraph order exactly as given.
 Prefer chunks that are natural semantic reading units for later literary analysis, character discovery, speaker attribution, translation, narration planning, and audiobook work.
 
@@ -24,9 +24,9 @@ Be careful with:
 - boundaries that preserve coherent scene memory for later speaker attribution and character tracking
 
 Return JSON only in the required shape:
-{"break_after_unit_ids": ["paragraph-0003", "paragraph-0007"]}
+{"chunks":[{"start_paragraph":1,"start_text":"It is a truth universally acknowledged that a","break_after_paragraph":7}]}
 
-Return only the paragraph ids that should end a chunk.
+Use absolute one-based paragraph numbers. For every descriptor, copy exactly the first eight whitespace-separated words of its start paragraph into "start_text", or its whole normalized text when shorter. Count the example above: "It is a truth universally acknowledged that a" contains exactly eight words. Descriptors must be consecutive, ordered, and non-overlapping. Return {"chunks": []} when no valid internal split exists.
 Do not use markdown fences or any extra text.
 
 {units_block}

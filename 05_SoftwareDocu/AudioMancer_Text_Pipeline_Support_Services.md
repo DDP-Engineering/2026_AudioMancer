@@ -29,7 +29,7 @@ or TTS-sized units, and shape chunking/Speech Blocks operation reports.
 - classify text lines, scripts, language hints, chapter labels, sentence
   endings, and dialogue line breaks
 - produce deterministic one-paragraph chunk artifacts for local chunking
-- produce AI-assisted chunk artifacts from model-selected paragraph breaks
+- produce AI-assisted chunk artifacts from validated model chunk descriptors
 - rebuild Speech Blocks operation reports and warning summaries
 - split long Speech Blocks text into budget-safe AI/TTS spans
 - build deterministic Speech Blocks source spans with stable `sNNN`
@@ -70,9 +70,19 @@ paragraph cap applied before token-budget checks: Balanced keeps the 64, 96,
 and 128 paragraph caps for paragraph, meaning, and scene strategies; Wide
 scene context doubles them to 128, 192, and 256; Maximum context disables the
 paragraph cap and relies only on the token budget. The path appends optional
-operator-supplied chunking rules to each prompt, then commits only valid break
-IDs, reuses the already-built chunk list for each window checkpoint, and
-writes AI transaction logs.
+operator-supplied chunking rules to each prompt. The model returns only a
+`chunks` array whose descriptors contain an absolute one-based start paragraph,
+an up-to-eight-word start anchor, and an inclusive break paragraph. Anchor
+validation normalizes Unicode compatibility forms, case, whitespace, and
+punctuation. A paragraph with at least five normalized words is confirmed by
+five consecutive position-aligned matching prefix words; a shorter paragraph
+requires every normalized word to match. The service validates every descriptor
+atomically. For non-final windows, a valid
+response commits the described ranges and re-submits the uncommitted tail from
+the paragraph after the last break; an empty or invalid response commits the
+whole window once as a context fallback. The final window always closes the
+remaining document text without treating normal final closure as a fallback.
+Every request and response remains available in the AI transaction log.
 
 For active narrator-plus-character Speech Blocks generation, the service splits
 source chunks into contiguous source-text request segments. Speech Blocks then
@@ -140,16 +150,23 @@ adds text back at runtime by slicing `clean_text.txt` with the stored line
 spans.
 
 Chunk payloads keep stable `chunk_id` values, source paragraph references,
-chapter labels, sequence indexes, and text content. AI chunking persists token
-usage, optional operator prompt rules, their fingerprint, and profile runtime
-metadata in operation state so an interrupted run can resume with the same
-committed break IDs and original prompt rules. The context mode influences
-window construction for local-profile chunking prompts; `openai_compatible`
-profiles retain their direct online text-context fraction and no local
-paragraph cap. Chunking state, report, and chunk-artifact JSON writes use the
-shared atomic persistence helper; malformed state JSON restarts chunking from
-a clean checkpoint, and malformed chunk artifact JSON loads as an empty list
-with a warning instead of raising into the workflow page.
+chapter labels, sequence indexes, and text content; the canonical chunk
+artifact shape is unchanged. AI chunking checkpoints contain only the input
+fingerprint, semantic strategy, operator-instruction fingerprint, next absolute
+paragraph, committed chunk count, completed window count, context fallback
+count, token usage, and log path. The committed chunks themselves remain in the
+canonical artifact. Checkpoints from the former break-ID contract are rejected
+and restart from paragraph one; there is no migration path. The context mode
+influences window construction for local-profile prompts;
+`openai_compatible` profiles retain their direct online text-context fraction
+and no local paragraph cap. Chunking state, report, and chunk-artifact JSON
+writes use the shared atomic persistence helper.
+
+The report includes `context_window_fallback_count` and one operation-level
+warning when non-final windows were saved as fallback chunks. The progress
+callback identifies each affected absolute paragraph range. Provider transport
+errors and unparseable responses remain operation failures; only a parsed but
+empty or semantically invalid descriptor response uses text-preserving closure.
 
 Speech Blocks reports include stage status, approved counts, warning records,
 source metadata, and token-usage payloads.
@@ -199,6 +216,7 @@ Focused tests:
 - `tests/test_cleanup_text_analysis_service.py`
 - `tests/test_deterministic_chunking_service.py`
 - `tests/test_ai_chunking_service.py`
+- `tests/test_ai_chunking_descriptor_contract.py`
 - `tests/test_text_chunking_state_service.py`
 - `tests/test_speech_blocks_report_state_service.py`
 - `tests/test_speech_blocks_text_split_service.py`
@@ -213,8 +231,8 @@ Minimum validation after changes:
 ## 10. Limitations And Future Work
 
 - Language detection is heuristic and can be unavailable for short text.
-- AI chunking depends on model compliance and therefore validates break IDs
-  before committing them.
+- AI chunking still depends on semantic model judgment; invalid descriptor
+  responses preserve text by closing the affected window as one chunk.
 - Text splitting uses conservative budget units rather than provider-specific
   tokenizers.
 - Source-span candidate kinds and atomic-unit structural kinds are prompt hints;
@@ -224,3 +242,11 @@ Minimum validation after changes:
 ## Documentation Review Notes
 
 Reviewed for the AI chunking context mode feature. The AI chunking path now receives the persisted chunking context mode from the Text Chunking UI controller. Balanced keeps the existing 64, 96, and 128 paragraph caps for paragraph, meaning, and scene strategies. Wide scene context uses 128, 192, and 256. Maximum context disables the local paragraph cap and relies on the token budget. `openai_compatible` profiles continue to use their direct online text-context fraction without a local paragraph cap. Validation should include `tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps`.
+
+Reviewed for REQ-FUNC-065 on 2026-07-16. AI chunking now uses the strict
+three-field descriptor contract and new-only paragraph-position checkpoint.
+Anchor validation tolerates harmless copied-prefix variation through the
+deterministic five-consecutive-word rule while preserving strict descriptor
+ordering, paragraph bounds, and atomic response rejection.
+Deterministic chunking, manual selected-chunk operations, and the canonical
+`chunks_text.json` payload remain unchanged.

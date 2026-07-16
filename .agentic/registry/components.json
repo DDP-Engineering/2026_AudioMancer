@@ -1,6 +1,43 @@
 {
   "bundles": {},
   "components": {
+    "ai_chunking": {
+      "adoption_status": "baseline-usable",
+      "criticality": "high",
+      "name": "ai_chunking",
+      "notes": "Owns AI-assisted paragraph-window chunk boundary selection, context budgeting, strict prompt/response handling, canonical chunk construction, checkpoint/report integration, and Text Chunking operator state. Deterministic chunking remains outside this component. Shared AI/config/UI files are in scope only for chunking-specific contracts. High criticality reflects downstream replacement and reset impact plus resumable LLM work. Baseline established 2026-07-16 from active requirements, focused tests, existing component documentation, and clean traceability/coverage audits.",
+      "owner": "",
+      "paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+        "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
+        "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+        "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+        "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+        "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+        "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+        "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+        "04_Software/AudioMancer/src/audiomancer/config.py",
+        "04_Software/AudioMancer/prompts/text_chunking_system.txt",
+        "04_Software/AudioMancer/prompts/text_chunking_user.txt",
+        "04_Software/AudioMancer/tests/test_ai_chunking_service.py",
+        "04_Software/AudioMancer/tests/test_ai_budget_service.py",
+        "04_Software/AudioMancer/tests/test_text_chunking_state_service.py",
+        "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py",
+        "04_Software/AudioMancer/tests/test_text_chunking_page.py",
+        "04_Software/AudioMancer/tests/test_atomic_io_contracts.py",
+        "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md",
+        "05_SoftwareDocu/AudioMancer_Text_Chunking_State_Service.md"
+      ],
+      "tests": [
+        "04_Software/AudioMancer/tests/test_ai_chunking_service.py",
+        "04_Software/AudioMancer/tests/test_ai_budget_service.py",
+        "04_Software/AudioMancer/tests/test_text_chunking_state_service.py",
+        "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py",
+        "04_Software/AudioMancer/tests/test_text_chunking_page.py",
+        "04_Software/AudioMancer/tests/test_atomic_io_contracts.py"
+      ]
+    },
     "ai_cleanup": {
       "adoption_status": "baseline-usable",
       "criticality": "high",
