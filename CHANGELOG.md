@@ -10,6 +10,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.6] - 2026-07-16
+
+### Changed
+
+- Project package metadata, `audiomancer.__version__`, the lockfile, and the
+  release-version smoke test were updated to `1.6.6`.
+- Offline English and Romanian help bundles were updated to version `1.6.6`.
+
+### Fixed
+
+- AI Cleanup now accepts provider-modified Story text when unique normalized
+  edge anchors identify exactly one original source span, while keeping exact
+  matching mandatory for non-Story blocks.
+- AI Cleanup now preserves source text omitted between uniquely bounded exact
+  response blocks instead of repeatedly failing with an unexplained source-gap
+  error; ambiguous, leading, and trailing omissions still fail closed.
+- Compatible partial AI Cleanup checkpoints now resume from the first
+  unprocessed canonical source offset when model budget changes repartition
+  request windows, avoiding reprocessing of already validated text.
+
 ## [1.6.5] - 2026-07-15
 
 ### Added

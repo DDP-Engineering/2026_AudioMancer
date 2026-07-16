@@ -8,17 +8,19 @@
 # -----------------------------------------------------------------------------
 """
 @file test_ai_cleanup_contract.py
-@brief Red/green checks for exact-source AI Cleanup blocks.
-@details Verifies exact ordered source slices, deterministic artifact replacement,
-         whitespace reconstruction, checkpoint invalidation, and durable
-         requirements REQ-FUNC-058 through REQ-FUNC-060 plus REQ-NFR-019.
+@brief Red/green checks for source-grounded AI Cleanup blocks.
+@details Verifies exact ordered source slices, uniquely anchored modified Story
+         fallback, deterministic artifact replacement, whitespace reconstruction,
+         checkpoint invalidation, and durable requirements REQ-FUNC-058 through
+         REQ-FUNC-064 plus REQ-NFR-019.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-15
-@version 1.2.0
+@version 1.5.0
 """
 
 # IMPORTS
 
+import hashlib
 import json
 
 import pytest
@@ -42,6 +44,19 @@ _MOCK_PROFILE = {
     "supports_structured_output": True,
     "enabled": True,
 }
+_STORY_EDGE_START = (
+    "Elizabeth walked through the quiet garden before sunrise and considered the sealed letter very carefully."
+)
+_STORY_EDGE_END = (
+    "After breakfast she returned to the house and placed the folded paper beside the eastern window."
+)
+_MODIFIED_STORY_SOURCE = (
+    f"{_STORY_EDGE_START}\n"
+    "She was determined not to venture near her, lest she might hear too much.\n"
+    f"{_STORY_EDGE_END}"
+)
+_MODIFIED_STORY_AI = _MODIFIED_STORY_SOURCE.replace("lest she", "llest she")
+_OMITTED_SOURCE_LINE = "�To whom I have related the affair�"
 
 
 def _payload(window_id: str, blocks: list[dict[str, object]]) -> dict[str, object]:
@@ -118,7 +133,198 @@ def test_cleanup_validation_preserves_exact_order_for_every_block() -> None:
         "It was a sunny day.\n",
         "The street was quiet.\n",
     ]
+    assert [item["match_mode"] for item in validated["preserved_blocks"]] == ["exact", "exact"]
+    assert validated["modified_story_block_count"] == 0
     assert validated["removed_character_count"] == len("Page 1 ") + len("The Warhound\n")
+
+
+def test_cleanup_validation_accepts_uniquely_bracketed_modified_story_text() -> None:
+    """
+    @brief      Verify AICU-007 and REQ-FUNC-062 accept one uniquely bounded Story correction.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    source = f"HEADER\n\n{_MODIFIED_STORY_SOURCE}\n\nFOOTER"
+    pages = ai_cleanup_service._build_source_pages(source)
+    response = _payload(
+        "cleanup-window-0001",
+        [
+            _block(1, "HEADER", "header"),
+            _block(2, _MODIFIED_STORY_AI, "story"),
+            _block(3, "FOOTER", "footer"),
+        ],
+    )
+
+    validated = ai_cleanup_service._validate_response(response, pages, "cleanup-window-0001")
+
+    preserved = validated["preserved_blocks"][0]
+    source_start = source.index(_MODIFIED_STORY_SOURCE)
+    assert validated["reconstructed_text"] == _MODIFIED_STORY_AI
+    assert validated["modified_story_block_count"] == 1
+    assert preserved["text_block"] == _MODIFIED_STORY_AI
+    assert preserved["source_text"] == _MODIFIED_STORY_SOURCE
+    assert preserved["match_mode"] == "anchored_modified"
+    assert preserved["source_window_start"] == source_start
+    assert preserved["source_window_end"] == source_start + len(_MODIFIED_STORY_SOURCE)
+    assert any(
+        detail["kind"] == "modified_story_text_accepted" and detail["text_block_id"] == 2
+        for detail in validated["warning_details"]
+    )
+
+
+def test_cleanup_validation_accepts_arbitrary_interior_with_normalized_story_edges() -> None:
+    """
+    @brief      Verify AICU-007 normalized anchors ignore edge case, punctuation, and whitespace.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    source_story = (
+        f"\u201c{_STORY_EDGE_START.upper()}\u201d\n"
+        "This original interior may be replaced without a similarity threshold.\n"
+        f"\u201c{_STORY_EDGE_END.upper()}!\u201d"
+    )
+    ai_story = (
+        f"{_STORY_EDGE_START.lower().replace(' ', '  ')}\n"
+        "The provider supplied a completely different interior passage.\n"
+        f"{_STORY_EDGE_END.lower()}"
+    )
+
+    validated = ai_cleanup_service._validate_response(
+        _payload("cleanup-window-0001", [_block(1, ai_story, "story")]),
+        ai_cleanup_service._build_source_pages(source_story),
+        "cleanup-window-0001",
+    )
+
+    assert validated["reconstructed_text"] == ai_story
+    assert validated["preserved_blocks"][0]["source_text"] == source_story
+    assert validated["preserved_blocks"][0]["match_mode"] == "anchored_modified"
+
+
+def test_cleanup_validation_preserves_uniquely_bounded_internal_source_gap() -> None:
+    """
+    @brief      Verify AICU-008 and REQ-FUNC-063 preserve one exact internal source gap.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    source = f"Opening story.\n\n{_OMITTED_SOURCE_LINE}\n\nPage 24\n\nClosing story."
+    response = _payload(
+        "cleanup-window-0001",
+        [
+            _block(1, "Opening story.", "story"),
+            _block(2, "Page 24", "noise"),
+            _block(3, "Closing story.", "story"),
+        ],
+    )
+
+    validated = ai_cleanup_service._validate_response(
+        response,
+        ai_cleanup_service._build_source_pages(source),
+        "cleanup-window-0001",
+    )
+
+    preserved_gap = validated["preserved_source_gaps"][0]
+    expected_gap = f"\n\n{_OMITTED_SOURCE_LINE}\n\n"
+    assert validated["reconstructed_text"] == f"Opening story.{expected_gap}Closing story."
+    assert validated["preserved_source_gap_count"] == 1
+    assert preserved_gap == {
+        "source_window_start": len("Opening story."),
+        "source_window_end": len(f"Opening story.{expected_gap}"),
+        "text": expected_gap,
+        "reason": "unclassified_source_gap_preserved",
+    }
+    assert any(
+        detail["kind"] == "unclassified_source_gap_preserved"
+        and detail["source_window_start"] == preserved_gap["source_window_start"]
+        and detail["source_window_end"] == preserved_gap["source_window_end"]
+        for detail in validated["warning_details"]
+    )
+
+
+def test_cleanup_validation_rejects_ambiguous_internal_source_gap_delimiter() -> None:
+    """
+    @brief      Verify AICU-008 rejects a repeated exact delimiter after an omitted gap.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    source = "Opening story.\n\nOmitted text.\n\nPage 24\n\nPage 24\n\nClosing story."
+    response = _payload(
+        "cleanup-window-0001",
+        [
+            _block(1, "Opening story.", "story"),
+            _block(2, "Page 24", "noise"),
+            _block(3, "Closing story.", "story"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="unexplained source gap"):
+        ai_cleanup_service._validate_response(
+            response,
+            ai_cleanup_service._build_source_pages(source),
+            "cleanup-window-0001",
+        )
+
+
+@pytest.mark.parametrize(
+    ("source", "blocks"),
+    [
+        (
+            f"{_MODIFIED_STORY_SOURCE}\n\n{_MODIFIED_STORY_SOURCE}",
+            [
+                _block(1, _MODIFIED_STORY_AI, "story"),
+                _block(2, _MODIFIED_STORY_AI.replace("llest", "allest"), "story"),
+            ],
+        ),
+        ("Short original text.", [_block(1, "Short changed text.", "story")]),
+        (
+            _MODIFIED_STORY_SOURCE,
+            [_block(1, _MODIFIED_STORY_AI.replace("Elizabeth", "Darcy"), "story")],
+        ),
+        (_MODIFIED_STORY_SOURCE, [_block(1, _MODIFIED_STORY_AI, "noise")]),
+        (
+            f"{_MODIFIED_STORY_SOURCE}\nFOOTER\n{_MODIFIED_STORY_SOURCE}\nFOOTER",
+            [_block(1, _MODIFIED_STORY_AI, "story"), _block(2, "FOOTER", "footer")],
+        ),
+    ],
+    ids=[
+        "adjacent-modified-story",
+        "short-normalized-anchors",
+        "changed-normalized-start",
+        "modified-non-story",
+        "ambiguous-next-delimiter",
+    ],
+)
+def test_cleanup_validation_rejects_unsafe_modified_story_fallbacks(
+    source: str,
+    blocks: list[dict[str, object]],
+) -> None:
+    """
+    @brief      Verify AICU-007 and REQ-FUNC-062 reject unsafe or ambiguous fallback cases.
+    @param[in]  source Canonical source window fixture.
+    @param[in]  blocks Provider response block fixtures.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    with pytest.raises(ValueError, match="exact source slice"):
+        ai_cleanup_service._validate_response(
+            _payload("cleanup-window-0001", blocks),
+            ai_cleanup_service._build_source_pages(source),
+            "cleanup-window-0001",
+        )
 
 
 @pytest.mark.parametrize(
@@ -303,6 +509,221 @@ def test_cleanup_checkpoint_compatibility_requires_schema_and_input_identity() -
         "input-b",
         "instructions-a",
     )
+
+
+def test_cleanup_source_offset_resume_trims_mid_page_and_stops_at_mismatch() -> None:
+    """
+    @brief      Verify AICU-009 offset restoration handles split pages and corrupt trailing evidence.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-16
+    @version    0.1.0
+    """
+    source_stream = "First segment.\nSecond segment.\nThird segment."
+    restored_offset = len("First segment.\nSec")
+    checkpoint = {
+        "completed_windows": [
+            {
+                "window_id": "cleanup-window-0001",
+                "source_window_length": restored_offset,
+                "source_window_fingerprint": ai_cleanup_service._fingerprint(source_stream[:restored_offset]),
+                "preserved_blocks": [],
+                "reconstructed_text": source_stream[:restored_offset],
+            },
+            {
+                "window_id": "cleanup-window-0002",
+                "source_window_length": 4,
+                "source_window_fingerprint": "mismatched",
+                "preserved_blocks": [],
+                "reconstructed_text": "ond ",
+            },
+        ]
+    }
+
+    restored, source_offset = ai_cleanup_service._restored_completed_windows(checkpoint, source_stream)
+    remaining_pages = ai_cleanup_service._source_pages_after_offset(
+        ai_cleanup_service._build_source_pages(source_stream),
+        source_offset,
+    )
+
+    assert len(restored) == 1
+    assert source_offset == restored_offset
+    assert restored[0]["source_stream_start"] == 0
+    assert restored[0]["source_stream_end"] == restored_offset
+    assert ai_cleanup_service._window_source_text(remaining_pages) == source_stream[restored_offset:]
+    with pytest.raises(ValueError, match="exceeds"):
+        ai_cleanup_service._source_pages_after_offset(remaining_pages, len(source_stream) + 1)
+
+
+def test_ai_cleanup_resume_uses_source_offset_after_budget_repartition(
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify AICU-009 and REQ-FUNC-064 resume only the unprocessed source suffix.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-16
+    @version    0.1.0
+    """
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    page_separator = "\n\n\f\n\n"
+    page_texts = [f"Page {index} " + (chr(96 + index) * 1000) + ".\n" for index in range(1, 6)]
+    extracted_path.write_text(page_separator.join(page_texts), encoding="utf-8")
+    canonical_source = ai_cleanup_service._canonicalize_source_text(extracted_path.read_text(encoding="utf-8"))
+    source_pages = ai_cleanup_service._build_source_pages(canonical_source)
+    expected_source_stream = ai_cleanup_service._window_source_text(source_pages)
+    expected_restored_offset = len(ai_cleanup_service._window_source_text(source_pages[:2]))
+    (mock_prompt_environment / "text_cleanup_user.txt").write_text(
+        "Window: {window_id}\nLanguage: {source_language_hint}\nScript: {dominant_script_hint}\n"
+        "{source_window_block}\nInstructions: {additional_cleanup_instructions}",
+        encoding="utf-8",
+    )
+
+    first_call_count = 0
+
+    def _source_from_prompt(user_prompt: str) -> str:
+        """
+        @brief      Extract provider-visible source text from one cleanup prompt fixture.
+        @param[in]  user_prompt Rendered cleanup user prompt.
+        @return     Canonical source-window text between stable prompt markers.
+        @exception  IndexError Raised when required source markers are absent.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-16
+        @version    0.1.0
+        """
+        start_marker = "<<< SOURCE WINDOW START >>>\n"
+        end_marker = "<<< SOURCE WINDOW END >>>"
+        return user_prompt.split(start_marker, 1)[1].split(end_marker, 1)[0]
+
+    def _first_provider(_profile, _system_prompt, user_prompt, **kwargs):
+        """
+        @brief      Validate the first narrow-budget window and fail the next request.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system_prompt Unused cleanup system prompt.
+        @param[in]  user_prompt Rendered cleanup user prompt.
+        @param[in]  kwargs Provider call metadata containing the expected window ID.
+        @return     Provider-compatible keep-all cleanup response.
+        @exception  RuntimeError Raised on the second request to create a partial checkpoint.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-16
+        @version    0.1.0
+        """
+        nonlocal first_call_count
+        first_call_count += 1
+        if first_call_count == 2:
+            raise RuntimeError("stop after first narrow-budget window")
+        context = dict(kwargs.get("log_context", {}))
+        return {
+            "payload": _payload(
+                str(context["window_id"]),
+                [_block(1, _source_from_prompt(user_prompt), "story")],
+            ),
+            "usage": {"input_tokens": 10, "output_tokens": 10, "total_tokens": 20, "usage_available": True},
+        }
+
+    narrow_profile = {**_MOCK_PROFILE, "max_output_tokens": 2000}
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _first_provider)
+    with pytest.raises(RuntimeError, match="narrow-budget window"):
+        ai_cleanup_service.clean_text(project_root, manifest, narrow_profile)
+
+    failed_state = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert failed_state["progress_current"] == 1
+    assert failed_state["progress_total"] == 3
+    assert len(failed_state["resume_checkpoint"]["completed_windows"]) == 1
+
+    resumed_prompts: list[str] = []
+
+    def _resumed_provider(_profile, _system_prompt, user_prompt, **kwargs):
+        """
+        @brief      Retain and capture each source window submitted after resume.
+        @param[in]  _profile Unused AI profile payload.
+        @param[in]  _system_prompt Unused cleanup system prompt.
+        @param[in]  user_prompt Rendered cleanup user prompt.
+        @param[in]  kwargs Provider call metadata containing the expected window ID.
+        @return     Provider-compatible keep-all cleanup response.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-16
+        @version    0.1.0
+        """
+        resumed_prompts.append(user_prompt)
+        context = dict(kwargs.get("log_context", {}))
+        return {
+            "payload": _payload(
+                str(context["window_id"]),
+                [_block(1, _source_from_prompt(user_prompt), "story")],
+            ),
+            "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _resumed_provider)
+    report = ai_cleanup_service.clean_text(
+        project_root,
+        manifest,
+        {**_MOCK_PROFILE, "id": "profile-wide", "max_output_tokens": 4096},
+    )
+
+    assert len(resumed_prompts) == 1
+    assert "Page 1 " not in resumed_prompts[0]
+    assert "Page 2 " not in resumed_prompts[0]
+    assert "Page 3 " in resumed_prompts[0]
+    assert "Page 5 " in resumed_prompts[0]
+    assert report["window_count"] == 2
+    assert [item["window_id"] for item in report["validated_window_decisions"]] == [
+        "cleanup-window-0001",
+        "cleanup-window-0002",
+    ]
+    assert report["validated_window_decisions"][0]["source_stream_start"] == 0
+    assert report["validated_window_decisions"][0]["source_stream_end"] == expected_restored_offset
+    assert report["validated_window_decisions"][1]["source_stream_start"] == expected_restored_offset
+    assert report["validated_window_decisions"][1]["source_stream_end"] == len(expected_source_stream)
+    assert report["token_usage"]["total_tokens"] == 30
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    assert cleaned_path.read_text(encoding="utf-8") == expected_source_stream
+
+
+def test_cleanup_modified_story_contract_invalidates_exact_story_fingerprint() -> None:
+    """
+    @brief      Verify AICU-007 and REQ-FUNC-060 invalidate exact-Story-only state.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    old_fingerprint = hashlib.sha256(
+        b"window_id|all-blocks-exact-with-source-ranges|whitespace:restore-exact|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator,story-exact|confidence:high,medium,low"
+    ).hexdigest()
+
+    assert ai_cleanup_service._CONTRACT_FINGERPRINT != old_fingerprint
+
+
+def test_cleanup_preserved_source_gap_contract_invalidates_modified_story_fingerprint() -> None:
+    """
+    @brief      Verify AICU-008 and REQ-FUNC-060 invalidate the pre-gap contract.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    old_fingerprint = hashlib.sha256(
+        b"window_id|artifacts-exact,story-exact-or-unique-normalized-edge-anchored-modified,min32,edge16-64,interior-any|source-ranges-complete|whitespace:restore-exact|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator|confidence:high,medium,low"
+    ).hexdigest()
+
+    assert ai_cleanup_service._CONTRACT_FINGERPRINT != old_fingerprint
 
 
 def test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators(
@@ -733,6 +1154,147 @@ def test_ai_cleanup_spacing_reapplication_persists_selection_without_provider(
         )
     )
     assert persisted_report["selected_spacing_categories"] == []
+
+
+def test_ai_cleanup_spacing_reapplication_preserves_anchored_modified_story(
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify AICU-007 and REQ-FUNC-061 reapply spacing around accepted AI Story text.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.write_text(f"Header\n\n{_MODIFIED_STORY_SOURCE}\nFooter", encoding="utf-8")
+    (mock_prompt_environment / "text_cleanup_user.txt").write_text(
+        "Window: {window_id}\nLanguage: {source_language_hint}\nScript: {dominant_script_hint}\n"
+        "{source_window_block}\nInstructions: {additional_cleanup_instructions}",
+        encoding="utf-8",
+    )
+    provider_call_count = 0
+
+    def _fake_chat_json(*_args, **_kwargs):
+        """
+        @brief      Return one uniquely bounded modified Story response.
+        @return     Provider-compatible cleanup response fixture.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
+        nonlocal provider_call_count
+        provider_call_count += 1
+        return {
+            "payload": _payload(
+                "cleanup-window-0001",
+                [
+                    _block(1, "Header", "header"),
+                    _block(2, _MODIFIED_STORY_AI, "story"),
+                    _block(3, "Footer", "footer"),
+                ],
+            ),
+            "usage": {},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+    report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+
+    assert cleaned_path.read_text(encoding="utf-8") == _MODIFIED_STORY_AI
+    assert report["modified_story_block_count"] == 1
+    assert provider_call_count == 1
+
+    monkeypatch.setattr(
+        ai_cleanup_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: pytest.fail("Spacing reapplication must not call the provider."),
+    )
+    reapplied = ai_cleanup_service.apply_spacing_selection(project_root, {"header", "footer"})
+
+    assert cleaned_path.read_text(encoding="utf-8") == f"\n\n{_MODIFIED_STORY_AI}\n\n"
+    assert reapplied["modified_story_block_count"] == 1
+    assert provider_call_count == 1
+
+
+def test_ai_cleanup_spacing_reapplication_preserves_internal_source_gap(
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify AICU-008 and REQ-FUNC-061 retain omitted source through spacing changes.
+    @param[in]  mock_extracted_project Extracted-project pytest fixture.
+    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    source = f"Opening story.\n\n{_OMITTED_SOURCE_LINE}\n\nPage 24\n\nClosing story."
+    expected_gap = f"\n\n{_OMITTED_SOURCE_LINE}\n\n"
+    extracted_path.write_text(source, encoding="utf-8")
+    (mock_prompt_environment / "text_cleanup_user.txt").write_text(
+        "Window: {window_id}\nLanguage: {source_language_hint}\nScript: {dominant_script_hint}\n"
+        "{source_window_block}\nInstructions: {additional_cleanup_instructions}",
+        encoding="utf-8",
+    )
+    provider_call_count = 0
+
+    def _fake_chat_json(*_args, **_kwargs):
+        """
+        @brief      Return one response that omits a uniquely bounded internal source line.
+        @return     Provider-compatible cleanup response fixture.
+        @exception  None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-15
+        @version    0.1.0
+        """
+        nonlocal provider_call_count
+        provider_call_count += 1
+        return {
+            "payload": _payload(
+                "cleanup-window-0001",
+                [
+                    _block(1, "Opening story.", "story"),
+                    _block(2, "Page 24", "noise"),
+                    _block(3, "Closing story.", "story"),
+                ],
+            ),
+            "usage": {},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+    report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+
+    assert cleaned_path.read_text(encoding="utf-8") == f"Opening story.{expected_gap}Closing story."
+    assert report["preserved_source_gap_count"] == 1
+    assert any(detail["kind"] == "unclassified_source_gap_preserved" for detail in report["warning_details"])
+    assert provider_call_count == 1
+
+    monkeypatch.setattr(
+        ai_cleanup_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: pytest.fail("Spacing reapplication must not call the provider."),
+    )
+    reapplied = ai_cleanup_service.apply_spacing_selection(project_root, {"noise"})
+
+    assert cleaned_path.read_text(encoding="utf-8") == f"Opening story.{expected_gap}\n\nClosing story."
+    assert reapplied["preserved_source_gap_count"] == 1
+    assert provider_call_count == 1
 
 
 # END OF FILE

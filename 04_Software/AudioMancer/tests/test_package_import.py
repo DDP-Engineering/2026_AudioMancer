@@ -25,7 +25,8 @@ import audiomancer
 # CONSTANTS
 
 APP_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.6.5"
+EXPECTED_VERSION = "1.6.6"
+CHANGELOG_PATH = APP_ROOT.parents[1] / "CHANGELOG.md"
 USER_GUIDE_PATHS = (
     APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html",
     APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide_ro" / "index.html",
@@ -53,6 +54,8 @@ def test_package_exposes_main_and_release_version_metadata() -> None:
     assert audiomancer.__version__ == EXPECTED_VERSION
     assert pyproject_payload["project"]["version"] == EXPECTED_VERSION
     assert locked_audiomancer_package["version"] == EXPECTED_VERSION
+    changelog = CHANGELOG_PATH.read_text(encoding="utf-8")
+    assert f"## [{EXPECTED_VERSION}]" in changelog
     for user_guide_path in USER_GUIDE_PATHS:
         user_guide = user_guide_path.read_text(encoding="utf-8")
         assert f"v{EXPECTED_VERSION}</title>" in user_guide

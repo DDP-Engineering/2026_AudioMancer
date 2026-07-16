@@ -11,12 +11,13 @@
 @file ai_cleanup_service.py
 @brief AI-assisted text cleanup service for AudioMancer.
 @details Presents each cleanup window as one canonical source string, validates
-         every returned block as an exact forward source slice, restores omitted
-         whitespace, renders artifacts with an operator-selectable spacing set,
-         and persists resumable operator-review evidence.
+         exact blocks and uniquely bounded modified Story blocks against forward
+         source positions, preserves uniquely bounded omitted source gaps, renders
+         artifacts with an operator-selectable spacing set, resumes compatible
+         validated prefixes by source-stream offset, and persists review evidence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-15
-@version 1.3.0
+@version 1.6.0
 """
 
 # IMPORTS
@@ -57,7 +58,7 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 _LOGGER = get_component_logger("ai_cleanup")
 _PAGE_SEPARATOR = "\n\f\n\n"
 _CONTRACT_FINGERPRINT = hashlib.sha256(
-    b"window_id|all-blocks-exact-with-source-ranges|whitespace:restore-exact|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator,story-exact|confidence:high,medium,low"
+    b"window_id|artifacts-exact,story-exact-or-unique-normalized-edge-anchored-modified,min32,edge16-64,interior-any|source-ranges-complete|whitespace:restore-exact|internal-nonwhitespace-gap:preserve-exact-between-unique-exact-boundaries|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator|confidence:high,medium,low"
 ).hexdigest()
 _SYSTEM_PROMPT_NAME = "text_cleanup_system"
 _USER_PROMPT_NAME = "text_cleanup_user"
@@ -72,6 +73,8 @@ _ARTIFACT_REPLACEMENTS = {
     "heading": "\n\n",
 }
 _CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
+_MODIFIED_STORY_MIN_NORMALIZED_LENGTH = 32
+_MODIFIED_STORY_MAX_EDGE_ANCHOR_LENGTH = 64
 
 # DATA MODELS / TYPEDEFINITIONS
 
@@ -211,7 +214,7 @@ def clean_text(
     additional_cleanup_instructions: str | None = None,
 ) -> CleanupReportPayload:
     """
-    @brief      Run strict exact-source AI cleanup for one project.
+    @brief      Run source-grounded AI cleanup for one project.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
@@ -224,7 +227,7 @@ def clean_text(
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-15
-    @version    1.1.0
+    @version    1.3.0
     """
     root = Path(project_root)
     _validate_request(manifest, ai_profile_payload)
@@ -254,12 +257,17 @@ def clean_text(
     checkpoint = checkpoint_value if isinstance(checkpoint_value, dict) else {}
     resume_compatible = _checkpoint_is_compatible(checkpoint, input_fingerprint, instructions_fingerprint)
     pages = _build_source_pages(input_text)
+    source_stream = _window_source_text(pages)
     prompt_shell = _render_cleanup_user_prompt([], "cleanup-window-0000", language_hint, script_hint, instructions)
     budget_metadata = _build_budget_metadata(ai_profile_payload, system_prompt, prompt_shell)
-    windows = _build_windows(pages, budget_metadata)
     model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
     model_settings_history = _update_model_settings_history(existing_state if resume_compatible else {}, model_settings)
-    completed_windows = _restored_completed_windows(checkpoint, windows) if resume_compatible else []
+    completed_windows, source_stream_offset = (
+        _restored_completed_windows(checkpoint, source_stream) if resume_compatible else ([], 0)
+    )
+    remaining_pages = _source_pages_after_offset(pages, source_stream_offset)
+    remaining_windows = _build_windows(remaining_pages, budget_metadata)
+    total_window_count = len(completed_windows) + len(remaining_windows)
     existing_metadata = _state_metadata(existing_state)
     started_at = str(existing_metadata.get("started_at") or _utc_now_iso()) if resume_compatible else _utc_now_iso()
     log_relative_path = str(existing_metadata.get("log_relative_path", "")).strip() if resume_compatible else ""
@@ -272,17 +280,18 @@ def clean_text(
         _restored_token_usage(existing_state) if completed_windows else token_usage_service.empty_token_usage()
     )
     _LOGGER.info(
-        "Starting AI cleanup profile_id=%s pages=%d windows=%d resume_window=%d",
+        "Starting AI cleanup profile_id=%s pages=%d windows=%d resume_window=%d source_stream_offset=%d",
         profile_id,
         len(pages),
-        len(windows),
+        total_window_count,
         len(completed_windows) + 1,
+        source_stream_offset,
     )
     _write_state(
         state_path,
         "running",
         len(completed_windows),
-        len(windows),
+        total_window_count,
         root,
         output_path,
         started_at,
@@ -302,15 +311,14 @@ def clean_text(
     _emit_progress(
         progress_callback,
         len(completed_windows),
-        len(windows),
+        total_window_count,
         "Resuming AI-assisted cleanup..." if completed_windows else "AI-assisted cleanup in progress...",
         token_usage,
     )
     try:
-        for zero_index in range(len(completed_windows), len(windows)):
+        for window in remaining_windows:
             raise_if_cancelled(cancel_requested)
-            window = windows[zero_index]
-            window_number = zero_index + 1
+            window_number = len(completed_windows) + 1
             window_id = f"cleanup-window-{window_number:04d}"
             user_prompt = _render_cleanup_user_prompt(
                 list(window["pages"]), window_id, language_hint, script_hint, instructions
@@ -325,7 +333,7 @@ def clean_text(
                     "stage_label": "ai_cleanup",
                     "profile_id": profile_id,
                     "window_index": window_number,
-                    "window_total": len(windows),
+                    "window_total": total_window_count,
                     "window_id": window_id,
                 },
                 cancel_requested=cancel_requested,
@@ -339,13 +347,35 @@ def clean_text(
             validated = _validate_response(payload, window_pages, window_id)
             validated["window_id"] = window_id
             validated["source_window_fingerprint"] = _fingerprint(_window_source_text(window_pages))
+            validated["source_stream_start"] = source_stream_offset
+            source_stream_offset += int(validated["source_window_length"])
+            validated["source_stream_end"] = source_stream_offset
+            for preserved_block in list(validated.get("preserved_blocks", [])):
+                if not isinstance(preserved_block, dict) or preserved_block.get("match_mode") != "anchored_modified":
+                    continue
+                _LOGGER.warning(
+                    "Accepted modified AI cleanup Story window_id=%s text_block_id=%d source_start=%d source_end=%d",
+                    window_id,
+                    int(preserved_block["text_block_id"]),
+                    int(preserved_block["source_window_start"]),
+                    int(preserved_block["source_window_end"]),
+                )
+            for preserved_gap in list(validated.get("preserved_source_gaps", [])):
+                if not isinstance(preserved_gap, dict):
+                    continue
+                _LOGGER.warning(
+                    "Preserved omitted AI cleanup source gap window_id=%s source_start=%d source_end=%d",
+                    window_id,
+                    int(preserved_gap["source_window_start"]),
+                    int(preserved_gap["source_window_end"]),
+                )
             completed_windows.append(validated)
             token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
             _write_state(
                 state_path,
                 "running",
                 window_number,
-                len(windows),
+                total_window_count,
                 root,
                 output_path,
                 started_at,
@@ -365,7 +395,7 @@ def clean_text(
             _emit_progress(
                 progress_callback,
                 window_number,
-                len(windows),
+                total_window_count,
                 "AI-assisted cleanup in progress...",
                 token_usage,
             )
@@ -382,7 +412,7 @@ def clean_text(
             instructions,
             instructions_fingerprint,
             completed_windows,
-            windows,
+            total_window_count,
             token_usage,
             budget_metadata,
             model_settings,
@@ -403,7 +433,7 @@ def clean_text(
             instructions,
             instructions_fingerprint,
             completed_windows,
-            windows,
+            total_window_count,
             token_usage,
             budget_metadata,
             model_settings,
@@ -438,6 +468,8 @@ def clean_text(
     )
     restored_whitespace_gap_count = sum(int(item.get("restored_whitespace_gap_count", 0)) for item in completed_windows)
     artifact_replacement_count = sum(int(item.get("artifact_replacement_count", 0)) for item in completed_windows)
+    modified_story_block_count = sum(int(item.get("modified_story_block_count", 0)) for item in completed_windows)
+    preserved_source_gap_count = sum(int(item.get("preserved_source_gap_count", 0)) for item in completed_windows)
     warnings = [
         str(detail.get("message", "")).strip() for detail in warning_details if str(detail.get("message", "")).strip()
     ]
@@ -460,10 +492,12 @@ def clean_text(
         "model_settings": model_settings,
         "model_settings_history": model_settings_history,
         "ai_log_relative_path": log_relative_path,
-        "window_count": len(windows),
+        "window_count": total_window_count,
         "validated_window_decisions": completed_windows,
         "source_page_count": len(pages),
         "preserved_block_count": len(preserved_blocks),
+        "modified_story_block_count": modified_story_block_count,
+        "preserved_source_gap_count": preserved_source_gap_count,
         "artifact_replacement_count": artifact_replacement_count,
         "spacing_replacement_count": sum(
             1
@@ -480,8 +514,8 @@ def clean_text(
     completed_state = _write_state(
         state_path,
         "completed",
-        len(windows),
-        len(windows),
+        total_window_count,
+        total_window_count,
         root,
         output_path,
         started_at,
@@ -511,15 +545,17 @@ def clean_text(
     )
     _emit_progress(
         progress_callback,
-        len(windows),
-        len(windows),
+        total_window_count,
+        total_window_count,
         "AI-assisted cleanup completed; human review is required.",
         token_usage,
     )
     _LOGGER.info(
-        "Completed AI cleanup windows=%d preserved_blocks=%d removed_characters=%d",
-        len(windows),
+        "Completed AI cleanup windows=%d preserved_blocks=%d modified_story_blocks=%d preserved_source_gaps=%d removed_characters=%d",
+        total_window_count,
         len(preserved_blocks),
+        modified_story_block_count,
+        preserved_source_gap_count,
         removed_character_count,
     )
     return report
@@ -643,6 +679,41 @@ def _window_source_text(pages: list[SourcePagePayload]) -> str:
     return "".join(str(page["text"]) for page in pages)
 
 
+def _source_pages_after_offset(
+    pages: list[SourcePagePayload],
+    source_stream_offset: int,
+) -> list[SourcePagePayload]:
+    """
+    @brief      Return provider-visible source units after one validated stream offset.
+    @param[in]  pages Ordered canonical source page payloads.
+    @param[in]  source_stream_offset Count of provider-visible source characters already validated.
+    @return     Copied remaining pages, with the first page trimmed when the offset falls inside it.
+    @exception  ValueError Raised when the offset is negative or exceeds the source stream.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-16
+    @version    0.1.0
+    """
+    if type(source_stream_offset) is not int or source_stream_offset < 0:
+        raise ValueError("AI cleanup source-stream resume offset is invalid.")
+    remaining_offset = source_stream_offset
+    remaining_pages: list[SourcePagePayload] = []
+    for page in pages:
+        page_text = str(page["text"])
+        if remaining_offset >= len(page_text):
+            remaining_offset -= len(page_text)
+            continue
+        copied_page = dict(page)
+        if remaining_offset:
+            copied_page["source_kind"] = "segment"
+            copied_page["text"] = page_text[remaining_offset:]
+            copied_page["source_start"] = int(page.get("source_start", 0)) + remaining_offset
+        remaining_pages.append(copied_page)
+        remaining_offset = 0
+    if remaining_offset:
+        raise ValueError("AI cleanup source-stream resume offset exceeds the canonical source.")
+    return remaining_pages
+
+
 def _build_response_schema() -> dict[str, object]:
     """
     @brief      Build the strict canonical-window response schema.
@@ -696,7 +767,7 @@ def _validate_response(
     @exception  ValueError Raised when the provider response violates the cleanup contract.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-15
-    @version    1.2.0
+    @version    1.3.0
     """
     allowed_response_fields = {"window_id", "text_blocks"}
     if set(response_payload) != allowed_response_fields:
@@ -745,29 +816,116 @@ def _validate_response(
     preserved_spans: list[tuple[int, int]] = []
     removed_ranges: list[dict[str, object]] = []
     restored_whitespace_ranges: list[dict[str, object]] = []
+    preserved_source_gaps: list[dict[str, object]] = []
     output_fragments: list[str] = []
+    modified_story_warning_details: list[dict[str, object]] = []
+    preserved_gap_warning_details: list[dict[str, object]] = []
     cursor = 0
+    previous_was_modified_story = False
+    previous_match_mode: str | None = None
 
-    for block in normalized_blocks:
+    for block_index, block in enumerate(normalized_blocks):
         exact_text = str(block["text_block"])
         match_index = source_text.find(exact_text, cursor)
-        if match_index < 0:
-            raise ValueError("AI cleanup text_block is not an exact source slice in forward source order.")
-        if match_index > cursor:
-            gap_text = source_text[cursor:match_index]
-            if not gap_text.isspace():
-                raise ValueError(
-                    "AI cleanup response leaves an unexplained source gap or violates exact source slice order."
+        gap_text = source_text[cursor:match_index] if match_index >= 0 else ""
+        preserve_internal_gap = (
+            block_index > 0
+            and previous_match_mode == "exact"
+            and match_index > cursor
+            and not gap_text.isspace()
+            and _source_occurrences(source_text, exact_text, cursor) == [match_index]
+        )
+        exact_gap_valid = match_index >= 0 and (
+            match_index == cursor or source_text[cursor:match_index].isspace()
+            or preserve_internal_gap
+        )
+        if not exact_gap_valid:
+            fallback_span = None
+            if block["artifact_type"] == "story" and not previous_was_modified_story:
+                fallback_span = _locate_modified_story_span(
+                    source_text,
+                    cursor,
+                    normalized_blocks,
+                    block_index,
                 )
-            output_fragments.append(gap_text)
-            restored_whitespace_ranges.append(
+            if fallback_span is None:
+                if match_index >= 0:
+                    raise ValueError(
+                        "AI cleanup response leaves an unexplained source gap or violates exact source slice order."
+                    )
+                raise ValueError("AI cleanup text_block is not an exact source slice in forward source order.")
+
+            match_index, block_end = fallback_span
+            if match_index > cursor:
+                gap_text = source_text[cursor:match_index]
+                output_fragments.append(gap_text)
+                restored_whitespace_ranges.append(
+                    {
+                        "source_window_start": cursor,
+                        "source_window_end": match_index,
+                        "text": gap_text,
+                        "reason": "restored_whitespace_gap",
+                    }
+                )
+            source_span_text = source_text[match_index:block_end]
+            preserved_blocks.append(
                 {
-                    "source_window_start": cursor,
-                    "source_window_end": match_index,
-                    "text": gap_text,
-                    "reason": "restored_whitespace_gap",
+                    **block,
+                    "match_mode": "anchored_modified",
+                    "source_text": source_span_text,
+                    "source_window_start": match_index,
+                    "source_window_end": block_end,
                 }
             )
+            preserved_spans.append((match_index, block_end))
+            output_fragments.append(exact_text)
+            modified_story_warning_details.append(
+                {
+                    "kind": "modified_story_text_accepted",
+                    "severity": "warning",
+                    "text_block_id": int(block["text_block_id"]),
+                    "source_window_start": match_index,
+                    "source_window_end": block_end,
+                    "message": "AI cleanup accepted modified Story text using unique normalized edge anchors; compare it with the original.",
+                }
+            )
+            cursor = block_end
+            previous_was_modified_story = True
+            previous_match_mode = "anchored_modified"
+            continue
+
+        if match_index > cursor:
+            gap_text = source_text[cursor:match_index]
+            output_fragments.append(gap_text)
+            gap_payload = {
+                "source_window_start": cursor,
+                "source_window_end": match_index,
+                "text": gap_text,
+            }
+            if preserve_internal_gap:
+                preserved_source_gaps.append(
+                    {
+                        **gap_payload,
+                        "reason": "unclassified_source_gap_preserved",
+                    }
+                )
+                preserved_spans.append((cursor, match_index))
+                preserved_gap_warning_details.append(
+                    {
+                        "kind": "unclassified_source_gap_preserved",
+                        "severity": "warning",
+                        "source_window_start": cursor,
+                        "source_window_end": match_index,
+                        "message": "AI cleanup preserved source text omitted between unique exact block boundaries; compare it with the provider response.",
+                    }
+                )
+            else:
+                restored_whitespace_ranges.append(
+                    {
+                        **gap_payload,
+                        "reason": "restored_whitespace_gap",
+                    }
+                )
 
         block_end = match_index + len(exact_text)
         if block["artifact_type"] in _NON_DISPLAY_ARTIFACT_TYPES:
@@ -777,6 +935,7 @@ def _validate_response(
             preserved_blocks.append(
                 {
                     **block,
+                    "match_mode": "exact",
                     "source_window_start": match_index,
                     "source_window_end": block_end,
                 }
@@ -784,6 +943,8 @@ def _validate_response(
             preserved_spans.append((match_index, block_end))
             output_fragments.append(exact_text)
         cursor = block_end
+        previous_was_modified_story = False
+        previous_match_mode = "exact"
 
     if cursor < len(source_text):
         gap_text = source_text[cursor:]
@@ -801,7 +962,10 @@ def _validate_response(
             }
         )
 
-    warning_details: list[dict[str, object]] = []
+    warning_details: list[dict[str, object]] = [
+        *modified_story_warning_details,
+        *preserved_gap_warning_details,
+    ]
     source_offset = 0
     for page in pages:
         page_index = int(page["source_page_index"])
@@ -857,15 +1021,123 @@ def _validate_response(
         "reconstructed_text": "".join(output_fragments),
         "removed_ranges": removed_ranges,
         "restored_whitespace_ranges": restored_whitespace_ranges,
+        "preserved_source_gaps": preserved_source_gaps,
         "removed_character_count": removed_character_count,
         "restored_whitespace_character_count": restored_whitespace_character_count,
         "restored_whitespace_gap_count": len(restored_whitespace_ranges),
         "artifact_replacement_count": len(removed_ranges),
+        "modified_story_block_count": len(modified_story_warning_details),
+        "preserved_source_gap_count": len(preserved_source_gaps),
         "warning_details": warning_details,
         "response_block_count": len(normalized_blocks),
         "source_window_length": len(source_text),
     }
     return _render_validated_window(validated_window, _DEFAULT_SPACING_CATEGORIES)
+
+
+def _locate_modified_story_span(
+    source_text: str,
+    cursor: int,
+    blocks: list[dict[str, object]],
+    block_index: int,
+) -> tuple[int, int] | None:
+    """
+    @brief      Locate one uniquely bounded non-exact Story source span.
+    @param[in]  source_text Canonical source window text.
+    @param[in]  cursor First unconsumed source offset.
+    @param[in]  blocks Validated ordered provider blocks.
+    @param[in]  block_index Index of the non-exact Story block.
+    @return     Unique source start/end pair, or None when unsafe or ambiguous.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    returned_text = str(blocks[block_index]["text_block"])
+    source_start = cursor
+    while source_start < len(source_text) and source_text[source_start].isspace():
+        source_start += 1
+
+    if block_index + 1 >= len(blocks):
+        boundary_positions = [len(source_text)]
+    else:
+        next_text = str(blocks[block_index + 1]["text_block"])
+        boundary_positions = _source_occurrences(source_text, next_text, source_start)
+        if not boundary_positions:
+            return None
+
+    candidates: list[tuple[int, int]] = []
+    for boundary in boundary_positions:
+        source_end = boundary
+        while source_end > source_start and source_text[source_end - 1].isspace():
+            source_end -= 1
+        if source_end <= source_start:
+            continue
+        source_candidate = source_text[source_start:source_end]
+        if _modified_story_edges_match(source_candidate, returned_text):
+            candidates.append((source_start, source_end))
+            if len(candidates) > 1:
+                return None
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def _source_occurrences(source_text: str, exact_text: str, start: int) -> list[int]:
+    """
+    @brief      Return every forward occurrence of one non-empty exact block.
+    @param[in]  source_text Canonical source window text.
+    @param[in]  exact_text Exact next-block delimiter text.
+    @param[in]  start Inclusive source search offset.
+    @return     Ordered source offsets, including overlapping occurrences.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    positions: list[int] = []
+    search_offset = start
+    while search_offset <= len(source_text) - len(exact_text):
+        position = source_text.find(exact_text, search_offset)
+        if position < 0:
+            break
+        positions.append(position)
+        search_offset = position + 1
+    return positions
+
+
+def _modified_story_edges_match(source_text: str, returned_text: str) -> bool:
+    """
+    @brief      Compare normalized edge anchors without constraining Story interior text.
+    @param[in]  source_text Candidate original Story source span.
+    @param[in]  returned_text Provider-returned Story text.
+    @return     True when both normalized texts provide matching sufficient edges.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    normalized_source = _normalize_story_anchor_text(source_text)
+    normalized_returned = _normalize_story_anchor_text(returned_text)
+    minimum_length = min(len(normalized_source), len(normalized_returned))
+    if minimum_length < _MODIFIED_STORY_MIN_NORMALIZED_LENGTH:
+        return False
+    anchor_length = min(_MODIFIED_STORY_MAX_EDGE_ANCHOR_LENGTH, minimum_length // 2)
+    return (
+        normalized_source[:anchor_length] == normalized_returned[:anchor_length]
+        and normalized_source[-anchor_length:] == normalized_returned[-anchor_length:]
+    )
+
+
+def _normalize_story_anchor_text(text: str) -> str:
+    """
+    @brief      Case-fold Story text and discard punctuation and whitespace for edge matching.
+    @param[in]  text Story source or provider text.
+    @return     Concatenated Unicode alphanumeric characters.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-15
+    @version    0.1.0
+    """
+    return "".join(character for character in text.casefold() if character.isalnum())
 
 
 def _render_validated_window(
@@ -874,13 +1146,13 @@ def _render_validated_window(
 ) -> ValidatedWindowPayload:
     """
     @brief      Reconstruct one retained validated window for a complete spacing selection.
-    @param[in]  window_payload Retained exact-source validation decision payload.
+    @param[in]  window_payload Retained source-associated validation decision payload.
     @param[in]  selected_categories Complete selected non-story category collection.
     @return     Copied window payload with updated replacements and reconstructed text.
     @exception  ValueError Raised when retained ranges are missing, overlapping, or incompatible.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-15
-    @version    0.1.0
+    @version    0.2.0
     """
     spacing_categories = _normalize_spacing_categories(selected_categories)
     source_length = window_payload.get("source_window_length")
@@ -926,6 +1198,19 @@ def _render_validated_window(
                 int(raw_gap["source_window_start"]),
                 int(raw_gap["source_window_end"]),
                 "",
+            )
+        )
+
+    for raw_gap in list(window_payload.get("preserved_source_gaps", [])):
+        if not isinstance(raw_gap, dict):
+            raise ValueError("Retained AI Cleanup preserved source gap is invalid.")
+        if raw_gap.get("reason") != "unclassified_source_gap_preserved":
+            raise ValueError("Retained AI Cleanup preserved source-gap reason is invalid.")
+        fragments.append(
+            (
+                int(raw_gap["source_window_start"]),
+                int(raw_gap["source_window_end"]),
+                str(raw_gap["text"]),
             )
         )
 
@@ -1224,35 +1509,50 @@ def _checkpoint_is_compatible(
 
 def _restored_completed_windows(
     checkpoint: dict[str, object],
-    windows: list[dict[str, object]],
-) -> list[ValidatedWindowPayload]:
+    source_stream: str,
+) -> tuple[list[ValidatedWindowPayload], int]:
     """
-    @brief      Restore the valid leading sequence of checkpointed windows.
+    @brief      Restore the valid checkpoint prefix against canonical source-stream slices.
     @param[in]  checkpoint Persisted cleanup checkpoint payload.
-    @param[in]  windows Current ordered cleanup windows.
-    @return     Valid leading sequence of checkpointed window results.
+    @param[in]  source_stream Canonical provider-visible source text.
+    @return     Valid leading window results and the first unprocessed source-stream offset.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-15
-    @version    1.1.0
+    @date       2026-07-16
+    @version    1.2.0
     """
     restored: list[ValidatedWindowPayload] = []
+    source_stream_offset = 0
     items = checkpoint.get("completed_windows", [])
     if not isinstance(items, list):
-        return restored
+        return restored, source_stream_offset
     for zero_index, item in enumerate(items):
-        if zero_index >= len(windows) or not isinstance(item, dict):
+        if not isinstance(item, dict):
             break
         expected_id = f"cleanup-window-{zero_index + 1:04d}"
-        expected_fingerprint = _fingerprint(_window_source_text(list(windows[zero_index]["pages"])))
+        source_window_length = item.get("source_window_length")
+        if type(source_window_length) is not int or source_window_length <= 0:
+            break
+        source_stream_end = source_stream_offset + source_window_length
+        if source_stream_end > len(source_stream):
+            break
+        expected_fingerprint = _fingerprint(source_stream[source_stream_offset:source_stream_end])
         if item.get("window_id") != expected_id or item.get("source_window_fingerprint") != expected_fingerprint:
             break
         if not isinstance(item.get("preserved_blocks"), list):
             break
         if not isinstance(item.get("reconstructed_text"), str):
             break
-        restored.append(dict(item))
-    return restored
+        restored_item = dict(item)
+        stored_start = restored_item.get("source_stream_start", source_stream_offset)
+        stored_end = restored_item.get("source_stream_end", source_stream_end)
+        if stored_start != source_stream_offset or stored_end != source_stream_end:
+            break
+        restored_item["source_stream_start"] = source_stream_offset
+        restored_item["source_stream_end"] = source_stream_end
+        restored.append(restored_item)
+        source_stream_offset = source_stream_end
+    return restored, source_stream_offset
 
 
 def _build_model_settings(profile: dict[str, object], budget: dict[str, object]) -> dict[str, object]:
@@ -1411,7 +1711,7 @@ def _write_checkpoint_state(
     instructions: str,
     instructions_fingerprint: str,
     completed_windows: list[ValidatedWindowPayload],
-    windows: list[dict[str, object]],
+    total_window_count: int,
     token_usage: dict[str, object],
     budget_metadata: dict[str, object],
     model_settings: dict[str, object],
@@ -1430,7 +1730,7 @@ def _write_checkpoint_state(
     @param[in]  instructions Normalized operator cleanup instructions.
     @param[in]  instructions_fingerprint Operator-instructions fingerprint.
     @param[in]  completed_windows Fully validated cleanup-window results.
-    @param[in]  windows Current ordered cleanup windows.
+    @param[in]  total_window_count Restored prefix plus current suffix window count.
     @param[in]  token_usage Accumulated provider token usage.
     @param[in]  budget_metadata Cleanup model-budget metadata.
     @param[in]  model_settings Current persisted model settings.
@@ -1438,14 +1738,14 @@ def _write_checkpoint_state(
     @return     None.
     @exception  OSError Raised when atomic checkpoint persistence fails.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-15
-    @version    1.1.0
+    @date       2026-07-16
+    @version    1.2.0
     """
     _write_state(
         state_path,
         status,
         len(completed_windows),
-        len(windows),
+        total_window_count,
         root,
         output_path,
         started_at,

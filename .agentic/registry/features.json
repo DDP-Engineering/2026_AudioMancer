@@ -1,30 +1,28 @@
 {
-  "change-2026-07-15T111333Z-46add1a2": {
+  "change-2026-07-16T050958Z-8ff7ca31": {
     "check_ids": [
-      "CHECK-REL-1-6-5"
+      "CHECK-AICU-009"
     ],
     "intent": {
-      "created_at": "2026-07-15T11:13:33+00:00",
+      "created_at": "2026-07-16T05:09:58+00:00",
       "id": "I-0001",
       "kind": "change",
       "scope_hint": [],
-      "statement": "Prepare AudioMancer 1.6.5 release metadata for the completed AI Cleanup selectable-spacing work: update CHANGELOG, project/package/lock/test versions, and English/Romanian offline help versions and cleanup guidance.",
+      "statement": "Resume AI Cleanup from the first unprocessed canonical source offset when model budget settings repartition request windows, without reprocessing or losing validated source text.",
       "status": "draft"
     },
-    "report_path": ".agentic/runs/change-2026-07-15T111333Z-46add1a2/report.md",
-    "run_id": "change-2026-07-15T111333Z-46add1a2",
+    "report_path": ".agentic/runs/change-2026-07-16T050958Z-8ff7ca31/report.md",
+    "run_id": "change-2026-07-16T050958Z-8ff7ca31",
     "spec_ids": [
-      "REL-1-6-5"
+      "AICU-009"
     ],
-    "stage": "validation",
+    "stage": "delivery",
     "touched_paths": [
-      "04_Software/AudioMancer/pyproject.toml",
-      "04_Software/AudioMancer/src/audiomancer/__init__.py",
-      "04_Software/AudioMancer/tests/test_package_import.py",
-      "04_Software/AudioMancer/uv.lock",
-      "05_SoftwareDocu/UserGuide/index.html",
-      "05_SoftwareDocu/UserGuide_ro/index.html",
-      "CHANGELOG.md"
+      ".agentic/knowledge/components/ai_cleanup.md",
+      ".agentic/requirements/functional.md",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
+      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ]
   }
 }

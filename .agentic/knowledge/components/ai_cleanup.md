@@ -10,15 +10,17 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 ## 1. Purpose
 
 AI Cleanup consumes canonical extracted text and uses an explicitly selected
-OpenAI-compatible provider to classify exact source slices without allowing
-source text to be rewritten.
+OpenAI-compatible provider to classify exact artifacts and source-grounded Story
+spans. The prompt forbids rewriting, while validation can retain one uniquely
+bounded modified Story with explicit review evidence.
 
 ## 2. Responsibilities
 
-- Own canonical cleanup-window prompts, strict response validation,
-  operator-selected deterministic artifact spacing, exact whitespace-gap
-  reconstruction, output-aware budgeting, validated-window resume, reports,
-  warnings, and operator-review evidence.
+- Own canonical strict-copy cleanup-window prompts, source-grounded response
+  validation, operator-selected deterministic artifact spacing, exact
+  whitespace-gap reconstruction, uniquely bounded omitted-source preservation,
+  output-aware budgeting, source-offset validated-window resume, reports, warnings, and
+  operator-review evidence.
 - Do not own extraction, deterministic cleanup, downstream processing, profile
   editing, or proof that model-selected deletions are correct.
 
@@ -31,9 +33,12 @@ response adapter is present.
 
 Internal page-aware units are used only for budgeting and review warnings. Each
 provider request contains one concatenated canonical source window. Returned
-blocks have no version, action, page, or segment identity fields and are
-validated globally as exact forward source slices. Omitted gaps must be
-whitespace-only and are restored exactly from source positions.
+blocks have no version, action, page, or segment identity fields. Non-story
+blocks are exact forward slices. A non-exact Story may be associated with one
+unique span bounded by exact neighbors or window edges when normalized
+alphanumeric edge anchors match. An internal non-whitespace gap between two
+exact blocks is preserved only when the current delimiter has one forward
+occurrence; ambiguous and edge gaps remain errors.
 
 ## 4. Dependencies
 
@@ -55,27 +60,40 @@ transaction log, and synchronized cleanup fields in `project.json`.
 
 Relevant requirements are `REQ-FUNC-002`, `REQ-NFR-002`, `REQ-NFR-004`,
 `REQ-NFR-018`, `REQ-DATA-001`, `REQ-UX-027`, `REQ-FUNC-058`,
-`REQ-FUNC-059`, `REQ-FUNC-060`, `REQ-FUNC-061`, `REQ-UX-036`, and
-`REQ-NFR-019`.
+`REQ-FUNC-059`, `REQ-FUNC-060`, `REQ-FUNC-061`, `REQ-FUNC-062`, `REQ-FUNC-063`, `REQ-FUNC-064`,
+`REQ-UX-036`, and `REQ-NFR-019`.
 
 The response contains only `window_id` and sequential `text_blocks`. Each block
-contains only ID, text, one of six artifact types, and confidence. Every block
-must be an exact ordered source slice. `story` is retained exactly. A non-story
-block emits two LF characters when its category is selected and emits nothing
-otherwise; the default selection is `heading` plus `separator`. Confidence is
-review metadata only. Omitted whitespace-only gaps are restored exactly,
-omitted non-whitespace is rejected, and final window assembly does not trim or
-collapse the reconstructed text.
+contains only ID, text, one of six artifact types, and confidence. Artifacts
+must be exact ordered source slices. Story uses `match_mode=exact` when copied;
+otherwise one non-adjacent modified block may use `anchored_modified` when its
+unique candidate and provider text each have at least 32 normalized
+alphanumeric characters and matching 16-to-64-character edges. Case,
+punctuation, and whitespace are ignored only for edge matching; the accepted
+provider Story is emitted unchanged and its original source text and coordinates
+are retained. Interior similarity is intentionally unbounded. A non-story block
+emits two LF characters when selected and nothing otherwise; the default is
+`heading` plus `separator`. A uniquely bounded internal omitted gap is stored in
+`preserved_source_gaps`, emitted exactly from source, warning-marked, and counted
+in `preserved_source_gap_count`; leading, trailing, repeated-delimiter, or
+modified-boundary gaps remain rejected.
 
-Completed current-contract reports retain complete story, artifact, and
-whitespace source coordinates plus the applied category selection. Apply
-Spacing rebuilds from those ranges without a provider call, persists the new
-selection and output, and resets non-preserved downstream work. Manual edits or
+Completed current-contract reports retain complete Story, artifact, and
+whitespace and preserved-gap source coordinates, `modified_story_block_count`,
+`preserved_source_gap_count`, structured warnings, and the applied category
+selection. Apply Spacing rebuilds from those ranges without a provider call and
+preserves accepted provider Story and exact source-gap text. Manual edits or
 incompatible reports disable reapplication.
 
-Checkpoints use an internal contract fingerprint. Obsolete or changed-input
-state restarts at window one without legacy interpretation; changed model
-settings may resume after the last fully validated matching window.
+Checkpoints use an internal contract fingerprint. Compatible saved windows are
+verified sequentially by `source_window_length` and
+`source_window_fingerprint` against the canonical provider-visible source
+stream. Restored decisions gain `source_stream_start` and `source_stream_end`;
+current model settings repartition only the unprocessed suffix and new IDs
+continue after the restored count. Obsolete, changed-input, or
+changed-instruction state restarts at window one, while invalid saved-window
+evidence stops restoration at the first mismatch. Page separators are excluded
+from this offset stream because they are not provider-visible.
 
 ## 7. Workflow Integration
 
@@ -99,8 +117,11 @@ delivery.
 
 ## 9. Limitations And Future Work
 
-Exact slice validation proves source fidelity but not classification
-correctness. Broad artifact removals remain warnings and require operator
-comparison.
+Exact artifact validation and normalized Story edges do not prove semantic
+classification or modification correctness. Modified Story interiors are not
+similarity-thresholded, while adjacent, short-anchor, and ambiguous candidates
+remain errors. Broad artifact removals and accepted Story modifications require
+operator comparison. Preserved omitted source gaps also require operator review;
+only unique internal exact boundaries are accepted.
 Requests remain sequential and OpenAI-compatible.
 Reports from older reconstruction contracts cannot be spacing-reapplied.

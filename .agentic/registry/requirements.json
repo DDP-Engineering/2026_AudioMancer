@@ -1635,14 +1635,14 @@
   },
   "REQ-FUNC-058": {
     "created_on": "2026-07-14 20:55",
-    "last_updated": "2026-07-15 09:05",
+    "last_updated": "2026-07-15 22:43",
     "line_number": 69,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_whitespace_only_source_gaps_are_retained_for_spacing_rendering",
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering"
     ],
     "priority": "Must",
-    "rationale": "Preserves source validation and review provenance independently of whether the model includes separators inside adjacent block text while rejecting invented, changed, overlapping, reordered, or unexplained non-whitespace content.",
+    "rationale": "Preserves strict artifact validation and complete source-position provenance while allowing safely bounded model deviations to remain usable without silent source loss.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/prompts/text_cleanup_system.txt",
@@ -1650,20 +1650,20 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-058",
-    "requirement": "AI Cleanup shall accept only responses whose window identity, sequential block IDs, non-empty text, six artifact types, and confidence values are valid; the provider contract shall contain no version, action, page, or segment identity, every response block shall match an exact non-overlapping forward slice of the window's once-canonicalized source string, and every omitted gap shall contain whitespace only and remain retained with its exact canonical coordinates for deterministic reconstruction.",
+    "requirement": "AI Cleanup shall accept only responses whose window identity, sequential block IDs, non-empty text, six artifact types, and confidence values are valid; the provider contract shall contain no version, action, page, or segment identity. Every non-story block shall match an exact non-overlapping forward slice of the once-canonicalized source, while a story block shall either match an exact slice or satisfy the unique normalized-edge fallback in `REQ-FUNC-062`. Every source gap outside validated block spans shall contain whitespace only or satisfy the exact internal-gap preservation contract in `REQ-FUNC-063`, and shall retain exact canonical coordinates for deterministic reconstruction.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused whitespace-gap validation and retained-decision rendering tests pass in the pinned uv environment."
+    "verification": "Focused whitespace-gap, artifact rendering, anchored-story, and preserved internal-gap validation tests pass in the pinned uv environment."
   },
   "REQ-FUNC-059": {
     "created_on": "2026-07-14 19:20",
-    "last_updated": "2026-07-15 09:05",
+    "last_updated": "2026-07-15 18:10",
     "line_number": 70,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering"
     ],
     "priority": "Must",
-    "rationale": "Lets the operator choose every non-Story source of blank-line spacing without allowing model-generated replacement text or confidence to change output behavior.",
+    "rationale": "Lets the operator retain a safely bounded model correction while keeping every non-story spacing decision deterministic and source-grounded.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
@@ -1672,20 +1672,20 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-059",
-    "requirement": "AI Cleanup shall classify each exact source block as `header`, `footer`, `noise`, `separator`, `heading`, or `story`; `story` shall always emit its exact source slice, while each non-story block shall emit exactly two LF characters when its category belongs to the complete operator-selected spacing set and shall emit nothing otherwise, in response order and regardless of confidence. Whitespace-only gaps between retained blocks shall emit no spacing, so an empty selection removes all controllable inter-block blank lines. The default spacing set shall be `heading` plus `separator`; confidence remains review metadata and no action field is used.",
+    "requirement": "AI Cleanup shall classify each validated block as `header`, `footer`, `noise`, `separator`, `heading`, or `story`; `story` shall emit its provider-returned `text_block` after exact-slice or `REQ-FUNC-062` fallback validation, while each exact non-story block shall emit exactly two LF characters when its category belongs to the complete operator-selected spacing set and shall emit nothing otherwise, in response order and regardless of confidence. Whitespace-only gaps between retained blocks shall emit no spacing. The default spacing set shall be `heading` plus `separator`; confidence remains review metadata and no action field is used.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused selectable artifact and whitespace-gap rendering tests pass in the pinned uv environment."
+    "verification": "Focused selectable artifact, whitespace-gap, and modified-story rendering tests pass in the pinned uv environment."
   },
   "REQ-FUNC-060": {
     "created_on": "2026-07-14 20:55",
-    "last_updated": "2026-07-15 09:12",
+    "last_updated": "2026-07-16 08:13",
     "line_number": 71,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators"
     ],
     "priority": "Must",
-    "rationale": "Keeps prompt validation, paid-provider resume, deterministic reconstruction, and operator review consistent with one current unversioned contract while rejecting obsolete persisted state.",
+    "rationale": "Keeps strict provider guidance, paid-provider resume, deterministic source coverage, and operator review consistent with the current fallback-aware contract while rejecting obsolete persisted state.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
@@ -1696,31 +1696,93 @@
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-060",
-    "requirement": "AI Cleanup shall canonicalize CRLF to LF once, present each page-aware or safely segmented window exactly once through `text_cleanup_system` and `text_cleanup_user`, reconstruct final output from complete validated source positions using exact Story slices and the operator-selected artifact spacing policy, checkpoint only fully validated current-contract windows, reject incompatible or changed-input checkpoints using an internal contract fingerprint, and retain review artifacts and resumable progress. No legacy response, prompt, taxonomy, checkpoint, or public-entry-point compatibility is required.",
+    "requirement": "AI Cleanup shall canonicalize CRLF to LF once, present each page-aware or safely segmented window exactly once through the strict-copy `text_cleanup_system` and `text_cleanup_user` prompts, reconstruct final output from complete validated source positions using each accepted Story `text_block`, each `REQ-FUNC-063` preserved source gap, and the operator-selected artifact spacing policy, checkpoint only fully validated current-contract windows, restore compatible partial progress according to `REQ-FUNC-064`, reject incompatible or changed-input checkpoints using an internal contract fingerprint, and retain review artifacts and resumable progress. No legacy response, prompt, taxonomy, checkpoint, or public-entry-point compatibility is required.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused final assembly integration test passes in the pinned uv environment."
+    "verification": "Focused final assembly, source-offset resume, and contract-fingerprint tests pass in the pinned uv environment."
   },
   "REQ-FUNC-061": {
     "created_on": "2026-07-15 07:42",
-    "last_updated": "2026-07-15 09:05",
+    "last_updated": "2026-07-15 22:43",
     "line_number": 72,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_spacing_reapplication_persists_selection_without_provider"
     ],
     "priority": "Must",
-    "rationale": "Lets operators compare and adjust category spacing safely without paying for another AI run, accumulating newlines, or overwriting later manual edits.",
+    "rationale": "Lets operators compare and adjust category spacing safely without losing accepted provider Story text or preserved source gaps, paying for another AI run, accumulating newlines, or overwriting later manual edits.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
       "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
       "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
     ],
     "req_id": "REQ-FUNC-061",
-    "requirement": "A completed compatible AI Cleanup shall retain enough validated source-position decisions to reapply any complete non-story spacing selection without another model request; reapplication shall be idempotent, persist the selected categories and rebuilt cleaned text, preserve exact Story text and source order, and reset non-preserved downstream outputs as a cleaned-text revision. Reapplication shall be unavailable after manual cleaned-text editing or when compatible completed AI decisions are absent.",
+    "requirement": "A completed compatible AI Cleanup shall retain enough validated source-position decisions to reapply any complete non-story spacing selection without another model request; reapplication shall be idempotent, persist the selected categories and rebuilt cleaned text, preserve each validated Story `text_block`, each exact `REQ-FUNC-063` source gap, and source order, and reset non-preserved downstream outputs as a cleaned-text revision. Reapplication shall be unavailable after manual cleaned-text editing or when compatible completed AI decisions are absent.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
     "verification": "Focused retained-decision spacing reapplication test passes in the pinned uv environment."
+  },
+  "REQ-FUNC-062": {
+    "created_on": "2026-07-15 18:10",
+    "last_updated": "2026-07-15 22:43",
+    "line_number": 73,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_validation_accepts_uniquely_bracketed_modified_story_text"
+    ],
+    "priority": "Must",
+    "rationale": "Avoids expensive retries for safely bounded model corrections without silently accepting ambiguous source association or weakening artifact removal validation.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_service.py",
+      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
+    ],
+    "req_id": "REQ-FUNC-062",
+    "requirement": "When a non-exact `story` response is encountered, AI Cleanup shall accept it only when it is not adjacent to another non-exact story, its original source span is uniquely bracketed by exact neighboring blocks or window edges, and the returned and source texts each contain at least 32 alphanumeric characters whose case-folded punctuation-and-whitespace-free prefixes and suffixes match using an anchor size of `min(64, floor(min(normalized lengths) / 2))`. Interior similarity shall not be thresholded. An accepted block shall emit the provider text exactly and retain `match_mode=anchored_modified`, exact source coordinates, original `source_text`, aggregate count, a structured warning, and metadata-only logging; exact stories shall retain `match_mode=exact`. Zero or multiple candidate spans, changed non-story blocks, empty responses, adjacent modified stories, short anchors, and non-whitespace gaps outside `REQ-FUNC-063` shall remain errors.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated focused AI Cleanup contract and service tests: 43 passed."
+  },
+  "REQ-FUNC-063": {
+    "created_on": "2026-07-15 22:43",
+    "last_updated": "2026-07-15 20:01",
+    "line_number": 74,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_validation_preserves_uniquely_bounded_internal_source_gap"
+    ],
+    "priority": "Must",
+    "rationale": "Prevents deterministic model retries from losing safely bounded source text while keeping ambiguous omissions fail-closed.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
+      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
+    ],
+    "req_id": "REQ-FUNC-063",
+    "requirement": "When an exact response block follows another exact response block but the earliest matching current block leaves non-whitespace source text between their non-overlapping source spans, AI Cleanup shall preserve that omitted gap exactly only when the current exact block text has one forward occurrence from the previous exact block end. The preserved gap shall emit its original source text, retain exact source coordinates and reason `unclassified_source_gap_preserved`, increment `preserved_source_gap_count`, add a structured warning, and use metadata-only logging. Leading and trailing non-whitespace gaps, repeated current-block delimiters, boundaries involving `anchored_modified` blocks, changed blocks, and otherwise ambiguous spans shall remain errors.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated focused AI Cleanup contract and service tests: 47 passed; captured window-0024 replay accepted read-only."
+  },
+  "REQ-FUNC-064": {
+    "created_on": "2026-07-16 08:13",
+    "last_updated": "2026-07-16 05:29",
+    "line_number": 75,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_resume_uses_source_offset_after_budget_repartition"
+    ],
+    "priority": "Must",
+    "rationale": "Prevents expensive whole-book reprocessing when an operator raises or lowers model capacity after a late failure while retaining fail-closed source provenance.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
+      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
+    ],
+    "req_id": "REQ-FUNC-064",
+    "requirement": "A compatible partial AI Cleanup checkpoint shall restore the longest valid leading sequence of completed windows by verifying each saved `source_window_length` and `source_window_fingerprint` against the corresponding slice of the canonical provider-visible source stream. Changes to model profile or budget that repartition request windows shall affect only the unprocessed suffix: restored outputs, warnings, token usage, and window IDs remain stable, new window IDs continue after the restored count, and no restored source character is submitted again. Source, instruction, or contract identity changes shall restart; malformed or mismatched saved windows shall stop restoration at the first invalid entry.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated focused AI Cleanup source-offset resume tests: 49 passed."
   },
   "REQ-NFR-001": {
     "created_on": "2026-06-09 09:50",
