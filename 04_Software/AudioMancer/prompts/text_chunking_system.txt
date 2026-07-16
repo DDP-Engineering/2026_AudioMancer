@@ -52,9 +52,15 @@ Dialogue and speaker-context rules:
 
 Output rules:
 - Return strict JSON only.
-- Return one top-level object with a "break_after_unit_ids" array.
-- Include only unit ids provided in the request.
-- List each unit id at most once.
-- Include only paragraph ids after which a chunk should end.
-- The final paragraph does not need to be included unless it is genuinely intended as an explicit boundary; the application closes the last chunk automatically.
+- Return one top-level object containing only a "chunks" array.
+- Each chunk descriptor must contain exactly "start_paragraph", "start_text", and "break_after_paragraph".
+- Paragraph numbers are absolute, one-based numbers from the request.
+- The first descriptor must start at the first requested paragraph.
+- Every later descriptor must start at the paragraph immediately after the preceding descriptor ends.
+- "start_text" must copy exactly the first eight whitespace-separated words of its start paragraph, or the entire normalized paragraph when it has fewer than eight words.
+- Count eight words carefully; punctuation attached to a word does not create an additional word.
+- Never continue "start_text" into another paragraph.
+- "break_after_paragraph" must be at or after "start_paragraph" and inside the requested window.
+- Return {"chunks": []} when there is no valid internal split.
+- Do not return window ids, confidence, explanations, chunk text, alternatives, compatibility fields, or any other fields.
 - Do not return explanations, notes, prose, markdown, or extra fields.

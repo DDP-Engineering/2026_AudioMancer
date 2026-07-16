@@ -90,6 +90,42 @@
       "REQ-NFR-002"
     ]
   },
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_consecutive_multi_chunk_ranges": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_consecutive_multi_chunk_ranges",
+    "requirement_ids": [
+      "REQ-FUNC-065"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_five_consecutive_normalized_anchor_words": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_five_consecutive_normalized_anchor_words",
+    "requirement_ids": [
+      "REQ-FUNC-065"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_requires_complete_short_paragraph_anchor": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_requires_complete_short_paragraph_anchor",
+    "requirement_ids": [
+      "REQ-FUNC-065"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_non_final_response_commits_one_fallback_window_and_reports_it": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_non_final_response_commits_one_fallback_window_and_reports_it",
+    "requirement_ids": [
+      "REQ-FUNC-065"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage",
+    "requirement_ids": [
+      "REQ-FUNC-065"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_valid_non_final_split_advances_from_the_last_break_and_closes_final_remainder": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_valid_non_final_split_advances_from_the_last_break_and_closes_final_remainder",
+    "requirement_ids": [
+      "REQ-FUNC-065"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_appends_operator_instructions_to_prompt_and_state": {
     "id": "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_appends_operator_instructions_to_prompt_and_state",
     "requirement_ids": [
@@ -138,8 +174,8 @@
       "REQ-FUNC-001"
     ]
   },
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count": {
-    "id": "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count",
+  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields",
     "requirement_ids": [
       "REQ-FUNC-001"
     ]
@@ -156,8 +192,8 @@
       "REQ-FUNC-001"
     ]
   },
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_cleanup_metadata_paragraph_ids": {
-    "id": "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_cleanup_metadata_paragraph_ids",
+  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata",
     "requirement_ids": [
       "REQ-FUNC-001"
     ]
@@ -3086,6 +3122,7 @@
   "04_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata": {
     "id": "04_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata",
     "requirement_ids": [
+      "REQ-REL-004",
       "REQ-TEST-001"
     ]
   },

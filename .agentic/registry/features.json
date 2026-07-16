@@ -1,28 +1,48 @@
 {
-  "change-2026-07-16T050958Z-8ff7ca31": {
+  "change-2026-07-16T145409Z-0d030de9": {
     "check_ids": [
-      "CHECK-AICU-009"
+      "C-AICHUNK-001",
+      "C-AICHUNK-002",
+      "C-AICHUNK-003",
+      "C-AICHUNK-004",
+      "C-AICHUNK-005",
+      "C-RELEASE-001"
     ],
     "intent": {
-      "created_at": "2026-07-16T05:09:58+00:00",
+      "created_at": "2026-07-16T14:54:09+00:00",
       "id": "I-0001",
       "kind": "change",
       "scope_hint": [],
-      "statement": "Resume AI Cleanup from the first unprocessed canonical source offset when model budget settings repartition request windows, without reprocessing or losing validated source text.",
+      "statement": "Replace AI chunking break-ID responses with the approved three-field absolute-paragraph descriptor contract, atomic response validation, sequential next-paragraph windowing, whole-window context fallback, final remainder closure, fallback reporting, and new checkpoint data; keep deterministic chunking and canonical chunks_text.json unchanged, and add no compatibility or migration for the previous AI chunking implementation.",
       "status": "draft"
     },
-    "report_path": ".agentic/runs/change-2026-07-16T050958Z-8ff7ca31/report.md",
-    "run_id": "change-2026-07-16T050958Z-8ff7ca31",
+    "report_path": ".agentic/runs/change-2026-07-16T145409Z-0d030de9/report.md",
+    "run_id": "change-2026-07-16T145409Z-0d030de9",
     "spec_ids": [
-      "AICU-009"
+      "S-0001",
+      "S-0002",
+      "S-0003",
+      "S-0004",
+      "S-0005",
+      "S-0006"
     ],
     "stage": "delivery",
     "touched_paths": [
-      ".agentic/knowledge/components/ai_cleanup.md",
+      ".agentic/components.toml",
       ".agentic/requirements/functional.md",
-      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
-      "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
-      "05_SoftwareDocu/AudioMancer_AI_Cleanup_Service.md"
+      "04_Software/AudioMancer/prompts/text_chunking_system.txt",
+      "04_Software/AudioMancer/prompts/text_chunking_user.txt",
+      "04_Software/AudioMancer/pyproject.toml",
+      "04_Software/AudioMancer/src/audiomancer/__init__.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
+      "04_Software/AudioMancer/tests/test_ai_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_package_import.py",
+      "04_Software/AudioMancer/uv.lock",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html",
+      "CHANGELOG.md"
     ]
   }
 }

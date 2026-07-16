@@ -25,7 +25,7 @@ import audiomancer
 # CONSTANTS
 
 APP_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.6.6"
+EXPECTED_VERSION = "1.6.7"
 CHANGELOG_PATH = APP_ROOT.parents[1] / "CHANGELOG.md"
 USER_GUIDE_PATHS = (
     APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html",

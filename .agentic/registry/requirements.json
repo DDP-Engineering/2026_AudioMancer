@@ -161,9 +161,9 @@
       "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_writes_chunking_artifacts_and_log",
       "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_appends_operator_instructions_to_prompt_and_state",
       "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk",
-      "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_cleanup_metadata_paragraph_ids",
+      "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata",
       "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_resumes_from_saved_window_checkpoint",
-      "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count",
+      "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields",
       "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_continues_resume_when_budget_metadata_changes"
     ],
     "priority": "Must",
@@ -1784,6 +1784,36 @@
     "status": "Active",
     "verification": "Automated focused AI Cleanup source-offset resume tests: 49 passed."
   },
+  "REQ-FUNC-065": {
+    "created_on": "2026-07-16 18:51",
+    "last_updated": "2026-07-16 17:38",
+    "line_number": 76,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_five_consecutive_normalized_anchor_words",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_requires_complete_short_paragraph_anchor",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_consecutive_multi_chunk_ranges",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_valid_non_final_split_advances_from_the_last_break_and_closes_final_remainder",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_non_final_response_commits_one_fallback_window_and_reports_it",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage"
+    ],
+    "priority": "Must",
+    "rationale": "Gives local and online models a compact source-synchronized chunk descriptor contract while tolerating harmless model variation in copied anchors and preserving app-owned text, deterministic recovery, operator visibility, and downstream artifact compatibility.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+      "04_Software/AudioMancer/prompts/text_chunking_system.txt",
+      "04_Software/AudioMancer/prompts/text_chunking_user.txt",
+      "04_Software/AudioMancer/tests/test_ai_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html"
+    ],
+    "req_id": "REQ-FUNC-065",
+    "requirement": "AI Chunking shall request only a `chunks` array whose ordered descriptors contain absolute 1-based integer `start_paragraph`, a `start_text` anchor copied from up to the first eight words of that starting paragraph without crossing into another paragraph, and integer `break_after_paragraph`. Anchor validation shall canonicalize Unicode compatibility forms, case, whitespace, and punctuation, then accept paragraphs of at least five normalized words when the returned and source prefixes contain at least five consecutive position-aligned matching words; paragraphs shorter than five normalized words shall require every word to match. Each response shall be accepted atomically only when descriptors are in-window, consecutive, non-overlapping, correctly anchored, and start at the requested paragraph. Empty or invalid descriptor responses shall commit the complete current non-final request window as one context-boundary fallback without retry or expansion; valid responses shall advance the next request to the paragraph after the last returned break, including any uncommitted tail in that next window; final processing shall commit valid descriptors plus the remaining document text, or the entire remaining text when none are valid, without treating normal document-end closure as fallback. The report and progress shall expose fallback use, the checkpoint shall store only new-loop position/count/fingerprint/token/log data, old checkpoints shall restart without migration, deterministic chunking and canonical `chunks_text.json` records shall remain unchanged, and provider, transport, or unparseable JSON failures shall remain operation failures.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Focused descriptor-contract and AI chunking service suites passed: 34 tests."
+  },
   "REQ-NFR-001": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
@@ -2356,6 +2386,30 @@
     "source_file": ".agentic/requirements/release.md",
     "status": "Active",
     "verification": "Manual verification: review release notes and staged files before publishing."
+  },
+  "REQ-REL-004": {
+    "created_on": "2026-07-16 20:53",
+    "last_updated": "2026-07-16 18:18",
+    "line_number": 15,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata"
+    ],
+    "priority": "Must",
+    "rationale": "Ensures operators, package tooling, and offline documentation identify the same release.",
+    "related_components": [
+      "CHANGELOG.md",
+      "04_Software/AudioMancer/pyproject.toml",
+      "04_Software/AudioMancer/uv.lock",
+      "04_Software/AudioMancer/src/audiomancer/__init__.py",
+      "04_Software/AudioMancer/tests/test_package_import.py",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html"
+    ],
+    "req_id": "REQ-REL-004",
+    "requirement": "Each AudioMancer release shall synchronize its version across `pyproject.toml`, `audiomancer.__version__`, `uv.lock`, the release smoke test, `CHANGELOG.md`, and the English and Romanian offline help bundle title and version displays.",
+    "source_file": ".agentic/requirements/release.md",
+    "status": "Active",
+    "verification": "Release-version smoke test passed for 1.6.7."
   },
   "REQ-SEC-001": {
     "created_on": "2026-06-09 09:50",
