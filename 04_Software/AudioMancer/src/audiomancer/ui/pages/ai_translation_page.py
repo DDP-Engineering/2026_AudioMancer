@@ -13,12 +13,12 @@
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.6
+@version 0.7.0
 """
 
 # IMPORTS
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -66,11 +66,16 @@ class AiTranslationPage(QWidget):
         super().__init__(parent)
         self._project_active = False
         self._busy = False
-        self._stage_status = ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
+        self._stage_status = ai_translation_service.TRANSLATION_STATUS_NOT_STARTED
         self._source_chunks: list[dict[str, object]] = []
         self._display_chunks: list[dict[str, object]] = []
         self._current_chunk_id: str | None = None
         self._loading_translation_text = False
+        self._pending_edit: tuple[str, str] | None = None
+        self._edit_timer = QTimer(self)
+        self._edit_timer.setSingleShot(True)
+        self._edit_timer.setInterval(750)
+        self._edit_timer.timeout.connect(self.flush_pending_translation_edit)
         self._target_language = config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
         self._original_language = "Unknown"
 
@@ -116,7 +121,7 @@ class AiTranslationPage(QWidget):
         self._reset_button.clicked.connect(self.reset_translation_requested.emit)
         actions_layout.addWidget(self._reset_button)
         self._approve_all_button = QPushButton("Approve All")
-        self._approve_all_button.clicked.connect(self.approve_all_requested.emit)
+        self._approve_all_button.clicked.connect(self._emit_approve_all)
         actions_layout.addWidget(self._approve_all_button)
         chunk_list_layout.addWidget(self._translation_actions_widget, 0)
         top_row.addWidget(self._chunk_list_group, 1)
@@ -177,7 +182,7 @@ class AiTranslationPage(QWidget):
             "Unknown",
             config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
             None,
-            ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
+            ai_translation_service.TRANSLATION_STATUS_NOT_STARTED,
             0,
             0,
             0,
@@ -266,6 +271,8 @@ class AiTranslationPage(QWidget):
         @date       2026-04-07
         @version    0.2.1
         """
+        self._edit_timer.stop()
+        self._pending_edit = None
         self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
         self._display_chunks = _build_display_chunks(self._source_chunks, translated_chunks)
         self._stage_status = stage_status
@@ -370,12 +377,9 @@ class AiTranslationPage(QWidget):
         @version    0.2.1
         """
         has_source_chunks = bool(self._source_chunks)
-        has_started_translation = self._stage_status in {
-            "running",
-            "failed",
-            ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
-            ai_translation_service.TRANSLATION_STAGE_TRANSLATED,
-            ai_translation_service.TRANSLATION_STAGE_APPROVED,
+        has_started_translation = self._stage_status not in {
+            ai_translation_service.TRANSLATION_STATUS_NOT_STARTED,
+            ai_translation_service.TRANSLATION_STATUS_INVALID,
         }
         has_translated_chunks = any(str(chunk.get("translated_text", "")).strip() for chunk in self._display_chunks)
         has_untranslated_chunks = any(
@@ -394,7 +398,12 @@ class AiTranslationPage(QWidget):
             and has_source_chunks
             and not self._busy
             and has_untranslated_chunks
-            and self._stage_status != ai_translation_service.TRANSLATION_STAGE_APPROVED
+            and self._stage_status
+            not in {
+                ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
+                ai_translation_service.TRANSLATION_STATUS_COMPLETED,
+                ai_translation_service.TRANSLATION_STATUS_INVALID,
+            }
             and selected_profile_id is not None
         )
         self._reset_button.setEnabled(
@@ -449,6 +458,7 @@ class AiTranslationPage(QWidget):
         @date       2026-04-07
         @version    0.1.0
         """
+        self.flush_pending_translation_edit()
         if row < 0 or row >= len(self._display_chunks):
             self._current_chunk_id = None
             self._source_text_edit.clear()
@@ -487,6 +497,7 @@ class AiTranslationPage(QWidget):
         @date       2026-04-07
         @version    0.1.0
         """
+        self.flush_pending_translation_edit()
         profile_id = self.current_profile_id()
         chunk_id = self.selected_chunk_id()
         if profile_id is not None and chunk_id is not None:
@@ -501,6 +512,7 @@ class AiTranslationPage(QWidget):
         @date       2026-04-07
         @version    0.1.0
         """
+        self.flush_pending_translation_edit()
         chunk_id = self.selected_chunk_id()
         if chunk_id is not None:
             self.approve_selected_requested.emit(chunk_id)
@@ -520,7 +532,8 @@ class AiTranslationPage(QWidget):
         if chunk_id is None:
             return
         translated_text = self._translated_text_edit.toPlainText()
-        self.translated_text_changed.emit(chunk_id, translated_text)
+        self._pending_edit = (chunk_id, translated_text)
+        self._edit_timer.start()
         selected_chunk = self._current_display_chunk()
         if selected_chunk is not None:
             previous_text = str(selected_chunk.get("translated_text", ""))
@@ -528,18 +541,31 @@ class AiTranslationPage(QWidget):
             if translated_text.strip():
                 if translated_text != previous_text:
                     selected_chunk["approved"] = False
-                selected_chunk["status"] = (
-                    ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED
-                    if bool(selected_chunk.get("approved", False))
-                    else ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
-                )
             else:
                 selected_chunk["approved"] = False
-                selected_chunk["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED
             current_item = self._chunk_list.currentItem()
             if current_item is not None:
                 current_item.setText(_format_chunk_list_item(selected_chunk))
         self._apply_control_state()
+
+    def flush_pending_translation_edit(self) -> None:
+        """Emit the latest pending manual edit exactly once."""
+        if self._pending_edit is None:
+            return
+        self._edit_timer.stop()
+        chunk_id, translated_text = self._pending_edit
+        self._pending_edit = None
+        self.translated_text_changed.emit(chunk_id, translated_text)
+
+    def _emit_approve_all(self) -> None:
+        """Flush the current edit before requesting approve-all."""
+        self.flush_pending_translation_edit()
+        self.approve_all_requested.emit()
+
+    def closeEvent(self, event) -> None:  # noqa: N802
+        """Flush a pending manual edit before this page closes."""
+        self.flush_pending_translation_edit()
+        super().closeEvent(event)
 
     def _current_display_chunk(self) -> dict[str, object] | None:
         """
@@ -609,9 +635,6 @@ def _build_display_chunks(
                     "source_text": str(source_chunk.get("text", "")),
                     "translated_text": "",
                     "approved": False,
-                    "translation_profile_id": None,
-                    "target_language": config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
-                    "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED,
                 }
             )
             continue

@@ -444,10 +444,10 @@ def test_resolve_operation_path_uses_project_root_without_creating_folders(tmp_p
     resolved_path = operation_runtime_service.resolve_operation_path(
         project_root,
         "translation",
-        config.TRANSLATION_STATE_FILE_NAME,
+        config.TRANSLATED_CHUNKS_FILE_NAME,
     )
 
-    assert resolved_path == project_root / config.TRANSLATION_STATE_FILE_NAME
+    assert resolved_path == project_root / config.TRANSLATED_CHUNKS_FILE_NAME
     assert not any(
         (project_root / folder_name).exists() for folder_name in ("30_translation", "40_character_discovery")
     )
@@ -468,16 +468,11 @@ def test_ensure_default_operation_state_creates_not_started_state_only(tmp_path)
     state_path = operation_runtime_service.ensure_default_operation_state(project_root, "translation")
     second_state_path = operation_runtime_service.ensure_default_operation_state(project_root, "translation")
 
-    assert state_path == project_root / config.TRANSLATION_STATE_FILE_NAME
-    assert second_state_path == state_path
-    assert (project_root / config.TRANSLATION_REPORT_FILE_NAME).exists() is False
+    assert state_path is None
+    assert second_state_path is None
+    assert (project_root / "translation_state.json").exists() is False
+    assert (project_root / "translation_report.json").exists() is False
     assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
-    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
-    assert state_payload["status"] == "not_started"
-    assert state_payload["metadata"] == {}
-    assert state_payload["resume_checkpoint"] is None
-    for field_name in ("input_paths", "output_paths", "artifact_paths"):
-        assert field_name not in state_payload
 
 
 def test_ensure_default_operation_state_creates_compact_character_discovery_state(tmp_path) -> None:

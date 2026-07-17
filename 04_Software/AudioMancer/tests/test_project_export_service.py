@@ -266,12 +266,12 @@ def test_project_export_service_exports_ai_request_parameters_without_prompts(tm
         project_export_service.EXPORT_FORMAT_TXT,
     )
 
-    assert "AI Profile: profile_1" in content
-    assert "AI Backend: openai_compatible" in content
-    assert "AI Base URL: https://llm.example/v1" in content
-    assert "AI Model: theater-model-romanian" in content
-    assert "AI Temperature: 0.45" in content
-    assert "AI Max Tokens: 2048" in content
+    assert "Target Language: ro" in content
+    assert "Context Window: 4096" in content
+    assert "Maximum Output Tokens: 512" in content
+    assert "Total Tokens: 18" in content
+    assert "AI Profile:" not in content
+    assert "AI Base URL:" not in content
     assert "system prompt should not be exported" not in content
     assert "user prompt should not be exported" not in content
     assert "sk-secret" not in content
@@ -459,43 +459,34 @@ def _build_export_project(tmp_path):
 
     _write_json(
         project_root / config.TRANSLATED_CHUNKS_FILE_NAME,
-        [
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "source_text": "Source one",
-                "translated_text": "Traducere cu diacritice: țară și inimă.",
-                "approved": True,
-                "target_language": "ro",
-                "translation_profile_id": "profile_1",
-            }
-        ],
-    )
-    _write_json(
-        project_root / config.TRANSLATION_REPORT_FILE_NAME,
         {
             "target_language": "ro",
-            "translation_profile_id_last_used": "profile_1",
-            "translated_chunk_count": 1,
-            "approved_chunk_count": 1,
-            "total_chunk_count": 1,
+            "status": "in_progress",
             "token_usage": {
                 "input_tokens": 11,
                 "output_tokens": 7,
                 "total_tokens": 18,
                 "usage_available": True,
             },
+            "budget_metadata": {
+                "context_window": 4096,
+                "max_output_tokens": 512,
+                "prompt_budget_tokens": 100,
+                "text_budget_tokens": 2048,
+                "safety_margin_tokens": 512,
+            },
+            "additional_translation_instructions": "",
+            "chunks": [
+                {
+                    "chunk_id": "chunk-0001",
+                    "translated_text": "Traducere cu diacritice: țară și inimă.",
+                    "approved": True,
+                },
+                {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
+            ],
         },
     )
     _write_ai_log(project_root / "log_ai_translation_20260425.log")
-    _write_json(
-        project_root / config.TRANSLATION_STATE_FILE_NAME,
-        {
-            "status": "completed",
-            "mode": "ai_assisted",
-            "metadata": {"log_relative_path": "log_ai_translation_20260425.log"},
-        },
-    )
 
     _write_json(
         project_root / config.CHARACTER_PROFILE_FILE_NAME,

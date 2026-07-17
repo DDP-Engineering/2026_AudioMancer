@@ -180,20 +180,19 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     translation_root.mkdir(exist_ok=True)
     (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "source_text": "Original chunk",
-                    "translated_text": "Translated chunk",
-                    "approved": True,
-                    "translated_at": "2026-04-24T12:00:00+00:00",
-                    "approved_at": "2026-04-24T12:00:00+00:00",
-                    "translation_profile_id": "profile-1",
-                    "target_language": "ro",
-                    "status": "approved",
-                }
-            ],
+            {
+                "target_language": "en",
+                "status": "completed",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [{"chunk_id": "chunk-0001", "translated_text": "Translated chunk", "approved": True}],
+            },
             indent=2,
         )
         + "\n",
@@ -230,17 +229,18 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     assert chunks[0]["text"] == "Edited chunk"
     assert updated_manifest["current_stage"] == "translation_ready"
     assert updated_manifest["operations"]["chunking"]["status"] == "completed"
-    assert updated_manifest["operations"]["translation"]["status"] == "not_started"
+    assert updated_manifest["operations"]["translation"]["status"] == "in_progress"
     assert updated_manifest["operations"]["character_discovery"]["status"] == "completed"
     assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert updated_manifest["operations"]["character_voices"]["status"] == "completed"
     assert updated_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert updated_manifest["narrator_profile_name"] == "Warm Narrator"
     assert updated_manifest["narrator_language"] == "fr"
-    translated_chunks = json.loads((translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
-    assert translated_chunks[0]["source_text"] == "Edited chunk"
-    assert translated_chunks[0]["translated_text"] == ""
-    assert translated_chunks[0]["approved"] is False
+    translation_document = json.loads(
+        (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8")
+    )
+    assert translation_document["chunks"][0]["translated_text"] == ""
+    assert translation_document["chunks"][0]["approved"] is False
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
@@ -278,7 +278,9 @@ def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> 
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert [chunk["chunk_id"] for chunk in chunks] == ["chunk-0001", "chunk-0003", "chunk-0002"]
     assert [chunk["sequence_index"] for chunk in chunks] == [1, 2, 3]
-    translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
+    translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))[
+        "chunks"
+    ]
     assert [chunk["chunk_id"] for chunk in translated_chunks] == ["chunk-0001", "chunk-0003", "chunk-0002"]
     assert translated_chunks[0]["translated_text"] == "Primul"
     assert translated_chunks[1]["translated_text"] == ""
@@ -339,10 +341,11 @@ def test_delete_chunk_removes_only_selected_translation_record(tmp_path) -> None
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert [chunk["chunk_id"] for chunk in chunks] == ["chunk-0002"]
     assert chunks[0]["sequence_index"] == 1
-    translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
+    translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))[
+        "chunks"
+    ]
     assert [chunk["chunk_id"] for chunk in translated_chunks] == ["chunk-0002"]
     assert translated_chunks[0]["translated_text"] == "Al doilea"
-    assert translated_chunks[0]["sequence_index"] == 1
 
 
 def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
@@ -389,20 +392,29 @@ def _write_translations(project_root, records: tuple[tuple[str, str, str], ...])
     translated_chunks = [
         {
             "chunk_id": chunk_id,
-            "sequence_index": index,
-            "source_text": source_text,
             "translated_text": translated_text,
             "approved": True,
-            "translated_at": "2026-05-04T12:00:00+00:00",
-            "approved_at": "2026-05-04T12:00:00+00:00",
-            "translation_profile_id": "profile-1",
-            "target_language": "ro",
-            "status": "approved",
         }
-        for index, (chunk_id, source_text, translated_text) in enumerate(records, start=1)
+        for chunk_id, _source_text, translated_text in records
     ]
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
-        json.dumps(translated_chunks, indent=2) + "\n",
+        json.dumps(
+            {
+                "target_language": "en",
+                "status": "completed",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": translated_chunks,
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 

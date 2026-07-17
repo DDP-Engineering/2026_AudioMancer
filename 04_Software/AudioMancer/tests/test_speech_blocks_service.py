@@ -3824,21 +3824,32 @@ def _write_translation_artifacts(
     @date       2026-04-24
     @version    0.2.0
     """
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+    strict_chunks = [
+        {
+            "chunk_id": str(chunk.get("chunk_id", "")),
+            "translated_text": str(chunk.get("translated_text", "")),
+            "approved": index < approved_chunk_count,
+        }
+        for index, chunk in enumerate(translated_chunks)
+    ]
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
             {
                 "target_language": target_language,
-                "translated_chunk_count": len(translated_chunks),
-                "approved_chunk_count": approved_chunk_count,
-                "total_chunk_count": len(translated_chunks),
+                "status": "completed" if approved_chunk_count == len(strict_chunks) else "review_pending",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": strict_chunks,
             },
             indent=2,
         )
         + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
-        json.dumps(translated_chunks, indent=2) + "\n",
         encoding="utf-8",
     )
 

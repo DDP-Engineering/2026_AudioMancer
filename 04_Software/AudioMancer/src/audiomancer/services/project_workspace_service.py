@@ -773,18 +773,20 @@ def _translation_completion_evidence(project_root: Path, warnings: list[str]) ->
     @version    0.2.0
     """
     _ = warnings
-    state = _load_json_artifact(project_root, config.TRANSLATION_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.TRANSLATION_REPORT_FILE_NAME)
-    translations = _load_json_artifact(project_root, config.TRANSLATED_CHUNKS_FILE_NAME)
-    if (
-        not _status_is_completed(state)
-        or not isinstance(report, dict)
-        or not _non_empty_payload_list(translations)
-        or not any(_payload_has_text(item, ("translated_text", "text")) for item in translations)
-        or not _translation_report_is_fully_approved(report)
-    ):
+    document = _load_json_artifact(project_root, config.TRANSLATED_CHUNKS_FILE_NAME)
+    if not _translation_report_is_fully_approved(document):
         return None
-    return {"operation": state, "report": report}
+    chunks = list(document["chunks"])
+    return {
+        "operation": {
+            "status": "completed",
+            "progress_current": len(chunks),
+            "progress_total": len(chunks),
+            "mode": "ai_assisted",
+            "warning_count": 0,
+        },
+        "report": document,
+    }
 
 
 def _character_discovery_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
@@ -1193,13 +1195,28 @@ def _translation_report_is_fully_approved(report: object) -> bool:
     """
     if not isinstance(report, dict):
         return False
-    total_count = int(report.get("total_chunk_count", 0) or 0)
-    translated_count = int(report.get("translated_chunk_count", 0) or 0)
-    approved_count = int(report.get("approved_chunk_count", 0) or 0)
-    stage_status = str(report.get("translation_stage_status", "")).strip()
-    if stage_status not in {"approved", "completed"}:
+    expected_root_fields = {
+        "target_language",
+        "status",
+        "token_usage",
+        "budget_metadata",
+        "additional_translation_instructions",
+        "chunks",
+    }
+    if set(report) != expected_root_fields or str(report.get("status", "")) != "completed":
         return False
-    return total_count > 0 and translated_count >= total_count and approved_count >= total_count
+    chunks = report.get("chunks")
+    if not isinstance(chunks, list) or not chunks:
+        return False
+    expected_chunk_fields = {"chunk_id", "translated_text", "approved"}
+    return all(
+        isinstance(item, dict)
+        and set(item) == expected_chunk_fields
+        and bool(str(item.get("chunk_id", "")).strip())
+        and bool(str(item.get("translated_text", "")).strip())
+        and item.get("approved") is True
+        for item in chunks
+    )
 
 
 def _non_empty_payload_list(payload: object) -> bool:

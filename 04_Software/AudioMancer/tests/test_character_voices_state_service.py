@@ -60,16 +60,36 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     manifest["selected_voice_language"] = "ro"
     manifest["project_options_locked"] = True
     project_workspace_service.save_manifest(manifest, project_root)
-    translation_report_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME
-    )
+    translation_report_path = project_root / config.TRANSLATED_CHUNKS_FILE_NAME
     translation_report_path.write_text(
         json.dumps(
             {
                 "target_language": "ro",
-                "total_chunk_count": 2,
-                "approved_chunk_count": 2,
+                "status": "completed",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [
+                    {"chunk_id": "chunk-0001", "translated_text": "Unu", "approved": True},
+                    {"chunk_id": "chunk-0002", "translated_text": "Doi", "approved": True},
+                ],
             },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "One"},
+                {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Two"},
+            ],
             indent=2,
         )
         + "\n",

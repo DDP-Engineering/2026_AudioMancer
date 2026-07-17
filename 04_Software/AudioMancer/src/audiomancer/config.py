@@ -333,12 +333,6 @@ CHUNKING_STATE_FILE_NAME = "chunking_state.json"
 # @brief File name used for persisted translated chunk records.
 TRANSLATED_CHUNKS_FILE_NAME = "translated_text.json"
 
-# @brief File name used for persisted translation session metadata.
-TRANSLATION_REPORT_FILE_NAME = "translation_report.json"
-
-# @brief File name used for persisted translation runtime state.
-TRANSLATION_STATE_FILE_NAME = "translation_state.json"
-
 # @brief File name used for persisted discovered character profiles.
 CHARACTER_PROFILE_FILE_NAME = "characters_profile.json"
 

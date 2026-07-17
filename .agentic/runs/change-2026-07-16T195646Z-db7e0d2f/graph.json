@@ -1,0 +1,782 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "Only translated_text.json is authoritative; legacy report/state are neither produced nor consumed; strict incompatible data is rejected without overwrite; count/status summaries are derived; resume preserves completed chunks and uses the current profile; review writes are debounced/single-write; failed or cancelled retranslation preserves old text; approved translation remains the downstream gate; focused tests and workflow audits pass."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-16T19:58:07+00:00",
+    "decision": "pause",
+    "open_questions": [
+      "Approve intentional incompatibility with existing AI Translation artifacts and no migration?"
+    ],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+      "04_Software/AudioMancer/prompts/text_translation_system.txt",
+      "04_Software/AudioMancer/prompts/text_translation_user.txt",
+      "04_Software/AudioMancer/tests/test_ai_translation_service.py",
+      "04_Software/AudioMancer/tests/test_ai_translation_state_service.py",
+      "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py",
+      "04_Software/AudioMancer/tests/test_ai_translation_page.py",
+      "05_SoftwareDocu/AudioMancer_AI_Translation_Service.md",
+      ".agentic/requirements/functional.md",
+      ".agentic/requirements/non_functional.md",
+      ".agentic/requirements/ux_workflow.md"
+    ],
+    "reason": "Project policy requires a human risk checkpoint for an intentionally incompatible persistence replacement; the user has already supplied explicit approval and instructed automatic continuation through delivery.",
+    "recommended_responses": [
+      "Approved: replace the old contract without migration and require Reset Translation for incompatible data."
+    ],
+    "risk": "high",
+    "scope": [
+      "In scope: AI Translation service/state/controller/page, prompt simplification, strict monofile loading/writing, current-profile resume, cancellation/failure, debounced manual edits, non-destructive selected retranslation, manifest summary ownership, direct downstream consumers, focused tests, durable requirements, and component documentation. Out of scope: SQL, migration or legacy compatibility, semantic translation scoring, per-segment checkpoints, chunk-scoped downstream invalidation, full application regression, publishing, push, or PR."
+    ],
+    "source": "User-provided AI Translation monofile replacement plan and explicit instruction to continue through delivery",
+    "understanding": "Replace the current three-file AI Translation persistence contract with one strict authoritative translated_text.json document containing target language, operation status, token usage, current-run budget metadata, general operator instructions, and minimal chunk review records. Remove report/state compatibility and migration; resume by canonical source order at the first empty translation; use the currently selected profile budget; preserve completed chunks, minimal JSON response validation, manual review, same-language LLM use, broad downstream reset policy, and approved-only downstream consumption."
+  },
+  "change_units": [
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/config.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-002",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-003",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-004",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-005",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/main_window.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-007",
+      "touched_paths": [
+        "04_Software/AudioMancer/prompts/text_translation_system.txt"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-008",
+      "touched_paths": [
+        "04_Software/AudioMancer/prompts/text_translation_user.txt"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-009",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-010",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-011",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-012",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-013",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-014",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-015",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-016",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-017",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-018",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CH-AITRANS-019",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_AI_Translation_Service.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-004"
+      ],
+      "cites_spec": [
+        "S-AITRANS-001"
+      ],
+      "command": null,
+      "green_evidence": "E-0017",
+      "id": "C-AITRANS-001",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_ai_translation_service.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-004"
+      ],
+      "cites_spec": [
+        "S-AITRANS-002"
+      ],
+      "command": null,
+      "green_evidence": "E-0018",
+      "id": "C-AITRANS-002",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_ai_translation_service.py",
+      "red_evidence": "E-0014",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-004"
+      ],
+      "cites_spec": [
+        "S-AITRANS-003"
+      ],
+      "command": null,
+      "green_evidence": "E-0019",
+      "id": "C-AITRANS-003",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_ai_translation_service.py",
+      "red_evidence": "E-0015",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-002"
+      ],
+      "cites_spec": [
+        "S-AITRANS-004"
+      ],
+      "command": null,
+      "green_evidence": "E-0020",
+      "id": "C-AITRANS-004",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_ai_translation_page.py",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-NFR-016"
+      ],
+      "cites_spec": [
+        "S-AITRANS-005"
+      ],
+      "command": null,
+      "green_evidence": "E-0021",
+      "id": "C-AITRANS-005",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_ai_translation_state_service.py",
+      "red_evidence": "E-0016",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-004"
+      ],
+      "cites_spec": [
+        "S-AITRANS-006"
+      ],
+      "command": null,
+      "green_evidence": "E-0022",
+      "id": "C-AITRANS-006",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_ai_translation_service.py",
+      "red_evidence": "E-0006",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-16T19:58:08+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Human explicitly approved the attached incompatible monofile plan, instructed use of the agentic workflow, and authorized continuation without prompts through delivery."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-16T20:26:31+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "The prompt test used the substring 'ro', which also occurs inside unrelated English words; tighten the assertion to the target-language field label."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-16T20:27:20+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Prompt-contract assertion corrected at the check gate; resume implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-16T20:44:16+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Existing config/runtime tests still assert the deliberately removed Translation report/state contract; update them to the monofile contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-16T20:46:33+00:00",
+      "id": "D-0005",
+      "question": "Workflow stage route",
+      "rationale": "Legacy infrastructure checks now express the monofile Translation contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-16T20:47:38+00:00",
+      "id": "D-0006",
+      "question": "Workflow stage route",
+      "rationale": "Focused downstream tests still construct the retired report/list fixtures; replace them with strict translated_text.json documents and canonical chunks."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-16T20:54:07+00:00",
+      "id": "D-0007",
+      "question": "Workflow stage route",
+      "rationale": "Downstream fixtures now use the strict monofile Translation contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-16T20:56:15+00:00",
+      "id": "D-0008",
+      "question": "Workflow stage route",
+      "rationale": "Focused integration exposed remaining legacy translation fixtures and an export expectation for profile metadata intentionally removed from persistence."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-16T20:58:28+00:00",
+      "id": "D-0009",
+      "question": "Workflow stage route",
+      "rationale": "Focused downstream fixtures and export assertions now reflect the monofile metadata contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-16T20:58:49+00:00",
+      "id": "D-0010",
+      "question": "Workflow stage route",
+      "rationale": "Text-chunking fixtures used target ro while their project manifests retained default en; align fixture document target with the locked manifest."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-16T20:59:40+00:00",
+      "id": "D-0011",
+      "question": "Workflow stage route",
+      "rationale": "Text-chunking fixtures now match the project target-language lock."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-16T21:10:04+00:00",
+      "id": "D-0012",
+      "question": "Workflow stage route",
+      "rationale": "Restore two historical test identifiers required by existing durable requirement links."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-16T21:11:34+00:00",
+      "id": "D-0013",
+      "question": "Workflow stage route",
+      "rationale": "Historical linked test identifiers restored; resume validation."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-16T21:12:50+00:00",
+      "id": "D-0014",
+      "question": "Workflow stage route",
+      "rationale": "Validation review found uncovered canonical-ID alignment, manual whitespace preservation, and partial-segment token-usage cases."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-16T21:15:21+00:00",
+      "id": "D-0015",
+      "question": "Workflow stage route",
+      "rationale": "New edge-case checks fail against the current implementation as expected; implement the reviewed fixes."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-16T21:17:11+00:00",
+      "id": "D-0016",
+      "question": "Workflow stage route",
+      "rationale": "Validation-review edge cases are implemented and focused core tests pass."
+    }
+  ],
+  "defects": [],
+  "evidence": [
+    {
+      "command": null,
+      "created_at": "2026-07-16T20:16:45+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red: focused AI Translation tests cannot collect because the legacy implementation lacks the new monofile status contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T20:16:47+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red: focused AI Translation tests cannot collect because the legacy implementation lacks the new monofile status contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T20:16:48+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red: focused AI Translation tests cannot collect because the legacy implementation lacks the new monofile status contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T20:16:50+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red: focused AI Translation tests cannot collect because the legacy implementation lacks the new monofile status contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T20:16:51+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red: focused AI Translation tests cannot collect because the legacy implementation lacks the new monofile status contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T20:16:53+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red: focused AI Translation tests cannot collect because the legacy implementation lacks the new monofile status contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:09:15+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused AI Translation regression passed: 158 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:09:16+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused AI Translation regression passed: 158 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:09:18+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused AI Translation regression passed: 158 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:09:20+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused AI Translation regression passed: 158 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:09:21+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused AI Translation regression passed: 158 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:09:23+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused AI Translation regression passed: 158 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:09:24+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Scoped Ruff check passed for all changed Python source and test files.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:15:11+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red for validation-review edge cases: canonical ID alignment, exact manual whitespace, and partial-segment token usage.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:15:13+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0015",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red for validation-review edge cases: canonical ID alignment, exact manual whitespace, and partial-segment token usage.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:15:15+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0016",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Expected red for validation-review edge cases: canonical ID alignment, exact manual whitespace, and partial-segment token usage.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:18:35+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final focused AI Translation regression passed: 161 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:18:36+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final focused AI Translation regression passed: 161 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:18:38+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final focused AI Translation regression passed: 161 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:18:40+00:00",
+      "failure_kind": null,
+      "id": "E-0020",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final focused AI Translation regression passed: 161 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:18:41+00:00",
+      "failure_kind": null,
+      "id": "E-0021",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final focused AI Translation regression passed: 161 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:18:43+00:00",
+      "failure_kind": null,
+      "id": "E-0022",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final focused AI Translation regression passed: 161 passed, 1 skipped; no failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-16T21:21:36+00:00",
+      "failure_kind": null,
+      "id": "E-0023",
+      "kind": "gate",
+      "path": ".agentic/runs/change-2026-07-16T195646Z-db7e0d2f",
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Delivery preflight passed after focused tests, scoped Ruff, traceability, coverage, secrets, and working-tree checks.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-16T19:56:46+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [],
+    "statement": "Replace AI Translation report/state persistence with one strict authoritative translated_text.json document; preserve chunk-level resume, current-profile budgeting, minimal response validation, debounced review edits, non-destructive retranslation, existing broad downstream reset policy, and approved-translation downstream gating; provide no migration or compatibility for prior translation artifacts.",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-16T195646Z-db7e0d2f",
+  "spec_items": [
+    {
+      "examples": [],
+      "id": "S-AITRANS-001",
+      "statement": "AI Translation persists exactly one authoritative translated_text.json object with target_language, status, token_usage, budget_metadata, additional_translation_instructions, and minimal chunks containing only chunk_id, translated_text, and approved; legacy report/state files and legacy shapes are unsupported.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-AITRANS-002",
+      "statement": "Starting or continuing translation synchronizes canonical chunk IDs in source order, resumes at the first empty translated_text, preserves completed chunks, reuses saved general instructions for running/in_progress/cancelled/failed work, and recalculates budget metadata from the currently selected profile.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-AITRANS-003",
+      "statement": "Cancellation or provider failure preserves completed chunks and cumulative token usage with cancelled or failed status, while successful selected-chunk retranslation replaces text only after validation and failed or cancelled retranslation preserves the previous text and approval.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-AITRANS-004",
+      "statement": "Manual review derives counts and overall status from canonical source chunks, debounces edits for approximately 750 milliseconds, flushes on selection change or approval, writes once per review action, and reaches completed only when every non-empty translation is approved.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-AITRANS-005",
+      "statement": "AI Translation page-state construction is read-only, incompatible or malformed translation JSON raises a reset-required error without overwrite, manifest summaries are derived in the controller, and downstream translated-language consumers accept only completed translation.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-AITRANS-006",
+      "statement": "Translation prompts keep stable literary and multilingual dialogue-preservation rules in the system prompt while the user prompt contains target language, one optional instruction block, source text, and the single translated_text JSON response shape without duplicate rule blocks.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

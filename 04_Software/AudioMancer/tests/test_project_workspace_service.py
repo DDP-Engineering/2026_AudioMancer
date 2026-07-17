@@ -477,7 +477,7 @@ def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_
         "status": "completed",
         "input_paths": [config.CHUNK_ARTIFACT_FILE_NAME],
         "output_paths": [config.TRANSLATED_CHUNKS_FILE_NAME],
-        "artifact_paths": [config.TRANSLATION_REPORT_FILE_NAME],
+        "artifact_paths": [config.TRANSLATED_CHUNKS_FILE_NAME],
         "progress_current": 8,
         "progress_total": 8,
         "mode": "ai_assisted",

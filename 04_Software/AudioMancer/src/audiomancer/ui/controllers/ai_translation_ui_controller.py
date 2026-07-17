@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.4
+@version 0.10.0
 """
 
 # IMPORTS
@@ -80,11 +80,27 @@ def handle_start_translation_requested(
             ui_state_service.translate("project.error_missing_ai_translation_profile", current_language),
         )
         return
-    translation_operation = _manifest_translation_operation(window)
-    translation_status = str(translation_operation.get("status", "not_started"))
-    translation_mode = str(translation_operation.get("mode") or "")
+    try:
+        translation_document = ai_translation_service.load_translation_document(window._current_project_root)
+    except ai_translation_service.TranslationDocumentError as exc:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(exc),
+        )
+        return
+    translation_status = (
+        ai_translation_service.TRANSLATION_STATUS_NOT_STARTED
+        if translation_document is None
+        else str(translation_document["status"])
+    )
     additional_translation_instructions = None
-    if translation_status in {"running", "failed"} and translation_mode == "ai_assisted":
+    if translation_status in {
+        ai_translation_service.TRANSLATION_STATUS_RUNNING,
+        ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS,
+        ai_translation_service.TRANSLATION_STATUS_CANCELLED,
+        ai_translation_service.TRANSLATION_STATUS_FAILED,
+    }:
         pass
     else:
         additional_translation_instructions = prompt_ai_translation_instructions(window, current_language)
@@ -199,7 +215,7 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     )
 
 
-def _translation_manifest_stage(report: dict[str, object]) -> str:
+def _translation_manifest_stage(summary: dict[str, object]) -> str:
     """
     @brief      Resolve the manifest stage implied by the current translation report.
     @param[in]  report Latest translation report payload.
@@ -209,9 +225,7 @@ def _translation_manifest_stage(report: dict[str, object]) -> str:
     @date       2026-04-22
     @version    0.1.0
     """
-    total_chunk_count = int(report.get("total_chunk_count", 0) or 0)
-    approved_chunk_count = int(report.get("approved_chunk_count", 0) or 0)
-    if total_chunk_count > 0 and approved_chunk_count == total_chunk_count:
+    if str(summary.get("status", "")) == ai_translation_service.TRANSLATION_STATUS_COMPLETED:
         return "character_discovery_ready"
     return "translation_ready"
 
@@ -228,11 +242,7 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    report = ai_translation_service.approve_all(
-        window._current_project_root,
-        _persisted_target_language(window),
-        _persisted_profile_id(window),
-    )
+    report = ai_translation_service.approve_all(window._current_project_root)
     _sync_manifest_after_translation(window, report)
 
 
@@ -249,12 +259,7 @@ def handle_approve_selected_requested(window: "MainWindow", chunk_id: str) -> No
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    report = ai_translation_service.approve_chunk(
-        window._current_project_root,
-        chunk_id,
-        _persisted_target_language(window),
-        _persisted_profile_id(window),
-    )
+    report = ai_translation_service.approve_chunk(window._current_project_root, chunk_id)
     _sync_manifest_after_translation(window, report)
     window._ai_translation_page.advance_to_next_chunk()
 
@@ -277,8 +282,6 @@ def handle_translated_text_changed(window: "MainWindow", chunk_id: str, translat
         window._current_project_root,
         chunk_id,
         translated_text,
-        _persisted_target_language(window),
-        _persisted_profile_id(window),
     )
     _sync_manifest_after_translation(window, report)
 
@@ -391,9 +394,6 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
-    operation_state = ai_translation_service.load_operation_state(window._current_project_root)
-    if operation_state is None:
-        return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if _translation_manifest_stage(report) == "translation_ready":
@@ -411,10 +411,13 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
         ):
             if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
                 operations[selected_kind] = default_operations[selected_kind]
-    operations["translation"] = project_workspace_service.project_manifest_operation_summary(
-        "translation",
-        operation_state,
-    )
+    operations["translation"] = {
+        "status": str(report.get("status", ai_translation_service.TRANSLATION_STATUS_NOT_STARTED)),
+        "progress_current": int(report.get("translated_count", 0) or 0),
+        "progress_total": int(report.get("total_count", 0) or 0),
+        "mode": "ai_assisted",
+        "warning_count": int(report.get("warning_count", 0) or 0),
+    }
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = _translation_manifest_stage(report)
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -434,11 +437,17 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @date       2026-04-11
     @version    0.2.0
     """
-    workflow_controller_service.sync_manifest_operation_from_disk(
-        window,
-        "translation",
-        ai_translation_service.load_operation_state,
-    )
+    if window._current_project_root is None:
+        return
+    try:
+        summary = ai_translation_service.load_translation_summary(window._current_project_root)
+    except ai_translation_service.TranslationDocumentError:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+        return
+    _sync_manifest_after_translation(window, summary)
 
 
 def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: str | None) -> dict[str, object] | None:
@@ -492,38 +501,6 @@ def _has_chunking_output(project_root: str | None) -> bool:
     return bool(deterministic_chunking_service.load_chunks(project_root))
 
 
-def _manifest_translation_operation(window: "MainWindow") -> dict[str, object]:
-    """
-    @brief      Resolve the current translation operation summary from the active manifest.
-    @param[in]  window Active main window instance.
-    @return     Translation operation payload or an empty payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    if not isinstance(window._current_manifest, dict):
-        return {}
-    operations = window._current_manifest.get("operations", {})
-    if not isinstance(operations, dict):
-        return {}
-    translation_operation = operations.get("translation", {})
-    return dict(translation_operation) if isinstance(translation_operation, dict) else {}
-
-
-def _persisted_target_language(window: "MainWindow") -> str:
-    """
-    @brief      Resolve the translation target language from the locked project options.
-    @param[in]  window Active main window instance.
-    @return     Persisted target language code.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
-    """
-    return _manifest_target_language(window)
-
-
 def _manifest_target_language(window: "MainWindow") -> str:
     """
     @brief      Resolve the locked target language from the active manifest.
@@ -541,25 +518,4 @@ def _manifest_target_language(window: "MainWindow") -> str:
         if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
             return target_language
     return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
-
-
-def _persisted_profile_id(window: "MainWindow") -> str | None:
-    """
-    @brief      Resolve the translation profile id from persisted state or UI.
-    @param[in]  window Active main window instance.
-    @return     Persisted or currently selected profile id.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    if window._current_project_root is not None:
-        report = ai_translation_service.load_translation_report(window._current_project_root)
-        if isinstance(report, dict):
-            profile_id = report.get("translation_profile_id_last_used")
-            if profile_id not in (None, ""):
-                return str(profile_id)
-    return window._ai_translation_page.current_profile_id()
-
-
 # END OF FILE

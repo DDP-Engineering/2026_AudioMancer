@@ -8,12 +8,12 @@
 # -----------------------------------------------------------------------------
 """
 @file test_ai_translation_service.py
-@brief Focused translation-service tests for AudioMancer.
-@details Verifies persisted translation artifacts, resumable translation,
-         review-state updates, and approval helpers.
+@brief Focused monofile-contract tests for AudioMancer AI Translation.
+@details Verifies strict persistence, current-profile resume, interruption,
+         review writes, same-language processing, and safe retranslation.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.8.0
+@date 2026-07-16
+@version 0.9.0
 """
 
 # IMPORTS
@@ -25,712 +25,364 @@ import pytest
 from audiomancer import config
 from audiomancer.services import ai_translation_service, operation_runtime_service, project_workspace_service
 
+# PUBLIC API
 
-def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Validate ai translation service creates translation artifacts.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationArtifactsProject")
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _names: None,
+
+def test_translation_document_is_the_only_authoritative_artifact(monkeypatch, tmp_path) -> None:
+    """Verify REQ-FUNC-004 persists only the strict authoritative document."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationMonofile")
+    _install_translations(monkeypatch, ["Traducerea unu", "Traducerea doi"])
+
+    summary = ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        additional_translation_instructions="Pastreaza registrul formal.",
     )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
-    monkeypatch.setattr(
-        ai_translation_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: {
-            "payload": {"translated_text": "Translated text"},
-            "usage": {
-                "input_tokens": 100,
-                "output_tokens": 25,
-                "total_tokens": 125,
-                "usage_available": True,
-            },
+
+    document = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
+    assert set(document) == {
+        "target_language",
+        "status",
+        "token_usage",
+        "budget_metadata",
+        "additional_translation_instructions",
+        "chunks",
+    }
+    assert document["status"] == ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING
+    assert document["additional_translation_instructions"] == "Pastreaza registrul formal."
+    assert document["chunks"] == [
+        {"chunk_id": "chunk-0001", "translated_text": "Traducerea unu", "approved": False},
+        {"chunk_id": "chunk-0002", "translated_text": "Traducerea doi", "approved": False},
+    ]
+    assert all(set(item) == {"chunk_id", "translated_text", "approved"} for item in document["chunks"])
+    assert not (project_root / "translation_report.json").exists()
+    assert not (project_root / "translation_state.json").exists()
+    assert summary["status"] == ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING
+    assert summary["translated_count"] == 2
+    assert summary["approved_count"] == 0
+
+
+def test_translation_resume_uses_first_empty_chunk_and_current_profile_budget(monkeypatch, tmp_path) -> None:
+    """Verify REQ-FUNC-004 resume skips completed chunks and uses the current profile."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationResume")
+    ai_translation_service.write_translation_document(
+        project_root,
+        {
+            "target_language": "ro",
+            "status": ai_translation_service.TRANSLATION_STATUS_FAILED,
+            "token_usage": _usage(30, 10),
+            "budget_metadata": _budget(4096),
+            "additional_translation_instructions": "Pastreaza numele proprii.",
+            "chunks": [
+                {"chunk_id": "chunk-0001", "translated_text": "Traducere existenta", "approved": False},
+                {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
+            ],
         },
     )
+    calls = _install_translations(monkeypatch, ["Traducere noua"])
+    current_profile = {**_profile_payload(), "id": "profile-2", "context_window": 8192}
 
-    report = ai_translation_service.start_or_continue_translation(
+    ai_translation_service.start_or_continue_translation(
         project_root,
         manifest,
-        _profile_payload(),
+        current_profile,
         "ro",
+        additional_translation_instructions=None,
     )
 
-    translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    assert (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).is_file()
-    assert (translation_root / config.TRANSLATION_REPORT_FILE_NAME).is_file()
-    assert (translation_root / config.TRANSLATION_STATE_FILE_NAME).is_file()
-    assert report["translated_chunk_count"] == 2
-    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
-    assert report["token_usage"]["total_tokens"] == 250
-    assert report["budget_metadata"]["context_window"] == 4096
-    assert report["budget_metadata"]["max_output_tokens"] == 512
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    assert operation_state["status"] == "translated"
-    assert operation_state["metadata"]["budget_metadata"] == report["budget_metadata"]
-    _assert_simplified_translation_state(operation_state)
-
-
-def test_ai_translation_service_adds_operator_prompt_rules(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify operator translation instructions are appended and persisted.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.2.0
-    """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationPromptRulesProject")
-    captured_prompts = []
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _names: None,
-    )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "load_prompt",
-        lambda _name: "Translate to {target_language}:\n{source_text}",
-    )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
-
-    def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **_kwargs):
-        """
-        @brief      Capture the translation prompt and return a valid fake response.
-        @return     Fake translated text payload.
-        @exception  None
-        @version    0.1.0
-        """
-        captured_prompts.append(user_prompt)
-        return {
-            "payload": {"translated_text": "Translated with style"},
-            "usage": {
-                "input_tokens": 10,
-                "output_tokens": 5,
-                "total_tokens": 15,
-                "usage_available": True,
-            },
-        }
-
-    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
-
-    report = ai_translation_service.start_or_continue_translation(
-        project_root,
-        manifest,
-        _profile_payload(),
-        "ro",
-        additional_translation_instructions="Keep the formality level consistent.",
-    )
-
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    assert captured_prompts
-    assert "Additional operator translation instructions" in captured_prompts[0]
-    assert "Keep the formality level consistent." in captured_prompts[0]
-    assert report["additional_translation_instructions"] == "Keep the formality level consistent."
-    assert operation_state["metadata"]["additional_translation_instructions"] == "Keep the formality level consistent."
-
-
-def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -> None:
-    """
-    @brief      Validate ai translation service approve and edit update review state.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
-    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationReviewProject")
-    source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
-        project_root,
-        "ro",
-        "profile-1",
-    )
-    translated_chunks[0]["translated_text"] = "Translated one"
-    translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
-    report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
-    ai_translation_service._persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state=ai_translation_service._build_operation_state(
-            project_root,
-            report,
-            status="running",
-            started_at="2026-04-07T12:00:00+00:00",
-            completed_at=None,
-            profile_id="profile-1",
-            target_language="ro",
-            log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_20260407.log",
-            token_usage={
-                "input_tokens": 11,
-                "output_tokens": 7,
-                "total_tokens": 18,
-                "usage_available": True,
-            },
-            resume_checkpoint={"next_untranslated_chunk_id": "chunk-0002"},
-        ),
-    )
-
-    report = ai_translation_service.approve_chunk(project_root, "chunk-0001", "ro", "profile-1")
-    assert report["approved_chunk_count"] == 1
-    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS
-    report = ai_translation_service.update_translated_text(
-        project_root, "chunk-0001", "Edited translation", "ro", "profile-1"
-    )
-    assert report["approved_chunk_count"] == 0
-    assert ai_translation_service.load_operation_state(project_root)["metadata"]["approved_chunk_count"] == 0
-
-
-def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Validate ai translation service resume preserves completed chunks.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
-    """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationResumeProject")
-    source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
-        project_root,
-        "ro",
-        "profile-1",
-    )
-    translated_chunks[0]["translated_text"] = "Existing translation"
-    translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
-    report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
-    ai_translation_service._persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state=ai_translation_service._build_operation_state(
-            project_root,
-            report,
-            status="running",
-            started_at="2026-04-07T12:00:00+00:00",
-            completed_at=None,
-            profile_id="profile-1",
-            target_language="ro",
-            log_path=project_root / "log_ai_translation_20260407.log",
-            token_usage={
-                "input_tokens": 20,
-                "output_tokens": 10,
-                "total_tokens": 30,
-                "usage_available": True,
-            },
-            resume_checkpoint={"next_untranslated_chunk_id": "chunk-0002"},
-        ),
-    )
-    existing_log_path = project_root / "log_ai_translation_20260407.log"
-    existing_log_path.write_text("", encoding="utf-8")
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _names: None,
-    )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
-    calls = []
-
-    def fake_chat_json(*_args, **kwargs):
-        """
-        @brief      Record the transaction log path and return a fake translation.
-        @return     Fake translated text payload.
-        @exception  None
-        @version    0.1.0
-        """
-        calls.append(str(kwargs.get("log_path", "")))
-        return {
-            "payload": {"translated_text": "New translation"},
-            "usage": {
-                "input_tokens": 50,
-                "output_tokens": 15,
-                "total_tokens": 65,
-                "usage_available": True,
-            },
-        }
-
-    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
-
-    report = ai_translation_service.start_or_continue_translation(
-        project_root,
-        manifest,
-        _profile_payload(),
-        "ro",
-    )
-
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
     assert len(calls) == 1
-    translated_chunks = ai_translation_service.load_translated_chunks(project_root)
-    assert translated_chunks[0]["translated_text"] == "Existing translation"
-    assert translated_chunks[1]["translated_text"] == "New translation"
-    assert report["translated_chunk_count"] == 2
-    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
-    assert report["token_usage"]["total_tokens"] == 95
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    _assert_simplified_translation_state(operation_state)
-    assert operation_state["metadata"]["log_relative_path"] == "log_ai_translation_20260407.log"
-    assert calls == [str(existing_log_path)]
+    assert document["chunks"][0]["translated_text"] == "Traducere existenta"
+    assert document["chunks"][1]["translated_text"] == "Traducere noua"
+    assert document["budget_metadata"]["context_window"] == 8192
+    assert document["additional_translation_instructions"] == "Pastreaza numele proprii."
+    assert document["token_usage"]["total_tokens"] == 55
 
 
-def test_ai_translation_service_uses_single_checkpoint_for_one_resumed_chunk(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify REQ-FUNC-004 keeps one atomic chunk checkpoint during resume.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationSingleCheckpointProject")
-    source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
-        project_root,
-        "ro",
-        "profile-1",
-    )
-    translated_chunks[0]["translated_text"] = "Existing translation"
-    translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
-    report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
-    ai_translation_service._persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state=ai_translation_service._refresh_operation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            ai_translation_service.load_operation_state(project_root),
-            "profile-1",
-            "ro",
-            {},
+@pytest.mark.parametrize(
+    ("raised_error", "expected_status"),
+    [
+        (RuntimeError("provider unavailable"), ai_translation_service.TRANSLATION_STATUS_FAILED),
+        (
+            operation_runtime_service.OperationCancelledError("cancelled"),
+            ai_translation_service.TRANSLATION_STATUS_CANCELLED,
         ),
+    ],
+)
+def test_translation_cancel_and_failure_preserve_completed_chunks(
+    monkeypatch,
+    tmp_path,
+    raised_error,
+    expected_status,
+) -> None:
+    """Verify REQ-FUNC-004 terminal interruption keeps prior completed chunks."""
+    project_root, manifest = _create_chunked_project(tmp_path, f"Translation{expected_status}")
+    responses = iter(
+        [
+            {"payload": {"translated_text": "Traducere pastrata"}, "usage": _usage(10, 5)},
+            raised_error,
+        ]
     )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _names: None,
-    )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
+
+    def fake_chat_json(*_args, **_kwargs):
+        """Return one translation and then raise the requested terminal error."""
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
+
+    with pytest.raises(type(raised_error)):
+        ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["status"] == expected_status
+    assert document["chunks"][0]["translated_text"] == "Traducere pastrata"
+    assert document["chunks"][1]["translated_text"] == ""
+    assert document["token_usage"]["total_tokens"] == 15
+
+
+def test_retranslate_failure_preserves_previous_translation(monkeypatch, tmp_path) -> None:
+    """Verify REQ-FUNC-004 failed retranslation does not destroy approved text."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationSafeRetranslate")
+    ai_translation_service.write_translation_document(
+        project_root,
+        {
+            "target_language": "ro",
+            "status": ai_translation_service.TRANSLATION_STATUS_COMPLETED,
+            "token_usage": _usage(10, 5),
+            "budget_metadata": _budget(4096),
+            "additional_translation_instructions": "Reguli generale",
+            "chunks": [
+                {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
+                {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
+            ],
+        },
     )
     monkeypatch.setattr(
         ai_translation_service.llm_provider_service,
         "chat_json",
-        lambda *_args, **_kwargs: {"payload": {"translated_text": "New translation"}, "usage": {}},
-    )
-    original_write_json_atomic = ai_translation_service.write_json_atomic
-    translated_artifact_writes = []
-
-    def spy_write_json_atomic(path, payload, **kwargs):
-        """
-        @brief      Record translated artifact writes and preserve persistence.
-        @return     None.
-        @exception  None
-        @version    0.1.0
-        """
-        if path.name == config.TRANSLATED_CHUNKS_FILE_NAME:
-            translated_artifact_writes.append(path)
-        original_write_json_atomic(path, payload, **kwargs)
-
-    monkeypatch.setattr(ai_translation_service, "write_json_atomic", spy_write_json_atomic)
-
-    ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
-
-    assert len(translated_artifact_writes) == 3
-
-
-def test_ai_translation_service_review_action_writes_artifact_once(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify REQ-FUNC-004 review approval avoids precondition rewrite churn.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationReviewWriteCountProject")
-    source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
-        project_root,
-        "ro",
-        "profile-1",
-    )
-    translated_chunks[0]["translated_text"] = "Translated one"
-    translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
-    report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
-    ai_translation_service._persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state=ai_translation_service._refresh_operation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            ai_translation_service.load_operation_state(project_root),
-            "profile-1",
-            "ro",
-            {},
-        ),
-    )
-    original_write_json_atomic = ai_translation_service.write_json_atomic
-    translated_artifact_writes = []
-
-    def spy_write_json_atomic(path, payload, **kwargs):
-        """
-        @brief      Record translated artifact writes and preserve persistence.
-        @return     None.
-        @exception  None
-        @version    0.1.0
-        """
-        if path.name == config.TRANSLATED_CHUNKS_FILE_NAME:
-            translated_artifact_writes.append(path)
-        original_write_json_atomic(path, payload, **kwargs)
-
-    monkeypatch.setattr(ai_translation_service, "write_json_atomic", spy_write_json_atomic)
-
-    ai_translation_service.approve_chunk(project_root, "chunk-0001", "ro", "profile-1")
-
-    assert len(translated_artifact_writes) == 1
-
-
-def test_ai_translation_service_tolerates_malformed_translation_json(tmp_path) -> None:
-    """
-    @brief      Verify REQ-FUNC-004 treats malformed translation artifacts as recoverable.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationMalformedJsonProject")
-    (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[", encoding="utf-8")
-    (project_root / config.TRANSLATION_REPORT_FILE_NAME).write_text("{", encoding="utf-8")
-    (project_root / config.TRANSLATION_STATE_FILE_NAME).write_text("{", encoding="utf-8")
-
-    source_chunks, translated_chunks, report = ai_translation_service.ensure_translation_records(
-        project_root,
-        "ro",
-        "profile-1",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("provider unavailable")),
     )
 
-    assert len(source_chunks) == 2
-    assert len(translated_chunks) == 2
-    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
-    assert ai_translation_service.load_operation_state(project_root)["status"] == "not_started"
-
-
-def test_ai_translation_service_persists_cancelled_state(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify REQ-FUNC-004 persists cancellation terminal state.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationCancelledStateProject")
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _names: None,
-    )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
-
-    with pytest.raises(operation_runtime_service.OperationCancelledError):
-        ai_translation_service.start_or_continue_translation(
+    with pytest.raises(RuntimeError, match="provider unavailable"):
+        ai_translation_service.retranslate_chunk(
             project_root,
             manifest,
             _profile_payload(),
             "ro",
-            cancel_requested=lambda: True,
+            "chunk-0001",
+            additional_translation_instructions="Regula doar pentru retraducere",
         )
 
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    assert operation_state["status"] == "cancelled"
-    assert operation_state["resume_checkpoint"]["next_untranslated_chunk_id"] == "chunk-0001"
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["status"] == ai_translation_service.TRANSLATION_STATUS_FAILED
+    assert document["chunks"][0] == {
+        "chunk_id": "chunk-0001",
+        "translated_text": "Text aprobat",
+        "approved": True,
+    }
+    assert document["additional_translation_instructions"] == "Reguli generale"
 
 
-def test_ai_translation_service_persists_failed_state(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify REQ-FUNC-004 persists failure terminal state.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationFailedStateProject")
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _names: None,
-    )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
+def test_same_language_translation_uses_llm(monkeypatch, tmp_path) -> None:
+    """Verify REQ-FUNC-004 same-language translation remains AI-assisted."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationSameLanguage")
+    manifest["original_language"] = "en"
+    calls = _install_translations(monkeypatch, ["Rewritten one", "Rewritten two"])
 
-    def fail_chat_json(*_args, **_kwargs):
-        """
-        @brief      Raise a provider failure for terminal-state assertions.
-        @return     None.
-        @exception  RuntimeError Always raised for this test double.
-        @version    0.1.0
-        """
-        raise RuntimeError("provider unavailable")
+    ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "en")
 
-    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fail_chat_json)
+    assert len(calls) == 2
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert [item["translated_text"] for item in document["chunks"]] == ["Rewritten one", "Rewritten two"]
 
-    with pytest.raises(RuntimeError, match="provider unavailable"):
+
+def test_translation_document_writes_once_per_completed_chunk_and_review_action(monkeypatch, tmp_path) -> None:
+    """Verify REQ-NFR-016 uses one atomic document write per durable event."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationWriteCount")
+    _install_translations(monkeypatch, ["Traducere unu", "Traducere doi"])
+    writes = []
+    original_writer = ai_translation_service.write_json_atomic
+
+    def spy_write(path, payload, **kwargs):
+        """Record authoritative document writes while preserving persistence."""
+        writes.append(path)
+        original_writer(path, payload, **kwargs)
+
+    monkeypatch.setattr(ai_translation_service, "write_json_atomic", spy_write)
+    ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
+    assert len(writes) == 4  # running, two completed chunks, review_pending
+
+    writes.clear()
+    ai_translation_service.approve_chunk(project_root, "chunk-0001")
+    assert len(writes) == 1
+
+
+def test_invalid_or_legacy_translation_document_is_rejected_without_overwrite(tmp_path) -> None:
+    """Verify REQ-NFR-016 incompatible data is rejected and left untouched."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationStrictLoad")
+    translation_path = project_root / config.TRANSLATED_CHUNKS_FILE_NAME
+    legacy_text = json.dumps([{"chunk_id": "chunk-0001", "translated_text": "Legacy"}]) + "\n"
+    translation_path.write_text(legacy_text, encoding="utf-8")
+
+    with pytest.raises(ai_translation_service.TranslationDocumentError, match="Reset Translation"):
         ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
 
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    assert operation_state["status"] == "failed"
-    assert operation_state["resume_checkpoint"]["next_untranslated_chunk_id"] == "chunk-0001"
+    assert translation_path.read_text(encoding="utf-8") == legacy_text
 
 
-def test_ai_translation_start_same_language_uses_llm(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify start translation calls the LLM even when source and target languages match.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
-    """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationStartSameLanguageProject")
-    manifest["original_language"] = "en"
-    calls: list[str] = []
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _names: None,
-    )
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
-
-    def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **_kwargs):
-        """
-        @brief      Capture same-language prompts and return distinct fake text.
-        @return     Fake translated text payload.
-        @exception  None
-        @version    0.1.0
-        """
-        calls.append(user_prompt)
-        return {
-            "payload": {"translated_text": f"LLM same-language text {len(calls)}"},
-            "usage": {
-                "input_tokens": 10,
-                "output_tokens": 5,
-                "total_tokens": 15,
-                "usage_available": True,
-            },
-        }
-
-    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
-
-    report = ai_translation_service.start_or_continue_translation(
-        project_root,
-        manifest,
-        _profile_payload(),
-        "en",
-    )
-
-    assert isinstance(report, dict)
-    assert len(calls) == 2
-    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
-    assert report["translated_chunk_count"] == 2
-    assert report["approved_chunk_count"] == 0
-    translated_chunks = ai_translation_service.load_translated_chunks(project_root)
-    assert [chunk["translated_text"] for chunk in translated_chunks] == [
-        "LLM same-language text 1",
-        "LLM same-language text 2",
-    ]
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    assert operation_state["mode"] == "ai_assisted"
-    assert "pass_through" not in operation_state["metadata"]
-    _assert_simplified_translation_state(operation_state)
-
-
-def test_ai_translation_service_initializes_empty_operation_metadata(tmp_path) -> None:
-    """
-    @brief      Verify first page access creates empty translation state from chunks.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
-    """
-    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationInitialStateProject")
-
-    _source_chunks, translated_chunks, report = ai_translation_service.ensure_translation_records(
-        project_root,
-        "ro",
-        "profile-1",
-    )
-
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
-    assert translated_chunks[0]["translated_text"] == ""
-    assert operation_state["status"] == "not_started"
-    assert operation_state["metadata"]["total_chunk_count"] == 2
-    _assert_simplified_translation_state(operation_state)
-
-
-def test_ai_translation_budget_metadata_reserves_max_output_tokens(monkeypatch) -> None:
-    """
-    @brief      Verify larger translation output budgets reduce available source-text budget.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
-    """
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
-
-    small_output_budget = ai_translation_service._build_budget_metadata(
-        {
-            **_profile_payload(),
-            "context_window": 8192,
-            "max_output_tokens": 512,
-        },
+def test_translation_budget_reserves_output_and_rejects_insufficient_input() -> None:
+    """Verify current-profile budgeting reserves output capacity before requests."""
+    small = ai_translation_service._build_budget_metadata(
+        {**_profile_payload(), "context_window": 8192, "max_output_tokens": 512},
         "ro",
         "system",
     )
-    large_output_budget = ai_translation_service._build_budget_metadata(
-        {
-            **_profile_payload(),
-            "context_window": 8192,
-            "max_output_tokens": 4096,
-        },
+    large = ai_translation_service._build_budget_metadata(
+        {**_profile_payload(), "context_window": 8192, "max_output_tokens": 4096},
         "ro",
         "system",
     )
-
-    assert large_output_budget["max_output_tokens"] == 4096
-    assert large_output_budget["text_budget_tokens"] < small_output_budget["text_budget_tokens"]
-
-
-def test_ai_translation_rejects_profiles_with_no_input_budget(monkeypatch) -> None:
-    """
-    @brief      Verify excessive output-token settings fail before translation starts.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
-    """
-    monkeypatch.setattr(
-        ai_translation_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
-    )
+    assert large["text_budget_tokens"] < small["text_budget_tokens"]
 
     with pytest.raises(ValueError, match="too little room"):
         ai_translation_service._build_budget_metadata(
-            {
-                **_profile_payload(),
-                "context_window": 1024,
-                "max_output_tokens": 900,
-            },
+            {**_profile_payload(), "context_window": 1024, "max_output_tokens": 900},
             "ro",
             "system",
         )
 
 
-def _assert_simplified_translation_state(operation_state: dict[str, object]) -> None:
-    """
-    @brief      Assert translation operation state does not contain removed path metadata.
-    @param[in]  operation_state Persisted translation operation state payload.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
-    """
-    for field_name in ("folder_relative_path", "input_paths", "output_paths", "artifact_paths"):
-        assert field_name not in operation_state
-    metadata = operation_state.get("metadata", {})
-    assert isinstance(metadata, dict)
-    assert "source_chunk_count" not in metadata
-    assert "started_by_operator" not in metadata
+def test_translation_prompt_has_stable_rules_and_minimal_user_contract(monkeypatch, tmp_path) -> None:
+    """Verify REQ-FUNC-004 keeps stable rules separate from per-request translation data."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationPromptContract")
+    captured: list[tuple[str, str]] = []
+
+    def fake_chat_json(_profile, system_prompt, user_prompt, **_kwargs):
+        """Capture both prompt roles and return a valid minimal response."""
+        captured.append((system_prompt, user_prompt))
+        return {"payload": {"translated_text": "Traducere"}, "usage": _usage(10, 5)}
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
+    ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        additional_translation_instructions="Pastreaza numele proprii.",
+    )
+
+    system_prompt, user_prompt = captured[0]
+    assert "translated_text" in system_prompt
+    assert "Original one" not in system_prompt
+    assert "Target language: ro" not in system_prompt
+    assert "Target language: ro" in user_prompt
+    assert "Additional translation instructions:" in user_prompt
+    assert "Pastreaza numele proprii." in user_prompt
+    assert "Source text:" in user_prompt
+    assert "Original one" in user_prompt
+    assert "fingerprint" not in user_prompt.lower()
+    assert "regex" not in user_prompt.lower()
+
+
+def test_manual_translation_edit_preserves_operator_whitespace(tmp_path) -> None:
+    """Verify REQ-FUNC-004 manual review persists the operator's exact text value."""
+    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationWhitespace")
+    ai_translation_service.write_translation_document(
+        project_root,
+        {
+            "target_language": "ro",
+            "status": ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS,
+            "token_usage": _usage(0, 0),
+            "budget_metadata": _budget(4096),
+            "additional_translation_instructions": "",
+            "chunks": [
+                {"chunk_id": "chunk-0001", "translated_text": "", "approved": False},
+                {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
+            ],
+        },
+    )
+
+    ai_translation_service.update_translated_text(project_root, "chunk-0001", "\nTraducere exacta\n")
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["chunks"][0]["translated_text"] == "\nTraducere exacta\n"
+
+
+def test_partial_segment_failure_preserves_usage_without_partial_chunk(monkeypatch, tmp_path) -> None:
+    """Verify REQ-FUNC-004 a failed later segment keeps usage but no partial chunk text."""
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationSegmentFailure")
+    monkeypatch.setattr(
+        ai_translation_service,
+        "_split_translation_source_text",
+        lambda *_args: ["segment one", "segment two"],
+    )
+    responses = iter(
+        [
+            {"payload": {"translated_text": "segment tradus"}, "usage": _usage(10, 5)},
+            RuntimeError("second segment failed"),
+        ]
+    )
+
+    def fake_chat_json(*_args, **_kwargs):
+        """Return one paid segment and fail the next segment."""
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
+
+    with pytest.raises(RuntimeError, match="second segment failed"):
+        ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["status"] == ai_translation_service.TRANSLATION_STATUS_FAILED
+    assert document["token_usage"]["total_tokens"] == 15
+    assert document["chunks"][0]["translated_text"] == ""
+
+
+# TEST HELPERS
+
+
+def _install_translations(monkeypatch, translations: list[str]) -> list[str]:
+    """Install deterministic provider responses and return captured user prompts."""
+    captured_prompts: list[str] = []
+    responses = iter(translations)
+
+    def fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """Return the next deterministic translation response."""
+        captured_prompts.append(user_prompt)
+        return {"payload": {"translated_text": next(responses)}, "usage": _usage(10, 5)}
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
+    return captured_prompts
 
 
 def _create_chunked_project(tmp_path, name: str):
-    """
-    @brief      Provide the create chunked project test helper.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
+    """Create one project with two canonical source chunks."""
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
         "file_type": "txt",
-        "imported_at": "2026-04-07T12:00:00+00:00",
+        "imported_at": "2026-07-16T12:00:00+00:00",
         "size_bytes": 12,
     }
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [config.CHUNK_ARTIFACT_FILE_NAME]
+    manifest["target_language"] = "ro"
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root
-    chunk_root.mkdir(parents=True, exist_ok=True)
-    (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -765,14 +417,7 @@ def _create_chunked_project(tmp_path, name: str):
 
 
 def _profile_payload() -> dict[str, object]:
-    """
-    @brief      Provide the profile payload test helper.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
+    """Return one enabled OpenAI-compatible profile payload."""
     return {
         "id": "profile-1",
         "label": "Translation Profile",
@@ -786,6 +431,27 @@ def _profile_payload() -> dict[str, object]:
         "temperature": 0.2,
         "supports_structured_output": False,
         "enabled": True,
+    }
+
+
+def _usage(input_tokens: int, output_tokens: int) -> dict[str, object]:
+    """Build normalized provider token usage."""
+    return {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+        "usage_available": True,
+    }
+
+
+def _budget(context_window: int) -> dict[str, int]:
+    """Build complete persisted budget metadata for strict-loader fixtures."""
+    return {
+        "context_window": context_window,
+        "max_output_tokens": 512,
+        "prompt_budget_tokens": 100,
+        "text_budget_tokens": 2048,
+        "safety_margin_tokens": 512,
     }
 
 

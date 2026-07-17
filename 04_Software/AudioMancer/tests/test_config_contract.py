@@ -63,7 +63,8 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.CHUNKING_REPORT_FILE_NAME == "chunking_report.json"
     assert config.CHUNKING_STATE_FILE_NAME == "chunking_state.json"
     assert config.TRANSLATED_CHUNKS_FILE_NAME == "translated_text.json"
-    assert config.TRANSLATION_STATE_FILE_NAME == "translation_state.json"
+    assert not hasattr(config, "TRANSLATION_REPORT_FILE_NAME")
+    assert not hasattr(config, "TRANSLATION_STATE_FILE_NAME")
     assert config.NARRATOR_PROFILE_FILE_NAME == "audio_profiles.json"
     assert config.NARRATOR_SELECTION_FILE_NAME == "narator.json"
     assert config.SELECTED_NARRATOR_AUDIO_FILE_NAME == "narator.wav"

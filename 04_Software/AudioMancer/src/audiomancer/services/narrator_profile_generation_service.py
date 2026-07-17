@@ -620,15 +620,13 @@ def _approved_translation_units(project_root: Path, voice_language: str) -> list
     @date       2026-05-11
     @version    0.1.0
     """
-    report = ai_translation_service.load_translation_report(project_root)
-    if not isinstance(report, dict):
+    document = ai_translation_service.load_translation_document(project_root)
+    if document is None:
         return []
-    target_language = narrator_definition_service.narrator_language_code(report.get("target_language"))
+    target_language = narrator_definition_service.narrator_language_code(document["target_language"])
     if target_language != narrator_definition_service.narrator_language_code(voice_language):
         return []
-    total_count = int(report.get("total_chunk_count", 0) or 0)
-    approved_count = int(report.get("approved_chunk_count", 0) or 0)
-    if total_count <= 0 or approved_count < total_count:
+    if not ai_translation_service.translation_is_completed(project_root):
         return []
     units: list[SourceUnitPayload] = []
     for index, chunk in enumerate(ai_translation_service.load_translated_chunks(project_root), start=1):

@@ -9,41 +9,35 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 ## 1. Purpose
 
-Provides the AI Translation workflow for `AudioMancer`. It translates canonical
-text chunks into the project-locked target language, persists per-chunk review
-records, supports approval and manual corrections, and exposes page state for
-the `AI Translation` UI.
+Provides AudioMancer's AI-assisted translation and human-review workflow. It
+translates canonical text chunks into the project-locked target language and
+stores all durable Translation data in one authoritative project file:
+`translated_text.json`.
 
 ## 2. Responsibilities
 
-- read canonical chunk text from `chunks_text.json`
-- use the locked `project.json.target_language` as the only translation target
-- call the configured AI profile even when original and target languages match
-- call the configured OpenAI-compatible profile for chunk translation
-- append optional operator-supplied translation rules to translation prompts
-- split oversized chunk text into budgeted translation segments before model
-  calls
-- persist translated chunk records, operation state, report data, and AI logs
-  through atomic JSON writes for the translation artifact, report, and state
-- keep translation operation state compact by storing resume-critical metadata
-  instead of duplicated input, output, and artifact path lists
-- keep steady-state page display and review preconditions read-only when
-  translation records are already synchronized with source chunks
-- support selected-chunk edit, retranslate, approve, approve-all, and reset
-- reset downstream character, character-voice, speech, audio, and audiobook
-  artifacts when translation is fully reset, while preserving existing Narator
-  Voice profiles and selected narrator samples
-- mark a manually edited translated chunk unapproved when its text changes; the
-  current controller still treats approval loss as a broad downstream reset
-- shape page state with original-language and target-language indicators
+- read canonical source order and source text from `chunks_text.json`
+- use `project.json.target_language` as the locked translation target
+- use the currently selected enabled AI profile for every new or resumed run
+- reuse saved document-level instructions when resuming an interrupted run
+- translate same-language projects through the normal AI path
+- checkpoint only complete chunks and never persist partial segment output
+- preserve completed chunks across cancellation and provider failure
+- preserve the prior text and approval when selected retranslation fails
+- persist manual edits with a 750 ms debounce and flush them before selection
+  changes, approvals, and application close
+- derive page counts and effective review status without writing during page
+  state construction
+- synchronize the compact manifest operation summary in the controller
+- retain the existing broad downstream invalidation when approval is lost
 
-It does not own source import, chunking, character discovery, voice generation,
-or target-language selection. Target-language selection is locked on the Home
-page before source import.
+The component does not own source import, target-language selection, text
+chunking, character discovery, narrator generation, speech generation, or the
+agentic development workflow used to implement repository changes.
 
 ## 3. Implementation Overview
 
-The component is implemented in:
+Primary modules:
 
 - `04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py`
@@ -52,45 +46,49 @@ The component is implemented in:
 
 Main service entrypoints:
 
-- `ensure_translation_records(...)`
+- `load_translation_document(...)`
+- `write_translation_document(...)`
+- `load_translation_summary(...)`
+- `sync_translation_after_chunk_change(...)`
 - `start_or_continue_translation(...)`
 - `retranslate_chunk(...)`
 - `update_translated_text(...)`
 - `approve_chunk(...)`
 - `approve_all(...)`
 - `reset_translation(...)`
-- `build_ai_translation_state(...)`
-- `build_ai_translation_notes(...)`
 
-High-level flow:
+Processing flow:
 
-1. Text Chunking creates canonical chunks.
-2. The controller reads the locked target language from `project.json`.
-3. The state service displays original and target language indicators.
-4. The controller offers an optional word-wrapped prompt box for operator
-   translation rules before a fresh full translation run or selected chunk
-   retranslation.
-5. The service translates one chunk at a time, persists one atomic checkpoint
-   after each completed chunk, and appends provider transaction metadata.
-6. The generated-translation phase ends with `translation_stage_status =
-   translated`.
-7. Review remains incomplete until translated chunks are approved.
-8. The translation operation is considered complete only when
-   `translation_stage_status = approved`.
+1. Text Chunking creates `chunks_text.json`.
+2. A fresh translation builds the strict document, stores `running`, and sends
+   the first request.
+3. The service processes the first empty chunk in canonical order, using the
+   current profile's context budget.
+4. Each fully translated chunk is committed with one atomic document write.
+5. Cancellation and failure store their terminal status without discarding
+   completed chunks.
+6. Successful generation ends in `review_pending` until every chunk is
+   approved, then becomes `completed`.
+7. The controller derives and writes only the compact Translation summary in
+   `project.json`.
 
 ## 4. Dependencies
 
-- Internal dependencies:
-  `audiomancer.config`,
-  `audiomancer.services.deterministic_chunking_service`,
-  `audiomancer.services.llm_provider_service`,
-  `audiomancer.services.operation_runtime_service`,
-  `audiomancer.services.prompt_template_service`,
-  `audiomancer.services.project_workspace_service`,
-  `audiomancer.services.token_usage_service`, and
-  `audiomancer.services.ui_state_service`
-- External dependencies:
-  Python standard library and one configured OpenAI-compatible LLM backend
+Internal dependencies include:
+
+- `audiomancer.config`
+- `ai_budget_service`
+- `deterministic_chunking_service`
+- `llm_provider_service`
+- `operation_runtime_service`
+- `prompt_template_service`
+- `token_usage_service`
+- `persistence_service`
+- `ui_state_service`
+
+External execution requires one enabled OpenAI-compatible AI profile. AI
+transaction logs remain separate diagnostic files and are not referenced by
+the authoritative document.
 
 ## 5. Inputs And Outputs
 
@@ -98,132 +96,146 @@ Inputs:
 
 - active project root and manifest
 - `chunks_text.json`
-- locked `project.json.target_language`
-- `project.json.original_language`, when detected by cleanup
-- selected enabled AI Translation profile from settings
-- translation prompt templates under `04_Software/AudioMancer/prompts/`
-- optional operator-supplied translation rules entered from the AI Translation
-  dialog before fresh AI translation work
+- locked target language
+- currently selected enabled AI profile
+- stable system prompt and per-request user prompt templates
+- optional general translation instructions for a fresh run
+- optional one-off instructions for selected retranslation
 
 Outputs:
 
-- `translated_text.json`
-- `translation_report.json`
-- `translation_state.json`
-- `log_ai_translation_<timestamp>.log`
-- compact, path-list-free manifest operation summary for
-  `operations["translation"]`
+- authoritative `translated_text.json`
+- `log_ai_translation_<timestamp>.log` diagnostic files
+- compact `project.json.operations["translation"]` summary containing only
+  `status`, `progress_current`, `progress_total`, `mode`, and `warning_count`
+
+`translation_report.json` and `translation_state.json` are not created, read,
+or migrated. Reset Translation may delete files with those old names as
+cleanup-only behavior.
 
 ## 6. Data Contracts
 
-Translated chunk records include:
+`translated_text.json` has exactly these root fields:
 
-- `chunk_id`
-- `source_text`
-- `translated_text`
-- `target_language`
-- `status`
-- `approved`
-- warning and metadata fields used by review state
+```json
+{
+  "target_language": "ro",
+  "status": "review_pending",
+  "token_usage": {
+    "input_tokens": 120,
+    "output_tokens": 80,
+    "total_tokens": 200,
+    "usage_available": true
+  },
+  "budget_metadata": {
+    "context_window": 8192,
+    "max_output_tokens": 1024,
+    "prompt_budget_tokens": 240,
+    "text_budget_tokens": 4800,
+    "safety_margin_tokens": 1024
+  },
+  "additional_translation_instructions": "Preserve formal address.",
+  "chunks": [
+    {
+      "chunk_id": "chunk-0001",
+      "translated_text": "Translated text.",
+      "approved": false
+    }
+  ]
+}
+```
 
-Invariants:
+Persistent statuses are:
 
-- target language comes from `project.json.target_language`
-- reset clears translation artifacts and dependent downstream runtime artifacts,
-  but preserves Narator Voice profiles, selected narrator state, selected
-  narrator sample files, and the locked target language
-- same-language translation uses the normal AI-assisted translation path; it
-  can rewrite, adapt, or normalize text according to the prompt and operator
+- `running`
+- `in_progress`
+- `cancelled`
+- `failed`
+- `review_pending`
+- `completed`
+
+An absent file means `not_started`; `not_started` and `invalid` are derived UI
+states and are never persisted.
+
+Contract invariants:
+
+- the root and every chunk use exact field sets
+- source text, source order, profile identifiers, timestamps, path lists,
+  fingerprints, counts, and per-chunk status are not duplicated in the file
+- an approved chunk must contain non-empty translated text
+- incompatible JSON is rejected without overwrite and the operator is directed
+  to Reset Translation
+- source order and resume position come from canonical `chunks_text.json`
+- counts and effective completion are derived at read time
+- one-off retranslation instructions never replace the saved general document
   instructions
-- translation stage status uses the current review tokens only:
-  `not_started`, `in_progress`, `translated`, and `approved`; old
-  translation-report stage aliases are not normalized
-- operator-supplied translation rules are appended to the default prompt when
-  the prompt template does not provide an explicit
-  `{additional_translation_instructions}` placeholder
-- `translation_report.json` and `translation_state.json` persist
-  `additional_translation_instructions` plus a stable fingerprint for AI runs;
-  unfinished runs resumed from the UI reuse the saved rules
-- `translation_state.json` does not duplicate `folder_relative_path`,
-  `input_paths`, `output_paths`, `artifact_paths`, or `source_chunk_count` for
-  Translation; resume uses `translated_text.json` to skip completed chunks,
-  `metadata.log_relative_path` to keep appending to the same AI transaction log,
-  and persisted token-usage and prompt-rule metadata for continuity
-- translated chunk, report, and operation-state JSON writes are atomic; malformed
-  persisted JSON is logged and treated as missing data so page state and resume
-  paths can recover without an unhandled decode error
-- running translation and selected-chunk retranslation persist `cancelled` or
-  `failed` operation states with the current resume checkpoint before reraising
-  the interruption or error
-- `project.json.operations["translation"]` remains a compact Home summary with
-  status, progress, mode, and warning count only
-- approval is required before downstream character and voice workflows consume
-  translated text
-- manual translation edits clear the edited chunk approval when text changes
-- in the current implementation, any translation approval-loss state still
-  clears dependent downstream runtime data broadly through the AI Translation
-  controller; this is the remaining broad reset documented for the v2 release
+
+The AI response contract is deliberately minimal: a JSON object containing a
+non-empty string field named `translated_text`.
 
 ## 7. Workflow Integration
 
 Upstream:
 
-- Text Cleanup detects and stores `project.json.original_language`
-- Text Chunking creates canonical chunks
-- Home locks the target language before source import
+- Home locks the target language
+- Text Cleanup records the detected original language
+- Text Chunking owns source text, stable chunk IDs, and canonical order
 
 Downstream:
 
-- Characters, Character Voices, Speech Blocks, Audio Blocks, and Audio Assembly
-  consume either canonical text or approved translation state; Narator Voice
-  profiles are preserved across translation resets and approval-loss resets
-- workflow stage advances to `character_discovery_ready` only after translation
-  review is complete
-- unapproved translation state keeps the workflow at `translation_ready`
-- unlike manual chunk, character, voice, speech, audio-block, and assembly
-  operations, translation approval loss has not yet been migrated to
-  chunk-scoped v2 invalidation
+- Narrator Definition, Character Voices, Speech Blocks, Audio Blocks, project
+  recovery, and export read the strict document
+- translated content becomes downstream-ready only when the effective status
+  is `completed`
+- approval loss keeps the workflow at `translation_ready` and clears dependent
+  downstream runtime data, except preserved narrator profiles
 
 ## 8. Usage
 
-Representative service calls:
-
 ```python
-state = ai_translation_state_service.build_ai_translation_state(project_root, manifest, settings_payload, "en")
-report = ai_translation_service.start_or_continue_translation(
+summary = ai_translation_service.start_or_continue_translation(
     project_root,
     manifest,
     profile_payload,
     "ro",
-    additional_translation_instructions="Keep historical forms of address formal.",
+    additional_translation_instructions="Preserve formal address.",
 )
-report = ai_translation_service.approve_chunk(project_root, "chunk-0001", "ro", "profile-1")
+
+summary = ai_translation_service.approve_chunk(project_root, "chunk-0001")
+state = ai_translation_state_service.build_ai_translation_state(
+    project_root,
+    manifest,
+    "en",
+    settings_payload,
+)
 ```
 
 ## 9. Validation And Tests
 
-Focused automated coverage includes:
+Primary focused tests:
 
 - `04_Software/AudioMancer/tests/test_ai_translation_service.py`
 - `04_Software/AudioMancer/tests/test_ai_translation_state_service.py`
 - `04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_ai_translation_page.py`
 
-Focused persistence and recovery coverage verifies single chunk checkpoints,
-single review-action artifact writes, read-only unchanged page-state builds,
-malformed translation JSON recovery, and persisted `cancelled` / `failed`
-terminal states.
+Focused integration coverage also includes Text Chunking synchronization,
+project recovery, narrator/voice readiness, Speech Blocks input resolution,
+Audio Blocks readiness, export, operation reset behavior, and main-window close
+flush behavior.
 
 Minimum validation after changes:
 
 ```powershell
-uv run python -m py_compile src/audiomancer/services/ai_translation_service.py src/audiomancer/services/ai_translation_state_service.py
 uv run pytest tests/test_ai_translation_service.py tests/test_ai_translation_state_service.py tests/test_ai_translation_ui_controller.py tests/test_ai_translation_page.py
+uv run ruff check src/audiomancer/services/ai_translation_service.py src/audiomancer/services/ai_translation_state_service.py src/audiomancer/ui/controllers/ai_translation_ui_controller.py src/audiomancer/ui/pages/ai_translation_page.py
 ```
 
 ## 10. Limitations And Future Work
 
-- The service relies on language codes and labels already supported by
-  `config.TRANSLATION_LANGUAGE_OPTIONS`.
-- Segment-level recovery inside one oversized chunk remains future work; the
-  current durable checkpoint commits completed chunks atomically.
+- Segment-level resume inside one oversized chunk is intentionally unsupported;
+  the durable checkpoint boundary is the complete chunk.
+- Translation approval loss still uses broad downstream invalidation rather
+  than chunk-scoped invalidation.
+- Existing incompatible translation files require an explicit Reset
+  Translation; automatic migration is intentionally unsupported.

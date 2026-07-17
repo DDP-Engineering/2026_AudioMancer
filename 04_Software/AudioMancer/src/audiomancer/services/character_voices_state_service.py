@@ -32,6 +32,7 @@ from audiomancer.services import (
     voiceweaver_runtime_service,
 )
 
+
 def build_character_voices_state(
     project_root: Path | None,
     manifest: dict[str, object] | None,
@@ -497,7 +498,10 @@ def _voice_language_state(
     @date       2026-04-21
     @version    0.2.0
     """
-    translation_report = ai_translation_service.load_translation_report(project_root)
+    try:
+        translation_document = ai_translation_service.load_translation_document(project_root)
+    except ai_translation_service.TranslationDocumentError:
+        translation_document = None
     original_language_code = narrator_definition_service.narrator_language_code(
         manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
     )
@@ -510,13 +514,11 @@ def _voice_language_state(
     language_entries = [(target_language_label, target_language_code)]
     translated_language_label = target_language_label
     translation_ready = False
-    if isinstance(translation_report, dict):
-        translated_language_code = str(translation_report.get("target_language", "")).strip()
-        translated_total_count = int(translation_report.get("total_chunk_count", 0))
-        translated_approved_count = int(translation_report.get("approved_chunk_count", 0))
+    if translation_document is not None:
+        translated_language_code = str(translation_document["target_language"]).strip()
         if translated_language_code in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
             translated_language_label = narrator_definition_service.narrator_language_label(translated_language_code)
-            translation_ready = translated_total_count > 0 and translated_total_count == translated_approved_count
+            translation_ready = ai_translation_service.translation_is_completed(project_root)
     return (
         language_entries,
         target_language_code,
