@@ -1,8 +1,0 @@
-{
-  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
-  "_comment": "Project-local Pi settings for the transboarded project root. The agentic-guard extension is auto-discovered from .pi/extensions/ after the project is trusted; project-local resources only load once trust is granted (ctx.isProjectTrusted()).",
-  "_comment_python": "The guard hooks are stdlib-only Python (3.11+). Set AGENTIC_WORKFLOW_PYTHON to pin a specific interpreter; otherwise the bridge uses `py -3` on Windows and `python3` elsewhere.",
-  "packages": [
-    "./"
-  ]
-}
