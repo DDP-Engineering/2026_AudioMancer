@@ -312,12 +312,23 @@ def test_build_audio_blocks_state_does_not_resolve_unapproved_translation(monkey
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksUnapprovedTranslation")
     character_voices_service.save_selected_voice_language(project_root, "ro")
-    (project_root / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+    (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
             {
                 "target_language": "ro",
-                "total_chunk_count": 2,
-                "approved_chunk_count": 1,
+                "status": "review_pending",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [
+                    {"chunk_id": "chunk-0001", "translated_text": "Unu", "approved": True},
+                    {"chunk_id": "chunk-0002", "translated_text": "Doi", "approved": False},
+                ],
             },
             indent=2,
         )

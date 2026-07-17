@@ -859,24 +859,24 @@ def _write_translation(project_root, text: str, target_language: str) -> None:
     """
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "translated_text": text,
-                    "approved": True,
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.TRANSLATION_REPORT_FILE_NAME).write_text(
-        json.dumps(
             {
                 "target_language": target_language,
-                "total_chunk_count": 1,
-                "approved_chunk_count": 1,
+                "status": "completed",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "translated_text": text,
+                        "approved": True,
+                    }
+                ],
             },
             indent=2,
         )

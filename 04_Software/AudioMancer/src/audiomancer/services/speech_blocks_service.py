@@ -254,15 +254,13 @@ def resolve_source_chunks(
             ],
         }
 
-    translation_report = ai_translation_service.load_translation_report(resolved_project_root)
-    if not isinstance(translation_report, dict):
+    translation_document = ai_translation_service.load_translation_document(resolved_project_root)
+    if translation_document is None:
         raise ValueError("The selected Character Voices language is not available for Speech Blocks yet.")
-    translated_language = str(translation_report.get("target_language", "")).strip()
-    total_chunk_count = int(translation_report.get("total_chunk_count", 0))
-    approved_chunk_count = int(translation_report.get("approved_chunk_count", 0))
+    translated_language = str(translation_document["target_language"]).strip()
     if selected_voice_language != translated_language:
         raise ValueError("The selected Character Voices language is not available for Speech Blocks yet.")
-    if total_chunk_count <= 0 or total_chunk_count != approved_chunk_count:
+    if not ai_translation_service.translation_is_completed(resolved_project_root):
         raise ValueError("Approve all translated chunks before generating Speech Blocks in the translated language.")
 
     translated_by_id = {

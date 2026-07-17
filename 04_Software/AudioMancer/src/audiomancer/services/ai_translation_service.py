@@ -8,17 +8,16 @@
 # -----------------------------------------------------------------------------
 """
 @file ai_translation_service.py
-@brief AI-assisted translation helpers for AudioMancer.
-@details Persists translated chunk review records in `30_translation` and
-         executes resumable translation over canonical chunking output.
+@brief AI-assisted translation backed by one authoritative project document.
+@details Persists translation text, review state, usage, budget, and resumable
+         operation status exclusively in `translated_text.json`.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.13.0
+@date 2026-07-16
+@version 0.14.0
 """
 
 # IMPORTS
 
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -28,7 +27,6 @@ from audiomancer.services import (
     ai_budget_service,
     deterministic_chunking_service,
     llm_provider_service,
-    project_workspace_service,
     prompt_template_service,
     token_usage_service,
 )
@@ -38,262 +36,204 @@ from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     build_operation_output_path,
     raise_if_cancelled,
-    relative_to_project,
     reset_operation_data,
-    resolve_operation_path,
 )
-from audiomancer.services.operation_runtime_service import (
-    emit_progress_update as _emit_progress,
-)
+from audiomancer.services.operation_runtime_service import emit_progress_update as _emit_progress
 from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
-
-# @brief Component logger used by the AI translation workflow service.
 _AI_TRANSLATION_LOGGER = get_component_logger("ai_translation")
-
-# @brief Translation stage token used before any chunk was translated.
-TRANSLATION_STAGE_NOT_STARTED = "not_started"
-# @brief Translation stage token used while translation work remains incomplete.
-TRANSLATION_STAGE_IN_PROGRESS = "in_progress"
-# @brief Translation stage token used when all chunks were translated but still need approval.
-TRANSLATION_STAGE_TRANSLATED = "translated"
-# @brief Translation stage token used when all translated chunks are approved.
-TRANSLATION_STAGE_APPROVED = "approved"
-# @brief Translated-chunk status token used before a chunk receives translated text.
-TRANSLATED_CHUNK_STATUS_NOT_STARTED = "not_started"
-# @brief Translated-chunk status token used after a chunk receives translated text.
-TRANSLATED_CHUNK_STATUS_TRANSLATED = "translated"
-# @brief Translated-chunk status token used after a translated chunk is approved.
-TRANSLATED_CHUNK_STATUS_APPROVED = "approved"
-# @brief Mapping from translation language codes to display labels.
 _TRANSLATION_LANGUAGE_LABELS = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
+
+TRANSLATION_STATUS_NOT_STARTED = "not_started"
+TRANSLATION_STATUS_RUNNING = "running"
+TRANSLATION_STATUS_IN_PROGRESS = "in_progress"
+TRANSLATION_STATUS_CANCELLED = "cancelled"
+TRANSLATION_STATUS_FAILED = "failed"
+TRANSLATION_STATUS_REVIEW_PENDING = "review_pending"
+TRANSLATION_STATUS_COMPLETED = "completed"
+TRANSLATION_STATUS_INVALID = "invalid"
+
+_PERSISTED_STATUSES = frozenset(
+    (
+        TRANSLATION_STATUS_RUNNING,
+        TRANSLATION_STATUS_IN_PROGRESS,
+        TRANSLATION_STATUS_CANCELLED,
+        TRANSLATION_STATUS_FAILED,
+        TRANSLATION_STATUS_REVIEW_PENDING,
+        TRANSLATION_STATUS_COMPLETED,
+    )
+)
+_RESUMABLE_STATUSES = frozenset(
+    (
+        TRANSLATION_STATUS_RUNNING,
+        TRANSLATION_STATUS_IN_PROGRESS,
+        TRANSLATION_STATUS_CANCELLED,
+        TRANSLATION_STATUS_FAILED,
+    )
+)
+_DOCUMENT_FIELDS = frozenset(
+    (
+        "target_language",
+        "status",
+        "token_usage",
+        "budget_metadata",
+        "additional_translation_instructions",
+        "chunks",
+    )
+)
+_CHUNK_FIELDS = frozenset(("chunk_id", "translated_text", "approved"))
+
 TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
+TranslationDocumentPayload = dict[str, object]
+
+
+# DATA MODELS / TYPEDEFINITIONS
+
+
+class TranslationDocumentError(ValueError):
+    """Raised when persisted translation data does not match the strict contract."""
 
 
 # PUBLIC API
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
-def load_operation_state(project_root: str | Path) -> dict[str, object] | None:
-    """
-    @brief      Load the persisted translation operation state from disk.
-    @param[in]  project_root Active project root path.
-    @return     Translation operation state payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
-    """
-    state_path = resolve_operation_path(
-        project_root,
-        "translation",
-        config.TRANSLATION_STATE_FILE_NAME,
-    )
-    if not state_path.is_file():
-        return None
-    payload = _load_json_payload(state_path, None, "translation operation state")
-    return dict(payload) if isinstance(payload, dict) else None
-
-
-@trace_function(_AI_TRANSLATION_LOGGER)
-def load_translation_report(project_root: str | Path) -> dict[str, object] | None:
-    """
-    @brief      Load the persisted translation report from disk.
-    @param[in]  project_root Active project root path.
-    @return     Translation report payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
-    """
-    report_path = resolve_operation_path(
-        project_root,
-        "translation",
-        config.TRANSLATION_REPORT_FILE_NAME,
-    )
-    if not report_path.is_file():
-        return None
-    payload = _load_json_payload(report_path, None, "translation report")
-    return dict(payload) if isinstance(payload, dict) else None
-
-
-@trace_function(_AI_TRANSLATION_LOGGER)
-def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
-    """
-    @brief      Load persisted translated chunk records from disk.
-    @param[in]  project_root Active project root path.
-    @return     Persisted translated chunk payload list.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
-    """
-    translated_path = resolve_operation_path(
+def load_translation_document(project_root: str | Path) -> TranslationDocumentPayload | None:
+    """Load and strictly validate the authoritative translation document."""
+    document_path = build_operation_output_path(
         project_root,
         "translation",
         config.TRANSLATED_CHUNKS_FILE_NAME,
     )
-    if not translated_path.is_file():
-        return []
-    payload = _load_json_payload(translated_path, [], "translated chunks")
-    if not isinstance(payload, list):
-        return []
-    return [dict(item) for item in payload if isinstance(item, dict)]
+    if not document_path.is_file():
+        return None
+    try:
+        payload = json.loads(document_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise _incompatible_document_error("The file is not valid JSON.") from exc
+    _validate_translation_document(payload)
+    return dict(payload)
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
-def ensure_translation_records(
+def write_translation_document(
     project_root: str | Path,
-    target_language: str,
-    profile_id: str | None,
-) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
-    """
-    @brief      Synchronize translated records against the current source chunks.
-    @param[in]  project_root Active project root path.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @return     Source chunks, translated chunk records, and translation report.
-    @exception  ValueError When chunking output is missing.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
-    """
-    project_root = Path(project_root)
+    document: TranslationDocumentPayload,
+) -> Path:
+    """Validate and atomically persist the authoritative translation document."""
+    _validate_translation_document(document)
+    document_path = build_operation_output_path(
+        project_root,
+        "translation",
+        config.TRANSLATED_CHUNKS_FILE_NAME,
+    )
+    write_json_atomic(document_path, document)
+    return document_path
+
+
+@trace_function(_AI_TRANSLATION_LOGGER)
+def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
+    """Return minimal translated chunk records from the authoritative document."""
+    document = load_translation_document(project_root)
+    if document is None:
+        return []
+    return [dict(item) for item in document["chunks"]]
+
+
+@trace_function(_AI_TRANSLATION_LOGGER)
+def load_translation_summary(project_root: str | Path) -> dict[str, object]:
+    """Build the effective translation summary without mutating project data."""
     source_chunks = deterministic_chunking_service.load_chunks(project_root)
-    if not source_chunks:
-        raise ValueError("Run text chunking before starting AI translation.")
-    return _sync_translation_records(project_root, source_chunks, target_language, profile_id)
+    return build_translation_summary(source_chunks, load_translation_document(project_root))
+
+
+def build_translation_summary(
+    source_chunks: list[dict[str, object]],
+    document: TranslationDocumentPayload | None,
+) -> dict[str, object]:
+    """Derive counts and effective status from canonical chunks and one document."""
+    total_count = len(source_chunks)
+    if document is None:
+        return {
+            "status": TRANSLATION_STATUS_NOT_STARTED,
+            "translated_count": 0,
+            "approved_count": 0,
+            "total_count": total_count,
+            "warning_count": 0,
+            "target_language": "",
+            "token_usage": token_usage_service.empty_token_usage(),
+        }
+    chunks_by_id = {str(item["chunk_id"]): item for item in document["chunks"]}
+    canonical_chunks = [
+        chunks_by_id.get(str(source_chunk.get("chunk_id", "")))
+        for source_chunk in _canonical_source_chunks(source_chunks)
+    ]
+    translated_count = sum(
+        item is not None and bool(str(item["translated_text"]).strip()) for item in canonical_chunks
+    )
+    approved_count = sum(
+        item is not None
+        and bool(item["approved"])
+        and bool(str(item["translated_text"]).strip())
+        for item in canonical_chunks
+    )
+    persisted_status = str(document["status"])
+    if persisted_status in {
+        TRANSLATION_STATUS_RUNNING,
+        TRANSLATION_STATUS_CANCELLED,
+        TRANSLATION_STATUS_FAILED,
+    }:
+        effective_status = persisted_status
+    elif total_count > 0 and translated_count == total_count and approved_count == total_count:
+        effective_status = TRANSLATION_STATUS_COMPLETED
+    elif total_count > 0 and translated_count == total_count:
+        effective_status = TRANSLATION_STATUS_REVIEW_PENDING
+    else:
+        effective_status = TRANSLATION_STATUS_IN_PROGRESS
+    return {
+        "status": effective_status,
+        "translated_count": translated_count,
+        "approved_count": approved_count,
+        "total_count": total_count,
+        "warning_count": 0,
+        "target_language": str(document["target_language"]),
+        "token_usage": dict(document["token_usage"]),
+    }
+
+
+def translation_is_completed(project_root: str | Path) -> bool:
+    """Return whether the strict translation document is fully approved."""
+    return str(load_translation_summary(project_root)["status"]) == TRANSLATION_STATUS_COMPLETED
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def sync_translation_after_chunk_change(
     project_root: str | Path,
     target_language: str,
-    profile_id: str | None,
     invalidated_chunk_ids: list[str] | tuple[str, ...] | set[str],
 ) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
-    """
-    @brief      Synchronize Translation after a selective Text Chunking change.
-    @details    Existing translated/approved records are preserved by stable
-                `chunk_id` unless the source chunk id is explicitly invalidated
-                or its source text no longer matches the current chunk.
-    @param[in]  project_root Active project root path.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @param[in]  invalidated_chunk_ids Chunk ids changed by edit, insert, or delete.
-    @return     Source chunks, translated chunk records, and translation report.
-    @exception  ValueError When chunking output is missing.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
-    """
+    """Synchronize an existing translation document after canonical chunk changes."""
     resolved_project_root = Path(project_root)
     source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
     if not source_chunks:
         raise ValueError("Run text chunking before synchronizing AI translation.")
-    return _sync_translation_records(
-        resolved_project_root,
+    document = load_translation_document(resolved_project_root)
+    if document is None:
+        return source_chunks, [], build_translation_summary(source_chunks, None)
+    if str(document["target_language"]) != target_language:
+        raise _incompatible_document_error("The saved target language differs from the project.")
+    synchronized = _synchronize_document_chunks(document, source_chunks, invalidated_chunk_ids)
+    if synchronized:
+        document["status"] = _review_status(document["chunks"])
+        write_translation_document(resolved_project_root, document)
+    return source_chunks, [dict(item) for item in document["chunks"]], build_translation_summary(
         source_chunks,
-        target_language,
-        profile_id,
-        invalidated_chunk_ids=invalidated_chunk_ids,
+        document,
     )
-
-
-def _sync_translation_records(
-    project_root: Path,
-    source_chunks: list[dict[str, object]],
-    target_language: str,
-    profile_id: str | None,
-    invalidated_chunk_ids: list[str] | tuple[str, ...] | set[str] | None = None,
-) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
-    """
-    @brief      Synchronize translated records against source chunks.
-    @param[in]  project_root Active project root path.
-    @param[in]  source_chunks Current source chunk payloads.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @param[in]  invalidated_chunk_ids Source chunk ids that must become untranslated.
-    @return     Source chunks, translated chunk records, and translation report.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
-    """
-    invalidated_ids = {str(chunk_id).strip() for chunk_id in invalidated_chunk_ids or [] if str(chunk_id).strip()}
-    existing_by_id = {
-        str(chunk.get("chunk_id", "")): dict(chunk)
-        for chunk in load_translated_chunks(project_root)
-        if str(chunk.get("chunk_id", "")).strip()
-    }
-    translated_chunks: list[dict[str, object]] = []
-    synchronized = False
-    for source_chunk in sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0))):
-        chunk_id = str(source_chunk.get("chunk_id", "")).strip()
-        existing_chunk = existing_by_id.get(chunk_id)
-        if (
-            existing_chunk is None
-            or chunk_id in invalidated_ids
-            or str(existing_chunk.get("source_text", "")) != str(source_chunk.get("text", ""))
-        ):
-            translated_chunks.append(_build_default_translated_chunk(source_chunk, target_language, profile_id))
-            synchronized = True
-            continue
-        existing_chunk["sequence_index"] = int(source_chunk.get("sequence_index", 0))
-        existing_chunk["source_text"] = str(source_chunk.get("text", ""))
-        existing_chunk["target_language"] = target_language
-        if profile_id not in (None, ""):
-            existing_chunk["translation_profile_id"] = profile_id
-        normalized_chunk = _normalize_translated_chunk(existing_chunk, target_language)
-        translated_chunks.append(normalized_chunk)
-        if _normalize_translated_chunk(existing_by_id[chunk_id], target_language) != normalized_chunk:
-            synchronized = True
-    if len(existing_by_id) != len(translated_chunks) or invalidated_ids:
-        synchronized = True
-    existing_operation_state = load_operation_state(project_root)
-    existing_report = load_translation_report(project_root)
-    report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        warnings=(
-            ["Source chunk set changed since translation started. Translation records were synchronized."]
-            if synchronized
-            else list((existing_report or {}).get("warnings", []))
-        ),
-        token_usage=_restore_persisted_token_usage(existing_report, existing_operation_state),
-        budget_metadata=_restore_persisted_budget_metadata(existing_report, existing_operation_state),
-    )
-    operation_state = _refresh_operation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        existing_operation_state,
-        profile_id,
-        target_language,
-        _restore_persisted_token_usage(existing_report, existing_operation_state),
-    )
-    if (
-        synchronized
-        or existing_report is None
-        or existing_operation_state is None
-        or _normalize_report_payload(existing_report) != _normalize_report_payload(report)
-        or _normalize_operation_state_payload(existing_operation_state)
-        != _normalize_operation_state_payload(operation_state)
-    ):
-        _persist_translation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            operation_state=operation_state,
-        )
-    return source_chunks, translated_chunks, report
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
@@ -306,201 +246,93 @@ def start_or_continue_translation(
     cancel_requested=None,
     additional_translation_instructions: str | None = None,
 ) -> dict[str, object]:
-    """
-    @brief      Translate all remaining untranslated chunks for the active project.
-    @param[in]  project_root Active project root path.
-    @param[in]  manifest Active project manifest payload.
-    @param[in]  ai_profile_payload Enabled AI profile payload.
-    @param[in]  target_language Requested target language code.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  cancel_requested Optional cancellation callback.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @return     Final translation report payload.
-    @exception  ValueError When inputs are invalid or the model returns empty text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.6.0
-    """
-    project_root = Path(project_root)
-    profile_id = str(ai_profile_payload.get("id", "")).strip()
-    model_name = str(ai_profile_payload.get("model_name", "")).strip()
-    base_url = str(ai_profile_payload.get("base_url", "")).strip()
-    if not profile_id or not model_name or not base_url:
-        raise ValueError("AI translation requires a valid enabled AI profile.")
-    if target_language not in _TRANSLATION_LANGUAGE_LABELS:
-        raise ValueError("AI translation requires a valid target language.")
-    source_chunks, translated_chunks, report = ensure_translation_records(
-        project_root,
-        target_language,
-        profile_id,
-    )
-    existing_operation_state = load_operation_state(project_root) or {}
-    additional_translation_instructions = _resolve_additional_translation_instructions(
-        additional_translation_instructions,
-        existing_operation_state,
-    )
+    """Translate empty canonical chunks and checkpoint only complete chunks."""
+    resolved_project_root = Path(project_root)
+    _validate_translation_inputs(ai_profile_payload, target_language)
+    source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
+    if not source_chunks:
+        raise ValueError("Run text chunking before starting AI translation.")
+    source_chunks = _canonical_source_chunks(source_chunks)
+    existing_document = load_translation_document(resolved_project_root)
+    if existing_document is None:
+        instructions = _normalized_additional_translation_instructions(additional_translation_instructions)
+        document = _new_translation_document(source_chunks, target_language, instructions)
+    else:
+        document = existing_document
+        if str(document["target_language"]) != target_language:
+            raise _incompatible_document_error("The saved target language differs from the project.")
+        _synchronize_document_chunks(document, source_chunks, ())
+        if str(document["status"]) in _RESUMABLE_STATUSES:
+            instructions = str(document["additional_translation_instructions"])
+        else:
+            instructions = str(document["additional_translation_instructions"])
     prompt_template_service.validate_required_prompts(["text_translation_system", "text_translation_user"])
-    started_at = str(existing_operation_state.get("started_at") or _utc_now_iso())
-    log_path = _resolve_log_path(project_root, started_at)
-    token_usage = _restore_persisted_token_usage(report, existing_operation_state)
-    system_prompt = prompt_template_service.render_prompt(
-        "text_translation_system",
-        {"target_language": _language_label(target_language)},
-    )
+    system_prompt = prompt_template_service.render_prompt("text_translation_system", {})
     budget_metadata = _build_budget_metadata(
         ai_profile_payload,
         target_language,
         system_prompt,
-        additional_translation_instructions,
+        instructions,
     )
-    _write_running_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        started_at,
-        target_language,
-        profile_id,
-        log_path,
-        token_usage,
-        budget_metadata,
-        additional_translation_instructions,
-    )
+    document["budget_metadata"] = budget_metadata
+    document["additional_translation_instructions"] = instructions
+    document["status"] = TRANSLATION_STATUS_RUNNING
+    write_translation_document(resolved_project_root, document)
+    token_usage = token_usage_service.restore_token_usage(document["token_usage"])
+    log_path = _resolve_log_path(resolved_project_root)
     _emit_progress(
         progress_callback,
-        _translated_count(translated_chunks),
-        len(translated_chunks),
+        _translated_count(document["chunks"]),
+        len(document["chunks"]),
         "AI translation in progress...",
         token_usage,
     )
     try:
-        for chunk in translated_chunks:
+        for source_chunk, translated_chunk in zip(source_chunks, document["chunks"], strict=True):
             raise_if_cancelled(cancel_requested)
-            if str(chunk.get("translated_text", "")).strip():
+            if str(translated_chunk["translated_text"]).strip():
                 continue
             translated_text, token_usage = _translate_text_in_budgeted_segments(
-                project_root,
                 manifest,
                 ai_profile_payload,
-                str(chunk.get("source_text", "")),
+                str(source_chunk.get("text", "")),
                 target_language,
                 system_prompt,
-                int(chunk.get("sequence_index", 0)),
-                len(translated_chunks),
+                int(source_chunk.get("sequence_index", 0)),
+                len(source_chunks),
                 log_path,
                 token_usage,
                 budget_metadata,
-                additional_translation_instructions,
+                instructions,
                 progress_callback=progress_callback,
-                translated_chunk_count=_translated_count(translated_chunks),
+                translated_chunk_count=_translated_count(document["chunks"]),
                 cancel_requested=cancel_requested,
             )
-            if not translated_text.strip():
-                raise ValueError(f"AI translation returned an empty translated_text for {chunk.get('chunk_id', '')}.")
-            chunk["translated_text"] = translated_text
-            chunk["approved"] = False
-            chunk["translation_profile_id"] = profile_id
-            chunk["target_language"] = target_language
-            chunk["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
-            report = _rebuild_report(
-                translated_chunks,
-                target_language,
-                profile_id,
-                warnings=list(report.get("warnings", [])),
-                token_usage=token_usage,
-                budget_metadata=budget_metadata,
-                additional_translation_instructions=additional_translation_instructions,
-            )
-            _persist_translation_state(
-                project_root,
-                source_chunks,
-                translated_chunks,
-                report,
-                operation_state=_build_running_operation_state(
-                    project_root,
-                    translated_chunks,
-                    report,
-                    started_at,
-                    target_language,
-                    profile_id,
-                    log_path,
-                    token_usage,
-                    budget_metadata,
-                    additional_translation_instructions,
-                ),
-            )
+            translated_chunk["translated_text"] = translated_text
+            translated_chunk["approved"] = False
+            document["token_usage"] = token_usage
+            write_translation_document(resolved_project_root, document)
             _emit_progress(
                 progress_callback,
-                _translated_count(translated_chunks),
-                len(translated_chunks),
+                _translated_count(document["chunks"]),
+                len(document["chunks"]),
                 "AI translation in progress...",
                 token_usage,
             )
     except OperationCancelledError:
-        _persist_terminal_translation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            "cancelled",
-            started_at,
-            target_language,
-            profile_id,
-            log_path,
-            token_usage,
-            budget_metadata,
-            additional_translation_instructions,
-        )
+        document["status"] = TRANSLATION_STATUS_CANCELLED
+        document["token_usage"] = token_usage
+        write_translation_document(resolved_project_root, document)
         raise
     except Exception:
-        _persist_terminal_translation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            "failed",
-            started_at,
-            target_language,
-            profile_id,
-            log_path,
-            token_usage,
-            budget_metadata,
-            additional_translation_instructions,
-        )
+        document["status"] = TRANSLATION_STATUS_FAILED
+        document["token_usage"] = token_usage
+        write_translation_document(resolved_project_root, document)
         raise
-    completed_at = _utc_now_iso()
-    report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        warnings=list(report.get("warnings", [])),
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-    operation_state = _build_operation_state(
-        project_root,
-        report,
-        status=_operation_status_from_report(report),
-        started_at=started_at,
-        completed_at=completed_at if _operation_status_from_report(report) == "completed" else None,
-        profile_id=profile_id,
-        target_language=target_language,
-        log_path=log_path,
-        resume_checkpoint=None,
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-    _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
-    _sync_translation_manifest(project_root, operation_state, report)
-    _emit_progress(
-        progress_callback,
-        len(translated_chunks),
-        len(translated_chunks),
-        "AI translation completed.",
-        token_usage,
-    )
-    return report
+    document["status"] = _review_status(document["chunks"])
+    document["token_usage"] = token_usage
+    write_translation_document(resolved_project_root, document)
+    return build_translation_summary(source_chunks, document)
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
@@ -514,159 +346,66 @@ def retranslate_chunk(
     cancel_requested=None,
     additional_translation_instructions: str | None = None,
 ) -> dict[str, object]:
-    """
-    @brief      Re-translate one selected chunk and persist the new result.
-    @param[in]  project_root Active project root path.
-    @param[in]  manifest Active project manifest payload.
-    @param[in]  ai_profile_payload Enabled AI profile payload.
-    @param[in]  target_language Requested target language code.
-    @param[in]  chunk_id Selected chunk identifier.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  cancel_requested Optional cancellation callback.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @return     Updated translation report payload.
-    @exception  ValueError When the selected chunk is unknown or translation is empty.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.6.0
-    """
-    project_root = Path(project_root)
-    profile_id = str(ai_profile_payload.get("id", "")).strip()
-    source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
-    selected = next((item for item in translated_chunks if str(item.get("chunk_id", "")) == str(chunk_id)), None)
-    if selected is None:
-        raise ValueError(f"Unknown translation chunk id: {chunk_id}")
-    existing_operation_state = load_operation_state(project_root) or {}
-    additional_translation_instructions = _resolve_additional_translation_instructions(
-        additional_translation_instructions,
-        existing_operation_state,
-    )
+    """Re-translate one chunk without clearing its prior text or approval first."""
+    resolved_project_root = Path(project_root)
+    _validate_translation_inputs(ai_profile_payload, target_language)
+    source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
+    document = load_translation_document(resolved_project_root)
+    if document is None:
+        raise ValueError("Start AI translation before re-translating a chunk.")
+    if str(document["target_language"]) != target_language:
+        raise _incompatible_document_error("The saved target language differs from the project.")
+    source_by_id = {str(item.get("chunk_id", "")): item for item in source_chunks}
+    translated_by_id = {str(item["chunk_id"]): item for item in document["chunks"]}
+    if chunk_id not in source_by_id or chunk_id not in translated_by_id:
+        raise ValueError(f"Unknown translation chunk: {chunk_id}")
     prompt_template_service.validate_required_prompts(["text_translation_system", "text_translation_user"])
-    started_at = str(existing_operation_state.get("started_at") or _utc_now_iso())
-    log_path = _resolve_log_path(project_root, started_at)
-    token_usage = _restore_persisted_token_usage(report, existing_operation_state)
-    system_prompt = prompt_template_service.render_prompt(
-        "text_translation_system",
-        {"target_language": _language_label(target_language)},
-    )
+    system_prompt = prompt_template_service.render_prompt("text_translation_system", {})
+    one_off_instructions = _normalized_additional_translation_instructions(additional_translation_instructions)
     budget_metadata = _build_budget_metadata(
         ai_profile_payload,
         target_language,
         system_prompt,
-        additional_translation_instructions,
+        one_off_instructions,
     )
-    selected["translated_text"] = ""
-    selected["approved"] = False
-    selected["translation_profile_id"] = profile_id
-    selected["target_language"] = target_language
-    selected["status"] = TRANSLATED_CHUNK_STATUS_NOT_STARTED
-    _write_running_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        started_at,
-        target_language,
-        profile_id,
-        log_path,
-        token_usage,
-        budget_metadata,
-        additional_translation_instructions,
-    )
+    token_usage = token_usage_service.restore_token_usage(document["token_usage"])
+    log_path = _resolve_log_path(resolved_project_root)
+    selected_source = source_by_id[chunk_id]
     try:
         translated_text, token_usage = _translate_text_in_budgeted_segments(
-            project_root,
             manifest,
             ai_profile_payload,
-            str(selected.get("source_text", "")),
+            str(selected_source.get("text", "")),
             target_language,
             system_prompt,
-            int(selected.get("sequence_index", 0)),
-            len(translated_chunks),
+            int(selected_source.get("sequence_index", 0)),
+            len(source_chunks),
             log_path,
             token_usage,
             budget_metadata,
-            additional_translation_instructions,
+            one_off_instructions,
             progress_callback=progress_callback,
-            translated_chunk_count=max(0, _translated_count(translated_chunks)),
+            translated_chunk_count=_translated_count(document["chunks"]),
             cancel_requested=cancel_requested,
         )
-        if not translated_text.strip():
-            raise ValueError(f"AI translation returned an empty translated_text for {selected.get('chunk_id', '')}.")
-        selected["translated_text"] = translated_text
-        selected["approved"] = False
-        selected["translation_profile_id"] = profile_id
-        selected["target_language"] = target_language
-        selected["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
-        report = _rebuild_report(
-            translated_chunks,
-            target_language,
-            profile_id,
-            warnings=list(report.get("warnings", [])),
-            token_usage=token_usage,
-            budget_metadata=budget_metadata,
-            additional_translation_instructions=additional_translation_instructions,
-        )
-        operation_state = _build_operation_state(
-            project_root,
-            report,
-            status=_operation_status_from_report(report),
-            started_at=started_at,
-            completed_at=None,
-            profile_id=profile_id,
-            target_language=target_language,
-            log_path=log_path,
-            resume_checkpoint=None,
-            token_usage=token_usage,
-            budget_metadata=budget_metadata,
-            additional_translation_instructions=additional_translation_instructions,
-        )
-        _persist_translation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            operation_state=operation_state,
-        )
     except OperationCancelledError:
-        _persist_terminal_translation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            "cancelled",
-            started_at,
-            target_language,
-            profile_id,
-            log_path,
-            token_usage,
-            budget_metadata,
-            additional_translation_instructions,
-        )
+        document["status"] = TRANSLATION_STATUS_CANCELLED
+        document["token_usage"] = token_usage
+        write_translation_document(resolved_project_root, document)
         raise
     except Exception:
-        _persist_terminal_translation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            "failed",
-            started_at,
-            target_language,
-            profile_id,
-            log_path,
-            token_usage,
-            budget_metadata,
-            additional_translation_instructions,
-        )
+        document["status"] = TRANSLATION_STATUS_FAILED
+        document["token_usage"] = token_usage
+        write_translation_document(resolved_project_root, document)
         raise
-    _emit_progress(
-        progress_callback,
-        1,
-        1,
-        "Selected chunk re-translation completed.",
-        token_usage,
-    )
-    return report
+    selected = translated_by_id[chunk_id]
+    selected["translated_text"] = translated_text
+    selected["approved"] = False
+    document["budget_metadata"] = budget_metadata
+    document["token_usage"] = token_usage
+    document["status"] = _review_status(document["chunks"])
+    write_translation_document(resolved_project_root, document)
+    return build_translation_summary(source_chunks, document)
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
@@ -674,216 +413,46 @@ def update_translated_text(
     project_root: str | Path,
     chunk_id: str,
     translated_text: str,
-    target_language: str,
-    profile_id: str | None,
 ) -> dict[str, object]:
-    """
-    @brief      Persist one manual edit to the translated text of a chunk.
-    @param[in]  project_root Active project root path.
-    @param[in]  chunk_id Selected chunk identifier.
-    @param[in]  translated_text Edited translated text.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @return     Updated translation report payload.
-    @exception  ValueError When the selected chunk is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.1
-    """
-    project_root = Path(project_root)
-    source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
-    selected = next((item for item in translated_chunks if str(item.get("chunk_id", "")) == str(chunk_id)), None)
-    if selected is None:
-        raise ValueError(f"Unknown translation chunk id: {chunk_id}")
-    previous_text = str(selected.get("translated_text", ""))
-    selected["translated_text"] = translated_text
-    selected["translation_profile_id"] = profile_id
-    selected["target_language"] = target_language
-    if translated_text.strip():
-        if translated_text != previous_text:
-            selected["approved"] = False
-        selected["status"] = (
-            TRANSLATED_CHUNK_STATUS_APPROVED
-            if bool(selected.get("approved", False))
-            else TRANSLATED_CHUNK_STATUS_TRANSLATED
-        )
-    else:
+    """Persist one manual edit and invalidate approval when text changed."""
+    document = _required_translation_document(project_root)
+    selected = _find_document_chunk(document, chunk_id)
+    if str(selected["translated_text"]) != translated_text:
+        selected["translated_text"] = translated_text
         selected["approved"] = False
-        selected["status"] = TRANSLATED_CHUNK_STATUS_NOT_STARTED
-    operation_state_payload = load_operation_state(project_root)
-    report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        warnings=list(report.get("warnings", [])),
-        token_usage=_restore_persisted_token_usage(
-            report,
-            operation_state_payload,
-        ),
-        budget_metadata=_restore_persisted_budget_metadata(report, operation_state_payload),
-        additional_translation_instructions=_restore_persisted_additional_translation_instructions(
-            report,
-            operation_state_payload,
-        ),
-    )
-    operation_state = _refresh_operation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state_payload,
-        profile_id,
-        target_language,
-        _restore_persisted_token_usage(report, operation_state_payload),
-    )
-    _persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state=operation_state,
-    )
-    _sync_translation_manifest(project_root, operation_state, report)
-    return report
+    document["status"] = _review_status(document["chunks"])
+    write_translation_document(project_root, document)
+    return load_translation_summary(project_root)
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
-def approve_chunk(
-    project_root: str | Path,
-    chunk_id: str,
-    target_language: str,
-    profile_id: str | None,
-) -> dict[str, object]:
-    """
-    @brief      Approve one translated chunk for manual review completion.
-    @param[in]  project_root Active project root path.
-    @param[in]  chunk_id Selected chunk identifier.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @return     Updated translation report payload.
-    @exception  ValueError When the chunk is unknown or still untranslated.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.1
-    """
-    project_root = Path(project_root)
-    source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
-    selected = next((item for item in translated_chunks if str(item.get("chunk_id", "")) == str(chunk_id)), None)
-    if selected is None:
-        raise ValueError(f"Unknown translation chunk id: {chunk_id}")
-    if not str(selected.get("translated_text", "")).strip():
+def approve_chunk(project_root: str | Path, chunk_id: str) -> dict[str, object]:
+    """Approve one non-empty translated chunk in one atomic write."""
+    document = _required_translation_document(project_root)
+    selected = _find_document_chunk(document, chunk_id)
+    if not str(selected["translated_text"]).strip():
         raise ValueError("Translate the selected chunk before approving it.")
     selected["approved"] = True
-    selected["status"] = TRANSLATED_CHUNK_STATUS_APPROVED
-    operation_state_payload = load_operation_state(project_root)
-    report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        warnings=list(report.get("warnings", [])),
-        token_usage=_restore_persisted_token_usage(
-            report,
-            operation_state_payload,
-        ),
-        budget_metadata=_restore_persisted_budget_metadata(report, operation_state_payload),
-        additional_translation_instructions=_restore_persisted_additional_translation_instructions(
-            report,
-            operation_state_payload,
-        ),
-    )
-    operation_state = _refresh_operation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state_payload,
-        profile_id,
-        target_language,
-        _restore_persisted_token_usage(report, operation_state_payload),
-    )
-    _persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state=operation_state,
-    )
-    _sync_translation_manifest(project_root, operation_state, report)
-    return report
+    document["status"] = _review_status(document["chunks"])
+    write_translation_document(project_root, document)
+    return load_translation_summary(project_root)
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
-def approve_all(
-    project_root: str | Path,
-    target_language: str,
-    profile_id: str | None,
-) -> dict[str, object]:
-    """
-    @brief      Approve every translated chunk that still needs review approval.
-    @param[in]  project_root Active project root path.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @return     Updated translation report payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.1
-    """
-    project_root = Path(project_root)
-    source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
-    for chunk in translated_chunks:
-        if not str(chunk.get("translated_text", "")).strip():
-            continue
-        chunk["approved"] = True
-        chunk["status"] = TRANSLATED_CHUNK_STATUS_APPROVED
-    operation_state_payload = load_operation_state(project_root)
-    report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        warnings=list(report.get("warnings", [])),
-        token_usage=_restore_persisted_token_usage(
-            report,
-            operation_state_payload,
-        ),
-        budget_metadata=_restore_persisted_budget_metadata(report, operation_state_payload),
-        additional_translation_instructions=_restore_persisted_additional_translation_instructions(
-            report,
-            operation_state_payload,
-        ),
-    )
-    operation_state = _refresh_operation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state_payload,
-        profile_id,
-        target_language,
-        _restore_persisted_token_usage(report, operation_state_payload),
-    )
-    _persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state=operation_state,
-    )
-    _sync_translation_manifest(project_root, operation_state, report)
-    return report
+def approve_all(project_root: str | Path) -> dict[str, object]:
+    """Approve every non-empty translated chunk in one atomic write."""
+    document = _required_translation_document(project_root)
+    for chunk in document["chunks"]:
+        if str(chunk["translated_text"]).strip():
+            chunk["approved"] = True
+    document["status"] = _review_status(document["chunks"])
+    write_translation_document(project_root, document)
+    return load_translation_summary(project_root)
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def reset_translation(project_root: str | Path) -> None:
-    """
-    @brief      Remove translation and downstream persisted runtime artifacts while preserving narrator profiles.
-    @param[in]  project_root Active project root path.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
-    """
+    """Delete translation and downstream runtime artifacts while preserving narrator profiles."""
     reset_operation_data(
         project_root,
         "translation",
@@ -892,614 +461,142 @@ def reset_translation(project_root: str | Path) -> None:
     )
 
 
-# HELPER FUNCTIONS
+# LOCAL HELPERS
 
 
-def _build_default_translated_chunk(
-    source_chunk: dict[str, object], target_language: str, profile_id: str | None
-) -> dict[str, object]:
-    """
-    @brief      Build the default untranslated record for one source chunk.
-    @param[in]  source_chunk Source chunk payload.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @return     Default translated-chunk payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
-    """
-    return {
-        "chunk_id": str(source_chunk.get("chunk_id", "")),
-        "sequence_index": int(source_chunk.get("sequence_index", 0)),
-        "source_text": str(source_chunk.get("text", "")),
-        "translated_text": "",
-        "approved": False,
-        "translation_profile_id": profile_id,
-        "target_language": target_language,
-        "status": TRANSLATED_CHUNK_STATUS_NOT_STARTED,
-    }
+def _validate_translation_document(payload: object) -> None:
+    """Validate exact root and chunk fields without migrating legacy payloads."""
+    if not isinstance(payload, dict):
+        raise _incompatible_document_error("The root must be an object.")
+    if set(payload) != _DOCUMENT_FIELDS:
+        raise _incompatible_document_error("The root fields do not match the current contract.")
+    if not isinstance(payload["target_language"], str) or not str(payload["target_language"]).strip():
+        raise _incompatible_document_error("target_language must be a non-empty string.")
+    if payload["status"] not in _PERSISTED_STATUSES:
+        raise _incompatible_document_error("status is not supported.")
+    if not isinstance(payload["token_usage"], dict):
+        raise _incompatible_document_error("token_usage must be an object.")
+    if not isinstance(payload["budget_metadata"], dict):
+        raise _incompatible_document_error("budget_metadata must be an object.")
+    if not isinstance(payload["additional_translation_instructions"], str):
+        raise _incompatible_document_error("additional_translation_instructions must be a string.")
+    chunks = payload["chunks"]
+    if not isinstance(chunks, list):
+        raise _incompatible_document_error("chunks must be an array.")
+    chunk_ids: set[str] = set()
+    for item in chunks:
+        if not isinstance(item, dict) or set(item) != _CHUNK_FIELDS:
+            raise _incompatible_document_error("Each chunk must contain only chunk_id, translated_text, approved.")
+        chunk_id = item["chunk_id"]
+        if not isinstance(chunk_id, str) or not chunk_id.strip() or chunk_id in chunk_ids:
+            raise _incompatible_document_error("Each chunk_id must be a unique non-empty string.")
+        if not isinstance(item["translated_text"], str) or type(item["approved"]) is not bool:
+            raise _incompatible_document_error("Each chunk requires string translated_text and boolean approved.")
+        if item["approved"] and not item["translated_text"].strip():
+            raise _incompatible_document_error("An empty translation cannot be approved.")
+        chunk_ids.add(chunk_id)
 
 
-def _normalize_translated_chunk(payload: dict[str, object], target_language: str) -> dict[str, object]:
-    """
-    @brief      Normalize one persisted translated-chunk payload.
-    @param[in]  payload Raw translated-chunk payload.
-    @param[in]  target_language Active target language fallback code.
-    @return     Normalized translated-chunk payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
-    """
-    return {
-        "chunk_id": str(payload.get("chunk_id", "")),
-        "sequence_index": int(payload.get("sequence_index", 0)),
-        "source_text": str(payload.get("source_text", "")),
-        "translated_text": str(payload.get("translated_text", "")),
-        "approved": bool(payload.get("approved", False)),
-        "translation_profile_id": None
-        if payload.get("translation_profile_id") in (None, "")
-        else str(payload.get("translation_profile_id")),
-        "target_language": str(payload.get("target_language", target_language) or target_language),
-        "status": str(payload.get("status", TRANSLATED_CHUNK_STATUS_NOT_STARTED)),
-    }
-
-
-def _rebuild_report(
-    translated_chunks: list[dict[str, object]],
-    target_language: str,
-    profile_id: str | None,
-    warnings: list[str] | None = None,
-    updated_at: str | None = None,
-    token_usage: TokenUsagePayload | None = None,
-    budget_metadata: BudgetMetadataPayload | None = None,
-    additional_translation_instructions: str | None = None,
-) -> dict[str, object]:
-    """
-    @brief      Recompute the translation report from the current chunk records.
-    @param[in]  translated_chunks Current translated chunk payloads.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @param[in]  warnings Optional warning list to persist in the report.
-    @param[in]  updated_at Ignored legacy report timestamp override.
-    @param[in]  budget_metadata Optional context-budget metadata.
-    @param[in]  additional_translation_instructions Optional operator translation rules.
-    @return     Rebuilt translation report payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.5.0
-    """
-    translated_count = _translated_count(translated_chunks)
-    approved_count = sum(1 for chunk in translated_chunks if bool(chunk.get("approved", False)))
-    total_count = len(translated_chunks)
-    if translated_count <= 0:
-        stage_status = TRANSLATION_STAGE_NOT_STARTED
-    elif total_count > 0 and translated_count >= total_count and approved_count >= total_count:
-        stage_status = TRANSLATION_STAGE_APPROVED
-    elif total_count > 0 and translated_count >= total_count:
-        stage_status = TRANSLATION_STAGE_TRANSLATED
-    else:
-        stage_status = TRANSLATION_STAGE_IN_PROGRESS
-    report = {
-        "target_language": target_language,
-        "translation_profile_id_last_used": profile_id,
-        "translation_stage_status": stage_status,
-        "translated_chunk_count": translated_count,
-        "approved_chunk_count": approved_count,
-        "total_chunk_count": total_count,
-        "warnings": list(warnings or []),
-        "token_usage": token_usage_service.coerce_token_usage(token_usage),
-    }
-    if budget_metadata is not None:
-        report["budget_metadata"] = dict(budget_metadata)
-    if additional_translation_instructions is not None:
-        normalized_instructions = _normalized_additional_translation_instructions(additional_translation_instructions)
-        report["additional_translation_instructions"] = normalized_instructions
-        report["additional_translation_instructions_fingerprint"] = _compute_prompt_fingerprint(normalized_instructions)
-    return report
-
-
-def _operation_status_from_report(report: dict[str, object]) -> str:
-    """
-    @brief      Resolve persisted operation status from translation review state.
-    @param[in]  report Current translation report payload.
-    @return     Operation status token for translation runtime metadata.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    stage_status = str(report.get("translation_stage_status", TRANSLATION_STAGE_NOT_STARTED))
-    if stage_status == TRANSLATION_STAGE_APPROVED:
-        return "completed"
-    if stage_status == TRANSLATION_STAGE_TRANSLATED:
-        return TRANSLATION_STAGE_TRANSLATED
-    return stage_status
-
-
-def _sync_translation_manifest(
-    project_root: Path,
-    operation_state: dict[str, object],
-    report: dict[str, object],
-) -> None:
-    """
-    @brief      Persist the backend translation operation status into `project.json`.
-    @param[in]  project_root Active project root path.
-    @param[in]  operation_state Latest persisted translation operation state.
-    @param[in]  report Latest translation report payload.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.1.0
-    """
-    stage = (
-        "character_discovery_ready"
-        if str(report.get("translation_stage_status", "")).strip() == TRANSLATION_STAGE_APPROVED
-        else "translation_ready"
+def _incompatible_document_error(reason: str) -> TranslationDocumentError:
+    """Build the operator-facing strict-contract error."""
+    return TranslationDocumentError(
+        f"Translation data is incompatible: {reason} Use Reset Translation before continuing."
     )
-    project_workspace_service.sync_manifest_operation_summary(project_root, "translation", operation_state, stage)
 
 
-def _refresh_operation_state(
-    project_root: Path,
+def _new_translation_document(
     source_chunks: list[dict[str, object]],
-    translated_chunks: list[dict[str, object]],
-    report: dict[str, object],
-    existing_operation_state: dict[str, object] | None,
-    profile_id: str | None,
     target_language: str,
-    token_usage: TokenUsagePayload,
-) -> dict[str, object]:
-    """
-    @brief      Refresh translation operation metadata from the current report.
-    @param[in]  project_root Active project root path.
-    @param[in]  source_chunks Source chunk payloads.
-    @param[in]  translated_chunks Current translated chunk payloads.
-    @param[in]  report Current translation report payload.
-    @param[in]  existing_operation_state Previous operation state, if any.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @param[in]  target_language Active target language code.
-    @param[in]  token_usage Current cumulative token usage payload.
-    @return     Refreshed operation state payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.5.0
-    """
-    state = dict(existing_operation_state or {})
-    metadata = state.get("metadata", {})
-    metadata = dict(metadata) if isinstance(metadata, dict) else {}
-    log_relative_path = metadata.get("log_relative_path")
-    status = _operation_status_from_report(report)
-    mode = state.get("mode")
-    if mode in (None, "") and (profile_id not in (None, "") or int(report.get("translated_chunk_count", 0)) > 0):
-        mode = "ai_assisted"
-    budget_metadata = _restore_persisted_budget_metadata(report, existing_operation_state)
-    refreshed_metadata = {
-        "target_language": target_language,
-        "translation_profile_id": profile_id,
-        "translated_chunk_count": report["translated_chunk_count"],
-        "approved_chunk_count": report["approved_chunk_count"],
-        "total_chunk_count": report["total_chunk_count"],
-        "warnings": list(report.get("warnings", [])),
-        "token_usage": token_usage_service.coerce_token_usage(token_usage),
-    }
-    if budget_metadata:
-        refreshed_metadata["budget_metadata"] = budget_metadata
-    if log_relative_path not in (None, ""):
-        refreshed_metadata["log_relative_path"] = str(log_relative_path)
-    resume_checkpoint = None
-    if str(report.get("translation_stage_status", "")) == TRANSLATION_STAGE_IN_PROGRESS:
-        resume_checkpoint = {
-            "next_untranslated_chunk_id": _next_untranslated_chunk_id(translated_chunks),
-            "translated_chunk_count": report["translated_chunk_count"],
-            "total_chunk_count": report["total_chunk_count"],
-        }
-        if budget_metadata:
-            resume_checkpoint["budget_metadata"] = budget_metadata
-    additional_translation_instructions = _restore_persisted_additional_translation_instructions(
-        report,
-        existing_operation_state,
-    )
-    additional_translation_fingerprint = _compute_prompt_fingerprint(additional_translation_instructions)
-    refreshed_metadata["additional_translation_instructions"] = additional_translation_instructions
-    refreshed_metadata["additional_translation_instructions_fingerprint"] = additional_translation_fingerprint
-    if resume_checkpoint is not None:
-        resume_checkpoint["additional_translation_instructions_fingerprint"] = additional_translation_fingerprint
+    instructions: str,
+) -> TranslationDocumentPayload:
+    """Build a new strict document in canonical source order."""
     return {
-        "status": status,
-        "progress_current": report["translated_chunk_count"],
-        "progress_total": report["total_chunk_count"],
-        "mode": mode,
-        "warning_count": len(list(report.get("warnings", []))),
-        "metadata": refreshed_metadata,
-        "resume_checkpoint": resume_checkpoint,
-    }
-
-
-def _translated_count(translated_chunks: list[dict[str, object]]) -> int:
-    """
-    @brief      Count translated chunks with non-empty translated text.
-    @param[in]  translated_chunks Current translated chunk payloads.
-    @return     Number of translated chunks.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    return sum(1 for chunk in translated_chunks if str(chunk.get("translated_text", "")).strip())
-
-
-def _load_json_payload(path: Path, default_value: object, description: str) -> object:
-    """
-    @brief      Load optional JSON while treating malformed content as missing data.
-    @param[in]  path JSON artifact path.
-    @param[in]  default_value Value returned when loading fails.
-    @param[in]  description Human-readable artifact description for logging.
-    @return     Loaded JSON payload or the provided default value.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, TypeError, json.JSONDecodeError) as error:
-        _AI_TRANSLATION_LOGGER.warning("Ignored unreadable %s file: %s", description, error)
-        return default_value
-
-
-def _normalize_report_payload(payload: dict[str, object] | None) -> dict[str, object] | None:
-    """
-    @brief      Normalize one report payload for stable write-skip comparisons.
-    @param[in]  payload Translation report payload or `None`.
-    @return     Normalized report payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    return None if payload is None else json.loads(json.dumps(payload, sort_keys=True, ensure_ascii=False))
-
-
-def _normalize_operation_state_payload(payload: dict[str, object] | None) -> dict[str, object] | None:
-    """
-    @brief      Normalize one operation-state payload for stable write-skip comparisons.
-    @param[in]  payload Translation operation-state payload or `None`.
-    @return     Normalized operation-state payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    return None if payload is None else json.loads(json.dumps(payload, sort_keys=True, ensure_ascii=False))
-
-
-def _persist_translation_state(
-    project_root: Path,
-    source_chunks: list[dict[str, object]],
-    translated_chunks: list[dict[str, object]],
-    report: dict[str, object],
-    operation_state: dict[str, object] | None,
-) -> None:
-    """
-    @brief      Persist the translation input snapshot, outputs, report, and state.
-    @param[in]  project_root Active project root path.
-    @param[in]  source_chunks Source chunk payloads.
-    @param[in]  translated_chunks Persisted translated chunk payloads.
-    @param[in]  report Current translation report payload.
-    @param[in]  operation_state Current operation state payload or `None`.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
-    """
-    _ = source_chunks
-    translated_path = build_operation_output_path(
-        project_root,
-        "translation",
-        config.TRANSLATED_CHUNKS_FILE_NAME,
-    )
-    write_json_atomic(translated_path, translated_chunks)
-    report_path = build_operation_output_path(
-        project_root,
-        "translation",
-        config.TRANSLATION_REPORT_FILE_NAME,
-    )
-    write_json_atomic(report_path, report)
-    if operation_state is not None:
-        state_path = build_operation_output_path(
-            project_root,
-            "translation",
-            config.TRANSLATION_STATE_FILE_NAME,
-        )
-        write_json_atomic(state_path, operation_state)
-
-
-def _write_running_state(
-    project_root: Path,
-    source_chunks: list[dict[str, object]],
-    translated_chunks: list[dict[str, object]],
-    started_at: str,
-    target_language: str,
-    profile_id: str,
-    log_path: Path,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    additional_translation_instructions: str,
-) -> None:
-    """
-    @brief      Persist the translation operation in the running state.
-    @param[in]  project_root Active project root path.
-    @param[in]  source_chunks Source chunk payloads.
-    @param[in]  translated_chunks Current translated chunk payloads.
-    @param[in]  started_at Operation start timestamp.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.5.0
-    """
-    report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-    operation_state = _build_running_operation_state(
-        project_root,
-        translated_chunks,
-        report,
-        started_at,
-        target_language,
-        profile_id,
-        log_path,
-        token_usage,
-        budget_metadata,
-        additional_translation_instructions,
-    )
-    _persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state,
-    )
-
-
-def _persist_terminal_translation_state(
-    project_root: Path,
-    source_chunks: list[dict[str, object]],
-    translated_chunks: list[dict[str, object]],
-    report: dict[str, object],
-    status: str,
-    started_at: str,
-    target_language: str,
-    profile_id: str,
-    log_path: Path,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    additional_translation_instructions: str,
-) -> None:
-    """
-    @brief      Persist a terminal translation state after cancellation or failure.
-    @param[in]  project_root Active project root path.
-    @param[in]  source_chunks Source chunk payloads.
-    @param[in]  translated_chunks Current translated chunk payloads.
-    @param[in]  report Previous translation report payload.
-    @param[in]  status Terminal operation status token.
-    @param[in]  started_at Operation start timestamp.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  token_usage Current cumulative token usage payload.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    terminal_report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        warnings=list(report.get("warnings", [])),
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-    operation_state = _build_operation_state(
-        project_root,
-        terminal_report,
-        status=status,
-        started_at=started_at,
-        completed_at=_utc_now_iso(),
-        profile_id=profile_id,
-        target_language=target_language,
-        log_path=log_path,
-        token_usage=token_usage,
-        resume_checkpoint={
-            "next_untranslated_chunk_id": _next_untranslated_chunk_id(translated_chunks),
-            "translated_chunk_count": terminal_report["translated_chunk_count"],
-            "total_chunk_count": terminal_report["total_chunk_count"],
-            "budget_metadata": dict(budget_metadata),
-            "additional_translation_instructions_fingerprint": _compute_prompt_fingerprint(
-                additional_translation_instructions
-            ),
-        },
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-    _persist_translation_state(project_root, source_chunks, translated_chunks, terminal_report, operation_state)
-
-
-def _build_running_operation_state(
-    project_root: Path,
-    translated_chunks: list[dict[str, object]],
-    report: dict[str, object],
-    started_at: str,
-    target_language: str,
-    profile_id: str,
-    log_path: Path,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    additional_translation_instructions: str,
-) -> dict[str, object]:
-    """
-    @brief      Build the persisted running translation operation state.
-    @param[in]  project_root Active project root path.
-    @param[in]  translated_chunks Current translated chunk payloads.
-    @param[in]  report Current translation report payload.
-    @param[in]  started_at Operation start timestamp.
-    @param[in]  target_language Active target language code.
-    @param[in]  profile_id Active translation profile identifier.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  token_usage Current cumulative token usage payload.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @return     Persisted running operation state payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    return _build_operation_state(
-        project_root,
-        report,
-        status="running",
-        started_at=started_at,
-        completed_at=None,
-        profile_id=profile_id,
-        target_language=target_language,
-        log_path=log_path,
-        token_usage=token_usage,
-        resume_checkpoint={
-            "next_untranslated_chunk_id": _next_untranslated_chunk_id(translated_chunks),
-            "translated_chunk_count": report["translated_chunk_count"],
-            "total_chunk_count": report["total_chunk_count"],
-            "budget_metadata": dict(budget_metadata),
-            "additional_translation_instructions_fingerprint": _compute_prompt_fingerprint(
-                additional_translation_instructions
-            ),
-        },
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-
-
-def _build_operation_state(
-    project_root: Path,
-    report: dict[str, object],
-    status: str,
-    started_at: str,
-    completed_at: str | None,
-    profile_id: str | None,
-    target_language: str,
-    log_path: Path,
-    token_usage: TokenUsagePayload,
-    resume_checkpoint: dict[str, object] | None,
-    budget_metadata: BudgetMetadataPayload | None = None,
-    additional_translation_instructions: str = "",
-) -> dict[str, object]:
-    """
-    @brief      Build the persisted translation operation state payload.
-    @param[in]  project_root Active project root path.
-    @param[in]  report Current translation report payload.
-    @param[in]  status Persisted operation status token.
-    @param[in]  started_at Operation start timestamp.
-    @param[in]  completed_at Operation completion timestamp or `None`.
-    @param[in]  profile_id Active translation profile identifier or `None`.
-    @param[in]  target_language Active target language code.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  resume_checkpoint Resume checkpoint payload or `None`.
-    @param[in]  budget_metadata Optional context-budget metadata.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @return     Persisted operation state payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.7.0
-    """
-    metadata = {
         "target_language": target_language,
-        "translation_profile_id": profile_id,
-        "translated_chunk_count": report["translated_chunk_count"],
-        "approved_chunk_count": report["approved_chunk_count"],
-        "total_chunk_count": report["total_chunk_count"],
-        "warnings": list(report.get("warnings", [])),
-        "log_relative_path": relative_to_project(project_root, log_path),
-        "token_usage": token_usage_service.coerce_token_usage(token_usage),
-        "additional_translation_instructions": _normalized_additional_translation_instructions(
-            additional_translation_instructions
-        ),
-        "additional_translation_instructions_fingerprint": _compute_prompt_fingerprint(
-            _normalized_additional_translation_instructions(additional_translation_instructions)
-        ),
-    }
-    if budget_metadata is not None:
-        metadata["budget_metadata"] = dict(budget_metadata)
-    return {
-        "status": str(status),
-        "progress_current": int(report["translated_chunk_count"]),
-        "progress_total": int(report["total_chunk_count"]),
-        "mode": "ai_assisted",
-        "warning_count": len(list(report.get("warnings", []))),
-        "metadata": metadata,
-        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
+        "status": TRANSLATION_STATUS_IN_PROGRESS,
+        "token_usage": token_usage_service.empty_token_usage(),
+        "budget_metadata": {},
+        "additional_translation_instructions": instructions,
+        "chunks": [
+            {
+                "chunk_id": str(item.get("chunk_id", "")),
+                "translated_text": "",
+                "approved": False,
+            }
+            for item in _canonical_source_chunks(source_chunks)
+        ],
     }
 
 
-def _next_untranslated_chunk_id(translated_chunks: list[dict[str, object]]) -> str | None:
-    """
-    @brief      Return the next untranslated chunk id for resume state.
-    @param[in]  translated_chunks Current translated chunk payloads.
-    @return     Next untranslated chunk id or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    for chunk in translated_chunks:
-        if not str(chunk.get("translated_text", "")).strip():
-            return str(chunk.get("chunk_id", ""))
-    return None
+def _synchronize_document_chunks(
+    document: TranslationDocumentPayload,
+    source_chunks: list[dict[str, object]],
+    invalidated_chunk_ids: list[str] | tuple[str, ...] | set[str],
+) -> bool:
+    """Align document chunks to canonical IDs while preserving unaffected records."""
+    invalidated_ids = {str(value).strip() for value in invalidated_chunk_ids if str(value).strip()}
+    existing_by_id = {str(item["chunk_id"]): item for item in document["chunks"]}
+    synchronized_chunks: list[dict[str, object]] = []
+    for source_chunk in _canonical_source_chunks(source_chunks):
+        chunk_id = str(source_chunk.get("chunk_id", "")).strip()
+        existing = existing_by_id.get(chunk_id)
+        if existing is None or chunk_id in invalidated_ids:
+            synchronized_chunks.append({"chunk_id": chunk_id, "translated_text": "", "approved": False})
+        else:
+            synchronized_chunks.append(dict(existing))
+    changed = synchronized_chunks != document["chunks"]
+    if changed:
+        document["chunks"] = synchronized_chunks
+    return changed
 
 
-def _resolve_log_path(project_root: Path, started_at: str) -> Path:
-    """
-    @brief      Resolve or create the AI transaction log path for translation.
-    @param[in]  project_root Active project root path.
-    @param[in]  started_at Operation start timestamp.
-    @return     Operation-local AI transaction log path.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.1
-    """
-    existing_state = load_operation_state(project_root) or {}
-    metadata = existing_state.get("metadata", {})
-    if isinstance(metadata, dict):
-        relative_path = str(metadata.get("log_relative_path", "")).strip()
-        if relative_path:
-            resolved_path = project_root / relative_path
-            resolved_path.parent.mkdir(parents=True, exist_ok=True)
-            if not resolved_path.exists():
-                resolved_path.write_text("", encoding="utf-8")
-            return resolved_path
-    timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
+def _canonical_source_chunks(source_chunks: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Return canonical chunks ordered by sequence index."""
+    return sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
+
+
+def _review_status(chunks: object) -> str:
+    """Derive the persisted review status after a durable non-operation action."""
+    chunk_items = list(chunks) if isinstance(chunks, list) else []
+    if chunk_items and all(str(item["translated_text"]).strip() for item in chunk_items):
+        if all(bool(item["approved"]) for item in chunk_items):
+            return TRANSLATION_STATUS_COMPLETED
+        return TRANSLATION_STATUS_REVIEW_PENDING
+    return TRANSLATION_STATUS_IN_PROGRESS
+
+
+def _required_translation_document(project_root: str | Path) -> TranslationDocumentPayload:
+    """Load the document or reject review actions before translation exists."""
+    document = load_translation_document(project_root)
+    if document is None:
+        raise ValueError("Start AI translation before reviewing translated chunks.")
+    return document
+
+
+def _find_document_chunk(document: TranslationDocumentPayload, chunk_id: str) -> dict[str, object]:
+    """Return one mutable chunk record by identifier."""
+    for item in document["chunks"]:
+        if str(item["chunk_id"]) == chunk_id:
+            return item
+    raise ValueError(f"Unknown translation chunk: {chunk_id}")
+
+
+def _validate_translation_inputs(ai_profile_payload: dict[str, object], target_language: str) -> None:
+    """Validate current profile and target language before an AI request."""
+    required_profile_fields = ("id", "model_name", "base_url")
+    if any(not str(ai_profile_payload.get(field, "")).strip() for field in required_profile_fields):
+        raise ValueError("AI translation requires a valid enabled AI profile.")
+    if target_language not in _TRANSLATION_LANGUAGE_LABELS:
+        raise ValueError("AI translation requires a valid target language.")
+
+
+def _translated_count(chunks: object) -> int:
+    """Count non-empty translated chunks."""
+    return sum(bool(str(item["translated_text"]).strip()) for item in list(chunks))
+
+
+def _resolve_log_path(project_root: Path) -> Path:
+    """Create an operation-local AI transaction log without persisting its path."""
+    timestamp_token = _utc_now_iso().replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     log_path = build_operation_output_path(
         project_root,
         "translation",
@@ -1510,96 +607,7 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     return log_path
 
 
-def _translation_source_snapshot_base_name(project_root: Path) -> str:
-    """
-    @brief      Execute the translation source snapshot base name helper.
-    @param[in]  project_root Active project root folder.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    try:
-        manifest = project_workspace_service.load_manifest(project_root)
-    except Exception:
-        manifest = None
-    if isinstance(manifest, dict):
-        source_document = manifest.get("source_document", {})
-        if isinstance(source_document, dict):
-            original_name = str(source_document.get("original_name", "")).strip()
-            if original_name:
-                return Path(original_name).stem
-    return Path(config.CHUNK_ARTIFACT_FILE_NAME).stem
-
-
-def _restore_persisted_token_usage(
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
-) -> TokenUsagePayload:
-    """
-    @brief      Restore the persisted token usage.
-    @param[in]  report Value for `report`.
-    @param[in]  operation_state Value for `operation_state`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    metadata = {}
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-    return token_usage_service.restore_token_usage(
-        None if not isinstance(report, dict) else report.get("token_usage"),
-        metadata.get("token_usage") if isinstance(metadata, dict) else None,
-    )
-
-
-def _restore_persisted_budget_metadata(
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
-) -> BudgetMetadataPayload | None:
-    """
-    @brief      Restore persisted translation budget metadata from report or state.
-    @param[in]  report Translation report payload.
-    @param[in]  operation_state Translation operation-state payload.
-    @return     Budget metadata payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
-    """
-    candidates: list[object] = []
-    if isinstance(report, dict):
-        candidates.append(report.get("budget_metadata"))
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-        if isinstance(metadata, dict):
-            candidates.append(metadata.get("budget_metadata"))
-        resume_checkpoint = operation_state.get("resume_checkpoint", {})
-        if isinstance(resume_checkpoint, dict):
-            candidates.append(resume_checkpoint.get("budget_metadata"))
-    for candidate in candidates:
-        if not isinstance(candidate, dict):
-            continue
-        restored = {
-            str(key): int(value)
-            for key, value in candidate.items()
-            if str(key).strip() and isinstance(value, (int, float))
-        }
-        required_keys = {
-            "context_window",
-            "max_output_tokens",
-            "prompt_budget_tokens",
-            "text_budget_tokens",
-            "safety_margin_tokens",
-        }
-        if required_keys.issubset(restored):
-            return restored
-    return None
-
-
 def _translate_text_in_budgeted_segments(
-    project_root: Path,
     manifest: dict[str, object],
     ai_profile_payload: dict[str, object],
     source_text: str,
@@ -1615,39 +623,18 @@ def _translate_text_in_budgeted_segments(
     translated_chunk_count: int = 0,
     cancel_requested=None,
 ) -> tuple[str, TokenUsagePayload]:
-    """
-    @brief      Translate one source chunk in budgeted AI request segments.
-    @param[in]  project_root Active project root path.
-    @param[in]  manifest Active project manifest payload.
-    @param[in]  ai_profile_payload Enabled AI profile payload.
-    @param[in]  source_text Source text to translate.
-    @param[in]  target_language Requested target language code.
-    @param[in]  system_prompt Rendered translation system prompt.
-    @param[in]  chunk_sequence_index Sequence index of the translated chunk.
-    @param[in]  total_chunks Total number of source chunks.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  budget_metadata Context-budget metadata for source segmentation.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @param[in]  cancel_requested Optional cancellation callback.
-    @return     Concatenated translated text plus updated cumulative token usage.
-    @exception  ValueError When any translated segment is empty.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.4.0
-    """
-    text_budget = int(budget_metadata["text_budget_tokens"])
+    """Translate one chunk locally so partial segments never become checkpoints."""
     translated_segments: list[str] = []
+    cumulative_usage = token_usage
     for segment_index, source_segment in enumerate(
-        _split_translation_source_text(source_text, text_budget),
+        _split_translation_source_text(source_text, int(budget_metadata["text_budget_tokens"])),
         start=1,
     ):
         raise_if_cancelled(cancel_requested)
         user_prompt = _render_translation_user_prompt(
-            {
-                "target_language": _language_label(target_language),
-                "source_text": source_segment,
-                "additional_translation_instructions": additional_translation_instructions,
-            },
+            target_language,
+            source_segment,
+            additional_translation_instructions,
         )
         response_result = llm_provider_service.chat_json(
             ai_profile_payload,
@@ -1665,26 +652,27 @@ def _translate_text_in_budgeted_segments(
             },
             cancel_requested=cancel_requested,
         )
-        token_usage = token_usage_service.merge_token_usage(
-            token_usage,
-            response_result.get("usage"),
-        )
+        if isinstance(response_result, dict):
+            merged_usage = token_usage_service.merge_token_usage(
+                cumulative_usage,
+                response_result.get("usage"),
+            )
+            cumulative_usage.clear()
+            cumulative_usage.update(merged_usage)
+        if not isinstance(response_result, dict) or not isinstance(response_result.get("payload"), dict):
+            raise ValueError("AI translation returned an invalid JSON response object.")
+        translated_value = response_result["payload"].get("translated_text")
+        if not isinstance(translated_value, str) or not translated_value.strip():
+            raise ValueError("AI translation returned an invalid or empty translated_text value.")
+        translated_segments.append(translated_value.strip())
         _emit_progress(
             progress_callback,
             translated_chunk_count,
             total_chunks,
             "AI translation in progress...",
-            token_usage,
+            cumulative_usage,
         )
-        payload = dict(response_result.get("payload", {}))
-        translated_text = str(payload.get("translated_text", "")).strip()
-        if not translated_text:
-            raise ValueError("AI translation returned an empty translated_text segment.")
-        translated_segments.append(translated_text)
-    return (
-        "\n\n".join(segment for segment in translated_segments if segment.strip()),
-        token_usage,
-    )
+    return "\n\n".join(translated_segments), cumulative_usage
 
 
 def _build_budget_metadata(
@@ -1693,24 +681,11 @@ def _build_budget_metadata(
     system_prompt: str,
     additional_translation_instructions: str = "",
 ) -> BudgetMetadataPayload:
-    """
-    @brief      Build context-window budget metadata for AI translation.
-    @param[in]  ai_profile_payload Enabled AI profile payload.
-    @param[in]  target_language Requested target language code.
-    @param[in]  system_prompt Rendered translation system prompt.
-    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
-    @return     Context-budget metadata used for source segmentation.
-    @exception  ValueError Raised when context and output settings leave too little input room.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.2.0
-    """
+    """Build current-profile context budgeting for the translation request."""
     user_prompt_shell = _render_translation_user_prompt(
-        {
-            "target_language": _language_label(target_language),
-            "source_text": "(none)",
-            "additional_translation_instructions": additional_translation_instructions,
-        },
+        target_language,
+        "(none)",
+        additional_translation_instructions,
     )
     return ai_budget_service.context_budget_metadata(
         ai_profile_payload,
@@ -1724,150 +699,33 @@ def _build_budget_metadata(
     )
 
 
-def _render_translation_user_prompt(variables: dict[str, object]) -> str:
-    """
-    @brief      Render the AI translation user prompt with optional operator rules.
-    @param[in]  variables Prompt variables.
-    @return     Rendered AI translation user prompt.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    template = prompt_template_service.load_prompt("text_translation_user")
-    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
-    rendered_prompt = prompt_template_service.render_prompt(
+def _render_translation_user_prompt(
+    target_language: str,
+    source_text: str,
+    additional_translation_instructions: str,
+) -> str:
+    """Render only per-request values into the translation user prompt."""
+    instructions = _normalized_additional_translation_instructions(additional_translation_instructions)
+    instruction_block = (
+        f"Additional translation instructions:\n{instructions}\n\n" if instructions else ""
+    )
+    return prompt_template_service.render_prompt(
         "text_translation_user",
-        {key: value for key, value in variables.items() if key in placeholder_names},
+        {
+            "target_language": target_language,
+            "additional_translation_instructions_block": instruction_block,
+            "source_text": source_text,
+        },
     )
-    additional_translation_instructions = _normalized_additional_translation_instructions(
-        variables.get("additional_translation_instructions")
-    )
-    if additional_translation_instructions and "additional_translation_instructions" not in placeholder_names:
-        rendered_prompt = _append_additional_translation_instructions(
-            rendered_prompt,
-            additional_translation_instructions,
-        )
-    return rendered_prompt
-
-
-def _resolve_additional_translation_instructions(
-    additional_translation_instructions: str | None,
-    existing_state: dict[str, object],
-) -> str:
-    """
-    @brief      Resolve operator translation rules for a new or resumed AI translation run.
-    @param[in]  additional_translation_instructions New operator instructions or None when resuming.
-    @param[in]  existing_state Existing translation operation state.
-    @return     Normalized operator translation instructions.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    if additional_translation_instructions is not None:
-        return _normalized_additional_translation_instructions(additional_translation_instructions)
-    if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
-        "running",
-        "cancelled",
-        "failed",
-    }:
-        return ""
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return ""
-    return _normalized_additional_translation_instructions(metadata.get("additional_translation_instructions"))
-
-
-def _restore_persisted_additional_translation_instructions(
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
-) -> str:
-    """
-    @brief      Restore persisted operator translation rules from report or state.
-    @param[in]  report Translation report payload.
-    @param[in]  operation_state Translation operation-state payload.
-    @return     Normalized operator translation instructions.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    if isinstance(report, dict):
-        restored_report_value = _normalized_additional_translation_instructions(
-            report.get("additional_translation_instructions")
-        )
-        if restored_report_value:
-            return restored_report_value
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-        if isinstance(metadata, dict):
-            restored_metadata_value = _normalized_additional_translation_instructions(
-                metadata.get("additional_translation_instructions")
-            )
-            if restored_metadata_value:
-                return restored_metadata_value
-    return ""
 
 
 def _normalized_additional_translation_instructions(value: object) -> str:
-    """
-    @brief      Normalize optional operator translation rules for prompt insertion and state storage.
-    @param[in]  value Candidate instruction text.
-    @return     Trimmed instruction text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _append_additional_translation_instructions(prompt_text: str, additional_translation_instructions: str) -> str:
-    """
-    @brief      Append operator translation rules to one rendered AI translation prompt.
-    @param[in]  prompt_text Rendered prompt template text.
-    @param[in]  additional_translation_instructions Normalized operator rules.
-    @return     Prompt text with an additional-rules section.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    if not additional_translation_instructions:
-        return prompt_text
-    return (
-        f"{prompt_text.rstrip()}\n\n"
-        f"Additional operator translation instructions:\n{additional_translation_instructions}\n"
-    )
-
-
-def _compute_prompt_fingerprint(prompt_text: str) -> str:
-    """
-    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
-    @param[in]  prompt_text Operator prompt-rule text.
-    @return     SHA-256 fingerprint for the prompt-rule text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
+    """Normalize optional operator translation rules."""
+    return "" if value is None else str(value).strip()
 
 
 def _split_translation_source_text(source_text: str, usable_input_budget: int) -> list[str]:
-    """
-    @brief      Split source text into translation segments within the budget.
-    @param[in]  source_text Source text to translate.
-    @param[in]  usable_input_budget Safe estimated input-token budget.
-    @return     Ordered translation source segments.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
+    """Split source text into paragraph-preserving budget-safe segments."""
     paragraphs = [item.strip() for item in re.split(r"\n\s*\n", source_text.strip()) if item.strip()]
     if not paragraphs:
         return [source_text.strip()]
@@ -1889,16 +747,7 @@ def _split_translation_source_text(source_text: str, usable_input_budget: int) -
 
 
 def _split_oversized_translation_paragraph(paragraph: str, usable_input_budget: int) -> list[str]:
-    """
-    @brief      Split one oversized paragraph into budget-safe translation parts.
-    @param[in]  paragraph Source paragraph text.
-    @param[in]  usable_input_budget Safe estimated input-token budget.
-    @return     Ordered paragraph parts that fit the budget.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
+    """Split an oversized paragraph into sentence and word-based units."""
     if _estimate_text_tokens(paragraph) <= usable_input_budget:
         return [paragraph]
     sentences = _split_translation_sentences(paragraph)
@@ -1928,15 +777,7 @@ def _split_oversized_translation_paragraph(paragraph: str, usable_input_budget: 
 
 
 def _split_translation_sentences(paragraph: str) -> list[str]:
-    """
-    @brief      Split one paragraph into approximate sentence units.
-    @param[in]  paragraph Source paragraph text.
-    @return     Ordered list of sentence-like text units.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
+    """Split a paragraph into approximate sentence units."""
     normalized = paragraph.strip()
     if not normalized:
         return []
@@ -1945,16 +786,7 @@ def _split_translation_sentences(paragraph: str) -> list[str]:
 
 
 def _split_translation_sentence_by_words(text: str, usable_input_budget: int) -> list[str]:
-    """
-    @brief      Split one oversized sentence into word-based budget-safe parts.
-    @param[in]  text Source sentence text.
-    @param[in]  usable_input_budget Safe estimated input-token budget.
-    @return     Ordered sentence parts.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
+    """Split an oversized sentence into word-based units."""
     words = text.split()
     if not words:
         return [text.strip()]
@@ -1975,29 +807,8 @@ def _split_translation_sentence_by_words(text: str, usable_input_budget: int) ->
 
 
 def _estimate_text_tokens(text: str) -> int:
-    """
-    @brief      Estimate token count from text length using a simple heuristic.
-    @param[in]  text Source text value.
-    @return     Estimated token count.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
+    """Estimate tokens with the shared AI budgeting heuristic."""
     return ai_budget_service.estimate_text_tokens(text)
-
-
-def _language_label(language_code: str) -> str:
-    """
-    @brief      Resolve the display label for one translation language code.
-    @param[in]  language_code Translation language code.
-    @return     Human-readable language label or the original code.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    return _TRANSLATION_LANGUAGE_LABELS.get(language_code, language_code)
 
 
 # END OF FILE

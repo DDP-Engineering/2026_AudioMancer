@@ -41,12 +41,26 @@ def test_narrator_state_service_uses_original_language_and_no_default_selection(
     project_root, manifest = _create_project(tmp_path, "NarratorStateProject")
     manifest["original_language"] = "Italian"
     project_workspace_service.save_manifest(manifest, project_root)
-    translation_report_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME
-    )
+    translation_report_path = project_root / config.TRANSLATED_CHUNKS_FILE_NAME
     translation_report_path.parent.mkdir(parents=True, exist_ok=True)
     translation_report_path.write_text(
-        json.dumps({"target_language": "ro", "total_chunk_count": 1, "approved_chunk_count": 1}, indent=2) + "\n",
+        json.dumps(
+            {
+                "target_language": "ro",
+                "status": "completed",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [{"chunk_id": "chunk-0001", "translated_text": "Text", "approved": True}],
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 

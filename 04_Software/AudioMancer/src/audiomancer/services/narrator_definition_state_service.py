@@ -408,8 +408,11 @@ def _has_narrator_generation_source_text(project_root: Path | None) -> bool:
         return False
     if deterministic_chunking_service.load_chunks(project_root):
         return True
-    translated_report = ai_translation_service.load_translation_report(project_root)
-    if isinstance(translated_report, dict) and int(translated_report.get("approved_chunk_count", 0) or 0) > 0:
+    try:
+        translated_chunks = ai_translation_service.load_translated_chunks(project_root)
+    except ai_translation_service.TranslationDocumentError:
+        translated_chunks = []
+    if any(bool(item.get("approved", False)) for item in translated_chunks):
         return True
     cleanup_metadata = cleanup_metadata_service.load_cleanup_metadata(project_root)
     if isinstance(cleanup_metadata, dict) and cleanup_metadata.get("paragraphs"):
@@ -541,7 +544,10 @@ def _voice_language_state(project_root: Path, manifest: dict[str, object]) -> tu
     @date       2026-04-26
     @version    0.4.0
     """
-    translation_report = ai_translation_service.load_translation_report(project_root)
+    try:
+        translation_document = ai_translation_service.load_translation_document(project_root)
+    except ai_translation_service.TranslationDocumentError:
+        translation_document = None
     original_language_code = narrator_definition_service.narrator_language_code(
         _resolved_original_language_code(project_root, manifest),
         narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
@@ -551,12 +557,10 @@ def _voice_language_state(project_root: Path, manifest: dict[str, object]) -> tu
         original_language_code,
     )
     selectable_codes = [original_language_code]
-    if isinstance(translation_report, dict):
-        translated_language_code = str(translation_report.get("target_language", "")).strip()
-        translated_total_count = int(translation_report.get("total_chunk_count", 0))
-        translated_approved_count = int(translation_report.get("approved_chunk_count", 0))
+    if translation_document is not None:
+        translated_language_code = str(translation_document["target_language"]).strip()
         if translated_language_code in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
-            translation_ready = translated_total_count > 0 and translated_total_count == translated_approved_count
+            translation_ready = ai_translation_service.translation_is_completed(project_root)
             if translation_ready and translated_language_code != original_language_code:
                 selectable_codes.append(translated_language_code)
     if selected_language_code not in selectable_codes:

@@ -489,9 +489,11 @@ def _build_ai_translation_document(project_root: Path, manifest: dict[str, objec
     @date       2026-04-25
     @version    0.1.0
     """
-    report = ai_translation_service.load_translation_report(project_root) or {}
-    state = ai_translation_service.load_operation_state(project_root) or {}
-    metadata = _metadata_from_state(state)
+    document = ai_translation_service.load_translation_document(project_root)
+    if document is None:
+        raise ValueError("AI Translation export requires translated_text.json.")
+    summary = ai_translation_service.load_translation_summary(project_root)
+    budget_metadata = dict(document["budget_metadata"])
     translated_chunks = _sorted_by_sequence(ai_translation_service.load_translated_chunks(project_root))
     translated_texts = [
         str(chunk.get("translated_text", "")).strip()
@@ -500,34 +502,14 @@ def _build_ai_translation_document(project_root: Path, manifest: dict[str, objec
     ]
     parameters = _compact_fields(
         [
-            ("Target Language", _first_value(report.get("target_language"), metadata.get("target_language"))),
-            *_ai_parameter_fields(
-                project_root,
-                report,
-                state,
-                _first_value(report.get("translation_profile_id_last_used"), metadata.get("translation_profile_id")),
-            ),
-            (
-                "Total Chunks",
-                _first_value(
-                    report.get("total_chunk_count"), metadata.get("total_chunk_count"), len(translated_chunks)
-                ),
-            ),
-            (
-                "Translated Count",
-                _first_value(
-                    report.get("translated_chunk_count"), metadata.get("translated_chunk_count"), len(translated_texts)
-                ),
-            ),
-            (
-                "Approved Count",
-                _first_value(
-                    report.get("approved_chunk_count"),
-                    metadata.get("approved_chunk_count"),
-                    _approved_count(translated_chunks),
-                ),
-            ),
-            *_token_usage_fields(report, metadata),
+            ("Target Language", document["target_language"]),
+            ("Status", summary["status"]),
+            ("Context Window", budget_metadata.get("context_window")),
+            ("Maximum Output Tokens", budget_metadata.get("max_output_tokens")),
+            ("Total Chunks", summary["total_count"]),
+            ("Translated Count", summary["translated_count"]),
+            ("Approved Count", summary["approved_count"]),
+            *_token_usage_fields(document),
         ]
     )
     return ExportDocument(

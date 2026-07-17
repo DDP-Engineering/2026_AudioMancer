@@ -69,8 +69,9 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     ),
     "translation": (
         config.TRANSLATED_CHUNKS_FILE_NAME,
-        config.TRANSLATION_REPORT_FILE_NAME,
-        config.TRANSLATION_STATE_FILE_NAME,
+        # Cleanup-only legacy names; Translation never reads or writes them.
+        "translation_report.json",
+        "translation_state.json",
     ),
     "character_discovery": (
         config.CHARACTER_PROFILE_FILE_NAME,
@@ -108,7 +109,6 @@ _OPERATION_STATE_FILE_NAMES = {
     "extraction": config.EXTRACTION_STATE_FILE_NAME,
     "cleanup": config.CLEANUP_STATE_FILE_NAME,
     "chunking": config.CHUNKING_STATE_FILE_NAME,
-    "translation": config.TRANSLATION_STATE_FILE_NAME,
     "character_discovery": config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     "speech_blocks": config.SPEECH_BLOCKS_STATE_FILE_NAME,
     "audio_blocks": config.AUDIO_BLOCKS_STATE_FILE_NAME,

@@ -410,14 +410,15 @@ def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object
     if selected_voice_language == original_language:
         return True
 
-    translation_report = ai_translation_service.load_translation_report(project_root)
-    if not isinstance(translation_report, dict):
+    try:
+        translation_document = ai_translation_service.load_translation_document(project_root)
+    except ai_translation_service.TranslationDocumentError:
         return False
-    if selected_voice_language != str(translation_report.get("target_language", "")).strip():
+    if translation_document is None:
         return False
-    total_chunk_count = int(translation_report.get("total_chunk_count", 0))
-    approved_chunk_count = int(translation_report.get("approved_chunk_count", 0))
-    return total_chunk_count > 0 and total_chunk_count == approved_chunk_count
+    if selected_voice_language != str(translation_document["target_language"]).strip():
+        return False
+    return ai_translation_service.translation_is_completed(project_root)
 
 
 def _persisted_profile_id(report: dict[str, object] | None, operation_state: dict[str, object] | None) -> str | None:

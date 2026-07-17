@@ -8,18 +8,14 @@
 # -----------------------------------------------------------------------------
 """
 @file test_ai_translation_page.py
-@brief Focused Qt tests for the AudioMancer AI translation page.
-@details Verifies translation-page enablement, chunk rendering, review
-         controls, and bounded approval navigation for the AI Translation
-         workflow.
+@brief Focused Qt tests for monofile AI Translation review behavior.
+@details Verifies debounced edits, flush ordering, and status-driven controls.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.4.4
+@date 2026-07-16
+@version 0.5.0
 """
 
 # IMPORTS
-
-from PySide6.QtCore import Qt
 
 from audiomancer.services import ai_translation_service
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
@@ -27,244 +23,122 @@ from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 # PUBLIC API
 
 
-def test_ai_translation_page_displays_locked_language_indicators(qtbot) -> None:
-    """
-    @brief      Verify locked original and target language indicators are shown without a selector.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
-    """
-    page = AiTranslationPage()
-    qtbot.addWidget(page)
-    page.set_project_active(True)
-    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
-    page.set_translation_state(
-        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original"}],
-        translated_chunks=[
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "source_text": "Original",
-                "translated_text": "Translated",
-                "approved": False,
-                "translation_profile_id": "profile-1",
-                "target_language": "ro",
-                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
-            }
-        ],
-        notes=["Translated chunks: 1/1."],
-        original_language="English",
-        target_language="ro",
-        selected_profile_id="profile-1",
-        stage_status=ai_translation_service.TRANSLATION_STAGE_TRANSLATED,
-        translated_count=1,
-        approved_count=0,
-        total_count=1,
-    )
+def test_translation_edit_debounce_and_flush(qtbot) -> None:
+    """Verify REQ-UX-002 rapid edits emit one save and selection changes flush immediately."""
+    page = _build_page(qtbot)
+    emitted = []
+    page.translated_text_changed.connect(lambda chunk_id, text: emitted.append((chunk_id, text)))
 
-    assert hasattr(page, "_language_combo") is False
-    assert page._original_language_value_label.text() == "English"
-    assert page._target_language_value_label.text() == "Romanian"
+    page._translated_text_edit.setPlainText("Edit one")
+    page._translated_text_edit.setPlainText("Edit two")
+    page._translated_text_edit.setPlainText("Final edit")
+    qtbot.wait(800)
+    assert emitted == [("chunk-0001", "Final edit")]
+
+    page._translated_text_edit.setPlainText("Flush before selection")
+    page._chunk_list.setCurrentRow(1)
+    assert emitted[-1] == ("chunk-0001", "Flush before selection")
+
+
+def test_translation_page_control_state_uses_review_pending_and_completed(qtbot) -> None:
+    """Verify REQ-UX-002 Start is disabled after generation and reenabled for empty text."""
+    page = _build_page(qtbot)
     assert page._start_button.isEnabled() is False
     assert page._reset_button.isEnabled() is True
 
-
-def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) -> None:
-    """
-    @brief      Verify selected translation chunks render with enabled review actions.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
-    """
-    page = AiTranslationPage()
-    qtbot.addWidget(page)
-    page.set_project_active(True)
-    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
     page.set_translation_state(
-        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original text"}],
+        source_chunks=_source_chunks(),
         translated_chunks=[
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "source_text": "Original text",
-                "translated_text": "Translated text",
-                "approved": False,
-                "translation_profile_id": "profile-1",
-                "target_language": "ro",
-                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
-            }
+            {"chunk_id": "chunk-0001", "translated_text": "Traducere", "approved": True},
+            {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
         ],
-        notes=["Translated chunks: 1/1."],
+        notes=["resume"],
         original_language="English",
         target_language="ro",
         selected_profile_id="profile-1",
-        stage_status=ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
-        translated_count=1,
-        approved_count=0,
-        total_count=1,
-    )
-
-    assert page._chunk_list.count() == 1
-    assert page._chunk_list_group.maximumHeight() == 176
-    assert page._chunk_list_group.layout().indexOf(page._translation_actions_widget) >= 0
-    assert page._start_button.parentWidget() == page._translation_actions_widget
-    assert page._chunk_list.textElideMode() == Qt.TextElideMode.ElideRight
-    assert page._chunk_list.item(0).text() == "[Translated] chunk-0001 | Original text"
-    assert page._source_text_edit.toPlainText() == "Original text"
-    assert page._translated_text_edit.toPlainText() == "Translated text"
-    assert page._approve_all_button.isEnabled() is True
-    assert page._approve_selected_button.isEnabled() is True
-
-
-def test_ai_translation_page_edit_marks_selected_chunk_unapproved(qtbot) -> None:
-    """
-    @brief      Verify editing selected translated text emits a review-state update.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    page = AiTranslationPage()
-    qtbot.addWidget(page)
-    emitted = []
-    page.translated_text_changed.connect(lambda chunk_id, translated_text: emitted.append((chunk_id, translated_text)))
-    page.set_project_active(True)
-    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
-    page.set_translation_state(
-        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original text"}],
-        translated_chunks=[
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "source_text": "Original text",
-                "translated_text": "Translated text",
-                "approved": True,
-                "translation_profile_id": "profile-1",
-                "target_language": "ro",
-                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED,
-            }
-        ],
-        notes=["Translated chunks: 1/1."],
-        original_language="English",
-        target_language="ro",
-        selected_profile_id="profile-1",
-        stage_status=ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
+        stage_status=ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS,
         translated_count=1,
         approved_count=1,
-        total_count=1,
+        total_count=2,
     )
+    assert page._start_button.isEnabled() is True
 
-    page._translated_text_edit.setPlainText("Edited translation")
+    page.set_translation_state(
+        source_chunks=_source_chunks(),
+        translated_chunks=[
+            {"chunk_id": "chunk-0001", "translated_text": "Traducere", "approved": True},
+            {"chunk_id": "chunk-0002", "translated_text": "Alta traducere", "approved": True},
+        ],
+        notes=["complete"],
+        original_language="English",
+        target_language="ro",
+        selected_profile_id="profile-1",
+        stage_status=ai_translation_service.TRANSLATION_STATUS_COMPLETED,
+        translated_count=2,
+        approved_count=2,
+        total_count=2,
+    )
+    assert page._start_button.isEnabled() is False
 
-    assert emitted == [("chunk-0001", "Edited translation")]
-    assert page._approve_selected_button.isEnabled() is True
+
+def test_approve_selected_flushes_pending_edit_before_signal(qtbot) -> None:
+    """Verify REQ-UX-002 approval observes the latest local edit."""
+    page = _build_page(qtbot)
+    events = []
+    page.translated_text_changed.connect(lambda chunk_id, text: events.append(("edit", chunk_id, text)))
+    page.approve_selected_requested.connect(lambda chunk_id: events.append(("approve", chunk_id)))
+
+    page._translated_text_edit.setPlainText("Latest translation")
+    page._emit_approve_selected()
+
+    assert events == [
+        ("edit", "chunk-0001", "Latest translation"),
+        ("approve", "chunk-0001"),
+    ]
 
 
-def test_ai_translation_page_advances_to_next_chunk_with_limit(qtbot) -> None:
-    """
-    @brief      Verify approval navigation advances to the next chunk without crossing the end.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
+def test_translation_page_displays_locked_language_and_chunk_preview(qtbot) -> None:
+    """Verify locked language indicators and canonical source preview remain visible."""
+    page = _build_page(qtbot)
+    assert page._original_language_value_label.text() == "English"
+    assert page._target_language_value_label.text() == "Romanian"
+    assert page._source_text_edit.toPlainText() == "Original one"
+    assert page._chunk_list.item(0).text() == "[Translated] chunk-0001 | Original one"
+
+
+# TEST HELPERS
+
+
+def _build_page(qtbot) -> AiTranslationPage:
+    """Build one active translation page with two review-pending chunks."""
     page = AiTranslationPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
     page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
     page.set_translation_state(
-        source_chunks=[
-            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original one"},
-            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Original two"},
-        ],
+        source_chunks=_source_chunks(),
         translated_chunks=[
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "source_text": "Original one",
-                "translated_text": "Translated one",
-                "approved": False,
-                "translation_profile_id": "profile-1",
-                "target_language": "ro",
-                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
-            },
-            {
-                "chunk_id": "chunk-0002",
-                "sequence_index": 2,
-                "source_text": "Original two",
-                "translated_text": "Translated two",
-                "approved": False,
-                "translation_profile_id": "profile-1",
-                "target_language": "ro",
-                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
-            },
+            {"chunk_id": "chunk-0001", "translated_text": "Translated one", "approved": False},
+            {"chunk_id": "chunk-0002", "translated_text": "Translated two", "approved": False},
         ],
-        notes=["Translated chunks: 2/2."],
+        notes=["review"],
         original_language="English",
         target_language="ro",
         selected_profile_id="profile-1",
-        stage_status=ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
+        stage_status=ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
         translated_count=2,
         approved_count=0,
         total_count=2,
     )
-
-    page.advance_to_next_chunk()
-
-    assert page.selected_chunk_id() == "chunk-0002"
-    assert page._chunk_list.currentRow() == 1
-
-    page.advance_to_next_chunk()
-
-    assert page.selected_chunk_id() == "chunk-0002"
-    assert page._chunk_list.currentRow() == 1
+    return page
 
 
-def test_ai_translation_page_keeps_single_line_chunk_list_preview(qtbot) -> None:
-    """
-    @brief      Verify AI translation chunk rows show one source-text line with width-aware eliding.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
-    """
-    page = AiTranslationPage()
-    qtbot.addWidget(page)
-    source_text = (
-        "This source preview is intentionally longer than sixty characters so the list can use available width.\n"
-        "This second source line belongs in the original chunk preview, not the chunk list."
-    )
-
-    page.set_translation_state(
-        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": source_text}],
-        translated_chunks=[],
-        notes=["ready"],
-        original_language="English",
-        target_language="ro",
-        selected_profile_id=None,
-        stage_status=ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
-        translated_count=0,
-        approved_count=0,
-        total_count=1,
-    )
-    expected_preview = (
-        "[Pending] chunk-0001 | This source preview is intentionally longer than sixty characters so the list can "
-        "use available width."
-    )
-
-    assert page._chunk_list.item(0).text() == expected_preview
+def _source_chunks() -> list[dict[str, object]]:
+    """Return canonical source chunks for page-state tests."""
+    return [
+        {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original one"},
+        {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Original two"},
+    ]
 
 
 # END OF FILE

@@ -311,11 +311,9 @@ def _persist_manual_chunk_change(
     """
     _write_chunk_artifact(project_root, chunks)
     target_language = _manifest_target_language(manifest)
-    profile_id = _persisted_translation_profile_id(project_root)
     ai_translation_service.sync_translation_after_chunk_change(
         project_root,
         target_language,
-        profile_id,
         affected_chunk_ids,
     )
     character_discovery_service.drop_character_evidence_for_chunks(project_root, affected_chunk_ids)
@@ -439,10 +437,14 @@ def _build_manifest_after_selective_chunk_change(
         "chunking",
         deterministic_chunking_service.load_operation_state(project_root),
     )
-    operations["translation"] = project_workspace_service.project_manifest_operation_summary(
-        "translation",
-        ai_translation_service.load_operation_state(project_root),
-    )
+    translation_summary = ai_translation_service.load_translation_summary(project_root)
+    operations["translation"] = {
+        "status": str(translation_summary["status"]),
+        "progress_current": int(translation_summary["translated_count"]),
+        "progress_total": int(translation_summary["total_count"]),
+        "mode": "ai_assisted",
+        "warning_count": int(translation_summary["warning_count"]),
+    }
     operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
         "character_discovery",
         character_discovery_service.load_operation_state(project_root),
@@ -558,26 +560,6 @@ def _manifest_target_language(manifest: dict[str, object]) -> str:
     if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
         return target_language
     return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
-
-
-def _persisted_translation_profile_id(project_root: Path) -> str | None:
-    """
-    @brief      Resolve the last used translation profile id from persisted artifacts.
-    @param[in]  project_root Active project root folder.
-    @return     Profile id or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
-    """
-    report = ai_translation_service.load_translation_report(project_root)
-    if isinstance(report, dict) and report.get("translation_profile_id_last_used") not in (None, ""):
-        return str(report.get("translation_profile_id_last_used"))
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
-    if isinstance(metadata, dict) and metadata.get("translation_profile_id") not in (None, ""):
-        return str(metadata.get("translation_profile_id"))
-    return None
 
 
 def build_text_chunking_notes(

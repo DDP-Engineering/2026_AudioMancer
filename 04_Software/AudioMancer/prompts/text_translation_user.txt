@@ -1,25 +1,7 @@
-Translate the following audiobook chunk into {target_language}.
+Target language: {target_language}
 
-Translation mode: literary_audiobook
-Style preservation priority: high
-Translation faithfulness priority: high
-
-Requirements:
-- preserve the original meaning
-- preserve paragraph breaks whenever possible
-- preserve historical or literary tone when present in the source
-- preserve distinct character voice and dialogue personality whenever possible
-- optimize for natural read-aloud flow in the target language
-- keep character names, proper nouns, and invented terms consistent unless they clearly require translation
-- keep short standalone headings or standalone lines as standalone lines
-- avoid summaries, omissions, explanations, or added context
-- the value of "translated_text" must contain only the translated chunk text
-- return no text before or after the JSON object
-- escape inner quotes and embedded newlines correctly inside the JSON string value
-
-Return JSON only in the required shape:
-{"translated_text": "Translated text here."}
-
-SOURCE_TEXT_BEGIN
+{additional_translation_instructions_block}Source text:
 {source_text}
-SOURCE_TEXT_END
+
+Return JSON with this shape:
+{"translated_text": "Translated text here."}

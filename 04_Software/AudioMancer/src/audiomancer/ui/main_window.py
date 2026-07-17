@@ -1339,6 +1339,7 @@ class MainWindow(QMainWindow):
         ):
             event.ignore()
             return
+        self._ai_translation_page.flush_pending_translation_edit()
         self.stop_all_audio_playback()
         super().closeEvent(event)
 
