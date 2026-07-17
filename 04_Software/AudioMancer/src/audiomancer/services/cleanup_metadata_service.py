@@ -160,27 +160,6 @@ def write_cleanup_metadata(
     return metadata_payload
 
 
-def write_minimal_cleanup_metadata(
-    project_root: str | Path,
-    cleaned_text: str,
-    cleanup_mode: str,
-) -> CleanupMetadataPayload:
-    """
-    @brief      Persist metadata reconstructed from edited or AI-cleaned text.
-    @param[in]  project_root Active project root folder.
-    @param[in]  cleaned_text Canonical cleaned text.
-    @param[in]  cleanup_mode Cleanup mode label.
-    @return     Persisted metadata payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    cleaned_text_path = Path(project_root) / config.CLEANED_TEXT_FILE_NAME
-    records = build_paragraph_records_from_text(cleaned_text)
-    return write_cleanup_metadata(project_root, None, cleaned_text_path, records, cleanup_mode)
-
-
 def load_cleanup_metadata(project_root: str | Path) -> CleanupMetadataPayload | None:
     """
     @brief      Load the optional cleaned-text metadata sidecar.
@@ -225,21 +204,6 @@ def load_or_build_paragraph_records(
             if records:
                 return records
     return build_paragraph_records_from_text(cleaned_text)
-
-
-def remove_cleanup_metadata(project_root: str | Path) -> None:
-    """
-    @brief      Remove stale cleaned-text metadata if it exists.
-    @param[in]  project_root Active project root folder.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    metadata_path = cleanup_metadata_path(project_root)
-    if metadata_path.is_file():
-        metadata_path.unlink()
 
 
 # LOCAL HELPERS

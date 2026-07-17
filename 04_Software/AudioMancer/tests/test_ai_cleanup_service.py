@@ -199,14 +199,23 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
 
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    assert "schema_version" not in report
-    assert report["paragraph_count"] == 2
+    assert set(report) == {
+        "status",
+        "mode",
+        "source_fingerprint",
+        "instructions",
+        "token_usage",
+        "warnings",
+        "decisions",
+    }
+    assert report["status"] == "completed"
+    assert report["mode"] == "ai_assisted"
+    assert (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).is_file()
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8").endswith("\n")
-    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
-    state = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state["status"] == "completed"
-    assert state["resume_checkpoint"] is None
-    assert (project_root / report["ai_log_relative_path"]).is_file()
+    assert not (project_root / config.CLEANUP_REPORT_FILE_NAME).exists()
+    assert not (project_root / config.CLEANUP_STATE_FILE_NAME).exists()
+    assert not (project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).exists()
+    assert list(project_root.glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}cleanup_*.log"))
 
 
 @pytest.mark.parametrize(
@@ -319,7 +328,7 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
 
     monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-    assert any(detail["kind"] == "inconsistent_repeated_text_classification" for detail in report["warning_details"])
+    assert any(detail["kind"] == "inconsistent_repeated_text_classification" for detail in report["warnings"])
 
 
 def test_ai_cleanup_uses_artifact_type_and_confidence_without_action(
@@ -365,7 +374,13 @@ def test_ai_cleanup_uses_artifact_type_and_confidence_without_action(
 
     monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-    assert report["removed_character_count"] == len("Page 1 ")
+    artifact_item = report["decisions"]["items"][0]
+    assert artifact_item == {
+        "start": 0,
+        "end": len("Page 1 "),
+        "kind": "noise",
+        "confidence": "high",
+    }
 
 
 def test_ai_cleanup_ignores_legacy_label_only_schema(
@@ -457,7 +472,7 @@ def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
 
     assert "Language:" in prompts[0] and "Script: latin" in prompts[0]
     assert prompts[0].count("<<< SOURCE WINDOW START >>>") == 1
-    assert "First page.\nSecond page.\n" in prompts[0]
+    assert "First page.\n\n\f\n\nSecond page.\n" in prompts[0]
     assert "previous_unit_text" not in prompts[0]
 
 
@@ -490,8 +505,8 @@ def test_ai_cleanup_appends_operator_instructions_to_prompt_and_state(
     )
 
     assert "Preserve glossary names exactly." in prompts[0]
-    report = json.loads((project_root / config.CLEANUP_REPORT_FILE_NAME).read_text(encoding="utf-8"))
-    assert report["additional_cleanup_instructions"] == "Preserve glossary names exactly."
+    document = json.loads((project_root / config.CLEANUP_DOCUMENT_FILE_NAME).read_text(encoding="utf-8"))
+    assert document["instructions"] == "Preserve glossary names exactly."
 
 
 def test_ai_cleanup_splits_long_input_into_multiple_windows(
@@ -520,7 +535,7 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
 
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    assert report["window_count"] == 2
+    assert "window_count" not in report
     assert len(prompts) == 2
     assert "Page 4.\n" in prompts[0]
     assert "Page 5.\n" in prompts[1]
@@ -648,7 +663,15 @@ def test_ai_cleanup_resumes_with_new_model_settings(
     report = ai_cleanup_service.clean_text(project_root, manifest, second_profile)
 
     assert "Page 1.\n" not in prompts[0] and "Page 5.\n" in prompts[0]
-    assert len(report["model_settings_history"]) == 2
+    assert set(report) == {
+        "status",
+        "mode",
+        "source_fingerprint",
+        "instructions",
+        "token_usage",
+        "warnings",
+        "decisions",
+    }
 
 
 def test_ai_cleanup_restarts_when_extracted_text_changes(
@@ -680,37 +703,34 @@ def test_ai_cleanup_restarts_when_extracted_text_changes(
         ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
     _extracted_path(project_root).write_text("Replacement page.\n", encoding="utf-8")
-    prompts: list[str] = []
-    _install_keep_all_provider(monkeypatch, prompts)
-    ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-    assert "Replacement page.\n" in prompts[0]
+    monkeypatch.setattr(
+        ai_cleanup_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: pytest.fail("provider must not be called for a changed source"),
+    )
+    with pytest.raises(ValueError, match="source changed"):
+        ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
 
-def test_ai_cleanup_tolerates_corrupt_state_and_restarts(
+def test_ai_cleanup_does_not_use_legacy_state_and_blocks_corrupt_document(
     mock_extracted_project,
     mock_prompt_environment,
     monkeypatch,
 ) -> None:
-    """
-    @brief      Verify corrupt cleanup state is ignored and processing restarts.
-    @param[in]  mock_extracted_project Extracted-project pytest fixture.
-    @param[in]  mock_prompt_environment Prompt-directory pytest fixture.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @return     None.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-15
-    @version    1.1.0
-    """
+    """Verify legacy state is ignored while a corrupt authoritative document blocks Start."""
     project_root, manifest = mock_extracted_project
     _configure_cleanup_prompts(mock_prompt_environment)
-    (project_root / config.CLEANUP_STATE_FILE_NAME).write_text("{", encoding="utf-8")
+    legacy_state_path = project_root / config.CLEANUP_STATE_FILE_NAME
+    legacy_state_path.write_text("{", encoding="utf-8")
     _install_keep_all_provider(monkeypatch)
 
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-    assert "schema_version" not in report
-    state = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state["status"] == "completed"
 
+    assert report["status"] == "completed"
+    assert legacy_state_path.read_text(encoding="utf-8") == "{"
+    cleanup_document_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+    cleanup_document_path.write_text("{", encoding="utf-8")
+    with pytest.raises(json.JSONDecodeError):
+        ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
 # END OF FILE

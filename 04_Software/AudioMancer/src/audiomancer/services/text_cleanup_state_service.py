@@ -26,7 +26,6 @@ from audiomancer import config
 from audiomancer.services import (
     ai_cleanup_service,
     ai_state_note_service,
-    cleanup_metadata_service,
     deterministic_cleanup_service,
     home_presenter_service,
     operation_runtime_service,
@@ -34,7 +33,7 @@ from audiomancer.services import (
     text_extraction_service,
     ui_state_service,
 )
-from audiomancer.services.persistence_service import write_json_atomic, write_text_atomic
+from audiomancer.services.persistence_service import write_text_atomic
 
 # PUBLIC API
 
@@ -44,17 +43,7 @@ def build_text_cleanup_state(
     manifest: dict[str, object] | None,
     language: str,
 ) -> dict[str, object]:
-    """
-    @brief      Build the operator-facing state payload for the text cleanup page.
-    @param[in]  project_root Active project root or `None`.
-    @param[in]  manifest Active project manifest or `None`.
-    @param[in]  language Current UI language code.
-    @return     Keyword payload for `TextCleanupPage.set_processing_state`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
-    """
+    """Build the Text Cleanup page state without creating persistence artifacts."""
     if project_root is None or manifest is None:
         return {
             "extracted_text": None,
@@ -64,24 +53,69 @@ def build_text_cleanup_state(
             "can_clean": False,
             "can_ai_clean": False,
             "can_apply_ai_spacing": False,
+            "can_reset_cleanup": False,
+            "cleanup_mode": None,
+            "cleanup_status": "not_started",
             "selected_spacing_categories": ai_cleanup_service.default_spacing_categories(),
         }
 
     extracted_text = read_optional_project_text(project_root, config.EXTRACTED_TEXT_FILE_NAME)
     extraction_report_payload = text_extraction_service.load_extraction_report(project_root)
     extraction_operation_state = text_extraction_service.load_operation_state(project_root)
-    cleaned_text = read_optional_project_text(
-        project_root,
-        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
+    cleaned_text = read_optional_project_text(project_root, config.CLEANED_TEXT_FILE_NAME)
+    cleanup_document_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+    cleanup_document_invalid = False
+    cleanup_report_payload: dict[str, object] | None = None
+    cleanup_operation_state: dict[str, object] | None = None
+    if cleanup_document_path.exists():
+        try:
+            cleanup_report_payload = ai_cleanup_service.load_cleanup_document(project_root)
+            cleanup_operation_state = cleanup_report_payload
+        except (OSError, ValueError):
+            cleanup_document_invalid = True
+            cleanup_operation_state = {
+                "status": "invalid",
+                "mode": "ai_assisted",
+                "warning_count": 0,
+            }
+    else:
+        cleanup_report_payload = deterministic_cleanup_service.load_cleanup_report(project_root)
+        cleanup_operation_state = deterministic_cleanup_service.load_operation_state(project_root)
+        if isinstance(cleanup_operation_state, dict) and cleanup_operation_state.get("mode") == "ai_assisted":
+            cleanup_document_invalid = True
+            cleanup_report_payload = None
+            cleanup_operation_state = {
+                "status": "invalid",
+                "mode": "ai_assisted",
+                "warning_count": 0,
+            }
+        elif cleanup_operation_state is None:
+            operations = manifest.get("operations")
+            summary = operations.get("cleanup") if isinstance(operations, dict) else None
+            if isinstance(summary, dict) and summary.get("status") != "not_started":
+                cleanup_operation_state = dict(summary)
+
+    cleanup_mode = (
+        None
+        if not isinstance(cleanup_operation_state, dict)
+        else str(cleanup_operation_state.get("mode") or "") or None
     )
-    cleanup_report_payload = deterministic_cleanup_service.load_cleanup_report(project_root)
-    cleanup_operation_state = deterministic_cleanup_service.load_operation_state(project_root)
-    can_apply_ai_spacing = (
-        isinstance(cleanup_operation_state, dict)
-        and cleanup_operation_state.get("status") == "completed"
-        and cleanup_operation_state.get("mode") == "ai_assisted"
-        and ai_cleanup_service.spacing_selection_available(cleanup_report_payload)
+    cleanup_status = (
+        "not_started"
+        if not isinstance(cleanup_operation_state, dict)
+        else str(cleanup_operation_state.get("status") or "not_started")
     )
+    can_apply_ai_spacing = not cleanup_document_invalid and ai_cleanup_service.spacing_selection_available(
+        cleanup_report_payload
+    )
+    cleanup_artifact_names = (
+        config.CLEANUP_DOCUMENT_FILE_NAME,
+        config.CLEANED_TEXT_FILE_NAME,
+        config.CLEANUP_STATE_FILE_NAME,
+        config.CLEANUP_REPORT_FILE_NAME,
+        config.CLEANED_TEXT_METADATA_FILE_NAME,
+    )
+    can_reset_cleanup = any((project_root / file_name).exists() for file_name in cleanup_artifact_names)
     return {
         "extracted_text": extracted_text,
         "cleaned_text": cleaned_text,
@@ -97,6 +131,9 @@ def build_text_cleanup_state(
         "can_clean": extracted_text is not None,
         "can_ai_clean": extracted_text is not None,
         "can_apply_ai_spacing": can_apply_ai_spacing,
+        "can_reset_cleanup": can_reset_cleanup,
+        "cleanup_mode": cleanup_mode,
+        "cleanup_status": cleanup_status,
         "selected_spacing_categories": ai_cleanup_service.selected_spacing_categories(cleanup_report_payload),
     }
 
@@ -142,39 +179,28 @@ def build_ai_cleanup_profile_state(
 
 
 def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], cleaned_text: str) -> dict[str, object]:
-    """
-    @brief      Persist one manual cleaned-text edit and reset downstream workflow state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  manifest Current project manifest payload.
-    @param[in]  cleaned_text Edited cleaned text content.
-    @return     Updated manifest payload.
-    @exception  ValueError Raised when the cleaned text artifact does not exist yet.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.4.1
-    """
-    cleaned_text_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    """Persist a manual edit, discard Cleanup metadata, and reset every downstream result."""
+    cleaned_text_path = project_root / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_text_path.is_file():
         raise ValueError("No cleaned text is available to edit.")
     write_text_atomic(cleaned_text_path, cleaned_text)
-    metadata_payload = cleanup_metadata_service.write_minimal_cleanup_metadata(
-        project_root,
-        cleaned_text,
-        "manual_edit",
-    )
+    _remove_cleanup_metadata_artifacts(project_root)
     operation_runtime_service.reset_operation_data(
         project_root,
         "cleanup",
         include_current=False,
-        preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
     )
     updated_manifest = build_manifest_after_cleanup_edit(manifest)
     project_workspace_service.save_manifest(updated_manifest, project_root)
-    manual_state = _write_manual_cleanup_state(project_root, updated_manifest, metadata_payload)
+    manual_summary = {
+        "status": "completed",
+        "mode": "manual_edit",
+        "warning_count": 0,
+    }
     return project_workspace_service.sync_manifest_operation_summary(
         project_root,
         "cleanup",
-        manual_state,
+        manual_summary,
         current_stage="text_cleanup_ready",
     )
 
@@ -184,57 +210,72 @@ def apply_ai_cleanup_spacing(
     manifest: dict[str, object],
     selected_categories: object,
 ) -> dict[str, object]:
-    """
-    @brief      Persist one retained-decision AI spacing selection and reset downstream state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  manifest Current project manifest payload.
-    @param[in]  selected_categories Complete selected non-story category collection.
-    @return     Updated manifest payload.
-    @exception  ValueError Raised when compatible AI decisions are unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-15
-    @version    0.1.0
-    """
-    ai_cleanup_service.apply_spacing_selection(project_root, selected_categories)
+    """Rebuild AI clean text locally and reset every downstream result."""
+    cleanup_document = ai_cleanup_service.apply_spacing_selection(project_root, selected_categories)
     operation_runtime_service.reset_operation_data(
         project_root,
         "cleanup",
         include_current=False,
-        preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
     )
-    updated_manifest = build_manifest_after_cleanup_edit(manifest)
+    updated_manifest = build_manifest_after_operation_reset(manifest, "cleanup")
+    operations = normalized_manifest_operations(updated_manifest)
+    operations["cleanup"] = project_workspace_service.project_manifest_operation_summary(
+        "cleanup",
+        cleanup_document,
+    )
+    updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, project_root)
-    cleanup_state = deterministic_cleanup_service.load_operation_state(project_root)
-    if not isinstance(cleanup_state, dict) or cleanup_state.get("mode") != "ai_assisted":
-        raise ValueError("Compatible completed AI Cleanup state is unavailable for spacing reapplication.")
     return project_workspace_service.sync_manifest_operation_summary(
         project_root,
         "cleanup",
-        cleanup_state,
+        cleanup_document,
         current_stage="text_cleanup_ready",
     )
 
 
 def build_manifest_after_cleanup_edit(manifest: dict[str, object]) -> dict[str, object]:
-    """
-    @brief      Build one manifest payload after a manual cleaned-text edit.
-    @param[in]  manifest Current manifest payload before the edit.
-    @return     Manifest with cleanup preserved and downstream operations reset.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
-    """
-    updated_manifest = dict(manifest)
+    """Reset all downstream summaries while retaining a manual Cleanup result."""
+    updated_manifest = build_manifest_after_operation_reset(manifest, "cleanup")
     operations = normalized_manifest_operations(updated_manifest)
-    default_operations = normalized_manifest_operations({})
-    preserved_operation_kinds = operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS
-    for selected_kind in operation_runtime_service.downstream_operation_kinds("cleanup", include_current=False):
-        if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
-            operations[selected_kind] = default_operations[selected_kind]
+    operations["cleanup"] = {
+        "status": "completed",
+        "mode": "manual_edit",
+        "warning_count": 0,
+    }
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "text_cleanup_ready"
     return updated_manifest
+
+
+def reset_cleanup(project_root: Path, manifest: dict[str, object]) -> dict[str, object]:
+    """Delete Cleanup and every downstream artifact, then reset the manifest."""
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "cleanup",
+        include_current=True,
+    )
+    updated_manifest = build_manifest_after_operation_reset(manifest, "cleanup")
+    project_workspace_service.save_manifest(updated_manifest, project_root)
+    return project_workspace_service.load_manifest(project_root)
+
+
+def active_cleanup_mode(project_root: Path, manifest: dict[str, object] | None = None) -> str | None:
+    """Resolve the persisted Cleanup mode without interpreting legacy AI checkpoints."""
+    if (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).exists():
+        return "ai_assisted"
+    cleanup_state = deterministic_cleanup_service.load_operation_state(project_root)
+    if isinstance(cleanup_state, dict):
+        mode = str(cleanup_state.get("mode") or "").strip()
+        if mode:
+            return mode
+    if isinstance(manifest, dict):
+        operations = manifest.get("operations")
+        summary = operations.get("cleanup") if isinstance(operations, dict) else None
+        if isinstance(summary, dict) and summary.get("status") != "not_started":
+            mode = str(summary.get("mode") or "").strip()
+            if mode:
+                return mode
+    return None
 
 
 def build_text_cleanup_notes(
@@ -310,11 +351,31 @@ def build_text_cleanup_notes(
         if not isinstance(cleanup_operation_state, dict)
         else str(cleanup_operation_state.get("status", "not_started"))
     )
-    cleanup_mode = None
-    if cleanup_report_payload is not None:
-        cleanup_mode = str(cleanup_report_payload.get("cleanup_mode") or "")
-        if not cleanup_mode and isinstance(cleanup_operation_state, dict):
-            cleanup_mode = str(cleanup_operation_state.get("mode") or "")
+    cleanup_mode = ""
+    if isinstance(cleanup_report_payload, dict):
+        cleanup_mode = str(cleanup_report_payload.get("mode") or cleanup_report_payload.get("cleanup_mode") or "")
+    if not cleanup_mode and isinstance(cleanup_operation_state, dict):
+        cleanup_mode = str(cleanup_operation_state.get("mode") or "")
+
+    if cleanup_mode == "ai_assisted":
+        if cleanup_status == "invalid":
+            notes.append(ui_state_service.translate("text_cleanup.note_ai_cleanup_invalid", language))
+            return notes
+        if isinstance(cleanup_report_payload, dict):
+            notes.extend(
+                _build_token_usage_notes(
+                    cleanup_report_payload,
+                    cleanup_operation_state,
+                    language,
+                )
+            )
+            if cleanup_status == "completed":
+                notes.append(ui_state_service.translate("text_cleanup.note_ai_cleanup_review_warning", language))
+                notes.append(ui_state_service.translate("text_cleanup.note_ai_cleanup_rerun_warning", language))
+            else:
+                notes.append(ui_state_service.translate("text_cleanup.note_ai_cleanup_ready", language))
+                notes.append(ui_state_service.translate("text_cleanup.note_ai_cleanup_continue", language))
+            return notes
     if cleanup_report_payload is not None:
         summary_key = (
             "text_cleanup.note_ai_cleanup_summary"
@@ -554,44 +615,20 @@ def read_optional_project_text(
     return artifact_path.read_text(encoding="utf-8")
 
 
-def _write_manual_cleanup_state(
-    project_root: Path,
-    manifest: dict[str, object],
-    metadata_payload: dict[str, object],
-) -> dict[str, object]:
-    """
-    @brief      Persist compact cleanup operation state for one manual cleaned-text edit.
-    @param[in]  project_root Active project root folder.
-    @param[in]  manifest Manifest payload after the edit reset.
-    @param[in]  metadata_payload Newly persisted cleanup metadata payload.
-    @return     Persisted operation-state payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.2.0
-    """
-    state_path = operation_runtime_service.build_operation_output_path(
-        project_root,
-        "cleanup",
+def _remove_cleanup_metadata_artifacts(project_root: Path) -> None:
+    """Remove AI and deterministic Cleanup metadata while retaining clean text."""
+    for file_name in (
+        config.CLEANUP_DOCUMENT_FILE_NAME,
         config.CLEANUP_STATE_FILE_NAME,
-    )
-    paragraph_count = int(metadata_payload.get("paragraph_count", 0) or 0)
-    state_payload = operation_runtime_service.build_operation_state_payload(
-        status="completed",
-        progress_current=paragraph_count,
-        progress_total=paragraph_count,
-        mode="manual_edit",
-        warning_count=0,
-        metadata={
-            "warnings": [],
-            "detected_language": manifest.get("original_language"),
-            "paragraph_count": paragraph_count,
-            "detected_chapter_count": None,
-        },
-        resume_checkpoint=None,
-    )
-    write_json_atomic(state_path, state_payload)
-    return state_payload
+        config.CLEANUP_REPORT_FILE_NAME,
+        config.CLEANED_TEXT_METADATA_FILE_NAME,
+    ):
+        artifact_path = project_root / file_name
+        if artifact_path.is_file():
+            artifact_path.unlink()
+    for log_path in project_root.glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}cleanup_*.log"):
+        if log_path.is_file():
+            log_path.unlink()
 
 
 def _stage_after_operation_reset(operation_kind: str) -> str:

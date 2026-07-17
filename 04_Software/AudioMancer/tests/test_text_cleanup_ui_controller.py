@@ -17,7 +17,9 @@
 @version 0.5.1
 """
 
-# IMPORTS
+import json
+
+import pytest
 
 import pytest
 
@@ -398,9 +400,28 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
         "cleanup": {
             "status": "running",
             "mode": "ai_assisted",
-            "metadata": {"ai_profile_id": "profile_1", "model_settings": {"model_name": "qwen3-8b"}},
+            "warning_count": 0,
         }
     }
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "running",
+                "mode": "ai_assisted",
+                "source_fingerprint": "sha256:" + ("0" * 64),
+                "instructions": "Keep names.",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+                "warnings": [],
+                "decisions": {"selected_spacing_categories": ["heading", "separator"], "items": []},
+            }
+        ),
+        encoding="utf-8",
+    )
     project_workspace_service.save_manifest(manifest, project_root)
 
     settings_payload = dict(default_settings_payload)
@@ -441,9 +462,6 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
     confirm_calls: list[str] = []
     monkeypatch.setattr(
         text_cleanup_ui_controller, "confirm_ai_cleanup_start", lambda *_args: confirm_calls.append("start") or True
-    )
-    monkeypatch.setattr(
-        text_cleanup_ui_controller, "confirm_ai_cleanup_rerun", lambda *_args: confirm_calls.append("rerun") or True
     )
     start_calls = []
     monkeypatch.setattr(

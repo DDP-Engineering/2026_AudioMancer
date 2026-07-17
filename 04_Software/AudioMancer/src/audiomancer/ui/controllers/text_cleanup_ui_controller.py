@@ -29,7 +29,6 @@ from audiomancer.services import (
     ai_cleanup_service,
     deterministic_cleanup_service,
     home_presenter_service,
-    operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
     text_extraction_service,
@@ -96,15 +95,7 @@ def handle_extract_text_requested(window: "MainWindow") -> None:
 
 
 def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
-    """
-    @brief      Run deterministic cleanup for the active project.
-    @param[in]  window Active main window shell.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.4
-    """
+    """Start deterministic Cleanup after resolving any persisted mode conflict."""
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
@@ -119,33 +110,28 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate(
-                "project.error_missing_extracted_text",
-                current_language,
-            ),
+            ui_state_service.translate("project.error_missing_extracted_text", current_language),
         )
         return
 
-    cleanup_operation = home_presenter_service.manifest_operation(
+    active_mode = text_cleanup_state_service.active_cleanup_mode(
+        window._current_project_root,
         window._current_manifest,
-        "cleanup",
     )
-    if str(cleanup_operation.get("status", "not_started")) == "completed":
+    deterministic_state = deterministic_cleanup_service.load_operation_state(window._current_project_root)
+    deterministic_status = (
+        str(deterministic_state.get("status", "not_started"))
+        if isinstance(deterministic_state, dict) and deterministic_state.get("mode") == "deterministic"
+        else "not_started"
+    )
+    if active_mode and active_mode != "deterministic":
+        if not confirm_cleanup_mode_switch(window, current_language):
+            return
+        _reset_persisted_cleanup(window)
+    elif active_mode == "deterministic" and deterministic_status == "completed":
         if not confirm_cleanup_rerun(window, current_language):
             return
-        operation_runtime_service.reset_operation_data(
-            window._current_project_root,
-            "cleanup",
-            include_current=True,
-            preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
-        )
-        reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
-            window._current_manifest,
-            "cleanup",
-            preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
-        )
-        project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-        window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
+        _reset_persisted_cleanup(window)
 
     start_operation(
         window,
@@ -159,16 +145,7 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
 
 
 def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
-    """
-    @brief      Run AI-assisted cleanup for the active project and selected profile.
-    @param[in]  window Active main window shell.
-    @param[in]  profile_id Selected AI cleanup profile id.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.6.0
-    """
+    """Start or continue AI Cleanup using the current profile and context window."""
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
@@ -183,23 +160,10 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate(
-                "project.error_missing_extracted_text",
-                current_language,
-            ),
+            ui_state_service.translate("project.error_missing_extracted_text", current_language),
         )
         return
-
-    cleanup_operation = home_presenter_service.manifest_operation(
-        window._current_manifest,
-        "cleanup",
-    )
-    cleanup_status = str(cleanup_operation.get("status", "not_started"))
-    cleanup_mode = str(cleanup_operation.get("mode") or "")
-    selected_profile = _resolve_ai_profile(
-        window._settings_payload,
-        profile_id,
-    )
+    selected_profile = _resolve_ai_profile(window._settings_payload, profile_id)
     if selected_profile is None:
         QMessageBox.warning(
             window,
@@ -208,9 +172,36 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
         )
         return
 
-    additional_cleanup_instructions = None
-    if cleanup_status in {"running", "failed", "cancelled"} and cleanup_mode == "ai_assisted":
-        pass
+    active_mode = text_cleanup_state_service.active_cleanup_mode(
+        window._current_project_root,
+        window._current_manifest,
+    )
+    additional_cleanup_instructions: str | None = None
+    if active_mode and active_mode != "ai_assisted":
+        if not confirm_cleanup_mode_switch(window, current_language):
+            return
+        _reset_persisted_cleanup(window)
+        active_mode = None
+
+    if active_mode == "ai_assisted":
+        try:
+            cleanup_document = ai_cleanup_service.load_cleanup_document(window._current_project_root)
+        except (OSError, ValueError):
+            cleanup_document = None
+        if cleanup_document is None:
+            QMessageBox.warning(
+                window,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("project.ai_cleanup_reset_required_invalid", current_language),
+            )
+            return
+        if cleanup_document.get("status") == "completed":
+            QMessageBox.information(
+                window,
+                ui_state_service.translate("dialog.confirm_cleanup_reset_title", current_language),
+                ui_state_service.translate("project.ai_cleanup_reset_required_completed", current_language),
+            )
+            return
     else:
         if not confirm_ai_cleanup_start(window, current_language):
             return
@@ -218,22 +209,6 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
         if additional_cleanup_instructions is None:
             window._text_cleanup_page.set_busy(False)
             return
-        if cleanup_status == "completed":
-            if not confirm_ai_cleanup_rerun(window, current_language):
-                return
-            operation_runtime_service.reset_operation_data(
-                window._current_project_root,
-                "cleanup",
-                include_current=True,
-                preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
-            )
-            reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
-                window._current_manifest,
-                "cleanup",
-                preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
-            )
-            project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-            window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
     start_operation(
         window,
@@ -252,6 +227,26 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
         ),
         success_handler=lambda result_payload: handle_cleanup_success(window, result_payload),
         failure_handler=lambda error: handle_cleanup_failure(window, error),
+    )
+
+
+def handle_reset_cleanup_requested(window: "MainWindow") -> None:
+    """Confirm and execute a complete Cleanup/downstream reset."""
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not confirm_cleanup_reset(window, current_language):
+        return
+    updated_manifest = text_cleanup_state_service.reset_cleanup(
+        window._current_project_root,
+        window._current_manifest,
+    )
+    window.show_project_state(window._current_project_root, updated_manifest)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.cleanup_reset", current_language),
     )
 
 
@@ -540,32 +535,27 @@ def handle_extraction_failure(window: "MainWindow", error: Exception) -> None:
 
 
 def handle_cleanup_success(window: "MainWindow", result_payload: object) -> None:
-    """
-    @brief      Persist manifest state after one successful cleanup run.
-    @param[in]  window Active main window shell.
-    @param[in]  result_payload Successful cleanup result payload.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
-    """
-    cleanup_mode = None
-    if isinstance(result_payload, dict):
-        cleanup_mode = str(result_payload.get("cleanup_mode") or "")
+    """Synchronize a successful deterministic or AI Cleanup result."""
     assert window._current_project_root is not None
     assert window._current_manifest is not None
-    updated_manifest = dict(window._current_manifest)
-    updated_manifest["current_stage"] = "text_chunking_ready"
+    cleanup_mode = ""
     if isinstance(result_payload, dict):
+        cleanup_mode = str(result_payload.get("mode") or result_payload.get("cleanup_mode") or "")
+    updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
+    updated_manifest["current_stage"] = "text_chunking_ready"
+    if cleanup_mode != "ai_assisted" and isinstance(result_payload, dict):
         detected_language = str(result_payload.get("detected_language", "") or "").strip()
         if detected_language:
             updated_manifest["original_language"] = detected_language
+    cleanup_payload = (
+        result_payload
+        if cleanup_mode == "ai_assisted" and isinstance(result_payload, dict)
+        else deterministic_cleanup_service.load_operation_state(window._current_project_root)
+    )
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     operations["cleanup"] = project_workspace_service.project_manifest_operation_summary(
         "cleanup",
-        ai_cleanup_service.load_operation_state(window._current_project_root)
-        or deterministic_cleanup_service.load_operation_state(window._current_project_root),
+        cleanup_payload,
     )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -605,25 +595,15 @@ def handle_cleanup_failure(window: "MainWindow", error: Exception) -> None:
 
 
 def sync_manifest_after_unsuccessful_operation(window: "MainWindow", operation_kind: str) -> None:
-    """
-    @brief      Persist resumable operation state after one failed or cancelled run.
-    @param[in]  window Active main window shell.
-    @param[in]  operation_kind Operation-kind token that failed or was cancelled.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
+    """Persist a failed or cancelled operation summary."""
     if window._current_manifest is None or window._current_project_root is None:
         return
-    updated_manifest = dict(window._current_manifest)
+    updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if operation_kind == "cleanup":
         operations["cleanup"] = project_workspace_service.project_manifest_operation_summary(
             "cleanup",
-            ai_cleanup_service.load_operation_state(window._current_project_root)
-            or deterministic_cleanup_service.load_operation_state(window._current_project_root),
+            _load_cleanup_summary_payload(window._current_project_root),
         )
     elif operation_kind == "extraction":
         operations["extraction"] = project_workspace_service.project_manifest_operation_summary(
@@ -660,16 +640,7 @@ def confirm_extraction_rerun(window: "MainWindow", language: str) -> bool:
 
 
 def confirm_cleanup_rerun(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Ask the operator whether one completed cleanup should be rerun destructively.
-    @param[in]  window Active main window shell.
-    @param[in]  language Current UI language code.
-    @return     True when the operator accepts the rerun reset.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
+    """Confirm replacement of one completed deterministic Cleanup result."""
     decision = QMessageBox.question(
         window,
         ui_state_service.translate("dialog.confirm_cleanup_rerun_title", language),
@@ -680,17 +651,32 @@ def confirm_cleanup_rerun(window: "MainWindow", language: str) -> bool:
     return decision == QMessageBox.StandardButton.Yes
 
 
+def confirm_cleanup_mode_switch(window: "MainWindow", language: str) -> bool:
+    """Confirm destructive reset before changing Cleanup mode."""
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_cleanup_mode_switch_title", language),
+        ui_state_service.translate("project.confirm_cleanup_mode_switch", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def confirm_cleanup_reset(window: "MainWindow", language: str) -> bool:
+    """Confirm deletion of Cleanup and all downstream results."""
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_cleanup_reset_title", language),
+        ui_state_service.translate("project.confirm_cleanup_reset", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
 def confirm_ai_cleanup_start(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Ask the operator whether one AI-assisted cleanup should start.
-    @param[in]  window Active main window shell.
-    @param[in]  language Current UI language code.
-    @return     True when the operator accepts the longer AI run.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
+    """Confirm the first AI-assisted Cleanup run."""
     decision = QMessageBox.question(
         window,
         ui_state_service.translate("dialog.confirm_ai_cleanup_title", language),
@@ -701,25 +687,28 @@ def confirm_ai_cleanup_start(window: "MainWindow", language: str) -> bool:
     return decision == QMessageBox.StandardButton.Yes
 
 
-def confirm_ai_cleanup_rerun(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Ask the operator whether one completed cleanup should be replaced by AI cleanup.
-    @param[in]  window Active main window shell.
-    @param[in]  language Current UI language code.
-    @return     True when the operator accepts the destructive AI rerun.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    decision = QMessageBox.question(
-        window,
-        ui_state_service.translate("dialog.confirm_ai_cleanup_rerun_title", language),
-        ui_state_service.translate("project.confirm_ai_cleanup_rerun", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+def _reset_persisted_cleanup(window: "MainWindow") -> None:
+    """Reset Cleanup/downstream data and refresh the controller manifest."""
+    assert window._current_project_root is not None
+    assert window._current_manifest is not None
+    window._current_manifest = text_cleanup_state_service.reset_cleanup(
+        window._current_project_root,
+        window._current_manifest,
     )
-    return decision == QMessageBox.StandardButton.Yes
+
+
+def _load_cleanup_summary_payload(project_root) -> dict[str, object] | None:
+    """Load the active Cleanup payload without mixing AI and deterministic stores."""
+    if (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).exists():
+        try:
+            return ai_cleanup_service.load_cleanup_document(project_root)
+        except (OSError, ValueError):
+            return {
+                "status": "invalid",
+                "mode": "ai_assisted",
+                "warning_count": 0,
+            }
+    return deterministic_cleanup_service.load_operation_state(project_root)
 
 
 def prompt_ai_cleanup_instructions(window: "MainWindow", language: str) -> str | None:

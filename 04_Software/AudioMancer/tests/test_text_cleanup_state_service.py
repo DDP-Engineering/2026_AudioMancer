@@ -153,89 +153,32 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
 
 
 def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -> None:
-    """
-    @brief      Verify AI cleanup notes include one review warning when validation warnings were persisted.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
+    """Verify page state is derived from the authoritative AI Cleanup document."""
     project_root, manifest = project_workspace_service.create_project(
         "PresenterAiCleanupWarningProject",
         tmp_path,
     )
-    extraction_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    extraction_root.mkdir(exist_ok=True)
-    cleanup_root.mkdir(exist_ok=True)
-    (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
-        "Extracted text\n",
-        encoding="utf-8",
-    )
-    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "Cleaned text\n",
-        encoding="utf-8",
-    )
-    (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).write_text(
+    source_text = "Extracted text\n"
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(source_text, encoding="utf-8")
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Cleaned text\n", encoding="utf-8")
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
         json.dumps(
             {
-                "warnings": [
-                    "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review."
-                ],
-                "warning_details": [
-                    {
-                        "kind": "invalid_page_number_label_corrected",
-                        "message": (
-                            "AI cleanup corrected one invalid page-number label in window 1 "
-                            "and preserved the text for review."
-                        ),
-                    }
-                ],
-                "paragraph_count": 3,
-                "removed_line_count": 2,
-                "detected_chapter_count": 1,
-                "cleanup_mode": "ai_assisted",
-                "ai_profile_id": "profile_1",
+                "status": "completed",
+                "mode": "ai_assisted",
+                "source_fingerprint": "sha256:" + ("0" * 64),
+                "instructions": "",
                 "token_usage": {
                     "input_tokens": 300,
                     "output_tokens": 75,
                     "total_tokens": 375,
                     "usage_available": True,
                 },
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (cleanup_root / config.CLEANUP_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-                "status": "completed",
-                "input_paths": [],
-                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"],
-                "artifact_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANUP_REPORT_FILE_NAME}"],
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "ai_assisted",
-                "started_at": "2026-04-07T12:00:00+00:00",
-                "completed_at": "2026-04-07T12:01:00+00:00",
-                "updated_at": "2026-04-07T12:01:00+00:00",
-                "warning_count": 1,
-                "metadata": {
-                    "warnings": [],
-                    "ai_profile_id": "profile_1",
-                    "token_usage": {
-                        "input_tokens": 300,
-                        "output_tokens": 75,
-                        "total_tokens": 375,
-                        "usage_available": True,
-                    },
+                "warnings": [{"kind": "human_review_required"}],
+                "decisions": {
+                    "selected_spacing_categories": ["heading", "separator"],
+                    "items": [{"start": 0, "end": len(source_text), "kind": "story"}],
                 },
-                "resume_checkpoint": None,
             },
             indent=2,
         )
@@ -243,11 +186,6 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         encoding="utf-8",
     )
     manifest["source_document"] = {"original_name": "story.txt"}
-    manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["mode"] = "ai_assisted"
-    manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
-    ]
 
     cleanup_state = text_cleanup_state_service.build_text_cleanup_state(
         project_root,
@@ -255,9 +193,11 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         "en",
     )
 
+    assert cleanup_state["cleanup_mode"] == "ai_assisted"
+    assert cleanup_state["cleanup_status"] == "completed"
+    assert cleanup_state["can_apply_ai_spacing"] is True
     assert any("completed with validation warnings" in note for note in cleanup_state["notes"])
     assert any("Input tokens: 300 | Output tokens: 75 | Total: 375" in note for note in cleanup_state["notes"])
-
 
 def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) -> None:
     """
@@ -309,28 +249,29 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     assert updated_manifest["current_stage"] == "text_cleanup_ready"
     assert updated_manifest["operations"]["cleanup"]["status"] == "completed"
     assert updated_manifest["operations"]["chunking"]["status"] == "not_started"
-    assert updated_manifest["operations"]["character_discovery"]["status"] == "completed"
-    assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
-    assert updated_manifest["operations"]["character_voices"]["status"] == "completed"
+    assert updated_manifest["operations"]["character_discovery"]["status"] == "not_started"
+    assert updated_manifest["operations"]["narrator_definition"]["status"] == "not_started"
+    assert updated_manifest["operations"]["character_voices"]["status"] == "not_started"
     assert updated_manifest["operations"]["speech_blocks"]["status"] == "not_started"
-    assert updated_manifest["narrator_profile_name"] == "Warm Narrator"
-    assert updated_manifest["narrator_language"] == "fr"
+    assert updated_manifest["narrator_profile_name"] is None
+    assert updated_manifest["narrator_language"] is None
     assert not (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).exists()
-    assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).is_file()
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
+    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).exists()
+    assert not (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
-    metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
-    state_payload = json.loads((cleanup_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert not (cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).exists()
+    assert not (cleanup_root / config.CLEANUP_STATE_FILE_NAME).exists()
+    assert not (cleanup_root / config.CLEANUP_DOCUMENT_FILE_NAME).exists()
     reloaded_manifest = project_workspace_service.load_manifest(project_root)
-    assert metadata_payload["cleanup_mode"] == "manual_edit"
-    assert "text" not in metadata_payload["paragraphs"][0]
-    assert state_payload["mode"] == "manual_edit"
-    assert state_payload["resume_checkpoint"] is None
     assert reloaded_manifest["current_stage"] == "text_cleanup_ready"
-    assert reloaded_manifest["operations"]["cleanup"]["mode"] == "manual_edit"
+    assert reloaded_manifest["operations"]["cleanup"] == {
+        "status": "completed",
+        "mode": "manual_edit",
+        "warning_count": 0,
+    }
     loaded_records = cleanup_metadata_service.load_or_build_paragraph_records(project_root, "Edited clean text\n")
     assert loaded_records[0]["text"] == "Edited clean text"
 
