@@ -7,6 +7,18 @@
 Thumbs.db
 Desktop.ini
 
+# Python caches and local test/build state are never part of an AEGIS install.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Adapter dependencies are installed on demand.
+node_modules/
+.vitest/
+.opencode-cache/
+
 # Python caches and virtual environments
 __pycache__/
 *.py[cod]

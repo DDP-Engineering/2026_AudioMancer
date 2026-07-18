@@ -1,0 +1,49 @@
+{
+  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
+  "_comment": "Codex hook configuration for the transboarded project root. Hook commands are project-root relative.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/guard_write_zone.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\guard_write_zone.py",
+            "statusMessage": "Checking agentic write zone"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/secret_scan.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\secret_scan.py",
+            "statusMessage": "Checking command for secrets"
+          },
+          {
+            "type": "command",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/delivery_preflight.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\delivery_preflight.py",
+            "statusMessage": "Checking delivery preflight"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/post_tool_evidence.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\post_tool_evidence.py",
+            "statusMessage": "Recording agentic tool evidence"
+          }
+        ]
+      }
+    ]
+  }
+}

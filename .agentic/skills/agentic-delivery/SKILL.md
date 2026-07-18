@@ -1,0 +1,60 @@
+---
+name: agentic-delivery
+description: Manual agentic delivery workflow for preparing a PR, creating a PR, publishing a branch, or finalizing an agentic development run. Use when the user asks to create PR, prepare PR, deliver the change, publish, push, merge, or produce the final report for an agentic workflow run.
+---
+
+<!--
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+Commercial use requires a separate commercial license.
+See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+-->
+
+
+# Agentic Delivery
+
+Use this skill when the human asks to prepare delivery. Delivery never skips
+the final preflight.
+
+## Procedure
+
+Use `<workflow>` as the project-local workflow runner: `.\.agentic\tools\run.ps1`
+on Windows or `bash .agentic/tools/run.sh` on POSIX shells.
+
+1. Load the active run with `<workflow> status`.
+2. Run `<workflow> registry sync`.
+3. Run `<workflow> registry audit`.
+4. Run `<workflow> impact` against the Git working set.
+5. Run `<workflow> working-tree audit` and report untracked files as
+   advisory context unless the audit reports blocking findings.
+6. Run `<workflow> audit traceability`.
+7. Run `<workflow> audit coverage`.
+8. Run `$documentation-audit` or perform the same documentation review manually
+   when the target repo has no documentation audit tooling.
+   Treat broad README, overview, setup, and validation docs as opt-in or
+   scope-triggered maintenance, not a default delivery blocker.
+9. Confirm component documents under `.agentic/knowledge/components/` were
+   added or updated for new or materially changed components.
+10. Run `<workflow> delivery-preflight`.
+11. If preflight fails, stop and report failed invariants or audit findings.
+12. If preflight passes, run or refresh `<workflow> report`.
+13. Run the configured test gates if they were not already run in this turn.
+14. Summarize the branch status, report path, gate results, traceability status,
+   documentation status, and remaining risks.
+15. Stage only explicit intended paths for commits or PRs; do not stage
+   unrelated human notes, saved messages, meeting notes, or generated local
+   artifacts unless the human explicitly includes them.
+16. Ask the human for explicit approval before push, PR creation, merge, or any
+   outward-facing action.
+
+## Required Stop Format
+
+```text
+Delivery preflight: <pass/fail>
+Report: <path>
+Gate results: <summary>
+Traceability status: <summary>
+Documentation status: <summary>
+Risks/open notes: <summary>
+Approval needed: <exact action, e.g. create PR or push branch>
+```

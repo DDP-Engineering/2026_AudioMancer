@@ -1,0 +1,203 @@
+<!--
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+Commercial use requires a separate commercial license.
+See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+-->
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2100" viewBox="0 0 1600 2100" role="img" aria-labelledby="title desc">
+  <title id="title">AEGIS Cheat Sheet</title>
+  <desc id="desc">Visual one-page summary of the AEGIS gates, commands, artifacts, and delivery checks.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f5ef; }
+      .ink { fill: #17202a; }
+      .muted { fill: #53606b; }
+      .panel { fill: #ffffff; stroke: #d8d2c4; stroke-width: 2; }
+      .gate { fill: #ffffff; stroke-width: 3; }
+      .gate-title { font: 700 30px Arial, sans-serif; fill: #17202a; }
+      .gate-text { font: 20px Arial, sans-serif; fill: #31404f; }
+      .small { font: 18px Arial, sans-serif; fill: #53606b; }
+      .mono { font: 18px Consolas, "Courier New", monospace; fill: #17202a; }
+      .h1 { font: 800 54px Arial, sans-serif; fill: #17202a; }
+      .h2 { font: 700 28px Arial, sans-serif; fill: #17202a; }
+      .h3 { font: 700 23px Arial, sans-serif; fill: #17202a; }
+      .body { font: 21px Arial, sans-serif; fill: #31404f; }
+      .label { font: 700 17px Arial, sans-serif; fill: #ffffff; }
+      .arrow { stroke: #66717c; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+      .blue { stroke: #2f6f9f; }
+      .green { stroke: #2d7d59; }
+      .amber { stroke: #b7791f; }
+      .red { stroke: #b84b4b; }
+      .purple { stroke: #6b5aa6; }
+      .teal { stroke: #257981; }
+      .chip-blue { fill: #2f6f9f; }
+      .chip-green { fill: #2d7d59; }
+      .chip-amber { fill: #b7791f; }
+      .chip-red { fill: #b84b4b; }
+      .chip-purple { fill: #6b5aa6; }
+      .chip-teal { fill: #257981; }
+      .cmd { fill: #f1efe8; stroke: #d8d2c4; stroke-width: 1.5; }
+    </style>
+    <marker id="arrowhead" markerWidth="14" markerHeight="10" refX="12" refY="5" orient="auto">
+      <path d="M 0 0 L 14 5 L 0 10 z" fill="#66717c" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="2100"/>
+
+  <text class="h1" x="80" y="95">AEGIS Cheat Sheet</text>
+  <text class="body" x="82" y="135">A compact operating map for AEGIS: human-steered gates, deterministic evidence, scoped docs, explicit access, and delivery preflight.</text>
+
+  <rect class="panel" x="80" y="175" width="1440" height="170" rx="8"/>
+  <text class="h2" x="115" y="225">Project-local command placeholder</text>
+  <text class="body" x="115" y="265">Use </text>
+  <text class="mono" x="158" y="265">&lt;workflow&gt;</text>
+  <text class="body" x="276" y="265"> in prompts and replace it with the copied runner:</text>
+  <rect class="cmd" x="115" y="288" width="635" height="38" rx="6"/>
+  <text class="mono" x="135" y="314">Windows: .\.agentic\tools\run.ps1</text>
+  <rect class="cmd" x="795" y="288" width="605" height="38" rx="6"/>
+  <text class="mono" x="815" y="314">Ubuntu: bash .agentic/tools/run.sh</text>
+
+  <text class="h2" x="80" y="405">Gate Flow</text>
+
+  <g transform="translate(80 435)">
+    <rect class="gate blue" x="0" y="0" width="190" height="245" rx="8"/>
+    <rect class="chip-blue" x="18" y="18" width="70" height="28" rx="14"/>
+    <text class="label" x="38" y="38">1</text>
+    <text class="gate-title" x="18" y="82">Intake</text>
+    <text class="gate-text" x="18" y="122">Start run</text>
+    <text class="gate-text" x="18" y="153">Classify request</text>
+    <text class="gate-text" x="18" y="184">Identify impact</text>
+    <text class="small" x="18" y="222">Next: alignment</text>
+  </g>
+  <path class="arrow" d="M 280 557 L 305 557"/>
+
+  <g transform="translate(315 435)">
+    <rect class="gate green" x="0" y="0" width="190" height="245" rx="8"/>
+    <rect class="chip-green" x="18" y="18" width="70" height="28" rx="14"/>
+    <text class="label" x="38" y="38">2</text>
+    <text class="gate-title" x="18" y="82">Alignment</text>
+    <text class="gate-text" x="18" y="122">Record scope</text>
+    <text class="gate-text" x="18" y="153">Questions + defaults</text>
+    <text class="gate-text" x="18" y="184">Risk + path</text>
+    <text class="small" x="18" y="222">Skippable by config</text>
+  </g>
+  <path class="arrow" d="M 515 557 L 540 557"/>
+
+  <g transform="translate(550 435)">
+    <rect class="gate green" x="0" y="0" width="190" height="245" rx="8"/>
+    <rect class="chip-green" x="18" y="18" width="70" height="28" rx="14"/>
+    <text class="label" x="38" y="38">3</text>
+    <text class="gate-title" x="18" y="82">Requirement</text>
+    <text class="gate-text" x="18" y="122">Draft specs</text>
+    <text class="gate-text" x="18" y="153">Update registers</text>
+    <text class="gate-text" x="18" y="184">Plan docs</text>
+    <text class="small" x="18" y="222">Human approves spec</text>
+  </g>
+  <path class="arrow" d="M 750 557 L 775 557"/>
+
+  <g transform="translate(785 435)">
+    <rect class="gate amber" x="0" y="0" width="190" height="245" rx="8"/>
+    <rect class="chip-amber" x="18" y="18" width="70" height="28" rx="14"/>
+    <text class="label" x="38" y="38">4</text>
+    <text class="gate-title" x="18" y="82">Check</text>
+    <text class="gate-text" x="18" y="122">Write tests</text>
+    <text class="gate-text" x="18" y="153">Cite spec IDs</text>
+    <text class="gate-text" x="18" y="184">Prove red first</text>
+    <text class="small" x="18" y="222">No source edits</text>
+  </g>
+  <path class="arrow" d="M 985 557 L 1010 557"/>
+
+  <g transform="translate(1020 435)">
+    <rect class="gate purple" x="0" y="0" width="190" height="245" rx="8"/>
+    <rect class="chip-purple" x="18" y="18" width="70" height="28" rx="14"/>
+    <text class="label" x="38" y="38">5</text>
+    <text class="gate-title" x="18" y="82">Implement</text>
+    <text class="gate-text" x="18" y="122">Edit source/docs</text>
+    <text class="gate-text" x="18" y="153">Make checks green</text>
+    <text class="gate-text" x="18" y="184">Record changes</text>
+    <text class="small" x="18" y="222">Write zones apply</text>
+  </g>
+  <path class="arrow" d="M 1220 557 L 1245 557"/>
+
+  <g transform="translate(1255 435)">
+    <rect class="gate teal" x="0" y="0" width="190" height="245" rx="8"/>
+    <rect class="chip-teal" x="18" y="18" width="70" height="28" rx="14"/>
+    <text class="label" x="38" y="38">6</text>
+    <text class="gate-title" x="18" y="82">Validate</text>
+    <text class="gate-text" x="18" y="122">Run invariants</text>
+    <text class="gate-text" x="18" y="153">Audit docs/style</text>
+    <text class="gate-text" x="18" y="184">Review diff</text>
+    <text class="small" x="18" y="222">Read-only gate</text>
+  </g>
+  <path class="arrow" d="M 1455 557 L 1480 557"/>
+
+  <g transform="translate(80 735)">
+    <rect class="gate red" x="0" y="0" width="1420" height="190" rx="8"/>
+    <rect class="chip-red" x="24" y="24" width="92" height="30" rx="15"/>
+    <text class="label" x="48" y="45">7</text>
+    <text class="gate-title" x="24" y="92">Delivery</text>
+    <text class="gate-text" x="24" y="132">Run registry sync/audit, delivery-preflight, report. Do not commit, push, open PR, merge, or publish without explicit human approval.</text>
+    <text class="small" x="24" y="165">Output: .agentic/runs/&lt;run-id&gt;/report.md plus current git status and remaining risks.</text>
+  </g>
+
+  <g transform="translate(80 1075)">
+    <rect class="panel" x="0" y="0" width="690" height="360" rx="8"/>
+    <text class="h2" x="32" y="48">Core Commands</text>
+    <rect class="cmd" x="32" y="78" width="610" height="38" rx="6"/>
+    <text class="mono" x="50" y="104">&lt;workflow&gt; start --kind feature --statement "..."</text>
+    <rect class="cmd" x="32" y="126" width="610" height="38" rx="6"/>
+    <text class="mono" x="50" y="152">&lt;workflow&gt; status</text>
+    <rect class="cmd" x="32" y="174" width="610" height="38" rx="6"/>
+    <text class="mono" x="50" y="200">&lt;workflow&gt; invariants</text>
+    <rect class="cmd" x="32" y="222" width="610" height="38" rx="6"/>
+    <text class="mono" x="50" y="248">&lt;workflow&gt; audit traceability</text>
+    <rect class="cmd" x="32" y="270" width="610" height="38" rx="6"/>
+    <text class="mono" x="50" y="296">&lt;workflow&gt; audit coverage</text>
+    <rect class="cmd" x="32" y="318" width="610" height="38" rx="6"/>
+    <text class="mono" x="50" y="344">&lt;workflow&gt; set-access-mode repo-wide --reason "..."</text>
+  </g>
+
+  <g transform="translate(830 1075)">
+    <rect class="panel" x="0" y="0" width="690" height="360" rx="8"/>
+    <text class="h2" x="32" y="48">Must Not Forget</text>
+    <text class="body" x="32" y="92">1. Requirements first: behavior/property only.</text>
+    <text class="body" x="32" y="130">2. New/changed checks must fail before implementation.</text>
+    <text class="body" x="32" y="168">3. Implementation may update source and component docs.</text>
+    <text class="body" x="32" y="206">4. Do not edit tests during implementation without approval.</text>
+    <text class="body" x="32" y="244">5. New/material component changes need .agentic/knowledge/components.</text>
+    <text class="body" x="32" y="282">6. Broad docs are opt-in or scope-triggered.</text>
+    <text class="body" x="32" y="320">7. Delivery requires preflight and human approval.</text>
+  </g>
+
+  <g transform="translate(80 1485)">
+    <rect class="panel" x="0" y="0" width="690" height="300" rx="8"/>
+    <text class="h2" x="32" y="48">Generated Project Receives</text>
+    <text class="body" x="32" y="92">.agentic/cli - bundled workflow CLI</text>
+    <text class="body" x="32" y="130">.agentic/tools - Windows and Bash runners</text>
+    <text class="body" x="32" y="168">.agentic/requirements - durable requirement registers</text>
+    <text class="body" x="32" y="206">.codex/skills and .claude/skills - agent workflow adapters</text>
+    <text class="body" x="32" y="244">.agentic/knowledge/components - component documentation</text>
+    <text class="body" x="32" y="282">AGENTS.md, CHANGELOG.md, human prompt flyer</text>
+  </g>
+
+  <g transform="translate(830 1485)">
+    <rect class="panel" x="0" y="0" width="690" height="300" rx="8"/>
+    <text class="h2" x="32" y="48">Validation Checklist</text>
+    <text class="body" x="32" y="92">Run invariants, impact, traceability, coverage.</text>
+    <text class="body" x="32" y="130">Run focused tests and full regression as needed.</text>
+    <text class="body" x="32" y="168">Audit changed/component docs by default.</text>
+    <text class="body" x="32" y="206">Run python-codestyle audit when Python changed.</text>
+    <text class="body" x="32" y="244">Inspect diff for scope creep, weakened tests, secrets.</text>
+    <text class="body" x="32" y="282">Prepare delivery only after preflight passes.</text>
+  </g>
+
+  <rect class="panel" x="80" y="1840" width="1440" height="160" rx="8"/>
+  <text class="h2" x="115" y="1890">Default Start Prompt</text>
+  <text class="mono" x="115" y="1930">Use the agentic development workflow. Implement feature: &lt;feature description&gt;.</text>
+  <text class="mono" x="115" y="1962">Before drafting requirements, complete Intent Alignment and record defaults for open questions.</text>
+  <text class="mono" x="115" y="1994">Then run traceability/coverage audits, map impact, and stop at each gate.</text>
+
+  <text class="small" x="80" y="2052">Human operator flyer companion to PROMPT_CHEATSHEET.md. Generated for the Agentic Engineering Governance & Integrity System.</text>
+</svg>
