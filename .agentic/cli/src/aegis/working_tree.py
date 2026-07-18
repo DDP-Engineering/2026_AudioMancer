@@ -10,9 +10,14 @@
 @file working_tree.py
 @brief Working-tree audit helpers for delivery preflight checks.
 @details Provides reusable implementation behavior for the standalone AEGIS system.
+@details `_git_status` (0.3.0, code-review follow-up) now runs with
+         `-c core.quotepath=false` and unquotes any remaining C-style-quoted
+         path, so a protected/blocked/secret path pattern can no longer be
+         dodged by a non-ASCII filename that Git would otherwise report as an
+         escaped, quoted string.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.2.1
+@date 2026-07-18
+@version 0.3.0
 """
 
 # IMPORTS
@@ -27,6 +32,7 @@ from typing import Any
 from .config import WorkflowConfig, load_config
 from .paths import matches_pattern
 
+# CONSTANTS
 
 PROTECTED_PATH_PATTERNS = [
     ".git/**",
@@ -46,6 +52,8 @@ PROTECTED_PATH_PATTERNS = [
 ]
 
 MAX_SECRET_SCAN_BYTES = 1_000_000
+
+# PUBLIC API
 
 
 def audit_working_tree(
@@ -97,6 +105,9 @@ def audit_working_tree(
     }
 
 
+# HELPER FUNCTIONS
+
+
 def _git_status(repo_root: Path) -> list[dict[str, str]]:
     """
     @brief      Handle git status workflow behavior.
@@ -108,7 +119,13 @@ def _git_status(repo_root: Path) -> list[dict[str, str]]:
     @version    0.1.2
     """
     result = subprocess.run(
-        ["git", "status", "--porcelain", "-uall"],
+        # `-c core.quotepath=false` stops Git from C-style-quoting and
+        # octal-escaping paths containing non-ASCII bytes (its default
+        # `core.quotePath=true` behavior); without it, a file such as
+        # `café.txt` is reported as the literal string `"caf\303\251.txt"`,
+        # which none of the protected/blocked/secret path patterns below
+        # would ever match.
+        ["git", "-c", "core.quotepath=false", "status", "--porcelain", "-uall"],
         cwd=repo_root,
         text=True,
         encoding="utf-8",
@@ -125,11 +142,54 @@ def _git_status(repo_root: Path) -> list[dict[str, str]]:
         previous_path = None
         if " -> " in path:
             previous_path, path = path.split(" -> ", 1)
-        entry = {"status": status, "path": path.replace("\\", "/")}
+        entry = {"status": status, "path": _unquote_git_path(path).replace("\\", "/")}
         if previous_path:
-            entry["previous_path"] = previous_path.replace("\\", "/")
+            entry["previous_path"] = _unquote_git_path(previous_path).replace("\\", "/")
         entries.append(entry)
     return entries
+
+
+_GIT_QUOTE_ESCAPES = {"\\": "\\", '"': '"', "n": "\n", "t": "\t", "a": "\a", "b": "\b", "f": "\f", "v": "\v"}
+
+
+def _unquote_git_path(path: str) -> str:
+    """
+    @brief      Undo Git's C-style quoting of a porcelain status path.
+    @param[in]  path Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @details    `-c core.quotepath=false` (set on the `git status` call above)
+                covers the common non-ASCII-filename case, but Git still
+                quotes paths containing a literal double quote or backslash
+                regardless of that setting, so this remains a second,
+                defense-in-depth layer for those remaining cases.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-18
+    @version    0.1.0
+    """
+    if len(path) < 2 or path[0] != '"' or path[-1] != '"':
+        return path
+    inner = path[1:-1]
+    raw = bytearray()
+    index = 0
+    while index < len(inner):
+        char = inner[index]
+        if char != "\\" or index + 1 >= len(inner):
+            raw.extend(char.encode("utf-8"))
+            index += 1
+            continue
+        nxt = inner[index + 1]
+        if nxt in "01234567":
+            octal = inner[index + 1 : index + 4]
+            try:
+                raw.append(int(octal, 8))
+                index += 4
+                continue
+            except ValueError:
+                pass
+        raw.extend(_GIT_QUOTE_ESCAPES.get(nxt, nxt).encode("utf-8"))
+        index += 2
+    return raw.decode("utf-8", errors="replace")
 
 
 def _secret_match(path: Path, patterns: list[str]) -> str | None:
@@ -236,3 +296,6 @@ def _path_is_under_root(path: str, root: str) -> bool:
     """
     normalized_root = root.replace("\\", "/").strip("/")
     return path == normalized_root or path.startswith(f"{normalized_root}/")
+
+
+# END OF FILE

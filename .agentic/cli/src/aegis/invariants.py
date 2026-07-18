@@ -10,9 +10,12 @@
 @file invariants.py
 @brief Invariant checks for agentic workflow delivery readiness.
 @details Provides reusable implementation behavior for the standalone AEGIS system.
+@details INV-7 (0.3.0, code-review follow-up) now scans `git diff HEAD` plus
+         untracked file content instead of only the unstaged `git diff`, which
+         previously missed staged and newly created files.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.2.0
+@date 2026-07-18
+@version 0.3.0
 """
 
 # IMPORTS
@@ -29,6 +32,9 @@ from .config import WorkflowConfig, load_config
 from .models import Graph
 from .paths import is_allowed_path
 from .requirements import load_all_requirements
+from .working_tree import MAX_SECRET_SCAN_BYTES
+
+# DATA MODELS / TYPEDEFINITIONS
 
 
 @dataclass
@@ -44,6 +50,9 @@ class InvariantResult:
     holds: bool
     policy: str
     message: str
+
+
+# PUBLIC API
 
 
 def evaluate(repo_root: Path, graph: Graph, config: WorkflowConfig | None = None) -> list[InvariantResult]:
@@ -83,6 +92,9 @@ def blocking_failures(results: list[InvariantResult]) -> list[InvariantResult]:
     @version    0.1.0
     """
     return [item for item in results if item.policy in {"blocking", "non-waivable"} and not item.holds]
+
+
+# HELPER FUNCTIONS
 
 
 def _coverage(graph: Graph) -> InvariantResult:
@@ -301,38 +313,93 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
     @param[in]  repo_root Input value used by the workflow helper.
     @param[in]  cfg Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
+    @details    Scans `git diff HEAD` (staged and unstaged changes against the
+                last commit) plus the content of untracked files, not just the
+                unstaged working-tree diff: a secret dropped into a newly
+                created or already-`git add`-ed file would otherwise never
+                appear in a plain `git diff`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-18
+    @version    0.2.0
     """
     patterns = cfg.secret_patterns
     if not patterns:
         return InvariantResult("INV-7", "Clean secrets", True, "non-waivable", "No secret patterns configured.")
     try:
-        diff = subprocess.run(
-            ["git", "diff", "--no-ext-diff"],
-            cwd=repo_root,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            capture_output=True,
-            timeout=30,
-            check=False,
-        ).stdout
+        text = _tracked_changes_text(repo_root) + "\n" + _untracked_files_text(repo_root)
     except (OSError, subprocess.TimeoutExpired):
         return InvariantResult("INV-7", "Clean secrets", False, "non-waivable", "Could not inspect git diff for secrets.")
     matches = []
     for pattern in patterns:
-        if re.search(pattern, diff):
+        if re.search(pattern, text):
             matches.append(pattern)
     return InvariantResult(
         "INV-7",
         "Clean secrets",
         not matches,
         "non-waivable",
-        "No configured secret pattern found in diff." if not matches else f"Secret pattern matched: {', '.join(matches)}",
+        "No configured secret pattern found in diff or untracked files." if not matches else f"Secret pattern matched: {', '.join(matches)}",
     )
+
+
+def _tracked_changes_text(repo_root: Path) -> str:
+    """
+    @brief      Return staged and unstaged changes against HEAD as diff text.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Combined `git diff HEAD` text.
+    @exception  OSError Raised when Git cannot be invoked.
+    @exception  subprocess.TimeoutExpired Raised when Git does not finish in time.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-18
+    @version    0.1.0
+    """
+    return subprocess.run(
+        ["git", "diff", "--no-ext-diff", "HEAD"],
+        cwd=repo_root,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=30,
+        check=False,
+    ).stdout
+
+
+def _untracked_files_text(repo_root: Path) -> str:
+    """
+    @brief      Return the concatenated content of untracked, non-ignored files.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Concatenated file content, best-effort.
+    @details    A brand-new file has no HEAD to diff against, so its content
+                would never appear in `git diff HEAD`; this reads it directly.
+                Files larger than `MAX_SECRET_SCAN_BYTES` are skipped rather
+                than read in full.
+    @exception  OSError Raised when Git cannot be invoked.
+    @exception  subprocess.TimeoutExpired Raised when Git does not finish in time.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-18
+    @version    0.1.0
+    """
+    listing = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard"],
+        cwd=repo_root,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=30,
+        check=False,
+    ).stdout
+    chunks = []
+    for line in listing.splitlines():
+        path = repo_root / line
+        try:
+            if path.is_file() and path.stat().st_size <= MAX_SECRET_SCAN_BYTES:
+                chunks.append(path.read_text(encoding="utf-8", errors="ignore"))
+        except OSError:
+            continue
+    return "\n".join(chunks)
 
 
 def _root_patterns(roots: list[str]) -> list[str]:
@@ -353,3 +420,6 @@ def _root_patterns(roots: list[str]) -> list[str]:
         else:
             patterns.append(f"{normalized}/**")
     return patterns
+
+
+# END OF FILE

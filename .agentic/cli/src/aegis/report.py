@@ -28,6 +28,8 @@ from .invariants import evaluate
 from .models import Graph
 from .requirements import audit_coverage, audit_registry, audit_traceability
 
+# PUBLIC API
+
 
 def render_report(repo_root: Path, graph: Graph) -> str:
     """
@@ -140,6 +142,9 @@ def write_report(repo_root: Path, graph: Graph) -> Path:
     return path
 
 
+# HELPER FUNCTIONS
+
+
 def _render_adoption_baseline(repo_root: Path, graph: Graph) -> list[str]:
     """
     @brief      Render adoption baseline details when relevant to a run.
@@ -204,3 +209,6 @@ def _touched_paths(graph: Graph) -> list[str]:
     @version    0.1.0
     """
     return sorted({path for unit in graph.change_units for path in unit.touched_paths})
+
+
+# END OF FILE

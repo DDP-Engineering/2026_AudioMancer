@@ -9,7 +9,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|WriteFile|write_file|replace|apply_patch",
+        "matcher": "Edit|WriteFile",
         "hooks": [
           {
             "type": "command",
@@ -39,7 +39,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|Edit|Write|MultiEdit|WriteFile|write_file|replace|apply_patch",
+        "matcher": "Bash|Edit|WriteFile",
         "hooks": [
           {
             "type": "command",

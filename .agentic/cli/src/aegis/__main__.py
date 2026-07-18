@@ -19,6 +19,9 @@
 
 from .cli import main
 
+# PUBLIC API
 
 if __name__ == "__main__":
     main()
+
+# END OF FILE

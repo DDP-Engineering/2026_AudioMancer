@@ -24,6 +24,8 @@ import json
 from pathlib import Path
 import sys
 
+# PUBLIC API
+
 
 def main() -> int:
     """
@@ -60,3 +62,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# END OF FILE

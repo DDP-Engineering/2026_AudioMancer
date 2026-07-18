@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import tomllib
 
+# DATA MODELS / TYPEDEFINITIONS
+
 
 @dataclass
 class WorkflowConfig:
@@ -111,6 +113,9 @@ class WorkflowConfig:
     alignment_protected_scope_patterns: list[str] = field(default_factory=list)
 
 
+# PUBLIC API
+
+
 def load_config(repo_root: Path) -> WorkflowConfig:
     """
     @brief      Load config workflow behavior.
@@ -178,3 +183,6 @@ def load_config(repo_root: Path) -> WorkflowConfig:
         alignment_allow_recommended_responses=bool(alignment.get("allow_recommended_responses", True)),
         alignment_protected_scope_patterns=list(alignment.get("protected_scope_patterns", [])),
     )
+
+
+# END OF FILE

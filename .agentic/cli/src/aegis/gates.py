@@ -10,16 +10,20 @@
 @file gates.py
 @brief Gate execution helpers for workflow validation commands.
 @details Provides reusable implementation behavior for the standalone AEGIS system.
+@details Simple-command argv splitting (0.2.0, code-review follow-up) now uses
+         a `shlex.shlex` lexer instead of `shlex.split(..., posix=os.name !=
+         "nt")`: the previous non-POSIX mode on Windows only grouped a quoted
+         span when the quote started the token, corrupting a quoted argument
+         containing a space.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.1.0
+@date 2026-07-18
+@version 0.2.0
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
-import os
 import shlex
 import subprocess
 from pathlib import Path
@@ -27,6 +31,8 @@ from pathlib import Path
 from .config import load_config
 from .models import Evidence
 from .store import add_evidence, append_journal, load_graph, save_graph
+
+# PUBLIC API
 
 
 def run_gates(repo_root: Path, names: list[str] | None = None, timeout: int = 300) -> int:
@@ -78,6 +84,9 @@ def run_gates(repo_root: Path, names: list[str] | None = None, timeout: int = 30
                 exit_code = result.returncode
     save_graph(repo_root, graph)
     return exit_code
+
+
+# HELPER FUNCTIONS
 
 
 def _run_command(repo_root: Path, command: str, timeout: int) -> subprocess.CompletedProcess[str]:
@@ -132,7 +141,7 @@ def _argv_for_simple_command(repo_root: Path, command: str) -> list[str] | None:
     if any(token in command for token in ("&&", "||", "|", ">", "<", ";")):
         return None
     try:
-        parts = [_strip_quotes(part) for part in shlex.split(command, posix=os.name != "nt")]
+        parts = _shlex_split_preserving_backslashes(command)
     except ValueError:
         return None
     if not parts:
@@ -145,16 +154,35 @@ def _argv_for_simple_command(repo_root: Path, command: str) -> list[str] | None:
     return parts
 
 
-def _strip_quotes(value: str) -> str:
+def _shlex_split_preserving_backslashes(command: str) -> list[str]:
     """
-    @brief      Handle strip quotes workflow behavior.
-    @param[in]  value Input value used by the workflow helper.
+    @brief      Split a command string into argv, quote-aware on every platform.
+    @param[in]  command Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
-    @exception  None
+    @details    `shlex.split(command, posix=os.name != "nt")` used to pick
+                POSIX vs. non-POSIX mode by platform: non-POSIX mode on
+                Windows preserves literal backslashes (so ``C:\\Users\\x``
+                survives), but it only treats a quote character as
+                significant when it starts a token — a quoted argument
+                containing a space, e.g. ``--flag="a b"``, is split into two
+                tokens (``['--flag="a', 'b"']``) instead of one, silently
+                corrupting the argv. POSIX mode groups quoted spans
+                correctly but treats backslash as its own escape character,
+                which would instead corrupt unquoted Windows paths.
+                ``shlex.shlex`` lets quote-grouping and escape-handling be
+                configured independently: POSIX mode for correct quote
+                grouping, with ``escape`` cleared so backslashes are always
+                passed through literally, on every platform.
+    @exception  ValueError Raised when the command has unbalanced quoting.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
+    @date       2026-07-18
     @version    0.1.0
     """
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-        return value[1:-1]
-    return value
+    lexer = shlex.shlex(command, posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    lexer.escape = ""
+    return list(lexer)
+
+
+# END OF FILE

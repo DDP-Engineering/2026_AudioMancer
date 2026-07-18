@@ -19,4 +19,8 @@
 
 """Manual Codex agentic workflow support tools."""
 
+# CONSTANTS
+
 __version__ = "0.1.0"
+
+# END OF FILE

@@ -31,6 +31,7 @@ from typing import Any
 from .components import audit_components, load_components
 from .config import WorkflowConfig, load_config
 
+# CONSTANTS
 
 REGISTER_HEADER = [
     "ID",
@@ -50,6 +51,8 @@ VALID_PRIORITY = {"Must", "Should", "Could"}
 ID_PATTERN = re.compile(r"^REQ-[A-Z]+-\d{3,}$")
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
 MANUAL_MARKERS = ("manual", "inspection")
+
+# DATA MODELS / TYPEDEFINITIONS
 
 
 @dataclass
@@ -130,6 +133,9 @@ class AuditIssue:
         @version    0.1.0
         """
         return asdict(self)
+
+
+# PUBLIC API
 
 
 def load_all_requirements(repo_root: Path, config: WorkflowConfig | None = None) -> list[RequirementRow]:
@@ -437,6 +443,9 @@ def audit_registry(repo_root: Path) -> list[AuditIssue]:
     return issues
 
 
+# HELPER FUNCTIONS
+
+
 def _load_component_registry(repo_root: Path, config: WorkflowConfig) -> dict[str, Any]:
     """
     @brief      Load component adoption data for registry sync.
@@ -492,6 +501,9 @@ def _load_active_feature(repo_root: Path) -> dict[str, Any]:
             "report_path": f".agentic/runs/{run_id}/report.md",
         }
     }
+
+
+# PUBLIC API
 
 
 def load_waivers(repo_root: Path, config: WorkflowConfig) -> list[str]:
@@ -609,6 +621,9 @@ def resolve_test(repo_root: Path, test_id: str, config: WorkflowConfig) -> tuple
     else:
         resolved = ident.split("::")[-1].split("#")[-1] in source
     return (True, "resolved") if resolved else (False, f"{ident} not found in {test_path}")
+
+
+# HELPER FUNCTIONS
 
 
 def _activate_requirement_in_file(
@@ -886,3 +901,6 @@ def _git_working_set(repo_root: Path) -> list[str]:
         if len(line) > 3:
             files.append(_normalize_relative(line[3:]))
     return files
+
+
+# END OF FILE

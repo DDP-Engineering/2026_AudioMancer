@@ -24,8 +24,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+# CONSTANTS
+
 # @brief Publish-like shell command fragments that require delivery preflight.
 DELIVERY_PATTERNS = ("git push", "gh pr create", "git merge")
+
+# PUBLIC API
 
 
 def main() -> int:
@@ -87,3 +91,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# END OF FILE

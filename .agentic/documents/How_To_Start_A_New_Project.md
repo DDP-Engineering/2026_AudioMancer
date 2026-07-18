@@ -18,7 +18,8 @@ optional polish.
 
 ## 1. What is this, in one paragraph?
 
-This template gives an AI coding agent (Codex, Claude Code, or Pi) a disciplined way
+This template gives an AI coding agent (Codex, Claude Code, Pi, opencode, or
+Qwen Code — adapters ship for all five) a disciplined way
 to work on your project. Instead of letting the agent change code freely, the
 work is broken into seven **gates**. At each gate the agent stops, shows you
 what it did, and waits for your approval. Intent Alignment is the independent
@@ -53,11 +54,24 @@ tool, some guardrail "hooks", and instructions the agent reads automatically.
 | You need | Why | How to check |
 |---|---|---|
 | **Python 3.11+ runtime** | Runs the workflow tool and guardrail hooks; packaged WAEGIS registers one automatically | Run `.agentic/tools/run.ps1 --help` or `.agentic/tools/run.sh --help` |
+| **Node.js** | Every guardrail hook (write-zone guard, secret scan, ...) is dispatched through it via `.agentic/tools/run_hook.mjs` | `node --version` |
 | **Git** | The tool uses git to scan changes, find secrets, and gate delivery | `git --version` |
-| An AI agent | Codex, Claude Code, **or** Pi (the template supports all three) | — |
+| An AI agent | Codex, Claude Code, Pi, opencode, **or** Qwen Code (the template ships adapters for all five; Codex/Claude Code/Pi are the most exercised) | — |
 
 > Without git, the delivery check fails on purpose and you cannot finish a run.
 > Always work inside a git repository.
+
+> **Python and Node are requirements of the AEGIS/WAEGIS tooling itself, not
+> of your project.** They apply no matter what language your own project is
+> written in — C, C++, embedded firmware, Java, Go, whatever. Your project's
+> own compiler/build system/test runner is entirely separate and unaffected;
+> AEGIS only asks it to run gate commands you configure yourself in
+> `.agentic/workflow.toml` (`gate_test_cmds`/`gate_lint_cmds`). A machine that
+> can already build your project may still need Python and Node installed
+> just to run AEGIS's own workflow tool and hooks. `waegis new`/`waegis adopt`
+> check for both automatically (Python before proceeding; Node is checked and
+> reported, but never blocks setup — see `prereq.node` in the wizard's plan
+> preview).
 
 ---
 
@@ -86,6 +100,8 @@ flowchart TB
     CODEX[".codex  - for Codex"]
     CLAUDE[".claude + CLAUDE.md - for Claude Code"]
     PI[".pi  - for Pi"]
+    OPENCODE[".opencode + opencode.json - for opencode"]
+    QWEN[".qwen + QWEN.md - for Qwen Code"]
     AGENTS["AGENTS.md - the shared rulebook"]
   end
 
@@ -112,8 +128,8 @@ python 02_Tools\create_project_from_template.py D:\Path\To\NewProject
 
 Or simply copy everything inside `05_Software/aegis/template/`
 into your project's root folder by hand. After this, your project root contains
-`.agentic/`, `.codex/`, `.claude/`, `.pi/`, `AGENTS.md`, `CLAUDE.md`, and a few
-docs.
+`.agentic/`, `.codex/`, `.claude/`, `.pi/`, `.opencode/`, `.qwen/`, `AGENTS.md`,
+`CLAUDE.md`, `QWEN.md`, `opencode.json`, and a few docs.
 
 ### Step 2 — Make sure it is a git repository
 
@@ -200,12 +216,18 @@ You usually do **not** need to edit these:
 - **Pi** — `.pi/` ships a bridge extension that wires the same guardrails. Run
   `pi install ./.pi` and trust the project on first start. The skills surface as
   `/skill:<name>`. See `.pi/README.md`. Python must be on your PATH.
-- `AGENTS.md`, `CLAUDE.md`, and the skills are the shared rulebook — **leave
-  them as-is.**
+- **opencode** — `.opencode/` plus the root `opencode.json` wire the same
+  guardrails through an opencode plugin. See `.opencode/README.md`.
+- **Qwen Code** — `.qwen/` wires the same guardrails; `settings.json` loads
+  `AGENTS.md` first and treats `QWEN.md` only as the adapter note. See
+  `.qwen/README.md`.
+- `AGENTS.md`, `CLAUDE.md`, `QWEN.md`, and the skills are the shared rulebook —
+  **leave them as-is.**
 
 ### Step 6 — Let the agent sanity-check your setup
 
-Open your new project in Codex, Claude Code, or Pi and paste this prompt. It does not
+Open your new project in your agent tool (Codex, Claude Code, Pi, opencode, or
+Qwen Code) and paste this prompt. It does not
 change anything — it just verifies your `workflow.toml` matches the real project:
 
 ```text
@@ -270,6 +292,8 @@ every gate.
 [ ] Copy template/ into the new project root
 [ ] git init (if needed)
 [ ] A registered/system Python 3.11+ runtime and git available
+[ ] Node.js available (every guardrail hook runs through it - warned, not
+      blocked, if missing)
 [ ] run.ps1 --help works
 [ ] Edit .agentic/workflow.toml:
       [ ] [source] roots        -> your code folders
@@ -279,7 +303,8 @@ every gate.
       [ ] [traceability] language + source_extensions -> your language
       [ ] write_zones.implementation -> matches [source] roots  (+ .agentic/knowledge/components/**)
       [ ] write_zones.check          -> matches [tests] roots
-[ ] (Optional) review .codex/config.toml, .claude/settings.json, and .pi/README.md
+[ ] (Optional) review .codex/config.toml, .claude/settings.json, .pi/README.md,
+      .opencode/README.md, and .qwen/README.md for the adapter you use
 [ ] (Pi only) pi install ./.pi and trust the project
 [ ] Run the "sanity-check" prompt with your agent
 [ ] Start your first feature
@@ -313,6 +338,7 @@ The example above is Python. For other setups:
 | `gates run` does nothing | `[gates] test` / `lint` are still empty | Add your real commands |
 | Delivery preflight always fails | Not inside a git repo, or git not installed | `git init`; install git |
 | Hooks do nothing / not enforced | No explicit, WAEGIS-registered, or system Python runtime is available | Run packaged WAEGIS once, set `AEGIS_PYTHON`, or install Python 3.11+ |
+| Hooks error, or your agent tool reports a failed/missing hook command | Node.js is not installed (every hook is dispatched through `node .agentic/tools/run_hook.mjs`) | Install Node.js; `waegis`'s `prereq.node` step reports this too, but never blocks setup |
 | Coverage audit complains about a file | A new code file has no linked requirement | Add a requirement row, or waive legacy files in `.agentic/requirements/coverage_waivers.txt` |
 
 ---

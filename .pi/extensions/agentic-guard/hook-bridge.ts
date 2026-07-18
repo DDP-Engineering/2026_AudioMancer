@@ -14,10 +14,11 @@
  * printing `{ hookSpecificOutput: { permissionDecision: "deny", ... } }` (exit
  * code is always 0; stdout is the signal).
  *
- * Pi's `pi.exec()` cannot feed stdin (its ExecOptions is { signal, timeout, cwd }
- * only), so the hooks are spawned through Node's `child_process` instead. The
- * Python hooks are reused byte-for-byte; only the transport differs from a plain
- * `pi.exec`.
+ * Pi's `pi.exec()` cannot feed stdin (its ExecOptions is { signal, timeout }
+ * only, with no `cwd` option either), so the hooks are spawned through Node's
+ * `child_process` instead, which also gives explicit control over the working
+ * directory. The Python hooks are reused byte-for-byte; only the transport
+ * differs from a plain `pi.exec`.
  */
 
 import { spawn } from "node:child_process";

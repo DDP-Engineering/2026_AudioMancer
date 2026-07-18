@@ -1,6 +1,6 @@
 {
   "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
-  "_comment": "Claude Code hook configuration for the transboarded project root. Hook commands are project-root relative.",
+  "_comment": "Claude Code hook configuration for the transboarded project root. Hook commands are anchored with ${CLAUDE_PROJECT_DIR} per Claude Code's hook-reliability guidance, so they resolve correctly even in worktree/subagent sessions where cwd can diverge from the project root.",
   "_comment_permissions": "Outward delivery (git push, gh pr create, git merge) is denied by default and also gated by the delivery-preflight hook; a human runs those actions after preflight passes. Secret and key files are denied for read and write to mirror the Codex filesystem profile in .codex/config.toml.",
   "hooks": {
     "PreToolUse": [
@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/guard_write_zone.py",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.agentic/tools/run_hook.mjs\" \"${CLAUDE_PROJECT_DIR}/.agentic/hooks/guard_write_zone.py\"",
             "statusMessage": "Checking agentic write zone"
           }
         ]
@@ -19,12 +19,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/secret_scan.py",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.agentic/tools/run_hook.mjs\" \"${CLAUDE_PROJECT_DIR}/.agentic/hooks/secret_scan.py\"",
             "statusMessage": "Checking command for secrets"
           },
           {
             "type": "command",
-            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/delivery_preflight.py",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.agentic/tools/run_hook.mjs\" \"${CLAUDE_PROJECT_DIR}/.agentic/hooks/delivery_preflight.py\"",
             "statusMessage": "Checking delivery preflight"
           }
         ]
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/post_tool_evidence.py",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.agentic/tools/run_hook.mjs\" \"${CLAUDE_PROJECT_DIR}/.agentic/hooks/post_tool_evidence.py\"",
             "statusMessage": "Recording agentic tool evidence"
           }
         ]

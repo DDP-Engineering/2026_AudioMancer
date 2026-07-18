@@ -23,6 +23,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Literal
 
+# DATA MODELS / TYPEDEFINITIONS
 
 RunKind = Literal["feature", "fix", "change", "adoption"]
 
@@ -47,6 +48,8 @@ AccessMode = Literal["standard", "repo-wide"]
 AlignmentRisk = Literal["low", "medium", "high"]
 AlignmentDecision = Literal["proceed", "pause"]
 
+# CONSTANTS
+
 STAGES: list[Stage] = [
     "intake",
     "alignment",
@@ -69,6 +72,8 @@ ADOPTION_STAGES: list[Stage] = [
 
 ALL_STAGES: list[Stage] = [*STAGES, *ADOPTION_STAGES]
 
+# HELPER FUNCTIONS
+
 
 def now_iso() -> str:
     """
@@ -80,6 +85,9 @@ def now_iso() -> str:
     @version    0.1.0
     """
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+# DATA MODELS / TYPEDEFINITIONS
 
 
 @dataclass
@@ -279,3 +287,6 @@ class Graph:
             decisions=[Decision(**item) for item in data.get("decisions", [])],
             defects=[Defect(**item) for item in data.get("defects", [])],
         )
+
+
+# END OF FILE

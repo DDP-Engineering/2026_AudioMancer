@@ -48,9 +48,10 @@ translates Pi tool events into the existing hook payloads and reuses the Python
 `block` is returned as `{ block: true, reason }`. Pi enforces this in every mode
 (TUI, RPC, JSON, print) because blocking is a return value, not a UI prompt.
 
-> **Transport note:** Pi's `pi.exec()` cannot pass stdin (its options are
-> `{ signal, timeout, cwd }`), so the hooks are spawned via Node's
-> `child_process` instead. The Python is unchanged; only the transport differs
+> **Transport note:** Pi's `pi.exec()` cannot pass stdin (its options are only
+> `{ signal, timeout }`, with no `cwd` option either), so the hooks are spawned
+> via Node's `child_process` instead, which also gives explicit control over
+> the working directory. The Python is unchanged; only the transport differs
 > from a plain `pi.exec`.
 
 ## Prerequisites and trust

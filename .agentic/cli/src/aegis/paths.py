@@ -10,17 +10,23 @@
 @file paths.py
 @brief Path resolution helpers for generated workflow scaffolds.
 @details Mirrors the packaged CLI implementation shipped into generated projects.
+@details ``matches_pattern`` (0.2.0, architecture-review follow-up) is now
+         case-sensitive on non-Windows hosts, matching the real filesystem.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.1.0
+@date 2026-07-18
+@version 0.2.0
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
-from fnmatch import fnmatch
+import os
+from fnmatch import fnmatchcase
 from pathlib import Path
+
+
+# PUBLIC API
 
 
 def relative_to_root(path: str | Path, root: Path) -> str:
@@ -54,14 +60,33 @@ def matches_pattern(path: str, pattern: str) -> bool:
     @details    Shared matcher used by scope checks and the working-tree audit so
                 they stay consistent. The standalone `guard_write_zone.py` hook
                 keeps its own copy because it runs without importing this package.
+    @details    Case-folded only on Windows (``os.name == "nt"``), added
+                0.2.0 (architecture-review follow-up): the previous
+                unconditional ``.lower()`` matched Windows' own
+                case-insensitive filesystem but could match/miss patterns
+                inconsistently with the real, case-sensitive filesystem on
+                Ubuntu/Linux. Uses ``fnmatch.fnmatchcase`` rather than
+                ``fnmatch.fnmatch``: the latter applies its own OS-tied
+                ``os.path.normcase`` internally (case-insensitive on
+                Windows, a no-op on POSIX) *in addition to* whatever this
+                function does, which would silently reintroduce
+                Windows-only case-insensitivity no matter what this
+                function decides — ``fnmatchcase`` never normalizes case on
+                its own, so this function's own ``os.name`` check is the
+                only source of case-folding.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-18
+    @version    0.2.0
     """
-    normalized_path = path.replace("\\", "/").lower()
-    normalized_pattern = pattern.replace("\\", "/").rstrip("/").lower()
-    return fnmatch(normalized_path, normalized_pattern) or fnmatch(normalized_path, f"{normalized_pattern}/**")
+    normalized_path = path.replace("\\", "/")
+    normalized_pattern = pattern.replace("\\", "/").rstrip("/")
+    if os.name == "nt":
+        normalized_path = normalized_path.lower()
+        normalized_pattern = normalized_pattern.lower()
+    return fnmatchcase(normalized_path, normalized_pattern) or fnmatchcase(
+        normalized_path, f"{normalized_pattern}/**"
+    )
 
 
 def is_allowed_path(path: str | Path, root: Path, patterns: list[str]) -> bool:
@@ -78,3 +103,6 @@ def is_allowed_path(path: str | Path, root: Path, patterns: list[str]) -> bool:
     """
     rel = relative_to_root(path, root)
     return any(matches_pattern(rel, pattern) for pattern in patterns)
+
+
+# END OF FILE

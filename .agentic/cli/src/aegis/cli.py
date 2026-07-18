@@ -42,7 +42,11 @@ from .report import render_report, write_report
 from .store import add_evidence, append_journal, init_graph, load_graph, repo_root_from, save_graph, set_access_mode, set_stage
 from .working_tree import audit_working_tree
 
+# CONSTANTS
+
 ALIGNMENT_RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
+
+# PUBLIC API
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -396,6 +400,9 @@ def main(argv: list[str] | None = None) -> None:
         save_graph(root, graph)
         print(f"Recorded change unit {args.id}")
         return
+
+
+# HELPER FUNCTIONS
 
 
 def _status(root: Path, graph) -> dict:
@@ -795,3 +802,6 @@ def _supersede_evidence(graph, evidence_id: str, superseded_by: str, reason: str
             rationale=reason,
         )
     )
+
+
+# END OF FILE

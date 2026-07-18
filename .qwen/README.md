@@ -36,13 +36,16 @@ and Claude Code adapters:
 
 | Qwen tool event | Python hook(s) | Effect on deny |
 |---|---|---|
-| `WriteFile` / `Edit` / `MultiEdit` (PreToolUse) | `guard_write_zone.py` | block with reason |
+| `WriteFile` / `Edit` (PreToolUse) | `guard_write_zone.py` | block with reason |
 | `Bash` (PreToolUse) | `secret_scan.py`, then `delivery_preflight.py` | block with reason |
 | any edit/shell (PostToolUse) | `post_tool_evidence.py` | fire-and-forget journal entry |
 
-Qwen labels its file-writing tool `WriteFile` in hook matchers, so the write-zone
-guard accepts that name alongside the Codex `apply_patch` and Claude
-`Edit`/`Write`/`MultiEdit` names.
+Qwen labels its file-writing tool `WriteFile` in hook matchers, so `settings.json`
+matches `Edit|WriteFile` (0.1.1, code-review follow-up: no longer lists
+`MultiEdit`/`write_file`/`replace`/`apply_patch`, which are not documented Qwen
+Code tool names - they were unused aliases carried over from the Claude/Codex
+adapters). The shared `guard_write_zone.py` hook still recognizes those other
+adapters' tool names too, since it is reused byte-for-byte across all five.
 
 ## Prerequisites and trust
 

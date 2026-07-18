@@ -25,12 +25,15 @@ from uuid import uuid4
 
 from .models import ADOPTION_STAGES, AccessMode, Evidence, Graph, Intent, RunKind, Stage, now_iso
 
+# CONSTANTS
 
 AGENTIC_DIR = ".agentic"
 RUNS_DIR = "runs"
 CURRENT_RUN = "current_run"
 GRAPH_FILE = "graph.json"
 JOURNAL_FILE = "journal.jsonl"
+
+# PUBLIC API
 
 
 def repo_root_from(path: Path | None = None) -> Path:
@@ -329,3 +332,6 @@ def set_access_mode(
         {"access_mode": access_mode, "reason": reason},
     )
     return graph
+
+
+# END OF FILE
