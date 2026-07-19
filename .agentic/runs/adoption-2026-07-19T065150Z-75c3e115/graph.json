@@ -1,0 +1,383 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "The app-shell owner and boundary are confirmed or revised; current behavior is documented; every mapped production file has an Active test-linked requirement; focused tests and audits are recorded; integration gaps are classified honestly; no runtime behavior changes occur; and every gate stops for approval."
+    ],
+    "assumptions": [
+      "The approved app-shell paths in .agentic/components.toml remain the authoritative boundary unless discovery finds concrete contradictory evidence.",
+      "Current implementation is authoritative; legacy documentation and existing tests are evidence to reconcile, not permission to invent behavior.",
+      "Application source, assets, and tests remain unchanged unless a missing adoption-only test inventory need is proven and separately reported."
+    ],
+    "created_at": "2026-07-19T06:55:02+00:00",
+    "decision": "proceed",
+    "open_questions": [
+      "Confirm DDP Engineering / Eng. Dan Dumitru Pasare as owner for app-shell?"
+    ],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/__main__.py and app.py (read-only discovery)",
+      "04_Software/AudioMancer/src/audiomancer/ui/main_window.py, navigation_sidebar.py, and controllers/misc_ui_controller.py (read-only discovery)",
+      "04_Software/AudioMancer/tests/test_app_entrypoint.py, test_main_window_lifecycle.py, and test_package_import.py (read-only evidence)",
+      ".agentic/knowledge/components/App_Shell.md and index.md",
+      ".agentic/requirements/*.md, .agentic/components.toml, .agentic/registry/*.json, and .agentic/reports/adoption/**"
+    ],
+    "reason": "This is a workflow-artifact-only adoption slice. The owner question has a safe recommended response permitted by policy, and the known lazy cleanup-state mismatch will remain documented unless the human switches to agentic-development.",
+    "recommended_responses": [
+      "Confirm DDP Engineering / Eng. Dan Dumitru Pasare, consistent with the approved map and repository authorship evidence."
+    ],
+    "risk": "low",
+    "scope": [
+      "Single mapped app-shell component: bootstrap files, shared UI composition files, assets, existing focused entrypoint/package/lifecycle tests, and legacy App Shell documentation; no bundle and no runtime behavior changes."
+    ],
+    "source": "User approval to continue app-shell adoption alignment on 2026-07-19",
+    "understanding": "Adopt only the mapped app-shell component by documenting current bootstrap, package entry points, shared Qt application setup, main-window composition, navigation, and shared UI wiring; add minimal durable requirements linked to existing evidence; classify baseline gaps; and preserve all runtime behavior."
+  },
+  "change_units": [],
+  "checks": [],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "E-0005 -> E-0006",
+      "created_at": "2026-07-19T16:22:25+00:00",
+      "id": "D-0001",
+      "question": "Evidence superseded",
+      "rationale": "The mandated patch editor now successfully performs .agentic edits; the earlier Windows 206 failure was an environment/tool transient."
+    },
+    {
+      "approver": "human",
+      "chosen": "baseline-review",
+      "created_at": "2026-07-19T16:22:25+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "App Shell documentation, active test-linked requirement, map update, and registry sync completed from focused passing evidence E-0004."
+    },
+    {
+      "approver": "human",
+      "chosen": "component-adoption",
+      "created_at": "2026-07-19T16:22:48+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Starting the next approved single-component adoption slice: platform-settings-ui."
+    },
+    {
+      "approver": "human",
+      "chosen": "baseline-review",
+      "created_at": "2026-07-19T16:30:31+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "All remaining discovered component pages, active requirement links, focused representative evidence, and component-map updates are complete."
+    },
+    {
+      "approver": "human",
+      "chosen": "adoption-delivery",
+      "created_at": "2026-07-19T16:30:49+00:00",
+      "id": "D-0005",
+      "question": "Workflow stage route",
+      "rationale": "Repository-wide adoption documentation, active requirement coverage, registry synchronization, baseline review, and passing audits are complete; delivery validation remains read-only."
+    },
+    {
+      "approver": "human",
+      "chosen": "component-adoption",
+      "created_at": "2026-07-19T17:06:49+00:00",
+      "id": "D-0006",
+      "question": "Workflow stage route",
+      "rationale": "Redoing single-component characterization at the user-requested evidence depth, beginning with operation-orchestration; do not promote until requirements and tests are proportionate."
+    },
+    {
+      "approver": "human",
+      "chosen": "baseline-review",
+      "created_at": "2026-07-19T17:36:34+00:00",
+      "id": "D-0007",
+      "question": "Workflow stage route",
+      "rationale": "Completed one-at-a-time re-characterization of all nine previously shallow components with source review, split requirements, exact test links, and evidence E-0009 through E-0017."
+    },
+    {
+      "approver": "human",
+      "chosen": "adoption-delivery",
+      "created_at": "2026-07-19T17:37:05+00:00",
+      "id": "D-0008",
+      "question": "Workflow stage route",
+      "rationale": "Baseline review completed: all mapped components remain conservatively characterized with passing audits and manual verification limits recorded."
+    }
+  ],
+  "defects": [],
+  "evidence": [
+    {
+      "command": null,
+      "created_at": "2026-07-19T06:52:24+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "note",
+      "path": null,
+      "result": "info",
+      "stage": "adoption-intake",
+      "status": "active",
+      "summary": "Adoption intake: selected the discovered app-shell component as one component, with existing approved map paths and no bundle. Scope is application bootstrap, main-window composition, navigation, shared UI wiring, and mapped tests; runtime behavior remains out of scope.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-19T15:49:03+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "scan",
+      "path": null,
+      "result": "info",
+      "stage": "repo-discovery",
+      "status": "active",
+      "summary": "App-shell repo discovery: traceability audit passed; coverage audit has 72 repository gaps including five app-shell files. Boundary confirmed as bootstrap, MainWindow integration, sidebar, and shared misc UI; no bundle recommended.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-19T15:50:54+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "component-map",
+      "status": "active",
+      "summary": "Component-map gate: retain the existing app-shell boundary and high criticality with no bundle. Discovery validates bootstrap, MainWindow composition, navigation, and shared misc UI ownership. Owner confirmation is proposed for human approval; component status remains discovered pending adoption.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q tests/test_app_entrypoint.py tests/test_main_window_lifecycle.py tests/test_package_import.py",
+      "created_at": "2026-07-19T15:54:52+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Focused app-shell test inventory passed: 20 passed, 1 warning (entrypoint, MainWindow lifecycle, and package import).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-19T15:55:06+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "note",
+      "path": null,
+      "result": "info",
+      "stage": "component-adoption",
+      "status": "superseded",
+      "summary": "Component-adoption discovery completed: app-shell focused tests pass, but requirement, component-documentation, and manifest updates are pending because the mandated apply_patch editor fails with Windows error 206 before it can read or write .agentic files. No workaround that bypasses the mandated editor was used.",
+      "supersede_reason": "The mandated patch editor now successfully performs .agentic edits; the earlier Windows 206 failure was an environment/tool transient.",
+      "superseded_by": "E-0006"
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-19T16:22:13+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "note",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "The mandatory patch-tool write probe and subsequent App Shell documentation, requirement, index, and map edits completed without Windows error 206; E-0005 environment blocker is resolved.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected to 04_Software/AudioMancer/.pytest_tmp and .uv-cache; uv run --project . pytest -q [platform focused tests]",
+      "created_at": "2026-07-19T16:25:08+00:00",
+      "failure_kind": "configuration",
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Platform focused tests: 77 passed and 2 existing configuration-hygiene tests failed because the local settings file contains a nonblank credential. No behavior or settings change was made during adoption.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected to 04_Software/AudioMancer/.pytest_tmp and .uv-cache; uv run --project . pytest -q [nine representative component tests]",
+      "created_at": "2026-07-19T16:29:51+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Focused representative tests for operation orchestration, AI runtime, text chunking, AI translation, character discovery, voice profiles, speech blocks, TTS audio blocks, and audio assembly: 9 passed, 1 deprecation warning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected to 04_Software/AudioMancer/.pytest_tmp and .uv-cache; uv run --project . pytest -q test_main_window_operation_shutdown.py test_operation_runner_controller.py test_operation_runtime_service.py test_workflow_controller_service.py test_workflow_impact_service.py test_workflow_order_consistency.py",
+      "created_at": "2026-07-19T17:11:10+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Operation Orchestration re-characterization: reread all five mapped sources; focused suite passed 40 tests. REQ-FUNC-009 and REQ-FUNC-018 through REQ-FUNC-020 split runtime, impact, runner/dialog, and controller responsibilities. Component remains characterized because manifest synchronization and direct progress-dialog behavior lack focused tests.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected to 04_Software/AudioMancer/.pytest_tmp and .uv-cache; uv run --project . pytest -q test_ai_backend_service.py test_ai_budget_service.py test_ai_settings_page.py test_ai_state_note_service.py test_llm_provider_service.py test_main_window_ai_profiles.py test_prompt_template_service.py",
+      "created_at": "2026-07-19T17:13:16+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "AI Runtime re-characterization: reread all eight mapped sources; focused suite passed 40 tests. REQ-FUNC-010 and REQ-FUNC-021 through REQ-FUNC-025 split backend, budgeting, provider, prompts, token state, and profile UI behaviors. Component remains characterized because no focused tests directly isolate token-usage merge/restore helpers or controller persistence paths.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected; focused Text Chunking pytest modules",
+      "created_at": "2026-07-19T17:15:53+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Text Chunking re-characterization: reread all five mapped sources; focused suite passed 69 tests. REQ-FUNC-011 and REQ-FUNC-026 through REQ-FUNC-028 split deterministic, AI, state, and UI behavior. Component remains characterized pending explicit review of untested visual layout and real-document semantic-boundary behavior.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected; focused AI Translation pytest modules",
+      "created_at": "2026-07-19T17:18:05+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "AI Translation re-characterization: reread all four mapped sources; focused suite passed 28 tests. REQ-FUNC-012 and REQ-FUNC-029 through REQ-FUNC-030 split authoritative document, state synchronization, and UI/controller behavior. Component remains characterized pending manual target-language quality review.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected; focused Character Discovery pytest modules",
+      "created_at": "2026-07-19T17:22:58+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Character Discovery re-characterization: reread all four mapped sources; focused suite passed 55 tests. REQ-FUNC-013, REQ-FUNC-031, and REQ-FUNC-032 separate service, state, and UI behavior and link every test in their respective suites. Component remains characterized pending operator review of AI-derived character correctness, evidence relevance, and demographics.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected; focused Voice Profiles pytest modules",
+      "created_at": "2026-07-19T17:27:48+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Voice Profiles re-characterization: reread all ten mapped sources; focused suite passed 96 tests. REQ-FUNC-014 and REQ-FUNC-033 through REQ-FUNC-037 split persistence, state, narrator definition, profile generation/import, and both UI flows and link every test in their suites. Component remains characterized pending human audition and approval of generated/imported voice suitability.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected; focused Speech Blocks pytest modules",
+      "created_at": "2026-07-19T17:30:26+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Speech Blocks re-characterization: reread all seven mapped sources; focused suite passed 131 tests. REQ-FUNC-015 and REQ-FUNC-038 through REQ-FUNC-041 separate orchestration, normalization, report/state, text splitting, and UI behavior and link every test in their suites. Component remains characterized pending operator review of semantic speaker/ambience/pause decisions.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected; focused TTS Audio Blocks pytest modules",
+      "created_at": "2026-07-19T17:33:40+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "TTS Audio Blocks re-characterization: reread all ten mapped sources; focused suite passed 83 tests with one performance case deselected. REQ-FUNC-016 and REQ-FUNC-042 through REQ-FUNC-045 split artifacts, generation/state/budget, runtime, audio UI, and TTS settings. Component remains characterized pending installed-runtime verification and human listening.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "TEMP/TMP/UV_CACHE_DIR redirected; focused Audio Assembly pytest modules",
+      "created_at": "2026-07-19T17:35:51+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Audio Assembly re-characterization: reread all four mapped sources; focused suite passed 48 tests. REQ-FUNC-017 and REQ-FUNC-046 through REQ-FUNC-047 split composition, state, and UI behavior and link every test in their suites. Component remains characterized pending human listening for mix and output quality.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "source-authoritative reconciliation of 05_SoftwareDocu/AudioMancer_*.md against current 04_Software/AudioMancer source",
+      "created_at": "2026-07-19T18:40:51+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "note",
+      "path": ".agentic/knowledge/components",
+      "result": "info",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Documentation reconciliation completed for ten adopted components. AI Runtime: added canonical provider usage mapping/merge and explicit response_format/max_tokens compatibility retries, verified at token_usage_service.py:44-103 and llm_provider_service.py:75-193,356-367,501-534. Operation Orchestration: verified the existing AEGIS page already matched the QThread runner, cooperative shutdown, compact operation state, and selective impact policy at operation_runner_controller.py:247-551, operation_runtime_service.py:212-803, workflow_impact_service.py:148-486; no legacy import was warranted. Text Chunking: added stable chunk-ID resequencing, non-empty deletion, anchored insertion, and selective downstream invalidation at text_chunking_state_service.py:143-336,357-415,466-546. AI Translation: added single authoritative translated_text.json contract plus complete-chunk checkpointing and prior-text preservation on failed retranslation at ai_translation_service.py:258-335,339-407,467-496,610-675. Platform Settings UI: added settings JSON validation/persistence, UI-state/theme/scroll, and settings-dialog usage from settings_service.py:302-421,688-826, ui_state_service.py:2168-2628, ui_scroll_service.py:38-174, ui_theme_service.py:332-477. Speech Blocks: added CCCC-BBBBBB IDs, manual-row behavior, review_pending completion, and response-contract-gated resume from speech_blocks_service.py:3986-4138,4192-4285. Voice Profiles: added selected narrator copy and same_narrator copied/imported/generated sample-origin behavior from narrator_definition_service.py:914-943, character_voices_service.py:654-792, voice_sample_import_service.py:35-40. Audio Assembly: added output-mode/ambience policy, shared scene-mix handling, fingerprint-gated resume, temporary WAV publication, and WAV-only delivery from audio_assembly_state_service.py:28-95 and audio_assembly_service.py:1028-1088,1550-1707. Character Discovery: added exact profile/report/state/log outputs, malformed-artifact recovery, and dialogue-evidence-backed preview handling from character_discovery_state_service.py:73-137 and character_discovery_service.py:2414-2544. TTS Audio Blocks: added approval gating, pause metadata-only and scene-ambience runtime paths, compact speech_block_id record contract, assembly-only reset after approval, and cooperative cancellation boundary from audio_blocks_service.py:3366-3540. Discrepancies found: Platform Settings UI legacy docs claimed no settings-UI integration; actual MainWindow delegates to settings_ui_controller at main_window.py:644-653 and toolbar wiring is at 713-735. They also claimed default AI profile IDs were absent; actual settings normalization handles default profile IDs at settings_service.py:550-557 and defaults them at 700-707. No discrepancy was found between legacy claims and current source for AI Runtime, Operation Orchestration, Text Chunking, AI Translation, Speech Blocks, Voice Profiles, Audio Assembly, Character Discovery, or TTS Audio Blocks. This was documentation-only adoption work; no application behavior or adoption status changed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 invariants; .\\\\.agentic\\\\tools\\\\run.ps1 audit traceability",
+      "created_at": "2026-07-19T18:41:20+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "gate",
+      "path": ".agentic/knowledge/components",
+      "result": "pass",
+      "stage": "adoption-delivery",
+      "status": "active",
+      "summary": "Closed-loop validation after documentation-reconciliation evidence E-0018: aegis invariants passed INV-1 through INV-9, including blocking evidence and component-baseline-scope checks; aegis audit traceability returned OK: no audit issues. No runtime source, tests, component adoption statuses, requirements, or component map entries changed during this documentation-only evidence correction.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-19T06:51:50+00:00",
+    "id": "I-0001",
+    "kind": "adoption",
+    "scope_hint": [],
+    "statement": "Adopt the discovered app-shell component by characterizing its current entry points, application shell, main-window integration, UI navigation, and lifecycle contracts; preserve runtime behavior.",
+    "status": "draft"
+  },
+  "run_id": "adoption-2026-07-19T065150Z-75c3e115",
+  "spec_items": [],
+  "stage": "adoption-delivery"
+}

@@ -63,7 +63,7 @@ language = "python"
 source_extensions = [".py"]
 
 # Roots where source files require requirement coverage or an explicit waiver.
-coverable_roots = ["04_Software/AudioMancer"]
+coverable_roots = ["04_Software/AudioMancer/src/audiomancer"]
 
 # Files or glob patterns excluded from coverable-file discovery.
 coverable_exclude = ["__init__.py"]

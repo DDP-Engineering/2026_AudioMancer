@@ -10,9 +10,17 @@
 @file store.py
 @brief Persistence helpers for agentic workflow run state.
 @details Mirrors the packaged CLI implementation shipped into generated projects.
+@details ``repo_root_from`` (0.3.0, code-review follow-up) now refuses a
+         resolved root that is itself named ``.agentic`` or nested inside one:
+         previously, invoking the CLI with the process working directory
+         mistakenly set to a project's own ``.agentic`` folder (or a
+         previously self-nested copy of it) silently created another
+         ``.agentic/.agentic/...`` layer instead of failing, since
+         ``agentic_root()``/``write_current_run()``/``init_graph()`` all
+         ``mkdir(parents=True, exist_ok=True)`` unconditionally.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.2.0
+@date 2026-07-18
+@version 0.3.0
 """
 
 # IMPORTS
@@ -41,12 +49,44 @@ def repo_root_from(path: Path | None = None) -> Path:
     @brief      Resolve repo root from workflow behavior.
     @param[in]  path Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
-    @exception  None
+    @exception  SystemExit Raised when the resolved root is itself named
+                ``.agentic`` or nested inside one.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
+    @date       2026-07-18
+    @version    0.2.0
+    """
+    root = (path or Path.cwd()).resolve()
+    _reject_nested_agentic_root(root)
+    return root
+
+
+def _reject_nested_agentic_root(root: Path) -> None:
+    """
+    @brief      Refuse a workflow root that is itself named ``.agentic`` or
+                nested inside one.
+    @param[in]  root Resolved candidate workflow root.
+    @return     None
+    @details    Every state-writing command reaches this indirectly through
+                :func:`repo_root_from`, which the CLI calls with the process's
+                own current working directory and no further validation. A
+                caller that mistakenly runs the CLI from inside a project's
+                own ``.agentic`` folder (or a previously self-nested copy of
+                it) would otherwise silently grow another
+                ``.agentic/.agentic/...`` layer instead of failing loudly, since
+                every write path here (``write_current_run``, ``init_graph``)
+                calls ``mkdir(parents=True, exist_ok=True)`` unconditionally.
+    @exception  SystemExit Raised when ``root`` matches or contains an
+                ``.agentic`` path segment.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-18
     @version    0.1.0
     """
-    return (path or Path.cwd()).resolve()
+    if root.name == AGENTIC_DIR or AGENTIC_DIR in root.parts:
+        raise SystemExit(
+            f"Refusing to use '{root}' as the workflow root: it is the "
+            f"'{AGENTIC_DIR}' directory itself or nested inside one. Run this "
+            "command from the project root, not from inside '.agentic'."
+        )
 
 
 def agentic_root(repo_root: Path) -> Path:

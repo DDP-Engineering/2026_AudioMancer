@@ -1,0 +1,18 @@
+{
+  "adoption-2026-07-19T065150Z-75c3e115": {
+    "check_ids": [],
+    "intent": {
+      "created_at": "2026-07-19T06:51:50+00:00",
+      "id": "I-0001",
+      "kind": "adoption",
+      "scope_hint": [],
+      "statement": "Adopt the discovered app-shell component by characterizing its current entry points, application shell, main-window integration, UI navigation, and lifecycle contracts; preserve runtime behavior.",
+      "status": "draft"
+    },
+    "report_path": ".agentic/runs/adoption-2026-07-19T065150Z-75c3e115/report.md",
+    "run_id": "adoption-2026-07-19T065150Z-75c3e115",
+    "spec_ids": [],
+    "stage": "adoption-delivery",
+    "touched_paths": []
+  }
+}
