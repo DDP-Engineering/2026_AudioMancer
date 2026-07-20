@@ -9,10 +9,11 @@
 """
 @file requirements.py
 @brief Requirement registry, coverage, and traceability helpers.
-@details Provides reusable implementation behavior for the standalone AEGIS system.
+@details Provides reusable implementation behavior for the standalone AEGIS system,
+including linked-test validation and read-only registry freshness checks.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.2.1
+@date 2026-07-20
+@version 0.4.0
 """
 
 # IMPORTS
@@ -24,12 +25,12 @@ from datetime import datetime, timezone
 from fnmatch import fnmatch
 import json
 import re
-import subprocess
 from pathlib import Path
 from typing import Any
 
 from .components import audit_components, load_components
 from .config import WorkflowConfig, load_config
+from .working_tree import _git_status
 
 # CONSTANTS
 
@@ -301,21 +302,29 @@ def activate_requirement(
     config: WorkflowConfig | None = None,
 ) -> RequirementRow:
     """
-    @brief      Activate requirement workflow behavior.
+    @brief      Activate a requirement after validating each newly linked test.
     @param[in]  repo_root Input value used by the workflow helper.
     @param[in]  req_id Input value used by the workflow helper.
     @param[in]  linked_tests Input value used by the workflow helper.
     @param[in]  verification Input value used by the workflow helper.
     @param[in]  config Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
-    @exception  None
+    @exception  ValueError If activation data is invalid, a linked test does not
+                resolve, or the requirement cannot be found.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-20
+    @version    0.2.0
     """
     cfg = config or load_config(repo_root)
     if not linked_tests and not any(marker in verification.lower() for marker in MANUAL_MARKERS):
         raise ValueError("Requirement activation needs at least one linked test or manual verification text.")
+    unresolved_tests: list[str] = []
+    for test_id in linked_tests:
+        resolved, reason = resolve_test(repo_root, test_id, cfg)
+        if not resolved:
+            unresolved_tests.append(f"{test_id}: {reason}")
+    if unresolved_tests:
+        raise ValueError(f"linked test(s) do not resolve: {'; '.join(unresolved_tests)}")
     for root_name in cfg.requirement_roots:
         root = repo_root / root_name
         if not root.exists():
@@ -401,13 +410,13 @@ def sync_registry(repo_root: Path) -> dict[str, int]:
 
 def audit_registry(repo_root: Path) -> list[AuditIssue]:
     """
-    @brief      Audit registry workflow behavior.
+    @brief      Audit registry presence, JSON validity, and requirements freshness.
     @param[in]  repo_root Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.2.1
+    @date       2026-07-20
+    @version    0.3.0
     """
     registry = repo_root / ".agentic" / "registry"
     requirements_path = registry / "requirements.json"
@@ -426,12 +435,24 @@ def audit_registry(repo_root: Path) -> list[AuditIssue]:
     if issues:
         return issues
     try:
-        json.loads(requirements_path.read_text(encoding="utf-8"))
-        json.loads(checks_path.read_text(encoding="utf-8"))
+        cached_requirements = json.loads(requirements_path.read_text(encoding="utf-8"))
+        cached_checks = json.loads(checks_path.read_text(encoding="utf-8"))
         json.loads(features_path.read_text(encoding="utf-8"))
         json.loads(components_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         issues.append(AuditIssue("REGISTRY-BAD-JSON", str(exc)))
+    else:
+        rows = load_all_requirements(repo_root)
+        live_requirements = {row.req_id: row.to_dict() for row in rows}
+        live_check_ids = {test_id for row in rows for test_id in row.linked_tests}
+        cached_check_ids = set(cached_checks) if isinstance(cached_checks, dict) else None
+        if cached_requirements != live_requirements or cached_check_ids != live_check_ids:
+            issues.append(
+                AuditIssue(
+                    "REGISTRY-STALE",
+                    "requirements registry cache does not match the registers; run registry sync",
+                )
+            )
     for component_issue in audit_components(repo_root):
         issues.append(
             AuditIssue(
@@ -879,27 +900,20 @@ def _normalize_relative(path: str) -> str:
 
 def _git_working_set(repo_root: Path) -> list[str]:
     """
-    @brief      Handle git working set workflow behavior.
+    @brief      Return current and previous paths from the shared Git status parser.
     @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @return     Normalized repository-relative paths in Git status order.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-20
+    @version    0.2.0
     """
-    result = subprocess.run(
-        ["git", "status", "--short"],
-        cwd=repo_root,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        capture_output=True,
-        check=False,
-    )
-    files = []
-    for line in result.stdout.splitlines():
-        if len(line) > 3:
-            files.append(_normalize_relative(line[3:]))
+    files: list[str] = []
+    for entry in _git_status(repo_root):
+        files.append(entry["path"])
+        previous_path = entry.get("previous_path")
+        if previous_path:
+            files.append(previous_path)
     return files
 
 

@@ -11,6 +11,12 @@
             "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/guard_write_zone.py",
             "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\guard_write_zone.py",
             "statusMessage": "Checking agentic write zone"
+          },
+          {
+            "type": "command",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/secret_scan.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\secret_scan.py",
+            "statusMessage": "Checking edit content for secrets"
           }
         ]
       },

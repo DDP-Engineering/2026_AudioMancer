@@ -9,10 +9,11 @@
 """
 @file components.py
 @brief Component manifest loading and audit helpers.
-@details Provides the approved component and bundle contract for adoption runs.
+@details Provides the approved component and bundle contract for adoption runs,
+using the shared repository path-matching policy for component ownership.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-22
-@version 0.2.0
+@date 2026-07-20
+@version 0.3.0
 """
 
 # IMPORTS
@@ -20,12 +21,12 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-import fnmatch
 from pathlib import Path
 from typing import Any
 import tomllib
 
 from .config import load_config
+from .paths import matches_pattern
 
 
 # CONSTANTS
@@ -154,12 +155,12 @@ def component_for_path(manifest: ComponentManifest, repo_relative_path: str) -> 
     @return     Matching component, or None when no component pattern matches.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
+    @date       2026-07-20
+    @version    0.2.0
     """
     normalized = _normalize_path(repo_relative_path)
     for component in manifest.components.values():
-        if any(fnmatch.fnmatch(normalized, pattern) for pattern in component.paths):
+        if any(matches_pattern(normalized, pattern) for pattern in component.paths):
             return component
     return None
 

@@ -10,9 +10,15 @@
 @file config.py
 @brief Configuration loading helpers for agentic workflow repositories.
 @details Provides reusable implementation behavior for the standalone AEGIS system.
+@details Gate values (0.4.0, analysis-review follow-up) are normalized on
+         load: a scalar ``[gates]`` string becomes a one-command list —
+         previously ``test = "pytest"`` became ``list("pytest")`` and ran each
+         character as its own command — and any non-string, non-string-list
+         value exits with a message naming the offending key instead of
+         surfacing later as a raw traceback.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.3.0
+@date 2026-07-20
+@version 0.4.0
 """
 
 # IMPORTS
@@ -113,6 +119,34 @@ class WorkflowConfig:
     alignment_protected_scope_patterns: list[str] = field(default_factory=list)
 
 
+# HELPER FUNCTIONS
+
+
+def _gate_command_list(name: str, value: object) -> list[str]:
+    """
+    @brief      Normalize one ``[gates]`` value into a list of command strings.
+    @param[in]  name Gate key name, used in the error message.
+    @param[in]  value Raw TOML value for the gate.
+    @return     List of command strings (a scalar string becomes a one-item list).
+    @details    Guards the most common hand-edit mistake: ``test = "pytest"``
+                would otherwise become ``list("pytest")`` and run each character
+                as its own command.
+    @exception  SystemExit Raised when the value is neither a string nor a list
+                of strings, naming the offending key.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-20
+    @version    0.1.0
+    """
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return list(value)
+    raise SystemExit(
+        f".agentic/workflow.toml [gates] {name} must be a command string or a "
+        "list of command strings."
+    )
+
+
 # PUBLIC API
 
 
@@ -170,7 +204,7 @@ def load_config(repo_root: Path) -> WorkflowConfig:
 
         # Gate, secret, working-tree, and write-zone settings affect validation,
         # delivery preflight, and stage-specific edit permissions.
-        gate_commands={key: list(value) for key, value in gates.items()},
+        gate_commands={key: _gate_command_list(key, value) for key, value in gates.items()},
         secret_patterns=list(data.get("secrets", {}).get("patterns", [])),
         working_tree_blocked_patterns=list(data.get("working_tree", {}).get("blocked_patterns", [])),
         write_zones={

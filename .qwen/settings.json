@@ -2,25 +2,31 @@
   "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
   "_comment": "Qwen Code project settings for the transboarded project root. Hook commands are project-root relative and reuse the shared .agentic/hooks/ guards used by the Codex, Claude Code, Pi, and OpenCode adapters.",
   "_comment_context": "AGENTS.md stays the authoritative workflow contract; QWEN.md is only the Qwen adapter note. Both are loaded as context files, AGENTS.md first.",
-  "_comment_permissions": "Outward delivery (git push, gh pr create, git merge) is denied by default and also gated by the delivery-preflight hook; a human runs those actions after preflight passes. Secret and key files are denied for read and write to mirror the Claude and Codex filesystem profiles.",
+  "_comment_permissions": "Outward delivery (git push, gh pr create, gh pr merge, git merge) is denied by default and also gated by the delivery-preflight hook; a human runs those actions after preflight passes. Secret and key files are denied for read and write to mirror the shared write-zone protection list.",
   "context": {
     "fileName": ["AGENTS.md", "QWEN.md"]
   },
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|WriteFile",
+        "matcher": "Edit|WriteFile|write_file|replace",
         "hooks": [
           {
             "type": "command",
             "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/guard_write_zone.py",
             "name": "agentic-guard-write-zone",
             "statusMessage": "Checking agentic write zone"
+          },
+          {
+            "type": "command",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/secret_scan.py",
+            "name": "agentic-edit-secret-scan",
+            "statusMessage": "Checking edit content for secrets"
           }
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Bash|run_shell_command",
         "hooks": [
           {
             "type": "command",
@@ -39,7 +45,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|Edit|WriteFile",
+        "matcher": "Bash|run_shell_command|Edit|WriteFile|write_file|replace",
         "hooks": [
           {
             "type": "command",
@@ -58,21 +64,43 @@
       "Read(**/*.env)",
       "Read(**/*.pem)",
       "Read(**/*.key)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
       "Read(**/*_rsa)",
+      "Read(**/*_rsa.pub)",
+      "Read(**/id_rsa)",
+      "Read(**/id_rsa.pub)",
+      "Read(**/id_ed25519)",
+      "Read(**/id_ed25519.pub)",
       "Edit(.env)",
       "Edit(.env.*)",
       "Edit(**/*.env)",
       "Edit(**/*.pem)",
       "Edit(**/*.key)",
+      "Edit(**/*.p12)",
+      "Edit(**/*.pfx)",
       "Edit(**/*_rsa)",
+      "Edit(**/*_rsa.pub)",
+      "Edit(**/id_rsa)",
+      "Edit(**/id_rsa.pub)",
+      "Edit(**/id_ed25519)",
+      "Edit(**/id_ed25519.pub)",
       "Write(.env)",
       "Write(.env.*)",
       "Write(**/*.env)",
       "Write(**/*.pem)",
       "Write(**/*.key)",
+      "Write(**/*.p12)",
+      "Write(**/*.pfx)",
       "Write(**/*_rsa)",
+      "Write(**/*_rsa.pub)",
+      "Write(**/id_rsa)",
+      "Write(**/id_rsa.pub)",
+      "Write(**/id_ed25519)",
+      "Write(**/id_ed25519.pub)",
       "Bash(git push*)",
       "Bash(gh pr create*)",
+      "Bash(gh pr merge*)",
       "Bash(git merge*)"
     ]
   }

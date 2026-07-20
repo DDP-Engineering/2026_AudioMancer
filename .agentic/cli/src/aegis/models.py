@@ -9,10 +9,11 @@
 """
 @file models.py
 @brief Data models used by the agentic workflow state graph.
-@details Provides reusable implementation behavior for the standalone AEGIS system.
+@details Defines the persisted run graph while preserving read compatibility
+with legacy graphs that contain retired, unconsumed fields.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.4.0
+@date 2026-07-20
+@version 0.5.0
 """
 
 # IMPORTS
@@ -190,12 +191,11 @@ class ChangeUnit:
     """
     @brief      Represent ChangeUnit data used by the workflow.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-20
+    @version    0.2.0
     """
     id: str
     touched_paths: list[str]
-    evidence: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -215,27 +215,12 @@ class Decision:
 
 
 @dataclass
-class Defect:
-    """
-    @brief      Represent Defect data used by the workflow.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    id: str
-    statement: str
-    violates_spec: str | None = None
-    reproduced_by: str | None = None
-    status: str = "open"
-
-
-@dataclass
 class Graph:
     """
     @brief      Represent Graph data used by the workflow.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.4.0
+    @date       2026-07-20
+    @version    0.5.0
     """
     run_id: str
     stage: Stage
@@ -247,7 +232,6 @@ class Graph:
     evidence: list[Evidence] = field(default_factory=list)
     change_units: list[ChangeUnit] = field(default_factory=list)
     decisions: list[Decision] = field(default_factory=list)
-    defects: list[Defect] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -263,13 +247,13 @@ class Graph:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Graph":
         """
-        @brief      Handle from dict workflow behavior.
+        @brief      Load current and legacy graph mappings into the active model.
         @param[in]  data Input value used by the workflow helper.
-        @return     Result produced by the workflow helper.
+        @return     Graph with retired top-level and change-unit fields ignored.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-20
-        @version    0.2.0
+        @date       2026-07-20
+        @version    0.3.0
         """
         alignment = data.get("alignment") or data.get("intake_triage")
         if alignment and "recommended_responses" not in alignment:
@@ -283,9 +267,11 @@ class Graph:
             spec_items=[SpecItem(**item) for item in data.get("spec_items", [])],
             checks=[Check(**item) for item in data.get("checks", [])],
             evidence=[Evidence(**item) for item in data.get("evidence", [])],
-            change_units=[ChangeUnit(**item) for item in data.get("change_units", [])],
+            change_units=[
+                ChangeUnit(**{key: value for key, value in item.items() if key != "evidence"})
+                for item in data.get("change_units", [])
+            ],
             decisions=[Decision(**item) for item in data.get("decisions", [])],
-            defects=[Defect(**item) for item in data.get("defects", [])],
         )
 
 

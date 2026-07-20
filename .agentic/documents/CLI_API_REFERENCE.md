@@ -52,6 +52,12 @@ python -m aegis <command>
 Examples below use `<workflow>` as a placeholder for whichever invocation form
 is available in the current repository.
 
+Commands may be run from any subdirectory of the repository: the CLI resolves
+the workflow root by walking upward to the nearest directory containing
+`.agentic/` (falling back to the nearest `.git`), so state is always read from
+and written to the repository root — a nested `.agentic/` is never created
+below an existing install.
+
 ## Runtime Requirements
 
 - Python 3.11 or newer, supplied by `AEGIS_PYTHON`, the packaged-WAEGIS
@@ -127,6 +133,10 @@ Adoption runs start at `adoption-intake`.
 ```
 
 ```powershell
+<workflow> start --kind feature --statement "Generate client bindings" --scope-hint generated/client --scope-hint tools/codegen
+```
+
+```powershell
 <workflow> start --kind change --statement "Refresh repository documentation" --access-mode repo-wide --access-reason "Human-approved broad documentation update"
 ```
 
@@ -142,6 +152,10 @@ Arguments:
 | `--statement "<text>"` | Yes | Human-readable statement of the requested work. |
 | `--access-mode standard|repo-wide` | No | Defaults to `standard`. `repo-wide` relaxes stage write zones for normal repo files. |
 | `--access-reason "<text>"` | Required for `repo-wide` | Records why broad access was approved. |
+| `--scope-hint <root>` | No | Repeatable. Adds an intentional root to the INV-5 scope advisory and records it in the run intent and journal. |
+
+Scope hints affect advisory scope evaluation only. They do not relax stage
+write zones, protected-file rules, or host filesystem permissions.
 
 Stage: `intake` for feature, fix, and change runs; `adoption-intake` for
 adoption runs.
@@ -338,6 +352,9 @@ Writes:
 
 - `graph.json` `spec_items`
 
+Exit behavior: raises `Spec id already exists: <id>` without changing the graph
+when the active run already contains that spec id.
+
 ### `add-check`
 
 Adds a run-local check or test expectation to `graph.json`.
@@ -365,6 +382,9 @@ Flow caller: `agentic-development` during the red-before-green check gate.
 Writes:
 
 - `graph.json` `checks`
+
+Exit behavior: raises `Check id already exists: <id>` without changing the graph
+when the active run already contains that check id.
 
 ### `record-evidence`
 
@@ -408,6 +428,10 @@ Writes:
 - `graph.json` linked check state when `--check-id` is provided
 - `journal.jsonl` `evidence.recorded` event
 
+Report behavior: when `--failure-kind` is set, `report` renders it after the
+result, for example ``test-run/fail (env): summary``. Evidence without a failure
+classification keeps the existing ``kind/result: summary`` format.
+
 ### `record-change`
 
 Records the paths touched by an implementation change.
@@ -431,6 +455,10 @@ Flow caller: `agentic-development`.
 Writes:
 
 - `graph.json` `change_units`
+
+Each current change-unit record contains only its id and touched paths. The
+graph loader remains compatible with older files: it ignores a legacy
+`change_units[].evidence` key and the retired top-level `defects` collection.
 
 ### `supersede-evidence`
 
@@ -465,6 +493,11 @@ Writes:
 Updates a durable requirement row from `Planned` to `Active`, adds linked tests,
 updates verification text, and refreshes the row timestamp.
 
+Every newly supplied linked-test identifier is resolved before the register is
+written. If any identifier does not resolve, the command exits cleanly with the
+identifier and reason, and leaves the requirement register unchanged. An
+activation with manual verification and no linked tests keeps the same behavior.
+
 ```powershell
 <workflow> requirement activate --id REQ-FUNC-001 --linked-test tests/test_export.py::test_invoice_export --verification "Automated pytest coverage"
 ```
@@ -491,6 +524,10 @@ Writes:
 
 - `.agentic/requirements/*.md`
 - `journal.jsonl` `requirement.activated` event
+
+Exit behavior: exits with a descriptive error when the requirement is missing,
+the activation lacks both linked tests and manual verification, or a newly
+supplied linked test does not resolve.
 
 ### `audit traceability`
 
@@ -538,7 +575,9 @@ Exit behavior: exits with non-zero status when coverage issues exist.
 ### `impact`
 
 Maps changed or planned files to impacted requirements and linked tests. When no
-files are provided, it uses the Git working set.
+files are provided, it uses the shared Git-status parser also used by
+`working-tree audit`. A rename contributes both its current and previous path;
+quoted Git paths are decoded consistently by both commands.
 
 ```powershell
 <workflow> impact src/exporter.py tests/test_export.py
@@ -587,7 +626,10 @@ Writes:
 
 ### `registry audit`
 
-Validates that registry cache files exist and contain valid JSON.
+Validates that registry cache files exist and contain valid JSON. It also
+compares the cached requirement records and linked-test keys with the current
+durable requirement registers. The audit is read-only and never refreshes a
+stale cache automatically.
 
 ```powershell
 <workflow> registry audit
@@ -599,12 +641,15 @@ Flow caller: `agentic-delivery`.
 
 Reads:
 
+- `.agentic/requirements/*.md`
 - `.agentic/registry/requirements.json`
 - `.agentic/registry/checks.json`
 - `.agentic/registry/features.json`
+- `.agentic/registry/components.json`
 
 Exit behavior: exits with non-zero status when registry files are missing or
-invalid.
+invalid, or when the requirements/checks cache is stale. A stale-cache finding
+names `registry sync` as the required fix.
 
 ### `working-tree audit`
 
@@ -807,17 +852,20 @@ Writes:
 ## Hook Integration
 
 These four standalone hook scripts are the runtime source of truth and are
-reused unchanged by all four agent adapters:
+reused unchanged by all five agent adapters:
 
 - **Codex** wires them through `.codex/hooks.json` (PreToolUse / PostToolUse
-  command hooks).
+  command hooks); edit inputs run both the write-zone guard and secret scan.
 - **Claude Code** wires them through `.claude/settings.json` (matching hook
-  bindings plus protected-path Read/Edit/Write denies).
+  bindings plus protected-path Read/Edit/Write denies); edit inputs run both
+  the write-zone guard and secret scan.
+- **Qwen Code** wires them through `.qwen/settings.json`; `WriteFile` / `Edit`
+  inputs run both the write-zone guard and secret scan, while Bash input also
+  runs delivery preflight. See `.qwen/README.md`.
 - **Pi** wires them through the `.pi/` bridge extension, which maps Pi
   `tool_call` / `tool_result` events onto the same JSON-on-stdin hook protocol.
-  Because Pi can pass the full write/edit input, `secret_scan.py` also catches
-  secrets in file *content*, and a native check denies reads of protected
-  secret/key files. See `.pi/README.md`.
+  It passes full write/edit input to `secret_scan.py`, and a native check denies
+  reads of protected secret/key files. See `.pi/README.md`.
 - **OpenCode** wires them through `.opencode/plugins/agentic-guard.mjs`, which
   maps `tool.execute.before` / `tool.execute.after` events onto the same
   JSON-on-stdin hook protocol. The plugin also scans write/edit content for
@@ -842,6 +890,11 @@ What it reads:
 
 What it does: allows or denies file edits based on the current stage, access
 mode, write zones, and protected path patterns.
+
+If no active run exists, edits outside `.agentic/` remain denied, but the
+denial identifies the missing run and includes copyable Windows and POSIX
+`start` command examples. Once a run exists, the normal stage-specific denial
+message is used.
 
 Related CLI commands:
 
@@ -876,7 +929,7 @@ Hook path:
 ```
 
 When it runs: before publish-like shell commands such as `git push`,
-`gh pr create`, or `git merge`.
+`gh pr create`, `gh pr merge`, or `git merge`.
 
 What it calls:
 
@@ -894,10 +947,15 @@ Hook path:
 .agentic/hooks/secret_scan.py
 ```
 
-When it runs: before tool use.
+When it runs: before shell commands and edit/write tools on every supported
+adapter.
 
-What it does: scans tool input for configured secret-like patterns and denies
-the operation when a possible secret appears.
+What it reads: tool input plus `.agentic/workflow.toml` `[secrets].patterns`.
+
+What it does: scans tool input against the union of built-in and configured
+secret-like patterns and denies the operation when a possible secret appears.
+Missing or unreadable configuration falls back to built-ins; invalid configured
+regular expressions are ignored so configuration cannot brick tool use.
 
 Related CLI commands: none directly, but it protects the same workflow surface.
 

@@ -17,11 +17,11 @@ Use this workflow:
 
 1. Read `AGENTS.md` and the repository's documentation/style guidance, if
    present.
-2. If a deterministic documentation audit exists, run it in changed-only mode.
-   Common examples:
+2. If a deterministic documentation audit exists, run the target repository's
+   audit entry point in changed-only mode. For example:
 
    ```powershell
-   python 02_Tools/audits/audit_documentation.py --changed-only
+   python tools/audit_docs.py --changed-only
    ```
 
    Use a broad/full documentation option only when the user asks for broad

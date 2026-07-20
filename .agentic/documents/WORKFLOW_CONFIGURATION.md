@@ -179,6 +179,23 @@ Settings:
 Use `coverable_roots` narrowly at first. A broad value such as `src` makes every
 source file require requirement coverage unless explicitly waived.
 
+### Linked-test resolution by language
+
+AEGIS has structure-aware linked-test resolvers for `python`, `java`, `c`, and
+`cpp`. Every other configured language — including WAEGIS presets such as
+`typescript`, `javascript`, `go`, `rust`, and `csharp` — uses name-substring
+matching inside the configured test roots. For those languages, choose stable,
+distinct linked-test identifiers and confirm them with `audit traceability`.
+
+### Pattern semantics
+
+All AEGIS path matchers use the same `fnmatch`-based policy. In this policy,
+`*` crosses `/`: `src/*` behaves like `src/**`, and `*.tmp` also matches nested
+temporary files. A bare directory pattern such as `src/module` additionally
+covers its subtree, but does not match a sibling such as `src/module2`. Configure
+write zones, component paths, coverage exclusions, and working-tree blockers
+with these semantics in mind rather than assuming Git-glob behavior.
+
 ## Gates
 
 The `[gates]` section defines named command groups for `<workflow> gates run`.
@@ -196,7 +213,12 @@ docs = [
 ]
 ```
 
-Each key is a gate name. Each value is an ordered list of shell commands.
+Each key is a gate name. Each value is an ordered list of shell commands. A
+plain string value is also accepted and treated as a one-command list; any
+other value type stops with an error naming the offending key. A command that
+cannot be launched (missing executable) or exceeds the timeout is recorded as
+a normal failing gate (exit 127 / 124, with the error text in the journal)
+rather than crashing the run.
 
 Examples:
 
@@ -229,9 +251,14 @@ patterns = [
 ]
 ```
 
-These patterns are used by secret checks and delivery readiness. Keep patterns
-specific enough to avoid constant false positives, but broad enough to catch
-common credential formats used by the repository.
+These patterns are used by secret checks and delivery readiness. The
+`secret_scan.py` PreToolUse hook scans their union with its built-in credential
+formats, so project-specific tokens are protected during shell commands and
+file edits too. If the hook cannot read or parse `workflow.toml`, it continues
+with built-in patterns; invalid configured regular expressions are ignored by
+the hook instead of crashing or blocking tool use. Keep valid patterns specific
+enough to avoid constant false positives, but broad enough to catch common
+credential formats used by the repository.
 
 ## Working Tree
 

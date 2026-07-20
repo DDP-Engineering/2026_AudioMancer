@@ -9,10 +9,11 @@
 """
 @file report.py
 @brief Markdown report rendering for workflow runs.
-@details Mirrors the packaged CLI implementation shipped into generated projects.
+@details Renders persisted workflow evidence, including optional failure
+classifications, for generated projects.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.4.0
+@date 2026-07-20
+@version 0.5.0
 """
 
 # IMPORTS
@@ -33,14 +34,14 @@ from .requirements import audit_coverage, audit_registry, audit_traceability
 
 def render_report(repo_root: Path, graph: Graph) -> str:
     """
-    @brief      Render render report workflow behavior.
+    @brief      Render a complete Markdown report for the active workflow graph.
     @param[in]  repo_root Input value used by the workflow helper.
     @param[in]  graph Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.4.0
+    @date       2026-07-20
+    @version    0.5.0
     """
     results = evaluate(repo_root, graph)
     traceability_issues = audit_traceability(repo_root)
@@ -95,7 +96,10 @@ def render_report(repo_root: Path, graph: Graph) -> str:
     lines.extend(["", "## Evidence"])
     if graph.evidence:
         for item in graph.evidence:
-            lines.append(f"- `{item.id}` {item.kind}/{item.result}: {item.summary}")
+            failure_kind = f" ({item.failure_kind})" if item.failure_kind else ""
+            lines.append(
+                f"- `{item.id}` {item.kind}/{item.result}{failure_kind}: {item.summary}"
+            )
     else:
         lines.append("- None recorded.")
 

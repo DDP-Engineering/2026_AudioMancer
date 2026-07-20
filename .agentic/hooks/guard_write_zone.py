@@ -12,9 +12,12 @@
 @details Runs as part of the template hook layer and preserves workflow guard behavior.
 @details ``matches`` (0.2.0, architecture-review follow-up) is now
          case-sensitive on non-Windows hosts, matching the real filesystem.
+@details When hooks are installed but no run has been started, non-``.agentic``
+         edits remain denied and the message explains how to start a run before
+         retrying.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-18
-@version 0.2.0
+@date 2026-07-20
+@version 0.3.0
 """
 
 # IMPORTS
@@ -91,8 +94,8 @@ def main() -> int:
     @return     Result produced by the workflow helper.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.1
+    @date       2026-07-20
+    @version    0.2.0
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PreToolUse":
@@ -112,7 +115,7 @@ def main() -> int:
     }:
         return 0
     cwd = Path(payload.get("cwd") or ".").resolve()
-    stage = read_stage(cwd)
+    stage, has_run = read_stage_state(cwd)
     access_mode = read_access_mode(cwd)
     zones = (
         REPO_WIDE_ZONES
@@ -138,6 +141,14 @@ def main() -> int:
     if escaped:
         return deny(f"Edit escapes workspace root: {', '.join(escaped)}")
     if blocked:
+        if not has_run:
+            return deny(
+                "No active AEGIS run: edits outside .agentic/ are blocked. "
+                "Start a run first (e.g. "
+                '`.\\.agentic\\tools\\run.ps1 start --kind feature --statement "..."` / '
+                '`bash .agentic/tools/run.sh start --kind feature --statement "..."`), '
+                f"then retry. Blocked: {', '.join(blocked)}"
+            )
         return deny(f"Edit outside '{stage}' write zone: {', '.join(blocked)}")
     return 0
 
@@ -145,26 +156,46 @@ def main() -> int:
 # HELPER FUNCTIONS
 
 
-def read_stage(cwd: Path) -> str:
+def read_stage_state(cwd: Path) -> tuple[str, bool]:
     """
-    @brief      Read stage workflow behavior.
-    @param[in]  cwd Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Read the current stage and whether an active run exists.
+    @param[in]  cwd Repository root the hook resolves against.
+    @return     ``(stage, has_run)``; absent, missing, or invalid run state
+                returns ``("intake", False)``.
+    @details    Keeps stage lookup and active-run detection consistent for one
+                hook decision while parsing the run graph only once.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
+    @date       2026-07-20
     @version    0.1.0
     """
     current = cwd / ".agentic" / "current_run"
     if not current.exists():
-        return "intake"
+        return "intake", False
     graph = cwd / ".agentic" / "runs" / current.read_text(encoding="utf-8").strip() / "graph.json"
     if not graph.exists():
-        return "intake"
+        return "intake", False
     try:
-        return json.loads(graph.read_text(encoding="utf-8")).get("stage", "intake")
+        stage = json.loads(graph.read_text(encoding="utf-8")).get("stage", "intake")
     except json.JSONDecodeError:
-        return "intake"
+        return "intake", False
+    return stage, True
+
+
+def read_stage(cwd: Path) -> str:
+    """
+    @brief      Read the active workflow stage with an ``intake`` fallback.
+    @param[in]  cwd Repository root the hook resolves against.
+    @return     Active stage, or ``intake`` when no readable run exists.
+    @details    Compatibility wrapper for callers that only need the stage;
+                :func:`read_stage_state` also exposes active-run presence for
+                actionable denial messages.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-20
+    @version    0.2.0
+    """
+    return read_stage_state(cwd)[0]
 
 
 def read_access_mode(cwd: Path) -> str:

@@ -15,9 +15,15 @@
          "nt")`: the previous non-POSIX mode on Windows only grouped a quoted
          span when the quote started the token, corrupting a quoted argument
          containing a space.
+@details Command failures (0.3.0, analysis-review follow-up) can no longer
+         escape as raw tracebacks: a missing/unlaunchable executable (argv
+         mode used to raise `FileNotFoundError` while shell mode returned
+         non-zero) and a timeout (`subprocess.TimeoutExpired`, both modes)
+         are synthesized into failed `CompletedProcess` results (exit 127 and
+         124 respectively), so they end as recorded failing gate evidence.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-18
-@version 0.2.0
+@date 2026-07-20
+@version 0.3.0
 """
 
 # IMPORTS
@@ -95,18 +101,32 @@ def _run_command(repo_root: Path, command: str, timeout: int) -> subprocess.Comp
     @param[in]  repo_root Input value used by the workflow helper.
     @param[in]  command Input value used by the workflow helper.
     @param[in]  timeout Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @return     Completed process, synthesized as a failure (exit 127 for an
+                unlaunchable executable, 124 for a timeout) when the command
+                could not run to completion.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-20
+    @version    0.2.0
     """
     argv = _argv_for_simple_command(repo_root, command)
-    if argv:
+    try:
+        if argv:
+            return subprocess.run(
+                argv,
+                cwd=repo_root,
+                shell=False,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=timeout,
+                check=False,
+            )
         return subprocess.run(
-            argv,
+            command,
             cwd=repo_root,
-            shell=False,
+            shell=True,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -114,16 +134,32 @@ def _run_command(repo_root: Path, command: str, timeout: int) -> subprocess.Comp
             timeout=timeout,
             check=False,
         )
-    return subprocess.run(
-        command,
-        cwd=repo_root,
-        shell=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        capture_output=True,
-        timeout=timeout,
-        check=False,
+    except subprocess.TimeoutExpired as exc:
+        return _failed_process(command, 124, exc)
+    except (FileNotFoundError, NotADirectoryError, PermissionError, OSError) as exc:
+        return _failed_process(command, 127, exc)
+
+
+def _failed_process(command: str, returncode: int, exc: BaseException) -> subprocess.CompletedProcess[str]:
+    """
+    @brief      Synthesize a failed process result for an unrunnable command.
+    @param[in]  command Configured gate command text.
+    @param[in]  returncode Exit code to report (127 unlaunchable, 124 timeout).
+    @param[in]  exc The exception that prevented normal completion.
+    @return     Completed process carrying the exception text as stderr.
+    @details    Keeps configuration mistakes (missing executables, timeouts)
+                on the normal evidence path: the caller records a failing gate
+                with this stderr tail instead of crashing with a traceback.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-20
+    @version    0.1.0
+    """
+    return subprocess.CompletedProcess(
+        args=command,
+        returncode=returncode,
+        stdout="",
+        stderr=f"{type(exc).__name__}: {exc}",
     )
 
 

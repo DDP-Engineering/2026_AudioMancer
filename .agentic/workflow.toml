@@ -7,7 +7,7 @@
 
 [source]
 # Implementation roots used by invariants, impact analysis, and scope checks.
-roots = ["04_Software/AudioMancer"]
+roots = ["04_Software/AudioMancer/src/audiomancer"]
 
 [tests]
 # Test roots used by traceability checks and linked-test resolution.
@@ -76,8 +76,8 @@ test_file_patterns = ["test_*.py", "*_test.py"]
 # Replace these empty defaults with the target repository's real validation
 # commands, for example tests, linting, formatting checks, or documentation
 # audits.
-test = [["uv", "run", "--project", "04_Software/AudioMancer", "pytest", "-q"]]
-lint = [["uv", "run", "--project", "04_Software/AudioMancer", "ruff", "check", "."]]
+test = ["uv run --project 04_Software/AudioMancer pytest -q"]
+lint = ["uv run --project 04_Software/AudioMancer ruff check ."]
 
 [secrets]
 # Regular expressions scanned during secret checks. Keep this list conservative:
@@ -131,7 +131,7 @@ requirement = [".agentic/requirements/**"]
 check = ["04_Software/AudioMancer/tests/**"]
 
 # Implementation stage owns source roots and component documentation.
-implementation = ["04_Software/AudioMancer/**", ".agentic/knowledge/components/**"]
+implementation = ["04_Software/AudioMancer/**", "04_Software/AudioMancer/src/audiomancer/**", ".agentic/knowledge/components/**"]
 
 # Validation stage is read-only; record evidence through workflow commands.
 validation = []

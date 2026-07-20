@@ -36,16 +36,29 @@ and Claude Code adapters:
 
 | Qwen tool event | Python hook(s) | Effect on deny |
 |---|---|---|
-| `WriteFile` / `Edit` (PreToolUse) | `guard_write_zone.py` | block with reason |
-| `Bash` (PreToolUse) | `secret_scan.py`, then `delivery_preflight.py` | block with reason |
+| `WriteFile` / `Edit` / `write_file` / `replace` (PreToolUse) | `guard_write_zone.py`, then `secret_scan.py` (full input) | block with reason |
+| `Bash` / `run_shell_command` (PreToolUse) | `secret_scan.py`, then `delivery_preflight.py` | block with reason |
 | any edit/shell (PostToolUse) | `post_tool_evidence.py` | fire-and-forget journal entry |
 
-Qwen labels its file-writing tool `WriteFile` in hook matchers, so `settings.json`
-matches `Edit|WriteFile` (0.1.1, code-review follow-up: no longer lists
-`MultiEdit`/`write_file`/`replace`/`apply_patch`, which are not documented Qwen
-Code tool names - they were unused aliases carried over from the Claude/Codex
-adapters). The shared `guard_write_zone.py` hook still recognizes those other
-adapters' tool names too, since it is reused byte-for-byte across all five.
+## Tool-name compatibility
+
+The current Qwen Code hook contract states that tool events carry runtime ids
+in `tool_name`, including `edit`, `write_file`, and `run_shell_command`, while
+built-in display names remain accepted matcher aliases. Its settings reference
+maps `Edit` to `edit`, `WriteFile` to `write_file`, and `Bash` to
+`run_shell_command`. Some earlier builds and compatible event producers expose
+`replace` for editing. The adapter therefore uses harmless unions:
+
+- `Edit|WriteFile|write_file|replace` for edit pre-hooks;
+- `Bash|run_shell_command` for shell pre-hooks;
+- the union of both sets for post-tool evidence.
+
+These names are cross-checked against the current official
+[hook documentation](https://github.com/QwenLM/qwen-code/blob/main/docs/users/features/hooks.md)
+and [settings reference](https://github.com/QwenLM/qwen-code/blob/main/docs/users/configuration/settings.md).
+Keeping both friendly and raw forms makes hook coverage independent of which
+form a Qwen version reports. The shared `guard_write_zone.py` hook recognizes
+the same write identifiers because it is reused byte-for-byte across adapters.
 
 ## Prerequisites and trust
 
