@@ -67,8 +67,7 @@ export async function handleToolCall(
       if (zoneReason) return { block: true, reason: zoneReason };
 
       // Pass the full input so secrets in file *content* are caught too, not
-      // just the path. This improves on the Bash-only secret wiring used by the
-      // Codex/Claude adapters.
+      // just the path, matching the edit-content scan used by every adapter.
       const secretReason = await bridge.runPythonHook(cwd, "secret_scan.py", {
         hook_event_name: "PreToolUse",
         tool_name: toolName,

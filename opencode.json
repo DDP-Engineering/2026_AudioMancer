@@ -45,6 +45,7 @@
       "*": "allow",
       "git push*": "ask",
       "gh pr create*": "ask",
+      "gh pr merge*": "ask",
       "git merge*": "ask",
       "npm publish*": "ask"
     },

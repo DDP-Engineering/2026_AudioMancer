@@ -21,6 +21,9 @@ Contents:
 - `agents/` - optional Claude Code subagent notes for workflow roles.
 
 The hook configuration calls the generic scripts under `.agentic/hooks/`.
+Edit/write matchers run `guard_write_zone.py` and then `secret_scan.py`, so
+secrets pasted into file content are denied before the write occurs; Bash input
+is scanned independently by the same secret hook.
 Hook execution depends on the target machine having a compatible `python`
 command on `PATH`. If that is not true, adjust `.claude/settings.json` locally
 or run a packaged WAEGIS command to register its runtime; a system Python is

@@ -9,10 +9,11 @@
 """
 @file cli.py
 @brief Command-line interface for the agentic workflow runner.
-@details Provides reusable implementation behavior for the standalone AEGIS system.
+@details Provides reusable implementation behavior for the standalone AEGIS system,
+including clean validation errors, duplicate-id guards, and explicit run scope hints.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.5.0
+@date 2026-07-20
+@version 0.8.0
 """
 
 # IMPORTS
@@ -54,10 +55,10 @@ def main(argv: list[str] | None = None) -> None:
     @brief      Run command-line entry point workflow behavior.
     @param[in]  argv Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
-    @exception  None
+    @exception  SystemExit If command validation or a workflow gate fails.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.5.0
+    @date       2026-07-20
+    @version    0.8.0
     """
     parser = argparse.ArgumentParser(prog="aegis")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -67,6 +68,7 @@ def main(argv: list[str] | None = None) -> None:
     start.add_argument("--statement", required=True)
     start.add_argument("--access-mode", choices=["standard", "repo-wide"], default="standard")
     start.add_argument("--access-reason")
+    start.add_argument("--scope-hint", action="append", default=[])
 
     sub.add_parser("status")
     sub.add_parser("next")
@@ -175,7 +177,13 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "start":
         if args.access_mode == "repo-wide" and not args.access_reason:
             start.error("--access-reason is required when --access-mode repo-wide")
-        graph = init_graph(root, args.kind, args.statement, args.access_mode)
+        graph = init_graph(
+            root,
+            args.kind,
+            args.statement,
+            args.access_mode,
+            scope_hint=args.scope_hint,
+        )
         if args.access_mode == "repo-wide":
             _record_access_decision(graph, args.access_mode, args.access_reason)
             save_graph(root, graph)
@@ -306,7 +314,10 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "requirement":
         if args.requirement_command == "activate":
-            row = activate_requirement(root, args.id, args.linked_test, args.verification)
+            try:
+                row = activate_requirement(root, args.id, args.linked_test, args.verification)
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from None
             append_journal(root, graph.run_id, "requirement.activated", row.to_dict())
             print(json.dumps(row.to_dict(), indent=2))
             return
@@ -347,6 +358,8 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "add-spec":
+        if any(item.id == args.id for item in graph.spec_items):
+            raise SystemExit(f"Spec id already exists: {args.id}")
         graph.spec_items.append(
             SpecItem(
                 id=args.id,
@@ -362,6 +375,8 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "add-check":
+        if any(item.id == args.id for item in graph.checks):
+            raise SystemExit(f"Check id already exists: {args.id}")
         graph.checks.append(
             Check(
                 id=args.id,

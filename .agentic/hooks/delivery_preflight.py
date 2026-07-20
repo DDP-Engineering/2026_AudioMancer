@@ -10,9 +10,11 @@
 @file delivery_preflight.py
 @brief Hook entry point for delivery preflight validation.
 @details Runs as part of the template hook layer and preserves workflow guard behavior.
+@details Pull-request merges are outward delivery actions and use the same
+         preflight path as PR creation, Git push, and Git merge.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.1.0
+@date 2026-07-20
+@version 0.2.0
 """
 
 # IMPORTS
@@ -27,7 +29,7 @@ from pathlib import Path
 # CONSTANTS
 
 # @brief Publish-like shell command fragments that require delivery preflight.
-DELIVERY_PATTERNS = ("git push", "gh pr create", "git merge")
+DELIVERY_PATTERNS = ("git push", "gh pr create", "gh pr merge", "git merge")
 
 # PUBLIC API
 

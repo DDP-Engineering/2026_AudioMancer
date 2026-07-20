@@ -11,7 +11,6 @@ default_permissions = "agentic-workspace"
 
 # Workspace-scoped profile used by Codex after the template is copied to a
 # target repository root.
-sandbox_mode = "workspace-write"
 [permissions.agentic-workspace]
 description = "Workspace-scoped editing for manual agentic development."
 extends = ":workspace"
@@ -25,7 +24,11 @@ extends = ":workspace"
 ".agentic" = "write"
 "**/*.env" = "deny"
 "**/*.pem" = "deny"
+"**/*.key" = "deny"
+"**/*.p12" = "deny"
+"**/*.pfx" = "deny"
 "**/*_rsa" = "deny"
+"**/*_rsa.pub" = "deny"
 
 # Offline-first default. Enable only when the target project explicitly needs
 # network access and the human approves it. Outward delivery (push, PR, merge)
@@ -34,6 +37,3 @@ extends = ":workspace"
 # deny list in `.claude/settings.json`.
 [permissions.agentic-workspace.network]
 enabled = false
-
-[sandbox_workspace_write]
-network_access = true

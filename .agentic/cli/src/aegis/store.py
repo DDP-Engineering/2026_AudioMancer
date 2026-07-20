@@ -18,9 +18,21 @@
          ``.agentic/.agentic/...`` layer instead of failing, since
          ``agentic_root()``/``write_current_run()``/``init_graph()`` all
          ``mkdir(parents=True, exist_ok=True)`` unconditionally.
+@details ``repo_root_from`` (0.4.0, analysis-review follow-up) resolves the
+         workflow root by upward discovery instead of trusting the working
+         directory verbatim: the nearest ancestor containing an ``.agentic``
+         directory wins, then the nearest ancestor containing ``.git``, then
+         the candidate itself (legacy greenfield behavior). Previously, any
+         command run from a repository subdirectory treated that subdirectory
+         as the root, so ``status`` reported "No active agentic run" and
+         following its advice scaffolded a nested ``src/.agentic/`` silently;
+         a working directory inside ``.agentic`` itself now heals to the
+         surrounding project root instead of exiting.
+@details ``init_graph`` (0.3.0) persists optional scope hints in the run intent
+         and initial journal event so INV-5 can honor explicit extra roots.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-18
-@version 0.3.0
+@date 2026-07-20
+@version 0.5.0
 """
 
 # IMPORTS
@@ -46,18 +58,58 @@ JOURNAL_FILE = "journal.jsonl"
 
 def repo_root_from(path: Path | None = None) -> Path:
     """
-    @brief      Resolve repo root from workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  SystemExit Raised when the resolved root is itself named
-                ``.agentic`` or nested inside one.
+    @brief      Resolve the workflow root by upward marker discovery.
+    @param[in]  path Optional starting directory; defaults to the process
+                working directory.
+    @return     Resolved workflow root.
+    @details    Discovery order: the nearest ancestor (starting with the
+                candidate itself) that contains an ``.agentic`` directory,
+                else the nearest ancestor that contains ``.git``, else the
+                candidate itself. This makes every CLI command safe to run
+                from any repository subdirectory — including from inside
+                ``.agentic`` itself, which previously exited — and prevents
+                ``start`` from scaffolding a second ``.agentic/`` below an
+                existing install.
+    @exception  SystemExit Raised by the safety-net guard when the resolved
+                root is itself named ``.agentic`` or nested inside one (only
+                reachable for paths that do not exist on disk).
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.2.0
+    @date       2026-07-20
+    @version    0.3.0
     """
-    root = (path or Path.cwd()).resolve()
+    candidate = (path or Path.cwd()).resolve()
+    root = _discover_root(candidate)
     _reject_nested_agentic_root(root)
     return root
+
+
+def _discover_root(candidate: Path) -> Path:
+    """
+    @brief      Walk upward from a candidate directory to the workflow root.
+    @param[in]  candidate Resolved starting directory.
+    @return     The discovered workflow root, or the candidate itself.
+    @details    Two full passes, not one nearest-marker pass: ``.agentic`` is
+                the authoritative AEGIS marker and must win even when a
+                vendored checkout puts a ``.git`` closer to the candidate —
+                a nearest-marker rule would resolve into the vendored
+                repository and reintroduce the nested-scaffold defect there.
+                ``.git`` is checked with ``exists()`` rather than ``is_dir()``
+                because linked worktrees mark their root with a ``.git``
+                file. With no marker anywhere upward the candidate itself is
+                returned, preserving the greenfield ``start`` behavior.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-20
+    @version    0.1.0
+    """
+    directories = (candidate, *candidate.parents)
+    for directory in directories:
+        if (directory / AGENTIC_DIR).is_dir():
+            return directory
+    for directory in directories:
+        if (directory / ".git").exists():
+            return directory
+    return candidate
 
 
 def _reject_nested_agentic_root(root: Path) -> None:
@@ -66,20 +118,18 @@ def _reject_nested_agentic_root(root: Path) -> None:
                 nested inside one.
     @param[in]  root Resolved candidate workflow root.
     @return     None
-    @details    Every state-writing command reaches this indirectly through
-                :func:`repo_root_from`, which the CLI calls with the process's
-                own current working directory and no further validation. A
-                caller that mistakenly runs the CLI from inside a project's
-                own ``.agentic`` folder (or a previously self-nested copy of
-                it) would otherwise silently grow another
-                ``.agentic/.agentic/...`` layer instead of failing loudly, since
-                every write path here (``write_current_run``, ``init_graph``)
-                calls ``mkdir(parents=True, exist_ok=True)`` unconditionally.
+    @details    Safety net behind :func:`_discover_root`. For any path that
+                exists on disk discovery heals this case first (the parent
+                containing ``.agentic`` always wins), so the guard only fires
+                for nonexistent-path fallbacks — where the unchecked
+                ``mkdir(parents=True, exist_ok=True)`` write paths
+                (``write_current_run``, ``init_graph``) could still grow an
+                ``.agentic/.agentic/...`` layer.
     @exception  SystemExit Raised when ``root`` matches or contains an
                 ``.agentic`` path segment.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.1.0
+    @date       2026-07-20
+    @version    0.2.0
     """
     if root.name == AGENTIC_DIR or AGENTIC_DIR in root.parts:
         raise SystemExit(
@@ -219,6 +269,7 @@ def init_graph(
     kind: RunKind,
     statement: str,
     access_mode: AccessMode = "standard",
+    scope_hint: list[str] | None = None,
 ) -> Graph:
     """
     @brief      Handle init graph workflow behavior.
@@ -226,18 +277,24 @@ def init_graph(
     @param[in]  kind Input value used by the workflow helper.
     @param[in]  statement Input value used by the workflow helper.
     @param[in]  access_mode Input value used by the workflow helper.
+    @param[in]  scope_hint Optional extra roots accepted by the scope advisory.
     @return     Result produced by the workflow helper.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.2.0
+    @date       2026-07-20
+    @version    0.3.0
     """
     run_id = new_run_id(kind)
     starting_stage: Stage = ADOPTION_STAGES[0] if kind == "adoption" else "intake"
     graph = Graph(
         run_id=run_id,
         stage=starting_stage,
-        intent=Intent(id="I-0001", kind=kind, statement=statement),
+        intent=Intent(
+            id="I-0001",
+            kind=kind,
+            statement=statement,
+            scope_hint=list(scope_hint or []),
+        ),
         access_mode=access_mode,
     )
     run_dir(repo_root, run_id).mkdir(parents=True, exist_ok=True)
@@ -247,7 +304,12 @@ def init_graph(
         repo_root,
         run_id,
         "run.started",
-        {"kind": kind, "statement": statement, "access_mode": access_mode},
+        {
+            "kind": kind,
+            "statement": statement,
+            "access_mode": access_mode,
+            "scope_hint": graph.intent.scope_hint,
+        },
     )
     return graph
 

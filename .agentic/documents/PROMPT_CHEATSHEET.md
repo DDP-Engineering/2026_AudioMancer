@@ -278,6 +278,16 @@ Command shape after approval:
 
 ## Scope Advisory
 
+Declare intentional extra roots when starting the run:
+
+```text
+<workflow> start --kind feature --statement "<feature>" --scope-hint generated/client --scope-hint tools/codegen
+```
+
+`--scope-hint` is repeatable and journaled. It extends the INV-5 advisory scope
+for the new run, but does not relax write zones, protected-file controls, or
+host permissions.
+
 Accept intentional scope overflow:
 
 ```text
@@ -296,6 +306,46 @@ Revert or revise the out-of-scope changes to stay within the approved scope.
 Do not change requirements or tests unless you ask first.
 Stop after reporting the revised diff and invariant status.
 ```
+
+## Small Change / Docs-Only Recipe
+
+Use this named light path for an approved low-risk maintenance change that does
+not alter runtime behavior. It keeps the same evidence and delivery controls
+without inventing feature requirements or tests that do not apply:
+
+```text
+Use the agentic development workflow for a small change / docs-only run.
+Run:
+<workflow> start --kind change --statement "<small change>"
+<workflow> set-access-mode repo-wide --reason "Approved maintenance across <paths>"
+
+Confirm the intent, exact paths, acceptance result, and that runtime behavior is
+out of scope. Make only the approved edits, then run:
+<workflow> record-change --id CU-0001 --path <changed-path> [--path <changed-path>]
+<workflow> record-evidence --kind note --result pass --summary "<manual or automated verification>"
+<workflow> delivery-preflight
+
+Do not commit, push, create a PR, merge, publish, or deploy. Stop after reporting
+the changed paths, verification, preflight result, and any remaining human step.
+```
+
+Use focused automated validation when the repository provides it. For a purely
+textual change, a documented manual verification is acceptable; red-before-green
+still applies whenever an executable behavior check is introduced or changed.
+
+## Parallel Work Guidance
+
+Use one Git worktree per active run. The current selector under
+`.agentic/current_run` is worktree-local in practice but represents only one
+active run, so two agents must not share the same worktree and mutate the same
+workflow state concurrently. Automation should pin every invocation to its
+dedicated worktree and run from that repository tree.
+
+The ratified future design is
+`AEGIS_Parallel_Branch_Merge_Simplification_Plan.md`. It introduces an optional
+global `--run-id` override for automation; the current CLI does not expose that
+flag yet. Until that plan is implemented, do not script `--run-id` against the
+current CLI and do not add locking or multi-run state to one worktree.
 
 ## Validation Gate
 

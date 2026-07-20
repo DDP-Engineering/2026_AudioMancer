@@ -66,7 +66,8 @@ tool, some guardrail "hooks", and instructions the agent reads automatically.
 > written in — C, C++, embedded firmware, Java, Go, whatever. Your project's
 > own compiler/build system/test runner is entirely separate and unaffected;
 > AEGIS only asks it to run gate commands you configure yourself in
-> `.agentic/workflow.toml` (`gate_test_cmds`/`gate_lint_cmds`). A machine that
+> `.agentic/workflow.toml` (`[gates] test` / `[gates] lint`; WAEGIS answers use
+> corresponding setup fields internally). A machine that
 > can already build your project may still need Python and Node installed
 > just to run AEGIS's own workflow tool and hooks. `waegis new`/`waegis adopt`
 > check for both automatically (Python before proceeding; Node is checked and
@@ -145,7 +146,8 @@ git init        # skip if your project is already a git repo
 ```
 
 On Linux/macOS use `bash .agentic/tools/run.sh --help` instead. If you see the
-list of commands, you are ready. (Optional: run `.\.agentic\tools\install.ps1`
+list of commands, you are ready. (Workflow commands can later be run from any
+subfolder of the repo — the tool finds the project root by itself.) (Optional: run `.\.agentic\tools\install.ps1`
 to install a faster `aegis` command — not required.)
 
 ### Step 4 — Adapt `.agentic/workflow.toml` (the important step)
@@ -349,5 +351,7 @@ The example above is Python. For other setups:
 - `CLI_API_REFERENCE.md` — every workflow command, with examples (includes the
   runtime requirements).
 - `PROMPT_CHEATSHEET.md` — copy-paste prompts for each gate.
-- `Agentic_Development_Architecture/Agentic_Development_Stack_Architecture.md` —
-  the deeper design, if you want the full picture.
+- `WORKFLOW_CONFIGURATION.md` — configuration details for roots, gates,
+  traceability, matching semantics, and write zones.
+- `COMPONENTS_CONFIGURATION.md` — component maps, adoption baseline, and
+  component documentation behavior.

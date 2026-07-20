@@ -98,6 +98,11 @@ Fields:
 
 Path matching uses normalized forward slashes. Prefer patterns such as
 `src/package/storage/**` over operating-system-specific separators.
+A bare directory path such as `src/package/storage` owns that directory and its
+entire subtree, using the same tree-root semantics as workflow write zones. An
+explicit `src/package/storage/**` pattern remains supported. Matching retains
+Python `fnmatch` semantics, so `*` can cross `/`; use deliberate component
+boundaries and verify them with `adoption scope-check`.
 
 ## Adoption Status Levels
 
