@@ -193,7 +193,7 @@ def test_cleanup_metadata_uses_atomic_json_writer(monkeypatch, tmp_path) -> None
 
 def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify manual cleaned-text edits use atomic text and state writers.
+    @brief      Verify manual cleaned-text edits use atomic text and manifest writers.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -238,12 +238,12 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
         operation_runtime_service.write_json_atomic(target_path, payload)
 
     monkeypatch.setattr(text_cleanup_state_service, "write_text_atomic", _capture_text_write)
-    monkeypatch.setattr(text_cleanup_state_service, "write_json_atomic", _capture_json_write)
+    monkeypatch.setattr(project_workspace_service, "write_json_atomic", _capture_json_write)
 
     text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Edited text.\n")
 
     assert text_calls[0] == (cleaned_path, "Edited text.\n")
-    assert any(path == project_root / config.CLEANUP_STATE_FILE_NAME for path, _payload in json_calls)
+    assert any(path == project_root / config.PROJECT_MANIFEST_FILE_NAME for path, _payload in json_calls)
 
 
 def test_audio_assembly_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:

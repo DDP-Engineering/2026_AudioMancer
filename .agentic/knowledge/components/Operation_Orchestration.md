@@ -100,7 +100,8 @@ state transition.
 
 ## 9. Validation And Tests
 
-Focused evidence rerun for this characterization passed 40 tests:
+Focused baseline-review evidence covers the component's focused modules and
+direct UI/controller gaps:
 
 - `test_operation_runtime_service.py` covers progress, common state/artifact
   IO, malformed/missing data handling, path containment, default state, and
@@ -111,7 +112,11 @@ Focused evidence rerun for this characterization passed 40 tests:
 - `test_operation_runner_controller.py`,
   `test_workflow_controller_service.py`, and
   `test_main_window_operation_shutdown.py` cover success/failure/cancellation,
-  active-operation suppression, profile resolution, and close-time shutdown.
+  active-operation suppression, profile resolution, manifest synchronization,
+  and close-time shutdown.
+- `test_operation_progress_dialog.py` directly verifies the visible localized
+  title/cancel label, clamped progress, status replacement, and localized token
+  usage rendering.
 
 After changes run all six modules, then traceability and coverage audits.
 

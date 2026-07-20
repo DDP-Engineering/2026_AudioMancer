@@ -105,9 +105,9 @@ tests = [
   "04_Software/AudioMancer/tests/test_atomic_io_contracts.py",
 ]
 criticality = "high"
-adoption_status = "characterized"
+adoption_status = "baseline-usable"
 owner = "DDP Engineering / Eng. Dan Dumitru Pasare"
-notes = "Boundary and ownership approved on 2026-07-18. Current behavior is documented in .agentic/knowledge/components/Project_Lifecycle.md and linked by REQ-FUNC-001 through REQ-FUNC-004, REQ-NFR-001, and REQ-SEC-001. Exact linked tests passed (24 passed, 1 skipped). Baseline review keeps this component characterized because two broader-suite cross-component contract mismatches require development resolution or explicit human legacy-risk acceptance before promotion."
+notes = "Baseline-usable after the two apparent cross-component failures were resolved as stale test expectations: E-0040 corrects the atomic-I/O target, and E-0048 corrects the intentional lazy Cleanup state expectation confirmed by f49caac. E-0049 records the combined complete mapped suite (224 passed, 1 skipped, 1 warning); final audits are recorded separately."
 
 [components.operation-orchestration]
 paths = [
@@ -117,6 +117,7 @@ paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
   "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py",
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py",
   "04_Software/AudioMancer/tests/test_operation_runner_controller.py",
   "04_Software/AudioMancer/tests/test_operation_runtime_service.py",
   "04_Software/AudioMancer/tests/test_workflow_controller_service.py",
@@ -124,15 +125,18 @@ paths = [
   "04_Software/AudioMancer/tests/test_workflow_order_consistency.py",
 ]
 tests = [
+  "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py",
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py",
   "04_Software/AudioMancer/tests/test_operation_runner_controller.py",
   "04_Software/AudioMancer/tests/test_operation_runtime_service.py",
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py",
   "04_Software/AudioMancer/tests/test_workflow_impact_service.py",
   "04_Software/AudioMancer/tests/test_workflow_order_consistency.py",
 ]
 criticality = "high"
-adoption_status = "characterized"
+adoption_status = "baseline-usable"
 owner = "DDP Engineering / Eng. Dan Dumitru Pasare"
-notes = "Re-characterized through requirements REQ-FUNC-009 and REQ-FUNC-018 through REQ-FUNC-020 with focused evidence E-0009 (40 passed). It remains characterized: manifest synchronization and direct progress-dialog localization/token rendering lack dedicated focused tests, so baseline-usable would overstate verification depth."
+notes = "Baseline-usable after Operation Orchestration's direct verification gaps were closed: REQ-FUNC-019 now cites direct localized progress-dialog/token rendering and REQ-FUNC-020 cites persisted-manifest synchronization. E-0028 records the complete focused suite (42 passed, 1 warning); E-0029 records clean traceability and coverage gates."
 
 [components.ai-runtime]
 paths = [
@@ -146,22 +150,26 @@ paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
   "04_Software/AudioMancer/tests/test_ai_backend_service.py",
   "04_Software/AudioMancer/tests/test_ai_budget_service.py",
+  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py",
   "04_Software/AudioMancer/tests/test_ai_settings_page.py",
   "04_Software/AudioMancer/tests/test_ai_state_note_service.py",
   "04_Software/AudioMancer/tests/test_llm_provider_service.py",
   "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py",
   "04_Software/AudioMancer/tests/test_prompt_template_service.py",
+  "04_Software/AudioMancer/tests/test_token_usage_service.py",
 ]
 tests = [
   "04_Software/AudioMancer/tests/test_llm_provider_service.py",
   "04_Software/AudioMancer/tests/test_ai_backend_service.py",
   "04_Software/AudioMancer/tests/test_ai_budget_service.py",
+  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py",
   "04_Software/AudioMancer/tests/test_ai_settings_page.py",
+  "04_Software/AudioMancer/tests/test_token_usage_service.py",
 ]
 criticality = "high"
-adoption_status = "characterized"
+adoption_status = "baseline-usable"
 owner = "DDP Engineering / Eng. Dan Dumitru Pasare"
-notes = "Re-characterized through REQ-FUNC-010 and REQ-FUNC-021 through REQ-FUNC-025 with focused evidence E-0010 (40 passed). It remains characterized: token-usage merge/restore helpers and controller persistence paths lack direct focused tests, so baseline-usable would overstate verification depth. Domain prompt files remain with consuming workflow components."
+notes = "Baseline-usable after direct token-usage merge/restore and AI Settings controller persistence/reload paths were covered and linked. E-0034 records the complete focused suite (43 passed, 1 warning); E-0035 records clean traceability and coverage gates. Domain prompt files remain with consuming workflow components."
 
 [components.text-cleanup]
 paths = [
@@ -190,9 +198,9 @@ tests = [
   "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
 ]
 criticality = "high"
-adoption_status = "characterized"
+adoption_status = "baseline-usable"
 owner = "DDP Engineering / Eng. Dan Dumitru Pasare"
-notes = "Boundary and ownership approved on 2026-07-18. Current behavior is documented in .agentic/knowledge/components/Text_Cleanup.md and linked by REQ-FUNC-005 through REQ-FUNC-008, REQ-UX-001, and REQ-NFR-002. Exact linked tests passed (37 passed) and the mapped component suite passed (111 passed). Baseline review retains characterized status: two cross-component cleanup integration mismatches block baseline-usable promotion; an out-of-scope configuration credential-hygiene failure blocks delivery; 72 remaining coverage gaps belong to other discovered components."
+notes = "Baseline-usable after the two apparent cross-component failures were resolved as stale test expectations: E-0040 corrects the atomic-I/O target, and E-0048 confirms the intentional lazy Cleanup state design from f49caac. E-0049 records the combined complete mapped suite (224 passed, 1 skipped, 1 warning); final audits are recorded separately. The separate local credential-hygiene issue remains an adoption-delivery blocker for Platform Settings UI, not a Text Cleanup behavior gap."
 
 [components.text-chunking]
 paths = [

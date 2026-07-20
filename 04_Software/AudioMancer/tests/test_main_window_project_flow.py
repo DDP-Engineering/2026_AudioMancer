@@ -229,7 +229,7 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
 
 def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_path, default_settings_payload) -> None:
     """
-    @brief      Verify project activation does not create blank artifacts, but opening workflow pages creates state.
+    @brief      Verify page activation creates only the state artifacts currently required by that page.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  default_settings_payload Fixture supplying default test settings.
@@ -260,9 +260,7 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     assert json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))["status"] == (
         "not_started"
     )
-    assert json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))["status"] == (
-        "not_started"
-    )
+    assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
     assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
 

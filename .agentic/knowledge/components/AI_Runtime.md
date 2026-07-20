@@ -87,10 +87,12 @@ probe connectivity, select defaults, and save the resulting settings payload.
 
 ## 9. Validation And Tests
 
-Focused re-characterization evidence ran all seven mapped modules: 40 passed.
-They cover backend models/failures, context budgets, token notes, prompt
-placeholder rules, chat JSON parsing/retries/cancellation/format fallbacks/
-redaction, profile dialog layout/editing/probing, and main-window feedback.
+Focused re-characterization evidence ran the mapped suites. They cover backend
+models/failures, context budgets, token normalization/merge/ordered restore and
+localized notes, prompt placeholder rules, chat JSON parsing/retries/
+cancellation/format fallbacks/redaction, profile dialog layout/editing/probing,
+direct controller persistence/reload/refresh behavior, and main-window
+feedback.
 
 ## 10. Limitations And Future Work
 

@@ -71,6 +71,11 @@ effects. `TextCleanupUiController` connects those services to
 `TextCleanupPage`, while the page owns Qt signals, controls, previews, find
 behavior, edit state, and localized presentation.
 
+Opening Text Cleanup initializes only resumable extraction metadata. Cleanup
+state is an execution artifact: deterministic cleanup creates it when a run
+starts, while AI cleanup uses its cleanup document and manual edits retain a
+manifest summary without a cleanup-state file.
+
 ## 4. Dependencies
 
 Internal dependencies include:
@@ -182,12 +187,3 @@ state, controller, and page tests.
   error.
 - AI cleanup depends on an available configured provider and requires human
   review of source versus cleaned text.
-- The current manual-edit implementation exposes only the atomic text writer,
-  while one cross-component atomic-I/O test expects an atomic JSON writer on
-  the module.
-- Opening the Text Cleanup page currently initializes extraction state but not
-  `cleanup_state.json`, while one application-shell integration test expects
-  both state artifacts.
-- Those two integration mismatches require a separate behavior-changing
-  development decision; adoption records them without changing code or tests.
-
