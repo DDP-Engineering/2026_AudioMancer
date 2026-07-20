@@ -11,6 +11,7 @@ default_permissions = "agentic-workspace"
 
 # Workspace-scoped profile used by Codex after the template is copied to a
 # target repository root.
+sandbox_mode = "workspace-write"
 [permissions.agentic-workspace]
 description = "Workspace-scoped editing for manual agentic development."
 extends = ":workspace"
@@ -33,3 +34,6 @@ extends = ":workspace"
 # deny list in `.claude/settings.json`.
 [permissions.agentic-workspace.network]
 enabled = false
+
+[sandbox_workspace_write]
+network_access = true

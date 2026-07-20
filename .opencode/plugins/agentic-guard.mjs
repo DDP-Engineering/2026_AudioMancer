@@ -14,6 +14,8 @@
  */
 
 import { spawn } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 export const PROTECTED_READ_PATTERNS = [
@@ -33,8 +35,18 @@ export const PROTECTED_READ_PATTERNS = [
 ];
 
 export function resolveInterpreter() {
-  const override = process.env.AGENTIC_WORKFLOW_PYTHON;
+  const override = process.env.AEGIS_PYTHON;
   if (override && override.trim()) return { command: override.trim(), args: [] };
+  const home = process.env.WAEGIS_HOME
+    ?? (process.platform === "win32"
+      ? join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), "waegis")
+      : join(homedir(), ".config", "waegis"));
+  try {
+    const registered = readFileSync(join(home, "runtime-python"), "utf8").trim();
+    if (registered && existsSync(registered)) return { command: registered, args: [] };
+  } catch {
+    // No valid registered WAEGIS runtime; continue with system launchers.
+  }
   return process.platform === "win32"
     ? { command: "python", args: [] }
     : { command: "python3", args: [] };

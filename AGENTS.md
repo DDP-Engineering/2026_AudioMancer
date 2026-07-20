@@ -29,8 +29,8 @@ Use the project-local wrappers when available:
 bash .agentic/tools/run.sh <command>
 ```
 
-If the workflow package is installed in the active environment, `agentic-workflow`
-or `python -m agentic_workflow` may also be used.
+If the workflow package is installed in the active environment, `aegis`
+or `python -m aegis` may also be used.
 
 Examples below use `<workflow>` for the selected project-local or installed
 workflow command.
@@ -51,7 +51,7 @@ project is trusted; see `.pi/README.md`.
 Under [OpenCode](https://opencode.ai), this `AGENTS.md` contract applies
 unchanged. The project root `opencode.json` points OpenCode at this file and the
 workflow CLI reference, and sets the default primary agent to
-`agentic-workflow` for TUI, `opencode run`, desktop, and GitHub Action usage.
+`aegis` for TUI, `opencode run`, desktop, and GitHub Action usage.
 The `.opencode/` directory provides that workflow agent, native skill wrappers,
 command prompts, and a local plugin that bridges OpenCode tool events to the
 same `.agentic/hooks/` guards used by the Codex, Claude Code, and Pi adapters.
@@ -63,37 +63,18 @@ config, agent, skills, commands, and plugin load together; see
 
 ## Qwen Code Adapter
 
-Under [Qwen Code](https://github.com/QwenLM/qwen-code), this `AGENTS.md`
-contract applies unchanged. The `.qwen/settings.json` file sets
-`context.fileName` to `["AGENTS.md", "QWEN.md"]` so `AGENTS.md` loads first and
-stays authoritative, and its native `PreToolUse`/`PostToolUse` command hooks
-call the same `.agentic/hooks/` guards used by the Codex, Claude Code, Pi, and
-OpenCode adapters, so write-zone, secret, delivery-preflight, protected-read,
-and evidence rules hold identically. `<workflow>` still means the project-local
-runner under `.agentic/tools/`. Shared skills are model-invoked or selected from
-Qwen's `/skills` picker (for example `agentic-development`), and
-`.qwen/commands/` exposes `/workflow-status`, `/workflow-preflight`, and
-`/workflow-report`. Start Qwen Code from the repository root so the project
-settings, skills, and commands load together, and trust the project on first
-start; see `.qwen/README.md`.
-
-## Application Test Environment
-
-The agentic workflow and the AudioMancer application use separate environments;
-do not mix them. The workflow wrapper above stays independent of the
-application's language and toolchain.
-
-For the AudioMancer Python application's own tests, hygiene, and run commands,
-use the application's pinned `uv` environment from `04_Software/AudioMancer`:
-
-- Provision or repair it with `uv sync --extra dev` (installs the locked
-  `pytest`, `pytest-qt`, `ruff`, and `PyInstaller` from `uv.lock`).
-- Run commands through that environment with `uv run`, for example`r`n  `uv run pytest` or `uv run ruff check .`.
-- Do not invoke the system Python directly, install packages with ad-hoc `pip`,
-  or reach into the application's virtual environment from the workflow tooling.
-
-See `04_Software/AudioMancer/README.MD` for the full setup, run, and validation
-commands.
+Under [Qwen Code](https://github.com/QwenLM/qwen-code), this `AGENTS.md` contract
+applies unchanged. The `.qwen/settings.json` file sets `context.fileName` to
+`["AGENTS.md", "QWEN.md"]` so `AGENTS.md` loads first and stays authoritative, and
+its native `PreToolUse`/`PostToolUse` command hooks call the same `.agentic/hooks/`
+guards used by the Codex, Claude Code, Pi, and OpenCode adapters, so write-zone,
+secret, delivery-preflight, protected-read, and evidence rules hold identically.
+`<workflow>` still means the project-local runner under `.agentic/tools/`. Shared
+skills are model-invoked or selected from Qwen's `/skills` picker (for example
+`agentic-development`), and `.qwen/commands/` exposes `/workflow-status`,
+`/workflow-preflight`, and `/workflow-report`. Start Qwen Code from the repository
+root so the project settings, skills, and commands load together, and trust the
+project on first start; see `.qwen/README.md`.
 
 ## Durable Requirements Contract
 
@@ -121,14 +102,14 @@ commands.
 ## Component Documentation Contract
 
 - New software components require a new or updated component document under
-  `05_SoftwareDocu/`.
+  `.agentic/knowledge/components/`.
 - Material changes to a component's behavior, contracts, responsibilities, data
   formats, dependencies, or workflow integration require updating the matching
-  `05_SoftwareDocu/*.md` document in the same change.
+  `.agentic/knowledge/components/*.md` document in the same change.
 - Component documents must follow
-  `05_SoftwareDocu/component_documentation_template.md`.
-- When adding a new component page, update `05_SoftwareDocu/README.md` in the
-  same change.
+  `.agentic/knowledge/components/component_template.md`.
+- When adding a new component page, update
+  `.agentic/knowledge/components/index.md` in the same change.
 - Component documentation complements requirements and tests. It does not
   replace durable requirement rows or linked verification.
 

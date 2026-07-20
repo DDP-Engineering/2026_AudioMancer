@@ -418,40 +418,30 @@ def project_manifest_operation_summary(
     operation_kind: str,
     operation_payload: object | None = None,
 ) -> dict[str, object]:
-    """
-    @brief      Project one detailed operation payload into the compact manifest summary shape.
-    @param[in]  operation_kind Stable workflow operation token.
-    @param[in]  operation_payload Candidate detailed or compact operation payload.
-    @return     Compact operation summary payload for `project.json`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
-    """
+    """Project detailed operation data into its compact ``project.json`` summary."""
     default_summary = _default_operation_state(operation_kind)
     if not isinstance(operation_payload, dict):
         return default_summary
+    if operation_kind == "cleanup":
+        warnings = operation_payload.get("warnings")
+        warning_count = (
+            len(warnings)
+            if isinstance(warnings, list)
+            else _non_negative_int(operation_payload.get("warning_count", 0))
+        )
+        return {
+            "status": str(operation_payload.get("status", default_summary["status"])),
+            "mode": _optional_string(operation_payload.get("mode")),
+            "warning_count": warning_count,
+        }
     return {
         "status": str(operation_payload.get("status", default_summary["status"])),
         "progress_current": _non_negative_int(
-            operation_payload.get(
-                "progress_current",
-                default_summary["progress_current"],
-            )
+            operation_payload.get("progress_current", default_summary["progress_current"])
         ),
-        "progress_total": _non_negative_int(
-            operation_payload.get(
-                "progress_total",
-                default_summary["progress_total"],
-            )
-        ),
+        "progress_total": _non_negative_int(operation_payload.get("progress_total", default_summary["progress_total"])),
         "mode": _optional_string(operation_payload.get("mode")),
-        "warning_count": _non_negative_int(
-            operation_payload.get(
-                "warning_count",
-                default_summary["warning_count"],
-            )
-        ),
+        "warning_count": _non_negative_int(operation_payload.get("warning_count", default_summary["warning_count"])),
     }
 
 
@@ -719,26 +709,42 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
 
 
 def _cleanup_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
-    """
-    @brief      Verify completed Text Cleanup artifacts.
-    @param[in]  project_root Active project root folder.
-    @param[out] warnings Non-destructive repair warnings appended by the check.
-    @return     Completed operation evidence payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
+    """Verify completed AI, deterministic, or manual Cleanup artifacts."""
     _ = warnings
+    cleanup_document_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+    cleanup_document = _load_json_artifact(project_root, config.CLEANUP_DOCUMENT_FILE_NAME)
+    if cleanup_document_path.exists():
+        if (
+            isinstance(cleanup_document, dict)
+            and cleanup_document.get("status") == "completed"
+            and cleanup_document.get("mode") == "ai_assisted"
+            and isinstance(cleanup_document.get("warnings"), list)
+            and isinstance(cleanup_document.get("decisions"), dict)
+            and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
+        ):
+            return {"operation": cleanup_document, "report": cleanup_document}
+        return None
+
     state = _load_json_artifact(project_root, config.CLEANUP_STATE_FILE_NAME)
     report = _load_json_artifact(project_root, config.CLEANUP_REPORT_FILE_NAME)
     if (
-        not _status_is_completed(state)
-        or not isinstance(report, dict)
-        or not _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
+        _status_is_completed(state)
+        and isinstance(report, dict)
+        and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
     ):
-        return None
-    return {"operation": state, "report": report}
+        return {"operation": state, "report": report}
+
+    manifest = _load_json_artifact(project_root, config.PROJECT_MANIFEST_FILE_NAME)
+    operations = manifest.get("operations") if isinstance(manifest, dict) else None
+    cleanup_summary = operations.get("cleanup") if isinstance(operations, dict) else None
+    if (
+        isinstance(cleanup_summary, dict)
+        and cleanup_summary.get("status") == "completed"
+        and cleanup_summary.get("mode") == "manual_edit"
+        and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
+    ):
+        return {"operation": cleanup_summary, "report": {}}
+    return None
 
 
 def _chunking_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
@@ -1800,15 +1806,13 @@ def _build_default_operation_states() -> dict[str, dict[str, object]]:
 
 
 def _default_operation_state(operation_kind: str) -> dict[str, object]:
-    """
-    @brief      Build one default operation-state payload.
-    @param[in]  operation_kind Stable operation-kind token.
-    @return     Default operation-state payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.5.0
-    """
+    """Build the compact default manifest summary for one operation."""
+    if operation_kind == "cleanup":
+        return {
+            "status": "not_started",
+            "mode": None,
+            "warning_count": 0,
+        }
     return {
         "status": "not_started",
         "progress_current": 0,

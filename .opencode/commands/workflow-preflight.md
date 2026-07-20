@@ -1,6 +1,6 @@
 ---
 description: Run the agentic workflow delivery preflight
-agent: agentic-workflow
+agent: aegis
 ---
 
 <!--
@@ -13,7 +13,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Run the project-local delivery preflight command:
 
 ```powershell
-python .agentic/tools/run_agentic_workflow.py delivery-preflight
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py delivery-preflight
 ```
 
 Report pass or fail with the blocking findings. Do not push, merge, publish, or

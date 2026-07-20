@@ -5,7 +5,7 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# Agentic Workflow Configuration
+# AEGIS Configuration
 
 This document explains `.agentic/workflow.toml`, the main repository-local
 configuration file for the agentic workflow. It defines where the workflow looks

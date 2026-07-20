@@ -7,7 +7,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Pi Adapter
 
-This directory adapts the shared agentic workflow template for
+This directory adapts AEGIS for
 [Pi](https://pi.dev) (`@earendil-works/pi-coding-agent`). It is **also a Pi
 package** (`package.json` carries the `pi` key), so a copied template project
 gets Pi support automatically, and a standalone repo can `pi install ./.pi`.
@@ -48,16 +48,17 @@ translates Pi tool events into the existing hook payloads and reuses the Python
 `block` is returned as `{ block: true, reason }`. Pi enforces this in every mode
 (TUI, RPC, JSON, print) because blocking is a return value, not a UI prompt.
 
-> **Transport note:** Pi's `pi.exec()` cannot pass stdin (its options are
-> `{ signal, timeout, cwd }`), so the hooks are spawned via Node's
-> `child_process` instead. The Python is unchanged; only the transport differs
+> **Transport note:** Pi's `pi.exec()` cannot pass stdin (its options are only
+> `{ signal, timeout }`, with no `cwd` option either), so the hooks are spawned
+> via Node's `child_process` instead, which also gives explicit control over
+> the working directory. The Python is unchanged; only the transport differs
 > from a plain `pi.exec`.
 
 ## Prerequisites and trust
 
-- **Python on PATH.** The hooks are stdlib-only and run on any Python 3.11+.
-  Set `AGENTIC_WORKFLOW_PYTHON` to pin a specific interpreter; otherwise the
-  bridge uses `py -3` on Windows and `python3` elsewhere. If Python cannot be
+- **Python runtime.** Set `AEGIS_PYTHON` to pin an interpreter. Otherwise the
+  bridge uses the runtime registered by packaged WAEGIS, then a supported
+  system Python. If no interpreter can be
   run, the guard fails open (allows) — the same "needs Python on PATH" caveat as
   the Codex/Claude adapters.
 - **Project trust.** Project-local extensions and skills load only after the

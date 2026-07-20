@@ -10,15 +10,15 @@ build-backend = "setuptools.build_meta"
 
 # Project metadata for the optional local install under `.agentic/.venv`.
 [project]
-name = "agentic-workflow-template"
+name = "aegis"
 version = "0.4.0"
-description = "Manual agentic development workflow template"
+description = "Agentic Engineering Governance & Integrity System"
 requires-python = ">=3.11"
 dependencies = []
 
 # Console entry point created by the optional local install scripts.
 [project.scripts]
-agentic-workflow = "agentic_workflow.cli:main"
+aegis = "aegis.cli:main"
 
 # Package discovery for the embedded source tree.
 [tool.setuptools.packages.find]

@@ -6,7 +6,7 @@
  */
 
 /**
- * Pi adapter extension for the agentic workflow template.
+ * Pi adapter extension for AEGIS.
  *
  * Subscribes to Pi's `tool_call` (PreToolUse) and `tool_result` (PostToolUse)
  * events and bridges them to the shared, byte-for-byte Python guard hooks under

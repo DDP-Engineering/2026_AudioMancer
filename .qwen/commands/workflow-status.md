@@ -12,7 +12,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Run the project-local workflow status command and summarize the active run:
 
 ```powershell
-python .agentic/tools/run_agentic_workflow.py status
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py status
 ```
 
 Report the current stage, invariant status, and any clear next prompt options.

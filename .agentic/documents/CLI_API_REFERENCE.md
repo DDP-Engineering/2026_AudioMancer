@@ -5,15 +5,15 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# Agentic Workflow CLI API Reference
+# AEGIS CLI API Reference
 
 This document explains the human-facing command API implemented by
-`agentic_workflow/cli.py`. It is written for people who need to understand
+`aegis/cli.py`. It is written for people who need to understand
 which command to run, when it is normally used in the agentic flow, and which
 workflow skills or hooks call it.
 
 This file is the single canonical copy of the reference. It lives at
-`04_Software/agentic-workflow-template/template/.agentic/documents/CLI_API_REFERENCE.md`
+`05_Software/aegis/template/.agentic/documents/CLI_API_REFERENCE.md`
 in the template repository and at `.agentic/documents/CLI_API_REFERENCE.md` in
 copied target repositories.
 
@@ -32,21 +32,21 @@ bash .agentic/tools/run.sh <command>
 The wrappers call:
 
 ```text
-.agentic/tools/run_agentic_workflow.py
+.agentic/tools/run_aegis.py
 ```
 
 That script loads the bundled CLI source from:
 
 ```text
-.agentic/cli/src/agentic_workflow/cli.py
+.agentic/cli/src/aegis/cli.py
 ```
 
 When the package is installed in the active Python environment, these forms are
 also valid:
 
 ```powershell
-agentic-workflow <command>
-python -m agentic_workflow <command>
+aegis <command>
+python -m aegis <command>
 ```
 
 Examples below use `<workflow>` as a placeholder for whichever invocation form
@@ -54,7 +54,8 @@ is available in the current repository.
 
 ## Runtime Requirements
 
-- Python 3.11 or newer. The CLI has no third-party runtime dependencies.
+- Python 3.11 or newer, supplied by `AEGIS_PYTHON`, the packaged-WAEGIS
+  registered runtime, or the system. The CLI has no third-party dependencies.
 - `git` on `PATH`. The secret scan (`INV-7`), `working-tree audit`, `impact`,
   and `delivery-preflight` shell out to `git`.
 
@@ -880,7 +881,7 @@ When it runs: before publish-like shell commands such as `git push`,
 What it calls:
 
 ```powershell
-python .agentic/tools/run_agentic_workflow.py delivery-preflight
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py delivery-preflight
 ```
 
 What it does: denies the publish-like command when delivery preflight fails.

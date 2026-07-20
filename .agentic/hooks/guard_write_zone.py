@@ -10,21 +10,26 @@
 @file guard_write_zone.py
 @brief Pre-tool hook enforcing stage-specific write zones.
 @details Runs as part of the template hook layer and preserves workflow guard behavior.
+@details ``matches`` (0.2.0, architecture-review follow-up) is now
+         case-sensitive on non-Windows hosts, matching the real filesystem.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.1.3
+@date 2026-07-18
+@version 0.2.0
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
-from fnmatch import fnmatch
+from fnmatch import fnmatchcase
 import json
+import os
 from pathlib import Path
 import re
 import sys
 import tomllib
+
+# CONSTANTS
 
 # @brief Built-in edit allowlist used when `.agentic/workflow.toml` is missing
 #        or omits a stage-specific `write_zones` entry.
@@ -75,6 +80,9 @@ PROTECTED_PATH_PATTERNS = [
     "**/id_ed25519",
     "**/id_ed25519.pub",
 ]
+
+
+# PUBLIC API
 
 
 def main() -> int:
@@ -132,6 +140,9 @@ def main() -> int:
     if blocked:
         return deny(f"Edit outside '{stage}' write zone: {', '.join(blocked)}")
     return 0
+
+
+# HELPER FUNCTIONS
 
 
 def read_stage(cwd: Path) -> str:
@@ -260,7 +271,7 @@ def normalize(path: str, cwd: Path) -> str:
         raise ValueError(path) from exc
 
 
-# @note Mirrors `agentic_workflow.paths.matches_pattern`. This hook runs as a
+# @note Mirrors `aegis.paths.matches_pattern`. This hook runs as a
 #       standalone, stdlib-only script with no package import, so the small
 #       matcher is duplicated here on purpose.
 def matches(path: str, pattern: str) -> bool:
@@ -269,13 +280,27 @@ def matches(path: str, pattern: str) -> bool:
     @param[in]  path Input value used by the workflow helper.
     @param[in]  pattern Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
+    @details    Case-folded only on Windows (``os.name == "nt"``), added
+                0.2.0 (architecture-review follow-up), mirroring
+                ``aegis.paths.matches_pattern``: the previous unconditional
+                ``.lower()`` could match/miss write-zone patterns
+                inconsistently with the real, case-sensitive filesystem on
+                Ubuntu/Linux. Uses ``fnmatch.fnmatchcase`` rather than
+                ``fnmatch.fnmatch``: the latter applies its own OS-tied
+                ``os.path.normcase`` internally, which would silently
+                reintroduce Windows-only case-insensitivity regardless of
+                this function's own ``os.name`` check.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-18
+    @version    0.2.0
     """
+    path = path.replace("\\", "/")
     pattern = pattern.replace("\\", "/").rstrip("/")
-    return fnmatch(path.lower(), pattern.lower()) or fnmatch(path.lower(), f"{pattern.lower()}/**")
+    if os.name == "nt":
+        path = path.lower()
+        pattern = pattern.lower()
+    return fnmatchcase(path, pattern) or fnmatchcase(path, f"{pattern}/**")
 
 
 def is_protected_path(path: str) -> bool:
@@ -317,3 +342,6 @@ def deny(message: str) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# END OF FILE

@@ -14,13 +14,16 @@
  * printing `{ hookSpecificOutput: { permissionDecision: "deny", ... } }` (exit
  * code is always 0; stdout is the signal).
  *
- * Pi's `pi.exec()` cannot feed stdin (its ExecOptions is { signal, timeout, cwd }
- * only), so the hooks are spawned through Node's `child_process` instead. The
- * Python hooks are reused byte-for-byte; only the transport differs from a plain
- * `pi.exec`.
+ * Pi's `pi.exec()` cannot feed stdin (its ExecOptions is { signal, timeout }
+ * only, with no `cwd` option either), so the hooks are spawned through Node's
+ * `child_process` instead, which also gives explicit control over the working
+ * directory. The Python hooks are reused byte-for-byte; only the transport
+ * differs from a plain `pi.exec`.
  */
 
 import { spawn } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 /**
@@ -88,14 +91,25 @@ export interface HookBridge {
 }
 
 /**
- * Resolve the Python interpreter. Honors `AGENTIC_WORKFLOW_PYTHON`, otherwise
- * prefers the `py -3` launcher on Windows and `python3` elsewhere. The hooks are
- * stdlib-only, so any Python 3.11+ works.
+ * Resolve explicit `AEGIS_PYTHON`, the per-user WAEGIS runtime pointer, then
+ * supported system launchers. The hooks are stdlib-only.
  */
 export function resolveInterpreter(): Interpreter {
-  const override = process.env.AGENTIC_WORKFLOW_PYTHON;
+  const override = process.env.AEGIS_PYTHON;
   if (override && override.trim()) {
     return { command: override.trim(), args: [] };
+  }
+  const home = process.env.WAEGIS_HOME
+    ?? (process.platform === "win32"
+      ? join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), "waegis")
+      : join(homedir(), ".config", "waegis"));
+  try {
+    const registered = readFileSync(join(home, "runtime-python"), "utf8").trim();
+    if (registered && existsSync(registered)) {
+      return { command: registered, args: [] };
+    }
+  } catch {
+    // No valid registered WAEGIS runtime; continue with system launchers.
   }
   if (process.platform === "win32") {
     return { command: "py", args: ["-3"] };

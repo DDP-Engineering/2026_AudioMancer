@@ -7,7 +7,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Qwen Code Adapter
 
-This directory adapts the shared agentic workflow template for
+This directory adapts AEGIS for
 [Qwen Code](https://github.com/QwenLM/qwen-code).
 
 Do not duplicate the workflow contract here. `AGENTS.md` remains the canonical
@@ -36,17 +36,21 @@ and Claude Code adapters:
 
 | Qwen tool event | Python hook(s) | Effect on deny |
 |---|---|---|
-| `WriteFile` / `Edit` / `MultiEdit` (PreToolUse) | `guard_write_zone.py` | block with reason |
+| `WriteFile` / `Edit` (PreToolUse) | `guard_write_zone.py` | block with reason |
 | `Bash` (PreToolUse) | `secret_scan.py`, then `delivery_preflight.py` | block with reason |
 | any edit/shell (PostToolUse) | `post_tool_evidence.py` | fire-and-forget journal entry |
 
-Qwen labels its file-writing tool `WriteFile` in hook matchers, so the write-zone
-guard accepts that name alongside the Codex `apply_patch` and Claude
-`Edit`/`Write`/`MultiEdit` names.
+Qwen labels its file-writing tool `WriteFile` in hook matchers, so `settings.json`
+matches `Edit|WriteFile` (0.1.1, code-review follow-up: no longer lists
+`MultiEdit`/`write_file`/`replace`/`apply_patch`, which are not documented Qwen
+Code tool names - they were unused aliases carried over from the Claude/Codex
+adapters). The shared `guard_write_zone.py` hook still recognizes those other
+adapters' tool names too, since it is reused byte-for-byte across all five.
 
 ## Prerequisites and trust
 
-- **Python on PATH.** The hooks are stdlib-only and run on any Python 3.11+. If
+- **Python runtime.** Hooks use `AEGIS_PYTHON`, the packaged-WAEGIS registered
+  runtime, then a supported system Python. If
   `python` cannot be run, the guard fails open (allows) - the same "needs Python on
   PATH" caveat as the Codex and Claude Code adapters. Adjust the `command` entries
   in `settings.json` locally if your interpreter is named differently.

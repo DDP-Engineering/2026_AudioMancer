@@ -20,7 +20,9 @@
 
 from threading import Event
 from types import SimpleNamespace
+from unittest.mock import Mock
 
+from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import operation_runner_controller, workflow_controller_service
 
 
@@ -74,6 +76,51 @@ def test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles() -> No
         "enabled": True,
         "model": "model-a",
     }
+
+
+def test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window(tmp_path) -> None:
+    """
+    @brief      Verify persisted operation state becomes the active manifest summary.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-19
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("WorkflowSync", tmp_path)
+    show_project_state = Mock()
+    window = SimpleNamespace(
+        _current_project_root=project_root,
+        _current_manifest=manifest,
+        show_project_state=show_project_state,
+    )
+    operation_state = {
+        "status": "completed",
+        "progress_current": 2,
+        "progress_total": 2,
+        "mode": "deterministic",
+        "warning_count": 0,
+        "metadata": {},
+        "resume_checkpoint": None,
+    }
+
+    workflow_controller_service.sync_manifest_operation_from_disk(
+        window,
+        "chunking",
+        lambda root: operation_state if root == project_root else None,
+        current_stage="text_chunking_ready",
+    )
+
+    persisted_manifest = project_workspace_service.load_manifest(project_root)
+    assert persisted_manifest["operations"]["chunking"] == {
+        "status": "completed",
+        "progress_current": 2,
+        "progress_total": 2,
+        "mode": "deterministic",
+        "warning_count": 0,
+    }
+    assert persisted_manifest["current_stage"] == "text_chunking_ready"
+    show_project_state.assert_called_once_with(project_root, persisted_manifest)
 
 
 # END OF FILE

@@ -7,10 +7,28 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Component Knowledge
 
+- [App Shell](App_Shell.md) - desktop startup, shared Qt composition,
+  navigation, lifecycle coordination, and common dialogs.
+
+- [Platform Settings UI](Platform_Settings_UI.md) - shared configuration,
+  settings, logging, localization, scroll, and theme/state services.
+
+- [Operation Orchestration](Operation_Orchestration.md)
+- [AI Runtime](AI_Runtime.md)
+- [Text Chunking](Text_Chunking.md)
+- [AI Translation](AI_Translation.md)
+- [Character Discovery](Character_Discovery.md)
+- [Voice Profiles](Voice_Profiles.md)
+- [Speech Blocks](Speech_Blocks.md)
+- [TTS Audio Blocks](TTS_Audio_Blocks.md)
+- [Audio Assembly](Audio_Assembly.md)
+
 Component documentation and implementation notes belong here. New component
 pages should follow `component_template.md` and be listed in this index when
 added.
 
-| Component | Criticality | Baseline | Knowledge page |
-| --- | --- | --- | --- |
-| AI Cleanup | High | `baseline-usable` | [AI Cleanup](ai_cleanup.md) |
+- [Text Cleanup](Text_Cleanup.md) — source extraction, deterministic and AI
+  cleanup, cleanup metadata/state, and Text Cleanup UI integration.
+
+- [Project Lifecycle](Project_Lifecycle.md) — project workspaces, source
+  registration, Home flow, persistence, external exports, and snapshots.

@@ -1,6 +1,6 @@
 ---
 name: documentation-audit
-description: Review changed implementation files against relevant component knowledge under `05_SoftwareDocu`, updating broad README, overview, setup, or validation docs only when explicitly requested or when their scope changes.
+description: Review changed implementation files against relevant component knowledge under `.agentic/knowledge/components`, updating broad README, overview, setup, or validation docs only when explicitly requested or when their scope changes.
 ---
 
 <!--
@@ -31,8 +31,8 @@ Use this workflow:
    repository does not provide it, and perform the manual review below instead.
 3. Inspect implementation files changed in the current work.
 4. Update stale or missing component documentation directly:
-   - `05_SoftwareDocu/*.md` for new or materially changed components
-   - `05_SoftwareDocu/README.md` when adding or renaming component pages
+   - `.agentic/knowledge/components/*.md` for new or materially changed components
+   - `.agentic/knowledge/components/index.md` when adding or renaming component pages
 5. Update broad documentation only when the change materially affects that
    document's scope:
    - root or package README files for repository scope, setup, run command,
@@ -50,8 +50,8 @@ Use this workflow:
 Manual review checklist when no audit tool exists:
 
 - changed component behavior is reflected in the appropriate component document
-- new components have a `05_SoftwareDocu/*.md` page
-- new component pages are listed in `05_SoftwareDocu/README.md`
+- new components have a `.agentic/knowledge/components/*.md` page
+- new component pages are listed in `.agentic/knowledge/components/index.md`
 - broad README, overview, setup, and validation docs are reviewed only when
   explicitly requested or when their scope changes
 - docs do not duplicate obsolete behavior from older implementations

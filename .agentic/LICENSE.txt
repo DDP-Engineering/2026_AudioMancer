@@ -9,7 +9,7 @@ Required Notice: Copyright (c) 2026 DDP Engineering
 This software is made available under the PolyForm Noncommercial License 1.0.0,
 the full text of which appears below. Noncommercial use is permitted under these
 terms. Any commercial use requires a separate commercial license from
-DDP Engineering. To obtain a commercial license, contact it.ro@randstaddigital.com.
+DDP Engineering. To obtain a commercial license, contact pasaredan1979@gmail.com.
 
 SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 

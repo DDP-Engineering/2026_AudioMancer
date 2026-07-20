@@ -7,7 +7,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # OpenCode Adapter
 
-This directory adapts OpenCode to the shared agentic workflow template.
+This directory adapts OpenCode to AEGIS.
 The workflow engine remains under `.agentic/`: CLI, hooks, requirements,
 documents, and platform-neutral skills.
 
@@ -22,7 +22,7 @@ Start OpenCode from the repository root so it can find:
 - `.opencode/commands/`
 - `.opencode/plugins/`
 
-`opencode.json` sets `default_agent` to `agentic-workflow`, so the TUI and
+`opencode.json` sets `default_agent` to `aegis`, so the TUI and
 plain `opencode run` start with the primary agent that loads the shared
 development workflow before behavior-changing work.
 
@@ -79,8 +79,9 @@ OpenCode tool events onto the shared `.agentic/hooks/` Python scripts:
 - reads of protected secret/key paths are blocked natively;
 - post-tool events run `post_tool_evidence.py`.
 
-Set `AGENTIC_WORKFLOW_PYTHON` if OpenCode cannot find the desired Python
-interpreter. Python 3.11 or newer is required by the workflow CLI and hooks.
+Interpreter order is explicit `AEGIS_PYTHON`, the runtime registered by
+packaged WAEGIS, then a supported system Python. The workflow CLI and hooks do
+not require a system Python when that registered runtime is present.
 
 Delivery actions such as push, merge, publish, and PR creation still require a
 passing delivery preflight and explicit human approval.

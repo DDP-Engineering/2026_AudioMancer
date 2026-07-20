@@ -1,6 +1,6 @@
 ---
 name: write-component-documentation
-description: Create or update component documentation under `05_SoftwareDocu/` for a repository using this workflow template. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software component knowledge index aligned with implementation changes.
+description: Create or update component documentation under `.agentic/knowledge/components/` for a repository using AEGIS. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software component knowledge index aligned with implementation changes.
 ---
 
 <!--
@@ -16,10 +16,10 @@ Read and follow these shared workflow rule sources:
 
 - `AGENTS.md`
 - `.agentic/skills/write-component-documentation/SKILL.md`
-- `05_SoftwareDocu/component_documentation_template.md`
-- `05_SoftwareDocu/README.md`
+- `.agentic/knowledge/components/component_template.md`
+- `.agentic/knowledge/components/index.md`
 
 Codex invocation: `$write-component-documentation`.
 
 Document current implemented behavior only. Update
-`05_SoftwareDocu/README.md` when adding a new component page.
+`.agentic/knowledge/components/index.md` when adding a new component page.

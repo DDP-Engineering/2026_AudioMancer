@@ -131,7 +131,7 @@ Common invariant meanings:
 | `INV-4` | No regression | Implementation, validation, and delivery evidence must not contain active failing gates or tests. |
 | `INV-5` | In scope | Recorded change units should stay within source, test, documentation, or approved scope paths. |
 | `INV-6` | Evidence | The run must contain recorded evidence. |
-| `INV-7` | Clean secrets | Configured secret patterns must not appear in the diff. |
+| `INV-7` | Clean secrets | Configured secret patterns must not appear in staged/unstaged changes against the last commit or in untracked files. |
 
 Some workflow versions may evaluate additional invariants beyond those listed
 in the policy file. Treat new blocking or non-waivable invariant failures as

@@ -1,6 +1,6 @@
 ---
 name: write-component-documentation
-description: Create or update component documentation under `05_SoftwareDocu/` for a repository using this workflow template. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software component knowledge index aligned with implementation changes.
+description: Create or update component documentation under `.agentic/knowledge/components/` for a repository using AEGIS. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software component knowledge index aligned with implementation changes.
 ---
 
 <!--
@@ -18,9 +18,9 @@ component document after a material implementation change.
 
 Read these files before drafting the document:
 
-- `05_SoftwareDocu/component_documentation_template.md`
+- `.agentic/knowledge/components/component_template.md`
 - the implementation files being documented
-- `05_SoftwareDocu/README.md` if adding a new component page
+- `.agentic/knowledge/components/index.md` if adding a new component page
 
 Use this workflow:
 
@@ -42,8 +42,8 @@ Use this workflow:
    State what the component owns and what it does not own when that prevents
    confusion with nearby modules.
 6. Update the software-doc index.
-   If a new file is added under `05_SoftwareDocu/`, add a short
-   entry to `05_SoftwareDocu/README.md` in the same change.
+   If a new file is added under `.agentic/knowledge/components/`, add a short
+   entry to `.agentic/knowledge/components/index.md` in the same change.
 
 Content expectations by section:
 
@@ -66,7 +66,7 @@ Content expectations by section:
 Formatting rules:
 
 - Preserve the repository copyright header style used in nearby
-  `05_SoftwareDocu/*.md` files.
+  `.agentic/knowledge/components/*.md` files.
 - Use exact repository-relative paths in backticks when naming files.
 - Keep the document compact and avoid repeating the same detail across sections.
 - Prefer present tense for implemented behavior and future tense only for actual
@@ -80,7 +80,7 @@ When updating an existing component document:
 
 When creating a new component document:
 
-- name it `05_SoftwareDocu/<Component_Name>.md` using the
+- name it `.agentic/knowledge/components/<Component_Name>.md` using the
   repository's current naming style
-- add one short bullet to `05_SoftwareDocu/README.md` describing
+- add one short bullet to `.agentic/knowledge/components/index.md` describing
   the new document

@@ -1,6 +1,6 @@
 ---
 name: documentation-audit
-description: Review changed implementation files against relevant component knowledge under `05_SoftwareDocu`, updating broad README, overview, setup, or validation docs only when explicitly requested or when their scope changes.
+description: Review changed implementation files against relevant component knowledge under `.agentic/knowledge/components`, updating broad README, overview, setup, or validation docs only when explicitly requested or when their scope changes.
 ---
 
 <!--

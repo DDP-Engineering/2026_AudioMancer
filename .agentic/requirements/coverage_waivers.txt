@@ -1,28 +1,8 @@
-# AudioMancer requirement coverage waivers (REQ-TEST-007)
-#
-# One repository-relative module path per line. A module listed here is exempt
-# from the per-module requirement coverage gate. Lines starting with '#' and
-# blank lines are ignored.
-#
-# Purpose: this file records pre-existing coverage gaps so the coverage gate
-# passes today while still blocking NEW untested service or controller modules.
-# Each entry is a debt to retire: add a requirement with a linked automated test
-# for the module, then delete its line here. The audit reports stale waivers
-# (code REQ-COVERAGE-STALE-WAIVER) once a waived module becomes covered, so this
-# list cannot silently rot.
-#
-# Do not add new modules here to bypass the gate. New service and controller
-# modules must ship with a requirement and a linked test.
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 
-# --- Services (pre-existing gaps) ---
-04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py
-04_Software/AudioMancer/src/audiomancer/services/time_service.py
-04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py
-04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py
-
-# --- UI controllers (pre-existing gaps) ---
-04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py
-04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py
-04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py
-04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py
-04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py
+# One repository-relative path per line.
+# Use this only for pre-existing legacy modules that do not yet have
+# requirement coverage. Remove a waiver as soon as the module is covered.

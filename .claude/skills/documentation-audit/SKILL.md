@@ -1,6 +1,6 @@
 ---
 name: documentation-audit
-description: Use after implementation changes or before delivery to review changed implementation files against relevant component knowledge under `05_SoftwareDocu`; broad docs are opt-in or scope-triggered.
+description: Use after implementation changes or before delivery to review changed implementation files against relevant component knowledge under `.agentic/knowledge/components`; broad docs are opt-in or scope-triggered.
 ---
 
 <!--

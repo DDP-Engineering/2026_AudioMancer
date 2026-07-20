@@ -97,7 +97,7 @@ WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
 
 # @brief Page-to-operation-state mapping initialized only when a workflow page is opened.
 _PAGE_OPERATION_STATE_KINDS = {
-    "text_cleanup": ("extraction", "cleanup"),
+    "text_cleanup": ("extraction",),
     "text_chunking": ("chunking",),
     "ai_translation": ("translation",),
     "characters": ("character_discovery",),
@@ -793,6 +793,9 @@ class MainWindow(QMainWindow):
                 self,
                 profile_id,
             )
+        )
+        self._text_cleanup_page.reset_cleanup_requested.connect(
+            lambda: text_cleanup_ui_controller.handle_reset_cleanup_requested(self)
         )
         self._text_cleanup_page.apply_spacing_requested.connect(
             lambda selected_categories: text_cleanup_ui_controller.handle_apply_ai_cleanup_spacing_requested(

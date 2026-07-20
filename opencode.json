@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "default_agent": "agentic-workflow",
+  "default_agent": "aegis",
   "instructions": [
     "AGENTS.md",
     ".agentic/documents/CLI_API_REFERENCE.md"

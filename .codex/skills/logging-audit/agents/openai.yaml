@@ -1,4 +1,0 @@
-interface:
-  display_name: "Logging Audit"
-  short_description: "Check principal service logging"
-  default_prompt: "Use $logging-audit to check changed AudioMancer service code for principal functions that should use the logging service, add appropriate logging, and validate the changes."

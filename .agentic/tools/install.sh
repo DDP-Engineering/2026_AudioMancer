@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 # @brief Embedded CLI package installed by this helper.
 CLI_ROOT="$PROJECT_ROOT/.agentic/cli"
-# @brief Local virtual environment owned by the workflow template.
+# @brief Local virtual environment owned by AEGIS.
 VENV_ROOT="$PROJECT_ROOT/.agentic/.venv"
 
 # @brief Resolve a Python launcher available on PATH.

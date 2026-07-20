@@ -7,9 +7,9 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Requirements Registers
 
-These Markdown registers are the durable AudioMancer project contract. The
-active workflow run graph records what happened in one run; these registers
-record what the project promises over time.
+These Markdown registers are the durable project contract. The active workflow
+run graph records what happened in one run; these registers record what the
+project promises over time.
 
 ## Registers And ID Prefixes
 

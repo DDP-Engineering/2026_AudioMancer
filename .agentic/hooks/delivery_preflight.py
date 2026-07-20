@@ -24,8 +24,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+# CONSTANTS
+
 # @brief Publish-like shell command fragments that require delivery preflight.
 DELIVERY_PATTERNS = ("git push", "gh pr create", "git merge")
+
+# PUBLIC API
 
 
 def main() -> int:
@@ -47,7 +51,7 @@ def main() -> int:
     if not any(pattern in normalized for pattern in DELIVERY_PATTERNS):
         return 0
     cwd = Path(payload.get("cwd") or ".").resolve()
-    launcher = cwd / ".agentic" / "tools" / "run_agentic_workflow.py"
+    launcher = cwd / ".agentic" / "tools" / "run_aegis.py"
     if not launcher.exists():
         print(
             json.dumps(
@@ -55,7 +59,7 @@ def main() -> int:
                     "hookSpecificOutput": {
                         "hookEventName": "PreToolUse",
                         "permissionDecision": "deny",
-                        "permissionDecisionReason": "Agentic workflow launcher not found. Expected .agentic/tools/run_agentic_workflow.py.",
+                        "permissionDecisionReason": "Agentic workflow launcher not found. Expected .agentic/tools/run_aegis.py.",
                     }
                 }
             )
@@ -65,6 +69,8 @@ def main() -> int:
         [sys.executable, str(launcher), "delivery-preflight"],
         cwd=cwd,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
@@ -85,3 +91,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# END OF FILE

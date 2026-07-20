@@ -1,6 +1,6 @@
 ---
 description: Generate the agentic workflow delivery report
-agent: agentic-workflow
+agent: aegis
 ---
 
 <!--
@@ -13,7 +13,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Run the project-local workflow report command:
 
 ```powershell
-python .agentic/tools/run_agentic_workflow.py report
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py report
 ```
 
 Summarize the report path and the remaining delivery risks, if any.

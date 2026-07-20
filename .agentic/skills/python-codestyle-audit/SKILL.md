@@ -1,6 +1,6 @@
 ---
 name: python-codestyle-audit
-description: Review and update Python code style for repositories using this workflow template, including module prologues, documentation comments, public callable docstrings, and local style rules. Use after Python implementation changes or before delivery when Python files changed.
+description: Review and update Python code style for repositories using AEGIS, including module prologues, documentation comments, public callable docstrings, and local style rules. Use after Python implementation changes or before delivery when Python files changed.
 ---
 
 <!--

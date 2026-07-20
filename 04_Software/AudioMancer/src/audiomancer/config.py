@@ -312,6 +312,9 @@ EXTRACTION_STATE_FILE_NAME = "extraction_state.json"
 # @brief File name used for persisted cleaned text.
 CLEANED_TEXT_FILE_NAME = "clean_text.txt"
 
+# @brief Authoritative AI-assisted cleanup document file name.
+CLEANUP_DOCUMENT_FILE_NAME = "cleanup.json"
+
 # @brief File name used for persisted cleaned-text paragraph metadata.
 CLEANED_TEXT_METADATA_FILE_NAME = "clean_text_metadata.json"
 

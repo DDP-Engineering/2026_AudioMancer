@@ -13,14 +13,35 @@ param(
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # @brief Project-local Python launcher for the embedded workflow CLI.
-$Launcher = Join-Path $ScriptDir "run_agentic_workflow.py"
+$Launcher = Join-Path $ScriptDir "run_aegis.py"
 
-# @brief Resolve a Python launcher available on PATH.
-# @return Command name for Python, or $null when no supported launcher exists.
+# @brief Resolve explicit, WAEGIS-registered, then system Python.
+# @return Hashtable containing Command and leading Args, or $null.
 function Resolve-Python {
-    $candidates = @("python", "py")
+    if (-not [string]::IsNullOrWhiteSpace($env:AEGIS_PYTHON)) {
+        return @{ Command = $env:AEGIS_PYTHON; Args = @() }
+    }
+    $WaegisHome = $env:WAEGIS_HOME
+    if ([string]::IsNullOrWhiteSpace($WaegisHome)) {
+        $Base = $env:APPDATA
+        if ([string]::IsNullOrWhiteSpace($Base)) {
+            $Base = Join-Path $HOME "AppData\Roaming"
+        }
+        $WaegisHome = Join-Path $Base "waegis"
+    }
+    $Pointer = Join-Path $WaegisHome "runtime-python"
+    if (Test-Path -LiteralPath $Pointer -PathType Leaf) {
+        $Registered = (Get-Content -LiteralPath $Pointer -Raw).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($Registered) -and (Test-Path -LiteralPath $Registered -PathType Leaf)) {
+            return @{ Command = $Registered; Args = @() }
+        }
+    }
+    $candidates = @(
+        @{ Command = "py"; Args = @("-3") },
+        @{ Command = "python"; Args = @() }
+    )
     foreach ($candidate in $candidates) {
-        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        $command = Get-Command $candidate.Command -ErrorAction SilentlyContinue
         if ($null -ne $command) {
             return $candidate
         }
@@ -28,10 +49,10 @@ function Resolve-Python {
     return $null
 }
 
-$Python = Resolve-Python
-if ($null -eq $Python) {
-    Write-Error "Python 3.11+ was not found. Install Python 3.11+ or install uv, then rerun this script."
+$Interpreter = Resolve-Python
+if ($null -eq $Interpreter) {
+    Write-Error "No AEGIS Python runtime is available. Run a packaged WAEGIS command or set AEGIS_PYTHON."
 }
 
-& $Python $Launcher @Args
+& $Interpreter.Command @($Interpreter.Args) $Launcher @Args
 exit $LASTEXITCODE

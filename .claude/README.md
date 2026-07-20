@@ -7,7 +7,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Claude Code Adapter
 
-This directory adapts the shared agentic workflow template for Claude Code.
+This directory adapts AEGIS for Claude Code.
 
 Do not duplicate the workflow contract here. `AGENTS.md` remains the canonical
 source for gate order, requirements, documentation rules, safety rules, and stop
@@ -23,4 +23,5 @@ Contents:
 The hook configuration calls the generic scripts under `.agentic/hooks/`.
 Hook execution depends on the target machine having a compatible `python`
 command on `PATH`. If that is not true, adjust `.claude/settings.json` locally
-or install Python 3.11+.
+or run a packaged WAEGIS command to register its runtime; a system Python is
+only the final fallback.

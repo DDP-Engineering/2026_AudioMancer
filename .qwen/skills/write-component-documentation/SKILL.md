@@ -1,6 +1,6 @@
 ---
 name: write-component-documentation
-description: Use to create or update component documentation under `05_SoftwareDocu` for a new or materially changed software component.
+description: Use to create or update component documentation under `.agentic/knowledge/components` for a new or materially changed software component.
 ---
 
 <!--
@@ -16,10 +16,10 @@ Read and follow these shared workflow rule sources:
 
 - `AGENTS.md`
 - `.agentic/skills/write-component-documentation/SKILL.md`
-- `05_SoftwareDocu/component_documentation_template.md`
-- `05_SoftwareDocu/README.md`
+- `.agentic/knowledge/components/component_template.md`
+- `.agentic/knowledge/components/index.md`
 
 Qwen Code invocation: model-invoked when relevant, or select it from `/skills`.
 
 Document current implemented behavior only. Update
-`05_SoftwareDocu/README.md` when adding a new component page.
+`.agentic/knowledge/components/index.md` when adding a new component page.

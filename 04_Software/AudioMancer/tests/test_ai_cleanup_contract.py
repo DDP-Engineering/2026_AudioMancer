@@ -478,82 +478,59 @@ def test_cleanup_budget_rejects_profile_that_cannot_return_one_page() -> None:
         )
 
 
-def test_cleanup_checkpoint_compatibility_requires_schema_and_input_identity() -> None:
-    """
-    @brief      Verify checkpoint compatibility requires current contract and input identities.
-    @return     None.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-15
-    @version    1.1.0
-    """
-    compatible = {
-        "contract_fingerprint": ai_cleanup_service._CONTRACT_FINGERPRINT,
-        "input_fingerprint": "input-a",
-        "additional_cleanup_instructions_fingerprint": "instructions-a",
-        "completed_windows": [{"window_id": "cleanup-window-0001"}],
+def test_cleanup_document_contract_rejects_legacy_metadata_fields() -> None:
+    """Verify the authoritative document accepts only the approved compact fields."""
+    source = "Story."
+    document = ai_cleanup_service._build_cleanup_document(
+        "completed",
+        ai_cleanup_service._source_fingerprint(source),
+        "",
+        ai_cleanup_service.token_usage_service.empty_token_usage(),
+        [{"kind": "human_review_required"}],
+        [{"start": 0, "end": len(source), "kind": "story"}],
+        {"heading", "separator"},
+    )
+
+    validated = ai_cleanup_service._validate_cleanup_document(document)
+
+    assert validated == document
+    assert set(validated) == {
+        "status",
+        "mode",
+        "source_fingerprint",
+        "instructions",
+        "token_usage",
+        "warnings",
+        "decisions",
     }
+    with pytest.raises(ValueError, match="unsupported fields"):
+        ai_cleanup_service._validate_cleanup_document({**document, "schema_version": 1})
 
-    assert ai_cleanup_service._checkpoint_is_compatible(
-        compatible,
-        "input-a",
-        "instructions-a",
+def test_cleanup_source_offset_resume_trims_mid_page_with_absolute_offsets() -> None:
+    """Verify retained decisions resume from their last absolute source offset."""
+    source_stream = "First segment.\n\fSecond segment.\nThird segment."
+    restored_offset = len("First segment.\n\fSec")
+    prefix_items = [{"start": 0, "end": restored_offset, "kind": "story"}]
+
+    source_offset = ai_cleanup_service._validate_decision_items(
+        prefix_items,
+        source_length=len(source_stream),
     )
-    assert not ai_cleanup_service._checkpoint_is_compatible(
-        {"classifications": {"unit-0001": "story"}},
-        "input-a",
-        "instructions-a",
-    )
-    assert not ai_cleanup_service._checkpoint_is_compatible(
-        compatible,
-        "input-b",
-        "instructions-a",
-    )
-
-
-def test_cleanup_source_offset_resume_trims_mid_page_and_stops_at_mismatch() -> None:
-    """
-    @brief      Verify AICU-009 offset restoration handles split pages and corrupt trailing evidence.
-    @return     None.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    0.1.0
-    """
-    source_stream = "First segment.\nSecond segment.\nThird segment."
-    restored_offset = len("First segment.\nSec")
-    checkpoint = {
-        "completed_windows": [
-            {
-                "window_id": "cleanup-window-0001",
-                "source_window_length": restored_offset,
-                "source_window_fingerprint": ai_cleanup_service._fingerprint(source_stream[:restored_offset]),
-                "preserved_blocks": [],
-                "reconstructed_text": source_stream[:restored_offset],
-            },
-            {
-                "window_id": "cleanup-window-0002",
-                "source_window_length": 4,
-                "source_window_fingerprint": "mismatched",
-                "preserved_blocks": [],
-                "reconstructed_text": "ond ",
-            },
-        ]
-    }
-
-    restored, source_offset = ai_cleanup_service._restored_completed_windows(checkpoint, source_stream)
     remaining_pages = ai_cleanup_service._source_pages_after_offset(
         ai_cleanup_service._build_source_pages(source_stream),
         source_offset,
     )
 
-    assert len(restored) == 1
     assert source_offset == restored_offset
-    assert restored[0]["source_stream_start"] == 0
-    assert restored[0]["source_stream_end"] == restored_offset
+    assert remaining_pages[0]["source_start"] == restored_offset
     assert ai_cleanup_service._window_source_text(remaining_pages) == source_stream[restored_offset:]
     with pytest.raises(ValueError, match="exceeds"):
         ai_cleanup_service._source_pages_after_offset(remaining_pages, len(source_stream) + 1)
+    with pytest.raises(ValueError, match="continuous"):
+        ai_cleanup_service._validate_decision_items(
+            [{"start": 1, "end": restored_offset, "kind": "story"}],
+            source_length=len(source_stream),
+        )
 
 
 def test_ai_cleanup_resume_uses_source_offset_after_budget_repartition(
@@ -634,14 +611,12 @@ def test_ai_cleanup_resume_uses_source_offset_after_budget_repartition(
     with pytest.raises(RuntimeError, match="narrow-budget window"):
         ai_cleanup_service.clean_text(project_root, manifest, narrow_profile)
 
-    failed_state = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
+    failed_document = json.loads(
+        (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).read_text(encoding="utf-8")
     )
-    assert failed_state["progress_current"] == 1
-    assert failed_state["progress_total"] == 3
-    assert len(failed_state["resume_checkpoint"]["completed_windows"]) == 1
+    assert failed_document["status"] == "failed"
+    assert "progress_current" not in failed_document
+    expected_restored_offset = failed_document["decisions"]["items"][-1]["end"]
 
     resumed_prompts: list[str] = []
 
@@ -680,51 +655,31 @@ def test_ai_cleanup_resume_uses_source_offset_after_budget_repartition(
     assert "Page 2 " not in resumed_prompts[0]
     assert "Page 3 " in resumed_prompts[0]
     assert "Page 5 " in resumed_prompts[0]
-    assert report["window_count"] == 2
-    assert [item["window_id"] for item in report["validated_window_decisions"]] == [
-        "cleanup-window-0001",
-        "cleanup-window-0002",
-    ]
-    assert report["validated_window_decisions"][0]["source_stream_start"] == 0
-    assert report["validated_window_decisions"][0]["source_stream_end"] == expected_restored_offset
-    assert report["validated_window_decisions"][1]["source_stream_start"] == expected_restored_offset
-    assert report["validated_window_decisions"][1]["source_stream_end"] == len(expected_source_stream)
+    assert report["status"] == "completed"
+    assert report["decisions"]["items"][-1]["end"] == len(expected_source_stream)
     assert report["token_usage"]["total_tokens"] == 30
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     assert cleaned_path.read_text(encoding="utf-8") == expected_source_stream
 
 
-def test_cleanup_modified_story_contract_invalidates_exact_story_fingerprint() -> None:
-    """
-    @brief      Verify AICU-007 and REQ-FUNC-060 invalidate exact-Story-only state.
-    @return     None.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-15
-    @version    0.1.0
-    """
-    old_fingerprint = hashlib.sha256(
-        b"window_id|all-blocks-exact-with-source-ranges|whitespace:restore-exact|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator,story-exact|confidence:high,medium,low"
-    ).hexdigest()
+def test_cleanup_modified_story_is_stored_only_as_output_text() -> None:
+    """Verify modified Story text is the only duplicated source decision text."""
+    item = {
+        "start": 0,
+        "end": len(_MODIFIED_STORY_SOURCE),
+        "kind": "story",
+        "output_text": _MODIFIED_STORY_AI,
+    }
 
-    assert ai_cleanup_service._CONTRACT_FINGERPRINT != old_fingerprint
+    assert ai_cleanup_service._validate_decision_items([item]) == len(_MODIFIED_STORY_SOURCE)
+    assert set(item) == {"start", "end", "kind", "output_text"}
 
+def test_cleanup_preserved_source_gap_stores_no_duplicated_text() -> None:
+    """Verify preserved gaps retain only absolute offsets and their kind."""
+    item = {"start": 0, "end": len(_OMITTED_SOURCE_LINE), "kind": "preserved_source_gap"}
 
-def test_cleanup_preserved_source_gap_contract_invalidates_modified_story_fingerprint() -> None:
-    """
-    @brief      Verify AICU-008 and REQ-FUNC-060 invalidate the pre-gap contract.
-    @return     None.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-15
-    @version    0.1.0
-    """
-    old_fingerprint = hashlib.sha256(
-        b"window_id|artifacts-exact,story-exact-or-unique-normalized-edge-anchored-modified,min32,edge16-64,interior-any|source-ranges-complete|whitespace:restore-exact|artifact-output:operator-selected-two-lf,unselected-empty,default-heading-separator|confidence:high,medium,low"
-    ).hexdigest()
-
-    assert ai_cleanup_service._CONTRACT_FINGERPRINT != old_fingerprint
-
+    assert ai_cleanup_service._validate_decision_items([item]) == len(_OMITTED_SOURCE_LINE)
+    assert set(item) == {"start", "end", "kind"}
 
 def test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators(
     mock_extracted_project,
@@ -789,16 +744,30 @@ def test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators(
 
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     assert cleaned_path.read_text(encoding="utf-8") == ("First paragraph.\n\n\n\nSecond paragraph.")
-    assert "schema_version" not in report
-    assert report["removed_character_count"] == len("HEADER") + len("* * *") + len("Chapter 2")
-    assert report["restored_whitespace_character_count"] == 9
-    assert report["validated_window_decisions"][0]["removed_ranges"][0]["text"] == "HEADER"
-    state = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
-    assert state["resume_checkpoint"] is None
+    assert set(report) == {
+        "status",
+        "mode",
+        "source_fingerprint",
+        "instructions",
+        "token_usage",
+        "warnings",
+        "decisions",
+    }
+    items = report["decisions"]["items"]
+    assert [item["kind"] for item in items] == [
+        "header",
+        "whitespace",
+        "story",
+        "whitespace",
+        "separator",
+        "whitespace",
+        "heading",
+        "whitespace",
+        "story",
+        "whitespace",
+    ]
+    assert not (project_root / config.CLEANUP_STATE_FILE_NAME).exists()
+    assert not (project_root / config.CLEANUP_REPORT_FILE_NAME).exists()
 
 
 def test_cleanup_window_contract_uses_one_canonical_source_without_page_indices() -> None:
@@ -1143,17 +1112,15 @@ def test_ai_cleanup_spacing_reapplication_persists_selection_without_provider(
 
     assert first_text == "\n\nStory.\n\n"
     assert cleaned_path.read_text(encoding="utf-8") == first_text
-    assert first_report["selected_spacing_categories"] == ["header", "noise"]
-    assert second_report["selected_spacing_categories"] == ["header", "noise"]
+    assert first_report["decisions"]["selected_spacing_categories"] == ["header", "noise"]
+    assert second_report["decisions"]["selected_spacing_categories"] == ["header", "noise"]
     empty_report = ai_cleanup_service.apply_spacing_selection(project_root, set())
     assert cleaned_path.read_text(encoding="utf-8") == "Story."
-    assert empty_report["selected_spacing_categories"] == []
-    persisted_report = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_REPORT_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
+    assert empty_report["decisions"]["selected_spacing_categories"] == []
+    persisted_document = json.loads(
+        (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).read_text(encoding="utf-8")
     )
-    assert persisted_report["selected_spacing_categories"] == []
+    assert persisted_document["decisions"]["selected_spacing_categories"] == []
 
 
 def test_ai_cleanup_spacing_reapplication_preserves_anchored_modified_story(
@@ -1210,7 +1177,9 @@ def test_ai_cleanup_spacing_reapplication_preserves_anchored_modified_story(
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
 
     assert cleaned_path.read_text(encoding="utf-8") == _MODIFIED_STORY_AI
-    assert report["modified_story_block_count"] == 1
+    modified_items = [item for item in report["decisions"]["items"] if "output_text" in item]
+    assert len(modified_items) == 1
+    assert modified_items[0]["output_text"] == _MODIFIED_STORY_AI
     assert provider_call_count == 1
 
     monkeypatch.setattr(
@@ -1221,7 +1190,7 @@ def test_ai_cleanup_spacing_reapplication_preserves_anchored_modified_story(
     reapplied = ai_cleanup_service.apply_spacing_selection(project_root, {"header", "footer"})
 
     assert cleaned_path.read_text(encoding="utf-8") == f"\n\n{_MODIFIED_STORY_AI}\n\n"
-    assert reapplied["modified_story_block_count"] == 1
+    assert any(item.get("output_text") == _MODIFIED_STORY_AI for item in reapplied["decisions"]["items"])
     assert provider_call_count == 1
 
 
@@ -1281,8 +1250,8 @@ def test_ai_cleanup_spacing_reapplication_preserves_internal_source_gap(
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
 
     assert cleaned_path.read_text(encoding="utf-8") == f"Opening story.{expected_gap}Closing story."
-    assert report["preserved_source_gap_count"] == 1
-    assert any(detail["kind"] == "unclassified_source_gap_preserved" for detail in report["warning_details"])
+    assert sum(item["kind"] == "preserved_source_gap" for item in report["decisions"]["items"]) == 1
+    assert any(detail["kind"] == "unclassified_source_gap_preserved" for detail in report["warnings"])
     assert provider_call_count == 1
 
     monkeypatch.setattr(
@@ -1293,7 +1262,7 @@ def test_ai_cleanup_spacing_reapplication_preserves_internal_source_gap(
     reapplied = ai_cleanup_service.apply_spacing_selection(project_root, {"noise"})
 
     assert cleaned_path.read_text(encoding="utf-8") == f"Opening story.{expected_gap}\n\nClosing story."
-    assert reapplied["preserved_source_gap_count"] == 1
+    assert sum(item["kind"] == "preserved_source_gap" for item in reapplied["decisions"]["items"]) == 1
     assert provider_call_count == 1
 
 

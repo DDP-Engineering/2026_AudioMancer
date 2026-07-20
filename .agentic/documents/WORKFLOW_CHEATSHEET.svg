@@ -6,8 +6,8 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 -->
 
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2100" viewBox="0 0 1600 2100" role="img" aria-labelledby="title desc">
-  <title id="title">Agentic Workflow Cheat Sheet</title>
-  <desc id="desc">Visual one-page summary of the agentic development workflow template gates, commands, artifacts, and delivery checks.</desc>
+  <title id="title">AEGIS Cheat Sheet</title>
+  <desc id="desc">Visual one-page summary of the AEGIS gates, commands, artifacts, and delivery checks.</desc>
   <defs>
     <style>
       .bg { fill: #f7f5ef; }
@@ -46,8 +46,8 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
   <rect class="bg" x="0" y="0" width="1600" height="2100"/>
 
-  <text class="h1" x="80" y="95">Agentic Workflow Cheat Sheet</text>
-  <text class="body" x="82" y="135">A compact operating map for the copied workflow template: human-steered gates, deterministic evidence, scoped docs, explicit access, and delivery preflight.</text>
+  <text class="h1" x="80" y="95">AEGIS Cheat Sheet</text>
+  <text class="body" x="82" y="135">A compact operating map for AEGIS: human-steered gates, deterministic evidence, scoped docs, explicit access, and delivery preflight.</text>
 
   <rect class="panel" x="80" y="175" width="1440" height="170" rx="8"/>
   <text class="h2" x="115" y="225">Project-local command placeholder</text>
@@ -199,5 +199,5 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
   <text class="mono" x="115" y="1962">Before drafting requirements, complete Intent Alignment and record defaults for open questions.</text>
   <text class="mono" x="115" y="1994">Then run traceability/coverage audits, map impact, and stop at each gate.</text>
 
-  <text class="small" x="80" y="2052">Human operator flyer companion to PROMPT_CHEATSHEET.md. Generated for the Agentic Development Workflow Template.</text>
+  <text class="small" x="80" y="2052">Human operator flyer companion to PROMPT_CHEATSHEET.md. Generated for the Agentic Engineering Governance & Integrity System.</text>
 </svg>

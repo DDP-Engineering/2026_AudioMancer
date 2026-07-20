@@ -62,6 +62,7 @@ class TextCleanupPage(QWidget):
     extract_requested = Signal()
     clean_requested = Signal()
     ai_clean_requested = Signal(str)
+    reset_cleanup_requested = Signal()
     apply_spacing_requested = Signal(object)
     save_cleaned_text_requested = Signal(str)
 
@@ -82,6 +83,7 @@ class TextCleanupPage(QWidget):
         self._can_clean = False
         self._can_ai_clean = False
         self._can_apply_ai_spacing = False
+        self._can_reset_cleanup = False
         self._has_cleaned_text = False
         self._editing_cleaned_text = False
         self._has_ai_profiles = False
@@ -117,6 +119,10 @@ class TextCleanupPage(QWidget):
         self._ai_clean_button.setEnabled(False)
         self._ai_clean_button.clicked.connect(self._emit_ai_clean_requested)
         header_row.addWidget(self._ai_clean_button)
+
+        self._reset_cleanup_button = QPushButton("Reset Cleanup")
+        self._reset_cleanup_button.clicked.connect(self.reset_cleanup_requested.emit)
+        header_row.addWidget(self._reset_cleanup_button)
 
         layout.addLayout(header_row)
 
@@ -236,6 +242,9 @@ class TextCleanupPage(QWidget):
         can_clean: bool,
         can_ai_clean: bool,
         can_apply_ai_spacing: bool = False,
+        can_reset_cleanup: bool = False,
+        cleanup_mode: str | None = None,
+        cleanup_status: str = "not_started",
         selected_spacing_categories: list[str] | None = None,
     ) -> None:
         """
@@ -258,6 +267,9 @@ class TextCleanupPage(QWidget):
         self._can_clean = can_clean
         self._can_ai_clean = can_ai_clean
         self._can_apply_ai_spacing = can_apply_ai_spacing
+        self._can_reset_cleanup = can_reset_cleanup
+        _ = cleanup_mode
+        _ = cleanup_status
         self._has_cleaned_text = bool((cleaned_text or "").strip())
         self._editing_cleaned_text = False
         self._extracted_text_edit.setPlainText(extracted_text or "")
@@ -404,6 +416,7 @@ class TextCleanupPage(QWidget):
             and self.current_ai_profile_id() is not None
             and not self._busy
         )
+        self._reset_cleanup_button.setEnabled(self._project_active and self._can_reset_cleanup and not self._busy)
         self._edit_cleaned_button.setEnabled(
             self._project_active and self._has_cleaned_text and not self._busy and not self._editing_cleaned_text
         )
@@ -457,6 +470,7 @@ class TextCleanupPage(QWidget):
         self._clean_button.setText(ui_state_service.translate("text_cleanup.clean", language))
         self._ai_profile_label.setText(ui_state_service.translate("text_cleanup.ai_profile", language))
         self._ai_clean_button.setText(ui_state_service.translate("text_cleanup.ai_clean", language))
+        self._reset_cleanup_button.setText(ui_state_service.translate("text_cleanup.reset", language))
         self._edit_cleaned_button.setText(ui_state_service.translate("text_cleanup.edit_cleaned", language))
         self._save_cleaned_button.setText(ui_state_service.translate("text_cleanup.save_cleaned", language))
         self._spacing_label.setText(ui_state_service.translate("text_cleanup.spacing_label", language))

@@ -23,12 +23,16 @@ import json
 import re
 import sys
 
+# CONSTANTS
+
 PATTERNS = [
     r"sk-[A-Za-z0-9_-]{20,}",
     r"ghp_[A-Za-z0-9_]{20,}",
     r"AKIA[0-9A-Z]{16}",
     r"-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----",
 ]
+
+# PUBLIC API
 
 
 def main() -> int:
@@ -61,3 +65,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# END OF FILE

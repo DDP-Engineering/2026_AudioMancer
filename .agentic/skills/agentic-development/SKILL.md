@@ -95,7 +95,7 @@ next prompt options.
    - Also cite durable requirement IDs in test comments, docstrings, or names
      where practical.
    - For new components, include checks or review expectations that make the
-     required `05_SoftwareDocu/` documentation visible before
+     required `.agentic/knowledge/components/` documentation visible before
      delivery.
    - Run the smallest relevant command and confirm new checks fail first.
    - Record checks with `<workflow> add-check`.
@@ -107,7 +107,7 @@ next prompt options.
    - Reconfirm local scope before change by checking mapped component paths
      against `.agentic/components.toml` when present.
    - Update required component documentation under
-     `05_SoftwareDocu/` in the same change when component
+     `.agentic/knowledge/components/` in the same change when component
      boundaries, contracts, or behavior change.
    - Use `$write-component-documentation` for new or materially changed
      components.

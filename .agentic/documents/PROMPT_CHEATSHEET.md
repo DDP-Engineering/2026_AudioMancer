@@ -5,10 +5,10 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# Agentic Workflow Prompt Cheat Sheet
+# AEGIS Prompt Cheat Sheet
 
 This is a human operator flyer. Use these prompts in an agentic development tool
-after the target repo has the workflow template installed. Replace text in
+after the target repo has AEGIS installed. Replace text in
 `<angle brackets>`.
 
 The authoritative agent workflow rules live in `AGENTS.md`, `.agentic/`
@@ -20,8 +20,8 @@ In copied target projects, use `<workflow>` as the workflow command placeholder:
 
 - Windows: `.\.agentic\tools\run.ps1`
 - Ubuntu: `bash .agentic/tools/run.sh`
-- Windows after optional install: `.\.agentic\.venv\Scripts\agentic-workflow.exe`
-- Ubuntu after optional install: `.agentic/.venv/bin/agentic-workflow`
+- Windows after optional install: `.\.agentic\.venv\Scripts\aegis.exe`
+- Ubuntu after optional install: `.agentic/.venv/bin/aegis`
 
 ## Create A New Project From This Template
 
@@ -450,7 +450,7 @@ Record why the run is being aborted, summarize current state, and stop.
 
 ## Portable Command Reminder
 
-Prefer the copied project-local runner when `agentic-workflow` is not on PATH.
+Prefer the copied project-local runner when `aegis` is not on PATH.
 Use the matching local wrapper command wherever a prompt says `<workflow>`.
 
 Common Windows examples:
@@ -462,7 +462,7 @@ Use this command form for workflow operations:
 
 ```text
 Use this command form for workflow operations after optional local install:
-.\.agentic\.venv\Scripts\agentic-workflow.exe
+.\.agentic\.venv\Scripts\aegis.exe
 ```
 
 Common Ubuntu examples:
@@ -474,5 +474,5 @@ bash .agentic/tools/run.sh
 
 ```text
 Use this command form for workflow operations after optional local install:
-.agentic/.venv/bin/agentic-workflow
+.agentic/.venv/bin/aegis
 ```

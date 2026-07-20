@@ -15,7 +15,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
 # @brief Embedded CLI package installed by this helper.
 $CliRoot = Join-Path $ProjectRoot ".agentic\cli"
-# @brief Local virtual environment owned by the workflow template.
+# @brief Local virtual environment owned by AEGIS.
 $VenvRoot = Join-Path $ProjectRoot ".agentic\.venv"
 
 # @brief Resolve a Python launcher available on PATH.

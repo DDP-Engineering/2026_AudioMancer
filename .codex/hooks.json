@@ -8,8 +8,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .agentic/hooks/guard_write_zone.py",
-            "commandWindows": "python .agentic\\hooks\\guard_write_zone.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/guard_write_zone.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\guard_write_zone.py",
             "statusMessage": "Checking agentic write zone"
           }
         ]
@@ -19,14 +19,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .agentic/hooks/secret_scan.py",
-            "commandWindows": "python .agentic\\hooks\\secret_scan.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/secret_scan.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\secret_scan.py",
             "statusMessage": "Checking command for secrets"
           },
           {
             "type": "command",
-            "command": "python .agentic/hooks/delivery_preflight.py",
-            "commandWindows": "python .agentic\\hooks\\delivery_preflight.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/delivery_preflight.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\delivery_preflight.py",
             "statusMessage": "Checking delivery preflight"
           }
         ]
@@ -38,8 +38,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .agentic/hooks/post_tool_evidence.py",
-            "commandWindows": "python .agentic\\hooks\\post_tool_evidence.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/post_tool_evidence.py",
+            "commandWindows": "node .agentic\\tools\\run_hook.mjs .agentic\\hooks\\post_tool_evidence.py",
             "statusMessage": "Recording agentic tool evidence"
           }
         ]

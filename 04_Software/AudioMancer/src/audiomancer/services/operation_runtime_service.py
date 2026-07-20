@@ -58,6 +58,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     ),
     "cleanup": (
         config.CLEANED_TEXT_FILE_NAME,
+        config.CLEANUP_DOCUMENT_FILE_NAME,
         config.CLEANED_TEXT_METADATA_FILE_NAME,
         config.CLEANUP_REPORT_FILE_NAME,
         config.CLEANUP_STATE_FILE_NAME,
@@ -107,7 +108,6 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
 # @brief Optional operation-state file names that may be initialized on first page open.
 _OPERATION_STATE_FILE_NAMES = {
     "extraction": config.EXTRACTION_STATE_FILE_NAME,
-    "cleanup": config.CLEANUP_STATE_FILE_NAME,
     "chunking": config.CHUNKING_STATE_FILE_NAME,
     "character_discovery": config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     "speech_blocks": config.SPEECH_BLOCKS_STATE_FILE_NAME,

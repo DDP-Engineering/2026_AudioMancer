@@ -9,11 +9,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|WriteFile|write_file|replace|apply_patch",
+        "matcher": "Edit|WriteFile",
         "hooks": [
           {
             "type": "command",
-            "command": "python .agentic/hooks/guard_write_zone.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/guard_write_zone.py",
             "name": "agentic-guard-write-zone",
             "statusMessage": "Checking agentic write zone"
           }
@@ -24,13 +24,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .agentic/hooks/secret_scan.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/secret_scan.py",
             "name": "agentic-secret-scan",
             "statusMessage": "Checking command for secrets"
           },
           {
             "type": "command",
-            "command": "python .agentic/hooks/delivery_preflight.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/delivery_preflight.py",
             "name": "agentic-delivery-preflight",
             "statusMessage": "Checking delivery preflight"
           }
@@ -39,11 +39,11 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|Edit|Write|MultiEdit|WriteFile|write_file|replace|apply_patch",
+        "matcher": "Bash|Edit|WriteFile",
         "hooks": [
           {
             "type": "command",
-            "command": "python .agentic/hooks/post_tool_evidence.py",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/post_tool_evidence.py",
             "name": "agentic-tool-evidence",
             "statusMessage": "Recording agentic tool evidence"
           }
