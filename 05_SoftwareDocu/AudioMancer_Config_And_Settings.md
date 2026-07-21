@@ -89,7 +89,7 @@ Project runtime artifact contracts currently include:
 - no per-operation workflow folder constants
 - no required-workflow-subdirectory configuration for new projects
 - root-level state files such as `extraction_state.json`,
-  `cleanup_state.json`, `chunking_state.json`, `translation_state.json`,
+  `cleanup_state.json`, `translation_state.json`,
   `characters_state.json`, `speech_blocks_state.json`, and
   `audio_blocks_state.json`
 - root-level output/report artifacts such as `extracted_text.txt`,
@@ -97,6 +97,8 @@ Project runtime artifact contracts currently include:
   `characters_profile.json`, `audio_profiles.json`, `characters_voice.json`,
   `speech_blocks.json`, `audio_blocks.json`, and
   `audio_assembly_report.json`
+- `chunks_text.json` is the sole authoritative Chunking document; Chunking has
+  no report/state sidecar configuration
 - `audio_blocks/` as the runtime artifact subfolder used for generated
   audio-block WAV and split-part WAV files; per-block generation metadata is
   stored in `audio_blocks.json`

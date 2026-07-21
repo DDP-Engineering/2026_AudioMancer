@@ -24,6 +24,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_translation_service, operation_runtime_service, project_workspace_service
+from chunking_test_support import build_chunking_document
 
 # PUBLIC API
 
@@ -384,30 +385,32 @@ def _create_chunked_project(tmp_path, name: str):
     project_workspace_service.save_manifest(manifest, project_root)
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": "Chapter I",
-                    "text": "Original one",
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-                {
-                    "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "chapter_label": "Chapter I",
-                    "text": "Original two",
-                    "source_start_line": 3,
-                    "source_end_line": 3,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "chapter_label": "Chapter I",
+                        "text": "Original one",
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "chapter_label": "Chapter I",
+                        "text": "Original two",
+                        "source_start_line": 3,
+                        "source_end_line": 3,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                ]
+            ),
             indent=2,
         )
         + "\n",

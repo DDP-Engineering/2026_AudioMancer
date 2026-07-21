@@ -221,3 +221,7 @@ uv run pytest tests/test_project_export_service.py tests/test_home_page.py tests
   `project.json`.
 - Future format renderers should reuse `ExportDocument` rather than rereading
   runtime artifacts directly.
+
+Reviewed for the single-document Chunking contract: text-chunk exports derive
+mode, strategy, counts, and chunks from the strict document and do not depend on
+a persisted AI log path.

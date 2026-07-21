@@ -220,3 +220,6 @@ right-to-left layout handling.
 ## Documentation Review Notes
 
 Reviewed for the AI chunking context mode feature. The runtime UI string catalog now includes the AI Settings chunking context mode label and the Balanced, Wide scene context, and Maximum context option labels in English and Romanian. The AI Settings dialog flow string coverage verifies these keys exist for supported languages.
+
+Reviewed for the single-document Chunking contract. Resume notes no longer
+claim durable progress totals and instead describe the saved checkpoint.

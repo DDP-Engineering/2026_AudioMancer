@@ -157,3 +157,7 @@ Minimum validation after changes:
   workflow.
 - Operation reset behavior is intentionally limited to known runtime artifacts.
 - WAV stitching assumes compatible input format parameters.
+
+Reviewed for the single-document Chunking contract: page-open state creation
+omits Chunking, while Reset deletes `chunks_text.json`, separate AI logs, and
+obsolete sidecars without loading legacy data.

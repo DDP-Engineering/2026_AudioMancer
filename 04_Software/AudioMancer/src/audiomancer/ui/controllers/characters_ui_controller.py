@@ -27,7 +27,7 @@ from audiomancer.services import (
     audio_blocks_service,
     character_discovery_service,
     character_voices_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     narrator_definition_service,
     operation_runtime_service,
     project_workspace_service,
@@ -1198,7 +1198,7 @@ def _has_chunking_output(project_root: str | None) -> bool:
     """
     if not project_root:
         return False
-    return bool(deterministic_chunking_service.load_chunks(project_root))
+    return bool(chunking_document_service.load_chunks(project_root))
 
 
 # END OF FILE

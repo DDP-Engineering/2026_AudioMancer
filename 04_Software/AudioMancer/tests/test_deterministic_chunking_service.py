@@ -23,7 +23,13 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import deterministic_chunking_service, operation_runtime_service, project_workspace_service
+from audiomancer.services import (
+    chunking_document_service,
+    deterministic_chunking_service,
+    operation_runtime_service,
+    project_workspace_service,
+)
+from chunking_test_support import read_chunking_document, write_chunking_document
 
 
 def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> None:
@@ -57,14 +63,14 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
-    assert (project_root / config.CHUNKING_REPORT_FILE_NAME).is_file()
-    assert (project_root / config.CHUNKING_STATE_FILE_NAME).is_file()
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert not (project_root / "chunking_report.json").exists()
+    assert not (project_root / "chunking_state.json").exists()
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert chunks[0]["chunk_id"] == "chunk-0001"
     assert "chapter_label" not in chunks[0]
     assert "chapter_label" not in chunks[1]
     assert "chapter_label" not in chunks[2]
-    assert chunks[2]["source_start_line"] == 5
+    assert "source_start_line" not in chunks[2]
     assert report_payload["chunk_count"] == 3
     assert report_payload["detected_chapter_count"] == 1
 
@@ -103,7 +109,7 @@ def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
     assert report_payload["chunk_count"] == 2
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert len(chunks) == 2
 
 
@@ -158,7 +164,7 @@ def test_chunking_prefers_cleanup_metadata_paragraph_records(tmp_path) -> None:
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert report_payload["chunk_count"] == 1
     assert len(chunks) == 1
     assert chunks[0]["cleanup_joined_across_page_break"] is True
@@ -193,7 +199,7 @@ def test_chunking_falls_back_when_cleanup_metadata_is_missing(tmp_path) -> None:
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert report_payload["chunk_count"] == 2
     assert len(chunks) == 2
 
@@ -245,10 +251,11 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
             cancel_requested=lambda: should_cancel["value"],
         )
 
-    state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    state_payload = read_chunking_document(project_root)
     assert state_payload["status"] == "cancelled"
-    assert state_payload["progress_current"] < state_payload["progress_total"]
-    assert state_payload["resume_checkpoint"] is not None
+    assert state_payload["next_paragraph"] is not None
+    assert "progress_current" not in state_payload
+    assert state_payload["chunks"]
 
 
 def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, monkeypatch) -> None:
@@ -277,10 +284,10 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
         "\n\n".join(f"Paragraph {index}." for index in range(1, 7)) + "\n",
         encoding="utf-8",
     )
-    chunk_write_count = {"value": 0}
-    original_write_chunk_payload = deterministic_chunking_service._write_chunk_payload
+    document_write_count = {"value": 0}
+    original_write_document = chunking_document_service.write_chunking_document
 
-    def _counting_write_chunk_payload(output_path, chunks) -> None:
+    def _counting_write_document(output_root, document):
         """
         @brief      Count chunk-artifact writes while preserving real persistence.
         @return     None.
@@ -289,8 +296,8 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
         @date       2026-06-10
         @version    0.1.0
         """
-        chunk_write_count["value"] += 1
-        original_write_chunk_payload(output_path, chunks)
+        document_write_count["value"] += 1
+        return original_write_document(output_root, document)
 
     def _unexpected_full_chapter_scan(_chunks):
         """
@@ -303,13 +310,13 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
         """
         raise AssertionError("deterministic chunking should use incremental chapter counts")
 
-    monkeypatch.setattr(deterministic_chunking_service, "_write_chunk_payload", _counting_write_chunk_payload)
+    monkeypatch.setattr(chunking_document_service, "write_chunking_document", _counting_write_document)
     monkeypatch.setattr(deterministic_chunking_service, "_chapter_count_from_chunks", _unexpected_full_chapter_scan)
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
     assert report_payload["chunk_count"] == 6
-    assert chunk_write_count["value"] == 1
+    assert document_write_count["value"] == 8
 
 
 def test_incremental_chapter_count_matches_full_scan() -> None:
@@ -357,56 +364,19 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "Paragraph one.\n\nParagraph two.\n",
-        encoding="utf-8",
-    )
-    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "text": "Paragraph one.",
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.CHUNKING_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "folder_relative_path": ".",
-                "status": "running",
-                "input_paths": [config.CLEANED_TEXT_FILE_NAME],
-                "output_paths": [config.CHUNK_ARTIFACT_FILE_NAME],
-                "artifact_paths": [],
-                "progress_current": 1,
-                "progress_total": 2,
-                "mode": "deterministic",
-                "started_at": "2026-04-07T12:00:00+00:00",
-                "completed_at": None,
-                "updated_at": "2026-04-07T12:01:00+00:00",
-                "warning_count": 0,
-                "metadata": {"warnings": [], "chunk_count": 1, "detected_chapter_count": 0},
-                "resume_checkpoint": {"next_chunk_index": 1},
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    cleaned_text = "Paragraph one.\n\nParagraph two.\n"
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(cleaned_text, encoding="utf-8")
+    write_chunking_document(
+        project_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Paragraph one."}],
+        source_text=cleaned_text,
+        status="running",
+        next_paragraph=2,
     )
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert report_payload["chunk_count"] == 2
     assert len(chunks) == 2
     assert chunks[1]["chunk_id"] == "chunk-0002"
@@ -425,7 +395,8 @@ def test_load_chunks_returns_empty_for_malformed_artifact(tmp_path) -> None:
     project_root, _manifest = project_workspace_service.create_project("ChunkMalformed", tmp_path)
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("{not-json", encoding="utf-8")
 
-    assert deterministic_chunking_service.load_chunks(project_root) == []
+    with pytest.raises(ValueError, match="Reset Chunking"):
+        deterministic_chunking_service.load_chunks(project_root)
 
 
 def test_chunking_rejects_empty_cleaned_text(tmp_path) -> None:

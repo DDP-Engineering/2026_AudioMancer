@@ -29,6 +29,9 @@ Character-voice services derive safe prompts from the character inventory, prese
 
 ## 6. Data Contracts
 
+Narrator source resolution reads canonical chunks through the shared strict
+Chunking document service; it does not interpret legacy Chunking formats.
+
 - Narrator and character targets use stable IDs, selected flags, prompt/preview text, runtime language codes, sample-path metadata, and assignment mode.
 - Sample imports must be readable, non-silent WAVs of adequate duration. Writes use atomic JSON/byte persistence and tolerate torn legacy metadata as absent data.
 - AI profile generation retains style checkpoints, bounded preview text, operator rules, token-usage/state metadata, and does not overwrite profiles after invalid/cancelled work.

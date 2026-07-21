@@ -26,6 +26,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import character_discovery_service, project_workspace_service
+from chunking_test_support import build_chunking_document
 
 
 def test_character_discovery_prompts_request_demographic_confidence() -> None:
@@ -1046,18 +1047,20 @@ def test_load_input_chunks_derives_runtime_chapter_context(tmp_path) -> None:
     artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "text": "Chapter I\n\nAlice waits at the gate.",
-                },
-                {
-                    "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "text": '"Come inside," said Alice.',
-                },
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "text": "Chapter I\n\nAlice waits at the gate.",
+                    },
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "text": '"Come inside," said Alice.',
+                    },
+                ]
+            ),
             indent=2,
         )
         + "\n",
@@ -1066,7 +1069,9 @@ def test_load_input_chunks_derives_runtime_chapter_context(tmp_path) -> None:
 
     input_chunks = character_discovery_service.load_input_chunks(project_root)
 
-    persisted_chunks = json.loads((artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    persisted_chunks = json.loads((artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))[
+        "chunks"
+    ]
     assert input_chunks[0]["chapter_label"] == "Chapter I"
     assert input_chunks[1]["chapter_label"] == "Chapter I"
     assert "chapter_label" not in persisted_chunks[0]
@@ -1086,18 +1091,20 @@ def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
     artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "text": '"Hello there," said Alice.',
-                },
-                {
-                    "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "text": '"Goodbye," said Bob.',
-                },
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "text": '"Hello there," said Alice.',
+                    },
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "text": '"Goodbye," said Bob.',
+                    },
+                ]
+            ),
             indent=2,
         )
         + "\n",
@@ -1638,18 +1645,20 @@ def _create_character_project(tmp_path, project_name: str):
     )
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "text": '"Hello there," said Alice.',
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                }
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "text": '"Hello there," said Alice.',
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    }
+                ]
+            ),
             indent=2,
         )
         + "\n",

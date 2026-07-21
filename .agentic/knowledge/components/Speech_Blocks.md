@@ -28,6 +28,9 @@ The orchestration service resolves source chunks and voice assignments, builds b
 
 ## 6. Data Contracts
 
+When untranslated source is selected, source order and text come only from the
+strict authoritative Chunking document through its shared reader.
+
 - Each block has a stable `speech_block_id`, content/speaker kind and identifiers, text or ambience prompt, duration, warning flags, and approval state.
 - Source selection preserves canonical ordering; normalization and splits preserve usable text while keeping blocks within configured TTS limits.
 - Report/state summaries derive from persisted document data rather than creating competing block records.

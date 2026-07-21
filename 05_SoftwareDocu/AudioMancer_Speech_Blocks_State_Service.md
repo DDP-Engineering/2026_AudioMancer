@@ -192,3 +192,6 @@ uv run pytest tests/test_speech_blocks_page.py
 - Metadata-only handling is intentionally aligned with current Audio Blocks
   behavior; Scene Ambience rows should remain selectable for audio generation
   whenever the sound-prompt path is enabled.
+
+Reviewed for the single-document Chunking contract: source readiness derives
+from the shared canonical chunk reader.

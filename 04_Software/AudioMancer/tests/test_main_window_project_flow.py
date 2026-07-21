@@ -248,8 +248,8 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
     assert (project_root / config.EXTRACTION_STATE_FILE_NAME).exists() is False
     assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
-    assert (project_root / config.CHUNKING_STATE_FILE_NAME).exists() is False
-    assert (project_root / config.CHUNKING_REPORT_FILE_NAME).exists() is False
+    assert (project_root / "chunking_state.json").exists() is False
+    assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).exists() is False
@@ -266,10 +266,8 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
 
     window.set_current_page("text_chunking")
 
-    assert json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))["status"] == (
-        "not_started"
-    )
-    assert (project_root / config.CHUNKING_REPORT_FILE_NAME).exists() is False
+    assert (project_root / "chunking_state.json").exists() is False
+    assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).exists() is False

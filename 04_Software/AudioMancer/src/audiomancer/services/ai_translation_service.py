@@ -25,7 +25,7 @@ import re
 from audiomancer import config
 from audiomancer.services import (
     ai_budget_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     llm_provider_service,
     prompt_template_service,
     token_usage_service,
@@ -147,7 +147,7 @@ def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
 @trace_function(_AI_TRANSLATION_LOGGER)
 def load_translation_summary(project_root: str | Path) -> dict[str, object]:
     """Build the effective translation summary without mutating project data."""
-    source_chunks = deterministic_chunking_service.load_chunks(project_root)
+    source_chunks = chunking_document_service.load_chunks(project_root)
     return build_translation_summary(source_chunks, load_translation_document(project_root))
 
 
@@ -218,7 +218,7 @@ def sync_translation_after_chunk_change(
 ) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
     """Synchronize an existing translation document after canonical chunk changes."""
     resolved_project_root = Path(project_root)
-    source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
+    source_chunks = chunking_document_service.load_chunks(resolved_project_root)
     if not source_chunks:
         raise ValueError("Run text chunking before synchronizing AI translation.")
     document = load_translation_document(resolved_project_root)
@@ -249,7 +249,7 @@ def start_or_continue_translation(
     """Translate empty canonical chunks and checkpoint only complete chunks."""
     resolved_project_root = Path(project_root)
     _validate_translation_inputs(ai_profile_payload, target_language)
-    source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
+    source_chunks = chunking_document_service.load_chunks(resolved_project_root)
     if not source_chunks:
         raise ValueError("Run text chunking before starting AI translation.")
     source_chunks = _canonical_source_chunks(source_chunks)
@@ -349,7 +349,7 @@ def retranslate_chunk(
     """Re-translate one chunk without clearing its prior text or approval first."""
     resolved_project_root = Path(project_root)
     _validate_translation_inputs(ai_profile_payload, target_language)
-    source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
+    source_chunks = chunking_document_service.load_chunks(resolved_project_root)
     document = load_translation_document(resolved_project_root)
     if document is None:
         raise ValueError("Start AI translation before re-translating a chunk.")

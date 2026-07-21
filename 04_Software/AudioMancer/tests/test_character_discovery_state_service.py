@@ -23,6 +23,7 @@ import json
 
 from audiomancer import config
 from audiomancer.services import character_discovery_state_service, project_workspace_service
+from chunking_test_support import build_chunking_document
 
 
 def test_profile_state_prefers_default_character_profile() -> None:
@@ -150,19 +151,21 @@ def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": None,
-                    "text": '"Hello there," said Alice.',
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                }
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "chapter_label": None,
+                        "text": '"Hello there," said Alice.',
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    }
+                ]
+            ),
             indent=2,
         )
         + "\n",
@@ -221,7 +224,7 @@ def _create_project(tmp_path, name: str):
         }
     ]
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps(chunk_payload, indent=2) + "\n",
+        json.dumps(build_chunking_document(chunk_payload), indent=2) + "\n",
         encoding="utf-8",
     )
     (discovery_root / "input_story.json").write_text(

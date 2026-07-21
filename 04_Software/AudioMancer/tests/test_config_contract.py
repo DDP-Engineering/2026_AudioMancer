@@ -60,8 +60,8 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.CLEANED_TEXT_FILE_NAME == "clean_text.txt"
     assert config.CLEANUP_STATE_FILE_NAME == "cleanup_state.json"
     assert config.CHUNK_ARTIFACT_FILE_NAME == "chunks_text.json"
-    assert config.CHUNKING_REPORT_FILE_NAME == "chunking_report.json"
-    assert config.CHUNKING_STATE_FILE_NAME == "chunking_state.json"
+    assert not hasattr(config, "CHUNKING_REPORT_FILE_NAME")
+    assert not hasattr(config, "CHUNKING_STATE_FILE_NAME")
     assert config.TRANSLATED_CHUNKS_FILE_NAME == "translated_text.json"
     assert not hasattr(config, "TRANSLATION_REPORT_FILE_NAME")
     assert not hasattr(config, "TRANSLATION_STATE_FILE_NAME")

@@ -99,6 +99,11 @@ snapshot deliverables are not registered as runtime project artifacts.
 
 ## 6. Data Contracts
 
+Chunking completion evidence and text-chunk exports are projections of the one
+strict `chunks_text.json` document. Project open does not create a default
+Chunking state file, and obsolete report/state sidecars are ignored except when
+Reset Chunking deletes them.
+
 The root manifest contains project identity and timestamps, `current_stage`,
 `source_document`, compact `operations`, locked language/voice options,
 audio-assembly settings, and notes. `source_document` contains

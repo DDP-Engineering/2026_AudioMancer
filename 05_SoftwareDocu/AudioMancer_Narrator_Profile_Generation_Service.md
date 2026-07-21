@@ -333,3 +333,6 @@ Minimum validation after changes:
   the checkpoint.
 - Repeated runs append new suggestions and do not deduplicate against prior
   generated profile semantics beyond display-name suffixing.
+
+Reviewed for the single-document Chunking contract: narrator analysis resolves
+canonical source chunks through the shared strict reader.

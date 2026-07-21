@@ -239,3 +239,6 @@ uv run ruff check src/audiomancer/services/ai_translation_service.py src/audioma
   than chunk-scoped invalidation.
 - Existing incompatible translation files require an explicit Reset
   Translation; automatic migration is intentionally unsupported.
+
+Reviewed for the single-document Chunking contract: canonical source chunks now
+come through `chunking_document_service`, with no legacy Chunking fallback.

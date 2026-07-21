@@ -24,6 +24,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
+from chunking_test_support import read_chunking_document, write_chunking_document
 
 
 def test_ai_chunking_windows_use_configured_strategy_caps(monkeypatch) -> None:
@@ -338,7 +339,7 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
         },
     )
 
-    report_payload = ai_chunking_service.chunk_text(
+    ai_chunking_service.chunk_text(
         project_root,
         manifest,
         {
@@ -358,22 +359,15 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
 
     chunking_root = project_root
     assert (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
-    assert (chunking_root / config.CHUNKING_REPORT_FILE_NAME).is_file()
-    assert (chunking_root / config.CHUNKING_STATE_FILE_NAME).is_file()
+    assert not (chunking_root / "chunking_report.json").exists()
+    assert not (chunking_root / "chunking_state.json").exists()
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in chunking_root.glob("*.log"))
-    assert report_payload["chunking_mode"] == "ai_assisted"
-    assert report_payload["semantic_strategy"] == "meaning"
-    assert report_payload["budget_metadata"]["context_window"] == 4096
-    assert report_payload["budget_metadata"]["max_output_tokens"] == 512
-    assert report_payload["budget_metadata"]["strategy_paragraph_cap"] == config.DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE
-    state_payload = json.loads((chunking_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["metadata"]["budget_metadata"] == report_payload["budget_metadata"]
-    chunks = json.loads((chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    document = read_chunking_document(chunking_root)
+    assert document["mode"] == "ai_assisted"
+    assert document["semantic_strategy"] == "meaning"
+    assert "budget_metadata" not in document
+    chunks = document["chunks"]
     assert len(chunks) == 2
-    assert chunks[0]["chunking_mode"] == "ai_assisted"
-    assert chunks[0]["semantic_strategy"] == "meaning"
-    assert chunks[0]["source_start_line"] == 1
-    assert chunks[0]["source_end_line"] == 3
     assert "CHAPTER I" in chunks[0]["text"]
     assert "chapter_label" not in chunks[0]
     assert "chapter_label" not in chunks[1]
@@ -438,7 +432,7 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
 
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
 
-    report_payload = ai_chunking_service.chunk_text(
+    ai_chunking_service.chunk_text(
         project_root,
         manifest,
         {
@@ -460,11 +454,9 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
     assert captured_user_prompts
     assert "Additional operator chunking instructions:" in captured_user_prompts[0]
     assert "Keep all chapter prologues in separate chunks." in captured_user_prompts[0]
-    assert report_payload["additional_chunking_instructions"] == "Keep all chapter prologues in separate chunks."
-    assert report_payload["additional_chunking_instructions_fingerprint"]
-    state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["resume_checkpoint"] is None
-    assert "additional_chunking_instructions" not in state_payload["metadata"]
+    document = read_chunking_document(project_root)
+    assert document["additional_chunking_instructions"] == "Keep all chapter prologues in separate chunks."
+    assert "additional_chunking_instructions_fingerprint" not in document
 
 
 def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, monkeypatch) -> None:
@@ -536,7 +528,7 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
     )
 
     chunking_root = project_root
-    chunks = json.loads((chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert len(chunks) == 1
     assert "Paragraph one." in chunks[0]["text"]
     assert "Paragraph two." in chunks[0]["text"]
@@ -644,7 +636,7 @@ def test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata(tmp_pa
         "paragraph",
     )
 
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert "Paragraph 1\n" in captured_prompt["text"]
     assert "paragraph-0042" not in captured_prompt["text"]
     assert chunks[0]["cleanup_joined_across_page_break"] is True
@@ -752,10 +744,10 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
             "paragraph",
         )
 
-    state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    state_payload = read_chunking_document(project_root)
     assert state_payload["status"] == "cancelled"
-    assert state_payload["progress_current"] == 1
-    assert state_payload["resume_checkpoint"]["next_paragraph"] == 21
+    assert state_payload["next_paragraph"] == 21
+    assert "progress_current" not in state_payload
 
     monkeypatch.setattr(
         ai_chunking_service.llm_provider_service,
@@ -799,9 +791,9 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
 
     assert report_payload["chunk_count"] == 3
     assert report_payload["token_usage"]["total_tokens"] == 85
-    completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    completed_state = read_chunking_document(project_root)
     assert completed_state["status"] == "completed"
-    assert completed_state["progress_current"] == 2
+    assert completed_state["next_paragraph"] is None
 
 
 def test_ai_running_state_reuses_prebuilt_chunks(tmp_path) -> None:
@@ -815,59 +807,29 @@ def test_ai_running_state_reuses_prebuilt_chunks(tmp_path) -> None:
     @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("AiChunkPrebuiltState", tmp_path)
-    state_path = project_root / config.CHUNKING_STATE_FILE_NAME
     input_path = project_root / config.CLEANED_TEXT_FILE_NAME
-    output_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
-    input_path.write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
+    source_text = "Chapter I\n\nParagraph one.\n"
+    input_path.write_text(source_text, encoding="utf-8")
     chunks = [
         {
             "chunk_id": "chunk-0001",
             "sequence_index": 1,
             "text": "Chapter I\n\nParagraph one.",
-            "source_start_line": 1,
-            "source_end_line": 3,
-            "chunking_mode": "ai_assisted",
-            "semantic_strategy": "paragraph",
         }
     ]
-
-    ai_chunking_service._write_descriptor_state(
-        state_path=state_path,
-        project_root=project_root,
-        input_snapshot_path=input_path,
-        output_path=output_path,
-        started_at="2026-06-10T12:00:00+00:00",
-        progress_current=1,
-        progress_total=1,
-        chunks=chunks,
-        profile_id="profile_1",
+    write_chunking_document(
+        project_root,
+        chunks,
+        mode="ai_assisted",
         semantic_strategy="paragraph",
-        input_fingerprint="fingerprint",
-        log_relative_path="ai_chunking.log",
-        token_usage={"usage_available": False},
-        budget_metadata={
-            "context_window": 4096,
-            "max_output_tokens": 512,
-            "prompt_budget_tokens": 20,
-            "text_budget_tokens": 2000,
-            "safety_margin_tokens": 409,
-            "strategy_paragraph_cap": 20,
-        },
-        profile_runtime_metadata={
-            "model_name": "qwen3-8b",
-            "context_window": 4096,
-            "max_output_tokens": 512,
-            "temperature": 0.2,
-        },
-        profile_usage_history=[],
+        source_text=source_text,
+        status="running",
         next_paragraph=2,
-        additional_chunking_instructions_fingerprint=ai_chunking_service._compute_prompt_fingerprint(""),
-        context_window_fallback_count=0,
     )
 
-    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
-    assert state_payload["metadata"]["chunk_count"] == 1
-    assert state_payload["metadata"]["detected_chapter_count"] == 1
+    state_payload = read_chunking_document(project_root)
+    assert len(state_payload["chunks"]) == 1
+    assert state_payload["next_paragraph"] == 2
 
 
 def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_path, monkeypatch) -> None:
@@ -958,14 +920,11 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
     with pytest.raises(operation_runtime_service.OperationCancelledError):
         ai_chunking_service.chunk_text(project_root, manifest, profile, "paragraph")
 
-    state_path = project_root / config.CHUNKING_STATE_FILE_NAME
-    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
-    checkpoint = dict(state_payload["resume_checkpoint"])
-    checkpoint.pop("next_paragraph", None)
-    checkpoint["completed_last_unit_id"] = "paragraph-0020"
-    checkpoint["committed_break_ids"] = ["paragraph-0020"]
-    state_payload["resume_checkpoint"] = checkpoint
-    state_path.write_text(json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    document_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    state_payload = read_chunking_document(project_root)
+    state_payload["completed_last_unit_id"] = "paragraph-0020"
+    state_payload["committed_break_ids"] = ["paragraph-0020"]
+    document_path.write_text(json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     captured_prompts: list[str] = []
 
@@ -986,11 +945,10 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
 
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _second_chat_json)
 
-    ai_chunking_service.chunk_text(project_root, manifest, profile, "paragraph")
+    with pytest.raises(ValueError, match="Reset Chunking"):
+        ai_chunking_service.chunk_text(project_root, manifest, profile, "paragraph")
 
-    assert captured_prompts
-    assert "Paragraph 1\n" in captured_prompts[0]
-    assert "Paragraph 21\n" not in captured_prompts[0]
+    assert not captured_prompts
 
 
 def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, monkeypatch) -> None:
@@ -1118,21 +1076,18 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     }
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _second_chat_json)
 
-    report_payload = ai_chunking_service.chunk_text(project_root, manifest, second_profile, "paragraph")
+    ai_chunking_service.chunk_text(project_root, manifest, second_profile, "paragraph")
 
     assert captured_prompts
     assert "Paragraph 1\n" not in captured_prompts[0]
     assert "Paragraph 21\n" in captured_prompts[0]
-    assert report_payload["ai_profile_id"] == "profile_2"
-    assert report_payload["model_name"] == "qwen3-14b"
-    assert report_payload["context_window"] == 8192
-    assert report_payload["max_output_tokens"] == 768
-    assert report_payload["temperature"] == 0.4
-    assert len(report_payload["profile_usage_history"]) == 2
-    completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert completed_state["resume_checkpoint"] is None
-    assert "completed_unit_count" not in completed_state["metadata"]
-    assert completed_state["metadata"]["model_name"] == "qwen3-14b"
+    completed_state = read_chunking_document(project_root)
+    assert completed_state["status"] == "completed"
+    assert completed_state["next_paragraph"] is None
+    assert completed_state["token_usage"]["total_tokens"] == 24
+    assert "ai_profile_id" not in completed_state
+    assert "model_name" not in completed_state
+    assert "budget_metadata" not in completed_state
 
 
 # END OF FILE

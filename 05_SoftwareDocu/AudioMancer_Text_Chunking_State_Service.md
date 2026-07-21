@@ -12,7 +12,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Provides Text Chunking page-state helpers and the v2 manual chunk maintenance
 path for `AudioMancer`.
 
-The service keeps the page aligned with cleaned text, persisted chunk artifacts,
+The service keeps the page aligned with cleaned text, the authoritative Chunking document,
 AI chunking notes, profile selectors, and manual selected-chunk operations. Its
 v2 responsibility is to preserve expensive downstream work whenever a local
 chunk edit, insert, or delete affects only specific stable `chunk_id` values.
@@ -20,7 +20,7 @@ chunk edit, insert, or delete affects only specific stable `chunk_id` values.
 ## 2. Responsibilities
 
 - build Text Chunking page state from the active project, manifest, settings,
-  cleaned text, chunk output, chunking report, and operation state
+  cleaned text and projections derived from `chunks_text.json`
 - build deterministic and AI-assisted chunking notes, including persisted token
   usage when the backend reported it
 - expose enabled AI chunking profiles and selected semantic strategy
@@ -34,8 +34,8 @@ chunk edit, insert, or delete affects only specific stable `chunk_id` values.
 - drop Character Discovery evidence anchored to affected chunks while
   preserving character profiles
 - reset Audio Assembly outputs after chunk-local changes
-- refresh chunking metadata, operation state, impact metadata, and manifest
-  summaries
+- atomically preserve Chunking document metadata, set `manual_adjusted`, and
+  refresh manifest summaries
 - present failed or cancelled chunking runs as resumable instead of ready
 
 It does not own deterministic chunk generation, AI chunk generation, actual AI
@@ -61,7 +61,7 @@ Main public entrypoints:
 High-level manual-change flow:
 
 1. The controller confirms the operator action with localized impact text.
-2. The service loads the canonical chunk artifact.
+2. The service strictly loads the sole authoritative `chunks_text.json` document.
 3. The selected chunk is edited, a new empty chunk is inserted after the
    selected chunk, or the selected chunk is removed.
 4. The full chunk list is resequenced while preserving existing stable
@@ -75,8 +75,8 @@ High-level manual-change flow:
    audio files for those Audio Blocks are deleted through the workflow impact
    safe-artifact helper.
 8. Audio Assembly state, report, and generated audiobook output are reset.
-9. Chunking report and operation-state metadata record the manual adjustment
-   plus the latest v2 impact summary.
+9. The same document is atomically replaced with the updated chunks and
+   `manual_adjusted = true`; no report or state sidecar is written.
 10. `project.json` summaries are refreshed from the actual persisted artifacts.
 
 ## 4. Dependencies
@@ -88,10 +88,9 @@ Internal dependencies:
 - `audiomancer.services.ai_translation_service`
 - `audiomancer.services.audio_blocks_service`
 - `audiomancer.services.character_discovery_service`
-- `audiomancer.services.deterministic_chunking_service`
+- `audiomancer.services.chunking_document_service`
 - `audiomancer.services.home_presenter_service`
 - `audiomancer.services.operation_runtime_service`
-- `audiomancer.services.persistence_service`
 - `audiomancer.services.project_workspace_service`
 - `audiomancer.services.speech_blocks_service`
 - `audiomancer.services.text_cleanup_state_service`
@@ -100,7 +99,7 @@ Internal dependencies:
 
 External dependencies:
 
-- Python standard library only: `json` and `pathlib`
+- Python standard library: `pathlib`
 
 ## 5. Inputs And Outputs
 
@@ -110,15 +109,11 @@ Inputs:
 - settings payload with AI profile selectors
 - `clean_text.txt`
 - `chunks_text.json`
-- `chunking_report.json`
-- `chunking_state.json`
 - selected `chunk_id`
 
 Outputs updated by manual chunk changes:
 
 - `chunks_text.json`
-- `chunking_report.json`
-- `chunking_state.json`
 - `translated_text.json`
 - `translation_report.json`
 - `translation_state.json`
@@ -147,9 +142,7 @@ Ordering field:
 Manual insert rules:
 
 - new chunks receive the next unused `chunk-####` identifier
-- inserted chunks start with empty text and `chunking_mode = "manual"`
-- inserted chunks inherit source-position hints from the selected anchor chunk
-  only as placeholders until the operator edits the text
+- inserted chunks start with empty text and the exact minimal chunk field set
 - existing chunks keep their `chunk_id`
 
 Manual edit rules:
@@ -169,15 +162,16 @@ Metadata rules:
 
 - persisted chunk records do not store `chapter_label`; chapter counts are
   derived by scanning chunk text for chapter or scene heading lines
-- failed or cancelled chunking states are shown as resumable until the operator
-  completes or reruns chunking
-- `chunking_report.json` records manual adjustment and audit metadata
-- `chunking_state.json` stays compact after manual edits and does not duplicate
-  the chunk list in `metadata.chunks`
-- manual chunk, report, and state JSON rewrites use shared atomic persistence
-- `last_workflow_impact` records affected chunks, reset operation kinds,
-  assembly reset, deleted generated files, and timestamp
-- no complex v1 metadata migration is attempted
+- lifecycle, mode, strategy, instructions, token usage, warnings, checkpoint,
+  fallback count, and chunks live only in the strict root object
+- progress, current AI profile, model/budget settings, impact summaries, and log
+  paths are runtime-only and are not persisted in the Chunking document
+- failed or cancelled documents are shown as resumable without creating a
+  page-open state file; resume uses the currently selected profile
+- manual document rewrites use shared atomic persistence and preserve unrelated
+  root fields
+- legacy arrays and old report/state sidecars are never loaded or migrated;
+  operators must use Reset Chunking to recover
 
 ## 7. Workflow Integration
 

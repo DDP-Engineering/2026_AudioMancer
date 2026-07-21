@@ -24,6 +24,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from audiomancer import config
+from audiomancer.services import chunking_document_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     load_project_json_artifact as _load_json_artifact,
@@ -759,12 +760,13 @@ def _chunking_completion_evidence(project_root: Path, warnings: list[str]) -> di
     @version    0.1.0
     """
     _ = warnings
-    state = _load_json_artifact(project_root, config.CHUNKING_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.CHUNKING_REPORT_FILE_NAME)
-    chunks = _load_json_artifact(project_root, config.CHUNK_ARTIFACT_FILE_NAME)
-    if not _status_is_completed(state) or not isinstance(report, dict) or not _non_empty_payload_list(chunks):
+    document = chunking_document_service.load_chunking_document(project_root)
+    if document is None or document["status"] != "completed" or not document["chunks"]:
         return None
-    return {"operation": state, "report": report}
+    return {
+        "operation": chunking_document_service.derive_operation_state(document),
+        "report": chunking_document_service.derive_report(document),
+    }
 
 
 def _translation_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:

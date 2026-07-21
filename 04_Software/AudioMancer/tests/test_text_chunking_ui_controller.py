@@ -25,6 +25,7 @@ from audiomancer import config
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import text_chunking_ui_controller
 from audiomancer.ui.main_window import MainWindow
+from chunking_test_support import write_chunking_document
 
 
 def test_text_chunking_ui_controller_start_operation_clears_dialog(
@@ -597,19 +598,9 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
     chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
     chunk_artifact_path = chunking_root / config.CHUNK_ARTIFACT_FILE_NAME
-    chunk_artifact_path.write_text(
-        json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "text": "Original chunk",
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    write_chunking_document(
+        chunking_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original chunk"}],
     )
     manifest["current_stage"] = "character_discovery_ready"
     manifest["operations"]["chunking"]["status"] = "completed"
@@ -654,8 +645,9 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
 
     text_chunking_ui_controller.handle_save_chunk_requested(window, "chunk-0001", "Edited chunk")
 
-    chunks = json.loads(chunk_artifact_path.read_text(encoding="utf-8"))
-    assert chunks[0]["text"] == "Edited chunk"
+    document = json.loads(chunk_artifact_path.read_text(encoding="utf-8"))
+    assert document["chunks"][0]["text"] == "Edited chunk"
+    assert document["manual_adjusted"] is True
     assert window._current_manifest["current_stage"] == "translation_ready"
     assert restored_scroll_states == [
         {

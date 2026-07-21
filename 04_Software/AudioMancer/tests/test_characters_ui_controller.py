@@ -33,6 +33,7 @@ from audiomancer.services import (
 )
 from audiomancer.ui.controllers import characters_ui_controller
 from audiomancer.ui.main_window import MainWindow
+from chunking_test_support import build_chunking_document
 
 
 def test_character_ui_controller_first_run_shows_info_popup(monkeypatch, qtbot, tmp_path) -> None:
@@ -569,19 +570,21 @@ def _create_project(tmp_path, name: str):
     discovery_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": None,
-                    "text": '"Hello there," said Alice.',
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                }
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "chapter_label": None,
+                        "text": '"Hello there," said Alice.',
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    }
+                ]
+            ),
             indent=2,
         )
         + "\n",

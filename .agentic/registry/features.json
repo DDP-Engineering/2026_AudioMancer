@@ -1,18 +1,82 @@
 {
-  "adoption-2026-07-19T065150Z-75c3e115": {
-    "check_ids": [],
+  "feature-2026-07-20T191136Z-8198c638": {
+    "check_ids": [
+      "CHK-0001",
+      "CHK-0002",
+      "CHK-0003"
+    ],
     "intent": {
-      "created_at": "2026-07-19T06:51:50+00:00",
+      "created_at": "2026-07-20T19:11:36+00:00",
       "id": "I-0001",
-      "kind": "adoption",
-      "scope_hint": [],
-      "statement": "Adopt the discovered app-shell component by characterizing its current entry points, application shell, main-window integration, UI navigation, and lifecycle contracts; preserve runtime behavior.",
+      "kind": "feature",
+      "scope_hint": [
+        "04_Software/AudioMancer/src/audiomancer",
+        "04_Software/AudioMancer/tests",
+        ".agentic/knowledge/components"
+      ],
+      "statement": "Implement the AI Chunking Single-Document Implementation Plan: replace Text Chunking persistence with one strict authoritative chunks_text.json document, remove report/state sidecar reads and writes, preserve runtime-only progress and current-profile resume behavior, update downstream consumers, tests, and documentation, and provide no legacy compatibility beyond Reset Chunking cleanup.",
       "status": "draft"
     },
-    "report_path": ".agentic/runs/adoption-2026-07-19T065150Z-75c3e115/report.md",
-    "run_id": "adoption-2026-07-19T065150Z-75c3e115",
-    "spec_ids": [],
-    "stage": "adoption-delivery",
-    "touched_paths": []
+    "report_path": ".agentic/runs/feature-2026-07-20T191136Z-8198c638/report.md",
+    "run_id": "feature-2026-07-20T191136Z-8198c638",
+    "spec_ids": [
+      "S-0001",
+      "S-0002",
+      "S-0003",
+      "S-0004",
+      "S-0005",
+      "S-0006",
+      "S-0007"
+    ],
+    "stage": "validation",
+    "touched_paths": [
+      ".agentic/knowledge/components/AI_Translation.md",
+      ".agentic/knowledge/components/Character_Discovery.md",
+      ".agentic/knowledge/components/Platform_Settings_UI.md",
+      ".agentic/knowledge/components/Project_Lifecycle.md",
+      ".agentic/knowledge/components/Speech_Blocks.md",
+      ".agentic/knowledge/components/TTS_Audio_Blocks.md",
+      ".agentic/knowledge/components/Text_Chunking.md",
+      ".agentic/knowledge/components/Voice_Profiles.md",
+      "04_Software/AudioMancer/src/audiomancer/config.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+      "05_SoftwareDocu/AudioMancer_AI_Translation_Service.md",
+      "05_SoftwareDocu/AudioMancer_Audio_Blocks_State_Service.md",
+      "05_SoftwareDocu/AudioMancer_Character_Discovery_Service.md",
+      "05_SoftwareDocu/AudioMancer_Chunking_Document_Service.md",
+      "05_SoftwareDocu/AudioMancer_Config_And_Settings.md",
+      "05_SoftwareDocu/AudioMancer_Narrator_Definition_State_Service.md",
+      "05_SoftwareDocu/AudioMancer_Narrator_Profile_Generation_Service.md",
+      "05_SoftwareDocu/AudioMancer_Page_State_Support_Services.md",
+      "05_SoftwareDocu/AudioMancer_Project_Export_Service.md",
+      "05_SoftwareDocu/AudioMancer_Project_Runtime_Support_Services.md",
+      "05_SoftwareDocu/AudioMancer_Project_Workspace.md",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_State_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Chunking_State_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md",
+      "05_SoftwareDocu/AudioMancer_UI_State_Service.md",
+      "05_SoftwareDocu/README.md"
+    ]
   }
 }

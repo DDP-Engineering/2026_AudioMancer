@@ -27,6 +27,7 @@ from PySide6.QtWidgets import QMessageBox
 from audiomancer import config
 from audiomancer.services import (
     ai_chunking_service,
+    chunking_document_service,
     deterministic_chunking_service,
     home_presenter_service,
     operation_runtime_service,
@@ -702,9 +703,8 @@ def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | 
     """
     if window._current_project_root is None:
         return None
-    return ai_chunking_service.load_operation_state(
-        window._current_project_root
-    ) or deterministic_chunking_service.load_operation_state(window._current_project_root)
+    document = chunking_document_service.load_chunking_document(window._current_project_root)
+    return None if document is None else chunking_document_service.derive_operation_state(document)
 
 
 def _resolve_ai_profile(
@@ -748,19 +748,9 @@ def _resume_ai_profile_id(
     @date       2026-04-21
     @version    0.2.0
     """
+    _ = window
     _ = chunking_operation
-    state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
-    if isinstance(state_payload, dict):
-        resume_checkpoint = state_payload.get("resume_checkpoint")
-        if isinstance(resume_checkpoint, dict):
-            profile_id = resume_checkpoint.get("profile_id")
-            if profile_id not in (None, ""):
-                return str(profile_id)
-        state_metadata = state_payload.get("metadata")
-        if isinstance(state_metadata, dict):
-            profile_id = state_metadata.get("ai_profile_id")
-            if profile_id not in (None, ""):
-                return str(profile_id)
+    # AI profile selection is runtime-only; resume uses the currently selected profile.
     return None
 
 
@@ -778,18 +768,11 @@ def _resume_ai_strategy(
     @version    0.2.0
     """
     _ = chunking_operation
-    state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
-    if isinstance(state_payload, dict):
-        resume_checkpoint = state_payload.get("resume_checkpoint")
-        if isinstance(resume_checkpoint, dict):
-            semantic_strategy = str(resume_checkpoint.get("semantic_strategy", "")).strip()
-            if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
-                return semantic_strategy
-        state_metadata = state_payload.get("metadata")
-        if isinstance(state_metadata, dict):
-            semantic_strategy = str(state_metadata.get("semantic_strategy", "")).strip()
-            if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
-                return semantic_strategy
+    document = chunking_document_service.load_chunking_document(window._current_project_root or "")
+    if document is not None:
+        semantic_strategy = document["semantic_strategy"]
+        if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
+            return str(semantic_strategy)
     return config.DEFAULT_AI_CHUNKING_STRATEGY
 
 

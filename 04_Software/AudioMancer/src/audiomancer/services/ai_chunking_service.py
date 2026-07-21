@@ -10,9 +10,9 @@
 @file ai_chunking_service.py
 @brief AI-assisted text chunking helpers for AudioMancer.
 @details Consumes canonical cleaned text, asks one configured AI profile to
-         decide semantic chunk boundaries over ordered paragraphs, persists the
-         canonical chunk artifacts in `20_chunking`, and maintains resumable
-         window-based operation state plus AI transaction logging.
+         decide semantic chunk boundaries over ordered paragraphs, atomically
+         checkpoints one strict `chunks_text.json` document, and keeps AI
+         transaction logs separate from the durable Chunking contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
 @version 0.10.0
@@ -29,6 +29,7 @@ import unicodedata
 from audiomancer import config
 from audiomancer.services import (
     ai_budget_service,
+    chunking_document_service,
     deterministic_chunking_service,
     llm_provider_service,
     project_workspace_service,
@@ -41,9 +42,7 @@ from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
     build_operation_state_payload,
     load_operation_state_file,
-    load_operation_state_payload,
     raise_if_cancelled,
-    relative_to_project,
 )
 from audiomancer.services.operation_runtime_service import (
     emit_progress_update as _emit_progress,
@@ -133,35 +132,36 @@ def chunk_text(
         raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
 
     _ = source_document
-    input_snapshot_path = cleaned_path
-
-    output_path = build_operation_output_path(
-        resolved_project_root,
-        "chunking",
-        config.CHUNK_ARTIFACT_FILE_NAME,
-    )
-    report_path = build_operation_output_path(
-        resolved_project_root,
-        "chunking",
-        config.CHUNKING_REPORT_FILE_NAME,
-    )
-    state_path = build_operation_output_path(
-        resolved_project_root,
-        "chunking",
-        config.CHUNKING_STATE_FILE_NAME,
-    )
+    existing_document = chunking_document_service.load_chunking_document(resolved_project_root)
+    committed_chunks: list[ChunkPayload] = []
+    next_paragraph = 1
+    context_window_fallback_count = 0
+    token_usage = chunking_document_service.empty_token_usage()
+    if existing_document is not None and existing_document["status"] in chunking_document_service.RESUMABLE_STATUSES:
+        if existing_document["mode"] != "ai_assisted":
+            raise chunking_document_service.IncompatibleChunkingDocumentError(
+                "Chunking data is incompatible. Use Reset Chunking before continuing."
+            )
+        if existing_document["source_fingerprint"] != chunking_document_service.source_fingerprint(input_text):
+            raise chunking_document_service.IncompatibleChunkingDocumentError(
+                "Cleaned text changed. Use Reset Chunking before continuing."
+            )
+        semantic_strategy = str(existing_document["semantic_strategy"])
+        additional_chunking_instructions = str(existing_document["additional_chunking_instructions"])
+        committed_chunks = list(existing_document["chunks"])
+        next_paragraph = int(existing_document["next_paragraph"])
+        context_window_fallback_count = int(existing_document["context_window_fallback_count"])
+        token_usage = dict(existing_document["token_usage"])
+    else:
+        additional_chunking_instructions = _normalized_additional_chunking_instructions(
+            additional_chunking_instructions
+        )
 
     prompt_template_service.validate_required_prompts(["text_chunking_system", "text_chunking_user"])
     system_prompt = prompt_template_service.render_prompt(
         "text_chunking_system",
         {"strategy": semantic_strategy},
     )
-    existing_state = _load_resume_state(state_path)
-    additional_chunking_instructions = _resolve_additional_chunking_instructions(
-        additional_chunking_instructions,
-        existing_state,
-    )
-    additional_chunking_instructions_fingerprint = _compute_prompt_fingerprint(additional_chunking_instructions)
     budget_metadata = _build_budget_metadata(
         ai_profile_payload,
         semantic_strategy,
@@ -169,39 +169,9 @@ def chunk_text(
         additional_chunking_instructions,
         chunking_context_mode=chunking_context_mode,
     )
-    profile_runtime_metadata = _build_profile_runtime_metadata(ai_profile_payload)
-    input_fingerprint = _compute_input_fingerprint(input_text)
-    (
-        completed_window_count,
-        next_paragraph,
-        committed_chunks,
-        context_window_fallback_count,
-        log_relative_path,
-        token_usage,
-    ) = _restore_descriptor_resume_state(
-        existing_state,
-        output_path,
-        len(paragraph_records),
-        input_fingerprint,
-        semantic_strategy,
-        additional_chunking_instructions_fingerprint,
-    )
-    started_at = str(existing_state.get("started_at") or _utc_now_iso()) if completed_window_count else _utc_now_iso()
-    profile_usage_history = _merge_profile_usage_history(
-        _restore_profile_usage_history(existing_state) if completed_window_count else [],
-        profile_runtime_metadata,
-    )
-    if completed_window_count == 0:
-        _write_chunk_payload(output_path, [])
-
-    if not log_relative_path:
-        log_path = _build_ai_log_path(resolved_project_root, started_at)
-        log_relative_path = relative_to_project(resolved_project_root, log_path)
-    else:
-        log_path = resolved_project_root / log_relative_path
+    log_path = _build_ai_log_path(resolved_project_root, _utc_now_iso())
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    if not log_path.exists():
-        log_path.write_text("", encoding="utf-8")
+    log_path.write_text("", encoding="utf-8")
 
     remaining_windows = _build_windows_from_index(
         paragraph_records,
@@ -209,35 +179,25 @@ def chunk_text(
         semantic_strategy,
         budget_metadata,
     )
-    total_windows = completed_window_count + len(remaining_windows)
-    _write_descriptor_state(
-        state_path=state_path,
-        project_root=resolved_project_root,
-        input_snapshot_path=input_snapshot_path,
-        output_path=output_path,
-        started_at=started_at,
-        progress_current=completed_window_count,
-        progress_total=total_windows,
+    completed_window_count = 0
+    total_windows = len(remaining_windows)
+    document = chunking_document_service.build_document(
+        status="running",
+        mode="ai_assisted",
+        source_text=input_text,
         chunks=committed_chunks,
-        profile_id=profile_id,
         semantic_strategy=semantic_strategy,
-        input_fingerprint=input_fingerprint,
-        log_relative_path=log_relative_path,
+        additional_chunking_instructions=additional_chunking_instructions,
         token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        profile_runtime_metadata=profile_runtime_metadata,
-        profile_usage_history=profile_usage_history,
         next_paragraph=next_paragraph,
-        additional_chunking_instructions_fingerprint=additional_chunking_instructions_fingerprint,
         context_window_fallback_count=context_window_fallback_count,
     )
+    chunking_document_service.write_chunking_document(resolved_project_root, document)
     _emit_progress(
         progress_callback,
         progress_current=completed_window_count,
         progress_total=total_windows,
-        message=(
-            "Resuming AI-assisted chunking..." if completed_window_count > 0 else "AI-assisted chunking in progress..."
-        ),
+        message="Resuming AI-assisted chunking..." if committed_chunks else "AI-assisted chunking in progress...",
         token_usage=token_usage,
     )
 
@@ -288,7 +248,9 @@ def chunk_text(
             response_payload = response_result.get("payload")
             if not isinstance(response_payload, dict):
                 raise ValueError("AI chunking response must be one JSON object.")
-            token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
+            token_usage = _document_token_usage(
+                token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
+            )
             validated_ranges = _validate_chunk_descriptors(
                 response_payload,
                 paragraph_records,
@@ -345,27 +307,11 @@ def chunk_text(
                 budget_metadata,
             )
             total_windows = completed_window_count + len(remaining_windows)
-            _write_descriptor_state(
-                state_path=state_path,
-                project_root=resolved_project_root,
-                input_snapshot_path=input_snapshot_path,
-                output_path=output_path,
-                started_at=started_at,
-                progress_current=completed_window_count,
-                progress_total=total_windows,
-                chunks=committed_chunks,
-                profile_id=profile_id,
-                semantic_strategy=semantic_strategy,
-                input_fingerprint=input_fingerprint,
-                log_relative_path=log_relative_path,
-                token_usage=token_usage,
-                budget_metadata=budget_metadata,
-                profile_runtime_metadata=profile_runtime_metadata,
-                profile_usage_history=profile_usage_history,
-                next_paragraph=next_paragraph,
-                additional_chunking_instructions_fingerprint=additional_chunking_instructions_fingerprint,
-                context_window_fallback_count=context_window_fallback_count,
-            )
+            document["chunks"] = committed_chunks
+            document["token_usage"] = token_usage
+            document["next_paragraph"] = next_paragraph
+            document["context_window_fallback_count"] = context_window_fallback_count
+            chunking_document_service.write_chunking_document(resolved_project_root, document)
             _emit_progress(
                 progress_callback,
                 progress_current=completed_window_count,
@@ -374,58 +320,23 @@ def chunk_text(
                 token_usage=token_usage,
             )
     except OperationCancelledError:
-        _write_descriptor_state(
-            state_path=state_path,
-            project_root=resolved_project_root,
-            input_snapshot_path=input_snapshot_path,
-            output_path=output_path,
-            started_at=started_at,
-            progress_current=completed_window_count,
-            progress_total=total_windows,
-            chunks=committed_chunks,
-            profile_id=profile_id,
-            semantic_strategy=semantic_strategy,
-            input_fingerprint=input_fingerprint,
-            log_relative_path=log_relative_path,
-            token_usage=token_usage,
-            budget_metadata=budget_metadata,
-            profile_runtime_metadata=profile_runtime_metadata,
-            profile_usage_history=profile_usage_history,
-            next_paragraph=next_paragraph,
-            additional_chunking_instructions_fingerprint=additional_chunking_instructions_fingerprint,
-            context_window_fallback_count=context_window_fallback_count,
-            status="cancelled",
-            completed_at=_utc_now_iso(),
-        )
+        document["status"] = "cancelled"
+        document["chunks"] = committed_chunks
+        document["token_usage"] = token_usage
+        document["next_paragraph"] = next_paragraph
+        document["context_window_fallback_count"] = context_window_fallback_count
+        chunking_document_service.write_chunking_document(resolved_project_root, document)
         raise
     except Exception:
-        _write_descriptor_state(
-            state_path=state_path,
-            project_root=resolved_project_root,
-            input_snapshot_path=input_snapshot_path,
-            output_path=output_path,
-            started_at=started_at,
-            progress_current=completed_window_count,
-            progress_total=total_windows,
-            chunks=committed_chunks,
-            profile_id=profile_id,
-            semantic_strategy=semantic_strategy,
-            input_fingerprint=input_fingerprint,
-            log_relative_path=log_relative_path,
-            token_usage=token_usage,
-            budget_metadata=budget_metadata,
-            profile_runtime_metadata=profile_runtime_metadata,
-            profile_usage_history=profile_usage_history,
-            next_paragraph=next_paragraph,
-            additional_chunking_instructions_fingerprint=additional_chunking_instructions_fingerprint,
-            context_window_fallback_count=context_window_fallback_count,
-            status="failed",
-            completed_at=_utc_now_iso(),
-        )
+        document["status"] = "failed"
+        document["chunks"] = committed_chunks
+        document["token_usage"] = token_usage
+        document["next_paragraph"] = next_paragraph
+        document["context_window_fallback_count"] = context_window_fallback_count
+        chunking_document_service.write_chunking_document(resolved_project_root, document)
         raise
 
     chunks = committed_chunks
-    _write_chunk_payload(output_path, chunks)
     chapter_count = _chapter_count_from_chunks(chunks)
     warnings = deterministic_chunking_service._build_chunking_warnings(chapter_count)
     if context_window_fallback_count:
@@ -438,45 +349,14 @@ def chunk_text(
             f"{window_label} saved as a fallback chunk because AI chunking returned no valid internal split. "
             "A larger AI chunking context may produce more natural boundaries."
         )
-    report_payload: ChunkingReportPayload = {
-        "warnings": warnings,
-        "chunk_count": len(chunks),
-        "detected_chapter_count": chapter_count,
-        "chunking_mode": "ai_assisted",
-        "ai_profile_id": profile_id,
-        **profile_runtime_metadata,
-        "semantic_strategy": semantic_strategy,
-        "log_relative_path": log_relative_path,
-        "token_usage": token_usage,
-        "budget_metadata": budget_metadata,
-        "profile_usage_history": profile_usage_history,
-        "additional_chunking_instructions": additional_chunking_instructions,
-        "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
-        "context_window_fallback_count": context_window_fallback_count,
-    }
-    write_json_atomic(report_path, report_payload)
-    completed_state = _build_operation_state(
-        project_root=resolved_project_root,
-        input_snapshot_path=input_snapshot_path,
-        output_path=output_path,
-        report_path=report_path,
-        status="completed",
-        progress_current=total_windows,
-        progress_total=total_windows,
-        started_at=started_at,
-        completed_at=None,
-        warnings=warnings,
-        chunks=None,
-        profile_id=profile_id,
-        semantic_strategy=semantic_strategy,
-        log_relative_path=log_relative_path,
-        resume_checkpoint=None,
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        profile_runtime_metadata=profile_runtime_metadata,
-        profile_usage_history=profile_usage_history,
-    )
-    write_json_atomic(state_path, completed_state)
+    document["status"] = "completed"
+    document["chunks"] = chunks
+    document["token_usage"] = token_usage
+    document["warnings"] = warnings
+    document["next_paragraph"] = None
+    document["context_window_fallback_count"] = context_window_fallback_count
+    chunking_document_service.write_chunking_document(resolved_project_root, document)
+    completed_state = chunking_document_service.derive_operation_state(document)
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
         "chunking",
@@ -490,7 +370,7 @@ def chunk_text(
         message="AI-assisted chunking completed.",
         token_usage=token_usage,
     )
-    return report_payload
+    return chunking_document_service.derive_report(document)
 
 
 @trace_function(_AI_CHUNKING_LOGGER)
@@ -504,11 +384,8 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-07
     @version    0.2.0
     """
-    try:
-        return load_operation_state_payload(project_root, "chunking", config.CHUNKING_STATE_FILE_NAME)
-    except (OSError, TypeError, json.JSONDecodeError) as error:
-        _AI_CHUNKING_LOGGER.warning("Ignored unreadable AI chunking state file: %s", error)
-        return None
+    document = chunking_document_service.load_chunking_document(project_root)
+    return None if document is None else chunking_document_service.derive_operation_state(document)
 
 
 # LOCAL HELPERS
@@ -1131,21 +1008,16 @@ def _build_chunk_from_range(
     selected_records = paragraph_records[start_index : end_index + 1]
     if not selected_records:
         raise ValueError("AI chunk range does not contain any paragraphs.")
+    _ = semantic_strategy
     return {
         "chunk_id": f"chunk-{sequence_index:04d}",
         "sequence_index": sequence_index,
         "text": "\n\n".join(str(item["text"]) for item in selected_records).strip(),
-        "source_start_line": int(selected_records[0]["line_start"]),
-        "source_end_line": int(selected_records[-1]["line_end"]),
-        "source_page_start": selected_records[0].get("source_page_start"),
-        "source_page_end": selected_records[-1].get("source_page_end"),
         "cleanup_boundary_confidence": selected_records[0].get("boundary_confidence"),
         "cleanup_joined_across_page_break": any(
             bool(item.get("joined_across_page_break", False)) for item in selected_records
         ),
         "cleanup_warning_flags": _merged_warning_flags(selected_records),
-        "chunking_mode": "ai_assisted",
-        "semantic_strategy": semantic_strategy,
     }
 
 
@@ -1372,11 +1244,42 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     @version    0.1.0
     """
     timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
-    return build_operation_output_path(
+    candidate = build_operation_output_path(
         project_root,
         "chunking",
         config.ai_transaction_log_file_name("chunking", timestamp_token),
     )
+    suffix = 2
+    while candidate.exists():
+        candidate = build_operation_output_path(
+            project_root,
+            "chunking",
+            config.ai_transaction_log_file_name("chunking", f"{timestamp_token}_{suffix}"),
+        )
+        suffix += 1
+    return candidate
+
+
+def _document_token_usage(payload: object) -> dict[str, object]:
+    """
+    @brief Project provider usage into the strict integer-only document contract.
+    @param[in] payload Provider-normalized cumulative usage.
+    @return Exact Chunking document usage payload.
+    @exception None
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-20
+    @version 0.1.0
+    """
+    if not isinstance(payload, dict) or not bool(payload.get("usage_available", False)):
+        return chunking_document_service.empty_token_usage()
+    input_tokens = int(payload.get("input_tokens") or 0)
+    output_tokens = int(payload.get("output_tokens") or 0)
+    return {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+        "usage_available": True,
+    }
 
 
 # END OF FILE

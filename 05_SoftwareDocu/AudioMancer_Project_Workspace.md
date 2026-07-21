@@ -394,3 +394,6 @@ Minimum validation after a change:
 - existing projects with old extraction shortcut fields or operation folder
   paths are normalized to the current compact manifest shape; operators must
   re-run Extraction when the current root-level artifacts are missing
+
+Reviewed for the single-document Chunking contract: completion evidence requires
+one strict completed non-empty `chunks_text.json`; sidecars are not evidence.

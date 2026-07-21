@@ -25,7 +25,7 @@ from PySide6.QtWidgets import QMessageBox
 from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
@@ -498,7 +498,7 @@ def _has_chunking_output(project_root: str | None) -> bool:
     """
     if not project_root:
         return False
-    return bool(deterministic_chunking_service.load_chunks(project_root))
+    return bool(chunking_document_service.load_chunks(project_root))
 
 
 def _manifest_target_language(window: "MainWindow") -> str:

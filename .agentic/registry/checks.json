@@ -509,6 +509,12 @@
       "REQ-FUNC-025"
     ]
   },
+  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window": {
+    "id": "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window",
+    "requirement_ids": [
+      "REQ-FUNC-025"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_summary_from_report": {
     "id": "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_summary_from_report",
     "requirement_ids": [
@@ -1901,6 +1907,54 @@
       "REQ-FUNC-032"
     ]
   },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_chunking_persists_minimal_document_and_separate_log": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_chunking_persists_minimal_document_and_separate_log",
+    "requirement_ids": [
+      "REQ-DATA-001"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile",
+    "requirement_ids": [
+      "REQ-FUNC-050"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress",
+    "requirement_ids": [
+      "REQ-FUNC-049"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_round_trips_exact_contract_and_returns_defensive_chunks": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_round_trips_exact_contract_and_returns_defensive_chunks",
+    "requirement_ids": [
+      "REQ-FUNC-048"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_downstream_consumers_use_shared_document_reader_without_legacy_branches": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_downstream_consumers_use_shared_document_reader_without_legacy_branches",
+    "requirement_ids": [
+      "REQ-FUNC-053"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_manual_mutations_preserve_document_origin_and_set_manual_adjusted": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_manual_mutations_preserve_document_origin_and_set_manual_adjusted",
+    "requirement_ids": [
+      "REQ-FUNC-051"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_project_completion_evidence_uses_only_the_authoritative_document": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_project_completion_evidence_uses_only_the_authoritative_document",
+    "requirement_ids": [
+      "REQ-FUNC-052"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_state_projects_resumable_document_without_durable_progress": {
+    "id": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_state_projects_resumable_document_without_durable_progress",
+    "requirement_ids": [
+      "REQ-FUNC-054"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_metadata_omits_text_and_reconstructs_from_clean_text": {
     "id": "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_metadata_omits_text_and_reconstructs_from_clean_text",
     "requirement_ids": [
@@ -2789,6 +2843,12 @@
     "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_final_generation_without_reanalyzing_style",
     "requirement_ids": [
       "REQ-FUNC-035"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_progress_dialog_localizes_title_cancel_and_token_usage": {
+    "id": "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_progress_dialog_localizes_title_cancel_and_token_usage",
+    "requirement_ids": [
+      "REQ-FUNC-019"
     ]
   },
   "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_cancel_sets_event_and_calls_cancel_handler": {
@@ -4315,6 +4375,18 @@
       "REQ-FUNC-005"
     ]
   },
+  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_merge_token_usage_sums_available_usage_and_tolerates_missing_base": {
+    "id": "04_Software/AudioMancer/tests/test_token_usage_service.py::test_merge_token_usage_sums_available_usage_and_tolerates_missing_base",
+    "requirement_ids": [
+      "REQ-FUNC-024"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_restore_token_usage_selects_first_valid_persisted_payload": {
+    "id": "04_Software/AudioMancer/tests/test_token_usage_service.py::test_restore_token_usage_selects_first_valid_persisted_payload",
+    "requirement_ids": [
+      "REQ-FUNC-024"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_exposes_simple_connection_status_states": {
     "id": "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_exposes_simple_connection_status_states",
     "requirement_ids": [
@@ -4461,6 +4533,12 @@
   },
   "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles": {
     "id": "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles",
+    "requirement_ids": [
+      "REQ-FUNC-020"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window": {
+    "id": "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window",
     "requirement_ids": [
       "REQ-FUNC-020"
     ]

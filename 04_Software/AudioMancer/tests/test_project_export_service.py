@@ -23,6 +23,7 @@ import zipfile
 
 from audiomancer import config
 from audiomancer.services import project_export_service, project_workspace_service
+from chunking_test_support import build_chunking_document
 
 # PUBLIC API
 
@@ -432,31 +433,27 @@ def _build_export_project(tmp_path):
 
     _write_json(
         project_root / config.CHUNK_ARTIFACT_FILE_NAME,
-        [
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "chapter_label": None,
-                "text": "Primul fragment curat.",
-                "chunking_mode": "deterministic",
-                "semantic_strategy": None,
-            },
-            {
-                "chunk_id": "chunk-0002",
-                "sequence_index": 2,
-                "chapter_label": None,
-                "text": "Al doilea fragment curat.",
-                "chunking_mode": "deterministic",
-                "semantic_strategy": None,
-            },
-        ],
+        build_chunking_document(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": "Primul fragment curat.",
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                },
+                {
+                    "chunk_id": "chunk-0002",
+                    "sequence_index": 2,
+                    "chapter_label": None,
+                    "text": "Al doilea fragment curat.",
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                },
+            ]
+        ),
     )
-    _write_json(
-        project_root / config.CHUNKING_REPORT_FILE_NAME,
-        {"chunking_mode": "deterministic", "chunk_count": 2, "detected_chapter_count": 0},
-    )
-    _write_json(project_root / config.CHUNKING_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
-
     _write_json(
         project_root / config.TRANSLATED_CHUNKS_FILE_NAME,
         {

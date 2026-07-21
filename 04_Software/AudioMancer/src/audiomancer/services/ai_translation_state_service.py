@@ -24,7 +24,7 @@ from audiomancer import config
 from audiomancer.services import (
     ai_state_note_service,
     ai_translation_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     home_presenter_service,
     narrator_definition_service,
     ui_state_service,
@@ -77,7 +77,7 @@ def build_ai_translation_state(
             language,
             profile_state["selected_profile_id"],
         )
-    source_chunks = deterministic_chunking_service.load_chunks(project_root)
+    source_chunks = chunking_document_service.load_chunks(project_root)
     target_language = _persisted_target_language(manifest)
     try:
         document = ai_translation_service.load_translation_document(project_root)

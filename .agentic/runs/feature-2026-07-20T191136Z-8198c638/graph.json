@@ -1,0 +1,836 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "One strict chunks_text.json is the sole Chunking authority; obsolete sidecars are neither read nor created and are referenced only for Reset cleanup; exact root and chunk field validation rejects incompatible data; progress, profile, model, request, budget, history, and log-path details are not persisted; resume preserves source identity, strategy, instructions, usage, fallback count, committed chunks, and next paragraph while using current profile settings; manual mutations atomically set manual_adjusted; UI, manifest, validation, exports, and downstream consumers derive their views from the document; AI logs remain separate and resettable; focused and full regression suites pass; traceability, coverage, component documentation, Python style, and deterministic gates are clean."
+    ],
+    "assumptions": [
+      "The implementation plan is the authoritative product decision record and its exact root and chunk fields are closed to extension during this run.",
+      "The user explicitly approved the component adoption slices required by the planned cross-component changes; those slices must reach baseline-usable before source implementation touches each affected component.",
+      "Adoption work will be split into policy-compliant slices of at most five components, prioritizing Text Chunking before downstream consumers.",
+      "Existing unrelated worktree changes and the untracked planning document remain user-owned and will be preserved."
+    ],
+    "created_at": "2026-07-20T19:16:57+00:00",
+    "decision": "pause",
+    "open_questions": [
+      "Approve proceeding to Requirement work despite the high-risk, intentionally compatibility-breaking persistence replacement and its cross-component regression surface?"
+    ],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py and core chunking services",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py and Text Chunking page integration",
+      "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py, project_workspace_service.py, project_export_service.py, and config.py",
+      "04_Software/AudioMancer/src/audiomancer/services downstream chunk consumers for translation, character discovery, narrator profiles, Speech Blocks, and Audio Blocks",
+      "04_Software/AudioMancer/tests focused Chunking, lifecycle, export, and downstream consumer suites",
+      ".agentic/requirements and .agentic/knowledge/components/Text_Chunking.md plus relevant user help"
+    ],
+    "reason": "The repository pauses alignment at medium or higher risk. The user approved prerequisite adoption slices, but explicit acceptance of the high-risk compatibility break is still required before requirement/spec work.",
+    "recommended_responses": [
+      "Approve the high-risk alignment exactly as recorded and continue to the Requirement gate; complete the already approved adoption slices before Implementation."
+    ],
+    "risk": "high",
+    "scope": [
+      "In scope: the authoritative document service; deterministic and AI chunking; Text Chunking state/controller/page integration; reset/runtime configuration; project validation and manifest projection; canonical chunk consumers in translation, character discovery, narrator generation, Speech Blocks, Audio Blocks readiness, and exports; linked tests; component documentation and user help. Out of scope: legacy readers, migrations, schema dispatch, compatibility normalization, persistence of progress/profile/budget/log-path data, unrelated workflow redesign, and delivery actions."
+    ],
+    "source": "0_Planning/AI Chunking Single Document Implementation Plan.md plus user approval of required component adoption slices on 2026-07-20",
+    "understanding": "Replace the current three-artifact Text Chunking persistence model with one strictly validated authoritative chunks_text.json document shared by deterministic generation, AI-assisted generation, resume, manual mutation, project lifecycle, UI state, exports, and downstream readers. Preserve only the approved durable fields, keep progress and budget data in memory, use the currently selected AI profile on resume, keep AI logs separate, reject every older Chunking format without migration, and allow recovery only through Reset Chunking cleanup."
+  },
+  "change_units": [
+    {
+      "id": "S-0005",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py"
+      ]
+    },
+    {
+      "id": "S-0005",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Chunking.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/AI_Translation.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/Character_Discovery.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/Voice_Profiles.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/Speech_Blocks.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/TTS_Audio_Blocks.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/Project_Lifecycle.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        ".agentic/knowledge/components/Platform_Settings_UI.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Text_Chunking_State_Service.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Config_And_Settings.md"
+      ]
+    },
+    {
+      "id": "S-0001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+      ]
+    },
+    {
+      "id": "S-0001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/config.py"
+      ]
+    },
+    {
+      "id": "S-0003",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py"
+      ]
+    },
+    {
+      "id": "S-0004",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0002",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py"
+      ]
+    },
+    {
+      "id": "S-0001",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Chunking_Document_Service.md"
+      ]
+    },
+    {
+      "id": "S-0007",
+      "touched_paths": [
+        "05_SoftwareDocu/README.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_AI_Translation_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Page_State_Support_Services.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Audio_Blocks_State_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Character_Discovery_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Narrator_Definition_State_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Narrator_Profile_Generation_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Project_Runtime_Support_Services.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Project_Export_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Project_Workspace.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Speech_Blocks_State_Service.md"
+      ]
+    },
+    {
+      "id": "S-0006",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_UI_State_Service.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-048",
+        "REQ-DATA-001"
+      ],
+      "cites_spec": [
+        "S-0001"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py -k document_api",
+      "green_evidence": "E-0012",
+      "id": "CHK-0001",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "red_evidence": "E-0006",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-049",
+        "REQ-FUNC-050",
+        "REQ-FUNC-051",
+        "REQ-DATA-001"
+      ],
+      "cites_spec": [
+        "S-0002",
+        "S-0003",
+        "S-0004"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py -k deterministic or ai_chunking or ai_resume or manual_mutations",
+      "green_evidence": "E-0013",
+      "id": "CHK-0002",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "red_evidence": "E-0007",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-052",
+        "REQ-FUNC-053",
+        "REQ-FUNC-054",
+        "REQ-DATA-001"
+      ],
+      "cites_spec": [
+        "S-0005",
+        "S-0006",
+        "S-0007"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py -k chunking_default or project_completion or downstream_consumers or text_chunking_state or component_documentation",
+      "green_evidence": "E-0014",
+      "id": "CHK-0003",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "red_evidence": "E-0008",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "repo-wide",
+      "created_at": "2026-07-20T20:12:50+00:00",
+      "id": "D-0001",
+      "question": "Workflow access mode",
+      "rationale": "Human approved the two bounded component-adoption slices required before this cross-component feature implementation; temporary repo-wide access permits workflow-owned component baseline updates while the feature run remains at Check."
+    },
+    {
+      "approver": "human",
+      "chosen": "standard",
+      "created_at": "2026-07-20T20:14:54+00:00",
+      "id": "D-0002",
+      "question": "Workflow access mode",
+      "rationale": "Approved adoption baseline updates are complete; return to normal stage write-zone enforcement before feature implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-20T20:44:00+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Focused regression exposed stale legacy-array fixtures and removed-field assertions that contradict accepted S-0001 and REQ-FUNC-048; route back to align existing checks with the strict single-document contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-20T20:54:22+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Mechanical import ordering in the newly added shared test fixture was corrected; record the test-only formatting under the Check gate."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-20T20:58:26+00:00",
+      "id": "D-0005",
+      "question": "Workflow stage route",
+      "rationale": "Traceability audit found active REQ-FUNC-011 still links the original deterministic checkpoint test identifier; preserve that durable identifier while keeping its updated single-document assertions."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-20T21:00:35+00:00",
+      "id": "D-0006",
+      "question": "Workflow stage route",
+      "rationale": "Validation style audit requires Doxygen tags and END markers in the newly added Chunking contract test and shared fixture; route back for test documentation only."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0015 -> E-0016",
+      "created_at": "2026-07-20T21:35:42+00:00",
+      "id": "D-0007",
+      "question": "Evidence superseded",
+      "rationale": "The original full-suite failure was isolated to two pre-existing credential-hygiene assertions caused by unchanged user-owned settings state; the complete feature regression suite passed when only those environment assertions were deselected."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-20T21:37:22+00:00",
+      "id": "D-0008",
+      "question": "Workflow stage route",
+      "rationale": "Remove only this run's generated pytest basetemp directories before delivery preflight; no product artifact changes."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-20T21:37:25+00:00",
+      "id": "D-0009",
+      "question": "Workflow stage route",
+      "rationale": "Run-owned test basetemp cleanup completed; return to read-only validation for final invariant confirmation."
+    }
+  ],
+  "evidence": [
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit traceability; .\\.agentic\\tools\\run.ps1 audit coverage; .\\.agentic\\tools\\run.ps1 impact <planned chunking and downstream files>",
+      "created_at": "2026-07-20T19:13:23+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "scan",
+      "path": ".agentic/requirements",
+      "result": "pass",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Intake traceability and coverage audits reported no issues; planned-path impact mapped existing requirements and linked regressions, while the proposed new chunking_document_service.py requires a new file-level requirement and linked check.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-20T19:17:06+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "decision",
+      "path": ".agentic/components.toml",
+      "result": "info",
+      "stage": "alignment",
+      "status": "active",
+      "summary": "Human approved the required component adoption slices for the AI Chunking single-document feature. Adoption remains a prerequisite before implementation touches below-baseline components.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-20T19:19:04+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "decision",
+      "path": "0_Planning/AI Chunking Single Document Implementation Plan.md",
+      "result": "pass",
+      "stage": "alignment",
+      "status": "active",
+      "summary": "Human explicitly approved the high-risk, intentionally compatibility-breaking Chunking persistence alignment and authorized continuation to Requirement work.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-20T19:23:58+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "note",
+      "path": ".agentic/requirements",
+      "result": "info",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Requirement gate defined accepted specs S-0001 through S-0007 and Planned durable requirements REQ-FUNC-048 through REQ-FUNC-054 plus REQ-DATA-001; traceability and coverage audits remain clean before Check work.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit traceability and audit coverage",
+      "created_at": "2026-07-20T19:27:02+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "scan",
+      "path": ".agentic/requirements",
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Final Requirement registers parse cleanly: traceability and coverage audits pass after preserving Active file-level baseline rows and adding Planned replacement rows REQ-FUNC-048 through REQ-FUNC-054 plus REQ-DATA-001.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q --tb=short 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py -k document_api",
+      "created_at": "2026-07-20T19:36:13+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "CHK-0001 red as designed: 10 document API cases fail because chunking_document_service does not exist yet.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q --tb=short 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py -k deterministic-or-ai-or-manual",
+      "created_at": "2026-07-20T19:36:19+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "CHK-0002 red as designed: 5 lifecycle tests fail because current deterministic and AI services persist a list plus sidecars, resume ignores the new document, and manual mutation cannot load the root object.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q --tb=short 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py -k integration-ui-documentation",
+      "created_at": "2026-07-20T19:36:25+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "CHK-0003 red as designed: 5 integration tests fail because Chunking still creates default state, project completion requires sidecars, downstream readers use the old loader, UI state ignores the document, and component docs describe the old contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer ruff check <changed test files>; git diff --check",
+      "created_at": "2026-07-20T20:09:10+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "check",
+      "status": "active",
+      "summary": "All Check-stage Python test changes pass Ruff and git diff whitespace validation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest --collect-only -q -p no:cacheprovider 04_Software/AudioMancer/tests",
+      "created_at": "2026-07-20T20:09:10+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "check",
+      "status": "active",
+      "summary": "The complete application test suite collects cleanly after strict-document fixture migration: 947 of 948 tests collected, with one existing deselection and one deprecation warning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-20T20:14:54+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "decision",
+      "path": ".agentic/components.toml",
+      "result": "pass",
+      "stage": "check",
+      "status": "active",
+      "summary": "Human-approved component adoption slices promoted platform-settings-ui, text-chunking, ai-translation, character-discovery, voice-profiles, speech-blocks, and tts-audio-blocks to baseline-usable using existing owners, component documents, durable requirements, mapped focused tests, and prior passing adoption evidence; unrelated manual quality risks remain accepted legacy risks and no application behavior changed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\04_Software\\\\AudioMancer\\\\.venv\\\\Scripts\\\\python.exe -m pytest -q 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "created_at": "2026-07-20T20:56:27+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "CHK-0001 green: strict authoritative document API, exact root/chunk schemas, defensive reads, incompatible-format rejection, sidecar non-migration, and forbidden-field inspection pass.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\04_Software\\\\AudioMancer\\\\.venv\\\\Scripts\\\\python.exe -m pytest -q 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "created_at": "2026-07-20T20:56:28+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "CHK-0002 green: deterministic and AI lifecycle, cancellation/failure checkpoints, current-profile resume, fresh logs, and manual mutations pass.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\04_Software\\\\AudioMancer\\\\.venv\\\\Scripts\\\\python.exe -m pytest -q 04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "created_at": "2026-07-20T20:56:28+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "CHK-0003 green: page-open behavior, lifecycle completion evidence, downstream shared-reader routing, UI projection, and component documentation pass.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\venv\\\\Scripts\\\\python.exe -m pytest -q -p no:cacheprovider --disable-warnings",
+      "created_at": "2026-07-20T21:24:50+00:00",
+      "failure_kind": "environment",
+      "id": "E-0015",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Full regression reached 944 passed, 1 skipped, and 1 deselected; only two pre-existing credential-hygiene assertions failed because the tracked local settings file contains a populated credential. The feature did not modify that file and the credential is preserved as user-owned external state.",
+      "supersede_reason": "The original full-suite failure was isolated to two pre-existing credential-hygiene assertions caused by unchanged user-owned settings state; the complete feature regression suite passed when only those environment assertions were deselected.",
+      "superseded_by": "E-0016"
+    },
+    {
+      "command": ".\\\\venv\\\\Scripts\\\\python.exe -m pytest -q -p no:cacheprovider --disable-warnings --deselect <two unchanged credential-hygiene assertions>",
+      "created_at": "2026-07-20T21:35:42+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Full regression rerun passed: 944 passed, 1 skipped, and 3 deselected; the only added deselections were the two pre-existing credential-hygiene assertions tied to unchanged user-owned settings state.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "ruff check <changed feature Python files>",
+      "created_at": "2026-07-20T21:35:57+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed Python files pass Ruff without findings.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python 02_Tools/audits/audit_documentation.py --changed-only",
+      "created_at": "2026-07-20T21:35:57+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "scan",
+      "path": ".agentic/knowledge/components",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed-only documentation audit passes after updating durable component knowledge and affected software documentation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-20T21:35:58+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "note",
+      "path": "04_Software/AudioMancer",
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Python code-style review found zero findings in newly added Chunking service/test artifacts after route-back. The repository changed-only audit still reports pre-existing Doxygen debt in older touched modules whose existing callables were not introduced by this feature.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 registry audit; audit traceability; audit coverage; impact <changed files>",
+      "created_at": "2026-07-20T21:36:44+00:00",
+      "failure_kind": null,
+      "id": "E-0020",
+      "kind": "scan",
+      "path": ".agentic",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "AEGIS registry audit, traceability audit, coverage audit, and requirement impact mapping pass; all new requirements resolve to active linked tests.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 invariants",
+      "created_at": "2026-07-20T21:36:44+00:00",
+      "failure_kind": null,
+      "id": "E-0021",
+      "kind": "gate",
+      "path": ".agentic/runs/feature-2026-07-20T191136Z-8198c638",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "All blocking invariants pass, including coverage, citations, red-before-green, regression, evidence, secrets, active requirements, and component baseline scope; only the advisory 05_SoftwareDocu scope hint remains.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-20T19:11:36+00:00",
+    "id": "I-0001",
+    "kind": "feature",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer",
+      "04_Software/AudioMancer/tests",
+      ".agentic/knowledge/components"
+    ],
+    "statement": "Implement the AI Chunking Single-Document Implementation Plan: replace Text Chunking persistence with one strict authoritative chunks_text.json document, remove report/state sidecar reads and writes, preserve runtime-only progress and current-profile resume behavior, update downstream consumers, tests, and documentation, and provide no legacy compatibility beyond Reset Chunking cleanup.",
+    "status": "draft"
+  },
+  "run_id": "feature-2026-07-20T191136Z-8198c638",
+  "spec_items": [
+    {
+      "examples": [
+        "A valid deterministic document round-trips and returns defensive chunk copies.",
+        "A bare chunk array or any extra root or chunk field raises the Reset Chunking incompatibility error."
+      ],
+      "id": "S-0001",
+      "statement": "The sole persisted Chunking authority is a strictly validated root-object chunks_text.json containing exactly the approved document and chunk fields, with all counts and runtime or provider configuration derived rather than persisted and every legacy shape rejected.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "Zero production reads or writes of obsolete Chunking sidecars and zero non-approved persisted fields."
+    },
+    {
+      "examples": [
+        "Provider output that fails validation commits no partial chunks.",
+        "Runtime progress callbacks remain accurate without progress fields in the document."
+      ],
+      "id": "S-0002",
+      "statement": "Each deterministic unit or validated AI window commits one complete atomic Chunking document checkpoint, while cancellation and failure preserve prior commits and completion represents every canonical paragraph with next_paragraph null.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Changing profile or context settings repartitions only remaining paragraphs.",
+        "Changing clean_text.txt blocks resume and directs the operator to Reset Chunking."
+      ],
+      "id": "S-0003",
+      "statement": "AI Chunking resumes only a source-compatible resumable AI document using its stored strategy and instructions, the currently selected profile and recalculated budget, cumulative usage and fallback state, and a new separate log for the invocation.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "An inserted chunk has only the approved minimal chunk fields and empty nullable cleanup provenance."
+      ],
+      "id": "S-0004",
+      "statement": "Every successful manual chunk edit, insertion, or deletion atomically preserves the completed document origin and durable audit fields, maintains stable IDs where possible, resequences chunks, sets manual_adjusted true, and leaves workflow-impact details in memory.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "An incompatible chunks_text.json cannot be healed or migrated and requires Reset Chunking."
+      ],
+      "id": "S-0005",
+      "statement": "Project lifecycle derives Chunking readiness and compact manifest state only from a strict completed non-empty document, opening the page creates no default Chunking artifact, and Reset removes the document, matching logs, obsolete sidecars, and configured downstream artifacts without reading legacy data.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0006",
+      "statement": "Every canonical downstream reader uses the shared document API, and Text Chunks export derives document-level mode, strategy, and counts while locating separate AI logs without any persisted log path.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "All focused downstream-consumer tests and the complete application suite pass with no production legacy Chunking reader."
+    },
+    {
+      "examples": [
+        "A cancelled AI document displays resumable state using next_paragraph without presenting persisted current or total progress."
+      ],
+      "id": "S-0007",
+      "statement": "The Text Chunking page and controller derive not-started, running, resumable, completed, warned, and manually adjusted states from the authoritative document, resume without re-prompting stored instructions, use the selected profile, and retain existing rerun and reset confirmations.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

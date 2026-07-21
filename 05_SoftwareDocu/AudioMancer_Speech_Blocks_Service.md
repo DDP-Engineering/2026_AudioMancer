@@ -655,3 +655,6 @@ uv run ruff format <changed_python_files>
 - `Indication` blocks remain metadata-only markers skipped by generated speech
   audio until a richer non-spoken instruction layer is implemented
 - Audio Assembly is implemented as the next downstream WAV composition stage
+
+Reviewed for the single-document Chunking contract: untranslated Speech Blocks
+source chunks come through the shared strict document reader.

@@ -25,6 +25,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
+from chunking_test_support import read_chunking_document
 
 
 def _profile() -> dict[str, object]:
@@ -285,7 +286,7 @@ def test_valid_non_final_split_advances_from_the_last_break_and_closes_final_rem
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
 
     report = ai_chunking_service.chunk_text(project_root, manifest, _profile(), "paragraph")
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
 
     assert "Paragraph 1\n" in prompts[0]
     assert "Paragraph 3\n" in prompts[1]
@@ -318,7 +319,7 @@ def test_empty_non_final_response_commits_one_fallback_window_and_reports_it(tmp
         "paragraph",
         progress_callback=lambda _current, _total, _percent, message, _usage_payload: progress_messages.append(message),
     )
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
 
     assert len(chunks) == 2
     assert "Paragraph 1 has stable text." in chunks[0]["text"]
@@ -366,7 +367,7 @@ def test_invalid_non_final_response_is_an_atomic_fallback_and_boundary_at_window
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
 
     report = ai_chunking_service.chunk_text(project_root, manifest, _profile(), "paragraph")
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
 
     assert len(chunks) == 2
     assert "Paragraph 1 has stable text." in chunks[0]["text"]
@@ -404,22 +405,13 @@ def test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usag
     with pytest.raises(operation_runtime_service.OperationCancelledError):
         ai_chunking_service.chunk_text(project_root, manifest, _profile(), "paragraph")
 
-    state_path = project_root / config.CHUNKING_STATE_FILE_NAME
-    checkpoint = json.loads(state_path.read_text(encoding="utf-8"))["resume_checkpoint"]
-    assert set(checkpoint) == {
-        "input_fingerprint",
-        "semantic_strategy",
-        "additional_chunking_instructions_fingerprint",
-        "next_paragraph",
-        "committed_chunk_count",
-        "completed_window_count",
-        "context_window_fallback_count",
-        "token_usage",
-        "log_relative_path",
-    }
+    checkpoint = read_chunking_document(project_root)
+    assert checkpoint["status"] == "cancelled"
     assert checkpoint["next_paragraph"] == 3
-    assert checkpoint["committed_chunk_count"] == 1
-    assert checkpoint["completed_window_count"] == 1
+    assert len(checkpoint["chunks"]) == 1
+    assert checkpoint["token_usage"]["total_tokens"] == 20
+    assert "metadata" not in checkpoint
+    assert "progress_current" not in checkpoint
 
     resumed_prompts: list[str] = []
 
@@ -443,7 +435,7 @@ def test_old_break_id_checkpoint_restarts_from_paragraph_one(tmp_path, monkeypat
     @version    0.1.0
     """
     project_root, manifest = _prepare_project(tmp_path, monkeypatch)
-    state_path = project_root / config.CHUNKING_STATE_FILE_NAME
+    state_path = project_root / "chunking_state.json"
     state_path.write_text(
         json.dumps(
             {

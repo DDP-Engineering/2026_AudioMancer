@@ -167,3 +167,6 @@ Minimum validation after changes:
 - Audio Blocks row labels intentionally do not compute every generated WAV
   duration during page refresh; this keeps large projects responsive when the
   operator opens the page
+
+Reviewed for the single-document Chunking contract: readiness uses the strict
+shared chunk reader, so obsolete sidecars cannot make the stage ready.
