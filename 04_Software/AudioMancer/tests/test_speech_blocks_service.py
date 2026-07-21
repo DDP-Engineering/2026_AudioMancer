@@ -33,6 +33,7 @@ from audiomancer.services import (
     prompt_template_service,
     speech_blocks_service,
 )
+from chunking_test_support import build_chunking_document
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -2805,8 +2806,7 @@ def test_normalize_chunk_blocks_accepts_narration_with_non_spoken_quoted_words()
     @version    0.1.0
     """
     source_text = (
-        'Not "our" Emperor, Scytale noted. "Your" Emperor. '
-        "Irulan is too much the Bene Gesserit to miss that slip."
+        'Not "our" Emperor, Scytale noted. "Your" Emperor. Irulan is too much the Bene Gesserit to miss that slip.'
     )
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
     source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
@@ -3086,9 +3086,9 @@ def test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets()
     ai_settings_source = (
         _REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"
     ).read_text(encoding="utf-8")
-    settings_source = (
-        _REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/services/settings_service.py"
-    ).read_text(encoding="utf-8")
+    settings_source = (_REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/services/settings_service.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "qwen/qwen3.6-27b" in local_model_doc
     assert "google/gemma-4-31b" in local_model_doc
@@ -3637,30 +3637,32 @@ def _create_chunked_project(tmp_path, name: str):
     project_workspace_service.save_manifest(manifest, project_root)
     (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": "Chapter I",
-                    "text": 'Narration. "Hello there."',
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-                {
-                    "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "chapter_label": "Chapter I",
-                    "text": 'Maria smiled. "Welcome."',
-                    "source_start_line": 3,
-                    "source_end_line": 3,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "chapter_label": "Chapter I",
+                        "text": 'Narration. "Hello there."',
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "chapter_label": "Chapter I",
+                        "text": 'Maria smiled. "Welcome."',
+                        "source_start_line": 3,
+                        "source_end_line": 3,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                ]
+            ),
             indent=2,
         )
         + "\n",
@@ -3697,7 +3699,7 @@ def _write_source_chunks(project_root, source_chunks: list[dict[str, object]]) -
             }
         )
     (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps(chunk_payload, indent=2) + "\n",
+        json.dumps(build_chunking_document(chunk_payload), indent=2) + "\n",
         encoding="utf-8",
     )
 

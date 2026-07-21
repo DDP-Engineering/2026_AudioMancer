@@ -10,8 +10,8 @@
 @file deterministic_chunking_service.py
 @brief Deterministic text chunking helpers for AudioMancer.
 @details Consumes cleaned text, produces one ordered paragraph chunk per unit,
-         persists chunk artifacts at the project root, and maintains resumable
-         operation state for interrupted deterministic chunking runs.
+         and atomically checkpoints resumable lifecycle and chunk data in the
+         strict authoritative `chunks_text.json` document.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
 @version 0.5.1
@@ -23,20 +23,16 @@ from functools import partial
 import json
 from pathlib import Path
 import re
-import time
 
 from audiomancer import config
-from audiomancer.services import cleanup_metadata_service, project_workspace_service
+from audiomancer.services import chunking_document_service, cleanup_metadata_service, project_workspace_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_output_path,
     build_operation_state_payload,
     emit_progress_update,
     load_operation_state_file,
-    load_operation_state_payload,
     raise_if_cancelled,
-    resolve_operation_path,
 )
 from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
@@ -97,166 +93,83 @@ def chunk_text(
     @version    0.3.0
     """
     resolved_project_root = Path(project_root)
-    source_document = manifest.get("source_document")
-    if not isinstance(source_document, dict):
+    if not isinstance(manifest.get("source_document"), dict):
         raise ValueError("No imported source is available for deterministic chunking.")
-
-    cleaned_relative_path = config.CLEANED_TEXT_FILE_NAME
-
-    cleaned_path = resolved_project_root / cleaned_relative_path
+    cleaned_path = resolved_project_root / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_path.is_file():
         raise FileNotFoundError("Deterministic chunking requires cleaned text first.")
-
     input_text = cleaned_path.read_text(encoding="utf-8")
     paragraph_records = _build_paragraph_records(input_text, resolved_project_root)
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any chunkable paragraphs.")
 
-    _ = source_document
-    input_snapshot_path = cleaned_path
+    existing_document = chunking_document_service.load_chunking_document(resolved_project_root)
+    start_index = 0
+    chunks: list[ChunkPayload] = []
+    if existing_document is not None and existing_document["status"] in chunking_document_service.RESUMABLE_STATUSES:
+        if existing_document["mode"] != "deterministic":
+            raise chunking_document_service.IncompatibleChunkingDocumentError(
+                "Chunking data is incompatible. Use Reset Chunking before continuing."
+            )
+        if existing_document["source_fingerprint"] != chunking_document_service.source_fingerprint(input_text):
+            raise chunking_document_service.IncompatibleChunkingDocumentError(
+                "Cleaned text changed. Use Reset Chunking before continuing."
+            )
+        next_paragraph = int(existing_document["next_paragraph"])
+        start_index = next_paragraph - 1
+        chunks = list(existing_document["chunks"])
+        if len(chunks) != start_index:
+            raise chunking_document_service.IncompatibleChunkingDocumentError(
+                "Chunking data is incompatible. Use Reset Chunking before continuing."
+            )
 
-    output_path = build_operation_output_path(
-        resolved_project_root,
-        "chunking",
-        config.CHUNK_ARTIFACT_FILE_NAME,
+    document = chunking_document_service.build_document(
+        status="running",
+        mode="deterministic",
+        source_text=input_text,
+        chunks=chunks,
+        next_paragraph=start_index + 1,
     )
-    report_path = build_operation_output_path(
-        resolved_project_root,
-        "chunking",
-        config.CHUNKING_REPORT_FILE_NAME,
-    )
-    state_path = build_operation_output_path(
-        resolved_project_root,
-        "chunking",
-        config.CHUNKING_STATE_FILE_NAME,
-    )
-
-    existing_state = _load_resume_state(state_path)
+    chunking_document_service.write_chunking_document(resolved_project_root, document)
     progress_total = len(paragraph_records)
-    started_at = str(existing_state.get("started_at") or _utc_now_iso())
-    resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
-    start_chunk_index = int(resume_checkpoint.get("next_chunk_index", 0))
-    chunks = _load_partial_chunks(output_path) if start_chunk_index > 0 else []
-    if len(chunks) != start_chunk_index:
-        chunks = []
-        start_chunk_index = 0
-        _write_chunk_payload(output_path, chunks)
-
     chapter_count, last_chapter_label = _chapter_count_state_from_chunks(chunks)
-    _write_running_state(
-        state_path,
-        resolved_project_root,
-        input_snapshot_path,
-        output_path,
-        started_at,
-        start_chunk_index,
-        progress_total,
-        chunks,
-        chapter_count,
-    )
-    _emit_progress(
-        progress_callback,
-        progress_current=start_chunk_index,
-        progress_total=progress_total,
-        message="Deterministic chunking in progress...",
-    )
-
-    last_checkpoint_index = start_chunk_index
-    last_checkpoint_time = time.monotonic()
-    last_progress_time = last_checkpoint_time
     try:
-        for chunk_index in range(start_chunk_index, progress_total):
+        for chunk_index in range(start_index, progress_total):
             raise_if_cancelled(cancel_requested)
-            paragraph_record = paragraph_records[chunk_index]
-            chunk_payload = _build_chunk_payload(chunk_index + 1, paragraph_record)
-            chunks.append(chunk_payload)
+            chunk = _build_chunk_payload(chunk_index + 1, paragraph_records[chunk_index])
+            chunks.append(chunk)
             chapter_count, last_chapter_label = _update_chapter_count(
                 chapter_count,
                 last_chapter_label,
-                chunk_payload,
+                chunk,
             )
-            progress_current = chunk_index + 1
-            current_time = time.monotonic()
-            if _should_write_checkpoint(progress_current, last_checkpoint_index, current_time, last_checkpoint_time):
-                _write_chunk_payload(output_path, chunks)
-                _write_running_state(
-                    state_path,
-                    resolved_project_root,
-                    input_snapshot_path,
-                    output_path,
-                    started_at,
-                    progress_current,
-                    progress_total,
-                    chunks,
-                    chapter_count,
-                )
-                last_checkpoint_index = progress_current
-                last_checkpoint_time = current_time
-            if _should_emit_progress(progress_current, progress_total, current_time, last_progress_time):
-                _emit_progress(
-                    progress_callback,
-                    progress_current=progress_current,
-                    progress_total=progress_total,
-                    message="Deterministic chunking in progress...",
-                )
-                last_progress_time = current_time
+            document["chunks"] = chunks
+            document["next_paragraph"] = chunk_index + 2
+            chunking_document_service.write_chunking_document(resolved_project_root, document)
+            _emit_progress(
+                progress_callback,
+                progress_current=chunk_index + 1,
+                progress_total=progress_total,
+                message="Deterministic chunking in progress...",
+            )
     except OperationCancelledError:
-        _persist_terminal_state(
-            state_path,
-            resolved_project_root,
-            input_snapshot_path,
-            output_path,
-            started_at,
-            progress_total,
-            chunks,
-            chapter_count,
-            "cancelled",
-        )
+        document["status"] = "cancelled"
+        chunking_document_service.write_chunking_document(resolved_project_root, document)
         raise
     except Exception:
-        _persist_terminal_state(
-            state_path,
-            resolved_project_root,
-            input_snapshot_path,
-            output_path,
-            started_at,
-            progress_total,
-            chunks,
-            chapter_count,
-            "failed",
-        )
+        document["status"] = "failed"
+        chunking_document_service.write_chunking_document(resolved_project_root, document)
         raise
 
-    _write_chunk_payload(output_path, chunks)
-
-    warnings = _build_chunking_warnings(chapter_count)
-    report_payload: ChunkingReportPayload = {
-        "warnings": warnings,
-        "chunk_count": len(chunks),
-        "detected_chapter_count": chapter_count,
-        "chunking_mode": "deterministic",
-    }
-    write_json_atomic(report_path, report_payload)
-    completed_state = _build_operation_state(
-        resolved_project_root,
-        input_snapshot_path=input_snapshot_path,
-        output_path=output_path,
-        report_path=report_path,
-        status="completed",
-        progress_current=progress_total,
-        progress_total=progress_total,
-        started_at=started_at,
-        completed_at=None,
-        warnings=warnings,
-        chunk_count=len(chunks),
-        chapter_count=chapter_count,
-        resume_checkpoint=None,
-    )
-    write_json_atomic(state_path, completed_state)
+    document["status"] = "completed"
+    document["next_paragraph"] = None
+    document["warnings"] = _build_chunking_warnings(chapter_count)
+    chunking_document_service.write_chunking_document(resolved_project_root, document)
+    operation_state = chunking_document_service.derive_operation_state(document)
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
         "chunking",
-        completed_state,
+        operation_state,
         current_stage="translation_ready",
     )
     _emit_progress(
@@ -265,7 +178,7 @@ def chunk_text(
         progress_total=progress_total,
         message="Deterministic chunking completed.",
     )
-    return report_payload
+    return chunking_document_service.derive_report(document)
 
 
 @trace_function(_CHUNKING_LOGGER)
@@ -279,11 +192,8 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-07
     @version    0.2.1
     """
-    try:
-        return load_operation_state_payload(project_root, "chunking", config.CHUNKING_STATE_FILE_NAME)
-    except (OSError, TypeError, json.JSONDecodeError) as error:
-        _CHUNKING_LOGGER.warning("Ignored unreadable chunking state file: %s", error)
-        return None
+    document = chunking_document_service.load_chunking_document(project_root)
+    return None if document is None else chunking_document_service.derive_operation_state(document)
 
 
 @trace_function(_CHUNKING_LOGGER)
@@ -297,18 +207,8 @@ def load_chunking_report(project_root: str | Path) -> ChunkingReportPayload | No
     @date       2026-04-07
     @version    0.1.0
     """
-    report_path = resolve_operation_path(
-        project_root,
-        "chunking",
-        config.CHUNKING_REPORT_FILE_NAME,
-    )
-    if not report_path.is_file():
-        return None
-    try:
-        return dict(json.loads(report_path.read_text(encoding="utf-8")))
-    except (OSError, TypeError, json.JSONDecodeError) as error:
-        _CHUNKING_LOGGER.warning("Ignored unreadable chunking report file: %s", error)
-        return None
+    document = chunking_document_service.load_chunking_document(project_root)
+    return None if document is None else chunking_document_service.derive_report(document)
 
 
 @trace_function(_CHUNKING_LOGGER)
@@ -322,12 +222,7 @@ def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
     @date       2026-04-07
     @version    0.1.0
     """
-    output_path = resolve_operation_path(
-        project_root,
-        "chunking",
-        config.CHUNK_ARTIFACT_FILE_NAME,
-    )
-    return _load_partial_chunks(output_path)
+    return chunking_document_service.load_chunks(project_root)
 
 
 # LOCAL HELPERS
@@ -375,15 +270,9 @@ def _build_chunk_payload(
         "chunk_id": f"chunk-{sequence_index:04d}",
         "sequence_index": sequence_index,
         "text": str(paragraph_record["text"]),
-        "source_start_line": int(paragraph_record["line_start"]),
-        "source_end_line": int(paragraph_record["line_end"]),
-        "source_page_start": paragraph_record.get("source_page_start"),
-        "source_page_end": paragraph_record.get("source_page_end"),
         "cleanup_boundary_confidence": paragraph_record.get("boundary_confidence"),
         "cleanup_joined_across_page_break": bool(paragraph_record.get("joined_across_page_break", False)),
         "cleanup_warning_flags": list(paragraph_record.get("warning_flags", [])),
-        "chunking_mode": "deterministic",
-        "semantic_strategy": None,
     }
 
 

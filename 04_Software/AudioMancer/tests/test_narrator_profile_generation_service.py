@@ -25,6 +25,7 @@ import pytest
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, narrator_profile_generation_service
 from audiomancer.services.operation_runtime_service import OperationCancelledError
+from chunking_test_support import build_chunking_document
 
 # CONSTANTS
 
@@ -830,14 +831,16 @@ def _write_chunk_records(project_root, texts: list[str]) -> None:
     """
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": f"chunk-{index:04d}",
-                    "sequence_index": index,
-                    "text": text,
-                }
-                for index, text in enumerate(texts, start=1)
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": f"chunk-{index:04d}",
+                        "sequence_index": index,
+                        "text": text,
+                    }
+                    for index, text in enumerate(texts, start=1)
+                ]
+            ),
             indent=2,
         )
         + "\n",

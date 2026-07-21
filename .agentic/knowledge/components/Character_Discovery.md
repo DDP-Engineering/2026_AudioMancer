@@ -31,6 +31,9 @@ Derives a reviewable character inventory from the canonical project text so late
 
 ## 6. Data Contracts
 
+Canonical source chunks are loaded through the strict shared Chunking document
+reader. Legacy arrays and Chunking report/state sidecars are not input fallbacks.
+
 - Character records retain stable identifiers, name validation, evidence, dialogue previews, demographic fields/confidence, and a compact voice-definition prompt.
 - Discovery progress uses the shared operation-state envelope. Candidate payloads are normalized and trimmed to context-budget metadata before synthesis.
 - Translation chunks are usable only when they are compatible with the selected target; otherwise source chunks remain authoritative.

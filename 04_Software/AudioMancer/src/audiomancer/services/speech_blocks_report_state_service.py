@@ -22,7 +22,7 @@
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import speech_blocks_normalization_service, token_usage_service
+from audiomancer.services import chunking_document_service, speech_blocks_normalization_service, token_usage_service
 from audiomancer.services.operation_runtime_service import (
     build_operation_state_payload,
     relative_to_project,
@@ -247,7 +247,7 @@ def source_chunks_input_path(project_root: Path, source_kind: str) -> Path:
     """
     if str(source_kind).strip() == "translated":
         return project_root / config.TRANSLATED_CHUNKS_FILE_NAME
-    return project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    return chunking_document_service.document_path(project_root)
 
 
 # END OF FILE

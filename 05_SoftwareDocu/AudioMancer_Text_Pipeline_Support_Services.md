@@ -248,5 +248,7 @@ three-field descriptor contract and new-only paragraph-position checkpoint.
 Anchor validation tolerates harmless copied-prefix variation through the
 deterministic five-consecutive-word rule while preserving strict descriptor
 ordering, paragraph bounds, and atomic response rejection.
-Deterministic chunking, manual selected-chunk operations, and the canonical
-`chunks_text.json` payload remain unchanged.
+The single-document Chunking change makes `chunks_text.json` a strict root
+object containing lifecycle and chunks. Deterministic and AI writers atomically
+checkpoint complete units through `chunking_document_service`; progress and AI
+runtime configuration are not durable fields.

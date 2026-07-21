@@ -45,6 +45,7 @@ application version is exposed through the application package metadata and
 - `AudioMancer_Text_Extraction_Service.md`
 - `AudioMancer_Deterministic_Cleanup_Service.md`
 - `AudioMancer_AI_Cleanup_Service.md`
+- `AudioMancer_Chunking_Document_Service.md`
 - `AudioMancer_Text_Chunking_State_Service.md`
 - `AudioMancer_AI_Translation_Service.md`
 - `AudioMancer_LLM_Provider_Service.md`
@@ -78,6 +79,10 @@ application version is exposed through the application package metadata and
 ## Documentation Review Notes
 
 Reviewed for the AI chunking context mode feature. Relevant component documents are `AudioMancer_Config_And_Settings.md`, `AudioMancer_Settings_Service.md`, `AudioMancer_UI_State_Service.md`, and `AudioMancer_Text_Pipeline_Support_Services.md`.
+
+Reviewed for the single-document Chunking contract. The dedicated document
+service page and affected pipeline, lifecycle, export, and state pages now
+describe `chunks_text.json` as the sole authority.
 
 Reviewed for the 1.5.9 release sync. Offline help bundle versions are maintained
 in `UserGuide/index.html` and `UserGuide_ro/index.html`.

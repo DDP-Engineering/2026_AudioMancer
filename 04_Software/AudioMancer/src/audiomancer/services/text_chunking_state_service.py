@@ -27,7 +27,7 @@ from audiomancer.services import (
     ai_translation_service,
     audio_blocks_service,
     character_discovery_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     home_presenter_service,
     operation_runtime_service,
     project_workspace_service,
@@ -37,7 +37,6 @@ from audiomancer.services import (
     workflow_impact_service,
 )
 from audiomancer.services.logging_service import get_component_logger
-from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
 
@@ -78,9 +77,14 @@ def build_text_chunking_state(
         project_root,
         f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
     )
-    chunking_report_payload = deterministic_chunking_service.load_chunking_report(project_root)
-    chunking_operation_state = deterministic_chunking_service.load_operation_state(project_root)
-    chunks = deterministic_chunking_service.load_chunks(project_root)
+    chunking_document = chunking_document_service.load_chunking_document(project_root)
+    chunking_report_payload = (
+        None if chunking_document is None else chunking_document_service.derive_report(chunking_document)
+    )
+    chunking_operation_state = (
+        None if chunking_document is None else chunking_document_service.derive_operation_state(chunking_document)
+    )
+    chunks = [] if chunking_document is None else list(chunking_document["chunks"])
     has_cleaned_text = cleaned_text is not None and bool(cleaned_text.strip())
     has_ai_profiles = bool(build_ai_chunking_profile_state(settings_payload)["entries"])
     return {
@@ -96,7 +100,13 @@ def build_text_chunking_state(
         ),
         "can_chunk": has_cleaned_text,
         "can_ai_chunk": has_cleaned_text and has_ai_profiles,
-        "selected_strategy": _selected_ai_strategy(settings_payload),
+        "selected_strategy": (
+            str(chunking_document["semantic_strategy"])
+            if chunking_document is not None
+            and chunking_document["mode"] == "ai_assisted"
+            and chunking_document["status"] in chunking_document_service.RESUMABLE_STATUSES
+            else _selected_ai_strategy(settings_payload)
+        ),
     }
 
 
@@ -161,7 +171,7 @@ def save_chunk_text_edit(
     chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
     if not chunk_artifact_path.is_file():
         raise ValueError("No chunk artifact is available to edit.")
-    chunks = deterministic_chunking_service.load_chunks(project_root)
+    chunks = chunking_document_service.load_chunks(project_root)
     selected_index = next(
         (index for index, chunk in enumerate(chunks) if str(chunk.get("chunk_id", "")) == chunk_id),
         -1,
@@ -206,7 +216,7 @@ def insert_chunk_after_selected(
     @date       2026-05-04
     @version    0.2.0
     """
-    chunks = deterministic_chunking_service.load_chunks(project_root)
+    chunks = chunking_document_service.load_chunks(project_root)
     if not chunks and not str(selected_chunk_id).strip():
         inserted_chunk = _build_initial_manual_chunk_payload(project_root)
         return _persist_manual_chunk_change(
@@ -251,7 +261,7 @@ def delete_selected_chunk(
     @date       2026-05-04
     @version    0.2.0
     """
-    chunks = deterministic_chunking_service.load_chunks(project_root)
+    chunks = chunking_document_service.load_chunks(project_root)
     if not any(str(chunk.get("chunk_id", "")) == chunk_id for chunk in chunks):
         raise ValueError("The selected chunk is no longer available.")
     updated_chunks = [dict(chunk) for chunk in chunks if str(chunk.get("chunk_id", "")) != chunk_id]
@@ -331,7 +341,12 @@ def _persist_manual_chunk_change(
         audio_assembly_reset=True,
         artifact_deletion=audio_artifact_summary,
     )
-    _write_manual_chunking_metadata(project_root, chunks, impact_summary)
+    _TEXT_CHUNKING_STATE_LOGGER.info(
+        "Applied manual chunk mutation: chunk_count=%s affected_chunks=%s reason=%s",
+        len(chunks),
+        len(impact_summary.affected_chunk_ids),
+        impact_summary.reason,
+    )
     updated_manifest = _build_manifest_after_selective_chunk_change(project_root, manifest)
     project_workspace_service.save_manifest(updated_manifest, project_root)
     return updated_manifest
@@ -348,72 +363,27 @@ def _write_chunk_artifact(project_root: Path, chunks: list[dict[str, object]]) -
     @date       2026-05-04
     @version    0.2.0
     """
-    chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
-    chunk_artifact_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(chunk_artifact_path, chunks)
-
-
-def _write_manual_chunking_metadata(
-    project_root: Path,
-    chunks: list[dict[str, object]],
-    impact_summary: workflow_impact_service.WorkflowImpactSummary,
-) -> None:
-    """
-    @brief      Refresh chunking report and state after a manual v2 chunk edit.
-    @param[in]  project_root Active project root folder.
-    @param[in]  chunks Current chunk payload list.
-    @param[in]  impact_summary Selective impact summary to persist.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
-    """
-    existing_report = deterministic_chunking_service.load_chunking_report(project_root) or {}
-    existing_state = deterministic_chunking_service.load_operation_state(project_root) or {}
-    chapter_count = deterministic_chunking_service._chapter_count_from_chunks(chunks)
-    impact_metadata = workflow_impact_service.build_impact_metadata(impact_summary)
-    warnings = (
-        list(existing_report.get("warnings", [])) if isinstance(existing_report.get("warnings", []), list) else []
-    )
-    report = {
-        **dict(existing_report),
-        "warnings": warnings,
-        "chunk_count": len(chunks),
-        "detected_chapter_count": chapter_count,
-        "manual_adjusted": True,
-        "last_workflow_impact": impact_metadata,
-    }
-    if not report.get("chunking_mode"):
-        report["chunking_mode"] = "manual"
-    report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_REPORT_FILE_NAME
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(report_path, report)
-    metadata = {
-        "warnings": warnings,
-        "chunk_count": len(chunks),
-        "detected_chapter_count": chapter_count,
-        "manual_adjusted": True,
-        "last_workflow_impact": impact_metadata,
-    }
-    state = operation_runtime_service.build_operation_state_payload(
-        status="completed",
-        progress_current=len(chunks),
-        progress_total=len(chunks),
-        mode=str(existing_state.get("mode") or report.get("chunking_mode") or "manual"),
-        warning_count=len(warnings),
-        metadata=metadata,
-        resume_checkpoint=None,
-    )
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_STATE_FILE_NAME
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(state_path, state)
-    _TEXT_CHUNKING_STATE_LOGGER.info(
-        "Refreshed manual chunking metadata: chunk_count=%s affected_chunks=%s reason=%s",
-        len(chunks),
-        len(impact_summary.affected_chunk_ids),
-        impact_summary.reason,
-    )
+    document = chunking_document_service.load_chunking_document(project_root)
+    if document is None:
+        cleaned_text = text_cleanup_state_service.read_optional_project_text(
+            project_root,
+            f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
+        )
+        if cleaned_text is None or not cleaned_text.strip():
+            raise ValueError("Cleaned text is required before manual chunk insertion.")
+        document = chunking_document_service.build_document(
+            status="completed",
+            mode="deterministic",
+            source_text=cleaned_text,
+            chunks=chunks,
+            manual_adjusted=True,
+        )
+    else:
+        document["status"] = "completed"
+        document["manual_adjusted"] = True
+        document["next_paragraph"] = None
+        document["chunks"] = chunks
+    chunking_document_service.write_chunking_document(project_root, document)
 
 
 def _build_manifest_after_selective_chunk_change(
@@ -435,7 +405,9 @@ def _build_manifest_after_selective_chunk_change(
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
     operations["chunking"] = project_workspace_service.project_manifest_operation_summary(
         "chunking",
-        deterministic_chunking_service.load_operation_state(project_root),
+        chunking_document_service.derive_operation_state(
+            chunking_document_service.load_chunking_document(project_root)
+        ),
     )
     translation_summary = ai_translation_service.load_translation_summary(project_root)
     operations["translation"] = {
@@ -474,20 +446,13 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
     @date       2026-05-04
     @version    0.2.0
     """
-    payload = dict(source_chunk)
-    payload.pop("chapter_label", None)
     return {
-        **payload,
         "chunk_id": chunk_id,
+        "sequence_index": int(source_chunk.get("sequence_index", 1)) + 1,
         "text": "",
-        "source_start_line": source_chunk.get("source_end_line", source_chunk.get("source_start_line", 0)),
-        "source_end_line": source_chunk.get("source_end_line", source_chunk.get("source_start_line", 0)),
-        "source_page_start": source_chunk.get("source_page_end", source_chunk.get("source_page_start")),
-        "source_page_end": source_chunk.get("source_page_end", source_chunk.get("source_page_start")),
         "cleanup_boundary_confidence": None,
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
-        "chunking_mode": "manual",
     }
 
 
@@ -507,20 +472,13 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
     )
     if cleaned_text is None or not cleaned_text.strip():
         raise ValueError("Cleaned text is required before manual chunk insertion.")
-    source_line_count = max(1, len(cleaned_text.splitlines()))
     return {
         "chunk_id": "chunk-0001",
         "sequence_index": 1,
         "text": "",
-        "source_start_line": 1,
-        "source_end_line": source_line_count,
-        "source_page_start": None,
-        "source_page_end": None,
         "cleanup_boundary_confidence": None,
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
-        "chunking_mode": "manual",
-        "semantic_strategy": None,
     }
 
 
@@ -627,6 +585,17 @@ def build_text_chunking_notes(
                 )
             )
         notes.extend(str(item) for item in list(chunking_report_payload.get("warnings", [])))
+        if chunking_status in {"failed", "cancelled"}:
+            resume_key = (
+                "text_chunking.note_ai_resume" if chunking_mode == "ai_assisted" else "text_chunking.note_resume"
+            )
+            notes.append(
+                ui_state_service.translate(resume_key, language).format(
+                    progress_current=0,
+                    progress_total=0,
+                    strategy=_chunking_state_strategy(chunking_operation_state or {}),
+                )
+            )
         if chunking_status == "completed":
             rerun_key = (
                 "text_chunking.note_ai_rerun_warning"

@@ -29,8 +29,8 @@ from audiomancer import config
 from audiomancer.services import (
     ai_budget_service,
     ai_translation_service,
+    chunking_document_service,
     cleanup_metadata_service,
-    deterministic_chunking_service,
     llm_provider_service,
     narrator_definition_service,
     prompt_template_service,
@@ -649,7 +649,7 @@ def _canonical_chunk_units(project_root: Path) -> list[SourceUnitPayload]:
     @version    0.1.0
     """
     chunks = sorted(
-        deterministic_chunking_service.load_chunks(project_root),
+        chunking_document_service.load_chunks(project_root),
         key=lambda item: int(item.get("sequence_index", 0) or 0),
     )
     units = []

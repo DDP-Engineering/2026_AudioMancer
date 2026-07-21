@@ -28,6 +28,7 @@ import re
 from audiomancer import config
 from audiomancer.services import (
     ai_budget_service,
+    chunking_document_service,
     deterministic_chunking_service,
     llm_provider_service,
     project_workspace_service,
@@ -1028,7 +1029,7 @@ def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, 
     @version    0.3.0
     """
     source_chunks = sorted(
-        deterministic_chunking_service.load_chunks(project_root),
+        chunking_document_service.load_chunks(project_root),
         key=lambda item: int(item.get("sequence_index", 0)),
     )
     discovery_chunks: list[dict[str, object]] = []

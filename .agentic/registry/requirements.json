@@ -1,8 +1,29 @@
 {
+  "REQ-DATA-001": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:57",
+    "line_number": 12,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_chunking_persists_minimal_document_and_separate_log"
+    ],
+    "priority": "Must",
+    "rationale": "Persisting only data required for canonical results and safe resume limits stale configuration coupling and keeps verbose provider exchanges outside the authoritative project contract.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py"
+    ],
+    "req_id": "REQ-DATA-001",
+    "requirement": "The authoritative Chunking document shall not persist AI profile identity, model or request parameters, profile history, budget metadata, runtime progress, derived counts, generic metadata, or transaction-log paths; AI transaction logs shall remain separate artifacts and Reset Chunking shall remove them.",
+    "source_file": ".agentic/requirements/data_privacy.md",
+    "status": "Active",
+    "verification": "Persisted Chunking data excludes runtime/profile/budget/log-path fields and logs remain separate."
+  },
   "REQ-FUNC-001": {
     "created_on": "2026-07-18 15:49",
     "last_updated": "2026-07-19 18:00",
-    "line_number": 51,
+    "line_number": 58,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_creates_required_structure_and_manifest",
       "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_project_fixes_invalid_current_stage_metadata_only",
@@ -53,7 +74,7 @@
   "REQ-FUNC-002": {
     "created_on": "2026-07-18 15:49",
     "last_updated": "2026-07-18 15:54",
-    "line_number": 52,
+    "line_number": 59,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_copies_file_and_records_metadata",
       "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_name_collisions",
@@ -73,7 +94,7 @@
   "REQ-FUNC-003": {
     "created_on": "2026-07-18 15:49",
     "last_updated": "2026-07-18 15:54",
-    "line_number": 53,
+    "line_number": 60,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_detects_readiness_for_all_export_types",
       "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_archives_never_include_ai_transaction_logs",
@@ -96,7 +117,7 @@
   "REQ-FUNC-004": {
     "created_on": "2026-07-18 15:49",
     "last_updated": "2026-07-18 15:54",
-    "line_number": 54,
+    "line_number": 61,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_creates_zip_with_top_level_project_folder",
       "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_cancellation_removes_temporary_zip",
@@ -119,7 +140,7 @@
   "REQ-FUNC-005": {
     "created_on": "2026-07-18 21:07",
     "last_updated": "2026-07-18 18:14",
-    "line_number": 55,
+    "line_number": 62,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_writes_self_contained_artifacts_for_txt_source",
       "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_supports_document_formats",
@@ -140,7 +161,7 @@
   "REQ-FUNC-006": {
     "created_on": "2026-07-18 21:07",
     "last_updated": "2026-07-19 18:00",
-    "line_number": 56,
+    "line_number": 63,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_writes_runtime_artifacts_and_preserves_structure",
       "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_removes_repeated_headers_with_changing_page_numbers",
@@ -179,7 +200,7 @@
   "REQ-FUNC-007": {
     "created_on": "2026-07-18 21:07",
     "last_updated": "2026-07-19 18:00",
-    "line_number": 57,
+    "line_number": 64,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_validation_preserves_exact_order_for_every_block",
       "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators",
@@ -235,7 +256,7 @@
   "REQ-FUNC-008": {
     "created_on": "2026-07-18 21:07",
     "last_updated": "2026-07-18 18:14",
-    "line_number": 58,
+    "line_number": 65,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_text_cleanup_state_loads_previews_and_notes",
       "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_save_cleaned_text_edit_persists_text_and_resets_downstream",
@@ -257,7 +278,7 @@
   "REQ-FUNC-009": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:10",
-    "line_number": 12,
+    "line_number": 19,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_progress_percent_clamps_to_zero_and_hundred",
       "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_emit_progress_update_uses_standard_payload_shape",
@@ -292,7 +313,7 @@
   "REQ-FUNC-010": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:13",
-    "line_number": 16,
+    "line_number": 23,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_normalizes_openai_compatible_models",
       "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_normalizes_ollama_models",
@@ -312,8 +333,8 @@
   },
   "REQ-FUNC-011": {
     "created_on": "2026-07-19 16:32",
-    "last_updated": "2026-07-19 17:15",
-    "line_number": 22,
+    "last_updated": "2026-07-20 22:25",
+    "line_number": 29,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_writes_runtime_artifacts_and_detects_chapters",
       "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_uses_canonical_cleanup_output_with_compact_manifest",
@@ -332,7 +353,7 @@
       "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py"
     ],
     "req_id": "REQ-FUNC-011",
-    "requirement": "Deterministic chunking shall derive ordered canonical chunks from clean text, preserve supported chapter structure, and persist chunk/report/state artifacts.",
+    "requirement": "Deterministic chunking shall derive ordered canonical chunks from clean text, preserve supported chapter structure, persist recoverable checkpoints atomically, and expose canonical chunks to downstream readers.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
     "verification": "Focused deterministic chunking suite passed within E-0011."
@@ -340,7 +361,7 @@
   "REQ-FUNC-012": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:18",
-    "line_number": 26,
+    "line_number": 33,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_is_the_only_authoritative_artifact",
       "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_resume_uses_first_empty_chunk_and_current_profile_budget",
@@ -368,7 +389,7 @@
   "REQ-FUNC-013": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:22",
-    "line_number": 29,
+    "line_number": 36,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_prompts_request_demographic_confidence",
       "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_outputs_and_report",
@@ -414,7 +435,7 @@
   "REQ-FUNC-014": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:27",
-    "line_number": 32,
+    "line_number": 39,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_uses_compact_character_profile",
       "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prefers_character_owned_voice_definition_prompt",
@@ -446,7 +467,7 @@
   "REQ-FUNC-015": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:30",
-    "line_number": 38,
+    "line_number": 45,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_original_language_selection",
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_requires_fully_approved_translation",
@@ -533,7 +554,7 @@
   "REQ-FUNC-016": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:33",
-    "line_number": 43,
+    "line_number": 50,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_paths_are_deterministic",
       "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_wav_validation_and_stitching"
@@ -552,7 +573,7 @@
   "REQ-FUNC-017": {
     "created_on": "2026-07-19 16:32",
     "last_updated": "2026-07-19 17:35",
-    "line_number": 48,
+    "line_number": 55,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_per_chunk_outputs",
       "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
@@ -589,7 +610,7 @@
   "REQ-FUNC-018": {
     "created_on": "2026-07-19 20:10",
     "last_updated": "2026-07-19 17:10",
-    "line_number": 13,
+    "line_number": 20,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_operation_order_matches_current_workflow",
       "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_rejects_unknown_operation_kind",
@@ -620,14 +641,15 @@
   },
   "REQ-FUNC-019": {
     "created_on": "2026-07-19 20:10",
-    "last_updated": "2026-07-19 17:10",
-    "line_number": 14,
+    "last_updated": "2026-07-19 18:32",
+    "line_number": 21,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_success_reports_progress_and_cleans_up",
       "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_failure_calls_failure_handler_and_cleans_up",
       "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_cancel_sets_event_and_calls_cancel_handler",
       "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_does_not_start_when_operation_is_active",
-      "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py::test_main_window_close_ignores_event_while_operation_thread_is_active"
+      "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py::test_main_window_close_ignores_event_while_operation_thread_is_active",
+      "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_progress_dialog_localizes_title_cancel_and_token_usage"
     ],
     "priority": "Must",
     "rationale": "Long-running workflow actions need responsive, cancellable UI behavior without concurrent conflicting operations.",
@@ -639,15 +661,16 @@
     "requirement": "The shared Qt operation runner and progress dialog shall run one worker at a time, relay progress and terminal results on the UI thread, support cooperative cancellation, restore UI/project-switch state after completion, and prevent unsafe application close while a worker remains active.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused runner and shutdown suite passed: 5 relevant tests within E-0009."
+    "verification": "Focused runner, direct localized dialog, and shutdown suite passed: 6 relevant tests within E-0026."
   },
   "REQ-FUNC-020": {
     "created_on": "2026-07-19 20:10",
-    "last_updated": "2026-07-19 17:10",
-    "line_number": 15,
+    "last_updated": "2026-07-19 18:32",
+    "line_number": 22,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_request_operation_cancel_sets_worker_visible_event",
-      "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles"
+      "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles",
+      "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window"
     ],
     "priority": "Must",
     "rationale": "Domain pages need one controller-facing orchestration facade and must not use disabled or absent provider profiles.",
@@ -658,12 +681,12 @@
     "requirement": "Workflow controllers shall delegate starts to the shared runner, project persisted operation state into the active manifest, and resolve only enabled AI profiles by identifier.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused workflow-controller suite passed: 2 relevant tests within E-0009; manifest synchronization has no direct focused test and remains a documented characterization limitation."
+    "verification": "Focused workflow-controller suite passed: 3 relevant tests within E-0024 and E-0026, including persisted manifest synchronization."
   },
   "REQ-FUNC-021": {
     "created_on": "2026-07-19 20:20",
     "last_updated": "2026-07-19 17:13",
-    "line_number": 17,
+    "line_number": 24,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_budget_service.py::test_estimate_text_tokens_returns_positive_conservative_count",
       "04_Software/AudioMancer/tests/test_ai_budget_service.py::test_available_text_budget_reserves_prompt_output_and_safety_tokens",
@@ -684,7 +707,7 @@
   "REQ-FUNC-022": {
     "created_on": "2026-07-19 20:20",
     "last_updated": "2026-07-19 17:13",
-    "line_number": 18,
+    "line_number": 25,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_parses_fenced_json",
       "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_transient_failure",
@@ -718,7 +741,7 @@
   "REQ-FUNC-023": {
     "created_on": "2026-07-19 20:20",
     "last_updated": "2026-07-19 17:13",
-    "line_number": 19,
+    "line_number": 26,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_requires_exact_placeholders",
       "04_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_allows_braced_source_text_values"
@@ -736,9 +759,11 @@
   },
   "REQ-FUNC-024": {
     "created_on": "2026-07-19 20:20",
-    "last_updated": "2026-07-19 17:13",
-    "line_number": 20,
+    "last_updated": "2026-07-19 18:42",
+    "line_number": 27,
     "linked_tests": [
+      "04_Software/AudioMancer/tests/test_token_usage_service.py::test_merge_token_usage_sums_available_usage_and_tolerates_missing_base",
+      "04_Software/AudioMancer/tests/test_token_usage_service.py::test_restore_token_usage_selects_first_valid_persisted_payload",
       "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_summary_from_report",
       "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_unavailable_only_when_usage_was_persisted",
       "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_normalizes_provider_usage"
@@ -753,13 +778,14 @@
     "requirement": "Token usage shall normalize, merge, restore, and localize available or unavailable provider usage from reports and operation state.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused AI runtime suites passed: 40 tests within E-0010; token normalization is verified by provider and state-note tests."
+    "verification": "Focused AI runtime suites passed, including direct merge/restore coverage within E-0032."
   },
   "REQ-FUNC-025": {
     "created_on": "2026-07-19 20:20",
-    "last_updated": "2026-07-19 17:13",
-    "line_number": 21,
+    "last_updated": "2026-07-19 18:42",
+    "line_number": 28,
     "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window",
       "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_default_selectors_are_stacked_in_workflow_order",
       "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_numeric_profile_options_use_two_column_grid",
       "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_structured_output_is_in_model_name_row",
@@ -782,12 +808,12 @@
     "requirement": "The AI Settings controller/page shall edit, validate, probe, localize, and persist AI profiles and workflow default selectors without losing manual model/context overrides.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Focused profile UI suites passed: 11 tests within E-0010."
+    "verification": "Focused profile UI suites passed, including direct controller persistence/reload coverage within E-0032."
   },
   "REQ-FUNC-026": {
     "created_on": "2026-07-19 20:30",
-    "last_updated": "2026-07-19 17:15",
-    "line_number": 23,
+    "last_updated": "2026-07-20 22:25",
+    "line_number": 30,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_schema_contains_only_the_approved_fields",
       "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_anchor_uses_first_eight_normalized_words",
@@ -831,8 +857,8 @@
   },
   "REQ-FUNC-027": {
     "created_on": "2026-07-19 20:30",
-    "last_updated": "2026-07-19 17:15",
-    "line_number": 24,
+    "last_updated": "2026-07-20 22:25",
+    "line_number": 31,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking",
       "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking",
@@ -857,7 +883,7 @@
   "REQ-FUNC-028": {
     "created_on": "2026-07-19 20:30",
     "last_updated": "2026-07-19 17:15",
-    "line_number": 25,
+    "line_number": 32,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_renders_chunks_and_selected_preview",
       "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_keeps_selectors_readable_while_busy",
@@ -892,7 +918,7 @@
   "REQ-FUNC-029": {
     "created_on": "2026-07-19 20:40",
     "last_updated": "2026-07-19 17:18",
-    "line_number": 27,
+    "line_number": 34,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_build_ai_translation_profile_state_prefers_default_translation_profile",
       "04_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_build_ai_translation_state_is_read_only",
@@ -914,7 +940,7 @@
   "REQ-FUNC-030": {
     "created_on": "2026-07-19 20:40",
     "last_updated": "2026-07-19 17:18",
-    "line_number": 28,
+    "line_number": 35,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_edit_debounce_and_flush",
       "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_control_state_uses_review_pending_and_completed",
@@ -940,7 +966,7 @@
   "REQ-FUNC-031": {
     "created_on": "2026-07-19 20:55",
     "last_updated": "2026-07-19 17:22",
-    "line_number": 30,
+    "line_number": 37,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_profile_state_prefers_default_character_profile",
       "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_build_character_state_exposes_manual_maintenance_flags",
@@ -961,7 +987,7 @@
   "REQ-FUNC-032": {
     "created_on": "2026-07-19 20:55",
     "last_updated": "2026-07-19 17:22",
-    "line_number": 31,
+    "line_number": 38,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_fields_are_read_only_by_default",
       "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_splitter_keeps_twenty_percent_minimums",
@@ -1001,7 +1027,7 @@
   "REQ-FUNC-033": {
     "created_on": "2026-07-19 21:05",
     "last_updated": "2026-07-19 17:27",
-    "line_number": 33,
+    "line_number": 40,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_character_voices_state_service_omits_ai_profile_selector_builder",
       "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
@@ -1024,7 +1050,7 @@
   "REQ-FUNC-034": {
     "created_on": "2026-07-19 21:05",
     "last_updated": "2026-07-19 17:27",
-    "line_number": 34,
+    "line_number": 41,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_starts_without_predefined_profiles",
       "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_treats_torn_profile_json_as_empty_data",
@@ -1059,7 +1085,7 @@
   "REQ-FUNC-035": {
     "created_on": "2026-07-19 21:05",
     "last_updated": "2026-07-19 17:27",
-    "line_number": 35,
+    "line_number": 42,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_prefers_approved_translation_for_voice_language",
       "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_odd_allocation_appends_without_deleting_existing",
@@ -1095,7 +1121,7 @@
   "REQ-FUNC-036": {
     "created_on": "2026-07-19 21:05",
     "last_updated": "2026-07-19 17:27",
-    "line_number": 36,
+    "line_number": 43,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode",
       "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after_audio_invalidation",
@@ -1133,7 +1159,7 @@
   "REQ-FUNC-037": {
     "created_on": "2026-07-19 21:05",
     "last_updated": "2026-07-19 17:27",
-    "line_number": 37,
+    "line_number": 44,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_create_profile_does_not_change_selected_narrator",
       "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_selected_profile_clears_sample_and_selection",
@@ -1171,7 +1197,7 @@
   "REQ-FUNC-038": {
     "created_on": "2026-07-19 21:15",
     "last_updated": "2026-07-19 17:30",
-    "line_number": 39,
+    "line_number": 46,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_normalize_block_text_strips_only_dialogue_delimiters",
       "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_content_kind_and_operation_entry_normalization",
@@ -1191,7 +1217,7 @@
   "REQ-FUNC-039": {
     "created_on": "2026-07-19 21:15",
     "last_updated": "2026-07-19 17:30",
-    "line_number": 40,
+    "line_number": 47,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_rebuild_report_reflects_stage_counts_and_warnings",
       "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint",
@@ -1220,7 +1246,7 @@
   "REQ-FUNC-040": {
     "created_on": "2026-07-19 21:15",
     "last_updated": "2026-07-19 17:30",
-    "line_number": 41,
+    "line_number": 48,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries",
       "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions",
@@ -1243,7 +1269,7 @@
   "REQ-FUNC-041": {
     "created_on": "2026-07-19 21:15",
     "last_updated": "2026-07-19 17:30",
-    "line_number": 42,
+    "line_number": 49,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_requires_confirmation_before_starting",
       "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_passes_extra_prompt_to_generation",
@@ -1297,7 +1323,7 @@
   "REQ-FUNC-042": {
     "created_on": "2026-07-19 21:25",
     "last_updated": "2026-07-19 17:33",
-    "line_number": 44,
+    "line_number": 51,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs",
       "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_characters",
@@ -1361,7 +1387,7 @@
   "REQ-FUNC-043": {
     "created_on": "2026-07-19 21:25",
     "last_updated": "2026-07-19 17:33",
-    "line_number": 45,
+    "line_number": 52,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_normalizes_models_and_capabilities",
       "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_maps_auth_failures",
@@ -1389,7 +1415,7 @@
   "REQ-FUNC-044": {
     "created_on": "2026-07-19 21:25",
     "last_updated": "2026-07-19 17:33",
-    "line_number": 46,
+    "line_number": 53,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_requires_confirmation_before_starting",
       "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_ignores_completed_start_request",
@@ -1426,7 +1452,7 @@
   "REQ-FUNC-045": {
     "created_on": "2026-07-19 21:25",
     "last_updated": "2026-07-19 17:33",
-    "line_number": 47,
+    "line_number": 54,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_loads_runtime_limits_without_project_plan",
       "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_exposes_simple_connection_status_states",
@@ -1450,7 +1476,7 @@
   "REQ-FUNC-046": {
     "created_on": "2026-07-19 21:35",
     "last_updated": "2026-07-19 17:35",
-    "line_number": 49,
+    "line_number": 56,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_keeps_reset_disabled_for_default_metadata",
       "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_reports_completed_outputs",
@@ -1471,7 +1497,7 @@
   "REQ-FUNC-047": {
     "created_on": "2026-07-19 21:35",
     "last_updated": "2026-07-19 17:35",
-    "line_number": 50,
+    "line_number": 57,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_persists_settings_and_starts_threaded_operation",
       "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_reset_clears_artifacts_and_manifest_summary",
@@ -1503,6 +1529,147 @@
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
     "verification": "Focused assembly UI suites passed within E-0017."
+  },
+  "REQ-FUNC-048": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:56",
+    "line_number": 12,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_round_trips_exact_contract_and_returns_defensive_chunks"
+    ],
+    "priority": "Must",
+    "rationale": "One authoritative validation boundary prevents divergent result, report, and resume state while making incompatible legacy data explicit.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+    ],
+    "req_id": "REQ-FUNC-048",
+    "requirement": "Text Chunking shall use one strict root-object `chunks_text.json` document with exactly the approved document and chunk fields, expose atomic load/write and defensive chunk-reader APIs, derive counts and effective status in memory, treat an absent document as not started, and reject every incompatible document with Reset Chunking guidance.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Strict document API contract suite passes."
+  },
+  "REQ-FUNC-049": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:56",
+    "line_number": 13,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress"
+    ],
+    "priority": "Must",
+    "rationale": "Crash-safe unit commits must never publish partial provider output or split canonical chunks from resumable operation state.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+    ],
+    "req_id": "REQ-FUNC-049",
+    "requirement": "Deterministic and AI-assisted Chunking shall atomically create the running document before work, commit only complete deterministic units or validated AI windows, emit progress only in memory, preserve committed chunks and resume fields on cancellation or failure, and complete with every paragraph represented and `next_paragraph` set to null.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Deterministic and AI lifecycle contract suite passes."
+  },
+  "REQ-FUNC-050": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:57",
+    "line_number": 14,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile"
+    ],
+    "priority": "Must",
+    "rationale": "Resume must continue the same source operation without coupling durable project state to stale provider configuration or a previous log file.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+    ],
+    "req_id": "REQ-FUNC-050",
+    "requirement": "AI Chunking resume shall accept only resumable AI-assisted documents whose source fingerprint matches current canonical clean text, reuse the stored strategy and normalized instructions, recalculate windows from the currently selected profile and settings, preserve cumulative usage and fallback count, and create a separate transaction log for each invocation without persisting its path.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "AI resume contract uses stored operation data and current runtime profile."
+  },
+  "REQ-FUNC-051": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:57",
+    "line_number": 15,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_manual_mutations_preserve_document_origin_and_set_manual_adjusted"
+    ],
+    "priority": "Must",
+    "rationale": "Operators need safe manual correction without corrupting origin metadata or embedding transient workflow-impact state.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+    ],
+    "req_id": "REQ-FUNC-051",
+    "requirement": "A successful manual chunk edit, insertion, or deletion shall atomically mutate only a strictly valid completed Chunking document, preserve document-level generation and audit fields, retain stable IDs where possible, give inserted chunks only minimal cleanup provenance, resequence chunks, set `manual_adjusted` true, and calculate downstream invalidation without persisting its payload.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Manual edit, insert, and delete preserve the strict root contract."
+  },
+  "REQ-FUNC-052": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:57",
+    "line_number": 16,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_project_completion_evidence_uses_only_the_authoritative_document"
+    ],
+    "priority": "Must",
+    "rationale": "Project recovery must be truthful and deterministic without silently repairing or migrating unsupported Chunking formats.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+    ],
+    "req_id": "REQ-FUNC-052",
+    "requirement": "Project lifecycle and reset logic shall derive Chunking completion and manifest summaries only from a strict completed non-empty Chunking document, shall not create Chunking state merely by opening its page, and shall require Reset Chunking for incompatible documents; Reset Chunking shall delete the authoritative document, matching AI logs, obsolete sidecars, and configured downstream artifacts without reading obsolete sidecars.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Lifecycle completion and page-open/reset contract tests derive from the document without sidecars."
+  },
+  "REQ-FUNC-053": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:57",
+    "line_number": 17,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_downstream_consumers_use_shared_document_reader_without_legacy_branches"
+    ],
+    "priority": "Must",
+    "rationale": "Every downstream stage must consume the new root-object artifact consistently without reintroducing legacy readers or persistence shortcuts.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py"
+    ],
+    "req_id": "REQ-FUNC-053",
+    "requirement": "Translation, Character Discovery, narrator generation, Speech Blocks, Audio Blocks readiness, project validation, and exports shall obtain canonical chunks through the shared document reader, while Text Chunks export derives document-level mode, strategy, and counts and discovers separate AI logs without a persisted log path.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "All required downstream modules route through the shared reader."
+  },
+  "REQ-FUNC-054": {
+    "created_on": "2026-07-20 22:20",
+    "last_updated": "2026-07-20 20:57",
+    "line_number": 18,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_state_projects_resumable_document_without_durable_progress"
+    ],
+    "priority": "Must",
+    "rationale": "Operators need an accurate workflow surface whose controls and notes reflect the sole persisted Chunking authority.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py"
+    ],
+    "req_id": "REQ-FUNC-054",
+    "requirement": "The Text Chunking UI shall derive not-started, running, resumable, completed, warned, and manually adjusted states from the authoritative document, resume with its stored strategy and instructions and the currently selected AI profile without re-prompting, omit durable progress claims, and preserve existing rerun and reset confirmations.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Text Chunking UI state derives resume and strategy without durable progress."
   },
   "REQ-NFR-001": {
     "created_on": "2026-07-18 15:49",

@@ -26,7 +26,7 @@ from audiomancer.services import (
     ai_translation_service,
     audio_blocks_service,
     character_voices_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     home_presenter_service,
     narrator_definition_service,
     speech_blocks_service,
@@ -353,7 +353,7 @@ def _build_full_source_text(
     @date       2026-04-23
     @version    0.2.0
     """
-    if not deterministic_chunking_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
+    if not chunking_document_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
         project_root,
         manifest,
     ):

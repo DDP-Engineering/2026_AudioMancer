@@ -24,7 +24,7 @@ from pathlib import Path
 from audiomancer.services import (
     ai_state_note_service,
     character_discovery_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     home_presenter_service,
     ui_state_service,
 )
@@ -105,7 +105,7 @@ def build_character_discovery_state(
             "edit_mode": False,
             "dirty": False,
         }
-    source_chunks = deterministic_chunking_service.load_chunks(project_root)
+    source_chunks = chunking_document_service.load_chunks(project_root)
     operation_state = character_discovery_service.load_operation_state(project_root)
     report = character_discovery_service.load_character_discovery_report(project_root)
     profiles = character_discovery_service.load_character_profiles(project_root)

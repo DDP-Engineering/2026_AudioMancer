@@ -152,3 +152,6 @@ Minimum validation after changes:
 - the returned model remains a dictionary contract shared with the Qt page
 - capability readiness is intentionally tied to the current fixed Qwen3 model
   families
+
+Reviewed for the single-document Chunking contract: narrator source readiness
+uses the strict canonical chunk reader.

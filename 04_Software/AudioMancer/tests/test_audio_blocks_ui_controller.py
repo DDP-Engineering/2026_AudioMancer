@@ -27,6 +27,7 @@ from audiomancer import config
 from audiomancer.services import character_voices_service, project_workspace_service, speech_blocks_service
 from audiomancer.ui.controllers import audio_blocks_ui_controller
 from audiomancer.ui.main_window import MainWindow
+from chunking_test_support import build_chunking_document
 
 
 def test_audio_blocks_ui_controller_requires_confirmation_before_starting(
@@ -713,19 +714,21 @@ def _create_project(tmp_path, name: str):
     character_voices_service.save_selected_voice_language(project_root, "en")
     (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": None,
-                    "text": 'Narration one. "Hello there."',
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                }
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "chapter_label": None,
+                        "text": 'Narration one. "Hello there."',
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    }
+                ]
+            ),
             indent=2,
         )
         + "\n",

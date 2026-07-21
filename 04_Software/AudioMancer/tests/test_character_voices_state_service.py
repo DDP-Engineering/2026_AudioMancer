@@ -29,6 +29,7 @@ from audiomancer.services import (
     narrator_definition_service,
     project_workspace_service,
 )
+from chunking_test_support import build_chunking_document
 
 
 def test_character_voices_state_service_omits_ai_profile_selector_builder() -> None:
@@ -86,10 +87,12 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     )
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "One"},
-                {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Two"},
-            ],
+            build_chunking_document(
+                [
+                    {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "One"},
+                    {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Two"},
+                ]
+            ),
             indent=2,
         )
         + "\n",

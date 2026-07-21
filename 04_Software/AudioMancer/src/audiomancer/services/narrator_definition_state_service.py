@@ -25,8 +25,8 @@ from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
     character_voices_service,
+    chunking_document_service,
     cleanup_metadata_service,
-    deterministic_chunking_service,
     deterministic_cleanup_service,
     home_presenter_service,
     narrator_definition_service,
@@ -406,7 +406,7 @@ def _has_narrator_generation_source_text(project_root: Path | None) -> bool:
     """
     if project_root is None:
         return False
-    if deterministic_chunking_service.load_chunks(project_root):
+    if chunking_document_service.load_chunks(project_root):
         return True
     try:
         translated_chunks = ai_translation_service.load_translated_chunks(project_root)

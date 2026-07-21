@@ -170,3 +170,6 @@ Minimum validation after changes:
 - The helpers return dictionaries rather than typed view models.
 - Some fields are intentionally shaped around current Qt page contracts.
 - Localization is limited to strings already present in the UI state service.
+
+Reviewed for the single-document Chunking contract: translation and character
+page-state builders obtain source chunks through the strict shared reader.

@@ -24,6 +24,7 @@ from audiomancer import config
 from audiomancer.services import character_voices_service, project_workspace_service, speech_blocks_service
 from audiomancer.ui.main_window import MainWindow
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
+from chunking_test_support import build_chunking_document
 
 
 def test_main_window_loads_audio_blocks_state_into_real_page(qtbot, tmp_path, default_settings_payload) -> None:
@@ -83,30 +84,32 @@ def _create_project(tmp_path, name: str):
     character_voices_service.save_selected_voice_language(project_root, "en")
     (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": None,
-                    "text": "Narration one.",
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-                {
-                    "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "chapter_label": None,
-                    "text": '"Alice spoke."',
-                    "source_start_line": 2,
-                    "source_end_line": 2,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-            ],
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "chapter_label": None,
+                        "text": "Narration one.",
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "chapter_label": None,
+                        "text": '"Alice spoke."',
+                        "source_start_line": 2,
+                        "source_end_line": 2,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                ]
+            ),
             indent=2,
         )
         + "\n",

@@ -47,6 +47,11 @@ workflow artifact.
 
 ## 6. Data Contracts
 
+AI profile and context-budget settings remain application settings, not fields
+in `chunks_text.json`. A resumable AI Chunking run uses the currently selected
+enabled profile and current runtime budget while retaining strategy and operator
+instructions from the Chunking document.
+
 - Settings remain a UTF-8 JSON object. Missing files receive defaults; invalid
   supported values are repaired, while unknown future keys are preserved unless
   an explicit migration removes them.

@@ -65,8 +65,9 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     ),
     "chunking": (
         config.CHUNK_ARTIFACT_FILE_NAME,
-        config.CHUNKING_REPORT_FILE_NAME,
-        config.CHUNKING_STATE_FILE_NAME,
+        # Cleanup-only legacy sidecars; Chunking never reads or writes them.
+        "chunking_report.json",
+        "chunking_state.json",
     ),
     "translation": (
         config.TRANSLATED_CHUNKS_FILE_NAME,
@@ -108,7 +109,6 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
 # @brief Optional operation-state file names that may be initialized on first page open.
 _OPERATION_STATE_FILE_NAMES = {
     "extraction": config.EXTRACTION_STATE_FILE_NAME,
-    "chunking": config.CHUNKING_STATE_FILE_NAME,
     "character_discovery": config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     "speech_blocks": config.SPEECH_BLOCKS_STATE_FILE_NAME,
     "audio_blocks": config.AUDIO_BLOCKS_STATE_FILE_NAME,

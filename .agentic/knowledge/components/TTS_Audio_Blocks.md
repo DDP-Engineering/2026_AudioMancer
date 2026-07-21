@@ -32,6 +32,9 @@ Artifact helpers own safe names/paths and WAV inspection. The main service coord
 
 ## 6. Data Contracts
 
+Chunk-source readiness is derived through the shared strict Chunking document
+reader; stale legacy sidecars cannot make Audio Blocks appear ready.
+
 - Generated audio uses stable block ordering and project-local artifact paths; WAV format/metadata must pass validation before downstream assembly.
 - Runtime capabilities, budgets, progress and completed block IDs are persisted for truthful resume rather than inferred from a partially generated plan.
 - Audio Block identity is its `speech_block_id`; compact records retain source

@@ -26,6 +26,7 @@ from audiomancer import config
 from audiomancer.services import ai_translation_service, project_workspace_service
 from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.main_window import MainWindow
+from chunking_test_support import build_chunking_document
 
 # PUBLIC API
 
@@ -176,7 +177,11 @@ def _create_project(tmp_path, name: str):
     manifest["target_language"] = "ro"
     project_workspace_service.save_manifest(manifest, project_root)
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps([{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original"}], indent=2) + "\n",
+        json.dumps(
+            build_chunking_document([{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original"}]),
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     return project_root, manifest

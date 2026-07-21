@@ -27,7 +27,7 @@ from audiomancer.services import (
     ai_translation_service,
     audio_blocks_service,
     character_voices_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     home_presenter_service,
     narrator_definition_service,
     speech_blocks_service,
@@ -121,7 +121,7 @@ def build_speech_blocks_state(
     selected_profile_id = _persisted_profile_id(report, operation_state)
     profile_state = build_speech_blocks_profile_state(settings_payload, selected_profile_id)
 
-    if not deterministic_chunking_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
+    if not chunking_document_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
         project_root,
         manifest,
     ):

@@ -31,7 +31,7 @@ from audiomancer.services import (
     audio_assembly_service,
     character_discovery_service,
     character_voices_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     deterministic_cleanup_service,
     narrator_definition_service,
     speech_blocks_service,
@@ -435,10 +435,11 @@ def _build_text_chunks_document(project_root: Path, manifest: dict[str, object])
     @date       2026-04-25
     @version    0.1.0
     """
-    report = deterministic_chunking_service.load_chunking_report(project_root) or {}
-    state = deterministic_chunking_service.load_operation_state(project_root) or {}
+    document = chunking_document_service.load_chunking_document(project_root)
+    report = {} if document is None else chunking_document_service.derive_report(document)
+    state = {} if document is None else chunking_document_service.derive_operation_state(document)
     metadata = _metadata_from_state(state)
-    chunks = _sorted_by_sequence(deterministic_chunking_service.load_chunks(project_root))
+    chunks = _sorted_by_sequence(chunking_document_service.load_chunks(project_root))
     chunk_texts = [str(chunk.get("text", "")).strip() for chunk in chunks if str(chunk.get("text", "")).strip()]
     combined_text = "\n\n----\n\n".join(chunk_texts)
     parameters = _compact_fields(
@@ -581,7 +582,7 @@ def _build_speech_blocks_document(project_root: Path, manifest: dict[str, object
     source_chunks = (
         ai_translation_service.load_translated_chunks(project_root)
         if source_kind == "translated_chunks"
-        else deterministic_chunking_service.load_chunks(project_root)
+        else chunking_document_service.load_chunks(project_root)
     )
     source_chunk_count = len(source_chunks) if source_chunks else None
     parameters = _compact_fields(
@@ -770,7 +771,7 @@ def _artifact_ready(project_root: Path, export_kind: str) -> bool:
     if export_kind == EXPORT_KIND_CLEANED_TEXT:
         return bool(artifact_path.read_text(encoding="utf-8").strip())
     if export_kind == EXPORT_KIND_TEXT_CHUNKS:
-        return bool(deterministic_chunking_service.load_chunks(project_root))
+        return bool(chunking_document_service.load_chunks(project_root))
     if export_kind == EXPORT_KIND_AI_TRANSLATION:
         return any(
             str(item.get("translated_text", "")).strip()

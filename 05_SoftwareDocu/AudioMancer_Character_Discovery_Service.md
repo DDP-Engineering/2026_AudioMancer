@@ -422,3 +422,6 @@ Minimum validation after a change:
   depends on how much direct textual evidence exists for each character
 - the final voice-definition prompt is generated locally and deterministically;
   there is no second AI refinement pass dedicated only to voice design
+
+Reviewed for the single-document Chunking contract: canonical source text and
+ordering are loaded through `chunking_document_service` only.

@@ -31,7 +31,7 @@ from audiomancer.services import (
     ai_translation_service,
     character_discovery_service,
     character_voices_service,
-    deterministic_chunking_service,
+    chunking_document_service,
     llm_provider_service,
     narrator_definition_service,
     project_workspace_service,
@@ -227,7 +227,7 @@ def resolve_source_chunks(
     """
     resolved_project_root = Path(project_root)
     original_chunks = sorted(
-        deterministic_chunking_service.load_chunks(resolved_project_root),
+        chunking_document_service.load_chunks(resolved_project_root),
         key=lambda item: int(item.get("sequence_index", 0)),
     )
     if not original_chunks:

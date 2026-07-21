@@ -22,6 +22,7 @@ import json
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service, text_chunking_state_service
+from chunking_test_support import build_chunking_document, write_chunking_document
 
 
 def test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking() -> None:
@@ -162,19 +163,9 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
     chunk_artifact_path = chunking_root / config.CHUNK_ARTIFACT_FILE_NAME
-    chunk_artifact_path.write_text(
-        json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "text": "Original chunk",
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    write_chunking_document(
+        chunking_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original chunk"}],
     )
     translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     translation_root.mkdir(exist_ok=True)
@@ -225,8 +216,9 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
         "Edited chunk",
     )
 
-    chunks = json.loads(chunk_artifact_path.read_text(encoding="utf-8"))
-    assert chunks[0]["text"] == "Edited chunk"
+    document = json.loads(chunk_artifact_path.read_text(encoding="utf-8"))
+    assert document["chunks"][0]["text"] == "Edited chunk"
+    assert document["manual_adjusted"] is True
     assert updated_manifest["current_stage"] == "translation_ready"
     assert updated_manifest["operations"]["chunking"]["status"] == "completed"
     assert updated_manifest["operations"]["translation"]["status"] == "in_progress"
@@ -275,7 +267,7 @@ def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> 
         "chunk-0001",
     )
 
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert [chunk["chunk_id"] for chunk in chunks] == ["chunk-0001", "chunk-0003", "chunk-0002"]
     assert [chunk["sequence_index"] for chunk in chunks] == [1, 2, 3]
     translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))[
@@ -308,14 +300,19 @@ def test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist(tmp_path) 
         "",
     )
 
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert len(chunks) == 1
     assert chunks[0]["chunk_id"] == "chunk-0001"
     assert chunks[0]["sequence_index"] == 1
     assert chunks[0]["text"] == ""
-    assert chunks[0]["source_start_line"] == 1
-    assert chunks[0]["source_end_line"] == 2
-    assert chunks[0]["chunking_mode"] == "manual"
+    assert set(chunks[0]) == {
+        "chunk_id",
+        "sequence_index",
+        "text",
+        "cleanup_boundary_confidence",
+        "cleanup_joined_across_page_break",
+        "cleanup_warning_flags",
+    }
     assert updated_manifest["current_stage"] == "translation_ready"
 
 
@@ -338,7 +335,7 @@ def test_delete_chunk_removes_only_selected_translation_record(tmp_path) -> None
 
     text_chunking_state_service.delete_selected_chunk(project_root, manifest, "chunk-0001")
 
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert [chunk["chunk_id"] for chunk in chunks] == ["chunk-0002"]
     assert chunks[0]["sequence_index"] == 1
     translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))[
@@ -373,7 +370,7 @@ def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
         for index, text in enumerate(texts, start=1)
     ]
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps(chunks, indent=2) + "\n",
+        json.dumps(build_chunking_document(chunks), indent=2) + "\n",
         encoding="utf-8",
     )
 
