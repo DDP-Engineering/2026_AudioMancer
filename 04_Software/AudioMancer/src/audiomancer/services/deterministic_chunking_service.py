@@ -88,6 +88,7 @@ def chunk_text(
     @exception  FileNotFoundError Raised when the cleaned input is missing.
     @exception  ValueError Raised when no chunkable paragraphs remain.
     @exception  OperationCancelledError Raised when the operator cancels the run.
+    @exception  IncompatibleChunkingDocumentError Raised for incompatible data; reset Chunking first.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
     @version    0.3.0

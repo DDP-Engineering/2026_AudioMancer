@@ -57,8 +57,9 @@ def build_text_chunking_state(
     @param[in]  project_root Active project root or `None`.
     @param[in]  manifest Active project manifest or `None`.
     @param[in]  language Current UI language code.
+    @param[in]  settings_payload Validated application settings payload.
     @return     Keyword payload for `TextChunkingPage.set_processing_state`.
-    @exception  None
+    @exception  ValueError Raised when cleaned text is unavailable for manual chunk insertion.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
     @version    0.3.0

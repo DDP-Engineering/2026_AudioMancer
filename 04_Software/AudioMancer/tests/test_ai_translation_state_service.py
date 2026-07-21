@@ -28,7 +28,11 @@ from chunking_test_support import build_chunking_document
 
 
 def test_build_ai_translation_profile_state_prefers_default_translation_profile() -> None:
-    """Verify profile state prefers the enabled translation default."""
+    """
+    @brief      Verify profile state prefers the enabled translation default.
+    @return     None.
+    @version    0.1.0
+    """
     profile_state = ai_translation_state_service.build_ai_translation_profile_state(
         {
             "llm_profiles": [
@@ -43,7 +47,13 @@ def test_build_ai_translation_profile_state_prefers_default_translation_profile(
 
 
 def test_build_ai_translation_state_is_read_only(monkeypatch, tmp_path) -> None:
-    """Verify REQ-FUNC-005 page-state construction never persists translation data."""
+    """
+    @brief      Verify REQ-FUNC-005 page-state construction never persists translation data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_project(tmp_path, "TranslationStateReadOnly")
     ai_translation_service.write_translation_document(
         project_root,
@@ -52,7 +62,14 @@ def test_build_ai_translation_state_is_read_only(monkeypatch, tmp_path) -> None:
     writes = []
 
     def fail_on_write(*args, **kwargs):
-        """Fail when page-state construction attempts an authoritative write."""
+        """
+        @brief      Fail when page-state construction attempts an authoritative write.
+        @param[in]  args Positional arguments forwarded to the test double.
+        @param[in]  kwargs Keyword arguments forwarded to the test double.
+        @return     None.
+        @exception  AssertionError Raised when unexpected translation write.
+        @version    0.1.0
+        """
         writes.append((args, kwargs))
         raise AssertionError("Unexpected translation write")
 
@@ -68,7 +85,12 @@ def test_build_ai_translation_state_is_read_only(monkeypatch, tmp_path) -> None:
 
 
 def test_build_ai_translation_state_derives_counts_and_status(tmp_path) -> None:
-    """Verify REQ-FUNC-005 counts and completed status are derived, not persisted."""
+    """
+    @brief      Verify REQ-FUNC-005 counts and completed status are derived, not persisted.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_project(tmp_path, "TranslationStateDerived")
     document = _document(ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING)
     document["chunks"][0]["approved"] = True
@@ -92,7 +114,12 @@ def test_build_ai_translation_state_derives_counts_and_status(tmp_path) -> None:
 
 
 def test_build_ai_translation_state_surfaces_incompatible_document(tmp_path) -> None:
-    """Verify REQ-FUNC-005 incompatible persistence becomes a reset-required UI state."""
+    """
+    @brief      Verify REQ-FUNC-005 incompatible persistence becomes a reset-required UI state.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_project(tmp_path, "TranslationStateInvalid")
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
 
@@ -109,7 +136,12 @@ def test_build_ai_translation_state_surfaces_incompatible_document(tmp_path) -> 
 
 
 def test_translation_summary_requires_canonical_chunk_id_alignment(tmp_path) -> None:
-    """Verify REQ-FUNC-005 unknown document chunks cannot make canonical input complete."""
+    """
+    @brief      Verify REQ-FUNC-005 unknown document chunks cannot make canonical input complete.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "TranslationStateAlignment")
     document = _document(ai_translation_service.TRANSLATION_STATUS_COMPLETED)
     document["chunks"][0]["approved"] = True
@@ -131,7 +163,13 @@ def test_translation_summary_requires_canonical_chunk_id_alignment(tmp_path) -> 
 
 
 def _create_project(tmp_path, name: str):
-    """Create one project with two canonical chunks."""
+    """
+    @brief      Create one project with two canonical chunks.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  name Stable name associated with the requested object.
+    @return     Created project root and manifest payload.
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",

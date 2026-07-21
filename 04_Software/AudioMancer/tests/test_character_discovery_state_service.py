@@ -125,6 +125,7 @@ def test_build_character_state_uses_loaded_chunks_without_discovery_enrichment(m
 def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
     """
     @brief      Validate build character state requires ai profile to start.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -186,6 +187,8 @@ def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
 def _create_project(tmp_path, name: str):
     """
     @brief      Provide the create project test helper.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  name Stable name associated with the requested object.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare

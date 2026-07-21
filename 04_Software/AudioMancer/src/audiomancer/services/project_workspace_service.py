@@ -116,10 +116,11 @@ def create_project(
     @param[in]  name Operator-facing project name and folder name.
     @param[in]  parent_path Existing parent directory selected by the operator.
     @return     Tuple of created project root path and manifest payload.
-    @exception  None
+    @exception  FileNotFoundError Raised when the selected parent folder does not exist.
+    @exception  FileExistsError Raised when the target project folder is not empty.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-        @version    0.5.0
+    @version    0.5.0
     """
     validate_project_name(name)
     resolved_parent = Path(parent_path)
@@ -148,7 +149,7 @@ def save_manifest(
     @param[in,out] manifest Manifest payload updated with a fresh timestamp.
     @param[in]  project_root Active project root folder.
     @return     None.
-    @exception  None
+    @exception  ValueError Raised when folder-based repair is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
     @version    0.3.1
@@ -419,7 +420,13 @@ def project_manifest_operation_summary(
     operation_kind: str,
     operation_payload: object | None = None,
 ) -> dict[str, object]:
-    """Project detailed operation data into its compact ``project.json`` summary."""
+    """
+    @brief      Project detailed operation data into its compact ``project.json`` summary.
+    @param[in]  operation_kind Stable operation-kind token.
+    @param[in]  operation_payload Optional detailed operation payload.
+    @return     Compact operation summary suitable for `project.json`.
+    @version    0.1.0
+    """
     default_summary = _default_operation_state(operation_kind)
     if not isinstance(operation_payload, dict):
         return default_summary
@@ -710,7 +717,13 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
 
 
 def _cleanup_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
-    """Verify completed AI, deterministic, or manual Cleanup artifacts."""
+    """
+    @brief      Verify completed AI, deterministic, or manual Cleanup artifacts.
+    @param[in]  project_root Active project root folder.
+    @param[in]  warnings Ordered persisted contract warnings.
+    @return     Cleanup completion evidence, or None when cleanup is incomplete.
+    @version    0.1.0
+    """
     _ = warnings
     cleanup_document_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
     cleanup_document = _load_json_artifact(project_root, config.CLEANUP_DOCUMENT_FILE_NAME)
@@ -1808,7 +1821,12 @@ def _build_default_operation_states() -> dict[str, dict[str, object]]:
 
 
 def _default_operation_state(operation_kind: str) -> dict[str, object]:
-    """Build the compact default manifest summary for one operation."""
+    """
+    @brief      Build the compact default manifest summary for one operation.
+    @param[in]  operation_kind Stable operation-kind token.
+    @return     Default compact state for the requested operation kind.
+    @version    0.1.0
+    """
     if operation_kind == "cleanup":
         return {
             "status": "not_started",

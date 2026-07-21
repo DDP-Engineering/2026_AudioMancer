@@ -213,6 +213,7 @@ def handle_save_character_requested(
     @param[in]  show_progress True to show the synchronous save progress dialog.
     @return     `True` when the character was saved successfully.
     @exception  ValueError Propagated from manual-name validation helpers.
+    @exception  RuntimeError Raised when could not persist the new manual character profile.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
     @version    0.5.0
@@ -428,6 +429,13 @@ def _start_character_save_progress(
     misc_ui_controller.process_pending_ui_events()
 
     def _update(percent: int, message_key: str) -> None:
+        """
+        @brief      Update the active Character Discovery progress dialog.
+        @param[in]  percent Progress percentage displayed to the operator.
+        @param[in]  message_key Translation key for the progress message.
+        @return     None.
+        @version    0.1.0
+        """
         misc_ui_controller.update_progress_dialog(
             window,
             percent,

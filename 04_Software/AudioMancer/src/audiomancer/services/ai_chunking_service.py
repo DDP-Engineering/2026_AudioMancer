@@ -102,6 +102,7 @@ def chunk_text(
     @exception  FileNotFoundError Raised when the cleaned input is missing.
     @exception  ValueError Raised on missing profile data or unusable cleaned text.
     @exception  OperationCancelledError Raised when the operator cancels the run.
+    @exception  IncompatibleChunkingDocumentError Raised when cleaned text changed; reset Chunking first.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-16
     @version    1.0.0
@@ -676,6 +677,7 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
     """
     @brief      Build the paragraph records.
     @param[in]  cleaned_text Text value for `cleaned_text`.
+    @param[in]  project_root Active project root folder.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
@@ -1107,6 +1109,27 @@ def _write_descriptor_state(
 ) -> None:
     """
     @brief      Persist one descriptor-contract AI chunking checkpoint.
+    @param[in]  state_path Filesystem path for state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Filesystem path for input snapshot.
+    @param[in]  output_path Filesystem path for output.
+    @param[in]  started_at ISO-8601 timestamp marking operation start.
+    @param[in]  progress_current Number of processing units completed so far.
+    @param[in]  progress_total Total number of processing units expected.
+    @param[in]  chunks Ordered canonical chunk payloads.
+    @param[in]  profile_id Stable AI profile identifier.
+    @param[in]  semantic_strategy Selected semantic chunking strategy token.
+    @param[in]  input_fingerprint Stable fingerprint of the canonical input text.
+    @param[in]  log_relative_path Filesystem path for log relative.
+    @param[in]  token_usage Cumulative AI token-usage metadata.
+    @param[in]  budget_metadata Context-window budgeting metadata for the selected profile.
+    @param[in]  profile_runtime_metadata Runtime metadata for the selected AI profile.
+    @param[in]  profile_usage_history Ordered AI profile usage history.
+    @param[in]  next_paragraph Absolute index of the next paragraph awaiting processing.
+    @param[in]  additional_chunking_instructions_fingerprint Supplemental-instructions fingerprint.
+    @param[in]  context_window_fallback_count Number of context-window fallback retries.
+    @param[in]  status Operation status token under evaluation.
+    @param[in]  completed_at Optional ISO-8601 operation completion timestamp.
     @return     None.
     @exception  OSError Raised when state persistence fails.
     @author     Eng. Dan Dumitru Pasare
