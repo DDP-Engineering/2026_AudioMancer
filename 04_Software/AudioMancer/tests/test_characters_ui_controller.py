@@ -542,6 +542,8 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
 def _create_project(tmp_path, name: str):
     """
     @brief      Provide the create project test helper.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  name Stable name associated with the requested object.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare

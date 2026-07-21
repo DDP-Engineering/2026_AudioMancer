@@ -290,6 +290,8 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
     def _counting_write_document(output_root, document):
         """
         @brief      Count chunk-artifact writes while preserving real persistence.
+        @param[in]  output_root Temporary output root used by the export test double.
+        @param[in]  document Authoritative operation document payload.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare

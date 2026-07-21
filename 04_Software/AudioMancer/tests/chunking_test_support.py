@@ -41,6 +41,19 @@ def write_chunking_document(
 ) -> Path:
     """
     @brief Write a strict Chunking document from compact test records.
+    @param[in]  document_root Candidate root object of the strict chunking document.
+    @param[in]  chunks Ordered canonical chunk payloads.
+    @param[in]  mode Stable chunking mode token.
+    @param[in]  semantic_strategy Selected semantic chunking strategy token.
+    @param[in]  manual_adjusted Whether an operator manually changed canonical chunks.
+    @param[in]  source_text Canonical source text processed by the callable.
+    @param[in]  status Operation status token under evaluation.
+    @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
+    @param[in]  token_usage Cumulative AI token-usage metadata.
+    @param[in]  warnings Ordered persisted contract warnings.
+    @param[in]  next_paragraph Absolute index of the next paragraph awaiting processing.
+    @param[in]  context_window_fallback_count Number of context-window fallback retries.
+    @return     Resolved filesystem path.
     @version 0.1.0
     """
     document = build_chunking_document(
@@ -77,6 +90,18 @@ def build_chunking_document(
 ) -> dict[str, object]:
     """
     @brief Build a strict Chunking document from compact test records.
+    @param[in]  chunks Ordered canonical chunk payloads.
+    @param[in]  mode Stable chunking mode token.
+    @param[in]  semantic_strategy Selected semantic chunking strategy token.
+    @param[in]  manual_adjusted Whether an operator manually changed canonical chunks.
+    @param[in]  source_text Canonical source text processed by the callable.
+    @param[in]  status Operation status token under evaluation.
+    @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
+    @param[in]  token_usage Cumulative AI token-usage metadata.
+    @param[in]  warnings Ordered persisted contract warnings.
+    @param[in]  next_paragraph Absolute index of the next paragraph awaiting processing.
+    @param[in]  context_window_fallback_count Number of context-window fallback retries.
+    @return     Constructed chunking document.
     @version 0.1.0
     """
     normalized_chunks = [_normalize_chunk(item, index) for index, item in enumerate(chunks, start=1)]
@@ -110,6 +135,9 @@ def build_chunking_document(
 def read_chunking_document(document_root: str | Path) -> dict[str, object]:
     """
     @brief Read one strict Chunking document fixture.
+    @param[in]  document_root Candidate root object of the strict chunking document.
+    @return     Loaded chunking document.
+    @exception  AssertionError Raised when expected a strict Chunking document fixture.
     @version 0.1.0
     """
     payload = json.loads((Path(document_root) / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
@@ -121,6 +149,9 @@ def read_chunking_document(document_root: str | Path) -> dict[str, object]:
 def _normalize_chunk(item: dict[str, object], sequence_index: int) -> dict[str, object]:
     """
     @brief Project a compact test record into the exact chunk field set.
+    @param[in]  item Candidate list item being validated.
+    @param[in]  sequence_index Expected zero-based canonical sequence position.
+    @return     Normalized chunk.
     @version 0.1.0
     """
     return {
@@ -136,6 +167,8 @@ def _normalize_chunk(item: dict[str, object], sequence_index: int) -> dict[str, 
 def _inferred_mode(chunks: list[dict[str, object]]) -> str:
     """
     @brief Infer a valid document-level mode from optional compact fixture metadata.
+    @param[in]  chunks Ordered canonical chunk payloads.
+    @return     Inferred strict chunking mode token.
     @version 0.1.0
     """
     if chunks and chunks[0].get("chunking_mode") == "ai_assisted":

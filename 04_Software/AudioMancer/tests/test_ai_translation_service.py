@@ -30,7 +30,13 @@ from chunking_test_support import build_chunking_document
 
 
 def test_translation_document_is_the_only_authoritative_artifact(monkeypatch, tmp_path) -> None:
-    """Verify REQ-FUNC-004 persists only the strict authoritative document."""
+    """
+    @brief      Verify REQ-FUNC-004 persists only the strict authoritative document.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationMonofile")
     _install_translations(monkeypatch, ["Traducerea unu", "Traducerea doi"])
 
@@ -66,7 +72,13 @@ def test_translation_document_is_the_only_authoritative_artifact(monkeypatch, tm
 
 
 def test_translation_resume_uses_first_empty_chunk_and_current_profile_budget(monkeypatch, tmp_path) -> None:
-    """Verify REQ-FUNC-004 resume skips completed chunks and uses the current profile."""
+    """
+    @brief      Verify REQ-FUNC-004 resume skips completed chunks and uses the current profile.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationResume")
     ai_translation_service.write_translation_document(
         project_root,
@@ -119,7 +131,15 @@ def test_translation_cancel_and_failure_preserve_completed_chunks(
     raised_error,
     expected_status,
 ) -> None:
-    """Verify REQ-FUNC-004 terminal interruption keeps prior completed chunks."""
+    """
+    @brief      Verify REQ-FUNC-004 terminal interruption keeps prior completed chunks.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  raised_error Controlled exception used to exercise a failure path.
+    @param[in]  expected_status Expected status used by the assertion.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, f"Translation{expected_status}")
     responses = iter(
         [
@@ -129,7 +149,14 @@ def test_translation_cancel_and_failure_preserve_completed_chunks(
     )
 
     def fake_chat_json(*_args, **_kwargs):
-        """Return one translation and then raise the requested terminal error."""
+        """
+        @brief      Return one translation and then raise the requested terminal error.
+        @param[in]  _args Ignored positional arguments accepted by the test double.
+        @param[in]  _kwargs Ignored keyword arguments accepted by the test double.
+        @return     Controlled AI chat response payload.
+        @exception  Exception Raised when the next controlled response is an exception.
+        @version    0.1.0
+        """
         response = next(responses)
         if isinstance(response, Exception):
             raise response
@@ -149,7 +176,13 @@ def test_translation_cancel_and_failure_preserve_completed_chunks(
 
 
 def test_retranslate_failure_preserves_previous_translation(monkeypatch, tmp_path) -> None:
-    """Verify REQ-FUNC-004 failed retranslation does not destroy approved text."""
+    """
+    @brief      Verify REQ-FUNC-004 failed retranslation does not destroy approved text.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationSafeRetranslate")
     ai_translation_service.write_translation_document(
         project_root,
@@ -193,7 +226,13 @@ def test_retranslate_failure_preserves_previous_translation(monkeypatch, tmp_pat
 
 
 def test_same_language_translation_uses_llm(monkeypatch, tmp_path) -> None:
-    """Verify REQ-FUNC-004 same-language translation remains AI-assisted."""
+    """
+    @brief      Verify REQ-FUNC-004 same-language translation remains AI-assisted.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationSameLanguage")
     manifest["original_language"] = "en"
     calls = _install_translations(monkeypatch, ["Rewritten one", "Rewritten two"])
@@ -207,14 +246,27 @@ def test_same_language_translation_uses_llm(monkeypatch, tmp_path) -> None:
 
 
 def test_translation_document_writes_once_per_completed_chunk_and_review_action(monkeypatch, tmp_path) -> None:
-    """Verify REQ-NFR-016 uses one atomic document write per durable event."""
+    """
+    @brief      Verify REQ-NFR-016 uses one atomic document write per durable event.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationWriteCount")
     _install_translations(monkeypatch, ["Traducere unu", "Traducere doi"])
     writes = []
     original_writer = ai_translation_service.write_json_atomic
 
     def spy_write(path, payload, **kwargs):
-        """Record authoritative document writes while preserving persistence."""
+        """
+        @brief      Record authoritative document writes while preserving persistence.
+        @param[in]  path Filesystem path for path.
+        @param[in]  payload Candidate structured payload.
+        @param[in]  kwargs Keyword arguments forwarded to the test double.
+        @return     None.
+        @version    0.1.0
+        """
         writes.append(path)
         original_writer(path, payload, **kwargs)
 
@@ -228,7 +280,12 @@ def test_translation_document_writes_once_per_completed_chunk_and_review_action(
 
 
 def test_invalid_or_legacy_translation_document_is_rejected_without_overwrite(tmp_path) -> None:
-    """Verify REQ-NFR-016 incompatible data is rejected and left untouched."""
+    """
+    @brief      Verify REQ-NFR-016 incompatible data is rejected and left untouched.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationStrictLoad")
     translation_path = project_root / config.TRANSLATED_CHUNKS_FILE_NAME
     legacy_text = json.dumps([{"chunk_id": "chunk-0001", "translated_text": "Legacy"}]) + "\n"
@@ -241,7 +298,11 @@ def test_invalid_or_legacy_translation_document_is_rejected_without_overwrite(tm
 
 
 def test_translation_budget_reserves_output_and_rejects_insufficient_input() -> None:
-    """Verify current-profile budgeting reserves output capacity before requests."""
+    """
+    @brief      Verify current-profile budgeting reserves output capacity before requests.
+    @return     None.
+    @version    0.1.0
+    """
     small = ai_translation_service._build_budget_metadata(
         {**_profile_payload(), "context_window": 8192, "max_output_tokens": 512},
         "ro",
@@ -263,12 +324,26 @@ def test_translation_budget_reserves_output_and_rejects_insufficient_input() -> 
 
 
 def test_translation_prompt_has_stable_rules_and_minimal_user_contract(monkeypatch, tmp_path) -> None:
-    """Verify REQ-FUNC-004 keeps stable rules separate from per-request translation data."""
+    """
+    @brief      Verify REQ-FUNC-004 keeps stable rules separate from per-request translation data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationPromptContract")
     captured: list[tuple[str, str]] = []
 
     def fake_chat_json(_profile, system_prompt, user_prompt, **_kwargs):
-        """Capture both prompt roles and return a valid minimal response."""
+        """
+        @brief      Capture both prompt roles and return a valid minimal response.
+        @param[in]  _profile AI profile argument intentionally unused by the test double.
+        @param[in]  system_prompt Rendered system prompt for the AI request.
+        @param[in]  user_prompt Rendered user prompt inspected by the test double.
+        @param[in]  _kwargs Ignored keyword arguments accepted by the test double.
+        @return     Controlled AI chat response payload.
+        @version    0.1.0
+        """
         captured.append((system_prompt, user_prompt))
         return {"payload": {"translated_text": "Traducere"}, "usage": _usage(10, 5)}
 
@@ -295,7 +370,12 @@ def test_translation_prompt_has_stable_rules_and_minimal_user_contract(monkeypat
 
 
 def test_manual_translation_edit_preserves_operator_whitespace(tmp_path) -> None:
-    """Verify REQ-FUNC-004 manual review persists the operator's exact text value."""
+    """
+    @brief      Verify REQ-FUNC-004 manual review persists the operator's exact text value.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, _manifest = _create_chunked_project(tmp_path, "TranslationWhitespace")
     ai_translation_service.write_translation_document(
         project_root,
@@ -320,7 +400,13 @@ def test_manual_translation_edit_preserves_operator_whitespace(tmp_path) -> None
 
 
 def test_partial_segment_failure_preserves_usage_without_partial_chunk(monkeypatch, tmp_path) -> None:
-    """Verify REQ-FUNC-004 a failed later segment keeps usage but no partial chunk text."""
+    """
+    @brief      Verify REQ-FUNC-004 a failed later segment keeps usage but no partial chunk text.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationSegmentFailure")
     monkeypatch.setattr(
         ai_translation_service,
@@ -335,7 +421,14 @@ def test_partial_segment_failure_preserves_usage_without_partial_chunk(monkeypat
     )
 
     def fake_chat_json(*_args, **_kwargs):
-        """Return one paid segment and fail the next segment."""
+        """
+        @brief      Return one paid segment and fail the next segment.
+        @param[in]  _args Ignored positional arguments accepted by the test double.
+        @param[in]  _kwargs Ignored keyword arguments accepted by the test double.
+        @return     Controlled AI chat response payload.
+        @exception  Exception Raised when the next controlled response is an exception.
+        @version    0.1.0
+        """
         response = next(responses)
         if isinstance(response, Exception):
             raise response
@@ -357,12 +450,26 @@ def test_partial_segment_failure_preserves_usage_without_partial_chunk(monkeypat
 
 
 def _install_translations(monkeypatch, translations: list[str]) -> list[str]:
-    """Install deterministic provider responses and return captured user prompts."""
+    """
+    @brief      Install deterministic provider responses and return captured user prompts.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  translations Ordered controlled translation responses.
+    @return     Callable returning controlled translation responses.
+    @version    0.1.0
+    """
     captured_prompts: list[str] = []
     responses = iter(translations)
 
     def fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
-        """Return the next deterministic translation response."""
+        """
+        @brief      Return the next deterministic translation response.
+        @param[in]  _profile AI profile argument intentionally unused by the test double.
+        @param[in]  _system_prompt System prompt intentionally unused by the test double.
+        @param[in]  user_prompt Rendered user prompt inspected by the test double.
+        @param[in]  _kwargs Ignored keyword arguments accepted by the test double.
+        @return     Controlled AI chat response payload.
+        @version    0.1.0
+        """
         captured_prompts.append(user_prompt)
         return {"payload": {"translated_text": next(responses)}, "usage": _usage(10, 5)}
 
@@ -371,7 +478,13 @@ def _install_translations(monkeypatch, translations: list[str]) -> list[str]:
 
 
 def _create_chunked_project(tmp_path, name: str):
-    """Create one project with two canonical source chunks."""
+    """
+    @brief      Create one project with two canonical source chunks.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  name Stable name associated with the requested object.
+    @return     Created project root and manifest payload.
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",

@@ -1610,6 +1610,8 @@ def _legacy_group_character_candidates_by_identity(
 def _create_character_project(tmp_path, project_name: str):
     """
     @brief      Provide the create character project test helper.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  project_name Unique project name used by the test fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare

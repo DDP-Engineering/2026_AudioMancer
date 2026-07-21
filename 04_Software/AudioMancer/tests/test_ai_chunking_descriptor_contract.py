@@ -260,6 +260,8 @@ def test_descriptor_validation_rejects_the_entire_invalid_response(chunks) -> No
 def test_valid_non_final_split_advances_from_the_last_break_and_closes_final_remainder(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify S-0002 and REQ-FUNC-065 re-submit the tail and close the remainder.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
     @version    0.1.0
     """
@@ -302,6 +304,8 @@ def test_valid_non_final_split_advances_from_the_last_break_and_closes_final_rem
 def test_empty_non_final_response_commits_one_fallback_window_and_reports_it(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify S-0002/S-0003 and REQ-FUNC-065 report one non-final fallback.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
     @version    0.1.0
     """
@@ -338,6 +342,8 @@ def test_invalid_non_final_response_is_an_atomic_fallback_and_boundary_at_window
 ) -> None:
     """
     @brief      Verify S-0001/S-0002 atomic fallback and window-end advancement.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
     @version    0.1.0
     """
@@ -379,6 +385,8 @@ def test_invalid_non_final_response_is_an_atomic_fallback_and_boundary_at_window
 def test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify S-0003 and REQ-FUNC-065 resume only the new descriptor checkpoint.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
     @version    0.1.0
     """
@@ -431,6 +439,8 @@ def test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usag
 def test_old_break_id_checkpoint_restarts_from_paragraph_one(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify S-0003 and REQ-FUNC-065 restart checkpoints from the removed contract.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
     @version    0.1.0
     """

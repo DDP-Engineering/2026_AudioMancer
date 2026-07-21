@@ -95,7 +95,10 @@ TranslationDocumentPayload = dict[str, object]
 
 
 class TranslationDocumentError(ValueError):
-    """Raised when persisted translation data does not match the strict contract."""
+    """
+    @brief      Raised when persisted translation data does not match the strict contract.
+    @version    0.1.0
+    """
 
 
 # PUBLIC API
@@ -103,7 +106,13 @@ class TranslationDocumentError(ValueError):
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def load_translation_document(project_root: str | Path) -> TranslationDocumentPayload | None:
-    """Load and strictly validate the authoritative translation document."""
+    """
+    @brief      Load and strictly validate the authoritative translation document.
+    @param[in]  project_root Active project root folder.
+    @return     Loaded translation document.
+    @exception  Exception Raised when the file is not valid JSON.
+    @version    0.1.0
+    """
     document_path = build_operation_output_path(
         project_root,
         "translation",
@@ -124,7 +133,13 @@ def write_translation_document(
     project_root: str | Path,
     document: TranslationDocumentPayload,
 ) -> Path:
-    """Validate and atomically persist the authoritative translation document."""
+    """
+    @brief      Validate and atomically persist the authoritative translation document.
+    @param[in]  project_root Active project root folder.
+    @param[in]  document Authoritative operation document payload.
+    @return     Resolved filesystem path.
+    @version    0.1.0
+    """
     _validate_translation_document(document)
     document_path = build_operation_output_path(
         project_root,
@@ -137,7 +152,12 @@ def write_translation_document(
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
-    """Return minimal translated chunk records from the authoritative document."""
+    """
+    @brief      Return minimal translated chunk records from the authoritative document.
+    @param[in]  project_root Active project root folder.
+    @return     Loaded translated chunks.
+    @version    0.1.0
+    """
     document = load_translation_document(project_root)
     if document is None:
         return []
@@ -146,7 +166,12 @@ def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def load_translation_summary(project_root: str | Path) -> dict[str, object]:
-    """Build the effective translation summary without mutating project data."""
+    """
+    @brief      Build the effective translation summary without mutating project data.
+    @param[in]  project_root Active project root folder.
+    @return     Loaded translation summary.
+    @version    0.1.0
+    """
     source_chunks = chunking_document_service.load_chunks(project_root)
     return build_translation_summary(source_chunks, load_translation_document(project_root))
 
@@ -155,7 +180,13 @@ def build_translation_summary(
     source_chunks: list[dict[str, object]],
     document: TranslationDocumentPayload | None,
 ) -> dict[str, object]:
-    """Derive counts and effective status from canonical chunks and one document."""
+    """
+    @brief      Derive counts and effective status from canonical chunks and one document.
+    @param[in]  source_chunks Ordered canonical source-chunk records.
+    @param[in]  document Authoritative operation document payload.
+    @return     Constructed translation summary.
+    @version    0.1.0
+    """
     total_count = len(source_chunks)
     if document is None:
         return {
@@ -206,7 +237,12 @@ def build_translation_summary(
 
 
 def translation_is_completed(project_root: str | Path) -> bool:
-    """Return whether the strict translation document is fully approved."""
+    """
+    @brief      Return whether the strict translation document is fully approved.
+    @param[in]  project_root Active project root folder.
+    @return     True when every persisted translation is approved; otherwise False.
+    @version    0.1.0
+    """
     return str(load_translation_summary(project_root)["status"]) == TRANSLATION_STATUS_COMPLETED
 
 
@@ -216,7 +252,16 @@ def sync_translation_after_chunk_change(
     target_language: str,
     invalidated_chunk_ids: list[str] | tuple[str, ...] | set[str],
 ) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
-    """Synchronize an existing translation document after canonical chunk changes."""
+    """
+    @brief      Synchronize an existing translation document after canonical chunk changes.
+    @param[in]  project_root Active project root folder.
+    @param[in]  target_language Requested translation target language.
+    @param[in]  invalidated_chunk_ids Canonical chunk identifiers invalidated by the change.
+    @return     Synchronized source chunks, translation chunks, and summary payload.
+    @exception  ValueError Raised when canonical source chunks are unavailable.
+    @exception  Exception Raised when the saved target language differs from the project.
+    @version    0.1.0
+    """
     resolved_project_root = Path(project_root)
     source_chunks = chunking_document_service.load_chunks(resolved_project_root)
     if not source_chunks:
@@ -246,7 +291,21 @@ def start_or_continue_translation(
     cancel_requested=None,
     additional_translation_instructions: str | None = None,
 ) -> dict[str, object]:
-    """Translate empty canonical chunks and checkpoint only complete chunks."""
+    """
+    @brief      Translate empty canonical chunks and checkpoint only complete chunks.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  target_language Requested translation target language.
+    @param[in]  progress_callback Optional callback receiving operation progress updates.
+    @param[in]  cancel_requested Optional callback used to query cancellation state.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
+    @return     Durable translation summary after processing available chunks.
+    @exception  ValueError Raised when canonical source chunks are unavailable.
+    @exception  TranslationDocumentError Raised when persisted translation rules are incompatible.
+    @exception  Exception Raised when an AI request failure is propagated to the caller.
+    @version    0.1.0
+    """
     resolved_project_root = Path(project_root)
     _validate_translation_inputs(ai_profile_payload, target_language)
     source_chunks = chunking_document_service.load_chunks(resolved_project_root)
@@ -346,7 +405,22 @@ def retranslate_chunk(
     cancel_requested=None,
     additional_translation_instructions: str | None = None,
 ) -> dict[str, object]:
-    """Re-translate one chunk without clearing its prior text or approval first."""
+    """
+    @brief      Re-translate one chunk without clearing its prior text or approval first.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  target_language Requested translation target language.
+    @param[in]  chunk_id Stable canonical chunk identifier.
+    @param[in]  progress_callback Optional callback receiving operation progress updates.
+    @param[in]  cancel_requested Optional callback used to query cancellation state.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
+    @return     Durable translation summary after replacing the selected chunk translation.
+    @exception  ValueError Raised when translation has not started or the chunk ID is unknown.
+    @exception  TranslationDocumentError Raised when persisted translation rules are incompatible.
+    @exception  Exception Raised when an AI request failure is propagated to the caller.
+    @version    0.1.0
+    """
     resolved_project_root = Path(project_root)
     _validate_translation_inputs(ai_profile_payload, target_language)
     source_chunks = chunking_document_service.load_chunks(resolved_project_root)
@@ -414,7 +488,14 @@ def update_translated_text(
     chunk_id: str,
     translated_text: str,
 ) -> dict[str, object]:
-    """Persist one manual edit and invalidate approval when text changed."""
+    """
+    @brief      Persist one manual edit and invalidate approval when text changed.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunk_id Stable canonical chunk identifier.
+    @param[in]  translated_text Translated text associated with one canonical chunk.
+    @return     Durable translation summary after the manual text edit.
+    @version    0.1.0
+    """
     document = _required_translation_document(project_root)
     selected = _find_document_chunk(document, chunk_id)
     if str(selected["translated_text"]) != translated_text:
@@ -427,7 +508,14 @@ def update_translated_text(
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def approve_chunk(project_root: str | Path, chunk_id: str) -> dict[str, object]:
-    """Approve one non-empty translated chunk in one atomic write."""
+    """
+    @brief      Approve one non-empty translated chunk in one atomic write.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunk_id Stable canonical chunk identifier.
+    @return     Durable translation summary after approving the selected chunk.
+    @exception  ValueError Raised when translate the selected chunk before approving it.
+    @version    0.1.0
+    """
     document = _required_translation_document(project_root)
     selected = _find_document_chunk(document, chunk_id)
     if not str(selected["translated_text"]).strip():
@@ -440,7 +528,12 @@ def approve_chunk(project_root: str | Path, chunk_id: str) -> dict[str, object]:
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def approve_all(project_root: str | Path) -> dict[str, object]:
-    """Approve every non-empty translated chunk in one atomic write."""
+    """
+    @brief      Approve every non-empty translated chunk in one atomic write.
+    @param[in]  project_root Active project root folder.
+    @return     Durable translation summary after approving all translated chunks.
+    @version    0.1.0
+    """
     document = _required_translation_document(project_root)
     for chunk in document["chunks"]:
         if str(chunk["translated_text"]).strip():
@@ -452,7 +545,12 @@ def approve_all(project_root: str | Path) -> dict[str, object]:
 
 @trace_function(_AI_TRANSLATION_LOGGER)
 def reset_translation(project_root: str | Path) -> None:
-    """Delete translation and downstream runtime artifacts while preserving narrator profiles."""
+    """
+    @brief      Delete translation and downstream runtime artifacts while preserving narrator profiles.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @version    0.1.0
+    """
     reset_operation_data(
         project_root,
         "translation",
@@ -465,7 +563,13 @@ def reset_translation(project_root: str | Path) -> None:
 
 
 def _validate_translation_document(payload: object) -> None:
-    """Validate exact root and chunk fields without migrating legacy payloads."""
+    """
+    @brief      Validate exact root and chunk fields without migrating legacy payloads.
+    @param[in]  payload Candidate structured payload.
+    @return     None.
+    @exception  Exception Raised when an empty translation cannot be approved.
+    @version    0.1.0
+    """
     if not isinstance(payload, dict):
         raise _incompatible_document_error("The root must be an object.")
     if set(payload) != _DOCUMENT_FIELDS:
@@ -532,7 +636,14 @@ def _synchronize_document_chunks(
     source_chunks: list[dict[str, object]],
     invalidated_chunk_ids: list[str] | tuple[str, ...] | set[str],
 ) -> bool:
-    """Align document chunks to canonical IDs while preserving unaffected records."""
+    """
+    @brief      Align document chunks to canonical IDs while preserving unaffected records.
+    @param[in]  document Authoritative operation document payload.
+    @param[in]  source_chunks Ordered canonical source-chunk records.
+    @param[in]  invalidated_chunk_ids Canonical chunk identifiers invalidated by the change.
+    @return     True when synchronization changed the persisted chunk records.
+    @version    0.1.0
+    """
     invalidated_ids = {str(value).strip() for value in invalidated_chunk_ids if str(value).strip()}
     existing_by_id = {str(item["chunk_id"]): item for item in document["chunks"]}
     synchronized_chunks: list[dict[str, object]] = []
@@ -555,7 +666,12 @@ def _canonical_source_chunks(source_chunks: list[dict[str, object]]) -> list[dic
 
 
 def _review_status(chunks: object) -> str:
-    """Derive the persisted review status after a durable non-operation action."""
+    """
+    @brief      Derive the persisted review status after a durable non-operation action.
+    @param[in]  chunks Ordered canonical chunk payloads.
+    @return     Effective persisted review-status token.
+    @version    0.1.0
+    """
     chunk_items = list(chunks) if isinstance(chunks, list) else []
     if chunk_items and all(str(item["translated_text"]).strip() for item in chunk_items):
         if all(bool(item["approved"]) for item in chunk_items):
@@ -565,7 +681,13 @@ def _review_status(chunks: object) -> str:
 
 
 def _required_translation_document(project_root: str | Path) -> TranslationDocumentPayload:
-    """Load the document or reject review actions before translation exists."""
+    """
+    @brief      Load the document or reject review actions before translation exists.
+    @param[in]  project_root Active project root folder.
+    @return     Validated authoritative translation document.
+    @exception  ValueError Raised when start AI translation before reviewing translated chunks.
+    @version    0.1.0
+    """
     document = load_translation_document(project_root)
     if document is None:
         raise ValueError("Start AI translation before reviewing translated chunks.")
@@ -573,7 +695,14 @@ def _required_translation_document(project_root: str | Path) -> TranslationDocum
 
 
 def _find_document_chunk(document: TranslationDocumentPayload, chunk_id: str) -> dict[str, object]:
-    """Return one mutable chunk record by identifier."""
+    """
+    @brief      Return one mutable chunk record by identifier.
+    @param[in]  document Authoritative operation document payload.
+    @param[in]  chunk_id Stable canonical chunk identifier.
+    @return     Matching document chunk.
+    @exception  ValueError Raised when the requested translation chunk is unknown.
+    @version    0.1.0
+    """
     for item in document["chunks"]:
         if str(item["chunk_id"]) == chunk_id:
             return item
@@ -581,7 +710,14 @@ def _find_document_chunk(document: TranslationDocumentPayload, chunk_id: str) ->
 
 
 def _validate_translation_inputs(ai_profile_payload: dict[str, object], target_language: str) -> None:
-    """Validate current profile and target language before an AI request."""
+    """
+    @brief      Validate current profile and target language before an AI request.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  target_language Requested translation target language.
+    @return     None.
+    @exception  ValueError Raised when aI translation requires a valid target language.
+    @version    0.1.0
+    """
     required_profile_fields = ("id", "model_name", "base_url")
     if any(not str(ai_profile_payload.get(field, "")).strip() for field in required_profile_fields):
         raise ValueError("AI translation requires a valid enabled AI profile.")
@@ -595,7 +731,12 @@ def _translated_count(chunks: object) -> int:
 
 
 def _resolve_log_path(project_root: Path) -> Path:
-    """Create an operation-local AI transaction log without persisting its path."""
+    """
+    @brief      Create an operation-local AI transaction log without persisting its path.
+    @param[in]  project_root Active project root folder.
+    @return     Resolved filesystem path.
+    @version    0.1.0
+    """
     timestamp_token = _utc_now_iso().replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     log_path = build_operation_output_path(
         project_root,
@@ -623,7 +764,26 @@ def _translate_text_in_budgeted_segments(
     translated_chunk_count: int = 0,
     cancel_requested=None,
 ) -> tuple[str, TokenUsagePayload]:
-    """Translate one chunk locally so partial segments never become checkpoints."""
+    """
+    @brief      Translate one chunk locally so partial segments never become checkpoints.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  source_text Canonical source text processed by the callable.
+    @param[in]  target_language Requested translation target language.
+    @param[in]  system_prompt Rendered system prompt for the AI request.
+    @param[in]  chunk_sequence_index Zero-based position of the chunk in canonical order.
+    @param[in]  total_chunks Total number of canonical chunks in the operation.
+    @param[in]  log_path Filesystem path for log.
+    @param[in]  token_usage Cumulative AI token-usage metadata.
+    @param[in]  budget_metadata Context-window budgeting metadata for the selected profile.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
+    @param[in]  progress_callback Optional callback receiving operation progress updates.
+    @param[in]  translated_chunk_count Number of chunks with durable translated text.
+    @param[in]  cancel_requested Optional callback used to query cancellation state.
+    @return     Complete translated text and cumulative token-usage payload.
+    @exception  ValueError Raised when aI translation returned an invalid or empty translated_text value.
+    @version    0.1.0
+    """
     translated_segments: list[str] = []
     cumulative_usage = token_usage
     for segment_index, source_segment in enumerate(
@@ -681,7 +841,15 @@ def _build_budget_metadata(
     system_prompt: str,
     additional_translation_instructions: str = "",
 ) -> BudgetMetadataPayload:
-    """Build current-profile context budgeting for the translation request."""
+    """
+    @brief      Build current-profile context budgeting for the translation request.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  target_language Requested translation target language.
+    @param[in]  system_prompt Rendered system prompt for the AI request.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
+    @return     Constructed budget metadata.
+    @version    0.1.0
+    """
     user_prompt_shell = _render_translation_user_prompt(
         target_language,
         "(none)",
@@ -704,7 +872,14 @@ def _render_translation_user_prompt(
     source_text: str,
     additional_translation_instructions: str,
 ) -> str:
-    """Render only per-request values into the translation user prompt."""
+    """
+    @brief      Render only per-request values into the translation user prompt.
+    @param[in]  target_language Requested translation target language.
+    @param[in]  source_text Canonical source text processed by the callable.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
+    @return     Rendered translation user prompt.
+    @version    0.1.0
+    """
     instructions = _normalized_additional_translation_instructions(additional_translation_instructions)
     instruction_block = (
         f"Additional translation instructions:\n{instructions}\n\n" if instructions else ""
@@ -725,7 +900,13 @@ def _normalized_additional_translation_instructions(value: object) -> str:
 
 
 def _split_translation_source_text(source_text: str, usable_input_budget: int) -> list[str]:
-    """Split source text into paragraph-preserving budget-safe segments."""
+    """
+    @brief      Split source text into paragraph-preserving budget-safe segments.
+    @param[in]  source_text Canonical source text processed by the callable.
+    @param[in]  usable_input_budget Maximum input-token budget available for source text.
+    @return     Ordered translation source text.
+    @version    0.1.0
+    """
     paragraphs = [item.strip() for item in re.split(r"\n\s*\n", source_text.strip()) if item.strip()]
     if not paragraphs:
         return [source_text.strip()]
@@ -747,7 +928,13 @@ def _split_translation_source_text(source_text: str, usable_input_budget: int) -
 
 
 def _split_oversized_translation_paragraph(paragraph: str, usable_input_budget: int) -> list[str]:
-    """Split an oversized paragraph into sentence and word-based units."""
+    """
+    @brief      Split an oversized paragraph into sentence and word-based units.
+    @param[in]  paragraph Source paragraph being segmented or translated.
+    @param[in]  usable_input_budget Maximum input-token budget available for source text.
+    @return     Ordered oversized translation paragraph.
+    @version    0.1.0
+    """
     if _estimate_text_tokens(paragraph) <= usable_input_budget:
         return [paragraph]
     sentences = _split_translation_sentences(paragraph)
@@ -777,7 +964,12 @@ def _split_oversized_translation_paragraph(paragraph: str, usable_input_budget: 
 
 
 def _split_translation_sentences(paragraph: str) -> list[str]:
-    """Split a paragraph into approximate sentence units."""
+    """
+    @brief      Split a paragraph into approximate sentence units.
+    @param[in]  paragraph Source paragraph being segmented or translated.
+    @return     Ordered translation sentences.
+    @version    0.1.0
+    """
     normalized = paragraph.strip()
     if not normalized:
         return []
@@ -786,7 +978,13 @@ def _split_translation_sentences(paragraph: str) -> list[str]:
 
 
 def _split_translation_sentence_by_words(text: str, usable_input_budget: int) -> list[str]:
-    """Split an oversized sentence into word-based units."""
+    """
+    @brief      Split an oversized sentence into word-based units.
+    @param[in]  text Text content processed by the callable.
+    @param[in]  usable_input_budget Maximum input-token budget available for source text.
+    @return     Ordered translation sentence by words.
+    @version    0.1.0
+    """
     words = text.split()
     if not words:
         return [text.strip()]

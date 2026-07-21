@@ -37,7 +37,13 @@ def build_ai_translation_profile_state(
     settings_payload: dict[str, object] | None,
     selected_profile_id: str | None = None,
 ) -> dict[str, object]:
-    """Build enabled profile entries and prefer the current configured default."""
+    """
+    @brief      Build enabled profile entries and prefer the current configured default.
+    @param[in]  settings_payload Validated application settings payload.
+    @param[in]  selected_profile_id Optional identifier of the currently selected AI profile.
+    @return     Constructed ai translation profile state.
+    @version    0.1.0
+    """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
     raw_profiles = settings_payload.get("llm_profiles", [])
@@ -69,7 +75,15 @@ def build_ai_translation_state(
     language: str,
     settings_payload: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    """Build page state without writing or repairing translation persistence."""
+    """
+    @brief      Build page state without writing or repairing translation persistence.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  language Active user-interface language token.
+    @param[in]  settings_payload Validated application settings payload.
+    @return     Constructed ai translation state.
+    @version    0.1.0
+    """
     profile_state = build_ai_translation_profile_state(settings_payload)
     if project_root is None or manifest is None:
         return _empty_state(
@@ -125,7 +139,17 @@ def build_ai_translation_notes(
     has_ai_profiles: bool,
     language: str,
 ) -> list[str]:
-    """Build concise notes from derived document state."""
+    """
+    @brief      Build concise notes from derived document state.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  source_chunks Ordered canonical source-chunk records.
+    @param[in]  document Authoritative operation document payload.
+    @param[in]  summary Derived operation summary used by the interface.
+    @param[in]  has_ai_profiles Whether at least one usable AI profile is configured.
+    @param[in]  language Active user-interface language token.
+    @return     Constructed ai translation notes.
+    @version    0.1.0
+    """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("ai_translation.note_no_source", language)]
     if not source_chunks:
@@ -196,7 +220,12 @@ def _empty_state(notes: list[str], language: str, selected_profile_id: object) -
 
 
 def _persisted_target_language(manifest: dict[str, object]) -> str:
-    """Resolve the locked target language from the project manifest."""
+    """
+    @brief      Resolve the locked target language from the project manifest.
+    @param[in]  manifest Active project manifest payload.
+    @return     Persisted target-language token, or an empty string when unavailable.
+    @version    0.1.0
+    """
     candidate = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
     if candidate in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
         return candidate
@@ -204,13 +233,24 @@ def _persisted_target_language(manifest: dict[str, object]) -> str:
 
 
 def _manifest_original_language(manifest: dict[str, object]) -> str | None:
-    """Resolve a supported source-language code from the manifest."""
+    """
+    @brief      Resolve a supported source-language code from the manifest.
+    @param[in]  manifest Active project manifest payload.
+    @return     Original-language token from the manifest, or None when unavailable.
+    @version    0.1.0
+    """
     candidate = str(manifest.get("original_language", "") or "").strip()
     return candidate if candidate in dict(config.TRANSLATION_LANGUAGE_OPTIONS) else None
 
 
 def _original_language_label(manifest: dict[str, object], language: str) -> str:
-    """Resolve the operator-facing original-language label."""
+    """
+    @brief      Resolve the operator-facing original-language label.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  language Active user-interface language token.
+    @return     Operator-facing original-language label.
+    @version    0.1.0
+    """
     original_language = _manifest_original_language(manifest)
     if original_language is None:
         return ui_state_service.translate("narator_voice.language_unknown", language)

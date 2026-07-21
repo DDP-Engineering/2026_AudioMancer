@@ -46,7 +46,15 @@ def test_translation_controller_resumes_without_prompt_for_all_resumable_statuse
     tmp_path,
     status,
 ) -> None:
-    """Verify REQ-UX-003 every resumable monofile status reuses saved rules."""
+    """
+    @brief      Verify REQ-UX-003 every resumable monofile status reuses saved rules.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  status Operation status token under evaluation.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, f"TranslationResume{status}")
     document = _document(status)
     document["chunks"][0]["translated_text"] = "Existing"
@@ -72,7 +80,13 @@ def test_translation_controller_resumes_without_prompt_for_all_resumable_statuse
 
 
 def test_translation_controller_syncs_derived_manifest_summary(qtbot, tmp_path) -> None:
-    """Verify REQ-UX-003 the controller owns compact manifest synchronization."""
+    """
+    @brief      Verify REQ-UX-003 the controller owns compact manifest synchronization.
+    @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "TranslationManifestSummary")
     window = _build_window(qtbot, project_root)
 
@@ -110,7 +124,13 @@ def test_translation_controller_syncs_derived_manifest_summary(qtbot, tmp_path) 
 
 
 def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qtbot, tmp_path) -> None:
-    """Verify REQ-UX-003 approval loss retains the existing broad reset policy."""
+    """
+    @brief      Verify REQ-UX-003 approval loss retains the existing broad reset policy.
+    @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "TranslationDownstreamReset")
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -141,7 +161,14 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
 
 
 def test_translation_controller_reset_removes_monofile_and_preserves_narrator(monkeypatch, qtbot, tmp_path) -> None:
-    """Verify reset removes Translation and downstream data but preserves narrator profiles."""
+    """
+    @brief      Verify reset removes Translation and downstream data but preserves narrator profiles.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "TranslationReset")
     ai_translation_service.write_translation_document(project_root, _document("review_pending"))
     (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -164,7 +191,13 @@ def test_translation_controller_reset_removes_monofile_and_preserves_narrator(mo
 
 
 def _create_project(tmp_path, name: str):
-    """Create one active project with one canonical source chunk."""
+    """
+    @brief      Create one active project with one canonical source chunk.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  name Stable name associated with the requested object.
+    @return     Created project root and manifest payload.
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -188,7 +221,13 @@ def _create_project(tmp_path, name: str):
 
 
 def _build_window(qtbot, project_root):
-    """Build a main window with one enabled translation profile."""
+    """
+    @brief      Build a main window with one enabled translation profile.
+    @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
+    @param[in]  project_root Active project root folder.
+    @return     Configured main-window test double.
+    @version    0.1.0
+    """
     window = MainWindow(
         settings_payload={
             "language": "en",
