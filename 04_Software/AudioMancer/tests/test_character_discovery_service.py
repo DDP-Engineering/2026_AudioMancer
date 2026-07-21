@@ -25,7 +25,7 @@ from pathlib import Path
 import pytest
 
 from audiomancer import config
-from audiomancer.services import character_discovery_service, project_workspace_service
+from audiomancer.services import character_discovery_service, narrator_definition_service, project_workspace_service
 from chunking_test_support import build_chunking_document
 
 
@@ -680,7 +680,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     )
     narrator_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     narrator_root.mkdir(parents=True, exist_ok=True)
-    (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
 
     existing_alice = character_discovery_service.load_character_profiles(project_root)[0]
     assert existing_alice["gender_confidence"] == ""
@@ -726,7 +726,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     assert not (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).exists()
     assert not (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).exists()
-    assert (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (narrator_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (discovery_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
 
 

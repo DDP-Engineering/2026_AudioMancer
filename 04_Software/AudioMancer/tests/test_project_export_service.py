@@ -22,7 +22,7 @@ import json
 import zipfile
 
 from audiomancer import config
-from audiomancer.services import project_export_service, project_workspace_service
+from audiomancer.services import narrator_definition_service, project_export_service, project_workspace_service
 from chunking_test_support import build_chunking_document
 
 # PUBLIC API
@@ -310,13 +310,14 @@ def test_project_export_service_creates_voice_and_audio_archives(tmp_path) -> No
     )
 
     with zipfile.ZipFile(narrator_zip) as archive:
+        document = json.loads(archive.read(config.NARRATOR_VOICE_FILE_NAME).decode("utf-8"))
+        profile = document["profiles"][0]
         assert sorted(archive.namelist()) == [
-            "narator_voice/Narator_Profile.txt",
-            "narator_voice/Narator_Profile.wav",
+            f"audio_narator_{profile['profile_id']}.wav",
+            config.NARRATOR_VOICE_FILE_NAME,
         ]
-        narrator_text = archive.read("narator_voice/Narator_Profile.txt").decode("utf-8")
-        assert "A warm narrator definition." in narrator_text
-        assert "Narrator preview." in narrator_text
+        assert profile["prompt_text"] == "A warm narrator definition."
+        assert profile["sample"]["preview_text"] == "Narrator preview."
     with zipfile.ZipFile(character_zip) as archive:
         assert "character_voices/Stefan.wav" in archive.namelist()
         assert "Character voice definition." in archive.read("character_voices/Stefan.txt").decode("utf-8")
@@ -508,28 +509,22 @@ def _build_export_project(tmp_path):
     )
     _write_json(project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
 
-    narrator_audio_path = project_root / "audio_narator_narrator_1.wav"
-    narrator_audio_path.write_bytes(b"RIFF-narrator")
-    _write_json(
-        project_root / config.NARRATOR_PROFILE_FILE_NAME,
-        [
-            {
-                "profile_id": "narrator-1",
-                "display_name": "Narator Profile",
-                "language": "en",
-                "prompt_text": "A warm narrator definition.",
-                "preview_text": "Narrator preview.",
-                "sample": {
-                    "source_kind": "voice_designer",
-                    "preview_text": "Narrator preview.",
-                    "language": "en",
-                    "source_model_id": "qwen-designer",
-                    "created_at": "2026-05-16T00:00:00+00:00",
-                },
-            }
-        ],
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Narator Profile",
+        "en",
+        "A warm narrator definition.",
+        "Narrator preview.",
     )
-    _write_json(project_root / config.NARRATOR_SELECTION_FILE_NAME, {"selected_profile_id": "narrator-1"})
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        narrator_profile,
+        "Narrator preview.",
+        {"generation_mode": "definition", "source_model_id": "qwen-designer", "language": "en"},
+        "Narrator sample ready.",
+        b"RIFF-narrator",
+    )
+    narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
 
     character_audio_path = project_root / "audio_stefan.wav"
     character_audio_path.write_bytes(b"RIFF-character")

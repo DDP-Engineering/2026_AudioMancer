@@ -230,15 +230,15 @@ character-discovery metadata counters. This initialization does not imply that
 the workflow step has run and does not create reports or canonical outputs.
 
 Voice workflow metadata is also lazy. Project activation and Home-page refreshes
-do not create `audio_profiles.json`, `narator.json`, or `characters_voice.json`.
-Opening the Narator Voice page initializes only narrator metadata; opening the
+do not create `narrator_voice.json` or `characters_voice.json`. Opening the
+Narator Voice page initializes the exact default narrator document; opening the
 Character Voices page initializes the character-voice target metadata.
 
 Upstream text and character reruns preserve narrator-definition data. Cleanup
 reruns, selected cleaned-text edits, chunking reruns, selected chunk edits,
 translation resets or approval-loss resets, and character-discovery resets keep
-`audio_profiles.json`, `narator.json`, `narator.wav`, and `narator_sample.json`
-when those files already exist. Character voice targets, Speech Blocks, Audio
+`narrator_voice.json`, canonical `audio_narator_*.wav` profile samples, and
+narrator AI logs when those files already exist. Character voice targets, Speech Blocks, Audio
 Blocks, and assembled audiobook outputs are still invalidated because they
 depend on the regenerated text or character set.
 
@@ -276,11 +276,10 @@ Current validation invariants:
 - project-open manifest healing can promote operation summaries only when
   local artifacts prove the step completed; `current_stage` alone never marks
   an operation completed
-- Narrator Definition completion evidence checks the explicit `narator.json`
-  selection and the selected profile's compact `sample` metadata, while still
-  accepting legacy `sample_metadata` during project-open repair.
+- Narrator Definition completion evidence checks `selected_profile_id` and the
+  matching profile in the strict `narrator_voice.json` document.
 - Character Voices completion evidence checks the current artifact contract:
-  the selected narrator WAV plus `narator_sample.json`, and every character
+  the selected profile's canonical narrator WAV plus inline metadata, and every character
   target's `sample_metadata` plus project-relative `sample_audio_path`
 - stale operation-state files are reported as warnings and are not rewritten by
   the project-open repair path

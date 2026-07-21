@@ -104,6 +104,14 @@ strict `chunks_text.json` document. Project open does not create a default
 Chunking state file, and obsolete report/state sidecars are ignored except when
 Reset Chunking deletes them.
 
+Narrator completion evidence and exports are projections of the strict
+`narrator_voice.json` document. The selected profile's language, inline sample
+metadata, and canonical `audio_narator_<profile_id>.wav` are resolved at read
+time. Narrator reset owns only the current document, canonical profile WAVs,
+and `log_ai_narrator_profiles_*.log`; project repair never imports or rewrites
+removed narrator persistence artifacts. Project snapshots include the document
+and WAVs while excluding AI transaction logs.
+
 The root manifest contains project identity and timestamps, `current_stage`,
 `source_document`, compact `operations`, locked language/voice options,
 audio-assembly settings, and notes. `source_document` contains

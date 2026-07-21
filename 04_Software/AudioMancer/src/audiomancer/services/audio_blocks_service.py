@@ -1428,16 +1428,15 @@ def _resolve_generation_context(
         project_root,
         narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
     )
-    narrator_audio_path, narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
+    narrator_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
     narrator_metadata: dict[str, object] = {}
     if speech_audio_blocks:
-        if not narrator_audio_path.is_file():
+        if narrator_audio_path is None or not narrator_audio_path.is_file():
             raise ValueError("Generate the selected narrator sample before starting Audio Blocks.")
-        narrator_metadata = load_optional_json_artifact(narrator_metadata_path)
-        if not isinstance(narrator_metadata, dict):
+        selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
+        if not isinstance(selected_metadata, dict):
             raise ValueError("The selected narrator sample metadata is missing or invalid.")
+        narrator_metadata = selected_metadata
 
     voice_targets: list[dict[str, object]] = []
     voice_target_ids: set[str] = set()

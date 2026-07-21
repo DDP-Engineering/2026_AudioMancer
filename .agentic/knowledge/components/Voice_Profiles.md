@@ -3,56 +3,90 @@
 
 ## 1. Purpose
 
-Maintains the reviewed narrator and character voice definitions, sample audio, language/assignment choices, and AI-generated narrator profiles required before speech generation.
+Maintains reviewed narrator and character voice definitions, canonical sample
+audio, language/assignment choices, and resumable AI narrator suggestions
+required before speech generation.
 
 ## 2. Responsibilities
 
-- Persist character voice targets, prompt/preview text, language, selected samples, and same-narrator assignments.
-- Maintain narrator profile records, selection, sample metadata, runtime readiness, and profile-state projections.
-- Generate candidate narrator profiles through the configured AI provider and validate imported WAV samples.
-- Drive separate Narrator Voice and Character Voices review/edit/generate/import flows.
-- It does not synthesize the project speech blocks; that belongs to TTS Audio Blocks.
+- Own the strict Narrator Voice document and profile-owned WAV contract.
+- Persist Character Voices targets and target-specific sample metadata.
+- Generate resumable AI narrator suggestions without exposing partial profiles.
+- Resolve explicit narrator selection for Character Voices and Audio Blocks.
+- Drive the existing narrator and character review/edit/generate/import flows.
+
+It does not synthesize Speech Blocks or final TTS Audio Blocks.
 
 ## 3. Implementation Overview
 
-Character-voice services derive safe prompts from the character inventory, preserve selected language and target samples, and synchronize the voice plan. Narrator-definition services store profile/sample metadata and derive state from project language and runtime readiness. Profile generation performs bounded, resumable AI style analysis and final profile generation, while sample import validates WAV duration/audibility. The two controller/page pairs deliberately separate narrator selection from per-character maintenance and use the shared operation runner for long generation actions.
+`narrator_definition_service` is the sole owner of `narrator_voice.json`.
+Profile/sample/selection mutations validate and atomically replace that
+document; WAV writes are atomic and use immutable profile IDs. AI generation
+stores compact checkpoints in the same document and appends profiles only after
+complete validation. Character-voice services keep their independent target
+contract and resolve the selected narrator through the narrator service.
 
 ## 4. Dependencies
 
-- Internal: Character Discovery profiles, AI Runtime/provider/budget/prompt services, project manifest and operation runtime, VoiceWeaver runtime support, atomic persistence helpers, and shared Qt operation runner.
-- External: selected AI provider for narrator profile generation; VoiceWeaver runtime for sample generation; local WAV files for imported samples.
+- Internal: Character Discovery, AI provider/budget/prompt services, project
+  manifest and operation runtime, atomic persistence, VoiceWeaver runtime, and
+  shared Qt operation orchestration.
+- External: selected AI provider, local VoiceWeaver runtime, and imported WAV
+  files.
 
 ## 5. Inputs And Outputs
 
-- Inputs: project root/manifest, character profiles, approved language and assignment mode, narrator/character editor payloads, selected AI profile, runtime availability, generated or imported WAV samples.
-- Outputs: narrator profile data and selected-sample metadata, character voice targets/plan, copied/imported sample artifacts, generated candidate profiles, page state, and workflow invalidation when a voice choice changes.
+- Inputs: project root/manifest, character profiles, language/assignment mode,
+  editor payloads, selected AI profile, runtime state, and generated/imported
+  WAV samples.
+- Outputs: strict narrator document, canonical `audio_narator_<profile_id>.wav`
+  files, character target metadata/WAVs, diagnostic narrator AI logs, page
+  state, and downstream invalidation when voice choices change.
 
 ## 6. Data Contracts
 
-Narrator source resolution reads canonical chunks through the shared strict
-Chunking document service; it does not interpret legacy Chunking formats.
+`narrator_voice.json` has exactly seven root fields: `status`, `token_usage`,
+`budget_metadata`, `additional_profile_instructions`, `selected_profile_id`,
+`profiles`, and `resume`. Each profile has exactly ID, display name, language,
+prompt, preview, and optional sample metadata. Selection stores only the ID;
+selected language, metadata, and canonical WAV path are derived.
 
-- Narrator and character targets use stable IDs, selected flags, prompt/preview text, runtime language codes, sample-path metadata, and assignment mode.
-- Sample imports must be readable, non-silent WAVs of adequate duration. Writes use atomic JSON/byte persistence and tolerate torn legacy metadata as absent data.
-- AI profile generation retains style checkpoints, bounded preview text, operator rules, token-usage/state metadata, and does not overwrite profiles after invalid/cancelled work.
-- A selected narrator is copied to `narator.wav` and `narator_sample.json` from
-  the profile-owned sample. In `same_narrator` mode, character targets receive
-  `copied_narrator` sample metadata; per-character prompt editing and
-  generation remain disabled, while imported and generated samples retain
-  their distinct source kinds.
+Generated samples use `source_kind = "voice_designer"`; imported narrator
+samples use `source_kind = "imported"`. AI cancellation/failure retains compact
+resume state and unchanged profiles. Success appends validated profiles and
+clears resume atomically. AI log paths and raw responses are never persisted.
+
+Removed narrator persistence artifacts have no reader, migration, repair,
+rename, or deletion behavior. Character Voices retains its own current
+`characters_voice.json` contract, including `copied_narrator` target samples in
+same-narrator mode.
 
 ## 7. Workflow Integration
 
-Voice Profiles follows Character Discovery and the applicable text language decision. It supplies selected narrator/character voice assignments and validated samples to Speech Blocks and TTS Audio Blocks. Editing a voice can invalidate generated audio while preserving unrelated upstream text/character work.
+Voice Profiles follows Character Discovery and supplies narrator/character
+assignments and validated samples to Speech Blocks and Audio Blocks. Project
+completion evidence, export, snapshot, reset, and preservation use the current
+narrator document and canonical profile WAVs. Editing a voice invalidates only
+the intended downstream audio.
 
 ## 8. Usage
 
-Use Narrator Voice to create, generate, import, preview, and select one narrator profile. Use Character Voices to inspect the derived targets, choose a voice language/assignment mode, edit approved prompts, import or generate samples, and batch-regenerate eligible character samples. Confirm selected voice assets before starting TTS.
+Use Narrator Voice to create or generate profiles, import/generate samples,
+audition them, and explicitly select one profile. Use Character Voices to
+inspect derived targets and prepare character samples. Confirm current voice
+assets before starting TTS.
 
 ## 9. Validation And Tests
 
-Focused suite E-0014 passed 96 tests across all ten mapped services, controllers, and pages. Coverage includes prompt derivation, atomic persistence, language/assignment synchronization, recovery from malformed metadata, WAV validation, bounded/cancellable AI generation, UI edit/selection behavior, sample-generation failure preservation, and redacted progress. Run all ten mapped modules after changes with temporary/cache paths outside `.agentic`. Manual listening and operator selection remain mandatory.
+Primary coverage: `test_narrator_voice_single_document_contract.py`, narrator
+definition/generation/state/controller suites, Character Voices suites, Audio
+Blocks, operation runtime, workspace, export, snapshot, and project-flow tests.
+Run traceability, coverage, documentation, style, focused regression, and full
+deterministic gates before delivery.
 
 ## 10. Limitations And Future Work
 
-Tests verify artifact contracts and guarded flows but cannot determine that a generated or imported voice is natural, culturally appropriate, intelligible, legally usable, or suited to a character. Hardware/runtime availability and provider-generated style quality vary; operators must audition samples and approve voice assignments before speech generation.
+Automated tests cannot judge naturalness, cultural suitability,
+intelligibility, legal usability, or character fit. Operators must audition and
+approve samples. Malformed current narrator documents intentionally require
+operator action; there is no automatic repair or legacy import.

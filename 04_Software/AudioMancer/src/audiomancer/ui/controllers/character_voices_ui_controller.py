@@ -567,9 +567,7 @@ def handle_preview_toggle_requested(window: "MainWindow") -> None:
             window._current_project_root, current_target_id
         )
     else:
-        audio_path, _metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-            window._current_project_root
-        )
+        audio_path = narrator_definition_service.selected_narrator_sample_path(window._current_project_root)
     if audio_path is None or not audio_path.is_file():
         QMessageBox.warning(
             window,

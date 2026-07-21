@@ -528,8 +528,6 @@ def handle_import_sample_requested(window: "MainWindow", profile_id: str) -> Non
             normalized_sample_text,
             selected_file,
         )
-        if _selected_profile_id(window) == profile_id:
-            narrator_definition_service.copy_selected_narrator_sample(window._current_project_root, profile_id)
     except ValueError as error:
         _show_voice_sample_import_error(window, error, current_language)
         return
@@ -946,6 +944,10 @@ def _start_narator_voice_change_progress(
     misc_ui_controller.process_pending_ui_events()
 
     def _update(percent: int, message_key: str) -> None:
+        """
+        @brief      Update the active non-cancellable narrator-change progress dialog.
+        @version    1.0.0
+        """
         misc_ui_controller.update_progress_dialog(
             window,
             percent,
@@ -1162,17 +1164,6 @@ def _generate_and_store_sample(
         str(final_result.get("summary", "")),
         audio_bytes,
     )
-    selected_state = narrator_definition_service.load_selected_profile_state(project_root)
-    if (
-        str(selected_state.get("selected_profile_id", "") or "").strip()
-        == str(profile_payload.get("profile_id", "")).strip()
-    ):
-        narrator_definition_service.copy_selected_narrator_sample(
-            project_root,
-            str(profile_payload.get("profile_id", "")).strip(),
-        )
-
-
 def _limited_preview_text(preview_text: object, settings_payload: dict[str, object]) -> str:
     """
     @brief      Limit narrator sample preview text using the persisted TTS setting.
@@ -1301,7 +1292,7 @@ def _sync_manifest_summary(
     selected_language: str,
 ) -> None:
     """
-    @brief      Synchronize manifest narrator summary fields and the selected narrator audio copy.
+    @brief      Synchronize manifest narrator summary fields with the authoritative voice document.
     @param[in]  window Main application window.
     @param[in]  profile_id Explicitly selected narrator-profile identifier or `None`.
     @param[in]  selected_language Selected narrator language label.
@@ -1309,7 +1300,7 @@ def _sync_manifest_summary(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-08
-    @version    1.3.0
+    @version    2.0.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -1321,25 +1312,12 @@ def _sync_manifest_summary(
         updated_manifest["operations"]["narrator_definition"] = (
             project_workspace_service.project_manifest_operation_summary("narrator_definition")
         )
-        narrator_definition_service.clear_selected_narrator_sample(window._current_project_root)
+        narrator_definition_service.clear_narrator_selection(window._current_project_root)
     else:
         updated_manifest["narrator_profile_name"] = (
             narrator_definition_service.display_profile_name(profile_payload) or None
         )
         updated_manifest["narrator_language"] = narrator_definition_service.narrator_language_code(selected_language)
-        selected_metadata = None
-        profile_id_value = str(profile_payload.get("profile_id", "")).strip()
-        if narrator_definition_service.has_profile_sample(
-            window._current_project_root,
-            profile_id_value,
-        ):
-            selected_metadata = narrator_definition_service.copy_selected_narrator_sample(
-                window._current_project_root,
-                profile_id_value,
-            )
-        else:
-            narrator_definition_service.clear_selected_narrator_sample_artifacts(window._current_project_root)
-        _ = selected_metadata
         updated_manifest["operations"]["narrator_definition"] = (
             project_workspace_service.project_manifest_operation_summary(
                 "narrator_definition",

@@ -174,9 +174,8 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     )
 
     narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
-    selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
+    selected_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
+    selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
 
     assert (
         narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
@@ -186,7 +185,6 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     assert updated_manifest["narrator_profile_name"] == "My Narrator"
     assert updated_manifest["narrator_language"] == "en"
     narrator_operation = updated_manifest["operations"]["narrator_definition"]
-    selected_metadata = json.loads(selected_metadata_path.read_text(encoding="utf-8"))
     assert narrator_operation["status"] == "completed"
     assert "updated_at" not in narrator_operation
     assert project_workspace_service.open_project(project_root)["status"] == "ok"
@@ -237,9 +235,8 @@ def test_narator_voice_ui_controller_select_profile_without_sample_updates_manif
     )
 
     narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
-    selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
+    selected_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
+    selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
 
     assert (
         narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
@@ -249,8 +246,8 @@ def test_narator_voice_ui_controller_select_profile_without_sample_updates_manif
     assert updated_manifest["narrator_profile_name"] == "Unsampled Narrator"
     assert updated_manifest["narrator_language"] == "en"
     assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
-    assert selected_audio_path.exists() is False
-    assert selected_metadata_path.exists() is False
+    assert selected_audio_path is None
+    assert selected_metadata is None
 
 
 def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypatch, qtbot, tmp_path) -> None:
@@ -622,7 +619,12 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     )
 
     assert profile_audio_path.read_bytes() == b"RIFF-generated"
-    sample_metadata = json.loads(profile_metadata_path.read_text(encoding="utf-8"))[0]["sample"]
+    document = json.loads(profile_metadata_path.read_text(encoding="utf-8"))
+    sample_metadata = next(
+        profile["sample"]
+        for profile in document["profiles"]
+        if profile["profile_id"] == window._narator_voice_inspected_profile_id
+    )
     assert sample_metadata["source_kind"] == narrator_definition_service.NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER
     assert sample_metadata["source_model_id"] == "qwen-designer"
     assert observed_timeouts == {

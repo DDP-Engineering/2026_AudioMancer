@@ -117,7 +117,7 @@ _EXPORT_ARTIFACT_BY_KIND = {
     EXPORT_KIND_TEXT_CHUNKS: config.CHUNK_ARTIFACT_FILE_NAME,
     EXPORT_KIND_AI_TRANSLATION: config.TRANSLATED_CHUNKS_FILE_NAME,
     EXPORT_KIND_CHARACTERS: config.CHARACTER_PROFILE_FILE_NAME,
-    EXPORT_KIND_NARRATOR_VOICE: config.NARRATOR_PROFILE_FILE_NAME,
+    EXPORT_KIND_NARRATOR_VOICE: config.NARRATOR_VOICE_FILE_NAME,
     EXPORT_KIND_CHARACTER_VOICES: config.CHARACTER_VOICES_TARGETS_FILE_NAME,
     EXPORT_KIND_SPEECH_BLOCKS: config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
     EXPORT_KIND_AUDIO_ASSEMBLY: config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
@@ -811,34 +811,20 @@ def _build_archive_entries(
 
 def _build_narrator_voice_archive_entries(project_root: Path) -> list[tuple[str, Path | None, str | None]]:
     """
-    @brief      Build narrator sample WAV and companion TXT archive entries.
+    @brief      Build the authoritative narrator document and canonical sample WAV entries.
     @param[in]  project_root Active project root folder.
     @return     Ordered ZIP entries.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-16
-    @version    0.1.0
+    @version    1.0.0
     """
-    entries: list[tuple[str, Path | None, str | None]] = []
-    used_names: set[str] = set()
-    for profile, audio_path, metadata in _narrator_voice_archive_items(project_root):
-        base_name = _unique_archive_stem(
-            _first_value(metadata.get("display_name"), profile.get("display_name"), profile.get("profile_id")),
-            used_names,
-        )
-        entries.append((f"narator_voice/{base_name}.wav", audio_path, None))
-        entries.append(
-            (
-                f"narator_voice/{base_name}.txt",
-                None,
-                _build_voice_companion_text(
-                    "Narator Voice",
-                    str(_first_value(metadata.get("display_name"), profile.get("display_name"), base_name)),
-                    str(_first_value(metadata.get("prompt_text"), profile.get("prompt_text"), "")),
-                    str(_first_value(metadata.get("preview_text"), profile.get("preview_text"), "")),
-                ),
-            )
-        )
+    document_path = project_root / config.NARRATOR_VOICE_FILE_NAME
+    entries: list[tuple[str, Path | None, str | None]] = [
+        (config.NARRATOR_VOICE_FILE_NAME, document_path, None)
+    ]
+    for _profile, audio_path, _metadata in _narrator_voice_archive_items(project_root):
+        entries.append((audio_path.name, audio_path, None))
     return entries
 
 
@@ -924,7 +910,7 @@ def _narrator_voice_archive_items(project_root: Path) -> list[tuple[dict[str, ob
     @version    0.2.0
     """
     items: list[tuple[dict[str, object], Path, dict[str, object]]] = []
-    if not (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file():
+    if not (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file():
         return items
     for profile in narrator_definition_service.load_profiles(project_root):
         profile_id = str(profile.get("profile_id", "")).strip()

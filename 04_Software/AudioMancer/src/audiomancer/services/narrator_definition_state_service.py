@@ -123,7 +123,7 @@ def build_narrator_definition_state(
             "preview_available": False,
             "status_lines": [ui_state_service.translate("narator_voice.note_no_project", language)],
         }
-    if not (Path(project_root) / config.NARRATOR_PROFILE_FILE_NAME).is_file():
+    if not (Path(project_root) / config.NARRATOR_VOICE_FILE_NAME).is_file():
         narrator_definition_service.ensure_narrator_definition_files(project_root)
 
     discovered_models = (

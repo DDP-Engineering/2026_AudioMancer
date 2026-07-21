@@ -9,12 +9,12 @@
 """
 @file narrator_definition_service.py
 @brief Project-local narrator-definition persistence helpers for AudioMancer.
-@details Persists narrator profiles, explicit selection state, project-local
-         TTS plan data, AI-generated text-only profile suggestions, and one
-         compact per-profile sample artifact set.
+@details Owns the strict authoritative Narrator Voice document, explicit
+         profile selection, canonical per-profile WAV samples, project-local
+         TTS plan data, and derived selected-sample views.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.18.0
+@version 4.0.0
 """
 
 # IMPORTS
@@ -37,6 +37,53 @@ from audiomancer.services.persistence_service import write_json_atomic
 _NARRATOR_DEFINITION_LOGGER = get_component_logger("narrator_definition")
 
 NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER = "voice_designer"
+NARRATOR_SAMPLE_SOURCE_IMPORTED = "imported"
+
+NARRATOR_VOICE_STATUS_NOT_STARTED = "not_started"
+NARRATOR_VOICE_STATUS_RUNNING = "running"
+NARRATOR_VOICE_STATUS_CANCELLED = "cancelled"
+NARRATOR_VOICE_STATUS_FAILED = "failed"
+NARRATOR_VOICE_STATUS_COMPLETED = "completed"
+
+_NARRATOR_VOICE_ROOT_FIELDS = {
+    "status",
+    "token_usage",
+    "budget_metadata",
+    "additional_profile_instructions",
+    "selected_profile_id",
+    "profiles",
+    "resume",
+}
+_NARRATOR_VOICE_PROFILE_FIELDS = {
+    "profile_id",
+    "display_name",
+    "language",
+    "prompt_text",
+    "preview_text",
+    "sample",
+}
+_NARRATOR_VOICE_SAMPLE_FIELDS = {
+    "source_kind",
+    "preview_text",
+    "language",
+    "source_model_id",
+}
+_NARRATOR_VOICE_RESUME_FIELDS = {
+    "resume_fingerprint",
+    "requested_count",
+    "gender_allocation",
+    "completed_window_count",
+    "total_window_count",
+    "style_observations",
+}
+_NARRATOR_VOICE_GENDER_FIELDS = {"male", "female", "random", "random_gender"}
+_NARRATOR_VOICE_STATUSES = {
+    NARRATOR_VOICE_STATUS_NOT_STARTED,
+    NARRATOR_VOICE_STATUS_RUNNING,
+    NARRATOR_VOICE_STATUS_CANCELLED,
+    NARRATOR_VOICE_STATUS_FAILED,
+    NARRATOR_VOICE_STATUS_COMPLETED,
+}
 
 DEFAULT_NARRATOR_LANGUAGE = "en"
 DEFAULT_PREVIEW_TEXT = (
@@ -71,6 +118,94 @@ DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
     ),
 }
 _NARRATOR_LANGUAGE_LABELS = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
+
+
+class NarratorVoiceDocumentContractError(ValueError):
+    """
+    @brief      Report a current Narrator Voice document that violates its strict contract.
+    @version    1.0.0
+    """
+
+
+def default_narrator_voice_document() -> dict[str, object]:
+    """
+    @brief      Build the exact default authoritative Narrator Voice document.
+    @return     New mutable default document payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-21
+    @version    0.1.0
+    """
+    return {
+        "status": NARRATOR_VOICE_STATUS_NOT_STARTED,
+        "token_usage": {
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "usage_available": False,
+        },
+        "budget_metadata": {},
+        "additional_profile_instructions": "",
+        "selected_profile_id": None,
+        "profiles": [],
+        "resume": None,
+    }
+
+
+def load_narrator_voice_document(project_root: str | Path) -> dict[str, object]:
+    """
+    @brief      Load and strictly validate the authoritative Narrator Voice document.
+    @param[in]  project_root Active project root folder.
+    @return     Validated document payload.
+    @exception  NarratorVoiceDocumentContractError Raised for unreadable or invalid current data.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-21
+    @version    0.1.0
+    """
+    document_path = _document_path(project_root)
+    if not document_path.is_file():
+        ensure_narrator_voice_document(project_root)
+    try:
+        payload = json.loads(document_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise NarratorVoiceDocumentContractError(
+            f"Narrator Voice data is unreadable. Reset Narrator Voice to recover: {error}"
+        ) from error
+    return _validate_narrator_voice_document(payload)
+
+
+def write_narrator_voice_document(project_root: str | Path, document: object) -> Path:
+    """
+    @brief      Strictly validate and atomically write the authoritative document.
+    @param[in]  project_root Active project root folder.
+    @param[in]  document Candidate complete document payload.
+    @return     Written `narrator_voice.json` path.
+    @exception  NarratorVoiceDocumentContractError Raised when the candidate is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-21
+    @version    0.1.0
+    """
+    validated_document = _validate_narrator_voice_document(document)
+    document_path = _document_path(project_root)
+    write_json_atomic(document_path, validated_document)
+    return document_path
+
+
+def ensure_narrator_voice_document(project_root: str | Path) -> Path:
+    """
+    @brief      Create the exact default document only when it is absent.
+    @param[in]  project_root Active project root folder.
+    @return     Authoritative document path.
+    @exception  NarratorVoiceDocumentContractError Raised when existing current data is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-21
+    @version    0.1.0
+    """
+    document_path = _document_path(project_root)
+    if document_path.is_file():
+        load_narrator_voice_document(project_root)
+        return document_path
+    return write_narrator_voice_document(project_root, default_narrator_voice_document())
 
 
 def load_tts_plan(
@@ -221,8 +356,9 @@ def apply_voice_language_to_profiles(project_root: str | Path, voice_language: o
     """
     normalized_language = narrator_language_code(voice_language)
     localized_preview_text = preview_text_for_language(normalized_language)
+    document = load_narrator_voice_document(project_root)
     profiles = []
-    for profile in load_profiles(project_root):
+    for profile in document["profiles"]:
         previous_language = narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE))
         profiles.append(
             _normalize_profile(
@@ -237,70 +373,57 @@ def apply_voice_language_to_profiles(project_root: str | Path, voice_language: o
                 }
             )
         )
-    _write_json(_profiles_path(project_root), profiles)
+    document["profiles"] = profiles
+    write_narrator_voice_document(project_root, document)
     return normalized_language
 
 
 def load_profiles(project_root: str | Path) -> list[dict[str, object]]:
     """
-    @brief      Load or repair narrator profiles for one project.
+    @brief      Load narrator profiles from the authoritative document.
     @param[in]  project_root Active project root folder.
     @return     Ordered narrator-profile payload list.
-    @exception  None
+    @exception  NarratorVoiceDocumentContractError Raised for invalid current data.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.1.0
+    @version    3.0.0
     """
-    profile_path = _profiles_path(project_root)
-    if not profile_path.is_file():
-        ensure_narrator_definition_files(project_root)
-    payload = _read_json_or_default(profile_path, [], "narrator profiles")
-    normalized_profiles = (
-        [_normalize_profile(profile) for profile in payload if isinstance(profile, dict)]
-        if isinstance(payload, list)
-        else []
-    )
-    _write_json(profile_path, normalized_profiles)
-    return normalized_profiles
+    return [dict(profile) for profile in load_narrator_voice_document(project_root)["profiles"]]
 
 
 def load_selected_profile_state(project_root: str | Path) -> dict[str, object]:
     """
-    @brief      Load or repair the selected narrator-profile state for one project.
+    @brief      Derive the selected narrator-profile view from the authoritative document.
     @param[in]  project_root Active project root folder.
     @return     Selected narrator-profile state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.6.0
+    @version    2.0.0
     """
-    ensure_narrator_definition_files(project_root)
-    profiles = load_profiles(project_root)
-    selection_path = _selection_path(project_root)
-    payload = _read_json_or_default(selection_path, {}, "selected narrator profile state")
-    normalized_state, normalized_profiles = _normalize_selected_state(payload, profiles)
-    _write_json(_profiles_path(project_root), normalized_profiles)
-    _write_json(selection_path, normalized_state)
-    return normalized_state
+    document = load_narrator_voice_document(project_root)
+    selected_profile_id = document["selected_profile_id"]
+    selected_profile = next(
+        (profile for profile in document["profiles"] if profile["profile_id"] == selected_profile_id),
+        None,
+    )
+    return {
+        "selected_profile_id": selected_profile_id,
+        "selected_language": None if selected_profile is None else selected_profile["language"],
+    }
 
 
 def ensure_narrator_definition_files(project_root: str | Path) -> None:
     """
-    @brief      Ensure narrator-definition files and sample folders exist for one project.
+    @brief      Ensure the authoritative Narrator Voice document exists.
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.6.0
+    @version    2.0.0
     """
-    profile_path = _profiles_path(project_root)
-    if not profile_path.is_file():
-        _write_json(profile_path, [])
-
-    selection_path = _selection_path(project_root)
-    if not selection_path.is_file():
-        _write_json(selection_path, {"selected_profile_id": None, "selected_language": None})
+    ensure_narrator_voice_document(project_root)
 
 
 def select_narrator_profile(
@@ -319,20 +442,21 @@ def select_narrator_profile(
     @date       2026-04-17
     @version    1.5.0
     """
+    _ = selected_language
     normalized_profile_id = str(profile_id or "").strip()
-    profiles = load_profiles(project_root)
-    if not any(str(profile.get("profile_id", "")).strip() == normalized_profile_id for profile in profiles):
+    document = load_narrator_voice_document(project_root)
+    selected_profile = next(
+        (profile for profile in document["profiles"] if profile["profile_id"] == normalized_profile_id),
+        None,
+    )
+    if selected_profile is None:
         raise ValueError("missing_profile")
-
-    selected_profile = profile_by_id(project_root, normalized_profile_id)
-    normalized_state = {
+    document["selected_profile_id"] = normalized_profile_id
+    write_narrator_voice_document(project_root, document)
+    return {
         "selected_profile_id": normalized_profile_id,
-        "selected_language": narrator_language_code(
-            selected_language or (selected_profile or {}).get("language", DEFAULT_NARRATOR_LANGUAGE)
-        ),
+        "selected_language": selected_profile["language"],
     }
-    _write_json(_selection_path(project_root), normalized_state)
-    return normalized_state
 
 
 def clear_narrator_selection(project_root: str | Path) -> dict[str, object]:
@@ -345,9 +469,10 @@ def clear_narrator_selection(project_root: str | Path) -> dict[str, object]:
     @date       2026-04-17
     @version    1.2.0
     """
-    normalized_state = {"selected_profile_id": None, "selected_language": None}
-    _write_json(_selection_path(project_root), normalized_state)
-    return normalized_state
+    document = load_narrator_voice_document(project_root)
+    document["selected_profile_id"] = None
+    write_narrator_voice_document(project_root, document)
+    return {"selected_profile_id": None, "selected_language": None}
 
 
 def validate_profile_name(
@@ -399,18 +524,21 @@ def create_custom_profile(
     @date       2026-04-17
     @version    1.4.0
     """
-    profiles = load_profiles(project_root)
+    document = load_narrator_voice_document(project_root)
+    profiles = list(document["profiles"])
+    normalized_name = validate_profile_name(profiles, display_name)
     custom_profile = _normalize_profile(
         {
             "profile_id": f"custom_{uuid4().hex}",
-            "display_name": display_name,
+            "display_name": normalized_name,
             "language": narrator_language_code(language),
             "prompt_text": prompt_text,
             "preview_text": preview_text or DEFAULT_PREVIEW_TEXT,
         }
     )
     profiles.append(custom_profile)
-    _write_json(_profiles_path(project_root), profiles)
+    document["profiles"] = profiles
+    write_narrator_voice_document(project_root, document)
     return custom_profile
 
 
@@ -418,22 +546,26 @@ def append_ai_generated_profiles(
     project_root: str | Path,
     profile_payloads: list[dict[str, object]],
     generation_metadata: dict[str, object],
+    *,
+    persist: bool = True,
 ) -> list[dict[str, object]]:
     """
     @brief      Append editable AI-generated narrator profiles without changing selection or samples.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_payloads Validated generated narrator-profile payloads.
     @param[in]  generation_metadata Shared metadata for the AI generation run.
+    @param[in]  persist Whether to write immediately; false lets the caller commit profiles with attempt state.
     @return     Persisted generated narrator-profile payload list.
     @exception  ValueError Raised when no valid generated profiles are provided.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = generation_metadata
     if not profile_payloads:
         raise ValueError("No generated narrator profiles were provided.")
-    profiles = load_profiles(project_root)
+    document = load_narrator_voice_document(project_root)
+    profiles = list(document["profiles"])
     existing_names = {display_profile_name(profile).casefold() for profile in profiles}
     created_profiles: list[dict[str, object]] = []
     for profile_payload in profile_payloads:
@@ -451,7 +583,9 @@ def append_ai_generated_profiles(
         created_profiles.append(generated_profile)
         profiles.append(generated_profile)
         existing_names.add(display_profile_name(generated_profile).casefold())
-    _write_json(_profiles_path(project_root), profiles)
+    if persist:
+        document["profiles"] = profiles
+        write_narrator_voice_document(project_root, document)
     return created_profiles
 
 
@@ -470,7 +604,9 @@ def update_custom_profile(
     @version    1.3.0
     """
     profile_id = str(profile_payload.get("profile_id", "")).strip()
-    profiles = load_profiles(project_root)
+    document = load_narrator_voice_document(project_root)
+    profiles = list(document["profiles"])
+    validate_profile_name(profiles, profile_payload.get("display_name"), profile_id)
     updated_profile = None
     normalized_profiles: list[dict[str, object]] = []
     for profile in profiles:
@@ -489,7 +625,8 @@ def update_custom_profile(
         normalized_profiles.append(updated_profile)
     if updated_profile is None:
         raise ValueError("missing_profile")
-    _write_json(_profiles_path(project_root), normalized_profiles)
+    document["profiles"] = normalized_profiles
+    write_narrator_voice_document(project_root, document)
     return updated_profile
 
 
@@ -526,7 +663,8 @@ def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, 
     @date       2026-04-17
     @version    1.4.0
     """
-    profiles = load_profiles(project_root)
+    document = load_narrator_voice_document(project_root)
+    profiles = list(document["profiles"])
     remaining_profiles: list[dict[str, object]] = []
     deleted_profile = None
     for profile in profiles:
@@ -536,12 +674,14 @@ def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, 
         deleted_profile = profile
     if deleted_profile is None:
         raise ValueError("missing_profile")
-    selected_state = load_selected_profile_state(project_root)
-    delete_profile_sample(project_root, profile_id)
-    _write_json(_profiles_path(project_root), remaining_profiles)
-    if str(selected_state.get("selected_profile_id", "") or "").strip() == str(profile_id).strip():
-        clear_narrator_selection(project_root)
-    return load_profiles(project_root)
+    audio_path = _current_profile_sample_audio_path(project_root, profile_id)
+    with suppress(OSError):
+        audio_path.unlink(missing_ok=True)
+    document["profiles"] = remaining_profiles
+    if document["selected_profile_id"] == str(profile_id).strip():
+        document["selected_profile_id"] = None
+    write_narrator_voice_document(project_root, document)
+    return [dict(profile) for profile in remaining_profiles]
 
 
 def profile_by_id(
@@ -645,23 +785,14 @@ def profile_sample_paths(project_root: str | Path, profile_id: str) -> tuple[Pat
     @brief      Resolve the per-profile narrator sample audio and aggregate metadata paths.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Target narrator-profile identifier.
-    @return     Tuple of WAV path and `audio_profiles.json` metadata path.
+    @return     Tuple of canonical WAV path and `narrator_voice.json` metadata path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    2.0.0
     """
     normalized_profile_id = str(profile_id).strip()
-    project_path = Path(project_root)
-    current_audio_path = project_path / f"audio_narator_{_normalized_audio_name(normalized_profile_id)}.wav"
-    profile_payload = profile_by_id(project_root, normalized_profile_id)
-    if isinstance(profile_payload, dict):
-        legacy_audio_path = (
-            project_path / f"audio_narator_{_normalized_audio_name(profile_payload.get('display_name'))}.wav"
-        )
-        if legacy_audio_path.is_file() and not current_audio_path.is_file():
-            return legacy_audio_path, _profiles_path(project_root)
-    return current_audio_path, _profiles_path(project_root)
+    return _current_profile_sample_audio_path(project_root, normalized_profile_id), _document_path(project_root)
 
 
 def has_profile_sample(project_root: str | Path, profile_id: str) -> bool:
@@ -669,7 +800,7 @@ def has_profile_sample(project_root: str | Path, profile_id: str) -> bool:
     @brief      Return whether one narrator profile currently has persisted sample artifacts.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Target narrator-profile identifier.
-    @return     True when the WAV exists and `audio_profiles.json` has sample metadata.
+    @return     True when the canonical WAV and current profile sample metadata exist.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
@@ -738,7 +869,6 @@ def store_profile_sample(
     """
     ensure_narrator_definition_files(project_root)
     profile_id = str(profile.get("profile_id", "")).strip()
-    previous_audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
     audio_path = _current_profile_sample_audio_path(project_root, profile_id)
     metadata_payload = {
         "source_kind": NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER,
@@ -757,7 +887,6 @@ def store_profile_sample(
         profile_id,
         metadata_payload=metadata_payload,
     )
-    _remove_replaced_sample_audio(previous_audio_path, audio_path)
     return metadata_payload
 
 
@@ -786,10 +915,9 @@ def import_profile_sample(
     source_path = Path(source_audio_path)
     voice_sample_import_service.validate_imported_wav_sample(source_path)
     profile_id = str(profile.get("profile_id", "")).strip()
-    previous_audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
     audio_path = _current_profile_sample_audio_path(project_root, profile_id)
     metadata_payload = {
-        "source_kind": voice_sample_import_service.IMPORTED_SAMPLE_SOURCE,
+        "source_kind": NARRATOR_SAMPLE_SOURCE_IMPORTED,
         "preview_text": normalized_preview_text,
         "language": narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE)),
         "source_model_id": None,
@@ -801,7 +929,6 @@ def import_profile_sample(
         profile_id,
         metadata_payload=metadata_payload,
     )
-    _remove_replaced_sample_audio(previous_audio_path, audio_path)
     return metadata_payload
 
 
@@ -821,123 +948,53 @@ def clear_all_profile_samples(project_root: str | Path) -> None:
     _clear_profile_sample_metadata(project_root)
 
 
-def selected_narrator_sample_paths(project_root: str | Path) -> tuple[Path, Path]:
+def selected_narrator_sample_path(project_root: str | Path) -> Path | None:
     """
-    @brief      Resolve the selected narrator profile sample audio and metadata paths.
+    @brief      Resolve the selected profile-owned narrator sample WAV.
     @param[in]  project_root Active project root folder.
-    @return     Tuple of WAV path and metadata JSON path.
+    @return     Canonical selected profile WAV path or `None` when unavailable.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.4.0
+    @date       2026-07-21
+    @version    0.1.0
     """
-    return (
-        Path(project_root) / config.SELECTED_NARRATOR_AUDIO_FILE_NAME,
-        Path(project_root) / config.SELECTED_NARRATOR_METADATA_FILE_NAME,
+    document = load_narrator_voice_document(project_root)
+    selected_profile_id = document["selected_profile_id"]
+    if selected_profile_id is None:
+        return None
+    selected_profile = next(
+        (profile for profile in document["profiles"] if profile["profile_id"] == selected_profile_id),
+        None,
     )
+    if selected_profile is None or selected_profile["sample"] is None:
+        return None
+    return _current_profile_sample_audio_path(project_root, selected_profile_id)
 
 
 def load_selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, object] | None:
     """
-    @brief      Load selected narrator sample metadata with profile-owned fallback.
+    @brief      Derive selected narrator sample metadata from the authoritative document.
     @param[in]  project_root Active project root folder.
     @return     Selected narrator sample metadata payload or None when unavailable.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.4.0
+    @version    1.0.0
     """
-    ensure_narrator_definition_files(project_root)
-    _audio_path, metadata_path = selected_narrator_sample_paths(project_root)
-    if metadata_path.is_file():
-        payload = _read_json_or_default(metadata_path, None, "selected narrator sample metadata")
-        if isinstance(payload, dict) and str(payload.get("preview_text", "")).strip():
-            selected_sample = _normalize_sample_payload(payload)
-            if isinstance(selected_sample, dict):
-                selected_profile_id = str(
-                    payload.get("profile_id", "") or payload.get("selected_profile_id", "")
-                ).strip()
-                if not selected_profile_id:
-                    selected_state = load_selected_profile_state(project_root)
-                    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
-                selected_metadata = {
-                    "profile_id": selected_profile_id,
-                    **selected_sample,
-                }
-                return selected_metadata
-            return dict(payload)
-
-    selected_state = load_selected_profile_state(project_root)
-    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
-    if not selected_profile_id:
+    document = load_narrator_voice_document(project_root)
+    selected_profile_id = document["selected_profile_id"]
+    if selected_profile_id is None:
         return None
-    profile_metadata = load_profile_sample_metadata(project_root, selected_profile_id)
-    if not isinstance(profile_metadata, dict):
+    selected_profile = next(
+        (profile for profile in document["profiles"] if profile["profile_id"] == selected_profile_id),
+        None,
+    )
+    if selected_profile is None or not isinstance(selected_profile["sample"], dict):
         return None
     return {
         "profile_id": selected_profile_id,
-        **dict(profile_metadata),
+        **dict(selected_profile["sample"]),
     }
-
-
-def clear_selected_narrator_sample(project_root: str | Path) -> None:
-    """
-    @brief      Clear selected-sample markers without deleting profile-owned sample audio.
-    @param[in]  project_root Active project root folder.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.7.0
-    """
-    clear_selected_narrator_sample_artifacts(project_root)
-    clear_narrator_selection(project_root)
-
-
-def clear_selected_narrator_sample_artifacts(project_root: str | Path) -> None:
-    """
-    @brief      Clear selected-sample audio and metadata without clearing the selected profile.
-    @param[in]  project_root Active project root folder.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
-    """
-    audio_path, metadata_path = selected_narrator_sample_paths(project_root)
-    if audio_path.exists():
-        audio_path.unlink()
-    if metadata_path.exists():
-        metadata_path.unlink()
-
-
-def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> dict[str, object] | None:
-    """
-    @brief      Mark one per-profile sample as the selected narrator sample.
-    @param[in]  project_root Active project root folder.
-    @param[in]  profile_id Selected narrator-profile identifier.
-    @return     Selected narrator metadata payload or None when unavailable.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.7.0
-    """
-    ensure_narrator_definition_files(project_root)
-    normalized_profile_id = str(profile_id).strip()
-    profile_audio_path, _profile_metadata_path = profile_sample_paths(project_root, normalized_profile_id)
-    profile_metadata = load_profile_sample_metadata(project_root, profile_id)
-    if not profile_audio_path.is_file() or profile_metadata is None:
-        clear_selected_narrator_sample_artifacts(project_root)
-        return None
-    select_narrator_profile(project_root, normalized_profile_id, str(profile_metadata.get("language", "")).strip())
-    selected_metadata = {
-        "profile_id": normalized_profile_id,
-        **dict(profile_metadata),
-    }
-    selected_audio_path, selected_metadata_path = selected_narrator_sample_paths(project_root)
-    _write_bytes_atomic(selected_audio_path, profile_audio_path.read_bytes())
-    _write_json(selected_metadata_path, selected_metadata)
-    return selected_metadata
 
 
 def sample_runtime_available(
@@ -985,39 +1042,25 @@ def _sample_metadata_is_imported(sample_metadata: dict[str, object]) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.2.0
+    @version    0.3.0
     """
     return (
-        str(sample_metadata.get("source_kind", "") or "").strip() == voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
-        or str(sample_metadata.get("sample_source", "") or "").strip()
-        == voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
-        or str(sample_metadata.get("generation_mode", "") or "").strip()
-        == voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE
+        str(sample_metadata.get("source_kind", "") or "").strip() == NARRATOR_SAMPLE_SOURCE_IMPORTED
+        or str(sample_metadata.get("sample_source", "") or "").strip() == "imported_sample"
+        or str(sample_metadata.get("generation_mode", "") or "").strip() == "imported_sample"
     )
 
 
-def _profiles_path(project_root: str | Path) -> Path:
+def _document_path(project_root: str | Path) -> Path:
     """
-    @brief      Execute the profiles path helper.
+    @brief      Resolve the authoritative Narrator Voice document path.
     @param[in]  project_root Active project root folder.
-    @return     Helper result.
+    @return     Project-root `narrator_voice.json` path.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-07-21
+    @version    1.0.0
     """
-    return Path(project_root) / config.NARRATOR_PROFILE_FILE_NAME
-
-
-def _selection_path(project_root: str | Path) -> Path:
-    """
-    @brief      Execute the selection path helper.
-    @param[in]  project_root Active project root folder.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return Path(project_root) / config.NARRATOR_SELECTION_FILE_NAME
+    return Path(project_root) / config.NARRATOR_VOICE_FILE_NAME
 
 
 def _normalized_audio_name(value: object) -> str:
@@ -1071,10 +1114,13 @@ def _normalize_sample_payload(payload: object) -> dict[str, object] | None:
         return None
     generation_mode = str(payload.get("generation_mode", "") or "").strip()
     source_kind = str(payload.get("source_kind", "") or payload.get("sample_source", "") or generation_mode).strip()
-    if source_kind == voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE:
-        source_kind = voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
-    if generation_mode and source_kind not in {
+    if source_kind in {
+        voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE,
         voice_sample_import_service.IMPORTED_SAMPLE_SOURCE,
+    }:
+        source_kind = NARRATOR_SAMPLE_SOURCE_IMPORTED
+    if generation_mode and source_kind not in {
+        NARRATOR_SAMPLE_SOURCE_IMPORTED,
         NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER,
     }:
         source_kind = NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER
@@ -1119,7 +1165,7 @@ def _update_profile_sample_metadata(
     metadata_payload: dict[str, object] | None,
 ) -> None:
     """
-    @brief      Store or clear one narrator profile sample metadata entry in `audio_profiles.json`.
+    @brief      Store or clear one profile sample entry in the authoritative document.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Target narrator-profile identifier.
     @param[in]  metadata_payload Sample payload or `None` to clear it.
@@ -1129,7 +1175,8 @@ def _update_profile_sample_metadata(
     @version    0.2.0
     """
     normalized_profile_id = str(profile_id or "").strip()
-    profiles = load_profiles(project_root)
+    document = load_narrator_voice_document(project_root)
+    profiles = list(document["profiles"])
     updated_profiles: list[dict[str, object]] = []
     for profile in profiles:
         if str(profile.get("profile_id", "")).strip() != normalized_profile_id:
@@ -1141,62 +1188,233 @@ def _update_profile_sample_metadata(
                 "sample": None if metadata_payload is None else dict(metadata_payload),
             }
         )
-    _write_json(_profiles_path(project_root), updated_profiles)
+    document["profiles"] = updated_profiles
+    write_narrator_voice_document(project_root, document)
 
 
 def _clear_profile_sample_metadata(project_root: str | Path) -> None:
     """
-    @brief      Clear every narrator profile sample metadata entry from `audio_profiles.json`.
+    @brief      Clear every narrator profile sample entry in the authoritative document.
     @param[in]  project_root Active project root folder.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
     @version    0.2.0
     """
+    document = load_narrator_voice_document(project_root)
     profiles = [
         {
             **dict(profile),
             "sample": None,
         }
-        for profile in load_profiles(project_root)
+        for profile in document["profiles"]
     ]
-    _write_json(_profiles_path(project_root), profiles)
+    document["profiles"] = profiles
+    write_narrator_voice_document(project_root, document)
 
 
-def _normalize_selected_state(
-    payload: object,
-    profiles: list[dict[str, object]],
-) -> tuple[dict[str, object], list[dict[str, object]]]:
+def _validate_narrator_voice_document(payload: object) -> dict[str, object]:
     """
-    @brief      Normalize the selected state.
-    @param[in]  payload Optional payload processed by the helper.
-    @param[in]  profiles Value for `profiles`.
-    @return     Derived helper result.
+    @brief      Validate the complete authoritative Narrator Voice data contract.
+    @param[in]  payload Candidate document payload.
+    @return     Validated detached document dictionary.
+    @exception  NarratorVoiceDocumentContractError Raised for any contract violation.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
+    @date       2026-07-21
+    @version    0.1.0
     """
-    normalized_payload = dict(payload) if isinstance(payload, dict) else {}
-    fallback_selected_profile_id = str(normalized_payload.get("selected_profile_id", "") or "").strip()
-    selected_profile = next(
-        (profile for profile in profiles if str(profile.get("profile_id", "")).strip() == fallback_selected_profile_id),
-        None,
-    )
-
-    selected_language = narrator_language_code(
-        normalized_payload.get("selected_language", "")
-        or (
-            selected_profile.get("language", DEFAULT_NARRATOR_LANGUAGE) if isinstance(selected_profile, dict) else None
-        ),
-        DEFAULT_NARRATOR_LANGUAGE,
-    )
-    normalized_state = {
-        "selected_profile_id": (
-            None if selected_profile is None else str(selected_profile.get("profile_id", "")).strip()
-        ),
-        "selected_language": selected_language if selected_profile is not None else None,
+    if not isinstance(payload, dict) or set(payload) != _NARRATOR_VOICE_ROOT_FIELDS:
+        raise NarratorVoiceDocumentContractError("Narrator Voice document root fields do not match the contract.")
+    status = payload.get("status")
+    if status not in _NARRATOR_VOICE_STATUSES:
+        raise NarratorVoiceDocumentContractError("Narrator Voice status is unsupported.")
+    token_usage = _validate_token_usage(payload.get("token_usage"))
+    budget_metadata = payload.get("budget_metadata")
+    if not isinstance(budget_metadata, dict):
+        raise NarratorVoiceDocumentContractError("Narrator Voice budget_metadata must be an object.")
+    instructions = payload.get("additional_profile_instructions")
+    if not isinstance(instructions, str):
+        raise NarratorVoiceDocumentContractError("Narrator Voice instructions must be a string.")
+    raw_profiles = payload.get("profiles")
+    if not isinstance(raw_profiles, list):
+        raise NarratorVoiceDocumentContractError("Narrator Voice profiles must be an array.")
+    profiles = [_validate_persisted_profile(profile) for profile in raw_profiles]
+    profile_ids = [profile["profile_id"] for profile in profiles]
+    if len(profile_ids) != len(set(profile_ids)):
+        raise NarratorVoiceDocumentContractError("Narrator Voice profile ids must be unique.")
+    folded_names = [profile["display_name"].casefold() for profile in profiles]
+    if len(folded_names) != len(set(folded_names)):
+        raise NarratorVoiceDocumentContractError("Narrator Voice display names must be unique.")
+    selected_profile_id = payload.get("selected_profile_id")
+    if selected_profile_id is not None and (
+        not isinstance(selected_profile_id, str)
+        or not selected_profile_id.strip()
+        or selected_profile_id not in profile_ids
+    ):
+        raise NarratorVoiceDocumentContractError("Narrator Voice selected_profile_id is invalid.")
+    resume = payload.get("resume")
+    if status in {NARRATOR_VOICE_STATUS_NOT_STARTED, NARRATOR_VOICE_STATUS_COMPLETED}:
+        if resume is not None:
+            raise NarratorVoiceDocumentContractError("Completed or not-started Narrator Voice data cannot resume.")
+        validated_resume = None
+    else:
+        validated_resume = _validate_resume(resume)
+    return {
+        "status": status,
+        "token_usage": token_usage,
+        "budget_metadata": dict(budget_metadata),
+        "additional_profile_instructions": instructions,
+        "selected_profile_id": selected_profile_id,
+        "profiles": profiles,
+        "resume": validated_resume,
     }
-    return normalized_state, profiles
+
+
+def _validate_token_usage(payload: object) -> dict[str, object]:
+    """
+    @brief      Validate the shared four-field token-usage payload.
+    @version    1.0.0
+    """
+    expected_fields = {"input_tokens", "output_tokens", "total_tokens", "usage_available"}
+    if not isinstance(payload, dict) or set(payload) != expected_fields:
+        raise NarratorVoiceDocumentContractError("Narrator Voice token_usage does not match the shared contract.")
+    usage_available = payload.get("usage_available")
+    if not isinstance(usage_available, bool):
+        raise NarratorVoiceDocumentContractError("Narrator Voice usage_available must be boolean.")
+    normalized: dict[str, object] = {"usage_available": usage_available}
+    for field_name in ("input_tokens", "output_tokens", "total_tokens"):
+        value = payload.get(field_name)
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 0):
+            raise NarratorVoiceDocumentContractError(f"Narrator Voice {field_name} must be non-negative or null.")
+        normalized[field_name] = value
+    return {
+        "input_tokens": normalized["input_tokens"],
+        "output_tokens": normalized["output_tokens"],
+        "total_tokens": normalized["total_tokens"],
+        "usage_available": normalized["usage_available"],
+    }
+
+
+def _validate_persisted_profile(payload: object) -> dict[str, object]:
+    """
+    @brief      Validate one exact persisted Narrator Voice profile.
+    @version    1.0.0
+    """
+    if not isinstance(payload, dict) or set(payload) != _NARRATOR_VOICE_PROFILE_FIELDS:
+        raise NarratorVoiceDocumentContractError("Narrator Voice profile fields do not match the contract.")
+    profile_id = payload.get("profile_id")
+    display_name = payload.get("display_name")
+    language = payload.get("language")
+    prompt_text = payload.get("prompt_text")
+    preview_text = payload.get("preview_text")
+    if not isinstance(profile_id, str) or not profile_id.strip():
+        raise NarratorVoiceDocumentContractError("Narrator Voice profile_id must be a non-empty string.")
+    if not isinstance(display_name, str) or not display_name.strip():
+        raise NarratorVoiceDocumentContractError("Narrator Voice display_name must be non-empty.")
+    if language not in _NARRATOR_LANGUAGE_LABELS:
+        raise NarratorVoiceDocumentContractError("Narrator Voice profile language is unsupported.")
+    if not isinstance(prompt_text, str):
+        raise NarratorVoiceDocumentContractError("Narrator Voice prompt_text must be a string.")
+    if not isinstance(preview_text, str) or not preview_text.strip():
+        raise NarratorVoiceDocumentContractError("Narrator Voice preview_text must be non-empty.")
+    sample = None if payload.get("sample") is None else _validate_persisted_sample(payload.get("sample"))
+    return {
+        "profile_id": profile_id,
+        "display_name": display_name,
+        "language": language,
+        "prompt_text": prompt_text,
+        "preview_text": preview_text,
+        "sample": sample,
+    }
+
+
+def _validate_persisted_sample(payload: object) -> dict[str, object]:
+    """
+    @brief      Validate one exact compact generated or imported sample payload.
+    @version    1.0.0
+    """
+    if not isinstance(payload, dict):
+        raise NarratorVoiceDocumentContractError("Narrator Voice sample must be an object or null.")
+    source_kind = payload.get("source_kind")
+    expected_fields = set(_NARRATOR_VOICE_SAMPLE_FIELDS)
+    if source_kind == NARRATOR_SAMPLE_SOURCE_IMPORTED:
+        expected_fields.add("source_file_name")
+    if set(payload) != expected_fields:
+        raise NarratorVoiceDocumentContractError("Narrator Voice sample fields do not match its source kind.")
+    preview_text = payload.get("preview_text")
+    language = payload.get("language")
+    source_model_id = payload.get("source_model_id")
+    if source_kind not in {NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER, NARRATOR_SAMPLE_SOURCE_IMPORTED}:
+        raise NarratorVoiceDocumentContractError("Narrator Voice sample source_kind is unsupported.")
+    if not isinstance(preview_text, str) or not preview_text.strip():
+        raise NarratorVoiceDocumentContractError("Narrator Voice sample preview_text must be non-empty.")
+    if language not in _NARRATOR_LANGUAGE_LABELS:
+        raise NarratorVoiceDocumentContractError("Narrator Voice sample language is unsupported.")
+    if source_kind == NARRATOR_SAMPLE_SOURCE_IMPORTED:
+        source_file_name = payload.get("source_file_name")
+        if source_model_id is not None or not isinstance(source_file_name, str) or not source_file_name.strip():
+            raise NarratorVoiceDocumentContractError("Imported narrator sample provenance is invalid.")
+        return {
+            "source_kind": source_kind,
+            "preview_text": preview_text,
+            "language": language,
+            "source_model_id": None,
+            "source_file_name": source_file_name,
+        }
+    if not isinstance(source_model_id, str) or not source_model_id.strip():
+        raise NarratorVoiceDocumentContractError("Generated narrator samples require source_model_id.")
+    return {
+        "source_kind": source_kind,
+        "preview_text": preview_text,
+        "language": language,
+        "source_model_id": source_model_id,
+    }
+
+
+def _validate_resume(payload: object) -> dict[str, object]:
+    """
+    @brief      Validate one exact unfinished AI style-analysis checkpoint.
+    @version    1.0.0
+    """
+    if not isinstance(payload, dict) or set(payload) != _NARRATOR_VOICE_RESUME_FIELDS:
+        raise NarratorVoiceDocumentContractError("Narrator Voice resume fields do not match the contract.")
+    fingerprint = payload.get("resume_fingerprint")
+    requested_count = payload.get("requested_count")
+    completed_count = payload.get("completed_window_count")
+    total_count = payload.get("total_window_count")
+    observations = payload.get("style_observations")
+    if not isinstance(fingerprint, str) or not fingerprint.strip():
+        raise NarratorVoiceDocumentContractError("Narrator Voice resume fingerprint is required.")
+    if not isinstance(requested_count, int) or isinstance(requested_count, bool) or requested_count <= 0:
+        raise NarratorVoiceDocumentContractError("Narrator Voice requested_count must be positive.")
+    if not isinstance(completed_count, int) or isinstance(completed_count, bool) or completed_count < 0:
+        raise NarratorVoiceDocumentContractError("Narrator Voice completed_window_count is invalid.")
+    if not isinstance(total_count, int) or isinstance(total_count, bool) or total_count < completed_count:
+        raise NarratorVoiceDocumentContractError("Narrator Voice total_window_count is invalid.")
+    if not isinstance(observations, list) or len(observations) != completed_count:
+        raise NarratorVoiceDocumentContractError("Narrator Voice resume observations are inconsistent.")
+    if not all(isinstance(observation, dict) for observation in observations):
+        raise NarratorVoiceDocumentContractError("Narrator Voice style observations must be objects.")
+    allocation = payload.get("gender_allocation")
+    if not isinstance(allocation, dict) or set(allocation) != _NARRATOR_VOICE_GENDER_FIELDS:
+        raise NarratorVoiceDocumentContractError("Narrator Voice gender allocation is invalid.")
+    for field_name in ("male", "female", "random"):
+        value = allocation.get(field_name)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise NarratorVoiceDocumentContractError("Narrator Voice gender allocation counts are invalid.")
+    random_gender = allocation.get("random_gender")
+    if not isinstance(random_gender, str):
+        raise NarratorVoiceDocumentContractError("Narrator Voice random_gender must be a string.")
+    if allocation["male"] + allocation["female"] != requested_count:
+        raise NarratorVoiceDocumentContractError("Narrator Voice gender allocation does not match requested_count.")
+    return {
+        "resume_fingerprint": fingerprint,
+        "requested_count": requested_count,
+        "gender_allocation": dict(allocation),
+        "completed_window_count": completed_count,
+        "total_window_count": total_count,
+        "style_observations": [dict(observation) for observation in observations],
+    }
 
 
 def _build_generation_request(
@@ -1272,32 +1490,6 @@ def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | 
     return None if not model_entries else dict(model_entries[0])
 
 
-def _read_json_or_default(path: Path, default_payload: object, artifact_label: str) -> object:
-    """
-    @brief      Read one JSON artifact, falling back to a default on missing or malformed data.
-    @param[in]  path JSON artifact path.
-    @param[in]  default_payload Payload returned when the artifact is unavailable.
-    @param[in]  artifact_label Human-readable artifact label for diagnostics.
-    @return     Parsed JSON payload or the supplied default payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
-    """
-    if not path.is_file():
-        return default_payload
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        _NARRATOR_DEFINITION_LOGGER.warning(
-            "Ignoring unreadable %s artifact at %s: %s",
-            artifact_label,
-            path,
-            error,
-        )
-        return default_payload
-
-
 def _current_profile_sample_audio_path(project_root: str | Path, profile_id: str) -> Path:
     """
     @brief      Resolve the current profile-id-based sample WAV path for a narrator profile.
@@ -1344,23 +1536,6 @@ def _write_bytes_atomic(target_path: str | Path, payload: bytes) -> None:
         raise
 
 
-def _remove_replaced_sample_audio(previous_audio_path: Path, current_audio_path: Path) -> None:
-    """
-    @brief      Remove a replaced legacy sample WAV after the new sample has been committed.
-    @param[in]  previous_audio_path Existing sample path before replacement.
-    @param[in]  current_audio_path Current committed sample path.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
-    """
-    if previous_audio_path == current_audio_path:
-        return
-    with suppress(OSError):
-        previous_audio_path.unlink(missing_ok=True)
-
-
 def _unlink_temporary_file(temporary_path: Path) -> None:
     """
     @brief      Best-effort cleanup for temporary byte persistence files.
@@ -1373,19 +1548,6 @@ def _unlink_temporary_file(temporary_path: Path) -> None:
     """
     with suppress(OSError):
         temporary_path.unlink(missing_ok=True)
-
-
-def _write_json(path: Path, payload: object) -> None:
-    """
-    @brief      Write the json.
-    @param[in]  path Value for `path`.
-    @param[in]  payload Optional payload processed by the helper.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    write_json_atomic(path, payload)
 
 
 # END OF FILE

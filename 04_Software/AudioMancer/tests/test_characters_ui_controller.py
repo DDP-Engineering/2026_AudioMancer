@@ -28,6 +28,7 @@ from audiomancer.services import (
     audio_blocks_service,
     character_discovery_service,
     character_voices_service,
+    narrator_definition_service,
     project_workspace_service,
     speech_blocks_service,
 )
@@ -308,7 +309,7 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
     saved_profiles = character_discovery_service.load_character_profiles(project_root)
     assert any(profile["canonical_name"] == "Bob" for profile in saved_profiles)
     assert window._characters_page.current_character_id() is not None
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     voice_targets = character_voices_service.load_voice_plan(project_root)
     assert {target["display_name"] for target in voice_targets} == {"Narator Voice", "Alice", "Bob"}
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
@@ -344,7 +345,7 @@ def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, q
     characters_ui_controller.handle_delete_character_requested(window, "alice")
 
     assert character_discovery_service.load_character_profiles(project_root) == []
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert character_voices_service.load_voice_plan(project_root) == []
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert len(speech_blocks) == 2
@@ -712,26 +713,14 @@ def _write_downstream_artifacts(project_root, window: MainWindow) -> None:
     @date       2026-04-26
     @version    0.2.0
     """
-    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text(
-        json.dumps(
-            [
-                {
-                    "profile_id": "narrator-profile",
-                    "display_name": "Narrator",
-                    "language": "en",
-                    "preview_text": "Narrator sample.",
-                    "is_selected": True,
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Narrator",
+        "en",
+        "A consistent narrator voice.",
+        "Narrator sample.",
     )
-    (project_root / config.NARRATOR_SELECTION_FILE_NAME).write_text(
-        json.dumps({"selected_profile_id": "narrator-profile", "selected_language": "en"}, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
     (project_root / "alice_sample.wav").write_bytes(b"RIFFalice")
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text(
         json.dumps(

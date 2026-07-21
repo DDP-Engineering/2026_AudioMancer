@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 
 from audiomancer import config
-from audiomancer.services import project_export_service, project_workspace_service
+from audiomancer.services import narrator_definition_service, project_export_service, project_workspace_service
 
 # PUBLIC API
 
@@ -770,27 +770,14 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
     @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("NarratorTimestampDrift", tmp_path)
-    profile_id = "narrator-1"
-    selected_at = "2026-05-11T10:23:11+00:00"
-    _write_json(
-        project_root / config.NARRATOR_PROFILE_FILE_NAME,
-        [
-            {
-                "profile_id": profile_id,
-                "display_name": "Selected Narrator",
-                "language": "en",
-            }
-        ],
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Selected Narrator",
+        "en",
+        "A steady narrator voice.",
+        "A selected narrator preview sentence.",
     )
-    _write_json(
-        project_root / config.NARRATOR_SELECTION_FILE_NAME,
-        {
-            "selected_profile_id": profile_id,
-            "display_name": "Selected Narrator",
-            "selected_language": "en",
-            "selected_at": selected_at,
-        },
-    )
+    narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
     _write_json(
         project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
         [{"speech_block_id": "sb-1", "approved": False}],
@@ -851,15 +838,22 @@ def test_open_project_heals_completed_character_voices_manifest_summary(tmp_path
     manifest["current_stage"] = "character_voices_ready"
     project_workspace_service.save_manifest(manifest, project_root)
     (project_root / "story.txt").write_text("Story.", encoding="utf-8")
-    (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).write_bytes(b"RIFF-narrator")
-    _write_json(
-        project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME,
-        {
-            "voice_language": "en",
-            "preview_text": "Narrator preview.",
-            "selected_at": "2026-05-16T12:01:00+00:00",
-        },
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Narator Voice",
+        "en",
+        "A warm narrator voice.",
+        "Narrator preview.",
     )
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        narrator_profile,
+        "Narrator preview.",
+        {"generation_mode": "definition", "source_model_id": "qwen-designer", "language": "en"},
+        "Narrator sample ready.",
+        b"RIFF-narrator",
+    )
+    narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
     (project_root / "audio_alice.wav").write_bytes(b"RIFF-alice")
     _write_json(
         project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME,

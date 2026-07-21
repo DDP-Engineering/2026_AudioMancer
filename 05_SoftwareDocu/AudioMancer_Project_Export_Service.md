@@ -105,7 +105,7 @@ Character Voices become available when at least one profile/target has both a
 sample WAV and sample metadata, and Audio Assembly becomes available when at
 least one generated output record still points to an existing WAV file.
 Narator Voice samples use the compact per-profile `sample` payload from
-`audio_profiles.json`; Character Voices targets continue to use their
+`narrator_voice.json`; Character Voices targets continue to use their
 target-level sample metadata.
 
 Every rendered export starts with:
@@ -137,10 +137,10 @@ Each Speech Block body renders the speaker display name on its own line and the
 spoken text on the following line; Markdown exports use hard line breaks inside
 each block so previewers preserve that two-line layout.
 
-Narator Voice ZIP exports include one WAV and one companion TXT file per
-sampled narrator profile. Character Voices ZIP exports do the same for sampled
-character targets. Each companion TXT contains the voice definition prompt and
-the preview text used for the sample. Audio Assembly ZIP exports include every
+Narator Voice ZIP exports include `narrator_voice.json` plus each valid
+profile-owned canonical WAV. Character Voices ZIP exports include one WAV and
+one companion TXT per sampled character target. Each character companion TXT
+contains the voice definition prompt and preview text. Audio Assembly ZIP exports include every
 available generated WAV plus `audio_assembly_manifest.txt`, which records the
 composition settings, exported file list, duration, size, and totals.
 

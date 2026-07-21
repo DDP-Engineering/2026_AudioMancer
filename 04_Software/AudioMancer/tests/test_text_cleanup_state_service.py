@@ -24,6 +24,7 @@ import json
 from audiomancer import config
 from audiomancer.services import (
     cleanup_metadata_service,
+    narrator_definition_service,
     operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
@@ -222,7 +223,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text("{}\n", encoding="utf-8")
-    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "text_chunking_ready"
@@ -259,7 +260,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).exists()
-    assert not (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
     assert not (cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).exists()

@@ -23,7 +23,7 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service, project_workspace_service
+from audiomancer.services import ai_translation_service, narrator_definition_service, project_workspace_service
 from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.main_window import MainWindow
 from chunking_test_support import build_chunking_document
@@ -133,7 +133,7 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationDownstreamReset")
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     assert window._current_manifest is not None
@@ -155,7 +155,7 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     assert window._current_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert window._current_manifest["operations"]["character_discovery"]["status"] == "not_started"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
 
@@ -171,7 +171,7 @@ def test_translation_controller_reset_removes_monofile_and_preserves_narrator(mo
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationReset")
     ai_translation_service.write_translation_document(project_root, _document("review_pending"))
-    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
@@ -183,7 +183,7 @@ def test_translation_controller_reset_removes_monofile_and_preserves_narrator(mo
     ai_translation_ui_controller.handle_reset_translation_requested(window)
 
     assert not (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
 
 

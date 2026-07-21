@@ -10,6 +10,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Narrator Voice now persists its complete strict metadata contract in
+  `narrator_voice.json`; selection stores only the profile ID and downstream
+  services resolve the selected profile-owned WAV at read time.
+- AI narrator profile generation now checkpoints resume state atomically in the
+  authoritative document and appends validated profiles only on success.
+- Narrator export, project recovery, snapshots, reset, and preservation now use
+  the authoritative document, canonical `audio_narator_<profile_id>.wav`
+  samples, and the actual narrator AI log pattern.
+
+### Removed
+
+- Removed the fragmented narrator profile, selection, selected-sample,
+  generation-report, and generation-state contracts. No compatibility reader,
+  automatic migration, or selected-sample copy remains.
+
 ## [1.6.7] - 2026-07-16
 
 ### Changed

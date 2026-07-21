@@ -549,7 +549,6 @@ def _create_project_with_selected_narrator(tmp_path, name: str):
         b"RIFF-narrator",
     )
     narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
-    narrator_definition_service.copy_selected_narrator_sample(project_root, narrator_profile["profile_id"])
     return project_root, manifest
 
 
