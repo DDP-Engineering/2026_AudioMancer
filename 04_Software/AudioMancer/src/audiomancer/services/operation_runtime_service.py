@@ -81,12 +81,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     ),
     "narrator_definition": (
-        config.NARRATOR_PROFILE_FILE_NAME,
-        config.NARRATOR_SELECTION_FILE_NAME,
-        config.SELECTED_NARRATOR_AUDIO_FILE_NAME,
-        config.SELECTED_NARRATOR_METADATA_FILE_NAME,
-        config.NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME,
-        config.NARRATOR_PROFILE_GENERATION_STATE_FILE_NAME,
+        config.NARRATOR_VOICE_FILE_NAME,
     ),
     "character_voices": (config.CHARACTER_VOICES_TARGETS_FILE_NAME,),
     "speech_blocks": (
@@ -104,6 +99,16 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
         config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
     ),
+}
+
+# @brief Root-level artifact globs owned by operations with derived file names.
+_OPERATION_ARTIFACT_GLOBS = {
+    "narrator_definition": ("audio_narator_*.wav",),
+}
+
+# @brief AI log tokens that differ from their owning operation kind.
+_OPERATION_AI_LOG_TOKENS = {
+    "narrator_definition": ("narrator_profiles",),
 }
 
 # @brief Optional operation-state file names that may be initialized on first page open.
@@ -731,9 +736,15 @@ def reset_operation_data(
             artifact_path = root_path / file_name
             if artifact_path.is_file():
                 artifact_path.unlink()
-        for log_path in root_path.glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{selected_kind}_*.log"):
-            if log_path.is_file():
-                log_path.unlink()
+        for artifact_glob in _OPERATION_ARTIFACT_GLOBS.get(selected_kind, ()):
+            for artifact_path in root_path.glob(artifact_glob):
+                if artifact_path.is_file():
+                    artifact_path.unlink()
+        log_tokens = _OPERATION_AI_LOG_TOKENS.get(selected_kind, (selected_kind,))
+        for log_token in log_tokens:
+            for log_path in root_path.glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{log_token}_*.log"):
+                if log_path.is_file():
+                    log_path.unlink()
         if selected_kind == "audio_blocks":
             audio_blocks_root = root_path / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
             if audio_blocks_root.is_dir():

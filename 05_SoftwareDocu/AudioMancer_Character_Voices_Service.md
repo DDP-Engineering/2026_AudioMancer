@@ -210,12 +210,12 @@ Same-narrator copied sample metadata uses:
 - `sample_source = "copied_narrator"`
 - `copied_from_target_id = "narrator"`
 
-When same-narrator mode copies from `narator_sample.json`, the source narrator
-sample may use the compact Narator Voice schema (`source_kind`) or legacy
-selected-sample source keys (`generation_mode`, `sample_source`). Character
-Voices writes its own target metadata using the Character Voices contract above
-and does not persist sample audit timestamps or `stale`; changing a character
-voice prompt clears the affected sample instead.
+When same-narrator mode copies a character-target sample, it resolves the
+selected profile's canonical WAV and inline sample metadata through
+`narrator_definition_service`. Character Voices writes its own target metadata
+using the Character Voices contract above and does not persist sample audit
+timestamps or `stale`; changing a character voice prompt clears the affected
+sample instead.
 
 Persistence contract:
 
@@ -236,8 +236,8 @@ order.
 
 Upstream integrations:
 
-- selected narrator state from `narator.json` and narrator sample artifacts
-  from `narator.wav` plus `narator_sample.json`
+- selected narrator state and inline sample metadata from `narrator_voice.json`,
+  plus the selected profile-owned `audio_narator_<profile_id>.wav`
 - project-local `voice_assignment_mode` from `project.json`
 - character discovery artifacts from `characters_profile.json`, including the
   compact sex/gender guidance, compact age-domain guidance, and final

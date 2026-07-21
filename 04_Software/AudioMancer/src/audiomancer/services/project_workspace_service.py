@@ -842,11 +842,21 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
     @version    0.2.0
     """
     _ = warnings
-    profiles = _load_json_artifact(project_root, config.NARRATOR_PROFILE_FILE_NAME)
-    selection = _load_json_artifact(project_root, config.NARRATOR_SELECTION_FILE_NAME)
-    if not _non_empty_payload_list(profiles) or not isinstance(selection, dict):
+    from audiomancer.services import narrator_definition_service
+
+    try:
+        document = narrator_definition_service.load_narrator_voice_document(project_root)
+    except narrator_definition_service.NarratorVoiceDocumentContractError:
         return None
-    selected_profile = _selected_narrator_profile(profiles, selection)
+    selected_profile_id = document.get("selected_profile_id")
+    selected_profile = next(
+        (
+            profile
+            for profile in document.get("profiles", [])
+            if isinstance(profile, dict) and profile.get("profile_id") == selected_profile_id
+        ),
+        None,
+    )
     if selected_profile is None:
         return None
     operation = {
@@ -856,7 +866,7 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
         "mode": "manual",
         "warning_count": 0,
     }
-    return {"operation": operation, "selection": selection, "profile": selected_profile}
+    return {"operation": operation, "document": document, "profile": selected_profile}
 
 
 def _character_voices_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
@@ -884,9 +894,13 @@ def _character_voices_completion_evidence(project_root: Path, warnings: list[str
         for target in targets
         if isinstance(target, dict) and str(target.get("target_kind", "")).strip() == "character"
     ]
-    narrator_metadata = _load_json_artifact(project_root, config.SELECTED_NARRATOR_METADATA_FILE_NAME)
+    from audiomancer.services import narrator_definition_service
+
+    narrator_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
+    narrator_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
     if narrator_targets and (
-        not (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).is_file()
+        narrator_audio_path is None
+        or not narrator_audio_path.is_file()
         or not isinstance(narrator_metadata, dict)
     ):
         return None

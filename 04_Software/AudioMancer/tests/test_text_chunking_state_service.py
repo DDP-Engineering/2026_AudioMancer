@@ -21,7 +21,7 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service, text_chunking_state_service
+from audiomancer.services import narrator_definition_service, project_workspace_service, text_chunking_state_service
 from chunking_test_support import build_chunking_document, write_chunking_document
 
 
@@ -189,7 +189,7 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
         + "\n",
         encoding="utf-8",
     )
-    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
@@ -233,7 +233,7 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     )
     assert translation_document["chunks"][0]["translated_text"] == ""
     assert translation_document["chunks"][0]["approved"] is False
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).is_file()

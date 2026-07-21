@@ -65,10 +65,11 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.TRANSLATED_CHUNKS_FILE_NAME == "translated_text.json"
     assert not hasattr(config, "TRANSLATION_REPORT_FILE_NAME")
     assert not hasattr(config, "TRANSLATION_STATE_FILE_NAME")
-    assert config.NARRATOR_PROFILE_FILE_NAME == "audio_profiles.json"
-    assert config.NARRATOR_SELECTION_FILE_NAME == "narator.json"
-    assert config.SELECTED_NARRATOR_AUDIO_FILE_NAME == "narator.wav"
-    assert config.SELECTED_NARRATOR_METADATA_FILE_NAME == "narator_sample.json"
+    assert config.NARRATOR_VOICE_FILE_NAME == "narrator_voice.json"
+    assert not hasattr(config, "NARRATOR_PROFILE_FILE_NAME")
+    assert not hasattr(config, "NARRATOR_SELECTION_FILE_NAME")
+    assert not hasattr(config, "SELECTED_NARRATOR_AUDIO_FILE_NAME")
+    assert not hasattr(config, "SELECTED_NARRATOR_METADATA_FILE_NAME")
     assert config.SPEECH_BLOCKS_OUTPUT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512

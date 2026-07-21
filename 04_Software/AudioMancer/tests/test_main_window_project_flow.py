@@ -251,8 +251,7 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     assert (project_root / "chunking_state.json").exists() is False
     assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists() is False
-    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).exists() is False
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists() is False
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
 
     window.set_current_page("text_cleanup")
@@ -269,14 +268,12 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     assert (project_root / "chunking_state.json").exists() is False
     assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists() is False
-    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).exists() is False
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists() is False
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
 
     window.set_current_page("narator_voice")
 
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
-    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
 
     window.set_current_page("character_voices")

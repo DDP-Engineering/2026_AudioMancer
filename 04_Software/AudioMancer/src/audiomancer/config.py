@@ -343,26 +343,11 @@ CHARACTER_DISCOVERY_REPORT_FILE_NAME = "characters_report.json"
 # @brief File name used for persisted character-discovery runtime state.
 CHARACTER_DISCOVERY_STATE_FILE_NAME = "characters_state.json"
 
-# @brief File name used for persisted narrator-definition profile records.
-NARRATOR_PROFILE_FILE_NAME = "audio_profiles.json"
-
-# @brief File name used for persisted narrator-definition selection state.
-NARRATOR_SELECTION_FILE_NAME = "narator.json"
-
-# @brief File name used for persisted AI narrator-profile generation metadata.
-NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME = "narator_profile_generation_report.json"
-
-# @brief File name used for persisted AI narrator-profile generation runtime state.
-NARRATOR_PROFILE_GENERATION_STATE_FILE_NAME = "narator_profile_generation_state.json"
+# @brief File name used for the authoritative Narrator Voice document.
+NARRATOR_VOICE_FILE_NAME = "narrator_voice.json"
 
 # @brief File name used for persisted character-voices target records.
 CHARACTER_VOICES_TARGETS_FILE_NAME = "characters_voice.json"
-
-# @brief File name used for the selected narrator sample at the project root.
-SELECTED_NARRATOR_AUDIO_FILE_NAME = "narator.wav"
-
-# @brief File name used for the selected narrator sample metadata at the project root.
-SELECTED_NARRATOR_METADATA_FILE_NAME = "narator_sample.json"
 
 # @brief File name used for persisted Speech Blocks output.
 SPEECH_BLOCKS_OUTPUT_FILE_NAME = "speech_blocks.json"

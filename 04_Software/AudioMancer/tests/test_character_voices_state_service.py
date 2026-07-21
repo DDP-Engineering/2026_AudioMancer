@@ -350,9 +350,6 @@ def _create_project_with_narrator_and_character(
             b"RIFF-narrator",
         )
     narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
-    if store_narrator_sample:
-        narrator_definition_service.copy_selected_narrator_sample(project_root, narrator_profile["profile_id"])
-
     character_discovery_service.add_character_profile(project_root, "Alice")
     alice_profile = character_discovery_service.load_character_profiles(project_root)[0]
     character_discovery_service.update_character_profile(

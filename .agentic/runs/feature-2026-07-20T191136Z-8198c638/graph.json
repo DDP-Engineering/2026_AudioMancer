@@ -744,6 +744,20 @@
       "summary": "All blocking invariants pass, including coverage, citations, red-before-green, regression, evidence, secrets, active requirements, and component baseline scope; only the advisory 05_SoftwareDocu scope hint remains.",
       "supersede_reason": null,
       "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-21T11:34:07+00:00",
+      "failure_kind": null,
+      "id": "E-0022",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "User explicitly parked the Text Chunking run on 2026-07-21 so a separate Narrator Voice persistence run can become active; the parked run remains preserved under its existing run id and is not delivered.",
+      "supersede_reason": null,
+      "superseded_by": null
     }
   ],
   "intent": {

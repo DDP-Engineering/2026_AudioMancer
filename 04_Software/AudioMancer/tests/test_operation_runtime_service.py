@@ -21,7 +21,7 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import operation_runtime_service, project_workspace_service
+from audiomancer.services import narrator_definition_service, operation_runtime_service, project_workspace_service
 from audiomancer.services.time_service import utc_now_iso
 
 
@@ -370,10 +370,9 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
     @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("PreserveNarratorRuntime", tmp_path)
-    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.NARRATOR_SELECTION_FILE_NAME).write_text("{}\n", encoding="utf-8")
-    (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).write_bytes(b"RIFF")
-    (project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
+    narrator_audio_path = project_root / "audio_narator_preserved.wav"
+    narrator_audio_path.write_bytes(b"RIFF")
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -385,10 +384,8 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
         preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
 
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
-    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).is_file()
-    assert (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).is_file()
-    assert (project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
+    assert narrator_audio_path.is_file()
     assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
@@ -408,7 +405,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text("{}\n", encoding="utf-8")
-    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -423,7 +420,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).is_file()
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
     assert not (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()

@@ -59,6 +59,11 @@ persists that metadata in `project.json`.
 
 `operation_runtime_service` is the shared contract for root-level operation
 folders, operation state, progress, cancellation, and selective artifact reset.
+For `narrator_definition`, reset owns the strict `narrator_voice.json`
+document, canonical `audio_narator_*.wav` profile samples, and diagnostic
+`log_ai_narrator_profiles_*.log` files. Preservation of that operation keeps
+all three current artifact classes. Removed Narrator Voice contract files are
+never included in reset or preservation logic.
 
 `audio_blocks_artifact_service` names generated audio from stable block data,
 normalizes speaker names for filesystem safety, validates WAV content, and

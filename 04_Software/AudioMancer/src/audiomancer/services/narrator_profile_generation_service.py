@@ -10,11 +10,11 @@
 @file narrator_profile_generation_service.py
 @brief AI-assisted text-only narrator profile generation for AudioMancer.
 @details Analyzes the current book text with one configured AI profile, appends
-         editable narrator voice-designer prompts and preview text, and persists
-         generation report/state sidecars without generating narrator audio.
+         editable narrator voice-designer prompts and preview text, and stores
+         resumable attempt state in the authoritative Narrator Voice document.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.4.3
+@version 1.0.0
 """
 
 # IMPORTS
@@ -40,15 +40,9 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_output_path,
-    build_operation_state_payload,
     emit_progress_update,
-    load_operation_state_payload,
     raise_if_cancelled,
-    relative_to_project,
-    resolve_operation_path,
 )
-from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -77,10 +71,10 @@ _NARRATOR_PREVIEW_TARGET_MAX_WORDS = 24
 # @brief Bounded generated-preview overage tolerated before rejecting model output.
 _NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE = 6
 
-# @brief Persisted narrator-profile-generation report payload type.
+# @brief In-memory narrator-profile-generation result payload type.
 NarratorProfileGenerationReportPayload = dict[str, object]
 
-# @brief Persisted narrator-profile-generation operation-state payload type.
+# @brief Derived narrator-profile-generation operation-state view type.
 OperationStatePayload = dict[str, object]
 
 # @brief Runtime text unit consumed by the profile-generation workflow.
@@ -117,40 +111,33 @@ _STYLE_SUMMARY_TERM_LIMITS = {
 @trace_function(_NARRATOR_PROFILE_GENERATION_LOGGER)
 def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
     """
-    @brief      Load the optional narrator profile generation runtime state.
+    @brief      Derive the narrator profile generation state from the authoritative document.
     @param[in]  project_root Active project root folder.
-    @return     Persisted operation-state payload or `None`.
-    @exception  None
+    @return     Derived operation-state payload or `None` before an AI attempt.
+    @exception  narrator_definition_service.NarratorVoiceDocumentContractError Raised for invalid data.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    1.0.0
     """
-    return load_operation_state_payload(
-        project_root,
-        "narrator_definition",
-        config.NARRATOR_PROFILE_GENERATION_STATE_FILE_NAME,
-    )
-
-
-@trace_function(_NARRATOR_PROFILE_GENERATION_LOGGER)
-def load_generation_report(project_root: str | Path) -> NarratorProfileGenerationReportPayload | None:
-    """
-    @brief      Load the optional narrator profile generation report.
-    @param[in]  project_root Active project root folder.
-    @return     Persisted report payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
-    """
-    report_path = resolve_operation_path(
-        project_root,
-        "narrator_definition",
-        config.NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME,
-    )
-    if not report_path.is_file():
+    document = narrator_definition_service.load_narrator_voice_document(project_root)
+    if document["status"] == narrator_definition_service.NARRATOR_VOICE_STATUS_NOT_STARTED:
         return None
-    return dict(json.loads(report_path.read_text(encoding="utf-8")))
+    resume = document["resume"]
+    completed_windows = int(resume["completed_window_count"]) if isinstance(resume, dict) else 0
+    total_windows = int(resume["total_window_count"]) if isinstance(resume, dict) else 0
+    return {
+        "status": document["status"],
+        "mode": NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
+        "progress_current": completed_windows,
+        "progress_total": total_windows + 1 if total_windows else 0,
+        "warning_count": 0,
+        "metadata": {
+            "token_usage": dict(document["token_usage"]),
+            "budget_metadata": dict(document["budget_metadata"]),
+            "additional_profile_instructions": document["additional_profile_instructions"],
+        },
+        "resume_checkpoint": None if resume is None else dict(resume),
+    }
 
 
 @trace_function(_NARRATOR_PROFILE_GENERATION_LOGGER)
@@ -214,16 +201,7 @@ def generate_narrator_profiles(
     if not windows:
         raise ValueError("Narrator profile generation requires at least one readable text window.")
 
-    state_path = build_operation_output_path(
-        resolved_project_root,
-        "narrator_definition",
-        config.NARRATOR_PROFILE_GENERATION_STATE_FILE_NAME,
-    )
-    report_path = build_operation_output_path(
-        resolved_project_root,
-        "narrator_definition",
-        config.NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME,
-    )
+    state_path = resolved_project_root / config.NARRATOR_VOICE_FILE_NAME
     allocation = _gender_allocation(requested_count)
     model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
     total_progress = len(windows) + 1
@@ -239,17 +217,15 @@ def generate_narrator_profiles(
         model_settings=model_settings,
         additional_profile_instructions_fingerprint=additional_profile_instructions_fingerprint,
     )
+    started_at = _utc_now_iso()
+    log_path = _resolve_log_path(resolved_project_root, started_at)
     if resume_state["resume_compatible"]:
-        started_at = str(resume_state["started_at"])
         token_usage = token_usage_service.restore_token_usage(resume_state["token_usage"])
-        log_path = Path(resume_state["log_path"])
         allocation = dict(resume_state["gender_allocation"])
         observations = [dict(item) for item in resume_state["style_observations"]]
         completed_window_count = int(resume_state["completed_window_count"])
     else:
-        started_at = _utc_now_iso()
         token_usage = token_usage_service.empty_token_usage()
-        log_path = _resolve_log_path(resolved_project_root, started_at)
         observations: list[dict[str, object]] = []
         completed_window_count = 0
 
@@ -466,6 +442,7 @@ def generate_narrator_profiles(
         resolved_project_root,
         validated_profiles,
         generation_metadata,
+        persist=False,
     )
     generated_profile_ids = [str(profile.get("profile_id", "")) for profile in created_profiles]
     report_payload = {
@@ -488,32 +465,14 @@ def generate_narrator_profiles(
         "additional_profile_instructions": additional_profile_instructions,
         "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
     }
-    write_json_atomic(report_path, report_payload)
-    _write_operation_state(
-        state_path,
-        resolved_project_root,
-        input_path=source_path,
-        report_path=report_path,
-        status="completed",
-        progress_current=total_progress,
-        progress_total=total_progress,
-        started_at=started_at,
-        completed_at=None,
-        profile_id=profile_id,
-        source_token=source_token,
-        source_unit_count=len(source_units),
-        requested_count=requested_count,
-        generated_profile_ids=generated_profile_ids,
-        gender_allocation=allocation,
-        input_fingerprint=input_fingerprint,
-        log_path=log_path,
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        model_settings=model_settings,
-        style_observations=observations,
-        total_window_count=len(windows),
-        additional_profile_instructions=additional_profile_instructions,
-    )
+    narrator_document = narrator_definition_service.load_narrator_voice_document(resolved_project_root)
+    narrator_document["profiles"] = [*narrator_document["profiles"], *created_profiles]
+    narrator_document["status"] = narrator_definition_service.NARRATOR_VOICE_STATUS_COMPLETED
+    narrator_document["token_usage"] = token_usage_service.coerce_token_usage(token_usage)
+    narrator_document["budget_metadata"] = dict(budget_metadata)
+    narrator_document["additional_profile_instructions"] = additional_profile_instructions
+    narrator_document["resume"] = None
+    narrator_definition_service.write_narrator_voice_document(resolved_project_root, narrator_document)
     emit_progress_update(
         progress_callback,
         total_progress,
@@ -1216,64 +1175,40 @@ def _restore_resume_state(
     @date       2026-05-13
     @version    0.2.0
     """
+    _ = project_root
     fallback = _empty_resume_state()
     if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
         return fallback
-    if str(existing_state.get("mode", "")) != NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED:
+    resume_checkpoint = existing_state.get("resume_checkpoint")
+    if not isinstance(resume_checkpoint, dict):
         return fallback
-    resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
-    if str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint:
-        return fallback
-    if str(resume_checkpoint.get("profile_id", "")) != profile_id:
-        return fallback
-    if str(resume_checkpoint.get("source", "")) != source_token:
-        return fallback
-    try:
-        checkpoint_requested_count = int(resume_checkpoint.get("requested_count", 0) or 0)
-        checkpoint_window_count = int(resume_checkpoint.get("total_window_count", 0) or 0)
-        checkpoint_budget_metadata = dict(resume_checkpoint.get("budget_metadata") or {})
-        checkpoint_model_settings = dict(resume_checkpoint.get("model_settings") or {})
-    except (TypeError, ValueError):
-        return fallback
-    if checkpoint_requested_count != int(requested_count):
-        return fallback
-    if checkpoint_window_count != int(total_window_count):
-        return fallback
-    if checkpoint_budget_metadata != dict(budget_metadata):
-        return fallback
-    if checkpoint_model_settings != dict(model_settings):
-        return fallback
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        metadata = {}
-    stored_instruction_fingerprint = str(
-        metadata.get("additional_profile_instructions_fingerprint")
-        or resume_checkpoint.get("additional_profile_instructions_fingerprint")
-        or _compute_prompt_fingerprint("")
+    expected_fingerprint = _build_resume_fingerprint(
+        input_fingerprint=input_fingerprint,
+        profile_id=profile_id,
+        source_token=source_token,
+        requested_count=requested_count,
+        budget_metadata=budget_metadata,
+        model_settings=model_settings,
+        additional_profile_instructions_fingerprint=additional_profile_instructions_fingerprint,
     )
-    if stored_instruction_fingerprint != additional_profile_instructions_fingerprint:
+    if resume_checkpoint.get("resume_fingerprint") != expected_fingerprint:
         return fallback
-    try:
-        gender_allocation = dict(resume_checkpoint.get("gender_allocation") or {})
-    except (TypeError, ValueError):
+    if resume_checkpoint.get("requested_count") != requested_count:
         return fallback
+    if resume_checkpoint.get("total_window_count") != total_window_count:
+        return fallback
+    gender_allocation = dict(resume_checkpoint.get("gender_allocation") or {})
     if not _is_valid_gender_allocation(gender_allocation, requested_count):
         return fallback
-    try:
-        completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0) or 0))
-    except (TypeError, ValueError):
-        return fallback
-    completed_window_count = min(completed_window_count, total_window_count)
+    completed_window_count = int(resume_checkpoint.get("completed_window_count", 0))
     style_observations = _restore_style_observations(resume_checkpoint.get("style_observations"))
-    if len(style_observations) < completed_window_count:
+    if completed_window_count < 0 or completed_window_count > total_window_count:
         return fallback
-    style_observations = style_observations[:completed_window_count]
-    log_path = _restored_log_path(project_root, resume_checkpoint)
+    if len(style_observations) != completed_window_count:
+        return fallback
     return {
         "resume_compatible": True,
-        "started_at": str(resume_checkpoint.get("run_token") or _utc_now_iso()),
         "token_usage": _restore_token_usage(existing_state),
-        "log_path": log_path,
         "gender_allocation": gender_allocation,
         "style_observations": style_observations,
         "completed_window_count": completed_window_count,
@@ -1291,9 +1226,7 @@ def _empty_resume_state() -> dict[str, object]:
     """
     return {
         "resume_compatible": False,
-        "started_at": "",
         "token_usage": token_usage_service.empty_token_usage(),
-        "log_path": Path(),
         "gender_allocation": {},
         "style_observations": [],
         "completed_window_count": 0,
@@ -1329,24 +1262,6 @@ def _restore_token_usage(existing_state: dict[str, object]) -> dict[str, object]
     if not isinstance(metadata, dict):
         return token_usage_service.empty_token_usage()
     return token_usage_service.restore_token_usage(metadata.get("token_usage"))
-
-
-def _restored_log_path(project_root: Path, resume_checkpoint: dict[str, object]) -> Path:
-    """
-    @brief      Restore the AI transaction log path from a checkpoint.
-    @param[in]  project_root Active project root folder.
-    @param[in]  resume_checkpoint Persisted resume checkpoint.
-    @return     Absolute AI transaction log path.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
-    """
-    log_relative_path = str(resume_checkpoint.get("log_relative_path", "") or "").strip()
-    if not log_relative_path:
-        return _resolve_log_path(project_root, _utc_now_iso())
-    log_path = Path(log_relative_path)
-    return log_path if log_path.is_absolute() else project_root / log_path
 
 
 def _is_valid_gender_allocation(gender_allocation: dict[str, object], requested_count: int) -> bool:
@@ -1435,53 +1350,78 @@ def _write_operation_state(
     @date       2026-05-13
     @version    0.3.0
     """
-    additional_profile_instructions = _normalized_additional_profile_instructions(additional_profile_instructions)
-    additional_profile_instructions_fingerprint = _compute_prompt_fingerprint(additional_profile_instructions)
+    _ = state_path
     _ = input_path
     _ = report_path
+    _ = progress_current
+    _ = progress_total
+    _ = started_at
     _ = completed_at
-    state_payload = build_operation_state_payload(
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        mode=NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
-        warning_count=0,
-        metadata={
-            "ai_profile_id": profile_id,
-            "source": source_token,
-            "source_unit_count": source_unit_count,
+    _ = source_unit_count
+    _ = generated_profile_ids
+    _ = log_path
+    normalized_instructions = _normalized_additional_profile_instructions(additional_profile_instructions)
+    instruction_fingerprint = _compute_prompt_fingerprint(normalized_instructions)
+    document = narrator_definition_service.load_narrator_voice_document(project_root)
+    document["status"] = status
+    document["token_usage"] = token_usage_service.coerce_token_usage(token_usage)
+    document["budget_metadata"] = dict(budget_metadata)
+    document["additional_profile_instructions"] = normalized_instructions
+    document["resume"] = (
+        None
+        if status == narrator_definition_service.NARRATOR_VOICE_STATUS_COMPLETED
+        else {
+            "resume_fingerprint": _build_resume_fingerprint(
+                input_fingerprint=input_fingerprint,
+                profile_id=profile_id,
+                source_token=source_token,
+                requested_count=requested_count,
+                budget_metadata=budget_metadata,
+                model_settings=model_settings,
+                additional_profile_instructions_fingerprint=instruction_fingerprint,
+            ),
             "requested_count": requested_count,
-            "generated_profile_ids": list(generated_profile_ids),
             "gender_allocation": dict(gender_allocation),
-            "input_fingerprint": input_fingerprint,
-            "log_relative_path": relative_to_project(project_root, log_path),
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-            "budget_metadata": dict(budget_metadata),
-            "model_settings": dict(model_settings),
-            "additional_profile_instructions": additional_profile_instructions,
-            "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
-        },
-        resume_checkpoint=(
-            None
-            if status == "completed"
-            else {
-                "input_fingerprint": input_fingerprint,
-                "profile_id": profile_id,
-                "source": source_token,
-                "requested_count": requested_count,
-                "gender_allocation": dict(gender_allocation),
-                "completed_window_count": len(style_observations),
-                "total_window_count": int(total_window_count),
-                "style_observations": [dict(item) for item in style_observations],
-                "run_token": started_at,
-                "log_relative_path": relative_to_project(project_root, log_path),
-                "budget_metadata": dict(budget_metadata),
-                "model_settings": dict(model_settings),
-                "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
-            }
-        ),
+            "completed_window_count": len(style_observations),
+            "total_window_count": int(total_window_count),
+            "style_observations": [dict(item) for item in style_observations],
+        }
     )
-    write_json_atomic(state_path, state_payload)
+    narrator_definition_service.write_narrator_voice_document(project_root, document)
+
+
+def _build_resume_fingerprint(
+    *,
+    input_fingerprint: str,
+    profile_id: str,
+    source_token: str,
+    requested_count: int,
+    budget_metadata: dict[str, int],
+    model_settings: dict[str, object],
+    additional_profile_instructions_fingerprint: str,
+) -> str:
+    """
+    @brief      Build the complete deterministic AI resume identity.
+    @return     SHA-256 fingerprint covering source, language, provider settings, budget, count, and instructions.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-21
+    @version    0.1.0
+    """
+    fingerprint_payload = {
+        "source": source_token,
+        "source_fingerprint": input_fingerprint,
+        "profile_id": profile_id,
+        "backend_kind": model_settings.get("backend_kind"),
+        "model_name": model_settings.get("model_name"),
+        "context_window": model_settings.get("context_window"),
+        "max_output_tokens": model_settings.get("max_output_tokens"),
+        "temperature": model_settings.get("temperature"),
+        "budget_metadata": dict(budget_metadata),
+        "requested_count": requested_count,
+        "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
+    }
+    serialized = json.dumps(fingerprint_payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def _build_input_fingerprint(

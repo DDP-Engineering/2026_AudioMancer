@@ -2665,108 +2665,6 @@
       "REQ-FUNC-037"
     ]
   },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_begin_profile_edit_clears_sample_and_selection": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_begin_profile_edit_clears_sample_and_selection",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_imports_profile_sample_and_marks_selected_metadata": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_imports_profile_sample_and_marks_selected_metadata",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_normalizes_language_labels_to_runtime_codes": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_normalizes_language_labels_to_runtime_codes",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_normalizes_legacy_profile_sample_metadata": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_normalizes_legacy_profile_sample_metadata",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_generation_request_requires_minimum_qwen_capabilities": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_generation_request_requires_minimum_qwen_capabilities",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_sample_path_uses_stored_audio_path_after_rename": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_sample_path_uses_stored_audio_path_after_rename",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_starts_without_predefined_profiles": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_starts_without_predefined_profiles",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_store_profile_sample_preserves_other_profile_samples": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_store_profile_sample_preserves_other_profile_samples",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_stores_single_profile_sample_and_marks_selected_metadata": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_stores_single_profile_sample_and_marks_selected_metadata",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_treats_torn_profile_json_as_empty_data": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_treats_torn_profile_json_as_empty_data",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_treats_torn_selected_sample_metadata_as_missing": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_treats_torn_selected_sample_metadata_as_missing",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_stale": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_stale",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_marks_unsampled_custom_profile_selectable": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_marks_unsampled_custom_profile_selectable",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_show_counts_and_qwen_readiness": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_show_counts_and_qwen_readiness",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_cleanup_detected_original_language_when_manifest_is_empty": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_cleanup_detected_original_language_when_manifest_is_empty",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_original_language_and_no_default_selection": {
-    "id": "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_original_language_and_no_default_selection",
-    "requirement_ids": [
-      "REQ-FUNC-034"
-    ]
-  },
   "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage": {
     "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
     "requirement_ids": [
@@ -2777,6 +2675,12 @@
     "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_adds_operator_prompt_rules",
     "requirement_ids": [
       "REQ-FUNC-035"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_keeps_compact_resume_in_document": {
+    "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_keeps_compact_resume_in_document",
+    "requirement_ids": [
+      "REQ-FUNC-056"
     ]
   },
   "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_leaves_profiles_unchanged": {
@@ -2843,6 +2747,30 @@
     "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_final_generation_without_reanalyzing_style",
     "requirement_ids": [
       "REQ-FUNC-035"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_character_voice_readiness_uses_selected_profile_resolution": {
+    "id": "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_character_voice_readiness_uses_selected_profile_resolution",
+    "requirement_ids": [
+      "REQ-FUNC-057"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_default_document_has_exact_contract_and_creates_no_removed_artifacts": {
+    "id": "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_default_document_has_exact_contract_and_creates_no_removed_artifacts",
+    "requirement_ids": [
+      "REQ-FUNC-034"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_reset_removes_current_artifacts_but_preserves_removed_contract_files": {
+    "id": "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_reset_removes_current_artifacts_but_preserves_removed_contract_files",
+    "requirement_ids": [
+      "REQ-FUNC-058"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_profile_sample_and_selection_use_only_document_and_canonical_wav": {
+    "id": "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_profile_sample_and_selection_use_only_document_and_canonical_wav",
+    "requirement_ids": [
+      "REQ-FUNC-055"
     ]
   },
   "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_progress_dialog_localizes_title_cancel_and_token_usage": {

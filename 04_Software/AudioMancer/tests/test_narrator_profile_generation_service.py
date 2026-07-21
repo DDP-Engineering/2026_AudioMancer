@@ -90,7 +90,7 @@ def test_narrator_profile_generation_prefers_approved_translation_for_voice_lang
     assert all("profile_origin" not in profile for profile in profiles)
     assert all(profile.get("sample") is None for profile in profiles)
     assert all("generation_metadata" not in profile for profile in profiles)
-    assert not (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).exists()
+    assert not (project_root / "narator.wav").exists()
 
 
 def test_narrator_profile_generation_odd_allocation_appends_without_deleting_existing(
@@ -220,7 +220,7 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
         "Existing prompt text.",
         "Existing preview.",
     )
-    before_payload = (project_root / config.NARRATOR_PROFILE_FILE_NAME).read_text(encoding="utf-8")
+    before_profiles = narrator_definition_service.load_profiles(project_root)
     monkeypatch.setattr(
         narrator_profile_generation_service.llm_provider_service,
         "chat_json",
@@ -237,8 +237,8 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
             220,
         )
 
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).read_text(encoding="utf-8") == before_payload
-    assert not (project_root / config.NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME).exists()
+    assert narrator_definition_service.load_profiles(project_root) == before_profiles
+    assert not (project_root / "narator_profile_generation_report.json").exists()
     state_payload = narrator_profile_generation_service.load_operation_state(project_root)
     assert state_payload is not None
     assert state_payload["status"] == "failed"
@@ -441,7 +441,7 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
     project_root.mkdir()
     _write_chunks(project_root, "A short source text.")
     narrator_definition_service.ensure_narrator_definition_files(project_root)
-    before_payload = (project_root / config.NARRATOR_PROFILE_FILE_NAME).read_text(encoding="utf-8")
+    before_profiles = narrator_definition_service.load_profiles(project_root)
 
     with pytest.raises(OperationCancelledError):
         narrator_profile_generation_service.generate_narrator_profiles(
@@ -454,7 +454,7 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
             cancel_requested=lambda: True,
         )
 
-    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).read_text(encoding="utf-8") == before_payload
+    assert narrator_definition_service.load_profiles(project_root) == before_profiles
     state_payload = narrator_profile_generation_service.load_operation_state(project_root)
     assert state_payload is not None
     assert state_payload["status"] == "cancelled"
@@ -784,6 +784,105 @@ def test_narrator_profile_generation_falls_back_to_clean_text(
 
     assert report_payload["source"] == narrator_profile_generation_service.SOURCE_CLEANED_TEXT
     assert len(narrator_definition_service.load_profiles(project_root)) == 2
+
+
+def test_narrator_profile_generation_completes_in_authoritative_document_only(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify SPEC-NV-003, REQ-FUNC-035, and REQ-FUNC-056 atomic monofile success.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-21
+    @version    0.1.0
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A measured chronicle about memory, ritual, and political consequence.")
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory([], _profiles_payload(2)),
+    )
+
+    result = narrator_profile_generation_service.generate_narrator_profiles(
+        project_root,
+        {},
+        _MOCK_AI_PROFILE,
+        2,
+        "en",
+        220,
+        additional_profile_instructions="Use restrained literary delivery.",
+    )
+
+    document = narrator_definition_service.load_narrator_voice_document(project_root)
+    serialized_document = json.dumps(document, sort_keys=True)
+    assert set(document) == {
+        "status",
+        "token_usage",
+        "budget_metadata",
+        "additional_profile_instructions",
+        "selected_profile_id",
+        "profiles",
+        "resume",
+    }
+    assert document["status"] == "completed"
+    assert document["resume"] is None
+    assert document["additional_profile_instructions"] == "Use restrained literary delivery."
+    assert len(document["profiles"]) == 2
+    assert len(result["generated_profile_ids"]) == 2
+    assert "generated_profile_ids" not in serialized_document
+    assert "log_path" not in serialized_document
+    assert not (project_root / "narator_profile_generation_report.json").exists()
+    assert not (project_root / "narator_profile_generation_state.json").exists()
+    assert not (project_root / "audio_profiles.json").exists()
+
+
+def test_narrator_profile_generation_cancellation_keeps_compact_resume_in_document(
+    tmp_path,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify SPEC-NV-003 and REQ-FUNC-056 persist an empty resumable cancellation.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-21
+    @version    0.1.0
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A short source that is cancelled before the first provider response.")
+
+    with pytest.raises(OperationCancelledError):
+        narrator_profile_generation_service.generate_narrator_profiles(
+            project_root,
+            {},
+            _MOCK_AI_PROFILE,
+            2,
+            "en",
+            220,
+            cancel_requested=lambda: True,
+        )
+
+    document = narrator_definition_service.load_narrator_voice_document(project_root)
+    assert document["status"] == "cancelled"
+    assert document["profiles"] == []
+    assert document["resume"] is not None
+    assert document["resume"]["completed_window_count"] == 0
+    assert document["resume"]["style_observations"] == []
+    assert not (project_root / "narator_profile_generation_report.json").exists()
+    assert not (project_root / "narator_profile_generation_state.json").exists()
 
 
 def _write_narrator_prompts(prompt_root) -> None:

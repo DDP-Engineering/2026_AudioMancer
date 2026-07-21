@@ -23,6 +23,8 @@ import json
 from pathlib import Path
 import wave
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service
 
@@ -46,9 +48,9 @@ def test_narrator_service_starts_without_predefined_profiles(tmp_path) -> None:
     assert selected_state["selected_profile_id"] is None
 
 
-def test_narrator_service_treats_torn_profile_json_as_empty_data(tmp_path) -> None:
+def test_narrator_service_rejects_torn_authoritative_document_without_replacing_it(tmp_path) -> None:
     """
-    @brief      Verify REQ-FUNC-024 handles malformed narrator profile JSON without crashing.
+    @brief      Verify REQ-FUNC-034 reports malformed current narrator data without replacement.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -57,13 +59,13 @@ def test_narrator_service_treats_torn_profile_json_as_empty_data(tmp_path) -> No
     @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorTornProfileProject", tmp_path)
-    profile_path = project_root / config.NARRATOR_PROFILE_FILE_NAME
-    profile_path.write_text("[", encoding="utf-8")
+    document_path = project_root / config.NARRATOR_VOICE_FILE_NAME
+    document_path.write_text("[", encoding="utf-8")
 
-    profiles = narrator_definition_service.load_profiles(project_root)
+    with pytest.raises(narrator_definition_service.NarratorVoiceDocumentContractError):
+        narrator_definition_service.load_profiles(project_root)
 
-    assert profiles == []
-    assert json.loads(profile_path.read_text(encoding="utf-8")) == []
+    assert document_path.read_text(encoding="utf-8") == "["
 
 
 def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_path) -> None:
@@ -140,14 +142,12 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
         b"RIFF-test-wav",
     )
     narrator_definition_service.select_narrator_profile(project_root, profile["profile_id"], "en")
-    selected_metadata = narrator_definition_service.copy_selected_narrator_sample(project_root, profile["profile_id"])
     profile_audio_path, profile_metadata_path = narrator_definition_service.profile_sample_paths(
         project_root,
         profile["profile_id"],
     )
-    selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
+    selected_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
+    selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
 
     assert profile_audio_path.read_bytes() == b"RIFF-test-wav"
     assert narrator_definition_service.load_profile_sample_metadata(project_root, profile["profile_id"])[
@@ -157,25 +157,14 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     assert selected_metadata["profile_id"] == profile["profile_id"]
     assert selected_metadata["source_kind"] == narrator_definition_service.NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER
     assert "selected_at" not in selected_metadata
-    assert selected_audio_path == project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME
-    assert selected_metadata_path == project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME
-    assert selected_metadata_path != project_root / config.NARRATOR_SELECTION_FILE_NAME
-    assert profile_metadata_path == project_root / config.NARRATOR_PROFILE_FILE_NAME
+    assert selected_audio_path == profile_audio_path
+    assert profile_metadata_path == project_root / config.NARRATOR_VOICE_FILE_NAME
     assert selected_audio_path.read_bytes() == b"RIFF-test-wav"
-    assert json.loads(selected_metadata_path.read_text(encoding="utf-8"))["profile_id"] == profile["profile_id"]
-    profile_payload = json.loads(profile_metadata_path.read_text(encoding="utf-8"))[0]
+    document_payload = json.loads(profile_metadata_path.read_text(encoding="utf-8"))
+    profile_payload = document_payload["profiles"][0]
     assert "sample_metadata" not in profile_payload
     assert profile_payload["sample"]["source_model_id"] == "qwen-designer"
-    assert (
-        json.loads((project_root / config.NARRATOR_SELECTION_FILE_NAME).read_text(encoding="utf-8"))[
-            "selected_profile_id"
-        ]
-        == profile["profile_id"]
-    )
-    selected_metadata_path.unlink()
-    fallback_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
-    assert fallback_metadata is not None
-    assert fallback_metadata["preview_text"] == "Preview text for the narrator."
+    assert document_payload["selected_profile_id"] == profile["profile_id"]
     assert not list(project_root.glob("audio_narator_*.json"))
 
 
@@ -207,29 +196,27 @@ def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp
         "This is the exact imported sample text.",
         source_sample,
     )
-    selected_metadata = narrator_definition_service.copy_selected_narrator_sample(project_root, profile["profile_id"])
     profile_audio_path, _profile_metadata_path = narrator_definition_service.profile_sample_paths(
         project_root,
         profile["profile_id"],
     )
-    selected_audio_path, _selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
+    selected_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
+    selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
 
     assert profile_audio_path.read_bytes() == source_sample.read_bytes()
     assert selected_audio_path.read_bytes() == source_sample.read_bytes()
-    assert metadata["source_kind"] == "imported_sample"
+    assert metadata["source_kind"] == "imported"
     assert metadata["source_model_id"] is None
     assert metadata["preview_text"] == "This is the exact imported sample text."
     assert "audio_validation" not in metadata
     assert selected_metadata is not None
-    assert selected_metadata["source_kind"] == "imported_sample"
+    assert selected_metadata["source_kind"] == "imported"
     assert narrator_definition_service.sample_runtime_available(metadata, []) is True
 
 
-def test_narrator_service_treats_torn_selected_sample_metadata_as_missing(tmp_path) -> None:
+def test_narrator_service_reports_selected_sample_metadata_when_canonical_wav_is_missing(tmp_path) -> None:
     """
-    @brief      Verify REQ-FUNC-024 falls back when selected narrator sample metadata is malformed.
+    @brief      Verify selected metadata remains authoritative while readiness detects a missing WAV.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -259,16 +246,16 @@ def test_narrator_service_treats_torn_selected_sample_metadata_as_missing(tmp_pa
         b"RIFF-profile",
     )
     narrator_definition_service.select_narrator_profile(project_root, profile["profile_id"], "en")
-    _selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
-    selected_metadata_path.write_text("{", encoding="utf-8")
+    selected_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
+    assert selected_audio_path is not None
+    selected_audio_path.unlink()
 
     selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
 
     assert selected_metadata is not None
     assert selected_metadata["profile_id"] == profile["profile_id"]
     assert selected_metadata["preview_text"] == "Profile sample text."
+    assert selected_audio_path.is_file() is False
 
 
 def test_narrator_service_store_profile_sample_preserves_other_profile_samples(tmp_path) -> None:
@@ -340,8 +327,8 @@ def test_narrator_service_store_profile_sample_preserves_other_profile_samples(t
         == "Second preview text."
     )
     assert first_audio_path.read_bytes() == b"RIFF-first"
-    assert first_metadata_path == project_root / config.NARRATOR_PROFILE_FILE_NAME
-    assert second_metadata_path == project_root / config.NARRATOR_PROFILE_FILE_NAME
+    assert first_metadata_path == project_root / config.NARRATOR_VOICE_FILE_NAME
+    assert second_metadata_path == project_root / config.NARRATOR_VOICE_FILE_NAME
     assert (
         narrator_definition_service.load_profile_sample_metadata(project_root, first_profile["profile_id"])[
             "preview_text"
@@ -426,101 +413,33 @@ def test_narrator_service_profile_sample_path_uses_stored_audio_path_after_renam
     assert renamed_audio_path.read_bytes() == b"RIFF-renamed"
 
 
-def test_narrator_service_normalizes_legacy_profile_sample_metadata(tmp_path) -> None:
+def test_narrator_service_does_not_import_removed_contract_artifacts(tmp_path) -> None:
     """
-    @brief      Verify old narrator profile sample metadata remains usable after schema normalization.
+    @brief      Verify REQ-FUNC-034 ignores and preserves removed narrator artifacts.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-18
-    @version    0.1.0
+    @date       2026-07-21
+    @version    1.0.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorLegacySampleProject", tmp_path)
-    profile_path = project_root / config.NARRATOR_PROFILE_FILE_NAME
-    profile_path.write_text(
-        json.dumps(
-            [
-                {
-                    "profile_id": "legacy_profile",
-                    "display_name": "Legacy Voice",
-                    "language": "English",
-                    "prompt_text": "Legacy prompt.",
-                    "preview_text": "Legacy preview text.",
-                    "profile_kind": "custom",
-                    "sample_audio_path": "audio_narator_legacy_voice.wav",
-                    "sample_metadata": {
-                        "sample_source": "imported_sample",
-                        "generation_mode": "imported_sample",
-                        "preview_text": "Legacy sample transcript.",
-                        "language": "en",
-                        "imported_at": "2026-05-18T00:00:00+00:00",
-                        "source_file_name": "legacy.wav",
-                        "audio_validation": {"duration_seconds": 3.2},
-                    },
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (project_root / "audio_narator_legacy_voice.wav").write_bytes(b"RIFF-legacy")
-    (project_root / config.NARRATOR_SELECTION_FILE_NAME).write_text(
-        json.dumps({"selected_profile_id": "legacy_profile", "selected_language": "en"}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "selected_profile_id": "legacy_profile",
-                "is_selected": True,
-                "role": "narrator",
-                "sample_source": "imported_sample",
-                "generation_mode": "imported_sample",
-                "preview_text": "Legacy selected transcript.",
-                "language": "en",
-                "imported_at": "2026-05-18T00:01:00+00:00",
-                "source_file_name": "selected.wav",
-                "audio_validation": {"duration_seconds": 3.4},
-                "selected_at": "2026-05-18T00:02:00+00:00",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-    profiles = narrator_definition_service.load_profiles(project_root)
-    audio_path, _metadata_path = narrator_definition_service.profile_sample_paths(project_root, "legacy_profile")
-    selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
-
-    assert profiles == [
-        {
-            "profile_id": "legacy_profile",
-            "display_name": "Legacy Voice",
-            "language": "en",
-            "prompt_text": "Legacy prompt.",
-            "preview_text": "Legacy preview text.",
-            "sample": {
-                "source_kind": "imported_sample",
-                "preview_text": "Legacy sample transcript.",
-                "language": "en",
-                "source_model_id": None,
-                "source_file_name": "legacy.wav",
-            },
-        }
-    ]
-    assert audio_path == project_root / "audio_narator_legacy_voice.wav"
-    assert narrator_definition_service.has_profile_sample(project_root, "legacy_profile") is True
-    assert selected_metadata == {
-        "profile_id": "legacy_profile",
-        "source_kind": "imported_sample",
-        "preview_text": "Legacy selected transcript.",
-        "language": "en",
-        "source_model_id": None,
-        "source_file_name": "selected.wav",
+    removed_paths = {
+        project_root / "audio_profiles.json": b"[{\"profile_id\":\"legacy_profile\"}]",
+        project_root / "narator.json": b"{\"selected_profile_id\":\"legacy_profile\"}",
+        project_root / "narator_sample.json": b"{\"preview_text\":\"legacy\"}",
+        project_root / "narator.wav": b"RIFF-legacy-selected-copy",
     }
+    for removed_path, content in removed_paths.items():
+        removed_path.write_bytes(content)
+
+    document_path = narrator_definition_service.ensure_narrator_voice_document(project_root)
+    document = narrator_definition_service.load_narrator_voice_document(project_root)
+
+    assert document_path == project_root / config.NARRATOR_VOICE_FILE_NAME
+    assert document["profiles"] == []
+    assert document["selected_profile_id"] is None
+    assert all(path.read_bytes() == content for path, content in removed_paths.items())
 
 
 def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_path) -> None:

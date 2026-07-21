@@ -281,9 +281,13 @@ def test_audio_blocks_service_requires_selected_narrator_sample_metadata(tmp_pat
     @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCurrentNarratorMetadata")
-    narrator_definition_service.selected_narrator_sample_paths(project_root)[1].unlink()
+    document = narrator_definition_service.load_narrator_voice_document(project_root)
+    selected_profile_id = document["selected_profile_id"]
+    selected_profile = next(profile for profile in document["profiles"] if profile["profile_id"] == selected_profile_id)
+    selected_profile["sample"] = None
+    narrator_definition_service.write_narrator_voice_document(project_root, document)
 
-    with pytest.raises(ValueError, match="selected narrator sample metadata"):
+    with pytest.raises(ValueError, match="selected narrator sample"):
         audio_blocks_service._resolve_generation_context(  # noqa: SLF001
             project_root,
             manifest,
@@ -2261,18 +2265,7 @@ def _create_audio_blocks_project(tmp_path, name: str):
         "Narrator sample ready.",
         b"selected-narrator",
     )
-    narrator_definition_service.copy_selected_narrator_sample(project_root, narrator_profile["profile_id"])
-    (project_root / config.NARRATOR_SELECTION_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "selected_profile_id": narrator_profile["profile_id"],
-                "selected_language": "en",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
     alice_target = {
         "target_id": "character_alice",
         "target_kind": character_voices_service.TARGET_KIND_CHARACTER,
@@ -2379,7 +2372,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
                     "voice_target_id": "narrator",
                     "display_name": "Narrator",
                     "source_sample_relative_path": str(
-                        narrator_definition_service.selected_narrator_sample_paths(project_root)[0]
+                        narrator_definition_service.selected_narrator_sample_path(project_root)
                         .relative_to(project_root)
                         .as_posix()
                     ),

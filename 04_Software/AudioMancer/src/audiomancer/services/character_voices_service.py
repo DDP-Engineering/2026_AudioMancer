@@ -728,11 +728,9 @@ def sync_same_narrator_samples(
     if not voice_targets:
         save_voice_targets(project_root, character_targets)
         voice_targets = load_voice_plan(project_root)
-    narrator_audio_path, _narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
+    narrator_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
     narrator_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
-    if not narrator_audio_path.is_file() or narrator_metadata is None:
+    if narrator_audio_path is None or not narrator_audio_path.is_file() or narrator_metadata is None:
         removed_samples = 0
         for target_payload in character_targets:
             target_id = str(target_payload.get("target_id", "")).strip()
@@ -838,11 +836,10 @@ def character_voices_is_ready(
     @date       2026-04-20
     @version    1.1.0
     """
-    narrator_audio_path, _narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
-        project_root
-    )
+    narrator_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
     if (
-        not narrator_audio_path.is_file()
+        narrator_audio_path is None
+        or not narrator_audio_path.is_file()
         or narrator_definition_service.load_selected_narrator_sample_metadata(project_root) is None
     ):
         return False
@@ -910,9 +907,10 @@ def selected_narrator_sample_exists(project_root: str | Path) -> bool:
     @date       2026-04-20
     @version    1.1.0
     """
-    audio_path, _metadata_path = narrator_definition_service.selected_narrator_sample_paths(project_root)
+    audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
     return (
-        audio_path.is_file()
+        audio_path is not None
+        and audio_path.is_file()
         and narrator_definition_service.load_selected_narrator_sample_metadata(project_root) is not None
     )
 
