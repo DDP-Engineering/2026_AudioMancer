@@ -28,8 +28,10 @@ The orchestration service resolves source chunks and voice assignments, assemble
 
 ## 6. Data Contracts
 
-When untranslated source is selected, source order and text come only from the
-strict authoritative Chunking document through its shared reader.
+Source selection matches Character Discovery: when a translation exists, is
+complete, and every chunk is approved, Speech Blocks uses the translated
+(repair-normalized) text regardless of the selected Character Voices language;
+otherwise it uses the original Chunking document text through its shared reader.
 
 - Each block has a stable `speech_block_id`, content/speaker kind and identifiers, text or ambience prompt, duration, warning flags, and approval state.
 - Source selection preserves canonical ordering; normalization and splits preserve usable text while keeping blocks within configured TTS limits.

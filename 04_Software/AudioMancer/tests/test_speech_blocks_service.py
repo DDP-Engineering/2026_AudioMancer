@@ -38,20 +38,21 @@ from chunking_test_support import build_chunking_document
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_resolve_source_chunks_uses_original_language_selection(tmp_path) -> None:
+def test_resolve_source_chunks_uses_original_when_no_translation(tmp_path) -> None:
     """
-    @brief      Verify Speech Blocks uses chunking output when Character Voices selects the original language.
+    @brief      Verify Speech Blocks uses original chunking text when no translation exists (SPEC-SB-XLAT-PARTIAL).
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
+    @date       2026-07-24
+    @version    0.4.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksOriginal")
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
-    character_voices_service.save_selected_voice_language(project_root, "en")
+    # A translated voice language is selected, but no translation exists yet; source stays original.
+    character_voices_service.save_selected_voice_language(project_root, "ro")
 
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
 
@@ -60,15 +61,15 @@ def test_resolve_source_chunks_uses_original_language_selection(tmp_path) -> Non
     assert source_resolution["source_chunks"][0]["text"] == 'Narration. "Hello there."'
 
 
-def test_resolve_source_chunks_requires_fully_approved_translation(tmp_path) -> None:
+def test_resolve_source_chunks_falls_back_to_original_when_translation_partially_approved(tmp_path) -> None:
     """
-    @brief      Verify translated Speech Blocks sources require full translation approval.
+    @brief      Verify partial translation approval falls back to original text (SPEC-SB-XLAT-PARTIAL).
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
+    @date       2026-07-24
+    @version    0.3.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslationApproval")
     manifest["original_language"] = "en"
@@ -83,25 +84,59 @@ def test_resolve_source_chunks_requires_fully_approved_translation(tmp_path) -> 
         ],
     )
 
-    with pytest.raises(ValueError, match="Approve all translated chunks"):
-        speech_blocks_service.resolve_source_chunks(project_root, manifest)
+    source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+
+    assert source_resolution["source_kind"] == "original"
+    assert source_resolution["selected_source_language"] == "en"
+    assert source_resolution["source_chunks"][0]["text"] == 'Narration. "Hello there."'
 
 
-def test_resolve_source_chunks_uses_approved_translated_language_selection(tmp_path) -> None:
+def test_resolve_source_chunks_uses_translated_when_fully_approved(tmp_path) -> None:
     """
-    @brief      Verify Speech Blocks uses approved translated chunks when Character Voices selects the translated
-                language.
+    @brief      Verify a complete, fully approved translation is used as the source (SPEC-SB-XLAT-SOURCE).
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-07-24
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslated")
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "ro")
+    _write_translation_artifacts(
+        project_root,
+        approved_chunk_count=2,
+        translated_chunks=[
+            {"chunk_id": "chunk-0001", "translated_text": 'Naratiune. "Salut."'},
+            {"chunk_id": "chunk-0002", "translated_text": 'Maria a zambit. "Bine ai venit."'},
+        ],
+    )
+
+    source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+
+    assert source_resolution["source_kind"] == "translated"
+    assert source_resolution["selected_source_language"] == "ro"
+    assert source_resolution["source_chunks"][0]["text"] == 'Naratiune. "Salut."'
+
+
+def test_resolve_source_chunks_uses_translated_regardless_of_selected_voice_language(tmp_path) -> None:
+    """
+    @brief      Verify an approved translation is used even when the original voice language is selected
+                (SPEC-SB-XLAT-SOURCE, REQ-FUNC-e85a7cf0).
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-24
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslatedOverridesVoice")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    # Operator selected the ORIGINAL voice language, yet the translation is complete and fully approved.
+    character_voices_service.save_selected_voice_language(project_root, "en")
     _write_translation_artifacts(
         project_root,
         approved_chunk_count=2,

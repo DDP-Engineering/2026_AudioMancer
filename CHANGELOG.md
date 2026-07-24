@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Speech Blocks source selection now matches Character Discovery: once the AI
+  translation is complete and every chunk is approved, Speech Blocks uses the
+  translated (repair-normalized) text as its source regardless of the selected
+  Character Voices language; otherwise it uses the original chunking text.
+  Selecting a translated voice language no longer raises when the translation is
+  absent or only partially approved — it falls back to the original text.
 - Speech Blocks now persists a single authoritative `speech_blocks.json`
   document (fixed top-level field set: status, source, ai_profile_id,
   instructions, scene_ambience, response_contract, token_usage,

@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.20.0
+@version 0.21.0
 """
 
 # IMPORTS
@@ -30,7 +30,6 @@ from audiomancer.services import (
     ai_budget_service,
     ai_translation_service,
     character_discovery_service,
-    character_voices_service,
     chunking_document_service,
     llm_provider_service,
     narrator_definition_service,
@@ -511,14 +510,17 @@ def resolve_source_chunks(
     manifest: dict[str, object],
 ) -> dict[str, object]:
     """
-    @brief      Resolve the source chunk set currently selected through Character Voices.
+    @brief      Resolve the Speech Blocks source chunks, preferring the approved translation.
+    @details    Mirrors Character Discovery: when a translation exists, is complete, and every
+                chunk is approved, the translated (repair-normalized) text is used regardless of
+                the selected Character Voices language; otherwise the original chunking text is used.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @return     Source-resolution payload with normalized source chunks.
-    @exception  ValueError Raised when chunking or the selected language source is unavailable.
+    @exception  ValueError Raised when chunking output is unavailable.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.1
+    @date       2026-07-24
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     original_chunks = sorted(
@@ -528,39 +530,52 @@ def resolve_source_chunks(
     if not original_chunks:
         raise ValueError("Run text chunking before starting Speech Blocks.")
 
-    selected_voice_language = character_voices_service.load_selected_voice_language(
-        resolved_project_root,
-        narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
-    )
+    translated_resolution = _resolve_translated_source_chunks(resolved_project_root, original_chunks)
+    if translated_resolution is not None:
+        return translated_resolution
+
     original_language = narrator_definition_service.narrator_language_code(
         manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
     )
-    if selected_voice_language == original_language:
-        return {
-            "selected_source_language": selected_voice_language,
-            "source_kind": "original",
-            "source_chunks": [
-                {
-                    "chunk_id": str(chunk.get("chunk_id", "")),
-                    "sequence_index": int(chunk.get("sequence_index", 0)),
-                    "text": str(chunk.get("text", "")),
-                }
-                for chunk in original_chunks
-            ],
-        }
+    return {
+        "selected_source_language": original_language,
+        "source_kind": "original",
+        "source_chunks": [
+            {
+                "chunk_id": str(chunk.get("chunk_id", "")),
+                "sequence_index": int(chunk.get("sequence_index", 0)),
+                "text": str(chunk.get("text", "")),
+            }
+            for chunk in original_chunks
+        ],
+    }
 
-    translation_document = ai_translation_service.load_translation_document(resolved_project_root)
-    if translation_document is None:
-        raise ValueError("The selected Character Voices language is not available for Speech Blocks yet.")
-    translated_language = str(translation_document["target_language"]).strip()
-    if selected_voice_language != translated_language:
-        raise ValueError("The selected Character Voices language is not available for Speech Blocks yet.")
-    if not ai_translation_service.translation_is_completed(resolved_project_root):
-        raise ValueError("Approve all translated chunks before generating Speech Blocks in the translated language.")
 
+def _resolve_translated_source_chunks(
+    project_root: Path,
+    original_chunks: list[dict[str, object]],
+) -> dict[str, object] | None:
+    """
+    @brief      Resolve translated source chunks when the translation is complete and fully approved.
+    @param[in]  project_root Active project root folder.
+    @param[in]  original_chunks Ordered original source chunks.
+    @return     Translated source-resolution payload, or `None` when the translation is absent,
+                incomplete, or not fully approved (caller then falls back to the original text).
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-24
+    @version    0.1.0
+    """
+    try:
+        translation_document = ai_translation_service.load_translation_document(project_root)
+        if translation_document is None or not ai_translation_service.translation_is_completed(project_root):
+            return None
+        translated_records = ai_translation_service.load_translated_chunks(project_root)
+    except (OSError, ValueError):
+        return None
     translated_by_id = {
         str(chunk.get("chunk_id", "")): dict(chunk)
-        for chunk in ai_translation_service.load_translated_chunks(resolved_project_root)
+        for chunk in translated_records
         if isinstance(chunk, dict) and str(chunk.get("chunk_id", "")).strip()
     }
     source_chunks: list[dict[str, object]] = []
@@ -569,9 +584,7 @@ def resolve_source_chunks(
         translated_chunk = translated_by_id.get(chunk_id)
         translated_text = "" if translated_chunk is None else str(translated_chunk.get("translated_text", ""))
         if not translated_text.strip():
-            raise ValueError(
-                "Approve all translated chunks before generating Speech Blocks in the translated language."
-            )
+            return None
         source_chunks.append(
             {
                 "chunk_id": chunk_id,
@@ -580,7 +593,7 @@ def resolve_source_chunks(
             }
         )
     return {
-        "selected_source_language": selected_voice_language,
+        "selected_source_language": str(translation_document["target_language"]).strip(),
         "source_kind": "translated",
         "source_chunks": source_chunks,
     }
