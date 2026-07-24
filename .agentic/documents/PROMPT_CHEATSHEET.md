@@ -83,9 +83,10 @@ Move on when: the agent has restated the request and you agree it understood you
 ```text
 Continue to Intent Alignment.
 Record: your understanding of the request, what is in and out of scope, your
-assumptions, the acceptance target (how we will know it works), any open
-questions with your recommended answers, a risk level, and the paths you plan
-to touch. Decide proceed or pause.
+assumptions, the acceptance criteria (one per checkable outcome — the success
+paths plus the failures and limits that define "done"), any open questions with
+your recommended answers, a risk level, and the paths you plan to touch. Decide
+proceed or pause.
 If risk is high, questions are still open, or a protected area is in scope,
 pause for me rather than proceeding.
 Stop after recording alignment and show me the result.
@@ -97,9 +98,17 @@ Move on when: alignment is recorded and any pause has been resolved by you.
 
 ```text
 Continue to the requirement gate.
-Draft the minimal spec items (one testable sentence each, tagged behavior or
-property). Check existing requirements first and reuse or revise where one
-already covers this. Record accepted specs into the workflow graph.
+First decompose the feature: list every behavior it implies — the success path,
+each input or branch, each rejection or error, and boundary/empty/limit cases —
+plus any ux, security, data_privacy, non_functional, or platform aspect that
+applies. Then draft the minimal spec items (one testable sentence each, tagged
+behavior or property). Keep each requirement to one behavior with a single,
+isolated purpose: one requirement per functionality, and split anything that
+joins distinct behaviors with "and", "or", or a list. Write the failure and
+boundary behaviors as their own requirements, not only as tests, and make sure
+every acceptance criterion from alignment maps to at least one requirement.
+Check existing requirements first and reuse or revise where one already covers
+this. Record accepted specs into the workflow graph.
 Do not write tests or code yet. Stop and show me the specs and the invariant
 status for approval.
 ```
@@ -372,9 +381,18 @@ Ask the agentic assistant to draft requirements:
 
 ```text
 Continue to the requirement gate.
+First list every behavior <feature or fix> implies: the success path, each input
+or branch, each rejection or error, boundary/empty/limit cases, and any ux,
+security, data_privacy, non_functional, or platform aspect that applies.
 Draft the minimal spec items for <feature or fix>.
 Allowed spec tags are only behavior and property.
 Use one testable sentence per spec item.
+Keep each requirement to one behavior with a single, isolated purpose: one
+requirement per functionality, and split anything that joins distinct behaviors
+with "and", "or", or a list.
+Write the failure and boundary behaviors as their own requirements, not only as
+tests, and make sure every acceptance criterion from alignment maps to at least
+one requirement.
 Run <workflow> requirement list --json before creating anything and identify
 semantically related current snapshots.
 Use <workflow> requirement create for a new behavioral contract and use the

@@ -613,6 +613,11 @@ Writes:
 ### `audit traceability`
 
 Validates canonical requirement snapshots and their current linked-test sets.
+Every non-Retired requirement (`Planned` or `Active`) must resolve at least one
+linked test or declare an explicit `Manual:`/`Inspection:` verification method;
+one that has neither is reported as `REQ-NO-VERIFICATION`. Unresolvable selectors
+are reported as `REQ-LINK-MISSING`. Retired requirements are exempt. Delivery
+preflight blocks on any of these findings.
 
 ```powershell
 <workflow> audit traceability

@@ -374,13 +374,13 @@ def audit_traceability(
                         record.source_file,
                     )
                 )
-        if record.status == "Active" and (
+        if record.status != "Retired" and (
             (not record.linked_tests or unresolved) and not manual_verification(record.verification)
         ):
             issues.append(
                 AuditIssue(
                     "REQ-NO-VERIFICATION",
-                    f"{record.id} is Active without a resolvable linked-test set or explicit manual verification",
+                    f"{record.id} ({record.status}) has no resolvable linked-test set and no explicit manual verification",
                     record.id,
                     record.source_file,
                 )

@@ -34,6 +34,43 @@ equivalent contract is not duplicated. Keep the same ID when revising the
 wording, rationale, priority, status, verification, affected paths, or linked
 tests of the same behavioral contract.
 
+## One Requirement, One Behavior
+
+Each requirement captures a single, independently verifiable behavior with one
+precise purpose, so it is easy to read, test, and trace. Split rather than
+combine: when a contract needs "and", "or", a list, or a semicolon to join
+*distinct* behaviors, write one requirement per behavior instead. A shared
+input, actor, or component is not a reason to merge; each behavior that can pass
+or fail on its own is its own requirement. This keeps each `affected_paths` and
+`linked_tests` set narrow and lets one failing test name exactly one broken
+contract.
+
+## Coverage Dimensions
+
+A feature is fully defined only when every category it touches has requirements,
+not just the functional happy path. When decomposing a feature, consider each
+dimension and record a requirement for every one that applies:
+
+- `functional` — what the system does: inputs, outputs, branches, and the errors
+  or rejections each behavior produces.
+- `ux` — how the user interacts: flows, states, visible messages, and
+  accessibility the behavior must present.
+- `non_functional` — how well it performs: latency, throughput, resource limits,
+  reliability, and other measurable qualities.
+- `security` — what must be prevented: authentication, authorization, input
+  containment, and abuse or escape paths.
+- `data_privacy` — what data is handled: what is stored, retained, exported, or
+  redacted, and what must never be persisted.
+- `platform` — where it runs: operating systems, runtimes, versions, and
+  environment constraints the behavior depends on.
+- `release` — how it ships: packaging, migration, compatibility, and rollout or
+  rollback expectations.
+- `testing` — how a behavior is verified when only a process or tool can assert
+  it rather than a product code path.
+
+A category with no applicable behavior needs no requirement; silently skipping a
+category that does apply is the common source of gaps and later regressions.
+
 ## Complete Record
 
 Every file uses schema version 1 and contains all fields below in this order:
@@ -64,10 +101,12 @@ last_updated = "2026-07-22T10:20:00Z"
 or `Could`. Arrays are the complete current sets and are replaced rather than
 appended during updates. Empty arrays never inherit earlier values.
 
-An Active automated requirement needs resolvable exact test selectors. A
-manual-only Active requirement uses `Manual: <method>` or
-`Inspection: <method>`. Current snapshots do not contain revision history,
-parent IDs, supersession chains, or previous wording.
+Every non-Retired requirement (`Planned` or `Active`) needs resolvable exact
+test selectors or an explicit `Manual: <method>` / `Inspection: <method>`
+verification; the traceability audit reports any that have neither and delivery
+preflight blocks on it. Retired requirements are exempt. Current snapshots do
+not contain revision history, parent IDs, supersession chains, or previous
+wording.
 
 Use requirement create/show/list/update/activate commands instead of inventing
 IDs or editing a shared index. Traceability, coverage, and impact read these
