@@ -9,9 +9,8 @@
 """
 @file text_extraction_service.py
 @brief Deterministic source-text extraction helpers for AudioMancer.
-@details Copies one operation-local input snapshot, extracts normalized text
-         from the supported source formats, persists extraction artifacts, and
-         maintains resumable extraction state in `00_extraction`.
+@details Extracts normalized text from supported source formats and persists
+         exactly one text artifact plus one strict, resumable metadata document.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
 @version 0.5.4
@@ -33,42 +32,60 @@ from odf.opendocument import load as load_odf_document
 from striprtf.striprtf import rtf_to_text
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_state_payload,
+    OperationCancelledError,
     emit_progress_update,
-    load_operation_state_file,
     raise_if_cancelled,
     reset_operation_data,
     resolve_project_relative_path,
 )
 from audiomancer.services.persistence_service import write_json_atomic, write_text_atomic
-from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
 # @brief Component logger used by deterministic text extraction.
 _EXTRACTION_LOGGER = get_component_logger("text_extraction")
 _emit_progress = partial(emit_progress_update, include_token_usage=False)
-# @brief Persisted extraction operation-state payload type.
-OperationStatePayload = dict[str, object]
-# @brief Persisted extraction report payload type.
-ExtractionReportPayload = dict[str, object]
+# @brief Authoritative persisted extraction metadata payload type.
+ExtractionMetadataPayload = dict[str, object]
 # @brief Internal extraction-units payload type used during format-specific parsing.
 ExtractionUnitsPayload = dict[str, object]
 # @brief Stable extraction-folder name used for local artifact path construction.
 _EXTRACTION_FOLDER_NAME = config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-# @brief Stable prefix used for copied extraction input snapshots.
-_EXTRACTION_INPUT_PREFIX = "input_"
 # @brief Stable file name used for extracted raw text output.
 _EXTRACTION_OUTPUT_NAME = config.EXTRACTED_TEXT_FILE_NAME
-# @brief Stable file name used for the extraction report artifact.
-_EXTRACTION_REPORT_NAME = config.EXTRACTION_REPORT_FILE_NAME
-# @brief Stable file name used for persisted extraction runtime state.
-_EXTRACTION_STATE_NAME = config.EXTRACTION_STATE_FILE_NAME
+# @brief Stable file name used for authoritative extraction metadata.
+_EXTRACTION_METADATA_NAME = config.EXTRACTION_METADATA_FILE_NAME
+# @brief Reset-only legacy extraction sidecars rejected by the strict contract.
+_LEGACY_EXTRACTION_FILE_NAMES = ("extraction_report.json", "extraction_state.json")
 # @brief Canonical separator inserted between extracted pages for downstream cleanup.
 _PAGE_BREAK_SEPARATOR = "\n\n\f\n\n"
+# @brief Exact root fields accepted by the strict extraction metadata contract.
+_METADATA_FIELDS = frozenset(
+    (
+        "status",
+        "progress_current",
+        "progress_total",
+        "warnings",
+        "character_count",
+        "word_count",
+        "line_count",
+        "page_count",
+    )
+)
+# @brief Persisted extraction status tokens.
+_PERSISTED_STATUSES = frozenset(("running", "cancelled", "failed", "completed"))
+# @brief Extraction statuses that support granular continuation.
+_RESUMABLE_STATUSES = frozenset(("running", "cancelled", "failed"))
+
+
+class ExtractionMetadataError(ValueError):
+    """
+    @brief      Raised when persisted extraction artifacts do not match the strict contract.
+    @exception  None
+    @version    0.1.0
+    """
 
 
 class _HtmlTextExtractor(HTMLParser):
@@ -166,14 +183,14 @@ def extract_text(
     manifest: dict[str, object],
     progress_callback=None,
     cancel_requested=None,
-) -> ExtractionReportPayload:
+) -> ExtractionMetadataPayload:
     """
     @brief      Extract source text for one active AudioMancer project.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @param[in]  progress_callback Optional zero-copy progress callback.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
-    @return     Extraction report payload describing the persisted artifacts.
+    @return     Completed authoritative extraction metadata document.
     @exception  FileNotFoundError Raised when the imported source file is missing.
     @exception  ValueError Raised when no extractable text is available.
     @exception  OperationCancelledError Raised when the operator cancels the run.
@@ -188,125 +205,145 @@ def extract_text(
 
     extraction_dir = resolved_project_root / _EXTRACTION_FOLDER_NAME
     extraction_dir.mkdir(parents=True, exist_ok=True)
-    input_snapshot_path = _source_path_from_manifest(resolved_project_root, source_document)
+    source_path = _source_path_from_manifest(resolved_project_root, source_document)
     output_path = extraction_dir / _EXTRACTION_OUTPUT_NAME
-    report_path = extraction_dir / _EXTRACTION_REPORT_NAME
-    state_path = extraction_dir / _EXTRACTION_STATE_NAME
+    metadata_path = extraction_dir / _EXTRACTION_METADATA_NAME
 
     file_type = str(source_document["file_type"])
-    resume_state = load_operation_state_file(state_path)
-    warnings = _warnings_from_state(resume_state)
+    existing_metadata = load_extraction_metadata(resolved_project_root)
+    warnings = _warnings_from_metadata(existing_metadata)
     _emit_status(progress_callback, _preparation_message_for_file_type(file_type))
-    if _supports_incremental_resume(file_type) and _can_resume_from_state(
-        resume_state,
-        input_snapshot_path,
-        output_path,
-    ):
-        progress_payload = _resume_extraction(
-            input_snapshot_path,
+    try:
+        if _supports_incremental_resume(file_type) and _can_resume_from_metadata(
+            existing_metadata,
+            source_path,
             output_path,
-            state_path,
-            file_type,
-            warnings,
-            progress_callback,
-            cancel_requested,
+        ):
+            progress_payload = _resume_extraction(
+                source_path,
+                output_path,
+                metadata_path,
+                file_type,
+                warnings,
+                progress_callback,
+                cancel_requested,
+            )
+        else:
+            progress_payload = _start_fresh_extraction(
+                source_path,
+                output_path,
+                metadata_path,
+                file_type,
+                warnings,
+                progress_callback,
+                cancel_requested,
+            )
+
+        if not output_path.is_file():
+            if file_type == "pdf":
+                raise ValueError("PDF source did not contain extractable text. OCR is not supported in this phase.")
+            raise ValueError("Source did not contain extractable text.")
+
+        normalized_text = _normalize_text(output_path.read_text(encoding="utf-8")).strip()
+        if not normalized_text:
+            if file_type == "pdf":
+                raise ValueError("PDF source did not contain extractable text. OCR is not supported in this phase.")
+            raise ValueError("Source did not contain extractable text.")
+
+        write_text_atomic(output_path, normalized_text + "\n")
+        completed_metadata = _build_metadata(
+            status="completed",
+            progress_current=int(progress_payload["progress_total"]),
+            progress_total=int(progress_payload["progress_total"]),
+            warnings=list(progress_payload["warnings"]),
+            character_count=len(normalized_text),
+            word_count=len(normalized_text.split()),
+            line_count=len(normalized_text.splitlines()),
+            page_count=_optional_non_negative_int(progress_payload.get("page_count")),
         )
-    else:
-        progress_payload = _start_fresh_extraction(
-            input_snapshot_path,
-            output_path,
-            state_path,
-            file_type,
-            warnings,
-            progress_callback,
-            cancel_requested,
-        )
-
-    if not output_path.is_file():
-        if file_type == "pdf":
-            raise ValueError("PDF source did not contain extractable text. OCR is not supported in this phase.")
-        raise ValueError("Source did not contain extractable text.")
-
-    normalized_text = _normalize_text(output_path.read_text(encoding="utf-8")).strip()
-    if not normalized_text:
-        if file_type == "pdf":
-            raise ValueError("PDF source did not contain extractable text. OCR is not supported in this phase.")
-        raise ValueError("Source did not contain extractable text.")
-
-    final_text = normalized_text + "\n"
-    write_text_atomic(output_path, final_text)
-
-    report_payload: ExtractionReportPayload = {
-        "source_relative_path": _relative_to_project(resolved_project_root, input_snapshot_path),
-        "source_type": file_type,
-        "page_count": progress_payload.get("page_count"),
-        "warnings": list(progress_payload["warnings"]),
-        "character_count": len(normalized_text),
-        "word_count": len(normalized_text.split()),
-        "line_count": len(normalized_text.splitlines()),
-    }
-    write_json_atomic(report_path, report_payload)
-
-    completed_state = _build_operation_state(
-        status="completed",
-        input_paths=[_relative_to_project(resolved_project_root, input_snapshot_path)],
-        output_paths=[_relative_to_project(resolved_project_root, output_path)],
-        artifact_paths=[_relative_to_project(resolved_project_root, report_path)],
-        warning_count=len(report_payload["warnings"]),
-        progress_current=int(progress_payload["progress_total"]),
-        progress_total=int(progress_payload["progress_total"]),
-        started_at=None,
-        completed_at=None,
-        metadata={
-            "warnings": list(report_payload["warnings"]),
-            "word_count": report_payload["word_count"],
-            "line_count": report_payload["line_count"],
-            "character_count": report_payload["character_count"],
-            "page_count": report_payload["page_count"],
-            "source_type": file_type,
-        },
-        resume_checkpoint=None,
-    )
-    write_json_atomic(state_path, completed_state)
-    project_workspace_service.sync_manifest_operation_summary(
-        resolved_project_root,
-        "extraction",
-        completed_state,
-        extra_fields={"extraction_warning_count": len(report_payload["warnings"])},
-    )
-    return report_payload
+        write_extraction_metadata(resolved_project_root, completed_metadata)
+        return completed_metadata
+    except OperationCancelledError:
+        _persist_interrupted_metadata(metadata_path, "cancelled")
+        raise
+    except Exception:
+        _persist_interrupted_metadata(metadata_path, "failed")
+        raise
 
 
 @trace_function(_EXTRACTION_LOGGER)
-def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
+def load_extraction_metadata(project_root: str | Path) -> ExtractionMetadataPayload | None:
     """
-    @brief      Load one optional extraction operation-state file.
+    @brief      Load and strictly validate the authoritative extraction metadata.
     @param[in]  project_root Active project root folder.
-    @return     Persisted extraction operation-state payload or `None`.
-    @exception  None
+    @return     Persisted extraction metadata or `None`.
+    @exception  ExtractionMetadataError Raised for legacy or incompatible artifacts.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
     @version    0.2.1
     """
-    state_path = Path(project_root) / _EXTRACTION_FOLDER_NAME / _EXTRACTION_STATE_NAME
-    return load_operation_state_file(state_path)
+    resolved_project_root = Path(project_root)
+    if _legacy_sidecars_exist(resolved_project_root):
+        raise _incompatible_metadata_error("Legacy extraction sidecars require Reset Extraction.")
+    metadata_path = resolved_project_root / _EXTRACTION_FOLDER_NAME / _EXTRACTION_METADATA_NAME
+    if not metadata_path.is_file():
+        if (resolved_project_root / _EXTRACTION_OUTPUT_NAME).exists():
+            raise _incompatible_metadata_error("Extracted text exists without current extraction metadata.")
+        return None
+    metadata = _load_metadata_path(metadata_path)
+    _validate_artifact_pair(resolved_project_root, metadata)
+    return metadata
 
 
 @trace_function(_EXTRACTION_LOGGER)
-def load_extraction_report(project_root: str | Path) -> ExtractionReportPayload | None:
+def write_extraction_metadata(
+    project_root: str | Path,
+    metadata: ExtractionMetadataPayload,
+) -> Path:
     """
-    @brief      Load one optional persisted extraction report.
+    @brief      Validate and atomically persist the authoritative extraction metadata.
     @param[in]  project_root Active project root folder.
-    @return     Extraction report payload or `None`.
-    @exception  None
+    @param[in]  metadata Candidate strict extraction metadata document.
+    @return     Resolved metadata path.
+    @exception  ExtractionMetadataError Raised when the payload is incompatible.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
     @version    0.1.0
     """
-    report_path = Path(project_root) / _EXTRACTION_FOLDER_NAME / _EXTRACTION_REPORT_NAME
-    if not report_path.is_file():
-        return None
-    return dict(json.loads(report_path.read_text(encoding="utf-8")))
+    resolved_project_root = Path(project_root)
+    if _legacy_sidecars_exist(resolved_project_root):
+        raise _incompatible_metadata_error("Legacy extraction sidecars require Reset Extraction.")
+    _validate_metadata(metadata)
+    _validate_artifact_pair(resolved_project_root, metadata)
+    metadata_path = resolved_project_root / _EXTRACTION_FOLDER_NAME / _EXTRACTION_METADATA_NAME
+    write_json_atomic(metadata_path, metadata)
+    return metadata_path
+
+
+def build_extraction_summary(
+    metadata: ExtractionMetadataPayload | None,
+) -> dict[str, object]:
+    """
+    @brief      Derive display and workflow summary values from extraction metadata.
+    @param[in]  metadata Optional authoritative extraction metadata.
+    @return     Derived non-authoritative summary.
+    @exception  ExtractionMetadataError Raised when the payload is incompatible.
+    @version    0.1.0
+    """
+    if metadata is None:
+        return {
+            "status": "not_started",
+            "progress_current": 0,
+            "progress_total": 0,
+            "warning_count": 0,
+        }
+    _validate_metadata(metadata)
+    return {
+        "status": str(metadata["status"]),
+        "progress_current": int(metadata["progress_current"]),
+        "progress_total": int(metadata["progress_total"]),
+        "warning_count": len(metadata["warnings"]),
+    }
 
 
 @trace_function(_EXTRACTION_LOGGER)
@@ -331,53 +368,31 @@ def reset_extraction_and_downstream(project_root: str | Path) -> None:
 
 
 def _start_fresh_extraction(
-    input_snapshot_path: Path,
+    source_path: Path,
     output_path: Path,
-    state_path: Path,
+    metadata_path: Path,
     file_type: str,
     warnings: list[str],
     progress_callback,
     cancel_requested,
 ) -> dict[str, object]:
-    """
-    @brief      Start extraction from the beginning of one copied input snapshot.
-    @param[in]  input_snapshot_path Operation-local source snapshot path.
-    @param[in]  output_path Canonical extracted output path.
-    @param[in]  state_path Operation-state file path.
-    @param[in]  file_type Normalized source-type token.
-    @param[in,out] warnings Mutable warnings list shared with the extraction pass.
-    @return     Summary payload with progress metadata and warnings.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.3
-    """
+    """Start extraction from the beginning of the imported source."""
     if output_path.exists():
         output_path.unlink()
-    run_token = _utc_now_iso()
-    progress_payload = _build_progress_units(input_snapshot_path, file_type)
+    progress_payload = _build_progress_units(source_path, file_type)
     progress_units = list(progress_payload["units"])
     warnings[:] = [*warnings, *list(progress_payload["warnings"])]
     total_units = len(progress_units)
-    _write_running_state(
-        state_path,
-        input_snapshot_path,
-        output_path,
-        run_token,
-        0,
-        total_units,
-        warnings,
-        file_type,
-        progress_callback,
-    )
+    page_count = _optional_non_negative_int(progress_payload.get("page_count"))
+    _write_running_metadata(metadata_path, 0, total_units, warnings, page_count)
     _process_units(
         progress_units,
-        input_snapshot_path,
+        source_path,
         output_path,
-        state_path,
-        run_token,
+        metadata_path,
         warnings,
         file_type,
+        page_count,
         0,
         progress_callback,
         cancel_requested,
@@ -385,59 +400,38 @@ def _start_fresh_extraction(
     return {
         "progress_total": total_units,
         "warnings": list(warnings),
-        "page_count": progress_payload["page_count"],
+        "page_count": page_count,
     }
 
 
 def _resume_extraction(
-    input_snapshot_path: Path,
+    source_path: Path,
     output_path: Path,
-    state_path: Path,
+    metadata_path: Path,
     file_type: str,
     warnings: list[str],
     progress_callback,
     cancel_requested,
 ) -> dict[str, object]:
-    """
-    @brief      Continue one previously interrupted incremental extraction.
-    @param[in]  input_snapshot_path Operation-local source snapshot path.
-    @param[in]  output_path Canonical extracted output path.
-    @param[in]  state_path Operation-state file path.
-    @param[in]  file_type Normalized source-type token.
-    @param[in,out] warnings Mutable warnings list restored from the previous state.
-    @return     Summary payload with progress metadata and warnings.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.3
-    """
-    existing_state = load_operation_state_file(state_path) or {}
-    resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
-    next_unit_index = int(resume_checkpoint.get("next_unit_index", 0))
-    run_token = str((existing_state.get("resume_checkpoint") or {}).get("run_token") or _utc_now_iso())
-    progress_payload = _build_progress_units(input_snapshot_path, file_type)
+    """Continue one interrupted incremental extraction."""
+    existing_metadata = _load_metadata_path(metadata_path)
+    next_unit_index = int(existing_metadata["progress_current"])
+    progress_payload = _build_progress_units(source_path, file_type)
     progress_units = list(progress_payload["units"])
     warnings[:] = [*warnings, *list(progress_payload["warnings"])]
     total_units = len(progress_units)
-    _write_running_state(
-        state_path,
-        input_snapshot_path,
-        output_path,
-        run_token,
-        next_unit_index,
-        total_units,
-        warnings,
-        file_type,
-        progress_callback,
-    )
+    if next_unit_index > total_units:
+        raise _incompatible_metadata_error("Saved progress exceeds the current source unit count.")
+    page_count = _optional_non_negative_int(progress_payload.get("page_count"))
+    _write_running_metadata(metadata_path, next_unit_index, total_units, warnings, page_count)
     _process_units(
         progress_units,
-        input_snapshot_path,
+        source_path,
         output_path,
-        state_path,
-        run_token,
+        metadata_path,
         warnings,
         file_type,
+        page_count,
         next_unit_index,
         progress_callback,
         cancel_requested,
@@ -445,45 +439,30 @@ def _resume_extraction(
     return {
         "progress_total": total_units,
         "warnings": list(warnings),
-        "page_count": progress_payload["page_count"],
+        "page_count": page_count,
     }
 
 
 def _process_units(
     progress_units: list[object],
-    input_snapshot_path: Path,
+    source_path: Path,
     output_path: Path,
-    state_path: Path,
-    run_token: str,
+    metadata_path: Path,
     warnings: list[str],
     file_type: str,
+    page_count: int | None,
     start_index: int,
     progress_callback,
     cancel_requested,
 ) -> None:
-    """
-    @brief      Process one ordered list of extracted text units into the output artifact.
-    @param[in]  progress_units Ordered extracted units for the source.
-    @param[in]  input_snapshot_path Operation-local source snapshot path.
-    @param[in]  output_path Canonical extracted output path.
-    @param[in]  state_path Operation-state file path.
-    @param[in]  run_token Stable resume token for the current extraction attempt.
-    @param[in,out] warnings Mutable warnings list.
-    @param[in]  file_type Normalized source-type token.
-    @param[in]  start_index First unit index to process.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.1
-    """
+    """Append ordered source units and checkpoint authoritative metadata."""
     if start_index == 0 and output_path.exists():
         output_path.unlink()
 
     total_units = len(progress_units)
     _emit_progress(progress_callback, start_index, total_units, "Text extraction in progress...")
     if file_type == "pdf":
-        with fitz.open(input_snapshot_path) as document:
+        with fitz.open(source_path) as document:
             for unit_index in range(start_index, total_units):
                 raise_if_cancelled(cancel_requested)
                 page_index = int(progress_units[unit_index])
@@ -491,21 +470,15 @@ def _process_units(
                 if not unit_text:
                     warnings.append(f"PDF page {page_index + 1} did not contain extractable text.")
                 if unit_text:
-                    prefix = ""
-                    if output_path.exists() and output_path.stat().st_size > 0:
-                        prefix = _PAGE_BREAK_SEPARATOR
+                    prefix = _PAGE_BREAK_SEPARATOR if output_path.exists() and output_path.stat().st_size > 0 else ""
                     with output_path.open("a", encoding="utf-8") as handle:
                         handle.write(prefix + unit_text)
-                _write_running_state(
-                    state_path,
-                    input_snapshot_path,
-                    output_path,
-                    run_token,
+                _write_running_metadata(
+                    metadata_path,
                     unit_index + 1,
                     total_units,
                     warnings,
-                    file_type,
-                    progress_callback,
+                    page_count,
                 )
                 _emit_progress(
                     progress_callback,
@@ -519,21 +492,15 @@ def _process_units(
         raise_if_cancelled(cancel_requested)
         unit_text = _normalize_text(str(progress_units[unit_index])).strip()
         if unit_text:
-            prefix = ""
-            if output_path.exists() and output_path.stat().st_size > 0:
-                prefix = "\n\n"
+            prefix = "\n\n" if output_path.exists() and output_path.stat().st_size > 0 else ""
             with output_path.open("a", encoding="utf-8") as handle:
                 handle.write(prefix + unit_text)
-        _write_running_state(
-            state_path,
-            input_snapshot_path,
-            output_path,
-            run_token,
+        _write_running_metadata(
+            metadata_path,
             unit_index + 1,
             total_units,
             warnings,
-            file_type,
-            progress_callback,
+            page_count,
         )
         _emit_progress(
             progress_callback,
@@ -543,96 +510,50 @@ def _process_units(
         )
 
 
-def _write_running_state(
-    state_path: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    run_token: str,
+def _write_running_metadata(
+    metadata_path: Path,
     progress_current: int,
     progress_total: int,
     warnings: list[str],
-    file_type: str,
-    progress_callback,
+    page_count: int | None,
 ) -> None:
-    """
-    @brief      Persist one running extraction state snapshot.
-    @param[in]  state_path Operation-state file path.
-    @param[in]  input_snapshot_path Operation-local source snapshot path.
-    @param[in]  output_path Canonical extracted output path.
-    @param[in]  run_token Stable resume token for the current extraction attempt.
-    @param[in]  progress_current Completed unit count.
-    @param[in]  progress_total Total unit count.
-    @param[in]  warnings Current warning list.
-    @param[in]  file_type Normalized source-type token.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
-    """
-    _ = input_snapshot_path
-    _ = output_path
-    running_state = _build_operation_state(
-        status="running",
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
-        warning_count=len(warnings),
-        progress_current=progress_current,
-        progress_total=progress_total,
-        started_at=None,
-        completed_at=None,
-        metadata={
-            "warnings": list(warnings),
-            "source_type": file_type,
-        },
-        resume_checkpoint={"next_unit_index": progress_current, "run_token": run_token},
+    """Persist one running extraction metadata checkpoint atomically."""
+    write_json_atomic(
+        metadata_path,
+        _build_metadata(
+            status="running",
+            progress_current=progress_current,
+            progress_total=progress_total,
+            warnings=warnings,
+            character_count=None,
+            word_count=None,
+            line_count=None,
+            page_count=page_count,
+        ),
     )
-    write_json_atomic(state_path, running_state)
-    _ = progress_callback
 
 
-def _build_operation_state(
+def _build_metadata(
     status: str,
-    input_paths: list[str],
-    output_paths: list[str],
-    artifact_paths: list[str],
-    warning_count: int,
     progress_current: int,
     progress_total: int,
-    started_at: str | None,
-    completed_at: str | None,
-    metadata: dict[str, object],
-    resume_checkpoint: dict[str, object] | None,
-) -> OperationStatePayload:
-    """
-    @brief      Build one extraction operation-state payload.
-    @param[in]  status Persisted extraction status token.
-    @param[in]  input_paths Relative input artifact paths.
-    @param[in]  output_paths Relative output artifact paths.
-    @param[in]  artifact_paths Relative report artifact paths.
-    @param[in]  warning_count Warning count.
-    @param[in]  progress_current Completed progress count.
-    @param[in]  progress_total Total progress count.
-    @param[in]  started_at Optional operation start timestamp.
-    @param[in]  completed_at Optional operation completion timestamp.
-    @param[in]  metadata Extra extraction metadata payload.
-    @param[in]  resume_checkpoint Optional resume checkpoint payload.
-    @return     JSON-ready operation-state payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    return build_operation_state_payload(
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        mode="deterministic",
-        warning_count=warning_count,
-        metadata=metadata,
-        resume_checkpoint=resume_checkpoint,
-    )
+    warnings: list[str],
+    character_count: int | None,
+    word_count: int | None,
+    line_count: int | None,
+    page_count: int | None,
+) -> ExtractionMetadataPayload:
+    """Build one strict extraction metadata document."""
+    return {
+        "status": str(status),
+        "progress_current": int(progress_current),
+        "progress_total": int(progress_total),
+        "warnings": [str(item) for item in warnings],
+        "character_count": character_count,
+        "word_count": word_count,
+        "line_count": line_count,
+        "page_count": page_count,
+    }
 
 
 def _build_progress_units(source_path: Path, file_type: str) -> ExtractionUnitsPayload:
@@ -799,15 +720,15 @@ def _supports_incremental_resume(file_type: str) -> bool:
     return file_type in {"pdf", "rtf", "docx", "odt", "epub"}
 
 
-def _can_resume_from_state(
-    state_payload: OperationStatePayload | None,
-    input_snapshot_path: Path,
+def _can_resume_from_metadata(
+    metadata: ExtractionMetadataPayload | None,
+    source_path: Path,
     output_path: Path,
 ) -> bool:
     """
-    @brief      Decide whether one saved extraction state can continue safely.
-    @param[in]  state_payload Optional saved operation-state payload.
-    @param[in]  input_snapshot_path Operation-local source snapshot path.
+    @brief      Decide whether saved extraction metadata can continue safely.
+    @param[in]  metadata Optional authoritative extraction metadata.
+    @param[in]  source_path Imported project-local source path.
     @param[in]  output_path Canonical extracted output path.
     @return     True when the extraction may continue from the saved checkpoint.
     @exception  None
@@ -815,18 +736,15 @@ def _can_resume_from_state(
     @date       2026-04-06
     @version    0.1.0
     """
-    if not isinstance(state_payload, dict):
+    if not isinstance(metadata, dict):
         return False
-    if str(state_payload.get("status")) not in {"running", "failed"}:
+    if str(metadata.get("status")) not in _RESUMABLE_STATUSES:
         return False
-    if not input_snapshot_path.is_file():
-        return False
-    checkpoint = state_payload.get("resume_checkpoint")
-    if not isinstance(checkpoint, dict) or not isinstance(checkpoint.get("next_unit_index"), int):
+    if not source_path.is_file():
         return False
     if output_path.exists():
         return True
-    return int(checkpoint.get("next_unit_index", 0)) == 0
+    return int(metadata.get("progress_current", 0)) == 0
 
 
 def _source_path_from_manifest(project_root: Path, source_document: dict[str, object]) -> Path:
@@ -864,25 +782,127 @@ def _source_document_from_manifest(manifest: dict[str, object]) -> dict[str, obj
     return dict(source_document)
 
 
-def _warnings_from_state(state_payload: OperationStatePayload | None) -> list[str]:
+def _warnings_from_metadata(metadata: ExtractionMetadataPayload | None) -> list[str]:
     """
-    @brief      Restore persisted warning strings from one saved extraction state.
-    @param[in]  state_payload Optional saved operation-state payload.
+    @brief      Restore persisted warnings from authoritative extraction metadata.
+    @param[in]  metadata Optional authoritative extraction metadata.
     @return     Ordered warning list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
     @version    0.1.0
     """
-    if not isinstance(state_payload, dict):
-        return []
-    metadata = state_payload.get("metadata")
     if not isinstance(metadata, dict):
         return []
     warnings = metadata.get("warnings", [])
     if not isinstance(warnings, list):
         return []
     return [str(item) for item in warnings]
+
+
+def _load_metadata_path(metadata_path: Path) -> ExtractionMetadataPayload:
+    """Load and strictly validate one exact extraction metadata path."""
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise _incompatible_metadata_error("The metadata file is not valid JSON.") from exc
+    _validate_metadata(payload)
+    return dict(payload)
+
+
+def _validate_metadata(payload: object) -> None:
+    """Validate the exact extraction metadata schema and status invariants."""
+    if not isinstance(payload, dict):
+        raise _incompatible_metadata_error("The metadata root must be an object.")
+    if set(payload) != _METADATA_FIELDS:
+        raise _incompatible_metadata_error("The metadata root fields do not match the current contract.")
+    if payload["status"] not in _PERSISTED_STATUSES:
+        raise _incompatible_metadata_error("The extraction status is not supported.")
+    for field_name in ("progress_current", "progress_total"):
+        if type(payload[field_name]) is not int or int(payload[field_name]) < 0:
+            raise _incompatible_metadata_error(f"{field_name} must be a non-negative integer.")
+    progress_current = int(payload["progress_current"])
+    progress_total = int(payload["progress_total"])
+    if progress_current > progress_total:
+        raise _incompatible_metadata_error("progress_current cannot exceed progress_total.")
+    warnings = payload["warnings"]
+    if not isinstance(warnings, list) or any(not isinstance(item, str) for item in warnings):
+        raise _incompatible_metadata_error("warnings must be an array of strings.")
+    page_count = payload["page_count"]
+    if page_count is not None and (type(page_count) is not int or int(page_count) < 0):
+        raise _incompatible_metadata_error("page_count must be null or a non-negative integer.")
+    statistics = (
+        payload["character_count"],
+        payload["word_count"],
+        payload["line_count"],
+    )
+    if payload["status"] == "completed":
+        if progress_current != progress_total:
+            raise _incompatible_metadata_error("Completed extraction progress must equal its total.")
+        if any(type(value) is not int or int(value) < 0 for value in statistics):
+            raise _incompatible_metadata_error("Completed extraction statistics must be non-negative integers.")
+    elif any(value is not None for value in statistics):
+        raise _incompatible_metadata_error("Incomplete extraction statistics must be null.")
+
+
+def _validate_artifact_pair(project_root: Path, metadata: ExtractionMetadataPayload) -> None:
+    """Require a non-empty canonical text artifact for completed metadata."""
+    if metadata["status"] != "completed":
+        return
+    output_path = project_root / _EXTRACTION_OUTPUT_NAME
+    if not output_path.is_file():
+        raise _incompatible_metadata_error("Completed metadata requires non-empty extracted_text.txt.")
+    try:
+        extracted_text = output_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise _incompatible_metadata_error("Completed metadata requires valid UTF-8 extracted text.") from exc
+    if not extracted_text.strip():
+        raise _incompatible_metadata_error("Completed metadata requires non-empty extracted_text.txt.")
+
+
+def _persist_interrupted_metadata(metadata_path: Path, status: str) -> None:
+    """Persist a failed or cancelled status without discarding resumable progress."""
+    if metadata_path.is_file():
+        metadata = _load_metadata_path(metadata_path)
+    else:
+        metadata = _build_metadata(
+            status=status,
+            progress_current=0,
+            progress_total=0,
+            warnings=[],
+            character_count=None,
+            word_count=None,
+            line_count=None,
+            page_count=None,
+        )
+    metadata["status"] = status
+    metadata["character_count"] = None
+    metadata["word_count"] = None
+    metadata["line_count"] = None
+    _validate_metadata(metadata)
+    write_json_atomic(metadata_path, metadata)
+
+
+def _legacy_sidecars_exist(project_root: Path) -> bool:
+    """Return whether reset-only legacy extraction sidecars are present."""
+    return any((project_root / file_name).exists() for file_name in _LEGACY_EXTRACTION_FILE_NAMES)
+
+
+def _optional_non_negative_int(value: object) -> int | None:
+    """Normalize one optional non-negative integer."""
+    if value is None:
+        return None
+    resolved = int(value)
+    if resolved < 0:
+        raise ValueError("Expected a non-negative integer.")
+    return resolved
+
+
+def _incompatible_metadata_error(reason: str) -> ExtractionMetadataError:
+    """Build the operator-facing strict extraction contract error."""
+    return ExtractionMetadataError(
+        f"Extraction data is incompatible: {reason} Use Reset Extraction before continuing."
+    )
 
 
 def _emit_status(progress_callback, message: str) -> None:
@@ -932,10 +952,14 @@ def _normalize_text(text: str) -> str:
     @version    0.1.0
     """
     normalized = str(text).replace("\r\n", "\n").replace("\r", "\n")
-    lines = [line.rstrip() for line in normalized.split("\n")]
+    lines = [line.rstrip(" \t") for line in normalized.split("\n")]
     collapsed: list[str] = []
     previous_blank = False
     for line in lines:
+        if line.strip(" \t") == "\f":
+            collapsed.append("\f")
+            previous_blank = False
+            continue
         if line.strip():
             collapsed.append(line)
             previous_blank = False
@@ -944,20 +968,6 @@ def _normalize_text(text: str) -> str:
             collapsed.append("")
         previous_blank = True
     return "\n".join(collapsed).strip()
-
-
-def _relative_to_project(project_root: Path, artifact_path: Path) -> str:
-    """
-    @brief      Convert one absolute project-local path to a manifest-relative string.
-    @param[in]  project_root Active project root folder.
-    @param[in]  artifact_path Absolute project-local artifact path.
-    @return     POSIX-style relative path string.
-    @exception  ValueError Raised when the artifact is outside the project root.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    return artifact_path.relative_to(project_root).as_posix()
 
 
 # END OF FILE

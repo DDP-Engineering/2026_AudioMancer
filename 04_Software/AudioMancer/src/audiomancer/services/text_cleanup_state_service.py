@@ -59,9 +59,17 @@ def build_text_cleanup_state(
             "selected_spacing_categories": ai_cleanup_service.default_spacing_categories(),
         }
 
-    extracted_text = read_optional_project_text(project_root, config.EXTRACTED_TEXT_FILE_NAME)
-    extraction_report_payload = text_extraction_service.load_extraction_report(project_root)
-    extraction_operation_state = text_extraction_service.load_operation_state(project_root)
+    extraction_invalid = False
+    extraction_metadata: dict[str, object] | None = None
+    try:
+        extraction_metadata = text_extraction_service.load_extraction_metadata(project_root)
+    except text_extraction_service.ExtractionMetadataError:
+        extraction_invalid = True
+    extracted_text = (
+        None
+        if extraction_invalid
+        else read_optional_project_text(project_root, config.EXTRACTED_TEXT_FILE_NAME)
+    )
     cleaned_text = read_optional_project_text(project_root, config.CLEANED_TEXT_FILE_NAME)
     cleanup_document_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
     cleanup_document_invalid = False
@@ -121,15 +129,23 @@ def build_text_cleanup_state(
         "cleaned_text": cleaned_text,
         "notes": build_text_cleanup_notes(
             manifest,
-            extraction_report_payload,
-            extraction_operation_state,
+            extraction_metadata,
             cleanup_report_payload,
             cleanup_operation_state,
             language,
+            extraction_invalid=extraction_invalid,
         ),
         "can_extract": home_presenter_service.source_document_name(manifest) is not None,
-        "can_clean": extracted_text is not None,
-        "can_ai_clean": extracted_text is not None,
+        "can_clean": (
+            extracted_text is not None
+            and isinstance(extraction_metadata, dict)
+            and extraction_metadata.get("status") == "completed"
+        ),
+        "can_ai_clean": (
+            extracted_text is not None
+            and isinstance(extraction_metadata, dict)
+            and extraction_metadata.get("status") == "completed"
+        ),
         "can_apply_ai_spacing": can_apply_ai_spacing,
         "can_reset_cleanup": can_reset_cleanup,
         "cleanup_mode": cleanup_mode,
@@ -280,17 +296,17 @@ def active_cleanup_mode(project_root: Path, manifest: dict[str, object] | None =
 
 def build_text_cleanup_notes(
     manifest: dict[str, object],
-    extraction_report_payload: dict[str, object] | None,
-    extraction_operation_state: dict[str, object] | None,
+    extraction_metadata: dict[str, object] | None,
     cleanup_report_payload: dict[str, object] | None,
     cleanup_operation_state: dict[str, object] | None,
     language: str,
+    *,
+    extraction_invalid: bool = False,
 ) -> list[str]:
     """
     @brief      Build operator-facing notes for extraction plus deterministic or AI cleanup.
     @param[in]  manifest Active project manifest payload.
-    @param[in]  extraction_report_payload Optional extraction report payload.
-    @param[in]  extraction_operation_state Optional extraction operation-state payload.
+    @param[in]  extraction_metadata Optional authoritative extraction metadata.
     @param[in]  cleanup_report_payload Optional cleanup report payload.
     @param[in]  cleanup_operation_state Optional cleanup operation-state payload.
     @param[in]  language Current UI language code.
@@ -304,39 +320,41 @@ def build_text_cleanup_notes(
     if home_presenter_service.source_document_name(manifest) is None:
         notes.append(ui_state_service.translate("text_cleanup.note_no_source", language))
         return notes
+    if extraction_invalid:
+        notes.append(ui_state_service.translate("text_cleanup.note_extraction_invalid", language))
+        return notes
 
     extraction_status = (
         None
-        if not isinstance(extraction_operation_state, dict)
-        else str(extraction_operation_state.get("status", "not_started"))
+        if not isinstance(extraction_metadata, dict)
+        else str(extraction_metadata.get("status", "not_started"))
     )
-    if extraction_report_payload is not None:
-        page_text = extraction_report_payload.get("page_count")
+    if extraction_status == "completed" and extraction_metadata is not None:
+        page_text = extraction_metadata.get("page_count")
         page_summary = "n/a" if page_text in (None, "") else str(page_text)
         notes.append(
             ui_state_service.translate(
                 "text_cleanup.note_report_summary",
                 language,
             ).format(
-                word_count=extraction_report_payload.get("word_count", 0),
-                line_count=extraction_report_payload.get("line_count", 0),
+                word_count=extraction_metadata.get("word_count", 0),
+                line_count=extraction_metadata.get("line_count", 0),
                 page_count=page_summary,
             )
         )
-        warnings = list(extraction_report_payload.get("warnings", []))
+        warnings = list(extraction_metadata.get("warnings", []))
         notes.extend(str(item) for item in warnings)
-        if extraction_status == "completed":
-            notes.append(ui_state_service.translate("text_cleanup.note_rerun_warning", language))
-    elif extraction_status in {"running", "failed"}:
+        notes.append(ui_state_service.translate("text_cleanup.note_rerun_warning", language))
+    elif extraction_status in {"running", "failed", "cancelled"}:
         progress_current = (
             0
-            if not isinstance(extraction_operation_state, dict)
-            else int(extraction_operation_state.get("progress_current", 0))
+            if not isinstance(extraction_metadata, dict)
+            else int(extraction_metadata.get("progress_current", 0))
         )
         progress_total = (
             0
-            if not isinstance(extraction_operation_state, dict)
-            else int(extraction_operation_state.get("progress_total", 0))
+            if not isinstance(extraction_metadata, dict)
+            else int(extraction_metadata.get("progress_total", 0))
         )
         notes.append(
             ui_state_service.translate("text_cleanup.note_resume", language).format(
@@ -510,7 +528,6 @@ def normalized_manifest_operations(
         operations = {}
     normalized: dict[str, dict[str, object]] = {}
     for operation_kind in (
-        "extraction",
         "cleanup",
         "chunking",
         "translation",
@@ -567,7 +584,6 @@ def build_manifest_after_operation_reset(
         str(selected_kind).strip() for selected_kind in (preserve_operation_kinds or ()) if str(selected_kind).strip()
     }
     if operation_kind == "extraction":
-        updated_manifest["extraction_warning_count"] = 0
         updated_manifest["current_stage"] = "source_selected"
         for selected_kind in operations:
             if selected_kind not in preserved_operation_kinds:

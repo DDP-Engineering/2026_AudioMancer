@@ -285,7 +285,7 @@ def test_audio_assembly_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> 
     ]
 
 
-def test_text_extraction_running_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
+def test_text_extraction_running_metadata_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify Text Extraction running state persistence routes through the atomic JSON writer.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -296,9 +296,7 @@ def test_text_extraction_running_state_uses_atomic_json_writer(monkeypatch, tmp_
     @date       2026-06-12
     @version    0.1.0
     """
-    state_path = tmp_path / config.EXTRACTION_STATE_FILE_NAME
-    input_path = tmp_path / "story.txt"
-    output_path = tmp_path / config.EXTRACTED_TEXT_FILE_NAME
+    metadata_path = tmp_path / config.EXTRACTION_METADATA_FILE_NAME
     write_calls: list[tuple[Path, object]] = []
 
     def _capture_atomic_write(target_path: str | Path, payload: object) -> None:
@@ -316,19 +314,15 @@ def test_text_extraction_running_state_uses_atomic_json_writer(monkeypatch, tmp_
 
     monkeypatch.setattr(text_extraction_service, "write_json_atomic", _capture_atomic_write)
 
-    text_extraction_service._write_running_state(
-        state_path,
-        input_path,
-        output_path,
-        "run-token",
+    text_extraction_service._write_running_metadata(
+        metadata_path,
         1,
         2,
         ["warning"],
-        "txt",
         None,
     )
 
-    assert write_calls[0][0] == state_path
+    assert write_calls[0][0] == metadata_path
     assert write_calls[0][1]["status"] == "running"
 
 

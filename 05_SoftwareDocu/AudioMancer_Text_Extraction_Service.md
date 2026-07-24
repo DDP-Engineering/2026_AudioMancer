@@ -13,16 +13,17 @@ Provides the deterministic raw-text extraction slice for `AudioMancer`.
 
 It gives the `Text Cleanup` page one extraction workflow that reads the
 imported source from the project root, produces `extracted_text.txt`, persists
-extraction metadata, stores resumable operation state, and reports progress
+one authoritative `extraction_metadata.json` document, and reports progress
 through the shared modal operation runner.
 
 ## 2. Responsibilities
 
 - extract raw text from the currently supported source formats
 - normalize extracted text and persist it as `extracted_text.txt` atomically
-- persist extraction metadata as `extraction_report.json` atomically
-- persist resumable operation state as `extraction_state.json` atomically
-- support resume for interrupted extraction when the saved checkpoint is safe
+- persist status, progress, warnings, page count, and final statistics together
+  in `extraction_metadata.json` atomically
+- support resume for interrupted extraction from `progress_current` when the
+  saved checkpoint is safe
 - clear known extraction and downstream runtime artifacts for a confirmed rerun
   of a completed extraction
 - emit unit-based progress and support cooperative cancellation for long runs
@@ -44,8 +45,9 @@ The component is implemented in:
 Main public entrypoints:
 
 - `extract_text(project_root, manifest)`
-- `load_operation_state(project_root)`
-- `load_extraction_report(project_root)`
+- `load_extraction_metadata(project_root)`
+- `write_extraction_metadata(project_root, metadata)`
+- `build_extraction_summary(metadata)`
 - `reset_extraction_and_downstream(project_root)`
 
 High-level flow:
@@ -60,20 +62,19 @@ High-level flow:
    possible.
 5. `text_extraction_service.extract_text(...)` resolves the imported source
    from `project.json`.
-6. The service extracts text units, updates `extraction_state.json` while the
-   work is in progress, emits unit-based progress callbacks, then atomically
-   writes `extracted_text.txt` and `extraction_report.json`.
+6. The service appends extracted text units to `extracted_text.txt`, updates
+   `extraction_metadata.json` atomically after every processed unit, and emits
+   unit-based progress callbacks.
 7. `MainWindow` drives the extraction run through the reusable modal progress
    dialog, including cooperative cancellation.
-8. `MainWindow` stores the compact extraction summary and warning count in
-   `project.json` and refreshes the cleanup page preview.
+8. `MainWindow` refreshes the cleanup page directly from the authoritative
+   extraction metadata; no extraction summary is stored in `project.json`.
 
 ## 4. Dependencies
 
 - Internal dependencies:
   `audiomancer.config`, `audiomancer.services.logging_service`,
   `audiomancer.services.operation_runtime_service`,
-  `audiomancer.services.project_workspace_service`,
   `audiomancer.services.ui_state_service`, `audiomancer.ui.main_window`,
   `audiomancer.ui.operation_progress_dialog`,
   `audiomancer.ui.pages.text_cleanup_page`
@@ -94,41 +95,37 @@ Inputs:
 Outputs:
 
 - `extracted_text.txt`
-- `extraction_report.json`
-- `extraction_state.json`
-- updated `project.json` fields:
-  `extraction_warning_count` and `operations.extraction`
+- `extraction_metadata.json`
 - progress updates delivered to the modal operation-progress dialog
 - cleanup-page preview text and operator-facing notes
 
 ## 6. Data Contracts
 
-Current extraction report fields:
-
-- `source_relative_path`
-- `source_type`
-- `page_count`
-- `warnings`
-- `character_count`
-- `word_count`
-- `line_count`
-
-Current extraction operation-state fields:
+`extraction_metadata.json` has an exact root schema:
 
 - `status`
 - `progress_current`
 - `progress_total`
-- `mode`
-- `warning_count`
-- `metadata`
-- `resume_checkpoint`
+- `warnings`
+- `character_count`
+- `word_count`
+- `line_count`
+- `page_count`
 
-The extracted text path is derived from configuration. Resume uses the
-checkpoint plus the partially written output artifact rather than persisted
-generic path arrays or operation audit timestamps.
-Malformed or truncated extraction state loads as no usable state through the
-shared operation runtime loader, logs a warning, and lets the next extraction
-restart cleanly.
+Persisted statuses are `running`, `cancelled`, `failed`, and `completed`;
+absence of the metadata file means `not_started`. `progress_current` is the
+resume checkpoint. Text statistics are `null` while incomplete and
+non-negative integers when completed. `page_count` is the PDF page total or
+`null` for other formats. Warning count is derived from `len(warnings)`.
+Completed metadata requires `progress_current == progress_total` and valid,
+non-empty `extracted_text.txt`.
+
+The source path and type come only from `project.source_document`. The
+extracted text and metadata paths are derived from configuration; no path,
+mode, warning count, or extraction operation summary is duplicated in
+`project.json`. Unknown fields, invalid status/progress/statistics, malformed
+JSON, legacy sidecars, and mixed legacy/current artifacts fail strict loading
+and require Extraction reset. There is no migration or permanent fallback.
 
 Supported extraction formats in the current implementation:
 
@@ -143,9 +140,9 @@ Supported extraction formats in the current implementation:
 Current deterministic behavior:
 
 - extracted output is always written as `extracted_text.txt`
-- `project.json` does not store extracted-text or extraction-report shortcut
-  paths; downstream services resolve the root-level artifact names from
-  `config.py`
+- `project.json` does not store extracted-text, extraction-metadata, warning,
+  progress, or status shortcuts; downstream services resolve the root-level
+  artifact names from `config.py`
 - line endings are normalized to `\n`
 - leading and trailing unusable whitespace is trimmed
 - one final trailing newline is written to the completed output file
@@ -159,6 +156,9 @@ Current deterministic behavior:
   from extracted XHTML content
 - a completed rerun keeps the imported source file but clears known generated
   extraction and downstream runtime artifacts
+- cancellation and failure persist their explicit status, progress, and
+  warnings for resume; TXT and Markdown restart cleanly because they do not
+  support granular resume
 
 ## 7. Workflow Integration
 
@@ -183,8 +183,8 @@ Service usage:
 ```python
 from audiomancer.services import text_extraction_service
 
-report_payload = text_extraction_service.extract_text(project_root, manifest)
-state_payload = text_extraction_service.load_operation_state(project_root)
+metadata = text_extraction_service.extract_text(project_root, manifest)
+summary = text_extraction_service.build_extraction_summary(metadata)
 ```
 
 UI usage:
@@ -211,6 +211,8 @@ Covered behaviors:
 - PDF page-count and warning reporting
 - rejection of empty-text PDFs without OCR
 - resume of unfinished incremental extraction
+- strict metadata-schema rejection and explicit cancellation/failure state
+- legacy and mixed-project reset-required behavior
 - destructive reset behavior for extraction and downstream runtime artifacts
 - cleanup-page button enablement and preview updates
 - main-window extraction, completed-rerun confirmation, and unfinished-resume flow
@@ -224,13 +226,12 @@ Minimum validation after a change:
 ## 10. Limitations And Future Work
 
 - OCR is not implemented, so image-only PDFs fail extraction
-- extraction runs synchronously in the main shell and still processes one unit
-  at a time without parallel format handling
+- extraction processes one unit at a time without parallel format handling
 - cleanup, chunking, translation, and character-discovery artifact generation
   are still out of scope for this service
 - format handlers currently extract plain text only and do not preserve richer
   semantic structure
 
 Documentation audit status: reviewed against the current implementation on
-2026-05-06. Shared operation-runtime behavior is documented separately in
+2026-07-23. Shared operation-runtime behavior is documented separately in
 `AudioMancer_Project_Runtime_Support_Services.md`.

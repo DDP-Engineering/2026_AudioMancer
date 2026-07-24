@@ -48,11 +48,10 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["display_name"] == "Book5_CAL_CAL"
     assert manifest["current_stage"] == config.DEFAULT_WORKFLOW_STAGE
     assert manifest["source_document"] is None
-    assert manifest["extraction_warning_count"] == 0
-    assert manifest["operations"]["extraction"]["status"] == "not_started"
+    assert "extraction_warning_count" not in manifest
+    assert "extraction" not in manifest["operations"]
     assert "folder_relative_path" not in manifest["operations"]["cleanup"]
     assert manifest["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
-    assert "metadata" not in manifest["operations"]["extraction"]
     assert "output_paths" not in manifest["operations"]["cleanup"]
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
     assert not any(path.is_dir() for path in project_root.iterdir())
@@ -450,11 +449,8 @@ def test_validate_project_manifest_normalizes_operations_map() -> None:
 
     validated = project_workspace_service.validate_project_manifest(manifest)
 
-    assert validated["operations"]["extraction"]["status"] == "running"
-    assert validated["operations"]["extraction"]["progress_current"] == 1
-    assert "folder_relative_path" not in validated["operations"]["extraction"]
+    assert "extraction" not in validated["operations"]
     assert validated["operations"]["translation"]["status"] == "not_started"
-    assert "metadata" not in validated["operations"]["extraction"]
     assert "output_paths" not in validated["operations"]["translation"]
 
 
@@ -555,7 +551,6 @@ def test_repair_manifest_preserves_character_discovery_for_narrator_stage() -> N
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["current_stage"] = "narrator_definition_ready"
-    manifest["operations"]["extraction"]["status"] = "completed"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["translation"]["status"] = "completed"
@@ -581,7 +576,6 @@ def test_repair_manifest_preserves_character_discovery_for_character_voices_stag
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["current_stage"] = "character_voices_ready"
-    manifest["operations"]["extraction"]["status"] = "completed"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["translation"]["status"] = "completed"
@@ -968,8 +962,19 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
     project_workspace_service.save_manifest(manifest, project_root)
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Story", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Story", encoding="utf-8")
-    _write_json(project_root / config.EXTRACTION_STATE_FILE_NAME, _operation_state("completed", 1, 1))
-    _write_json(project_root / config.EXTRACTION_REPORT_FILE_NAME, {"warning_count": 0})
+    _write_json(
+        project_root / config.EXTRACTION_METADATA_FILE_NAME,
+        {
+            "status": "completed",
+            "progress_current": 1,
+            "progress_total": 1,
+            "warnings": [],
+            "character_count": 5,
+            "word_count": 1,
+            "line_count": 1,
+            "page_count": None,
+        },
+    )
     _write_json(project_root / config.CLEANUP_STATE_FILE_NAME, _operation_state("completed", 1, 1))
     _write_json(project_root / config.CLEANUP_REPORT_FILE_NAME, {"warning_count": 0})
 
@@ -978,6 +983,40 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
     assert open_result["status"] == "repair_required"
     assert "current_stage: project_created -> text_cleanup_ready" in open_result["changes"]
     assert open_result["normalized_manifest"]["current_stage"] == "text_cleanup_ready"
+
+
+def test_open_project_requires_destructive_reset_for_legacy_extraction(tmp_path) -> None:
+    """Verify legacy Extraction sidecars are never migrated or consumed."""
+    project_root, manifest = project_workspace_service.create_project("LegacyExtractionReset", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-25T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Legacy text", encoding="utf-8")
+    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Downstream", encoding="utf-8")
+
+    repair_request = project_workspace_service.open_project(project_root)
+
+    assert repair_request["status"] == "repair_required"
+    assert repair_request["corrupted_step"] == "extraction"
+    assert repair_request["metadata_only"] is False
+
+    repaired = project_workspace_service.repair_project(repair_request)
+
+    assert repaired["manifest"]["current_stage"] == "source_selected"
+    assert "extraction_warning_count" not in repaired["manifest"]
+    assert "extraction" not in repaired["manifest"]["operations"]
+    assert source_path.is_file()
+    assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).exists() is False
+    assert (project_root / "extraction_report.json").exists() is False
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
 
 
 def test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing(tmp_path) -> None:

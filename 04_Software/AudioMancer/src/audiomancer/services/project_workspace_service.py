@@ -24,7 +24,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from audiomancer import config
-from audiomancer.services import chunking_document_service
+from audiomancer.services import chunking_document_service, text_extraction_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     load_project_json_artifact as _load_json_artifact,
@@ -245,6 +245,9 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
             f"Project uses the unsupported legacy numbered runtime layout: {legacy_folder}. "
             "Create a new flattened project; migration is not supported."
         )
+    extraction_reset_result = _build_extraction_reset_result(payload, resolved_root)
+    if extraction_reset_result is not None:
+        return extraction_reset_result
     repair_result = _build_project_manifest_healing_result(payload, resolved_root)
     if repair_result is not None:
         return repair_result
@@ -311,7 +314,16 @@ def repair_project(
     _validate_manifest_identity_fields(payload)
 
     if not bool(repair_request.get("metadata_only", False)):
-        raise ValueError("Folder-based project repair is not supported by the flattened project layout.")
+        if str(repair_request.get("corrupted_step", "")) != "extraction":
+            raise ValueError("Folder-based project repair is not supported by the flattened project layout.")
+        text_extraction_service.reset_extraction_and_downstream(project_root)
+        repaired_manifest = _build_repaired_manifest(payload, "source_selected")
+        save_manifest(repaired_manifest, project_root)
+        return {
+            "status": "ok",
+            "project_root": project_root,
+            "manifest": load_manifest(project_root),
+        }
 
     normalized_manifest = repair_request.get("normalized_manifest")
     if isinstance(normalized_manifest, dict):
@@ -355,7 +367,6 @@ def build_project_manifest(
         "updated_at": resolved_timestamp,
         "current_stage": config.DEFAULT_WORKFLOW_STAGE,
         "source_document": None,
-        "extraction_warning_count": 0,
         "operations": _build_default_operation_states(),
         "project_options_locked": False,
         "target_language": config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
@@ -402,7 +413,6 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "updated_at": str(payload["updated_at"]),
         "current_stage": current_stage,
         "source_document": _normalize_source_document(payload.get("source_document")),
-        "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
         "project_options_locked": project_options_locked,
         "target_language": target_language,
@@ -491,6 +501,28 @@ def sync_manifest_operation_summary(
     return load_manifest(project_root)
 
 
+def _build_extraction_reset_result(
+    payload: dict[str, object],
+    project_root: Path,
+) -> ProjectOpenResult | None:
+    """Build a destructive reset request for legacy or incompatible Extraction data."""
+    try:
+        text_extraction_service.load_extraction_metadata(project_root)
+    except text_extraction_service.ExtractionMetadataError as exc:
+        return {
+            "status": "repair_required",
+            "project_root": project_root,
+            "corrupted_step": "extraction",
+            "reset_stage": "source_selected",
+            "message": str(exc),
+            "metadata_only": False,
+            "changes": [],
+            "warnings": [],
+        }
+    _ = payload
+    return None
+
+
 def _build_project_manifest_healing_result(
     payload: dict[str, object],
     project_root: Path,
@@ -524,10 +556,9 @@ def _build_project_manifest_healing_result(
         if evidence is None:
             contiguous = False
             continue
-        _heal_operation_summary(candidate_manifest, operation_kind, evidence, changes)
-        if operation_kind == "extraction":
-            _heal_extraction_manifest_fields(candidate_manifest, evidence, changes)
-        elif operation_kind == "narrator_definition":
+        if operation_kind != "extraction":
+            _heal_operation_summary(candidate_manifest, operation_kind, evidence, changes)
+        if operation_kind == "narrator_definition":
             _heal_narrator_manifest_fields(candidate_manifest, evidence, changes)
         elif operation_kind == "character_voices":
             _heal_character_voice_manifest_fields(candidate_manifest, evidence, changes)
@@ -705,15 +736,13 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
     @version    0.1.0
     """
     _ = warnings
-    state = _load_json_artifact(project_root, config.EXTRACTION_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.EXTRACTION_REPORT_FILE_NAME)
-    if (
-        not _status_is_completed(state)
-        or not isinstance(report, dict)
-        or not _text_artifact_has_content(project_root, config.EXTRACTED_TEXT_FILE_NAME)
-    ):
+    try:
+        metadata = text_extraction_service.load_extraction_metadata(project_root)
+    except text_extraction_service.ExtractionMetadataError:
         return None
-    return {"operation": state, "report": report}
+    if not isinstance(metadata, dict) or metadata.get("status") != "completed":
+        return None
+    return {"operation": metadata, "report": metadata}
 
 
 def _cleanup_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
@@ -1080,29 +1109,6 @@ def _heal_operation_summary(
             changes.append(f"{operation_kind}: {old_status} -> {new_status}")
         else:
             changes.append(f"{operation_kind}: summary metadata normalized")
-
-
-def _heal_extraction_manifest_fields(
-    manifest: dict[str, object],
-    evidence: dict[str, object],
-    changes: list[str],
-) -> None:
-    """
-    @brief      Align extraction warning metadata in the candidate manifest.
-    @param[in,out] manifest Candidate manifest payload.
-    @param[in]  evidence Completed extraction evidence payload.
-    @param[out] changes Human-readable metadata changes.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
-    """
-    report = evidence.get("report")
-    warnings_value = 0
-    if isinstance(report, dict):
-        warnings_value = _non_negative_int(report.get("warning_count", len(report.get("warnings", []))))
-    _record_manifest_value_change(manifest, "extraction_warning_count", warnings_value, changes)
 
 
 def _heal_narrator_manifest_fields(
@@ -1586,7 +1592,6 @@ def _build_repaired_manifest(
             reset_stage if reset_stage in config.PROJECT_WORKFLOW_STAGES else config.DEFAULT_WORKFLOW_STAGE
         ),
         "source_document": _normalize_source_document(payload.get("source_document")),
-        "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
         "project_options_locked": bool(payload.get("project_options_locked", False)),
         "target_language": _normalize_target_language(
@@ -1820,7 +1825,6 @@ def _build_default_operation_states() -> dict[str, dict[str, object]]:
     return {
         operation_kind: _default_operation_state(operation_kind)
         for operation_kind in (
-            "extraction",
             "cleanup",
             "chunking",
             "translation",

@@ -71,11 +71,16 @@ def handle_extract_text_requested(window: "MainWindow") -> None:
         )
         return
 
-    extraction_operation = home_presenter_service.manifest_operation(
-        window._current_manifest,
-        "extraction",
-    )
-    if str(extraction_operation.get("status", "not_started")) == "completed":
+    extraction_requires_reset = False
+    try:
+        extraction_metadata = text_extraction_service.load_extraction_metadata(window._current_project_root)
+    except text_extraction_service.ExtractionMetadataError:
+        extraction_metadata = None
+        extraction_requires_reset = True
+    if extraction_requires_reset or (
+        isinstance(extraction_metadata, dict)
+        and str(extraction_metadata.get("status", "not_started")) == "completed"
+    ):
         if not confirm_extraction_rerun(window, current_language):
             return
         text_extraction_service.reset_extraction_and_downstream(window._current_project_root)
@@ -106,7 +111,7 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    if not (window._current_project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file():
+    if not _completed_extraction_available(window._current_project_root):
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -156,7 +161,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    if not (window._current_project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file():
+    if not _completed_extraction_available(window._current_project_root):
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -490,15 +495,6 @@ def handle_extraction_success(window: "MainWindow", result_payload: object) -> N
     assert isinstance(result_payload, dict)
     assert window._current_project_root is not None
     assert window._current_manifest is not None
-    updated_manifest = dict(window._current_manifest)
-    updated_manifest["extraction_warning_count"] = len(list(result_payload.get("warnings", [])))
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["extraction"] = project_workspace_service.project_manifest_operation_summary(
-        "extraction",
-        text_extraction_service.load_operation_state(window._current_project_root),
-    )
-    updated_manifest["operations"] = operations
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
@@ -523,7 +519,6 @@ def handle_extraction_failure(window: "MainWindow", error: Exception) -> None:
     @date       2026-04-06
     @version    0.1.0
     """
-    sync_manifest_after_unsuccessful_operation(window, "extraction")
     QMessageBox.warning(
         window,
         ui_state_service.translate(
@@ -598,17 +593,14 @@ def sync_manifest_after_unsuccessful_operation(window: "MainWindow", operation_k
     """Persist a failed or cancelled operation summary."""
     if window._current_manifest is None or window._current_project_root is None:
         return
+    if operation_kind == "extraction":
+        return
     updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if operation_kind == "cleanup":
         operations["cleanup"] = project_workspace_service.project_manifest_operation_summary(
             "cleanup",
             _load_cleanup_summary_payload(window._current_project_root),
-        )
-    elif operation_kind == "extraction":
-        operations["extraction"] = project_workspace_service.project_manifest_operation_summary(
-            "extraction",
-            text_extraction_service.load_operation_state(window._current_project_root),
         )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -709,6 +701,15 @@ def _load_cleanup_summary_payload(project_root) -> dict[str, object] | None:
                 "warning_count": 0,
             }
     return deterministic_cleanup_service.load_operation_state(project_root)
+
+
+def _completed_extraction_available(project_root) -> bool:
+    """Return whether strict metadata and canonical text prove completed Extraction."""
+    try:
+        metadata = text_extraction_service.load_extraction_metadata(project_root)
+    except text_extraction_service.ExtractionMetadataError:
+        return False
+    return isinstance(metadata, dict) and metadata.get("status") == "completed"
 
 
 def prompt_ai_cleanup_instructions(window: "MainWindow", language: str) -> str | None:

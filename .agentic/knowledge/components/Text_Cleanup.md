@@ -18,8 +18,8 @@ and presents the operator workflow through the Text Cleanup page.
 
 - Extract and normalize `.txt`, `.md`, `.pdf`, `.rtf`, `.docx`, `.odt`, and
   `.epub` sources into canonical project text.
-- Persist extraction state/report artifacts and resume supported interrupted
-  extraction work.
+- Persist canonical extracted text plus one strict metadata document and resume
+  supported interrupted extraction work from its progress checkpoint.
 - Remove conservative page artifacts, heal page-boundary text, preserve
   dialogue and paragraph structure, and detect language/script/chapter cues.
 - Partition canonical source windows through an AI provider, validate strict
@@ -71,10 +71,10 @@ effects. `TextCleanupUiController` connects those services to
 `TextCleanupPage`, while the page owns Qt signals, controls, previews, find
 behavior, edit state, and localized presentation.
 
-Opening Text Cleanup initializes only resumable extraction metadata. Cleanup
-state is an execution artifact: deterministic cleanup creates it when a run
-starts, while AI cleanup uses its cleanup document and manual edits retain a
-manifest summary without a cleanup-state file.
+Opening Text Cleanup does not initialize extraction metadata: absence means
+`not_started`. Cleanup state is an execution artifact: deterministic cleanup
+creates it when a run starts, while AI cleanup uses its cleanup document and
+manual edits retain a manifest summary without a cleanup-state file.
 
 ## 4. Dependencies
 
@@ -99,13 +99,14 @@ Inputs include the active project root and manifest, its registered source
 document, optional progress/cancellation callbacks, the selected cleanup mode,
 AI profile and operator instructions, and AI spacing selections.
 
-Extraction produces `extracted_text.txt`, `extraction_report.json`, and
-`extraction_state.json`. Cleanup produces `clean_text.txt`,
+Extraction produces exactly `extracted_text.txt` and
+`extraction_metadata.json`. Cleanup produces `clean_text.txt`,
 `clean_text_metadata.json`, `cleanup_report.json`, and `cleanup_state.json`.
 AI cleanup additionally persists its cleanup document and cleanup transaction
-logs using names from `audiomancer.config`. Operations update compact manifest
-summaries and may remove later-stage artifacts after confirmed reruns, resets,
-or manual edits.
+logs using names from `audiomancer.config`. Cleanup and later operations update
+compact manifest summaries and may remove later-stage artifacts after
+confirmed reruns, resets, or manual edits; extraction does not duplicate its
+metadata in `project.json`.
 
 ## 6. Data Contracts
 
@@ -114,6 +115,16 @@ retain form-feed boundaries for page-aware cleanup; extraction does not perform
 OCR. Cleanup metadata stores paragraph identifiers, line spans, and provenance
 without duplicating paragraph text; loaders reconstruct text from
 `clean_text.txt`.
+
+`extraction_metadata.json` contains exactly `status`, `progress_current`,
+`progress_total`, `warnings`, `character_count`, `word_count`, `line_count`,
+and `page_count`. Persisted statuses are `running`, `cancelled`, `failed`, and
+`completed`; its absence means `not_started`. Progress is the resume
+checkpoint. Text statistics remain `null` until completion, while
+`warning_count` is derived from `warnings`. A completed extraction requires
+equal progress values and valid non-empty canonical text. Legacy extraction
+sidecars or text without current metadata require a destructive Extraction
+reset; there is no migration or fallback reader.
 
 The AI prompt contract returns one object containing `window_id` and ordered
 `text_blocks`. Each block contains only `text_block_id`, `text_block`,
@@ -134,8 +145,9 @@ deterministic.
 
 Project Lifecycle registers the source before this component runs. The
 application shell opens `TextCleanupPage`; `TextCleanupUiController` dispatches
-extraction or cleanup through the shared operation runner and refreshes the
-manifest and page state after success, failure, or cancellation.
+extraction or cleanup through the shared operation runner. Extraction refreshes
+page state from its authoritative metadata after success, failure, or
+cancellation without synchronizing an extraction summary into the manifest.
 
 Extraction is the prerequisite for either cleanup mode. Clean text and its
 metadata become inputs to Text Chunking and all later workflow stages. Reruns,

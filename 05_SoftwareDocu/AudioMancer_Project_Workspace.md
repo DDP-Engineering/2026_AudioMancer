@@ -161,7 +161,6 @@ Current root manifest contract in `project.json`:
 - `updated_at`
 - `current_stage`
 - `source_document`
-- `extraction_warning_count`
 - `operations`
 - `original_language`
 - `project_options_locked`
@@ -183,11 +182,15 @@ Current root manifest contract in `project.json`:
 
 Current `operations` map keys:
 
-- `extraction`
 - `cleanup`
 - `chunking`
 - `translation`
 - `character_discovery`
+
+Extraction is intentionally absent from the manifest. Its status, progress,
+warnings, PDF page count, and final statistics live only in the strict
+root-level `extraction_metadata.json`; source path and type continue to live
+only in `source_document`.
 
 Current `audio_assembly_settings` include the Scene Ambience inclusion flag.
 The workspace service normalizes that flag with the other assembly settings so

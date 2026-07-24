@@ -303,11 +303,8 @@ SUPPORTED_SOURCE_SUFFIXES = {
 # @brief File name used for persisted raw extracted text.
 EXTRACTED_TEXT_FILE_NAME = "extracted_text.txt"
 
-# @brief File name used for the extraction metadata report.
-EXTRACTION_REPORT_FILE_NAME = "extraction_report.json"
-
-# @brief File name used for persisted extraction runtime state.
-EXTRACTION_STATE_FILE_NAME = "extraction_state.json"
+# @brief Authoritative deterministic text-extraction metadata file name.
+EXTRACTION_METADATA_FILE_NAME = "extraction_metadata.json"
 
 # @brief File name used for persisted cleaned text.
 CLEANED_TEXT_FILE_NAME = "clean_text.txt"
