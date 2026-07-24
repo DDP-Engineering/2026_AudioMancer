@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-6ac5f253-1b2b-4661-b772-e79f36a9b1b8"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Cleanup metadata shall omit paragraph text and reconstruct it from clean text."
+rationale = "Metadata must not duplicate paragraph text."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_metadata_omits_text_and_reconstructs_from_clean_text",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

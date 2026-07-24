@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-877cc910-b0df-40fc-bc55-e55656a0ede5"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Prompt templates shall preserve braced source-text values during rendering."
+rationale = "Braces inside source text must not be treated as placeholders."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_allows_braced_source_text_values",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-b60423df-1afe-4428-8fa9-325bec09cd5b"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character discovery shall reject a profile with too little context."
+rationale = "A profile that cannot supply enough context must be refused."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_rejects_profile_with_too_little_context",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-d9f1e435-0c15-4be5-a639-d584218f4b18"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block narrator-boundary normalization shall build exact source spans, skip and reject open-quote splits, and fall back on unusable IDs."
+rationale = "Narrator-only boundaries must be exact and safe."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_builds_exact_source_spans",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_narrator_boundary_candidates_skip_open_quote_sentence_boundary",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_rejects_open_quote_split",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_falls_back_on_unusable_ids",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

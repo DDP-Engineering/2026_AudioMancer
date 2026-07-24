@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-TEST-56bc8c14-b8dd-4342-96e6-9c60420d2c68"
+category = "testing"
+status = "Active"
+priority = "Must"
+requirement = "Services and controllers shall have test coverage."
+rationale = "Core modules must be guarded by an automated coverage check."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/tests/test_traceability.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_traceability.py::test_services_and_controllers_have_test_coverage",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-87394c27-c26f-4011-82bc-01b718fd2b95"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Deterministic cleanup shall format dialogue structure, displaying markers on new lines and preserving newlines after dialogue."
+rationale = "Dialogue layout must be normalized without losing structure."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_displays_dialogue_markers_on_new_lines",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_preserves_original_newline_after_dialogue_line",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_formats_unicode_dash_dialogue_markers",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

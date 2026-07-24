@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-de989067-e007-4182-88cb-a99866522f7f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block manual insertion shall append blocks in the correct position and initialize manual state without generation."
+rationale = "Operators must insert blocks safely without triggering generation."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_appends_after_selected_block",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_into_empty_chunk_creates_unapproved_narration",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_initializes_manual_state_without_generation",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_after_first_manual_block_appends_next_block",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

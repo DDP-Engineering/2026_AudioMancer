@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-029a6e43-4ba1-4c93-a821-29935b02a359"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI cleanup validation shall preserve exact block order and reconstruct whitespace and artifact separators for every block."
+rationale = "Provider output must not reorder or lose source blocks."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_validation_preserves_exact_order_for_every_block",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

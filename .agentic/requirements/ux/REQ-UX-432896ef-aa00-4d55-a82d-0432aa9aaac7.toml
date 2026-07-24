@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-UX-432896ef-aa00-4d55-a82d-0432aa9aaac7"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The Settings page shall create, edit, and delete custom themes, selecting a fallback after deletion."
+rationale = "Operators must fully manage custom themes with a safe fallback."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_creates_custom_theme_in_built_payload",
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_persists_edited_custom_theme_font_and_color",
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_deletes_custom_theme_and_selects_fallback",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

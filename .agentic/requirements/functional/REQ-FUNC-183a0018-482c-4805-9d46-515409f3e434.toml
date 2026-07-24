@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-183a0018-482c-4805-9d46-515409f3e434"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character voice sample import shall persist character sample metadata."
+rationale = "Imported samples must record their metadata durably."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_import_target_sample_persists_character_sample_metadata",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

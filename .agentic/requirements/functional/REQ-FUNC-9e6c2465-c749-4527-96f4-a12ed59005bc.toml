@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-9e6c2465-c749-4527-96f4-a12ed59005bc"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Audio-block resume shall continue from a saved checkpoint and reject invalid or escaping part checkpoints."
+rationale = "Resume must be crash-safe and path-safe."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_resume_continues_from_saved_checkpoint",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-1d439308-ef34-45d9-b5ee-15cef0ba04d9"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Source import shall store replacements collision-safely without overwriting existing files."
+rationale = "Re-importing must not clobber an existing stored source."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_name_collisions",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

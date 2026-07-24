@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-1562fca1-48da-44a0-9b91-ad42ee99e702"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "VoiceWeaver generation, clone, and sound payloads shall use the current documented contract."
+rationale = "TTS invocation must match the runtime's current request contract."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_generation_payloads_use_current_contract",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_omits_romanian_language",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-24T19:30:55Z"

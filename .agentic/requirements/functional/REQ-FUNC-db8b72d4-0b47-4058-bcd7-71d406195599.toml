@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-db8b72d4-0b47-4058-bcd7-71d406195599"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The main window shall load audio-blocks state into the real page."
+rationale = "Audio Blocks must integrate with the main window safely."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_main_window.py::test_main_window_loads_audio_blocks_state_into_real_page",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-ea3bc9b4-9048-4733-a790-85ff4c06d7fd"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Speech Blocks page approval controls shall emit only the selected block and toggle the label for an approved block."
+rationale = "Approval controls must act precisely on the selected block."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_approve_selected_emits_only_selected_block",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_approval_button_toggles_label_for_approved_block",
+]
+
+created_on = "2026-07-19T17:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

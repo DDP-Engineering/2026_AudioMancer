@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-870fe06d-c102-4c9e-96b3-a0342f844844"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Translation state construction shall be read-only."
+rationale = "Building the projection must not mutate durable translation artifacts."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_build_ai_translation_state_is_read_only",
+]
+
+created_on = "2026-07-19T17:18:00Z"
+last_updated = "2026-07-24T19:30:55Z"

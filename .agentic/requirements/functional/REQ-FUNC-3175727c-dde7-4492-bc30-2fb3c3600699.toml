@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-3175727c-dde7-4492-bc30-2fb3c3600699"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Characters controller shall coordinate resumable discovery, resuming with the current selected profile and cancelled state without prompting and passing an extra prompt through."
+rationale = "Discovery must resume cleanly using current selections."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_resume_uses_current_selected_profile",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_cancelled_state_resumes_without_prompt",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_passes_extra_prompt_to_discovery",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:30:55Z"

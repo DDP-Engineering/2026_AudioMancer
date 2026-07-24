@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-c2acd49d-fa3d-45fd-a293-5cac21beffa4"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Source import shall copy one supported source file into the project root and record normalized metadata."
+rationale = "A stable local source record is required before extraction."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_copies_file_and_records_metadata",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

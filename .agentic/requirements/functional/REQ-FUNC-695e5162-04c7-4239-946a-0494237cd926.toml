@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-695e5162-04c7-4239-946a-0494237cd926"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Text chunking chunk deletion shall remove only the selected chunk's translation record."
+rationale = "Deletion must not remove unrelated translation records."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_delete_chunk_removes_only_selected_translation_record",
+]
+
+created_on = "2026-07-19T20:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

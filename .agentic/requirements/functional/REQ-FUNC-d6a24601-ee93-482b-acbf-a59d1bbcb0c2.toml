@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-d6a24601-ee93-482b-acbf-a59d1bbcb0c2"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Text Chunking page shall enable the AI button when profiles exist and enable the initial manual insert."
+rationale = "Action availability must reflect configuration and chunk state."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_enables_ai_button_when_profiles_exist",
+  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_enables_initial_manual_insert",
+]
+
+created_on = "2026-07-19T17:15:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,24 @@
+schema_version = 1
+id = "REQ-FUNC-9f4389c9-0934-4f1d-a260-79b7b7dd4933"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character discovery shall construct bounded budgeted source windows once, shrinking, capping, or rejecting per profile budget."
+rationale = "Windows must fit the selected profile context and be built deterministically."
+verification = "Automated: 6 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_builds_windows_once",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_use_eight_chunks_as_cap",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_online_profile_uses_direct_context_fraction_without_chunk_cap",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_shrink_for_small_text_budget",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_reject_oversized_single_chunk",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_synthesis_candidate_payload_is_trimmed_to_budget_metadata",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

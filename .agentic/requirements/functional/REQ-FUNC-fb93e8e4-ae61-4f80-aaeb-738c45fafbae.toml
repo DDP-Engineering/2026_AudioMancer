@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-fb93e8e4-ae61-4f80-aaeb-738c45fafbae"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Workflow impact operation order and stage map shall be single-sourced from configuration and target valid stages."
+rationale = "Order and stage mapping must derive from one configuration source."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_order_consistency.py::test_operation_order_is_single_sourced_from_config",
+  "04_Software/AudioMancer/tests/test_workflow_order_consistency.py::test_operation_stage_map_is_single_sourced_from_config",
+  "04_Software/AudioMancer/tests/test_workflow_order_consistency.py::test_operation_stage_map_targets_are_valid_workflow_stages",
+]
+
+created_on = "2026-07-19T17:10:00Z"
+last_updated = "2026-07-24T19:30:55Z"

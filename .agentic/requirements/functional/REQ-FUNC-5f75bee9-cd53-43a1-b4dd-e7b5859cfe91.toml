@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-5f75bee9-cd53-43a1-b4dd-e7b5859cfe91"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI chunking shall advance from valid splits and fall back safely on empty, invalid, or out-of-bounds responses."
+rationale = "A provider returning no usable split must not lose or duplicate source content."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_valid_non_final_split_advances_from_the_last_break_and_closes_final_remainder",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_non_final_response_commits_one_fallback_window_and_reports_it",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_invalid_non_final_response_is_an_atomic_fallback_and_boundary_at_window_end_advances",
+  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk",
+]
+
+created_on = "2026-07-19T20:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

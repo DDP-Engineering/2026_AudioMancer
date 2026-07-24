@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-TEST-37b37cb0-ede9-4e91-a046-a6e5aef07957"
+category = "testing"
+status = "Active"
+priority = "Must"
+requirement = "All linked requirement tests shall resolve to existing test selectors."
+rationale = "Traceability must be enforced by an automated guard."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/tests/test_traceability.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_traceability.py::test_all_linked_requirement_tests_resolve",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

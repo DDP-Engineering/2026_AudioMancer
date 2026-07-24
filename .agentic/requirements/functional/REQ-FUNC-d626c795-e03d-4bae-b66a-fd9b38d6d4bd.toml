@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-d626c795-e03d-4bae-b66a-fd9b38d6d4bd"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Narrator profile generation shall use approved text and operator rules, fall back to clean text, and compact style observations for the final prompt."
+rationale = "Generation must be grounded in approved, operator-guided context."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_prefers_approved_translation_for_voice_language",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_adds_operator_prompt_rules",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_compacts_style_observations_for_final_prompt",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_falls_back_to_clean_text",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-e38de6a1-6160-4d42-b09e-eb52dea09761"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI translation budgeting shall reserve output and reject insufficient input budget."
+rationale = "Requests that cannot fit the profile must be refused."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_budget_reserves_output_and_rejects_insufficient_input",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

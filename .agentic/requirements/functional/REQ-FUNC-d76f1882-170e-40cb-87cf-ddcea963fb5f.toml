@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-d76f1882-170e-40cb-87cf-ddcea963fb5f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Home controller shall block snapshot creation during an active operation."
+rationale = "A snapshot must not run concurrently with another workflow operation."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_blocks_snapshot_during_active_operation",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

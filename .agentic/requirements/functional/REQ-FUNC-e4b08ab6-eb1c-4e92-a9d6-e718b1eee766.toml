@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-e4b08ab6-eb1c-4e92-a9d6-e718b1eee766"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The operation runtime shall ensure default not-started state, including compact character-discovery and zero audio-blocks metadata."
+rationale = "Default state must be created in the compact contract shape."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_not_started_state_only",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_compact_character_discovery_state",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_zero_audio_blocks_metadata",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

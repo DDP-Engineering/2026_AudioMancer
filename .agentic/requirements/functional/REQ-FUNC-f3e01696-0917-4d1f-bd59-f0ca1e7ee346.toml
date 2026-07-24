@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-f3e01696-0917-4d1f-bd59-f0ca1e7ee346"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Characters page shall load and persist manual demographic fields."
+rationale = "Manual character records must be editable and durable."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_demographic_fields_load_and_save",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:30:55Z"

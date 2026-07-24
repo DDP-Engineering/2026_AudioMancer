@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-903e2a32-d0d1-4854-a297-60ae243df14b"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character voices state shall derive narrator-first targets and the approved translated language."
+rationale = "The page must present the narrator first and the language actually approved upstream."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-24T19:30:55Z"

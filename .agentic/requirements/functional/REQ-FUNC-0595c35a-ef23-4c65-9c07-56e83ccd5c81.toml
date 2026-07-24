@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-0595c35a-ef23-4c65-9c07-56e83ccd5c81"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character default-prompt building shall derive a compact prompt, prefer a character-owned voice-definition prompt, and preserve an existing age instruction."
+rationale = "Prompts must come from character data and respect existing guidance."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_uses_compact_character_profile",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prefers_character_owned_voice_definition_prompt",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_preserves_existing_age_instruction",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

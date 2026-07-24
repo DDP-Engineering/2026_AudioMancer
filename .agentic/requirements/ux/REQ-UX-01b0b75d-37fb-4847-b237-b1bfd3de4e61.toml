@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-01b0b75d-37fb-4847-b237-b1bfd3de4e61"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The Settings page shall load the selected built-in theme and disable delete for it."
+rationale = "Built-in themes must be selectable but not deletable."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_loads_selected_built_in_theme_and_disables_delete",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

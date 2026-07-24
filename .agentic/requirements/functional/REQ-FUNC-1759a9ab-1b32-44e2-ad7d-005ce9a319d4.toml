@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-1759a9ab-1b32-44e2-ad7d-005ce9a319d4"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The translation page shall drive control state from review-pending and completed status."
+rationale = "Controls must reflect the review lifecycle."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_control_state_uses_review_pending_and_completed",
+]
+
+created_on = "2026-07-19T17:18:00Z"
+last_updated = "2026-07-24T19:30:55Z"

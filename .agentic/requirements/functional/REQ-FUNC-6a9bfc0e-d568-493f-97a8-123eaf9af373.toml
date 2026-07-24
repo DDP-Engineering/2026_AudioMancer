@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-6a9bfc0e-d568-493f-97a8-123eaf9af373"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character discovery state shall reject a run without a usable AI profile."
+rationale = "A provider operation must not start with invalid configuration."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_build_character_state_requires_ai_profile_to_start",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:30:55Z"

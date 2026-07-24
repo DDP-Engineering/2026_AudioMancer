@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-eab2f49e-895a-43c8-963d-a9e35a42cc86"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block normalization shall strip only dialogue delimiters from block text."
+rationale = "Text normalization must be deterministic and lossless of meaningful content."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_normalize_block_text_strips_only_dialogue_delimiters",
+]
+
+created_on = "2026-07-19T17:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

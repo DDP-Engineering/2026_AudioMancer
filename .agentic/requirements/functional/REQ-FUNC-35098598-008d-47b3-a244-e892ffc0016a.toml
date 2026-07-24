@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-35098598-008d-47b3-a244-e892ffc0016a"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Speech Blocks controller shall guard edits: start without refreshing, skip warning clear when clean, keep the editor locked on decline, and restore chunk scroll on save."
+rationale = "Editing must be a controlled, reversible boundary."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_start_does_not_refresh_page",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_start_skips_warning_clear_when_clean",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_decline_keeps_editor_locked",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_save_restores_chunk_text_scroll",
+]
+
+created_on = "2026-07-19T17:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

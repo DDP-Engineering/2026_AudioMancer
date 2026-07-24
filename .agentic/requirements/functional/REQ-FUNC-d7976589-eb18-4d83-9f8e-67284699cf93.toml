@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-d7976589-eb18-4d83-9f8e-67284699cf93"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Characters controller shall show a first-run info popup."
+rationale = "First-run guidance must orient the operator."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_first_run_shows_info_popup",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:30:55Z"

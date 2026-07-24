@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-e079a330-d608-48b7-a945-dd6d178c0885"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Audio Blocks controller shall guard start with confirmation, ignore a completed start, and allow start when the current speech block is missing audio."
+rationale = "Long TTS work must start deliberately and only when appropriate."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_requires_confirmation_before_starting",
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_ignores_completed_start_request",
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_allows_completed_start_when_current_speech_block_is_missing_audio",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-24T19:30:55Z"

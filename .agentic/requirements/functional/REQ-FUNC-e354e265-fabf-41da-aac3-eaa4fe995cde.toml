@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-e354e265-fabf-41da-aac3-eaa4fe995cde"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block chunk normalization shall split over-budget blocks at sentence boundaries or hard-split when none exist."
+rationale = "Blocks must fit the TTS budget without losing text."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_hard_splits_over_budget_without_boundaries",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

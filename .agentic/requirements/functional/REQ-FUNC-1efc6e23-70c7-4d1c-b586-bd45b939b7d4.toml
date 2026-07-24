@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-1efc6e23-70c7-4d1c-b586-bd45b939b7d4"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Extraction metadata loading shall reject incompatible schemas, legacy sidecars, and invalid JSON."
+rationale = "Only current, valid extraction metadata may be consumed."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_incompatible_schema",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_legacy_sidecars",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_invalid_json",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

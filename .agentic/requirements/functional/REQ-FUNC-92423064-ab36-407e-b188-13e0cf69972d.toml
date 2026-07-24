@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-92423064-ab36-407e-b188-13e0cf69972d"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Home presenter shall derive finished and not-started stage status from completed artifacts, trusting a not-started operation over an advanced stage."
+rationale = "Stage status must reflect actual completed artifacts, not assumptions."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completion",
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_chunking_finished_after_chunking_completion",
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_character_voices_ready_as_finished",
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_trusts_not_started_operation_over_advanced_stage",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

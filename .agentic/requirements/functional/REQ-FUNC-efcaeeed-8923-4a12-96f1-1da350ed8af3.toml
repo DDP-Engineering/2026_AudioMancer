@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-efcaeeed-8923-4a12-96f1-1da350ed8af3"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Project export shall create voice and audio archives."
+rationale = "Deliverables must include packaged voice and audio artifacts."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_creates_voice_and_audio_archives",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

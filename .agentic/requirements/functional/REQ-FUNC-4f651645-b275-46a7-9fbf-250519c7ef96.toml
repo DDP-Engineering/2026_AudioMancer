@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-4f651645-b275-46a7-9fbf-250519c7ef96"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Endpoint URL joining shall append a missing endpoint once and collapse a duplicate version prefix."
+rationale = "Endpoint URLs must be well-formed without duplication."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/url_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_url_service.py::test_join_endpoint_url_appends_missing_endpoint_once",
+  "04_Software/AudioMancer/tests/test_url_service.py::test_join_endpoint_url_collapses_duplicate_version_prefix",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-56dfec40-2991-4b2e-87f2-6562ee46cab0"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Text chunking state notes shall show in-progress, resume, and persisted token-usage entries."
+rationale = "Operators need truthful workflow notes for running, failed, and cancelled chunking."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_cancelled_chunking",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_persisted_token_usage_summary",
+]
+
+created_on = "2026-07-19T20:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

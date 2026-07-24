@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-1f7edf36-3eea-4cd5-a4f7-f2357bc01646"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character default-prompt building shall not default to male or young when gender or age is unknown."
+rationale = "Prompts must avoid demographic stereotyping on unknown attributes."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prevents_male_default_when_gender_is_unknown",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prevents_young_default_when_age_is_unknown",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

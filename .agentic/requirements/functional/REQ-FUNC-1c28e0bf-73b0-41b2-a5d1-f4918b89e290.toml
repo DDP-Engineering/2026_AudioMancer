@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-1c28e0bf-73b0-41b2-a5d1-f4918b89e290"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Home controller shall lock project options in the manifest."
+rationale = "Locking project options must persist to the manifest."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_locks_project_options_in_manifest",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

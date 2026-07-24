@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-a24e14cb-a0a2-4a70-bb71-a84b74b23f5f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "VoiceWeaver shall stop before reading terminal operation status when cancelled."
+rationale = "Cancellation must short-circuit before a further status read."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_stops_before_status_read_when_cancelled",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-24T19:30:55Z"

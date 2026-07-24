@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-5f4a236d-da38-4db5-ae65-d9b21ca3b656"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block generation shall preserve French dash and guillemet source spans and attach source spans to budgeted segments."
+rationale = "Source spans must survive multilingual splitting and budgeting."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_source_spans",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_budgeted_source_chunk_segments_attach_source_spans",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-58c3625e-0f07-448d-936a-b1c8c8fcd4e3"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI cleanup shall apply text transformations, correct invalid tail labels with warnings, use artifact type and confidence without an action field, and replace low-confidence non-story text."
+rationale = "Cleanup output must be normalized into the current schema."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_text_transformations",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_uses_artifact_type_and_confidence_without_action",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_replaces_low_confidence_non_story",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

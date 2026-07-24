@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-715a1df2-918d-4dcd-b295-6efc0cc36c3f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Text extraction shall reject an empty PDF source when OCR is not available."
+rationale = "An unreadable PDF must fail clearly rather than yield empty text."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_rejects_empty_pdf_without_ocr",
+]
+
+created_on = "2026-07-18T18:14:00Z"
+last_updated = "2026-07-24T19:30:55Z"
