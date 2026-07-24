@@ -19,6 +19,7 @@
 
 # IMPORTS
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QInputDialog, QMessageBox
@@ -600,7 +601,7 @@ def _sync_manifest_after_discovery(
     _ = report
     assert window._current_project_root is not None
     assert window._current_manifest is not None
-    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
+    operation_state = _character_operation_summary(window._current_project_root)
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if operation_state is not None:
@@ -751,7 +752,7 @@ def _save_refreshed_manual_manifest(
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
+    operation_state = _character_operation_summary(window._current_project_root)
     if operation_state is not None:
         operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
             "character_discovery",
@@ -870,7 +871,7 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     workflow_controller_service.sync_manifest_operation_from_disk(
         window,
         "character_discovery",
-        character_discovery_service.load_operation_state,
+        _character_operation_summary,
         current_stage="translation_ready",
     )
 
@@ -1126,11 +1127,7 @@ def _has_previous_character_discovery_state(window: "MainWindow") -> bool:
     """
     if window._current_project_root is None:
         return False
-    return bool(
-        character_discovery_service.load_operation_state(window._current_project_root)
-        or character_discovery_service.load_character_discovery_report(window._current_project_root)
-        or character_discovery_service.load_character_profiles(window._current_project_root)
-    )
+    return character_discovery_service.load_character_document(window._current_project_root) is not None
 
 
 def prompt_ai_character_discovery_instructions(window: "MainWindow", language: str) -> str | None:
@@ -1167,14 +1164,21 @@ def _is_resuming_character_discovery(window: "MainWindow") -> bool:
     """
     if window._current_project_root is None:
         return False
-    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
-    if not isinstance(operation_state, dict):
+    document = character_discovery_service.load_character_document(window._current_project_root)
+    if not isinstance(document, dict):
         return False
-    is_ai_mode = (
-        str(operation_state.get("mode", "")) == character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED
+    return str(document.get("status", "")) in {"running", "failed", "cancelled"}
+
+
+def _character_operation_summary(project_root: str | Path) -> dict[str, object] | None:
+    """Load the authoritative character document and derive its operation summary."""
+    document = character_discovery_service.load_character_document(project_root)
+    if document is None:
+        return None
+    return character_discovery_service.character_operation_summary(
+        document,
+        len(character_discovery_service.load_input_chunks(project_root)),
     )
-    is_resumable_status = str(operation_state.get("status", "")) in {"running", "failed", "cancelled"}
-    return is_ai_mode and is_resumable_status
 
 
 def _resolve_ai_profile(

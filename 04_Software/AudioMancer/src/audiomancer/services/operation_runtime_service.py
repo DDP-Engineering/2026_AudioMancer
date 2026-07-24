@@ -78,9 +78,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         "translation_state.json",
     ),
     "character_discovery": (
-        config.CHARACTER_PROFILE_FILE_NAME,
-        config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
-        config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
+        config.CHARACTERS_DOCUMENT_FILE_NAME,
     ),
     "narrator_definition": (
         config.NARRATOR_VOICE_FILE_NAME,
@@ -115,7 +113,6 @@ _OPERATION_AI_LOG_TOKENS = {
 
 # @brief Optional operation-state file names that may be initialized on first page open.
 _OPERATION_STATE_FILE_NAMES = {
-    "character_discovery": config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     "speech_blocks": config.SPEECH_BLOCKS_STATE_FILE_NAME,
     "audio_blocks": config.AUDIO_BLOCKS_STATE_FILE_NAME,
     "audio_assembly": config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
@@ -218,10 +215,9 @@ def build_operation_output_path(
 def default_operation_state(operation_kind: str) -> dict[str, object]:
     """
     @brief      Build one persisted default operation-state payload.
-    @details    All operations, including character discovery, use the shared
-                compact envelope (status, progress, mode, warning_count,
-                metadata, resume_checkpoint); workflow-specific fields live
-                under `metadata`.
+    @details    Operations that still own a separate state artifact use the
+                shared compact envelope. Character Discovery has no separate
+                state file and is not initialized through this payload.
     @param[in]  operation_kind Stable workflow operation token.
     @return     Default operation-state payload.
     @exception  ValueError Raised when the operation kind is unsupported.
@@ -231,29 +227,6 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
-    if operation_kind == "character_discovery":
-        return {
-            "status": "not_started",
-            "progress_current": 0,
-            "progress_total": 0,
-            "mode": "ai_assisted",
-            "warning_count": 0,
-            "metadata": {
-                "phase": "not_started",
-                "ai_profile_id": "",
-                "input_fingerprint": "",
-                "log_relative_path": "",
-                "additional_character_discovery_instructions": "",
-                "additional_character_discovery_instructions_fingerprint": "",
-                "token_usage": {
-                    "input_tokens": None,
-                    "output_tokens": None,
-                    "total_tokens": None,
-                    "usage_available": False,
-                },
-            },
-            "resume_checkpoint": None,
-        }
     return {
         "status": "not_started",
         "progress_current": 0,

@@ -331,14 +331,8 @@ CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
 # @brief File name used for persisted translated chunk records.
 TRANSLATED_CHUNKS_FILE_NAME = "translated_text.json"
 
-# @brief File name used for persisted discovered character profiles.
-CHARACTER_PROFILE_FILE_NAME = "characters_profile.json"
-
-# @brief File name used for persisted character-discovery metadata.
-CHARACTER_DISCOVERY_REPORT_FILE_NAME = "characters_report.json"
-
-# @brief File name used for persisted character-discovery runtime state.
-CHARACTER_DISCOVERY_STATE_FILE_NAME = "characters_state.json"
+# @brief File name used for the authoritative Character Discovery document.
+CHARACTERS_DOCUMENT_FILE_NAME = "characters.json"
 
 # @brief File name used for the authoritative Narrator Voice document.
 NARRATOR_VOICE_FILE_NAME = "narrator_voice.json"

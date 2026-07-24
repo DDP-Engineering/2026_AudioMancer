@@ -132,7 +132,10 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationDownstreamReset")
-    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(_characters_document("original")) + "\n",
+        encoding="utf-8",
+    )
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
@@ -156,7 +159,7 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     assert window._current_manifest["operations"]["character_discovery"]["status"] == "not_started"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
-    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
 
 
@@ -172,7 +175,10 @@ def test_translation_controller_reset_removes_monofile_and_preserves_narrator(mo
     project_root, _manifest = _create_project(tmp_path, "TranslationReset")
     ai_translation_service.write_translation_document(project_root, _document("review_pending"))
     narrator_definition_service.ensure_narrator_voice_document(project_root)
-    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(_characters_document("translated")) + "\n",
+        encoding="utf-8",
+    )
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
         ai_translation_ui_controller.QMessageBox,
@@ -184,7 +190,7 @@ def test_translation_controller_reset_removes_monofile_and_preserves_narrator(mo
 
     assert not (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
-    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
 
 
 # TEST HELPERS
@@ -268,6 +274,28 @@ def _document(status: str) -> dict[str, object]:
         },
         "additional_translation_instructions": "Saved instructions",
         "chunks": [{"chunk_id": "chunk-0001", "translated_text": "", "approved": False}],
+    }
+
+
+def _characters_document(source_kind: str) -> dict[str, object]:
+    """Build one strict Character Discovery document fixture."""
+    return {
+        "status": "completed",
+        "source": {
+            "kind": source_kind,
+            "language": "ro" if source_kind == "translated" else "en",
+            "fingerprint": "stale",
+        },
+        "instructions": "",
+        "token_usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "usage_available": False,
+        },
+        "checkpoint": None,
+        "failure": None,
+        "characters": [],
     }
 
 

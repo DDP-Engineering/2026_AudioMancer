@@ -851,12 +851,21 @@ def _character_discovery_completion_evidence(project_root: Path, warnings: list[
     @version    0.1.0
     """
     _ = warnings
-    state = _load_json_artifact(project_root, config.CHARACTER_DISCOVERY_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.CHARACTER_DISCOVERY_REPORT_FILE_NAME)
-    profiles = _load_json_artifact(project_root, config.CHARACTER_PROFILE_FILE_NAME)
-    if not _status_is_completed(state) or not isinstance(report, dict) or not _non_empty_payload_list(profiles):
+    from audiomancer.services import character_discovery_service
+
+    try:
+        document = character_discovery_service.load_character_document(project_root)
+    except character_discovery_service.CharacterDocumentError:
         return None
-    return {"operation": state, "report": report}
+    if document is None or document.get("status") != "completed":
+        return None
+    return {
+        "operation": character_discovery_service.character_operation_summary(
+            document,
+            len(character_discovery_service.load_input_chunks(project_root)),
+        ),
+        "report": document,
+    }
 
 
 def _narrator_definition_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:

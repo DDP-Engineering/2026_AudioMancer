@@ -28,6 +28,7 @@ import re
 from audiomancer import config
 from audiomancer.services import (
     ai_budget_service,
+    ai_translation_service,
     chunking_document_service,
     deterministic_chunking_service,
     llm_provider_service,
@@ -41,8 +42,6 @@ from audiomancer.services.operation_runtime_service import (
     NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     OperationCancelledError,
     build_operation_output_path,
-    load_operation_state_payload,
-    load_optional_json_artifact,
     raise_if_cancelled,
     reset_operation_data,
     resolve_operation_path,
@@ -70,8 +69,10 @@ CHARACTER_DISCOVERY_STAGE_COMPLETED = "completed"
 MANUAL_CHARACTER_EVIDENCE_CHUNK_ID = "manual"
 # @brief Stable note used for manual character evidence entries.
 MANUAL_CHARACTER_EVIDENCE_NOTE = "Added manually by the operator."
-# @brief Discovery input is the canonical source chunking output.
-CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS = "chunks"
+# @brief Discovery input uses canonical original chunks.
+CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL = "original"
+# @brief Discovery input uses fully approved translated chunks.
+CHARACTER_DISCOVERY_INPUT_SOURCE_TRANSLATED = "translated"
 # @brief Internal review status for AI-discovered character profiles.
 CHARACTER_REVIEW_STATUS_DISCOVERED = "discovered"
 # @brief Internal review status for manually added character profiles.
@@ -99,63 +100,106 @@ DEMOGRAPHIC_CONFIDENCE_VALUES = {
 
 # @brief Persisted character-profile payload type.
 CharacterProfilePayload = dict[str, object]
-# @brief Persisted character-discovery report payload type.
-CharacterDiscoveryReportPayload = dict[str, object]
-# @brief Persisted character-discovery operation-state payload type.
-OperationStatePayload = dict[str, object]
+# @brief Authoritative Character Discovery document payload type.
+CharacterDocumentPayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
-ModelSettingsPayload = dict[str, object]
 
 CHARACTER_VOICE_PROMPT_FIELD = "voice_definition_prompt"
 CHARACTER_PREVIEW_TEXT_FIELD = "preview_text"
+_CHARACTER_DOCUMENT_FIELDS = frozenset(
+    (
+        "status",
+        "source",
+        "instructions",
+        "token_usage",
+        "checkpoint",
+        "failure",
+        "characters",
+    )
+)
+_CHARACTER_SOURCE_FIELDS = frozenset(("kind", "language", "fingerprint"))
+_CHARACTER_DOCUMENT_STATUSES = frozenset(("running", "cancelled", "failed", "completed"))
+_TOKEN_USAGE_FIELDS = frozenset(
+    ("input_tokens", "output_tokens", "total_tokens", "usage_available")
+)
+
+
+class CharacterDocumentError(ValueError):
+    """Raised when the authoritative Character Discovery document is invalid."""
 
 
 # PUBLIC API
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
-def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
-    """
-    @brief      Load one optional character-discovery operation-state payload.
-    @param[in]  project_root Active project root folder.
-    @return     Persisted operation-state payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
-    """
-    return load_operation_state_payload(
+def load_character_document(project_root: str | Path) -> CharacterDocumentPayload | None:
+    """Load and strictly validate the authoritative Character Discovery document."""
+    document_path = resolve_operation_path(
         project_root,
         "character_discovery",
-        config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
+        config.CHARACTERS_DOCUMENT_FILE_NAME,
     )
+    if not document_path.is_file():
+        return None
+    try:
+        payload = json.loads(document_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise CharacterDocumentError("Character Discovery data is not valid JSON.") from error
+    _validate_character_document(payload)
+    return dict(payload)
+
+
+def write_character_document(
+    project_root: str | Path,
+    document: CharacterDocumentPayload,
+) -> Path:
+    """Strictly validate and atomically persist the Character Discovery document."""
+    _validate_character_document(document)
+    document_path = build_operation_output_path(
+        project_root,
+        "character_discovery",
+        config.CHARACTERS_DOCUMENT_FILE_NAME,
+    )
+    write_json_atomic(document_path, document)
+    return document_path
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
 def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePayload]:
-    """
-    @brief      Load the optional persisted character profile artifact.
-    @param[in]  project_root Active project root folder.
-    @return     Ordered character profile payload list.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.5.1
-    """
-    output_path = resolve_operation_path(
-        project_root,
-        "character_discovery",
-        config.CHARACTER_PROFILE_FILE_NAME,
-    )
-    try:
-        payload = load_optional_json_artifact(output_path)
-    except (OSError, json.JSONDecodeError, TypeError) as error:
-        _CHARACTER_DISCOVERY_LOGGER.warning("Ignoring unreadable character profiles artifact: %s", error)
+    """Project the authoritative document's nested character records for consumers."""
+    document = load_character_document(project_root)
+    if document is None:
         return []
-    if not isinstance(payload, list):
-        return []
-    return [_normalize_character_profile(item) for item in payload if isinstance(item, dict)]
+    return [
+        _normalize_character_profile(_flat_character_profile(item))
+        for item in document["characters"]
+        if isinstance(item, dict)
+    ]
+
+
+def character_operation_summary(
+    document: CharacterDocumentPayload,
+    source_chunk_count: int = 0,
+) -> dict[str, object]:
+    """Derive the shared manifest operation summary from one character document."""
+    checkpoint = document.get("checkpoint")
+    if isinstance(checkpoint, dict) and checkpoint.get("phase") == "discovery":
+        progress_current = int(checkpoint.get("next_chunk_index", 0))
+        progress_total = max(int(source_chunk_count), progress_current)
+    elif isinstance(checkpoint, dict) and checkpoint.get("phase") == "synthesis":
+        progress_current = int(checkpoint.get("next_candidate_index", 0))
+        progress_total = len(checkpoint.get("candidates", []))
+    else:
+        progress_current = len(document.get("characters", []))
+        progress_total = progress_current
+    return {
+        "status": str(document.get("status", "not_started")),
+        "progress_current": progress_current,
+        "progress_total": progress_total,
+        "mode": CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
+        "warning_count": 0,
+    }
 
 
 def build_character_voice_definition_prompt(character_profile: dict[str, object]) -> str:
@@ -198,36 +242,6 @@ def regenerate_character_voice_definition(profile_payload: dict[str, object]) ->
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
-def load_character_discovery_report(
-    project_root: str | Path,
-) -> CharacterDiscoveryReportPayload | None:
-    """
-    @brief      Load the optional persisted character-discovery report.
-    @param[in]  project_root Active project root folder.
-    @return     Persisted report payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.4.1
-    """
-    report_path = resolve_operation_path(
-        project_root,
-        "character_discovery",
-        config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
-    )
-    try:
-        payload = load_optional_json_artifact(report_path)
-    except (OSError, json.JSONDecodeError, TypeError) as error:
-        _CHARACTER_DISCOVERY_LOGGER.warning("Ignoring unreadable character discovery report artifact: %s", error)
-        return None
-    if payload is None:
-        return None
-    if not isinstance(payload, dict):
-        return None
-    return dict(payload)
-
-
-@trace_function(_CHARACTER_DISCOVERY_LOGGER)
 def load_input_chunks(project_root: str | Path) -> list[dict[str, object]]:
     """
     @brief      Load the optional chunk-input snapshot for character discovery.
@@ -238,7 +252,7 @@ def load_input_chunks(project_root: str | Path) -> list[dict[str, object]]:
     @date       2026-04-08
     @version    0.3.0
     """
-    input_chunks, _input_source = _resolve_discovery_input_chunks(Path(project_root))
+    input_chunks, _source = _resolve_discovery_input_chunks(Path(project_root))
     return input_chunks
 
 
@@ -251,7 +265,7 @@ def start_or_continue_discovery(
     cancel_requested=None,
     force_rerun: bool = False,
     additional_character_discovery_instructions: str | None = None,
-) -> CharacterDiscoveryReportPayload:
+) -> CharacterDocumentPayload:
     """
     @brief      Run AI-assisted character discovery for the active project.
     @param[in]  project_root Active project root folder.
@@ -269,7 +283,7 @@ def start_or_continue_discovery(
     @version    0.6.1
     """
     resolved_project_root = Path(project_root)
-    source_chunks, input_source = _resolve_discovery_input_chunks(resolved_project_root)
+    source_chunks, source_metadata = _resolve_discovery_input_chunks(resolved_project_root)
     if not source_chunks:
         raise ValueError("Run text chunking before starting Character Discovery.")
 
@@ -290,41 +304,30 @@ def start_or_continue_discovery(
         "character_discovery_system",
         {},
     )
-    existing_state = {} if force_rerun else (load_operation_state(resolved_project_root) or {})
+    existing_document = {} if force_rerun else (load_character_document(resolved_project_root) or {})
+    if existing_document and dict(existing_document.get("source", {})) != source_metadata:
+        reset_character_discovery(resolved_project_root)
+        existing_document = {}
     additional_character_discovery_instructions = _resolve_additional_character_discovery_instructions(
         additional_character_discovery_instructions,
-        existing_state,
-    )
-    additional_character_discovery_instructions_fingerprint = _compute_prompt_fingerprint(
-        additional_character_discovery_instructions
+        existing_document,
     )
     budget_metadata = _build_budget_metadata(
         ai_profile_payload,
         system_prompt,
         additional_character_discovery_instructions,
     )
-    output_path = build_operation_output_path(
+    document_path = build_operation_output_path(
         resolved_project_root,
         "character_discovery",
-        config.CHARACTER_PROFILE_FILE_NAME,
-    )
-    report_path = build_operation_output_path(
-        resolved_project_root,
-        "character_discovery",
-        config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
-    )
-    state_path = build_operation_output_path(
-        resolved_project_root,
-        "character_discovery",
-        config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
+        config.CHARACTERS_DOCUMENT_FILE_NAME,
     )
 
-    input_fingerprint = _build_input_fingerprint(source_chunks)
-    resume_checkpoint = existing_state.get("resume_checkpoint") if isinstance(existing_state, dict) else {}
+    input_fingerprint = str(source_metadata["fingerprint"])
+    resume_checkpoint = existing_document.get("checkpoint") if isinstance(existing_document, dict) else {}
     if not isinstance(resume_checkpoint, dict):
         resume_checkpoint = {}
-    run_token = str(resume_checkpoint.get("run_token") or _utc_now_iso())
-    model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
+    run_token = _utc_now_iso()
     (
         completed_window_count,
         next_discovery_start_chunk_index,
@@ -334,18 +337,15 @@ def start_or_continue_discovery(
         synthesized_profiles,
         log_relative_path,
     ) = _restore_resume_state(
-        existing_state,
+        existing_document,
         input_fingerprint,
         source_chunks,
-        additional_character_discovery_instructions_fingerprint,
     )
     resume_is_compatible = bool(
         completed_window_count > 0 or raw_candidates or merged_candidates or synthesized_profiles or log_relative_path
     )
     if not resume_is_compatible:
-        run_token = _utc_now_iso()
         log_relative_path = None
-    model_settings_history = [{"profile_id": profile_id, **dict(model_settings)}]
     windows = (
         []
         if merged_candidates
@@ -356,11 +356,11 @@ def start_or_continue_discovery(
             budget_metadata,
         )
     )
-    if not merged_candidates and not windows:
+    if not merged_candidates and not windows and not raw_candidates:
         raise ValueError("Character discovery requires at least one chunk window.")
     discovery_progress_total = completed_window_count + len(windows)
     token_usage = (
-        _restore_token_usage(existing_state)
+        _restore_token_usage(existing_document)
         if completed_window_count > 0 or raw_candidates or merged_candidates or synthesized_profiles
         else token_usage_service.empty_token_usage()
     )
@@ -376,7 +376,7 @@ def start_or_continue_discovery(
         discovery_progress_total + len(merged_candidates) if merged_candidates else discovery_progress_total
     )
     _write_operation_state(
-        state_path=state_path,
+        state_path=document_path,
         status="running",
         phase="synthesis" if merged_candidates else "discovery",
         progress_current=initial_progress_current,
@@ -395,6 +395,7 @@ def start_or_continue_discovery(
             "rejected_candidates": list(rejected_candidates),
             "synthesized_profiles": list(synthesized_profiles),
         },
+        source=source_metadata,
     )
     _emit_progress(
         progress_callback,
@@ -473,7 +474,7 @@ def start_or_continue_discovery(
                 "synthesized_profiles": [],
             }
             _write_operation_state(
-                state_path=state_path,
+                state_path=document_path,
                 status="running",
                 phase="discovery",
                 progress_current=discovery_progress_current,
@@ -495,7 +496,7 @@ def start_or_continue_discovery(
             )
     except OperationCancelledError:
         _write_operation_state(
-            state_path=state_path,
+            state_path=document_path,
             status="cancelled",
             phase="discovery",
             progress_current=discovery_progress_current,
@@ -511,7 +512,7 @@ def start_or_continue_discovery(
         raise
     except Exception:
         _write_operation_state(
-            state_path=state_path,
+            state_path=document_path,
             status="failed",
             phase="discovery",
             progress_current=discovery_progress_current,
@@ -530,7 +531,7 @@ def start_or_continue_discovery(
         merged_candidates, rejected_candidates = _merge_character_candidates_with_rejections(raw_candidates)
     total_progress = max(discovery_progress_total + len(merged_candidates), 1)
     _write_operation_state(
-        state_path=state_path,
+        state_path=document_path,
         status="running",
         phase="synthesis",
         progress_current=discovery_progress_total + len(synthesized_profiles),
@@ -614,7 +615,7 @@ def start_or_continue_discovery(
                 "synthesized_profiles": list(synthesized_profiles),
             }
             _write_operation_state(
-                state_path=state_path,
+                state_path=document_path,
                 status="running",
                 phase="synthesis",
                 progress_current=synthesis_progress_current,
@@ -636,7 +637,7 @@ def start_or_continue_discovery(
             )
     except OperationCancelledError:
         _write_operation_state(
-            state_path=state_path,
+            state_path=document_path,
             status="cancelled",
             phase="synthesis",
             progress_current=synthesis_progress_current,
@@ -652,7 +653,7 @@ def start_or_continue_discovery(
         raise
     except Exception:
         _write_operation_state(
-            state_path=state_path,
+            state_path=document_path,
             status="failed",
             phase="synthesis",
             progress_current=synthesis_progress_current,
@@ -668,34 +669,8 @@ def start_or_continue_discovery(
         raise
 
     ordered_profiles = sorted(synthesized_profiles, key=_profile_sort_key)
-    report_payload = {
-        "input_chunk_count": len(source_chunks),
-        "input_source": input_source,
-        "analyzed_window_count": discovery_progress_total,
-        "merged_candidate_count": len(merged_candidates),
-        "rejected_candidate_count": len(rejected_candidates),
-        "rejected_candidates": list(rejected_candidates),
-        "character_count": len(ordered_profiles),
-        "review_status_summary": _review_status_summary(ordered_profiles),
-        "character_discovery_mode": CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-        "character_profile_id_last_used": profile_id,
-        "model_settings": dict(model_settings),
-        "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-        "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-        "budget_metadata": dict(budget_metadata),
-        "additional_character_discovery_instructions": additional_character_discovery_instructions,
-        "additional_character_discovery_instructions_fingerprint": (
-            additional_character_discovery_instructions_fingerprint
-        ),
-        "model_settings_history": [dict(item) for item in model_settings_history],
-        "warning_count": 0,
-        "warnings": [],
-        "token_usage": token_usage,
-    }
-    write_json_atomic(output_path, ordered_profiles)
-    write_json_atomic(report_path, report_payload)
     _write_operation_state(
-        state_path=state_path,
+        state_path=document_path,
         status="completed",
         phase="completed",
         progress_current=total_progress,
@@ -707,11 +682,14 @@ def start_or_continue_discovery(
         token_usage=token_usage,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
         checkpoint=None,
+        characters=ordered_profiles,
     )
+    completed_document = load_character_document(resolved_project_root)
+    assert completed_document is not None
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
         "character_discovery",
-        load_operation_state(resolved_project_root),
+        character_operation_summary(completed_document, len(source_chunks)),
         current_stage="character_discovery_ready",
     )
     _emit_progress(
@@ -721,7 +699,7 @@ def start_or_continue_discovery(
         "Character discovery completed.",
         token_usage=token_usage,
     )
-    return report_payload
+    return completed_document
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
@@ -820,6 +798,7 @@ def update_character_profile(
             merged_profile["canonical_name"] = normalized_name
             if not str(profile_payload.get("review_status", "")).strip():
                 merged_profile["review_status"] = _edited_review_status(existing_normalized_profile)
+            merged_profile["_provenance_edited"] = True
             updated_profiles.append(merged_profile)
             found_profile = True
         else:
@@ -879,6 +858,242 @@ def reset_character_discovery(project_root: str | Path) -> None:
         include_current=True,
         preserve_operation_kinds=NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
+
+
+def invalidate_if_source_changed(project_root: str | Path) -> bool:
+    """Reset Character Discovery and downstream artifacts when its effective source changed."""
+    document = load_character_document(project_root)
+    if document is None:
+        return False
+    _chunks, current_source = _resolve_discovery_input_chunks(Path(project_root))
+    if dict(document.get("source", {})) == current_source:
+        return False
+    reset_character_discovery(project_root)
+    return True
+
+
+def _validate_character_document(payload: object) -> None:
+    """Validate the strict, hard-break Character Discovery document contract."""
+    if not isinstance(payload, dict) or set(payload) != _CHARACTER_DOCUMENT_FIELDS:
+        raise CharacterDocumentError("Character Discovery data has an incompatible root contract.")
+    if str(payload.get("status", "")) not in _CHARACTER_DOCUMENT_STATUSES:
+        raise CharacterDocumentError("Character Discovery data has an invalid status.")
+    source = payload.get("source")
+    if not isinstance(source, dict) or set(source) != _CHARACTER_SOURCE_FIELDS:
+        raise CharacterDocumentError("Character Discovery data has an invalid source contract.")
+    if str(source.get("kind", "")) not in {
+        CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL,
+        CHARACTER_DISCOVERY_INPUT_SOURCE_TRANSLATED,
+    }:
+        raise CharacterDocumentError("Character Discovery data has an invalid source kind.")
+    if not all(isinstance(source.get(field), str) for field in _CHARACTER_SOURCE_FIELDS):
+        raise CharacterDocumentError("Character Discovery source fields must be strings.")
+    if not isinstance(payload.get("instructions"), str):
+        raise CharacterDocumentError("Character Discovery instructions must be a string.")
+    token_usage = payload.get("token_usage")
+    if not isinstance(token_usage, dict) or set(token_usage) != _TOKEN_USAGE_FIELDS:
+        raise CharacterDocumentError("Character Discovery token_usage has an invalid contract.")
+    for field in ("input_tokens", "output_tokens", "total_tokens"):
+        if type(token_usage.get(field)) is not int or int(token_usage[field]) < 0:
+            raise CharacterDocumentError("Character Discovery token counts must be non-negative integers.")
+    if type(token_usage.get("usage_available")) is not bool:
+        raise CharacterDocumentError("Character Discovery usage_available must be boolean.")
+    characters = payload.get("characters")
+    if not isinstance(characters, list):
+        raise CharacterDocumentError("Character Discovery characters must be an array.")
+    for character in characters:
+        _validate_nested_character(character)
+    checkpoint = payload.get("checkpoint")
+    if checkpoint is not None:
+        _validate_character_checkpoint(checkpoint)
+    failure = payload.get("failure")
+    if failure is not None and (
+        not isinstance(failure, dict)
+        or set(failure) != {"phase", "message"}
+        or not all(isinstance(failure.get(field), str) for field in ("phase", "message"))
+    ):
+        raise CharacterDocumentError("Character Discovery failure must be null or a phase/message object.")
+
+
+def _validate_nested_character(payload: object) -> None:
+    """Validate one nested character record."""
+    expected_fields = {
+        "character_id",
+        "canonical_name",
+        "aliases",
+        "traits",
+        "voice",
+        "discovery_confidence",
+        "provenance",
+        "evidence",
+    }
+    if not isinstance(payload, dict) or set(payload) != expected_fields:
+        raise CharacterDocumentError("Character Discovery contains an invalid character record.")
+    traits = payload.get("traits")
+    voice = payload.get("voice")
+    provenance = payload.get("provenance")
+    if not isinstance(traits, dict) or set(traits) != {"gender", "age"}:
+        raise CharacterDocumentError("Character traits must contain gender and age.")
+    for trait_name in ("gender", "age"):
+        trait = traits.get(trait_name)
+        if not isinstance(trait, dict) or set(trait) != {"value", "confidence"}:
+            raise CharacterDocumentError(f"Character {trait_name} must contain value and confidence.")
+    if not isinstance(voice, dict) or set(voice) != {"definition_prompt", "preview_text"}:
+        raise CharacterDocumentError("Character voice must contain definition_prompt and preview_text.")
+    if (
+        not isinstance(provenance, dict)
+        or set(provenance) != {"origin", "edited"}
+        or str(provenance.get("origin", "")) not in {"ai", "manual"}
+        or type(provenance.get("edited")) is not bool
+    ):
+        raise CharacterDocumentError("Character provenance is invalid.")
+    if not isinstance(payload.get("aliases"), list) or not isinstance(payload.get("evidence"), list):
+        raise CharacterDocumentError("Character aliases and evidence must be arrays.")
+    string_fields = ("character_id", "canonical_name", "discovery_confidence")
+    if not all(isinstance(payload.get(field), str) for field in string_fields):
+        raise CharacterDocumentError("Character identity and confidence fields must be strings.")
+    if not all(isinstance(item, str) for item in payload["aliases"]):
+        raise CharacterDocumentError("Character aliases must contain only strings.")
+    for trait_name in ("gender", "age"):
+        trait = traits[trait_name]
+        if not all(isinstance(trait.get(field), str) for field in ("value", "confidence")):
+            raise CharacterDocumentError("Character trait values must be strings.")
+    if not all(isinstance(voice.get(field), str) for field in ("definition_prompt", "preview_text")):
+        raise CharacterDocumentError("Character voice values must be strings.")
+    if not all(isinstance(item, dict) for item in payload["evidence"]):
+        raise CharacterDocumentError("Character evidence must contain only objects.")
+
+
+def _validate_character_checkpoint(payload: object) -> None:
+    """Validate one phase-specific resume checkpoint."""
+    if not isinstance(payload, dict):
+        raise CharacterDocumentError("Character Discovery checkpoint must be an object.")
+    phase = str(payload.get("phase", ""))
+    expected_fields = (
+        {"phase", "next_chunk_index", "candidates"}
+        if phase == "discovery"
+        else {"phase", "next_candidate_index", "candidates"}
+    )
+    if phase not in {"discovery", "synthesis"} or set(payload) != expected_fields:
+        raise CharacterDocumentError("Character Discovery checkpoint has an invalid phase contract.")
+    index_field = "next_chunk_index" if phase == "discovery" else "next_candidate_index"
+    if type(payload.get(index_field)) is not int or int(payload[index_field]) < 0:
+        raise CharacterDocumentError("Character Discovery checkpoint index must be non-negative.")
+    if not isinstance(payload.get("candidates"), list):
+        raise CharacterDocumentError("Character Discovery checkpoint candidates must be an array.")
+
+
+def _flat_character_profile(payload: dict[str, object]) -> CharacterProfilePayload:
+    """Project one nested persisted character into the existing consumer shape."""
+    traits = payload.get("traits", {})
+    traits = traits if isinstance(traits, dict) else {}
+    gender = traits.get("gender", {})
+    gender = gender if isinstance(gender, dict) else {}
+    age = traits.get("age", {})
+    age = age if isinstance(age, dict) else {}
+    voice = payload.get("voice", {})
+    voice = voice if isinstance(voice, dict) else {}
+    provenance = payload.get("provenance", {})
+    provenance = provenance if isinstance(provenance, dict) else {}
+    origin = str(provenance.get("origin", "ai"))
+    edited = bool(provenance.get("edited", False))
+    review_status = (
+        CHARACTER_REVIEW_STATUS_MANUAL
+        if origin == "manual"
+        else (CHARACTER_REVIEW_STATUS_EDITED if edited else CHARACTER_REVIEW_STATUS_DISCOVERED)
+    )
+    return {
+        "character_id": str(payload.get("character_id", "")),
+        "canonical_name": str(payload.get("canonical_name", "")),
+        "aliases": list(payload.get("aliases", [])),
+        "gender_hint": str(gender.get("value", "")),
+        "gender_confidence": str(gender.get("confidence", "")),
+        "age_hint": str(age.get("value", "")),
+        "age_confidence": str(age.get("confidence", "")),
+        CHARACTER_VOICE_PROMPT_FIELD: str(voice.get("definition_prompt", "")),
+        CHARACTER_PREVIEW_TEXT_FIELD: str(voice.get("preview_text", "")),
+        "confidence": str(payload.get("discovery_confidence", "")),
+        "review_status": review_status,
+        "evidence": list(payload.get("evidence", [])),
+        "_provenance_origin": origin,
+        "_provenance_edited": edited,
+    }
+
+
+def _nested_character_profile(
+    profile_payload: dict[str, object],
+    existing_payload: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Convert one consumer profile into the authoritative nested shape."""
+    normalized = _normalize_character_profile(profile_payload)
+    existing_provenance = (
+        existing_payload.get("provenance", {})
+        if isinstance(existing_payload, dict)
+        else {}
+    )
+    existing_provenance = existing_provenance if isinstance(existing_provenance, dict) else {}
+    review_status = _normalize_review_status(normalized.get("review_status", ""))
+    origin = str(
+        profile_payload.get(
+            "_provenance_origin",
+            existing_provenance.get(
+                "origin",
+                "manual" if review_status == CHARACTER_REVIEW_STATUS_MANUAL else "ai",
+            ),
+        )
+    )
+    edited = bool(
+        profile_payload.get(
+            "_provenance_edited",
+            existing_provenance.get("edited", review_status == CHARACTER_REVIEW_STATUS_EDITED),
+        )
+    )
+    return {
+        "character_id": str(normalized.get("character_id", "")),
+        "canonical_name": str(normalized.get("canonical_name", "")),
+        "aliases": list(normalized.get("aliases", [])),
+        "traits": {
+            "gender": {
+                "value": str(normalized.get("gender_hint", "")),
+                "confidence": str(normalized.get("gender_confidence", "")),
+            },
+            "age": {
+                "value": str(normalized.get("age_hint", "")),
+                "confidence": str(normalized.get("age_confidence", "")),
+            },
+        },
+        "voice": {
+            "definition_prompt": str(normalized.get(CHARACTER_VOICE_PROMPT_FIELD, "")),
+            "preview_text": str(normalized.get(CHARACTER_PREVIEW_TEXT_FIELD, "")),
+        },
+        "discovery_confidence": str(normalized.get("confidence", "")),
+        "provenance": {"origin": origin, "edited": edited},
+        "evidence": list(normalized.get("evidence", [])),
+    }
+
+
+def _new_character_document(
+    source: dict[str, str],
+    instructions: str,
+    *,
+    status: str = "running",
+) -> CharacterDocumentPayload:
+    """Build a new authoritative Character Discovery document."""
+    return {
+        "status": status,
+        "source": dict(source),
+        "instructions": str(instructions),
+        "token_usage": _persisted_character_token_usage(
+            token_usage_service.empty_token_usage()
+        ),
+        "checkpoint": {
+            "phase": "discovery",
+            "next_chunk_index": 0,
+            "candidates": [],
+        },
+        "failure": None,
+        "characters": [],
+    }
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
@@ -946,13 +1161,24 @@ def _write_character_profiles(
     @date       2026-04-08
     @version    0.4.1
     """
-    output_path = build_operation_output_path(
-        project_root,
-        "character_discovery",
-        config.CHARACTER_PROFILE_FILE_NAME,
-    )
-    persisted_profiles = [_persistable_character_profile(profile) for profile in profiles]
-    write_json_atomic(output_path, persisted_profiles)
+    document = load_character_document(project_root)
+    if document is None:
+        _chunks, source = _resolve_discovery_input_chunks(project_root)
+        document = _new_character_document(source, "", status="completed")
+        document["checkpoint"] = None
+    existing_by_id = {
+        str(item.get("character_id", "")): item
+        for item in document.get("characters", [])
+        if isinstance(item, dict)
+    }
+    document["characters"] = [
+        _nested_character_profile(
+            profile,
+            existing_by_id.get(str(profile.get("character_id", ""))),
+        )
+        for profile in profiles
+    ]
+    write_character_document(project_root, document)
 
 
 def _build_manual_character_profile(
@@ -1018,7 +1244,7 @@ def _next_manual_character_id(
     return f"{base_slug}_{suffix}"
 
 
-def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, object]], str]:
+def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, object]], dict[str, str]]:
     """
     @brief      Resolve the authoritative internal input for character discovery.
     @param[in]  project_root Active project root folder.
@@ -1028,10 +1254,51 @@ def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, 
     @date       2026-04-27
     @version    0.3.0
     """
-    source_chunks = sorted(
+    original_chunks = sorted(
         chunking_document_service.load_chunks(project_root),
         key=lambda item: int(item.get("sequence_index", 0)),
     )
+    manifest = project_workspace_service.load_manifest(project_root)
+    source_kind = CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL
+    source_language = str(manifest.get("original_language", "")).strip()
+    source_chunks = original_chunks
+    try:
+        translation_document = ai_translation_service.load_translation_document(project_root)
+    except (OSError, ValueError):
+        translation_document = None
+    if translation_document is not None:
+        translated_by_id = {
+            str(item.get("chunk_id", "")).strip(): item
+            for item in translation_document.get("chunks", [])
+            if isinstance(item, dict) and str(item.get("chunk_id", "")).strip()
+        }
+        translated_chunks: list[dict[str, object]] = []
+        translation_is_complete = bool(original_chunks)
+        for original_chunk in original_chunks:
+            chunk_id = str(original_chunk.get("chunk_id", "")).strip()
+            translated_chunk = translated_by_id.get(chunk_id)
+            translated_text = (
+                ""
+                if translated_chunk is None
+                else str(translated_chunk.get("translated_text", ""))
+            )
+            if (
+                translated_chunk is None
+                or not bool(translated_chunk.get("approved", False))
+                or not translated_text.strip()
+            ):
+                translation_is_complete = False
+                break
+            translated_chunks.append(
+                {
+                    **dict(original_chunk),
+                    "text": translated_text,
+                }
+            )
+        if translation_is_complete and len(translated_chunks) == len(original_chunks):
+            source_kind = CHARACTER_DISCOVERY_INPUT_SOURCE_TRANSLATED
+            source_language = str(translation_document.get("target_language", "")).strip()
+            source_chunks = translated_chunks
     discovery_chunks: list[dict[str, object]] = []
     current_chapter_label: str | None = None
     for source_chunk in source_chunks:
@@ -1040,14 +1307,30 @@ def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, 
         )
         if detected_chapter_label is not None:
             current_chapter_label = detected_chapter_label
-        discovery_chunks.append(_discovery_chunk_from_source(source_chunk, current_chapter_label))
-    return (
+        discovery_chunks.append(
+            _discovery_chunk_from_source(
+                source_chunk,
+                current_chapter_label,
+                source_kind,
+            )
+        )
+    fingerprint = _build_input_fingerprint(
         discovery_chunks,
-        CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
+        source_kind=source_kind,
+        source_language=source_language,
     )
+    return discovery_chunks, {
+        "kind": source_kind,
+        "language": source_language,
+        "fingerprint": fingerprint,
+    }
 
 
-def _discovery_chunk_from_source(source_chunk: dict[str, object], chapter_label: str | None) -> dict[str, object]:
+def _discovery_chunk_from_source(
+    source_chunk: dict[str, object],
+    chapter_label: str | None,
+    input_source: str,
+) -> dict[str, object]:
     """
     @brief      Build one discovery chunk from canonical source chunking output.
     @param[in]  source_chunk Source chunk payload.
@@ -1062,12 +1345,17 @@ def _discovery_chunk_from_source(source_chunk: dict[str, object], chapter_label:
     text = str(discovery_chunk.get("text", "")).strip()
     discovery_chunk["chapter_label"] = chapter_label
     discovery_chunk["source_text"] = text
-    discovery_chunk["input_source"] = CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
+    discovery_chunk["input_source"] = input_source
     discovery_chunk["dialogue_spans"] = _detect_dialogue_spans(text)
     return discovery_chunk
 
 
-def _build_input_fingerprint(source_chunks: list[dict[str, object]]) -> str:
+def _build_input_fingerprint(
+    source_chunks: list[dict[str, object]],
+    *,
+    source_kind: str = CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL,
+    source_language: str = "",
+) -> str:
     """
     @brief      Build the input fingerprint.
     @param[in]  source_chunks Value for `source_chunks`.
@@ -1077,6 +1365,10 @@ def _build_input_fingerprint(source_chunks: list[dict[str, object]]) -> str:
     @version    0.2.0
     """
     digest = hashlib.sha256()
+    digest.update(str(source_kind).encode("utf-8"))
+    digest.update(b"\n")
+    digest.update(str(source_language).encode("utf-8"))
+    digest.update(b"\n")
     for chunk in source_chunks:
         digest.update(str(chunk.get("chunk_id", "")).encode("utf-8"))
         digest.update(b"\n")
@@ -1313,21 +1605,17 @@ def _resolve_additional_character_discovery_instructions(
     @date       2026-05-13
     @version    0.2.0
     """
-    if additional_character_discovery_instructions is not None:
-        return _normalized_additional_character_discovery_instructions(additional_character_discovery_instructions)
-    is_ai_mode = existing_state.get("mode") == CHARACTER_DISCOVERY_MODE_AI_ASSISTED
     is_resumable_status = str(existing_state.get("status", "")) in {
         "running",
         "failed",
         "cancelled",
     }
-    if not is_ai_mode or not is_resumable_status:
-        return ""
-    metadata = existing_state.get("metadata")
+    if is_resumable_status:
+        return _normalized_additional_character_discovery_instructions(
+            existing_state.get("instructions")
+        )
     return _normalized_additional_character_discovery_instructions(
-        metadata.get("additional_character_discovery_instructions")
-        if isinstance(metadata, dict)
-        else existing_state.get("additional_character_discovery_instructions")
+        additional_character_discovery_instructions
     )
 
 
@@ -1365,19 +1653,6 @@ def _append_additional_character_discovery_instructions(prompt_text: str, instru
     )
 
 
-def _compute_prompt_fingerprint(prompt_text: str) -> str:
-    """
-    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
-    @param[in]  prompt_text Operator prompt-rule text.
-    @return     SHA-256 fingerprint for the prompt-rule text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
-    """
-    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
-
-
 def _estimate_text_tokens(text: str) -> int:
     """
     @brief      Estimate token usage for local budget checks.
@@ -1406,7 +1681,7 @@ def _build_units_block(window_records: list[dict[str, object]]) -> str:
             f"CHUNK_ID: {chunk.get('chunk_id', '')}\n"
             f"SEQUENCE_INDEX: {chunk.get('sequence_index', 0)}\n"
             f"CHAPTER_LABEL: {chunk.get('chapter_label', '') or ''}\n"
-            f"INPUT_SOURCE: {chunk.get('input_source', CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS)}\n"
+            f"INPUT_SOURCE: {chunk.get('input_source', CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL)}\n"
             "DIALOGUE_SPANS_BEGIN\n"
             f"{json.dumps(list(chunk.get('dialogue_spans', [])), ensure_ascii=False)}\n"
             "DIALOGUE_SPANS_END\n"
@@ -1417,32 +1692,10 @@ def _build_units_block(window_records: list[dict[str, object]]) -> str:
     return "\n\n".join(blocks).strip()
 
 
-def _build_model_settings(
-    ai_profile_payload: dict[str, object],
-    budget_metadata: BudgetMetadataPayload,
-) -> ModelSettingsPayload:
-    """
-    @brief      Build the concrete AI model settings stored with discovery state.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  budget_metadata Context-budget metadata derived from the profile.
-    @return     JSON-ready model settings payload.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    return {
-        "model_name": str(ai_profile_payload.get("model_name", "")).strip(),
-        "context_window": int(budget_metadata.get("context_window", 0)),
-        "max_output_tokens": int(budget_metadata.get("max_output_tokens", 0)),
-        "temperature": ai_profile_payload.get("temperature"),
-    }
-
-
 def _restore_resume_state(
     existing_state: dict[str, object],
     input_fingerprint: str,
     source_chunks: list[dict[str, object]],
-    additional_character_discovery_instructions_fingerprint: str = "",
 ) -> tuple[
     int,
     int,
@@ -1457,7 +1710,6 @@ def _restore_resume_state(
     @param[in]  existing_state Value for `existing_state`.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  source_chunks Current source chunk records.
-    @param[in]  additional_character_discovery_instructions_fingerprint Operator instruction fingerprint.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
@@ -1465,74 +1717,53 @@ def _restore_resume_state(
     """
     if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
         return 0, 0, [], [], [], [], None
-    if str(existing_state.get("mode", "")) != CHARACTER_DISCOVERY_MODE_AI_ASSISTED:
+    source = existing_state.get("source", {})
+    if not isinstance(source, dict) or str(source.get("fingerprint", "")) != input_fingerprint:
         return 0, 0, [], [], [], [], None
-    metadata = existing_state.get("metadata")
-    if not isinstance(metadata, dict):
-        metadata = {}
-    checkpoint = dict(existing_state.get("resume_checkpoint") or existing_state.get("checkpoint") or {})
-    if str(checkpoint.get("input_fingerprint") or existing_state.get("input_fingerprint", "")) != input_fingerprint:
+    checkpoint = existing_state.get("checkpoint")
+    if not isinstance(checkpoint, dict):
         return 0, 0, [], [], [], [], None
-    expected_instruction_fingerprint = (
-        additional_character_discovery_instructions_fingerprint or _compute_prompt_fingerprint("")
-    )
-    stored_instruction_fingerprint = str(
-        checkpoint.get("additional_character_discovery_instructions_fingerprint")
-        or metadata.get("additional_character_discovery_instructions_fingerprint")
-        or existing_state.get("additional_character_discovery_instructions_fingerprint")
-        or _compute_prompt_fingerprint("")
-    )
-    if stored_instruction_fingerprint != expected_instruction_fingerprint:
+    phase = str(checkpoint.get("phase", ""))
+    candidates = _restore_mapping_list(checkpoint.get("candidates"))
+    synthesized_profiles = [
+        _normalize_character_profile(_flat_character_profile(item))
+        for item in existing_state.get("characters", [])
+        if isinstance(item, dict)
+    ]
+    if phase == "discovery":
+        if type(checkpoint.get("next_chunk_index")) is not int:
+            return 0, 0, [], [], [], [], None
+        next_chunk_index = max(
+            0,
+            min(int(checkpoint.get("next_chunk_index", 0)), len(source_chunks)),
+        )
+        return (
+            next_chunk_index,
+            next_chunk_index,
+            candidates,
+            [],
+            [],
+            synthesized_profiles,
+            None,
+        )
+    if phase != "synthesis":
         return 0, 0, [], [], [], [], None
-    raw_candidates = _restore_mapping_list(checkpoint.get("raw_candidates"))
-    merged_candidates = _restore_mapping_list(checkpoint.get("merged_candidates"))
-    rejected_candidates = _restore_mapping_list(checkpoint.get("rejected_candidates"))
-    synthesized_profiles = _restore_mapping_list(checkpoint.get("synthesized_profiles"))
-    completed_window_count = max(0, int(checkpoint.get("completed_window_count", 0)))
-    next_chunk_index = _restore_next_discovery_start_chunk_index(
-        checkpoint,
-        source_chunks,
-        bool(merged_candidates),
-    )
-    if next_chunk_index is None:
+    if type(checkpoint.get("next_candidate_index")) is not int:
         return 0, 0, [], [], [], [], None
-    restored_log_relative_path = (
-        checkpoint.get("log_relative_path")
-        or metadata.get("log_relative_path")
-        or existing_state.get("log_relative_path")
+    next_candidate_index = max(
+        0,
+        min(int(checkpoint.get("next_candidate_index", 0)), len(candidates)),
     )
+    synthesized_profiles = synthesized_profiles[:next_candidate_index]
     return (
-        completed_window_count,
-        next_chunk_index,
-        raw_candidates,
-        merged_candidates,
-        rejected_candidates,
+        len(source_chunks),
+        len(source_chunks),
+        [],
+        candidates,
+        [],
         synthesized_profiles,
-        (None if restored_log_relative_path in (None, "") else str(restored_log_relative_path)),
+        None,
     )
-
-
-def _restore_next_discovery_start_chunk_index(
-    checkpoint: dict[str, object],
-    source_chunks: list[dict[str, object]],
-    discovery_phase_completed: bool,
-) -> int | None:
-    """
-    @brief      Restore the next source-chunk boundary for resumed discovery windows.
-    @param[in]  checkpoint Persisted discovery checkpoint.
-    @param[in]  source_chunks Current source chunk records.
-    @param[in]  discovery_phase_completed True when merged candidates already exist.
-    @return     Next source-chunk index or `None` when the checkpoint cannot be trusted.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.3.0
-    """
-    if discovery_phase_completed:
-        return len(source_chunks)
-    raw_next_index = checkpoint.get("next_discovery_start_chunk_index")
-    if raw_next_index not in (None, ""):
-        return max(0, min(int(raw_next_index), len(source_chunks)))
-    return 0 if max(0, int(checkpoint.get("completed_window_count", 0))) <= 0 else None
 
 
 def _next_chunk_index_after_window(
@@ -1574,10 +1805,7 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
     @date       2026-04-21
     @version    0.2.0
     """
-    metadata = existing_state.get("metadata")
-    return token_usage_service.restore_token_usage(
-        metadata.get("token_usage") if isinstance(metadata, dict) else existing_state.get("token_usage")
-    )
+    return token_usage_service.restore_token_usage(existing_state.get("token_usage"))
 
 
 def _restore_mapping_list(payload: object) -> list[dict[str, object]]:
@@ -1638,6 +1866,8 @@ def _write_operation_state(
     token_usage: TokenUsagePayload,
     additional_character_discovery_instructions: str,
     checkpoint: dict[str, object] | None,
+    source: dict[str, str] | None = None,
+    characters: list[CharacterProfilePayload] | None = None,
 ) -> None:
     """
     @brief      Write the operation state.
@@ -1658,35 +1888,85 @@ def _write_operation_state(
     @date       2026-05-13
     @version    0.8.0
     """
-    normalized_instructions = _normalized_additional_character_discovery_instructions(
-        additional_character_discovery_instructions
+    _ = (
+        progress_current,
+        progress_total,
+        run_token,
+        profile_id,
+        input_fingerprint,
+        log_relative_path,
     )
-    instruction_fingerprint = _compute_prompt_fingerprint(normalized_instructions)
-    state_payload: OperationStatePayload = {
-        "status": str(status),
-        "mode": CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-        "progress_current": int(progress_current),
-        "progress_total": int(progress_total),
-        "warning_count": 0,
-        "metadata": {
-            "phase": str(phase),
-            "ai_profile_id": profile_id,
-            "log_relative_path": str(log_relative_path),
-            "additional_character_discovery_instructions": normalized_instructions,
-            "additional_character_discovery_instructions_fingerprint": instruction_fingerprint,
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-        },
-        "resume_checkpoint": None
-        if checkpoint is None
-        else {
-            **dict(checkpoint),
-            "run_token": run_token,
-            "input_fingerprint": input_fingerprint,
-            "log_relative_path": str(log_relative_path),
-            "additional_character_discovery_instructions_fingerprint": instruction_fingerprint,
-        },
+    existing_document = load_character_document(state_path.parent)
+    resolved_source = dict(source or (existing_document or {}).get("source", {}))
+    if not resolved_source:
+        raise CharacterDocumentError("Character Discovery source metadata is required.")
+    legacy_checkpoint = dict(checkpoint) if isinstance(checkpoint, dict) else None
+    if characters is not None:
+        flat_characters = list(characters)
+    elif legacy_checkpoint is not None:
+        flat_characters = _restore_mapping_list(legacy_checkpoint.get("synthesized_profiles"))
+    else:
+        flat_characters = load_character_profiles(state_path.parent)
+    if phase == "discovery" and legacy_checkpoint is not None:
+        persisted_checkpoint: dict[str, object] | None = {
+            "phase": "discovery",
+            "next_chunk_index": max(
+                0,
+                int(legacy_checkpoint.get("next_discovery_start_chunk_index", 0)),
+            ),
+            "candidates": _restore_mapping_list(legacy_checkpoint.get("raw_candidates")),
+        }
+    elif phase == "synthesis" and legacy_checkpoint is not None:
+        persisted_checkpoint = {
+            "phase": "synthesis",
+            "next_candidate_index": len(
+                _restore_mapping_list(legacy_checkpoint.get("synthesized_profiles"))
+            ),
+            "candidates": _restore_mapping_list(legacy_checkpoint.get("merged_candidates")),
+        }
+    else:
+        persisted_checkpoint = None
+    existing_by_id = {
+        str(item.get("character_id", "")): item
+        for item in (existing_document or {}).get("characters", [])
+        if isinstance(item, dict)
     }
-    write_json_atomic(state_path, state_payload)
+    document: CharacterDocumentPayload = {
+        "status": str(status),
+        "source": resolved_source,
+        "instructions": _normalized_additional_character_discovery_instructions(
+            additional_character_discovery_instructions
+        ),
+        "token_usage": _persisted_character_token_usage(token_usage),
+        "checkpoint": persisted_checkpoint,
+        "failure": (
+            {"phase": str(phase), "message": f"Character Discovery {phase} failed."}
+            if status == "failed"
+            else None
+        ),
+        "characters": [
+            _nested_character_profile(
+                profile,
+                existing_by_id.get(str(profile.get("character_id", ""))),
+            )
+            for profile in flat_characters
+        ],
+    }
+    _validate_character_document(document)
+    write_json_atomic(state_path, document)
+
+
+def _persisted_character_token_usage(payload: object) -> TokenUsagePayload:
+    """Normalize token usage to the zero-valued strict document contract."""
+    normalized = token_usage_service.coerce_token_usage(payload)
+    if bool(normalized.get("usage_available", False)):
+        return normalized
+    return {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "usage_available": False,
+    }
 
 
 def _normalize_window_candidates(

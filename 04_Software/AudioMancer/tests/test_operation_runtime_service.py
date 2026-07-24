@@ -373,7 +373,7 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     narrator_audio_path = project_root / "audio_narator_preserved.wav"
     narrator_audio_path.write_bytes(b"RIFF")
-    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
 
@@ -386,7 +386,7 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
 
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert narrator_audio_path.is_file()
-    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
 
@@ -402,9 +402,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("PreserveTextRevisionRuntime", tmp_path)
-    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
-    (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -417,9 +415,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
         preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
     )
 
-    assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).is_file()
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
@@ -484,25 +480,13 @@ def test_ensure_default_operation_state_creates_compact_character_discovery_stat
     """
     project_root, _manifest = project_workspace_service.create_project("DefaultCharacterStateRuntime", tmp_path)
 
-    state_path = operation_runtime_service.ensure_default_operation_state(project_root, "character_discovery")
+    state_path = operation_runtime_service.ensure_default_operation_state(
+        project_root,
+        "character_discovery",
+    )
 
-    assert state_path == project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME
-    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
-    assert state_payload["status"] == "not_started"
-    assert state_payload["progress_current"] == 0
-    assert state_payload["progress_total"] == 0
-    assert state_payload["mode"] == "ai_assisted"
-    assert state_payload["warning_count"] == 0
-    assert state_payload["metadata"]["phase"] == "not_started"
-    assert state_payload["metadata"]["log_relative_path"] == ""
-    assert state_payload["metadata"]["ai_profile_id"] == ""
-    assert state_payload["metadata"]["additional_character_discovery_instructions"] == ""
-    assert state_payload["metadata"]["token_usage"]["usage_available"] is False
-    assert state_payload["resume_checkpoint"] is None
-    assert "output_paths" not in state_payload
-    assert "artifact_paths" not in state_payload
-    assert "phase" not in state_payload
-    assert "checkpoint" not in state_payload
+    assert state_path is None
+    assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
 
 
 def test_ensure_default_operation_state_creates_zero_audio_blocks_metadata(tmp_path) -> None:

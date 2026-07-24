@@ -327,7 +327,14 @@ def _persist_manual_chunk_change(
         target_language,
         affected_chunk_ids,
     )
-    character_discovery_service.drop_character_evidence_for_chunks(project_root, affected_chunk_ids)
+    character_source_invalidated = character_discovery_service.invalidate_if_source_changed(
+        project_root
+    )
+    if not character_source_invalidated:
+        character_discovery_service.drop_character_evidence_for_chunks(
+            project_root,
+            affected_chunk_ids,
+        )
     _audio_report, audio_artifact_summary = audio_blocks_service.remove_audio_blocks_for_chunks(
         project_root,
         affected_chunk_ids,
@@ -418,10 +425,17 @@ def _build_manifest_after_selective_chunk_change(
         "mode": "ai_assisted",
         "warning_count": int(translation_summary["warning_count"]),
     }
-    operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
-        "character_discovery",
-        character_discovery_service.load_operation_state(project_root),
+    character_document = character_discovery_service.load_character_document(project_root)
+    operations["character_discovery"] = (
+        default_operations["character_discovery"]
+        if character_document is None
+        else character_discovery_service.character_operation_summary(
+            character_document,
+            len(character_discovery_service.load_input_chunks(project_root)),
+        )
     )
+    if character_document is None:
+        operations["character_voices"] = default_operations["character_voices"]
     operations["speech_blocks"] = project_workspace_service.project_manifest_operation_summary(
         "speech_blocks",
         speech_blocks_service.load_operation_state(project_root),

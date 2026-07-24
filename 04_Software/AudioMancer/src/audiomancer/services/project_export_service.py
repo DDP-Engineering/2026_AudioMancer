@@ -116,7 +116,7 @@ _EXPORT_ARTIFACT_BY_KIND = {
     EXPORT_KIND_CLEANED_TEXT: config.CLEANED_TEXT_FILE_NAME,
     EXPORT_KIND_TEXT_CHUNKS: config.CHUNK_ARTIFACT_FILE_NAME,
     EXPORT_KIND_AI_TRANSLATION: config.TRANSLATED_CHUNKS_FILE_NAME,
-    EXPORT_KIND_CHARACTERS: config.CHARACTER_PROFILE_FILE_NAME,
+    EXPORT_KIND_CHARACTERS: config.CHARACTERS_DOCUMENT_FILE_NAME,
     EXPORT_KIND_NARRATOR_VOICE: config.NARRATOR_VOICE_FILE_NAME,
     EXPORT_KIND_CHARACTER_VOICES: config.CHARACTER_VOICES_TARGETS_FILE_NAME,
     EXPORT_KIND_SPEECH_BLOCKS: config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
@@ -532,25 +532,16 @@ def _build_characters_document(project_root: Path, manifest: dict[str, object]) 
     @date       2026-05-19
     @version    0.2.0
     """
-    report = character_discovery_service.load_character_discovery_report(project_root) or {}
-    state = character_discovery_service.load_operation_state(project_root) or {}
-    metadata = _metadata_from_state(state)
+    document = character_discovery_service.load_character_document(project_root) or {}
     characters = character_discovery_service.load_character_profiles(project_root)
+    source = document.get("source", {}) if isinstance(document, dict) else {}
+    source = source if isinstance(source, dict) else {}
     parameters = _compact_fields(
         [
-            *_ai_parameter_fields(
-                project_root,
-                report,
-                state,
-                _first_value(report.get("character_profile_id_last_used"), metadata.get("ai_profile_id")),
-            ),
-            (
-                "Analyzed Windows",
-                _first_value(report.get("analyzed_window_count"), metadata.get("analyzed_window_count")),
-            ),
-            ("Analyzed Chunks", _first_value(report.get("input_chunk_count"), metadata.get("input_chunk_count"))),
-            ("Character Count", _first_value(report.get("character_count"), len(characters))),
-            *_token_usage_fields(report, metadata),
+            ("Source Kind", source.get("kind")),
+            ("Source Language", source.get("language")),
+            ("Character Count", len(characters)),
+            *_token_usage_fields(document, {}),
         ]
     )
     dossier_records = _character_dossier_records(characters)

@@ -117,7 +117,7 @@ Outputs updated by manual chunk changes:
 - `translated_text.json`
 - `translation_report.json`
 - `translation_state.json`
-- `characters_profile.json` evidence metadata
+- `characters.json` evidence metadata
 - `speech_blocks.json`
 - `speech_blocks_report.json`
 - `speech_blocks_state.json`

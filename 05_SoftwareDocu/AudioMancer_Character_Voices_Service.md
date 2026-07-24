@@ -130,7 +130,7 @@ Inputs:
 
 - active project root and manifest
 - selected narrator profile plus selected narrator sample
-- discovered character profiles from `characters_profile.json`
+- discovered character profiles projected from `characters.json`
 - translation approval report from `translation_report.json`
 - cached VoiceWeaver discovery fields from `settings.json`
 - Character Voices page actions:
@@ -239,7 +239,7 @@ Upstream integrations:
 - selected narrator state and inline sample metadata from `narrator_voice.json`,
   plus the selected profile-owned `audio_narator_<profile_id>.wav`
 - project-local `voice_assignment_mode` from `project.json`
-- character discovery artifacts from `characters_profile.json`, including the
+- character discovery records projected from `characters.json`, including the
   compact sex/gender guidance, compact age-domain guidance, and final
   `voice_definition_prompt`
 - translation approval state from `translation_report.json`

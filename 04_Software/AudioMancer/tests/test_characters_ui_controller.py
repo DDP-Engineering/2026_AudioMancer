@@ -126,16 +126,17 @@ def test_character_ui_controller_cancelled_state_resumes_without_prompt(monkeypa
     @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerCancelledResume")
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTER_DISCOVERY_STATE_FILE_NAME
+    state_path = (
+        project_root
+        / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+        / config.CHARACTERS_DOCUMENT_FILE_NAME
+    )
     state_payload = json.loads(state_path.read_text(encoding="utf-8"))
     state_payload["status"] = "cancelled"
-    state_payload["resume_checkpoint"] = {
-        "completed_window_count": 1,
-        "next_discovery_start_chunk_index": 1,
-        "raw_candidates": [],
-        "merged_candidates": [],
-        "rejected_candidates": [],
-        "synthesized_profiles": [],
+    state_payload["checkpoint"] = {
+        "phase": "discovery",
+        "next_chunk_index": 1,
+        "candidates": [],
     }
     state_path.write_text(json.dumps(state_payload, indent=2) + "\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
@@ -521,8 +522,16 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
     second_profile = dict(_saved_profile_payload())
     second_profile["character_id"] = "bob"
     second_profile["canonical_name"] = "Bob"
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTER_PROFILE_FILE_NAME).write_text(
-        json.dumps([_saved_profile_payload(), second_profile], indent=2) + "\n",
+    (
+        project_root
+        / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+        / config.CHARACTERS_DOCUMENT_FILE_NAME
+    ).write_text(
+        json.dumps(
+            _characters_document([_saved_profile_payload(), second_profile]),
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     window.show_project_state(project_root, project_workspace_service.load_manifest(project_root))
@@ -598,52 +607,8 @@ def _create_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
-        json.dumps([_saved_profile_payload()], indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "input_chunk_count": 1,
-                "analyzed_window_count": 1,
-                "merged_candidate_count": 1,
-                "character_count": 1,
-                "character_discovery_mode": "ai_assisted",
-                "character_profile_id_last_used": "profile-1",
-                "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-                "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-                "warning_count": 0,
-                "warnings": [],
-                "generated_at": "2026-04-08T12:01:00+00:00",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "status": "completed",
-                "phase": "completed",
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "ai_assisted",
-                "started_at": "2026-04-08T12:00:00+00:00",
-                "completed_at": "2026-04-08T12:01:00+00:00",
-                "updated_at": "2026-04-08T12:01:00+00:00",
-                "warning_count": 0,
-                "ai_profile_id": "profile-1",
-                "input_fingerprint": "",
-                "additional_character_discovery_instructions": "",
-                "additional_character_discovery_instructions_fingerprint": "",
-                "token_usage": {},
-                "log_relative_path": "log_ai_characters_saved.log",
-                "checkpoint": None,
-            },
-            indent=2,
-        )
+    (discovery_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(_characters_document([_saved_profile_payload()]), indent=2)
         + "\n",
         encoding="utf-8",
     )
@@ -919,6 +884,33 @@ def _saved_profile_payload() -> dict[str, object]:
             "updated_at": "2026-04-08T12:01:00+00:00",
         }
     )
+
+
+def _characters_document(
+    profiles: list[dict[str, object]],
+) -> dict[str, object]:
+    """Build one strict completed Character Discovery fixture."""
+    return {
+        "status": "completed",
+        "source": {
+            "kind": "original",
+            "language": "en",
+            "fingerprint": "fixture",
+        },
+        "instructions": "",
+        "token_usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "usage_available": False,
+        },
+        "checkpoint": None,
+        "failure": None,
+        "characters": [
+            character_discovery_service._nested_character_profile(profile)  # noqa: SLF001
+            for profile in profiles
+        ],
+    }
 
 
 def _manual_draft_payload(name: str) -> dict[str, object]:

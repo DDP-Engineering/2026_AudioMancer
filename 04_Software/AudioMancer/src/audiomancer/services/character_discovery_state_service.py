@@ -24,7 +24,6 @@ from pathlib import Path
 from audiomancer.services import (
     ai_state_note_service,
     character_discovery_service,
-    chunking_document_service,
     home_presenter_service,
     ui_state_service,
 )
@@ -105,24 +104,37 @@ def build_character_discovery_state(
             "edit_mode": False,
             "dirty": False,
         }
-    source_chunks = chunking_document_service.load_chunks(project_root)
-    operation_state = character_discovery_service.load_operation_state(project_root)
-    report = character_discovery_service.load_character_discovery_report(project_root)
+    source_chunks = character_discovery_service.load_input_chunks(project_root)
+    document = character_discovery_service.load_character_document(project_root)
     profiles = character_discovery_service.load_character_profiles(project_root)
+    operation_state = (
+        None
+        if document is None
+        else character_discovery_service.character_operation_summary(document, len(source_chunks))
+    )
+    if operation_state is not None and document is not None:
+        operation_state["metadata"] = {"token_usage": dict(document["token_usage"])}
+    report = (
+        None
+        if document is None or document.get("status") != character_discovery_service.CHARACTER_DISCOVERY_STAGE_COMPLETED
+        else {
+            "token_usage": dict(document["token_usage"]),
+            "warnings": [],
+        }
+    )
     source_chunk_map = {
         str(chunk.get("chunk_id", "")): str(chunk.get("text", ""))
         for chunk in source_chunks
         if str(chunk.get("chunk_id", "")).strip()
     }
-    persisted_profile_id = _persisted_profile_id(report, operation_state)
     profile_state = build_character_discovery_profile_state(
         settings_payload,
-        persisted_profile_id,
+        None,
     )
     stage_status = _character_discovery_stage_status(report, operation_state)
     has_ai_profiles = bool(profile_state["entries"])
     has_chunking_output = bool(source_chunks)
-    has_discovery_result = bool(report or operation_state or profiles)
+    has_discovery_result = document is not None
     can_start = (
         has_chunking_output
         and has_ai_profiles
@@ -143,7 +155,7 @@ def build_character_discovery_state(
             has_ai_profiles,
             language,
         ),
-        "selected_profile_id": persisted_profile_id or profile_state["selected_profile_id"],
+        "selected_profile_id": profile_state["selected_profile_id"],
         "stage_status": stage_status,
         "character_count": len(profiles),
         "source_chunk_map": source_chunk_map,
