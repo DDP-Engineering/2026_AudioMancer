@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-23ef8601-8f2c-4f44-b302-3addb582293f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The application shall extract supported TXT, Markdown, PDF, RTF, DOCX, ODT, and EPUB project sources into normalized canonical text with self-contained extraction state and report artifacts, and extraction reset shall preserve the registered source document."
+rationale = "Cleanup requires one stable local text input while operators must be able to rerun extraction without losing the imported source."
+verification = "Automated focused pytest coverage passed for supported extraction formats, canonical artifacts, no-OCR rejection, and source-preserving reset."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_writes_self_contained_artifacts_for_txt_source",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_supports_document_formats",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_rejects_empty_pdf_without_ocr",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_reset_extraction_and_downstream_preserves_source_document",
+]
+
+created_on = "2026-07-18T18:14:00Z"
+last_updated = "2026-07-18T21:07:00Z"

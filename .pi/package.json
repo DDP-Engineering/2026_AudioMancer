@@ -1,9 +1,12 @@
 {
   "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder. Do NOT npm publish: keep private:true so the noncommercial license posture is preserved; distribute via git or local path only.",
   "name": "@ddp/pi-aegis",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "description": "Pi adapter for AEGIS. Bridges Pi tool events to the shared Python guard hooks and reuses the shared neutral skills from ../.agentic/skills.",
   "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
   "keywords": ["pi-package"],

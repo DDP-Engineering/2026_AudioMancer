@@ -15,25 +15,9 @@ default_permissions = "agentic-workspace"
 description = "Workspace-scoped editing for manual agentic development."
 extends = ":workspace"
 
-# Root-relative filesystem grants. Keep secret-like files denied even when the
-# workspace itself is writable.
-[permissions.agentic-workspace.filesystem.":workspace_roots"]
-"." = "write"
-".git" = "read"
-".codex" = "read"
-".agentic" = "write"
-"**/*.env" = "deny"
-"**/*.pem" = "deny"
-"**/*.key" = "deny"
-"**/*.p12" = "deny"
-"**/*.pfx" = "deny"
-"**/*_rsa" = "deny"
-"**/*_rsa.pub" = "deny"
-
 # Offline-first default. Enable only when the target project explicitly needs
-# network access and the human approves it. Outward delivery (push, PR, merge)
-# is additionally gated by the shared `.agentic/hooks/delivery_preflight.py`
-# hook and always requires explicit human approval, matching the Claude Code
-# deny list in `.claude/settings.json`.
+# network access and the human approves it. Configured outward-delivery policy
+# is evaluated by `.agentic/hooks/delivery_preflight.py`; Codex approvals are a
+# separate host safety layer.
 [permissions.agentic-workspace.network]
 enabled = false

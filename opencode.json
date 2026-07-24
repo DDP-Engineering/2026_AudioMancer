@@ -10,44 +10,13 @@
       "*": "allow"
     },
     "read": {
-      "*": "allow",
-      ".env": "deny",
-      ".env.*": "deny",
-      "**/*.env": "deny",
-      "**/*.pem": "deny",
-      "**/*.key": "deny",
-      "**/*.p12": "deny",
-      "**/*.pfx": "deny",
-      "**/*_rsa": "deny",
-      "**/*_rsa.pub": "deny",
-      "**/id_rsa": "deny",
-      "**/id_rsa.pub": "deny",
-      "**/id_ed25519": "deny",
-      "**/id_ed25519.pub": "deny"
+      "*": "allow"
     },
     "edit": {
-      "*": "allow",
-      ".env": "deny",
-      ".env.*": "deny",
-      "**/*.env": "deny",
-      "**/*.pem": "deny",
-      "**/*.key": "deny",
-      "**/*.p12": "deny",
-      "**/*.pfx": "deny",
-      "**/*_rsa": "deny",
-      "**/*_rsa.pub": "deny",
-      "**/id_rsa": "deny",
-      "**/id_rsa.pub": "deny",
-      "**/id_ed25519": "deny",
-      "**/id_ed25519.pub": "deny"
+      "*": "allow"
     },
     "bash": {
-      "*": "allow",
-      "git push*": "ask",
-      "gh pr create*": "ask",
-      "gh pr merge*": "ask",
-      "git merge*": "ask",
-      "npm publish*": "ask"
+      "*": "allow"
     },
     "external_directory": {
       "*": "ask"

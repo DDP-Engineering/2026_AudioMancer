@@ -1,0 +1,29 @@
+schema_version = 1
+id = "REQ-FUNC-7862719e-bc39-481e-bfbf-f44e203d0fc8"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI Translation shall validate and atomically persist one authoritative target-language document aligned to canonical chunk IDs, deriving truthful translation/review/completion summaries."
+rationale = "Parallel or malformed translation state would make downstream workflow decisions unsafe."
+verification = "Focused translation-service suite passed within E-0012."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_is_the_only_authoritative_artifact",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_resume_uses_first_empty_chunk_and_current_profile_budget",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_cancel_and_failure_preserve_completed_chunks",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_failure_preserves_previous_translation",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_same_language_translation_uses_llm",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_writes_once_per_completed_chunk_and_review_action",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_invalid_or_legacy_translation_document_is_rejected_without_overwrite",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_budget_reserves_output_and_rejects_insufficient_input",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_prompt_has_stable_rules_and_minimal_user_contract",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_manual_translation_edit_preserves_operator_whitespace",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_partial_segment_failure_preserves_usage_without_partial_chunk",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-19T17:18:00Z"

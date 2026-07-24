@@ -12,9 +12,12 @@
 @details Mirrors the packaged CLI implementation shipped into generated projects.
 @details ``matches_pattern`` (0.2.0, architecture-review follow-up) is now
          case-sensitive on non-Windows hosts, matching the real filesystem.
+@details ``contained_relative_path`` (0.4.0) is the lenient containment check
+         used by policy evaluators reading persisted data; ``relative_to_root``
+         remains the strict form used at input boundaries.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-18
-@version 0.2.0
+@date 2026-07-23
+@version 0.4.0
 """
 
 # IMPORTS
@@ -50,6 +53,31 @@ def relative_to_root(path: str | Path, root: Path) -> str:
     return rel.as_posix()
 
 
+def contained_relative_path(path: str | Path, root: Path) -> str | None:
+    """
+    @brief      Return the repo-relative form of a path, or ``None`` when it
+                escapes the workspace root.
+    @param[in]  path Repository-relative or absolute candidate path.
+    @param[in]  root Workspace root the candidate must stay inside.
+    @return     Normalized POSIX repo-relative path, or ``None`` for an escape.
+    @details    Lenient counterpart to :func:`relative_to_root`. Policy
+                evaluators read persisted data that may predate validation, and
+                an escaping entry there must become a reported finding rather
+                than an exception that aborts the whole evaluation. Use
+                :func:`relative_to_root` at input boundaries, where an escape is
+                an operator error worth refusing immediately, and this function
+                when classifying data already on disk.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-23
+    @version    0.1.0
+    """
+    try:
+        return relative_to_root(path, root)
+    except ValueError:
+        return None
+
+
 def matches_pattern(path: str, pattern: str) -> bool:
     """
     @brief      Match a repo-relative path against one glob pattern.
@@ -57,9 +85,8 @@ def matches_pattern(path: str, pattern: str) -> bool:
     @param[in]  pattern Glob pattern in either slash style.
     @return     True when the path matches the pattern directly or as a tree
                 rooted at the pattern.
-    @details    Shared matcher used by scope checks and the working-tree audit so
-                they stay consistent. The standalone `guard_write_zone.py` hook
-                keeps its own copy because it runs without importing this package.
+    @details    Shared matcher used by scope checks, working-tree audit, and
+                configured read/write hooks so every policy consumer agrees.
     @details    Case-folded only on Windows (``os.name == "nt"``), added
                 0.2.0 (architecture-review follow-up): the previous
                 unconditional ``.lower()`` matched Windows' own
@@ -77,7 +104,7 @@ def matches_pattern(path: str, pattern: str) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-18
-    @version    0.2.0
+    @version    0.3.0
     """
     normalized_path = path.replace("\\", "/")
     normalized_pattern = pattern.replace("\\", "/").rstrip("/")

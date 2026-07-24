@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-47927c04-17bb-429e-aa69-98b083041752"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Before project options are locked, the application shall import or replace one supported source file inside the project root and return normalized source metadata with collision-safe storage."
+rationale = "A stable local source record is required before extraction, while replacement must not delete files outside the project."
+verification = "Automated focused pytest coverage passed for supported source copy, metadata, collision handling, and safe replacement."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_copies_file_and_records_metadata",
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_name_collisions",
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_previous_source_traversal_path",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-18T15:54:00Z"

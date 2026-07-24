@@ -1,0 +1,25 @@
+schema_version = 1
+id = "REQ-FUNC-9a824a09-9a64-4a6a-aafd-34faa1923d68"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "TTS settings UI support shall surface probe/capability status and persist deliberate runtime/planning settings without enabling generation before required capabilities are ready."
+rationale = "Local runtime setup is a prerequisite that must be explicit to operators."
+verification = "Focused settings-page suite passed within E-0016; controller behavior is indirectly exercised through page integration."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_loads_runtime_limits_without_project_plan",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_exposes_simple_connection_status_states",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_keeps_runtime_limits_available_without_project",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_uses_compact_runtime_limit_controls",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_numeric_increment_arrows_change_values",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-19T21:25:00Z"

@@ -16,6 +16,14 @@
  *
  * Auto-discovered as `.pi/extensions/agentic-guard/index.ts` after the project
  * is trusted, and as a Pi package via the `pi.extensions` manifest entry.
+ *
+ * Reachable by both routes, but Pi loads it once, not twice: verified against
+ * a real Pi install with a probe extension in this exact layout (auto-discover
+ * location + `pi.extensions` manifest + `packages: ["./"]` in settings), which
+ * logged a single load and a single registration per run. The guards therefore
+ * run once per tool call — worth re-checking if the layout or Pi's package
+ * resolution changes, because a double registration would run every guard
+ * twice and double every hook's latency.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";

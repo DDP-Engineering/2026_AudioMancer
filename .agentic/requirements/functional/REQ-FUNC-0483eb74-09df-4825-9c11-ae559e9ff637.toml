@@ -1,0 +1,41 @@
+schema_version = 1
+id = "REQ-FUNC-0483eb74-09df-4825-9c11-ae559e9ff637"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Characters controller/page shall keep evidence review read-only until intentional edit/add actions, validate and persist manual records, restore selections on cancellation, coordinate resumable discovery, and preserve approved speech work when a voice-definition-only change permits it."
+rationale = "Operators need a safe review and correction boundary around AI-produced records."
+verification = "Focused Characters UI suites passed: 23 tests within E-0013."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_fields_are_read_only_by_default",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_splitter_keeps_twenty_percent_minimums",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_edit_mode_enables_save_after_change",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_demographic_fields_load_and_save",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_save_without_changes_exits_edit_mode",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_add_mode_creates_draft_row_and_manual_evidence",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_selection_change_emits_requested_character_id",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_preview_supports_find_next_wraparound",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_first_run_shows_info_popup",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_resume_uses_current_selected_profile",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_cancelled_state_resumes_without_prompt",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_passes_extra_prompt_to_discovery",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_add_flow_enters_draft_mode",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_add_rejects_duplicate_name",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_cancel_keeps_view_mode",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_accepts_edit_mode",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_new_character_persists_and_selects",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_delete_flow_confirms_and_removes",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_preserves_speech_approval_for_voice_definition_change",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_with_progress_stays_synchronous",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_progress_clears_after_failure",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_selection_change_cancel_restores_current_row",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-19T20:55:00Z"

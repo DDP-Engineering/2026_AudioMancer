@@ -1,0 +1,39 @@
+schema_version = 1
+id = "REQ-FUNC-899c5ff6-97e1-42a7-bf29-d17357007776"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Narrator Voice controller/page shall keep selection and editor state explicit, update the manifest after deliberate selection, manage sample/profile generation with cancellation/failure recovery, and redact runtime model identifiers from progress."
+rationale = "Narrator selection is a review gate whose long-running actions must be safe and understandable."
+verification = "Focused Narrator Voice UI suites passed: 20 tests within E-0014."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_create_profile_does_not_change_selected_narrator",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_selected_profile_clears_sample_and_selection",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_select_profile_without_sample_updates_manifest",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_select_profile_with_audio_blocks_shows_progress",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_select_profile_progress_clears_after_failure",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_selection_change_refreshes_delete_state",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_failure_preserves_previous_sample",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_count_cancel_stops_before_worker",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_preview_state_change_clears_preview_flag",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_progress_messages_hide_model_id",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_places_select_button_in_profiles_group",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_preview_toggle_updates_label_and_select_enablement",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_status_panel_keeps_language_value_internal",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_renders_ai_profile_selector_and_generation_button",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-19T21:05:00Z"

@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-d3790150-6878-47e3-b91f-bbab5e8f2b4f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Prompt templates shall load only from their configured root, require exact replacement placeholders, and preserve braced source-text values."
+rationale = "Domain prompt contracts must fail clearly rather than submit malformed instructions."
+verification = "Focused prompt suite passed: 2 tests within E-0010."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_requires_exact_placeholders",
+  "04_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_allows_braced_source_text_values",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-19T20:20:00Z"

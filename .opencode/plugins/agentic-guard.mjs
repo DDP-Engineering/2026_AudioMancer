@@ -11,28 +11,43 @@
  * OpenCode plugin that maps tool.execute.before/after events onto the shared
  * `.agentic/hooks/` Python guard scripts. The Python hooks are reused
  * byte-for-byte; this file is only the OpenCode transport adapter.
+ *
+ * Interpreter resolution and the fail-closed decision contract are kept
+ * identical to `.agentic/tools/run_hook.mjs` (the Claude Code / Codex / Qwen
+ * Code launcher) and to `.pi/extensions/agentic-guard/hook-bridge.ts`, so one
+ * repository policy cannot resolve to a different interpreter — or to a
+ * different answer — depending on which agent is driving.
  */
 
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 
-export const PROTECTED_READ_PATTERNS = [
-  ".env",
-  ".env.*",
-  "*.env",
-  "*.pem",
-  "*.key",
-  "*.p12",
-  "*.pfx",
-  "*_rsa",
-  "*_rsa.pub",
-  "id_rsa",
-  "id_rsa.pub",
-  "id_ed25519",
-  "id_ed25519.pub",
-];
+/** Actionable reason used whenever no interpreter can be resolved. */
+export const NO_INTERPRETER_REASON =
+  "AEGIS guard could not run: no Python runtime was found. "
+  + "Set AEGIS_PYTHON to an interpreter, or run a packaged WAEGIS command to register one.";
+
+export function pathCommandExists(command) {
+  if (command.includes("/") || command.includes("\\")) return existsSync(command);
+  const extensions = process.platform === "win32"
+    ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";")
+    : [""];
+  return (process.env.PATH || "").split(delimiter).some((directory) =>
+    extensions.some((extension) => existsSync(join(directory, command + extension))),
+  );
+}
+
+/**
+ * System launcher candidates, in order. Must match `interpreterCandidates()`
+ * in `.agentic/tools/run_hook.mjs`.
+ */
+export function interpreterCandidates() {
+  return process.platform === "win32"
+    ? [{ command: "py", args: ["-3"] }, { command: "python", args: [] }]
+    : [{ command: "python3", args: [] }, { command: "python", args: [] }];
+}
 
 export function resolveInterpreter() {
   const override = process.env.AEGIS_PYTHON;
@@ -47,9 +62,11 @@ export function resolveInterpreter() {
   } catch {
     // No valid registered WAEGIS runtime; continue with system launchers.
   }
-  return process.platform === "win32"
-    ? { command: "python", args: [] }
-    : { command: "python3", args: [] };
+  // Bare `python` on Windows resolves to the Microsoft Store alias stub when no
+  // real interpreter is installed: it spawns successfully, exits non-zero, and
+  // writes nothing to stdout. Probing PATH first keeps that from being mistaken
+  // for a guard that ran and allowed.
+  return interpreterCandidates().find(({ command }) => pathCommandExists(command)) ?? null;
 }
 
 export function defaultSpawn(command, args, input, cwd) {
@@ -99,34 +116,27 @@ export function parseHookDecision(stdout) {
   return null;
 }
 
-function fnmatchToRegExp(pattern) {
-  let regex = "";
-  for (const ch of pattern) {
-    if (ch === "*") regex += ".*";
-    else if (ch === "?") regex += ".";
-    else regex += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-  }
-  return new RegExp(`^${regex}$`);
-}
-
-const PROTECTED_READ_MATCHERS = PROTECTED_READ_PATTERNS.map(fnmatchToRegExp);
-
-export function protectedPathDeny(path) {
-  if (!path) return null;
-  const basename = String(path).replace(/\\/g, "/").split("/").filter(Boolean).pop();
-  if (!basename) return null;
-  const lower = basename.toLowerCase();
-  if (PROTECTED_READ_MATCHERS.some((matcher) => matcher.test(lower))) {
-    return `Reading protected path is blocked: ${path}`;
-  }
-  return null;
-}
-
 export function normalizeToolName(name) {
   const value = String(name ?? "").toLowerCase();
   if (value === "patch") return "apply_patch";
   return value;
 }
+
+/**
+ * OpenCode tools that expose repository file content or file names, and the
+ * tool name each is reported to the shared guard as. The guard keys its
+ * strictness off the name: a `read` that names no file is a malformed read and
+ * is denied, while a `grep` without a scope is a whole-repository search and is
+ * allowed.
+ */
+export const OPENCODE_TOOL_NAMES = {
+  read: "read",
+  grep: "grep",
+  glob: "glob",
+  list: "list",
+};
+
+export const READ_LIKE_TOOLS = new Set(Object.keys(OPENCODE_TOOL_NAMES));
 
 export function pathFromArgs(args = {}) {
   return args.filePath ?? args.file_path ?? args.path ?? args.filename;
@@ -148,10 +158,33 @@ export function hookPayload(cwd, hookEventName, toolName, toolInput, toolUseId, 
   return payload;
 }
 
+/**
+ * Turn one completed hook run into a block reason, or `null` to allow.
+ *
+ * The shared Python guards always exit 0 and signal a denial by printing a
+ * decision on stdout, so a non-zero exit is always an abnormal guard failure
+ * and never an allow. Reading only stdout — the previous behavior — made a
+ * crashed guard indistinguishable from one that ran and permitted the call.
+ */
+export function decideFromResult(hookName, result) {
+  const denial = parseHookDecision(result?.stdout ?? "");
+  if (denial) return denial;
+  const code = result?.code ?? 0;
+  if (code === 0) return null;
+  const stderr = (result?.stderr ?? "").trim();
+  const detail = stderr
+    ? stderr.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).pop()
+    : "no diagnostic output";
+  return `AEGIS guard ${hookName} exited with status ${code} without a decision; blocking. ${detail}`;
+}
+
 export function createHookRunner(cwd, options = {}) {
   const spawnImpl = options.spawn ?? defaultSpawn;
-  const interpreter = options.interpreter ?? resolveInterpreter();
+  // `?? resolveInterpreter()` would silently re-resolve an explicit null, so an
+  // injected "no interpreter available" case must be honored by key presence.
+  const interpreter = "interpreter" in options ? options.interpreter ?? null : resolveInterpreter();
   return async function runPythonHook(hookName, payload) {
+    if (!interpreter) return NO_INTERPRETER_REASON;
     const hookPath = join(cwd, ".agentic", "hooks", hookName);
     let result;
     try {
@@ -161,10 +194,10 @@ export function createHookRunner(cwd, options = {}) {
         JSON.stringify(payload),
         cwd,
       );
-    } catch {
-      return null;
+    } catch (error) {
+      return `AEGIS guard could not run ${hookName}: ${error?.message ?? String(error)}`;
     }
-    return parseHookDecision(result.stdout);
+    return decideFromResult(hookName, result);
   };
 }
 
@@ -172,8 +205,18 @@ export async function handleBeforeTool(input, output, cwd, runPythonHook) {
   const tool = normalizeToolName(input?.tool);
   const args = output?.args ?? input?.args ?? {};
 
-  if (tool === "read") {
-    const reason = protectedPathDeny(pathFromArgs(args));
+  // `read` returns file contents; `grep` returns matching lines from them;
+  // `glob` and `list` enumerate paths. All four can target a protected path, so
+  // all four are checked. The real tool name is forwarded rather than a
+  // hardcoded "Read" so the guard can tell a read that must name a file from a
+  // search whose scope argument is optional.
+  if (READ_LIKE_TOOLS.has(tool)) {
+    const toolInput = { file_path: pathFromArgs(args) };
+    if (tool === "glob") toolInput.pattern = args.pattern;
+    const reason = await runPythonHook(
+      "guard_read_path.py",
+      hookPayload(cwd, "PreToolUse", OPENCODE_TOOL_NAMES[tool], toolInput, undefined, undefined),
+    );
     if (reason) throw new Error(reason);
     return;
   }

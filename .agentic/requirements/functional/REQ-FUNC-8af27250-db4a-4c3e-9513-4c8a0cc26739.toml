@@ -1,0 +1,23 @@
+schema_version = 1
+id = "REQ-FUNC-8af27250-db4a-4c3e-9513-4c8a0cc26739"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Text Cleanup state orchestration shall build source and cleaned previews from project artifacts, save confirmed manual clean-text edits, apply compatible AI spacing, derive manifest transitions, and reset cleanup or downstream artifacts according to workflow impact while preserving extraction when requested."
+rationale = "The UI and later workflow stages need one consistent projection of cleanup state and predictable invalidation after operator changes."
+verification = "Automated focused pytest coverage passed for page-state projection, manual edits, spacing, manifest transitions, and cleanup/downstream reset behavior."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_text_cleanup_state_loads_previews_and_notes",
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_save_cleaned_text_edit_persists_text_and_resets_downstream",
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_manifest_after_cleanup_reset_preserves_extraction_outputs",
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_reset_removes_stale_cleaned_text_metadata",
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_applies_spacing_and_refreshes_project_state",
+]
+
+created_on = "2026-07-18T18:14:00Z"
+last_updated = "2026-07-18T21:07:00Z"

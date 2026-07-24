@@ -1,0 +1,36 @@
+schema_version = 1
+id = "REQ-FUNC-ff8864d7-9d4a-4628-870b-87d0ec7b1ac9"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The operation runtime shall persist the shared compact operation-state envelope and JSON artifacts atomically, tolerate missing or malformed optional state, constrain all project-relative artifact paths to the active project, and reset only configured affected artifacts while preserving requested work."
+rationale = "Every workflow stage needs safe resumable state and must not delete data outside its project or preservation policy."
+verification = "Focused operation-runtime suite passed: 18 relevant tests within E-0009."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_progress_percent_clamps_to_zero_and_hundred",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_emit_progress_update_uses_standard_payload_shape",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_emit_progress_update_can_omit_token_usage_payload",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_utc_now_iso_uses_utc_without_microseconds",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_build_operation_state_payload_uses_shared_envelope",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_operation_json_artifact_round_trips_via_shared_io",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_load_operation_state_file_accepts_missing_and_dict_payloads",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_load_operation_state_file_tolerates_malformed_json",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_project_artifact_helpers_handle_missing_and_malformed_inputs",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_optional_string_and_runtime_value_helpers_normalize_null_like_values",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_project_relative_path_resolver_rejects_escapes",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_clears_known_root_artifacts_only",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_requested_narrator_artifacts",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_text_revision_artifacts",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_resolve_operation_path_uses_project_root_without_creating_folders",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_not_started_state_only",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_compact_character_discovery_state",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_zero_audio_blocks_metadata",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-19T17:10:00Z"

@@ -60,20 +60,47 @@ below an existing install.
 
 ## Runtime Requirements
 
-- Python 3.11 or newer, supplied by `AEGIS_PYTHON`, the packaged-WAEGIS
+- Python **3.11 or newer**, supplied by `AEGIS_PYTHON`, the packaged-WAEGIS
   registered runtime, or the system. The CLI has no third-party dependencies.
-- `git` on `PATH`. The secret scan (`INV-7`), `working-tree audit`, `impact`,
-  and `delivery-preflight` shell out to `git`.
+- `git` **2.30 or newer** on `PATH`. The secret scan (`INV-7`),
+  `working-tree audit`, `impact`, and `delivery-preflight` shell out to `git`.
+- Node **18 or newer** on `PATH` for the Claude Code, Codex, and Qwen Code
+  adapters, which dispatch every guard through
+  `node .agentic/tools/run_hook.mjs`. **Without it those guards cannot launch,
+  and a guard that cannot launch does not block — tool calls run unchecked.**
+  OpenCode runs its guard plugin in its own runtime and needs no system Node;
+  Pi is installed with `npm` and therefore always has one. `waegis doctor`
+  reports a missing or too-old Node as a warning rather than an error, because
+  installing it afterwards makes every hook work with no repair or re-run.
+- At least **1 GiB** free disk at the target, checked during deployment.
+- **Start the agent from the repository root** — the directory holding
+  `.agentic/`. Agent hosts locate their project configuration relative to the
+  directory they were launched in; started in a subdirectory, a host finds no
+  project config, registers no hooks, and runs the whole session with every
+  guard silently absent. Nothing reports this: the tool calls are not blocked,
+  they are simply never inspected. It happens before any hook loads, so no hook
+  can detect it, and it is not fixable by changing how the hooks are addressed.
+  See `.agentic/hooks/README.md`. To confirm guards are live in a session, ask
+  the agent to read a path covered by an enforced
+  `guardrails.protected_paths` read policy; a loaded configuration denies it.
 
-Degraded behavior without git:
+Behavior without git:
 
 - If the `git` executable is missing, `INV-7` (`Clean secrets`) reports
   `Could not inspect git diff for secrets` and fails closed, which blocks
   `delivery-preflight`.
-- If the directory is not a git repository, the git-based scans see no changes:
-  `impact` and `working-tree audit` return nothing and `INV-7` finds nothing to
-  scan. These checks no-op rather than protect, so run the workflow inside a git
-  repository.
+- If `git status` cannot be read at all — the executable is missing, the
+  directory is not a repository, or git exits non-zero for any other reason —
+  `working-tree audit` records a `git-status-unavailable` blocking finding,
+  which blocks `delivery-preflight`. An unreadable working tree is never
+  reported as a clean one: the audit exists to prove nothing blocking is
+  staged, and it cannot prove that from a status it never received.
+- `impact` widens its result set from `git status` as a convenience, so an
+  unreadable status simply contributes no extra paths there. The blocking
+  judgement belongs to `working-tree audit` alone and is not duplicated.
+
+Run the workflow inside a git repository. Delivery is a git operation, so
+`delivery-preflight` cannot pass outside one.
 
 ## Workflow Stages
 
@@ -98,14 +125,11 @@ skill, or invoked by a hook. The CLI records state in `.agentic/`.
 
 | File | Purpose | Main writers |
 | --- | --- | --- |
-| `.agentic/current_run` | Stores the active run id. | `start` |
+| `.agentic/.workspace/state/current_run` | Stores the ignored, per-worktree active run ID. | `start` |
 | `.agentic/runs/<run-id>/graph.json` | Stores current stage, intent alignment, specs, checks, evidence, change units, decisions, and access mode. | `start`, `next`, `set-stage`, `set-access-mode`, `alignment`, `add-spec`, `add-check`, `record-evidence`, `record-change`, `supersede-evidence` |
 | `.agentic/runs/<run-id>/journal.jsonl` | Append-only event log for workflow events and hook evidence. | `start`, `set-stage`, `set-access-mode`, `alignment`, `requirement activate`, `record-evidence`, `gates run`, `post_tool_evidence.py` |
 | `.agentic/runs/<run-id>/report.md` | Human-readable delivery report. | `report` |
-| `.agentic/requirements/*.md` | Durable requirement registers. | Human/agent edits, `requirement activate` |
-| `.agentic/registry/requirements.json` | Requirement registry cache. | `registry sync` |
-| `.agentic/registry/checks.json` | Requirement-to-check registry cache. | `registry sync` |
-| `.agentic/registry/features.json` | Active feature/run summary cache. | `registry sync` |
+| `.agentic/requirements/<category>/<code>-<uuid>.toml` | One canonical current requirement snapshot. | `requirement create`, `requirement update`, `requirement activate` |
 
 ## Flow Integration Summary
 
@@ -113,15 +137,46 @@ skill, or invoked by a hook. The CLI records state in `.agentic/`.
 | --- | --- | --- |
 | Intake | `start`, `status`, `audit traceability`, `audit coverage`, `impact` | Human prompt, `agentic-development`, `regression-traceability` |
 | Intent Alignment | `alignment`, `status`, `next`, `set-stage` | `agentic-development`, `agentic-adoption`, ticket-driven orchestrators |
-| Requirement | `add-spec`, `requirement activate`, `invariants`, `set-stage` | `agentic-development`, human approval |
+| Requirement | `requirement create`, `requirement show`, `requirement list`, `requirement update`, `add-spec`, `requirement activate`, `invariants`, `set-stage` | `agentic-development`, human approval |
 | Check | `add-check`, `record-evidence`, `set-stage` | `agentic-development`, test authoring gate |
 | Implementation | `record-evidence`, `record-change`, `gates run`, `invariants` | `agentic-development`, `write-component-documentation`, `python-codestyle-audit` |
 | Validation | `gates run`, `audit traceability`, `audit coverage`, `impact`, `invariants`, `record-evidence` | `agentic-development`, `regression-traceability`, `documentation-audit`, `python-codestyle-audit` |
-| Delivery | `registry sync`, `registry audit`, `working-tree audit`, `delivery-preflight`, `report` | `agentic-delivery`, `delivery_preflight.py` hook, human approval |
+| Delivery | `audit traceability`, `audit coverage`, `working-tree audit`, `delivery-preflight`, `report` | `agentic-delivery`, `delivery_preflight.py` hook, human approval |
 | Adoption | `start --kind adoption`, `next`, `set-stage`, `status`, `adoption component-status`, `adoption scope-check`, `adoption baseline`, `report` | `agentic-adoption`, human approval |
 | Any stage | `status`, `next`, `set-stage`, `set-access-mode`, `supersede-evidence` | Human routing, skills, troubleshooting |
 
 ## Command Reference
+
+Every CLI operation first loads and validates `.agentic/workflow.toml`. A
+configuration failure exits with status `2` before the command performs its
+action. `config validate --json` and `config show --effective --json` expose
+the stable machine-readable configuration contract.
+
+The graph-dependent commands below accept `--run-id <id>` on their leaf
+parser: `status`, `next`, `invariants`, `report`, `delivery-preflight`,
+`set-stage`, `set-access-mode`, `alignment`, `supersede-evidence`, `gates run`,
+`requirement activate`, `add-spec`, `add-check`, `record-evidence`, and
+`record-change`. An explicit ID wins over the per-worktree pointer and never
+rewrites it. Run-resolution failures exit with status `2` and use the stable
+`RUN-POINTER-*` or `RUN-ID-NOT-FOUND` contract.
+
+Repository-wide commands reject `--run-id`: `config`, `audit`, `impact`,
+`requirement create/show/list/update`, `working-tree audit`, and the read-only
+`adoption` commands. `start` creates and selects a new run and also rejects an
+explicit selector.
+
+### `config validate` and `config show`
+
+Validate the mandatory configuration or print every effective mode and active
+rule collection.
+
+```powershell
+<workflow> config validate --json
+<workflow> config show --effective --json
+```
+
+Both commands exit with status `2` and emit one actionable typed error when
+the configuration is missing, malformed, incomplete, or inconsistent.
 
 ### `start`
 
@@ -150,12 +205,12 @@ Arguments:
 | --- | --- | --- |
 | `--kind feature|fix|change|adoption` | Yes | Classifies the run intent. |
 | `--statement "<text>"` | Yes | Human-readable statement of the requested work. |
-| `--access-mode standard|repo-wide` | No | Defaults to `standard`. `repo-wide` relaxes stage write zones for normal repo files. |
+| `--access-mode standard|repo-wide` | No | Defaults to `standard`. Under `stage_restricted`, `repo-wide` bypasses stage lists but not protected paths. |
 | `--access-reason "<text>"` | Required for `repo-wide` | Records why broad access was approved. |
 | `--scope-hint <root>` | No | Repeatable. Adds an intentional root to the INV-5 scope advisory and records it in the run intent and journal. |
 
-Scope hints affect advisory scope evaluation only. They do not relax stage
-write zones, protected-file rules, or host filesystem permissions.
+Scope hints affect advisory scope evaluation only. They do not relax configured
+stage write access, protected-path rules, or host filesystem permissions.
 
 Stage: `intake` for feature, fix, and change runs; `adoption-intake` for
 adoption runs.
@@ -164,7 +219,7 @@ Flow caller: human prompt, `agentic-development`, or `agentic-adoption`.
 
 Writes:
 
-- `.agentic/current_run`
+- `.agentic/.workspace/state/current_run`
 - `.agentic/runs/<run-id>/graph.json`
 - `.agentic/runs/<run-id>/journal.jsonl`
 
@@ -173,7 +228,7 @@ Writes:
 Prints the active run summary as JSON.
 
 ```powershell
-<workflow> status
+<workflow> status --run-id <existing-run-id>
 ```
 
 Stage: any stage.
@@ -183,7 +238,7 @@ Flow caller: human prompt, `agentic-development`, `agentic-adoption`,
 
 Reads:
 
-- `.agentic/current_run`
+- `.agentic/.workspace/state/current_run`
 - `.agentic/runs/<run-id>/graph.json`
 - configured workflow state needed for invariant checks
 
@@ -192,7 +247,7 @@ Reads:
 Moves the active run to the next built-in stage.
 
 ```powershell
-<workflow> next
+<workflow> next --run-id <existing-run-id>
 ```
 
 Stage: any stage except the final stage for that run kind. When already in
@@ -214,11 +269,11 @@ Writes:
 Routes the active run to a specific stage and records the human-approved reason.
 
 ```powershell
-<workflow> set-stage requirement --reason "Human requested a requirement revision"
+<workflow> set-stage requirement --run-id <existing-run-id> --reason "Human requested a requirement revision"
 ```
 
 ```powershell
-<workflow> set-stage check --reason "Human approved writing the failing tests"
+<workflow> set-stage check --run-id <existing-run-id> --reason "Human approved writing the failing tests"
 ```
 
 Arguments:
@@ -360,7 +415,7 @@ when the active run already contains that spec id.
 Adds a run-local check or test expectation to `graph.json`.
 
 ```powershell
-<workflow> add-check --id CHECK-001 --level test --cites-spec SPEC-001 --cites-requirement REQ-FUNC-001 --command "python -m pytest tests/test_export.py::test_invoice_export" --path tests/test_export.py --state red
+<workflow> add-check --id CHECK-001 --level test --cites-spec SPEC-001 --cites-requirement <requirement-id> --command "python -m pytest tests/test_export.py::test_invoice_export" --path tests/test_export.py --state red
 ```
 
 Arguments:
@@ -445,7 +500,13 @@ Arguments:
 | Argument | Required | Meaning |
 | --- | --- | --- |
 | `--id <id>` | Yes | Run-local change unit id. |
-| `--path <path>` | Yes | Repeatable. A touched path. |
+| `--path <path>` | Yes | Repeatable. A touched path, repository-relative or absolute inside the repository. |
+
+Paths are normalized to repository-relative form before they are stored, and
+repeated spellings of the same path are stored once, so scope and component
+checks compare recorded paths against repository-relative globs consistently.
+A path that resolves outside the repository is refused: the command exits
+without recording anything and names the offending path.
 
 Stage: `implementation`, sometimes `validation` if change units are recorded
 after final cleanup.
@@ -488,50 +549,70 @@ Writes:
 - `graph.json` decisions
 - `journal.jsonl` `evidence.superseded` event
 
+### `requirement create`
+
+Creates one independent `Planned` UUIDv4-backed TOML snapshot and returns its
+ID, repository-relative path, and complete record as JSON.
+
+```powershell
+<workflow> requirement create --category functional --priority Must --requirement "Invoice export writes CSV." --rationale "Operators need portable exports." --verification "Inspection: inspect the exported CSV" --affected-path src/exporter.py
+```
+
+The command never accepts a caller-supplied ID, status, or run selector and
+never edits a shared counter or register.
+
+### `requirement show` and `requirement list`
+
+Read canonical current snapshots without resolving a run or writing a journal.
+
+```powershell
+<workflow> requirement show --id <requirement-id> --json
+<workflow> requirement list --category functional --status Planned --json
+```
+
+`--json` is required. Lists are ordered by ID.
+
+### `requirement update`
+
+Applies atomic partial scalar changes and complete replacement semantics for
+linked tests and affected paths.
+
+```powershell
+<workflow> requirement update --id <requirement-id> --priority Should --linked-test tests/test_export.py::test_invoice_export --affected-path src/exporter.py
+```
+
+Omitted collections remain unchanged. Supplied repeatable values replace the
+complete set; `--clear-linked-tests` and `--clear-affected-paths` explicitly
+replace their set with empty. At least one update option is required. The ID,
+category, schema version, and creation date are immutable.
+
 ### `requirement activate`
 
-Updates a durable requirement row from `Planned` to `Active`, adds linked tests,
-updates verification text, and refreshes the row timestamp.
-
-Every newly supplied linked-test identifier is resolved before the register is
-written. If any identifier does not resolve, the command exits cleanly with the
-identifier and reason, and leaves the requirement register unchanged. An
-activation with manual verification and no linked tests keeps the same behavior.
+Atomically changes one current snapshot to `Active`, replaces its complete
+linked-test set, updates verification, and journals the result to the selected
+run.
 
 ```powershell
-<workflow> requirement activate --id REQ-FUNC-001 --linked-test tests/test_export.py::test_invoice_export --verification "Automated pytest coverage"
+<workflow> requirement activate --run-id <existing-run-id> --id <requirement-id> --linked-test tests/test_export.py::test_invoice_export --verification "Automated test"
 ```
 
 ```powershell
-<workflow> requirement activate --id REQ-DOC-001 --verification "Manual inspection of generated documentation"
+<workflow> requirement activate --id <requirement-id> --verification "Inspection: inspect generated documentation"
 ```
 
-Arguments:
-
-| Argument | Required | Meaning |
-| --- | --- | --- |
-| `--id <requirement-id>` | Yes | Durable requirement id. |
-| `--linked-test <test-id>` | Required unless verification is manual | Repeatable. Adds exact linked test ids. |
-| `--verification "<method>"` | Yes | Verification method. Manual verification text is allowed. |
-
-Stage: usually requirement after approval, or validation/delivery after checks
-have passed and a planned requirement needs activation.
-
-Flow caller: `agentic-development`, `regression-traceability`, or
-`agentic-delivery`.
+Every supplied selector is resolved before the TOML file is replaced. An empty
+selector set is accepted only when verification begins with `Manual:` or
+`Inspection:` and contains non-empty method text. `--run-id` is optional and
+uses the explicit-first selection contract.
 
 Writes:
 
-- `.agentic/requirements/*.md`
-- `journal.jsonl` `requirement.activated` event
-
-Exit behavior: exits with a descriptive error when the requirement is missing,
-the activation lacks both linked tests and manual verification, or a newly
-supplied linked test does not resolve.
+- `.agentic/requirements/<category>/<code>-<uuid>.toml`
+- the selected run's `journal.jsonl` `requirement.activated` event
 
 ### `audit traceability`
 
-Validates durable requirement rows and linked tests.
+Validates canonical requirement snapshots and their current linked-test sets.
 
 ```powershell
 <workflow> audit traceability
@@ -545,7 +626,7 @@ Flow caller: `agentic-development`, `regression-traceability`, and
 Reads:
 
 - `.agentic/workflow.toml`
-- `.agentic/requirements/*.md`
+- `.agentic/requirements/<category>/*.toml`
 - configured test roots
 
 Exit behavior: exits with non-zero status when audit issues exist.
@@ -566,7 +647,7 @@ Flow caller: `agentic-development`, `regression-traceability`, and
 Reads:
 
 - `.agentic/workflow.toml`
-- `.agentic/requirements/*.md`
+- `.agentic/requirements/<category>/*.toml`
 - `.agentic/requirements/coverage_waivers.txt`
 - configured coverable source roots
 
@@ -605,57 +686,11 @@ Reads:
 - configured coverable roots
 - Git working set when no paths are passed
 
-### `registry sync`
-
-Refreshes JSON registry caches from durable requirement registers and the active
-run graph.
-
-```powershell
-<workflow> registry sync
-```
-
-Stage: delivery, sometimes validation.
-
-Flow caller: `agentic-delivery` and `regression-traceability`.
-
-Writes:
-
-- `.agentic/registry/requirements.json`
-- `.agentic/registry/checks.json`
-- `.agentic/registry/features.json`
-
-### `registry audit`
-
-Validates that registry cache files exist and contain valid JSON. It also
-compares the cached requirement records and linked-test keys with the current
-durable requirement registers. The audit is read-only and never refreshes a
-stale cache automatically.
-
-```powershell
-<workflow> registry audit
-```
-
-Stage: delivery.
-
-Flow caller: `agentic-delivery`.
-
-Reads:
-
-- `.agentic/requirements/*.md`
-- `.agentic/registry/requirements.json`
-- `.agentic/registry/checks.json`
-- `.agentic/registry/features.json`
-- `.agentic/registry/components.json`
-
-Exit behavior: exits with non-zero status when registry files are missing or
-invalid, or when the requirements/checks cache is stale. A stale-cache finding
-names `registry sync` as the required fix.
-
 ### `working-tree audit`
 
 Reports working-tree findings that matter for delivery. Arbitrary untracked
-human files are advisory by default; protected paths and configured blocked
-patterns are blocking.
+human files are advisory unless they match configured protected paths,
+working-tree blockers, adoption source-change policy, or secret patterns.
 
 ```powershell
 <workflow> working-tree audit
@@ -668,7 +703,9 @@ Flow caller: `agentic-delivery`.
 Reads:
 
 - Git working tree status
-- `.agentic/workflow.toml` `[working_tree]` configuration
+- `.agentic/workflow.toml` `[guardrails.working_tree]`,
+  `[guardrails.protected_paths]`, `[guardrails.secrets]`, and
+  `[adoption.source_changes]` policies
 
 Exit behavior: exits with non-zero status when blocking findings exist.
 
@@ -753,11 +790,11 @@ Exit behavior: exits zero after printing Markdown.
 Runs configured validation gate commands from `.agentic/workflow.toml`.
 
 ```powershell
-<workflow> gates run
+<workflow> gates run --run-id <existing-run-id>
 ```
 
 ```powershell
-<workflow> gates run --name test --name lint --timeout 600
+<workflow> gates run --run-id <existing-run-id> --name test --name lint --timeout 600
 ```
 
 Arguments:
@@ -765,7 +802,8 @@ Arguments:
 | Argument | Required | Meaning |
 | --- | --- | --- |
 | `run` | Yes | The only supported gates action. |
-| `--name <gate>` | No | Repeatable. Runs selected configured gates only. |
+| `--run-id <id>` | No | Explicit run selection; otherwise uses the local pointer. |
+| `--name <gate>` | No | Repeatable. Runs only the selected `test` or `lint` gate; any other name is rejected. |
 | `--timeout <seconds>` | No | Defaults to `300`. |
 
 Stage: validation, sometimes implementation when checking a focused change.
@@ -790,7 +828,7 @@ command fails.
 Evaluates workflow invariants against the active run.
 
 ```powershell
-<workflow> invariants
+<workflow> invariants --run-id <existing-run-id>
 ```
 
 Stage: after every gate, especially requirement, validation, and delivery.
@@ -812,7 +850,7 @@ exist.
 Runs the deterministic delivery readiness checks.
 
 ```powershell
-<workflow> delivery-preflight
+<workflow> delivery-preflight --run-id <existing-run-id>
 ```
 
 Stage: delivery.
@@ -825,7 +863,7 @@ Checks:
 - invariants
 - traceability audit
 - coverage audit
-- registry audit
+- component audit
 - working-tree audit
 
 Exit behavior: exits with non-zero status if any blocking finding exists. A
@@ -837,7 +875,7 @@ or publish.
 Writes and prints the human-readable workflow report.
 
 ```powershell
-<workflow> report
+<workflow> report --run-id <existing-run-id>
 ```
 
 Stage: delivery.
@@ -851,26 +889,34 @@ Writes:
 
 ## Hook Integration
 
-These four standalone hook scripts are the runtime source of truth and are
+These five standalone hook scripts are the runtime source of truth and are
 reused unchanged by all five agent adapters:
 
 - **Codex** wires them through `.codex/hooks.json` (PreToolUse / PostToolUse
   command hooks); edit inputs run both the write-zone guard and secret scan.
+  Codex reads through its shell tool, so its reads are covered by the command
+  guards rather than a separate read matcher.
 - **Claude Code** wires them through `.claude/settings.json` (matching hook
-  bindings plus protected-path Read/Edit/Write denies); edit inputs run both
-  the write-zone guard and secret scan.
+  bindings plus the protected-read guard on `Read` / `Grep` / `Glob`); edit
+  inputs run both the write-zone guard and secret scan.
 - **Qwen Code** wires them through `.qwen/settings.json`; `WriteFile` / `Edit`
-  inputs run both the write-zone guard and secret scan, while Bash input also
-  runs delivery preflight. See `.qwen/README.md`.
+  inputs run both the write-zone guard and secret scan, Bash input also runs
+  delivery preflight, and the read, search, glob, and directory-listing tools
+  run the protected-read guard. See `.qwen/README.md`.
 - **Pi** wires them through the `.pi/` bridge extension, which maps Pi
   `tool_call` / `tool_result` events onto the same JSON-on-stdin hook protocol.
-  It passes full write/edit input to `secret_scan.py`, and a native check denies
-  reads of protected secret/key files. See `.pi/README.md`.
+  It passes full write/edit input to `secret_scan.py`, and its `read`, `grep`,
+  `find`, and `ls` tools run `guard_read_path.py`. See `.pi/README.md`.
 - **OpenCode** wires them through `.opencode/plugins/agentic-guard.mjs`, which
   maps `tool.execute.before` / `tool.execute.after` events onto the same
   JSON-on-stdin hook protocol. The plugin also scans write/edit content for
-  secrets and denies protected secret/key reads natively. See
-  `.opencode/README.md`.
+  secrets and runs the protected-read guard on its `read`, `grep`, `glob`, and
+  `list` tools. See `.opencode/README.md`.
+
+Each adapter transport fails closed: because the shared guards always exit 0 and
+signal a denial on stdout, a guard that cannot run — a missing or unlaunchable
+Python interpreter, or a hook that crashed — is treated as a block, not an
+allow.
 
 ### `guard_write_zone.py`
 
@@ -884,17 +930,18 @@ When it runs: before edit tools.
 
 What it reads:
 
-- `.agentic/current_run`
+- `.agentic/.workspace/state/current_run`
 - `.agentic/runs/<run-id>/graph.json`
 - `.agentic/workflow.toml`
 
-What it does: allows or denies file edits based on the current stage, access
-mode, write zones, and protected path patterns.
+What it does: allows or denies file edits from the validated write-access and
+protected-path policies. Unrestricted write access does not resolve a run;
+stage-restricted access resolves stage and access mode through the shared
+workspace-state API.
 
-If no active run exists, edits outside `.agentic/` remain denied, but the
-denial identifies the missing run and includes copyable Windows and POSIX
-`start` command examples. Once a run exists, the normal stage-specific denial
-message is used.
+If stage-restricted access has no valid active run, the hook denies with the
+stable `RUN-POINTER-*` code and remediation. It never guesses an intake stage
+or reads the retired `.agentic/current_run` path.
 
 Related CLI commands:
 
@@ -902,6 +949,37 @@ Related CLI commands:
 - `next`
 - `set-stage`
 - `set-access-mode`
+
+### `guard_read_path.py`
+
+Hook path:
+
+```text
+.agentic/hooks/guard_read_path.py
+```
+
+When it runs: before the read, content-search, glob, and directory-listing
+tools on every adapter that exposes them (a host's read, grep, glob, and
+find/list tools).
+
+What it reads: the validated `.agentic/workflow.toml`
+`[guardrails.protected_paths]` policy, applied only when `read` is a configured
+operation.
+
+What it does: denies access to a configured protected path whether the agent
+targets it through the single-file read tool or through a content-search, glob,
+or listing tool — so a protected path cannot be reached by asking a host for the
+same bytes through its grep, or the same file names through its glob or listing
+tool, instead of its read tool. A search that names no path — a
+repository-wide grep — is allowed, because no pre-tool hook can rewrite tool
+output; the guard blocks a protected path from being *targeted*, not every
+search that might incidentally surface a line from one. When the policy is
+`disabled` or does not list `read`, it returns an explicit allow. Configuration
+and path failures become actionable hook denials; there are no built-in
+protected paths or permissive fallbacks.
+
+Related CLI commands: none directly; the protected-read policy comes from
+`.agentic/workflow.toml`.
 
 ### `post_tool_evidence.py`
 
@@ -950,36 +1028,42 @@ Hook path:
 When it runs: before shell commands and edit/write tools on every supported
 adapter.
 
-What it reads: tool input plus `.agentic/workflow.toml` `[secrets].patterns`.
+What it reads: tool input plus the validated
+`.agentic/workflow.toml` `[guardrails.secrets]` policy.
 
-What it does: scans tool input against the union of built-in and configured
-secret-like patterns and denies the operation when a possible secret appears.
-Missing or unreadable configuration falls back to built-ins; invalid configured
-regular expressions are ignored so configuration cannot brick tool use.
+What it does: when mode is `enforce`, scans tool input using only configured
+regular expressions and denies the operation when a possible secret appears.
+When mode is `disabled`, it returns an explicit allow result. Missing or invalid
+configuration is an actionable deny with the shared `CONFIG-*` code and
+remediation; there are no built-in secret rules or permissive fallbacks.
 
 Related CLI commands: none directly, but it protects the same workflow surface.
 
 ## Typical Full Flow
 
 ```powershell
+<workflow> config validate --json
+<workflow> config show --effective --json
 <workflow> start --kind feature --statement "Add invoice export"
 <workflow> audit traceability
 <workflow> audit coverage
 <workflow> impact src/exporter.py tests/test_export.py
 <workflow> next
 <workflow> alignment --source "human prompt" --understanding "Add invoice export." --scope "in: exporter command; out: invoice model changes" --acceptance "Invoice export writes a CSV file." --risk low --decision proceed --reason "No open questions and low risk"
+<workflow> requirement list --category functional --json
+<workflow> requirement create --category functional --priority Must --requirement "Invoice export writes a CSV file." --rationale "Operators need portable exports." --verification "Automated test" --affected-path src/exporter.py
 <workflow> add-spec --id SPEC-001 --tag behavior --statement "Invoice export writes a CSV file."
-<workflow> add-check --id CHECK-001 --cites-spec SPEC-001 --cites-requirement REQ-FUNC-001 --command "python -m pytest tests/test_export.py::test_invoice_export" --path tests/test_export.py --state red
+<workflow> add-check --id CHECK-001 --cites-spec SPEC-001 --cites-requirement <requirement-id> --command "python -m pytest tests/test_export.py::test_invoice_export" --path tests/test_export.py --state red
 <workflow> record-evidence --kind test-run --result fail --stage check --check-id CHECK-001 --summary "Export test fails before implementation." --command "python -m pytest tests/test_export.py::test_invoice_export"
 <workflow> set-stage implementation --reason "Human approved implementation after red check"
 <workflow> record-evidence --kind test-run --result pass --stage implementation --check-id CHECK-001 --summary "Export test passes after implementation." --command "python -m pytest tests/test_export.py::test_invoice_export"
 <workflow> record-change --id CU-001 --path src/exporter.py --path tests/test_export.py
+<workflow> requirement update --id <requirement-id-returned-by-create> --linked-test tests/test_export.py::test_invoice_export --affected-path src/exporter.py
 <workflow> set-stage validation --reason "Implementation is ready for validation"
 <workflow> gates run --name test
+<workflow> requirement activate --id <requirement-id-returned-by-create> --linked-test tests/test_export.py::test_invoice_export --verification "Automated test"
 <workflow> audit traceability
 <workflow> audit coverage
-<workflow> registry sync
-<workflow> registry audit
 <workflow> set-stage delivery --reason "Validation passed and human approved delivery preparation"
 <workflow> delivery-preflight
 <workflow> report

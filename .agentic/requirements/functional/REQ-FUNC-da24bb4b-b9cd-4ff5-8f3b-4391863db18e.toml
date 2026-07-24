@@ -1,0 +1,29 @@
+schema_version = 1
+id = "REQ-FUNC-da24bb4b-b9cd-4ff5-8f3b-4391863db18e"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "VoiceWeaver runtime support shall probe and expose only usable runtime capabilities and safely support configured TTS invocation."
+rationale = "Generation must not begin from stale or unsupported local runtime assumptions."
+verification = "Focused runtime suite passed within E-0016."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_normalizes_models_and_capabilities",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_maps_auth_failures",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_rejects_invalid_models_payload",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_build_capability_matrix_ignores_unhealthy_models",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_generation_payloads_use_current_contract",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_omits_romanian_language",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surface",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_endpoint_url_avoids_duplicate_v1_suffix",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_stops_before_status_read_when_cancelled",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-19T21:25:00Z"

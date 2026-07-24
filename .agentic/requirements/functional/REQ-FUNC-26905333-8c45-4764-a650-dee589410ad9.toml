@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-26905333-8c45-4764-a650-dee589410ad9"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Audio-block artifacts shall use deterministic project-local names/paths and validate WAV inputs/outputs before they enter the generated-audio plan."
+rationale = "Assembly needs durable ordered artifacts rather than ambiguous or malformed files."
+verification = "Focused artifact suite passed within E-0016."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_paths_are_deterministic",
+  "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_wav_validation_and_stitching",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-19T17:33:00Z"

@@ -13,9 +13,12 @@
 @details INV-7 (0.3.0, code-review follow-up) now scans `git diff HEAD` plus
          untracked file content instead of only the unstaged `git diff`, which
          previously missed staged and newly created files.
+@details INV-5 (0.6.0) reports a recorded path that escapes the repository as
+         its own finding instead of raising: an exception here aborts the whole
+         `evaluate` pass and with it every command that reads invariants.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-18
-@version 0.3.0
+@date 2026-07-23
+@version 0.6.0
 """
 
 # IMPORTS
@@ -28,10 +31,10 @@ import subprocess
 from pathlib import Path
 
 from .components import audit_local_scope
-from .config import WorkflowConfig, load_config
+from .config import WorkflowConfig
 from .models import Graph
-from .paths import is_allowed_path
-from .requirements import load_all_requirements
+from .paths import contained_relative_path, matches_pattern
+from .requirements import load_requirement_index
 from .working_tree import MAX_SECRET_SCAN_BYTES
 
 # DATA MODELS / TYPEDEFINITIONS
@@ -42,8 +45,8 @@ class InvariantResult:
     """
     @brief      Represent InvariantResult data used by the workflow.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-22
+    @version    0.2.0
     """
     id: str
     name: str
@@ -55,7 +58,9 @@ class InvariantResult:
 # PUBLIC API
 
 
-def evaluate(repo_root: Path, graph: Graph, config: WorkflowConfig | None = None) -> list[InvariantResult]:
+def evaluate(
+    repo_root: Path, graph: Graph, config: WorkflowConfig
+) -> list[InvariantResult]:
     """
     @brief      Evaluate workflow behavior.
     @param[in]  repo_root Input value used by the workflow helper.
@@ -65,19 +70,18 @@ def evaluate(repo_root: Path, graph: Graph, config: WorkflowConfig | None = None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.2.0
+    @version    0.3.0
     """
-    cfg = config or load_config(repo_root)
     return [
         _coverage(graph),
         _citation(graph),
         _red_before_green(graph),
         _no_regression(graph),
-        _in_scope(repo_root, graph, cfg),
+        _in_scope(repo_root, graph, config),
         _evidence(graph),
-        _clean_secrets(repo_root, cfg),
-        _green_requirements_active(repo_root, graph, cfg),
-        _component_baseline_scope(repo_root, graph, cfg),
+        _clean_secrets(repo_root, config),
+        _green_requirements_active(repo_root, graph, config),
+        _component_baseline_scope(repo_root, graph, config),
     ]
 
 
@@ -208,9 +212,13 @@ def _green_requirements_active(repo_root: Path, graph: Graph, cfg: WorkflowConfi
     cited = sorted({req_id for check in graph.checks if check.state == "green" for req_id in check.cites_requirement})
     if not cited:
         return InvariantResult("INV-8", "Green requirements active", True, "blocking", "No green checks cite durable requirements.")
-    rows = {row.req_id: row for row in load_all_requirements(repo_root, cfg)}
-    missing = [req_id for req_id in cited if req_id not in rows]
-    planned = [req_id for req_id in cited if req_id in rows and rows[req_id].status != "Active"]
+    requirements = load_requirement_index(repo_root, cfg).by_id
+    missing = [req_id for req_id in cited if req_id not in requirements]
+    planned = [
+        req_id
+        for req_id in cited
+        if req_id in requirements and requirements[req_id].status != "Active"
+    ]
     failures = [*missing, *planned]
     if not failures:
         return InvariantResult("INV-8", "Green requirements active", True, "blocking", "Green requirement-linked checks cite Active requirements.")
@@ -232,8 +240,16 @@ def _component_baseline_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-22
-    @version    0.1.0
+    @version    0.2.0
     """
+    if cfg.component_baseline_guard.mode == "disabled":
+        return InvariantResult(
+            "INV-9",
+            "Component baseline scope",
+            True,
+            "blocking",
+            "Component baseline guard is disabled by workflow.toml.",
+        )
     if graph.intent.kind == "adoption":
         return InvariantResult(
             "INV-9",
@@ -247,7 +263,9 @@ def _component_baseline_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig
     touched = [path for unit in graph.change_units for path in unit.touched_paths]
     if not touched:
         return InvariantResult("INV-9", "Component baseline scope", True, "blocking", "No change units recorded yet.")
-    issues = audit_local_scope(repo_root, touched, cfg.adoption_default_completion_level)
+    issues = audit_local_scope(
+        repo_root, touched, cfg, cfg.adoption_default_completion_level
+    )
     if not issues:
         return InvariantResult("INV-9", "Component baseline scope", True, "blocking", "Mapped component paths meet baseline scope.")
     messages = [
@@ -264,27 +282,53 @@ def _in_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantRe
     @param[in]  graph Input value used by the workflow helper.
     @param[in]  cfg Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
+    @details    A recorded path that escapes the repository root is reported as
+                its own finding instead of raising. Recording is validated at
+                the CLI boundary, but a graph written before that validation —
+                or edited by hand — must still be evaluable: an exception here
+                propagates out of `evaluate` and takes `status`, `invariants`,
+                `report`, and `delivery-preflight` down with it, leaving the run
+                unusable until the graph is repaired by hand. An escaping path
+                is never inside a configured root, so it fails the invariant.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-23
+    @version    0.3.0
     """
+    severity = "blocking" if cfg.scope.mode == "enforce" else "advisory"
+    if cfg.scope.mode == "unrestricted":
+        return InvariantResult(
+            "INV-5",
+            "In scope",
+            True,
+            severity,
+            "Scope restriction is unrestricted by workflow.toml.",
+        )
     touched = [path for unit in graph.change_units for path in unit.touched_paths]
     if not touched:
-        return InvariantResult("INV-5", "In scope", True, "advisory", "No change units recorded yet.")
-    allowed = []
-    allowed.extend(cfg.source_roots)
-    allowed.extend(cfg.test_roots)
-    allowed.extend(cfg.documentation_roots)
-    allowed.extend(graph.intent.scope_hint)
-    bad = [path for path in touched if not is_allowed_path(path, repo_root, _root_patterns(allowed))]
-    return InvariantResult(
-        "INV-5",
-        "In scope",
-        not bad,
-        "advisory",
-        "Touched paths are in configured scope." if not bad else f"Out-of-scope paths: {', '.join(bad)}",
-    )
+        return InvariantResult("INV-5", "In scope", True, severity, "No change units recorded yet.")
+    patterns = _root_patterns(list(cfg.scope.allowed_roots))
+    escaping: list[str] = []
+    out_of_scope: list[str] = []
+    for path in touched:
+        relative = contained_relative_path(path, repo_root)
+        if relative is None:
+            escaping.append(path)
+        elif not any(matches_pattern(relative, pattern) for pattern in patterns):
+            out_of_scope.append(relative)
+    if not escaping and not out_of_scope:
+        return InvariantResult(
+            "INV-5", "In scope", True, severity, "Touched paths are in configured scope."
+        )
+    parts = []
+    if out_of_scope:
+        parts.append(f"Out-of-scope paths: {', '.join(out_of_scope)}")
+    if escaping:
+        parts.append(
+            "Paths outside the repository (re-record them relative to the repository root): "
+            f"{', '.join(escaping)}"
+        )
+    return InvariantResult("INV-5", "In scope", False, severity, "; ".join(parts))
 
 
 def _evidence(graph: Graph) -> InvariantResult:
@@ -321,8 +365,16 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-18
-    @version    0.2.0
+    @version    0.3.0
     """
+    if cfg.secrets.mode == "disabled":
+        return InvariantResult(
+            "INV-7",
+            "Clean secrets",
+            True,
+            "non-waivable",
+            "Secret scanning is disabled by workflow.toml.",
+        )
     patterns = cfg.secret_patterns
     if not patterns:
         return InvariantResult("INV-7", "Clean secrets", True, "non-waivable", "No secret patterns configured.")

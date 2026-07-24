@@ -1,0 +1,33 @@
+schema_version = 1
+id = "REQ-FUNC-1eb7d7b6-ee0a-48c2-9d8f-eb27e5efb916"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Workflow impact processing shall derive ordered full or selective invalidation summaries, retain stable identities during resequencing, and collect or delete only exact affected audio/assembly artifacts located inside the active project."
+rationale = "An upstream revision must invalidate downstream work predictably without deleting preserved or unsafe artifacts."
+verification = "Focused workflow-impact and order suites passed: 15 relevant tests within E-0009."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_operation_order_matches_current_workflow",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_rejects_unknown_operation_kind",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_summary_preserves_requested_operations",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_selective_summary_normalizes_affected_ids",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_stable_identity_policy_preserves_ids_when_resequencing",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_deletes_audio_artifacts_for_affected_speech_block_only",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_can_skip_preserved_audio_artifact_collection",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_skips_unsafe_audio_artifact_paths",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_requires_exact_ids_for_audio_artifact_deletion",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_resets_audio_assembly_outputs_only",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_refreshes_manifest_from_completed_artifacts",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_wrapper_keeps_existing_broad_reset_behavior",
+  "04_Software/AudioMancer/tests/test_workflow_order_consistency.py::test_operation_order_is_single_sourced_from_config",
+  "04_Software/AudioMancer/tests/test_workflow_order_consistency.py::test_operation_stage_map_is_single_sourced_from_config",
+  "04_Software/AudioMancer/tests/test_workflow_order_consistency.py::test_operation_stage_map_targets_are_valid_workflow_stages",
+]
+
+created_on = "2026-07-19T17:10:00Z"
+last_updated = "2026-07-19T20:10:00Z"

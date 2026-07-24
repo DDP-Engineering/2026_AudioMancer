@@ -1,0 +1,24 @@
+schema_version = 1
+id = "REQ-FUNC-cfced11d-2d46-4e96-b0a7-1bd845825acc"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Home flow shall expose readiness-based external TXT, Markdown, and ZIP exports that project current usable artifacts into operator-facing deliverables without changing the active project."
+rationale = "Exports are delivery views of established workflow artifacts and must neither expose internal AI transaction logs nor become runtime state."
+verification = "Automated focused pytest coverage passed for export readiness, archive exclusions, external-path enforcement, and Home enablement."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_detects_readiness_for_all_export_types",
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_archives_never_include_ai_transaction_logs",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_rejects_export_inside_project",
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_export_buttons_follow_readiness_state",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-18T15:54:00Z"

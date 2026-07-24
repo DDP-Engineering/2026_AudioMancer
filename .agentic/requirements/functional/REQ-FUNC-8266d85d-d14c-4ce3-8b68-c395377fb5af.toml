@@ -1,0 +1,40 @@
+schema_version = 1
+id = "REQ-FUNC-8266d85d-d14c-4ce3-8b68-c395377fb5af"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Deterministic cleanup shall conservatively remove page artifacts, repair page-boundary and dialogue structure, detect supported language/script/chapter cues, and persist canonical clean text plus paragraph metadata that does not duplicate paragraph text."
+rationale = "Deterministic cleanup must improve extracted text without silently discarding meaningful multilingual story content or creating divergent text copies."
+verification = "Existing focused deterministic-cleanup suite: linked structure, recovery, page-boundary, dialogue, multilingual, and page-artifact behavior after traceability review."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_writes_runtime_artifacts_and_preserves_structure",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_removes_repeated_headers_with_changing_page_numbers",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_counts_supported_language_chapter_markers",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_merges_cjk_continuation_without_terminal_punctuation",
+  "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_metadata_omits_text_and_reconstructs_from_clean_text",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_requires_canonical_extracted_text_artifact",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_repairs_uppercase_name_fragment_after_page_break",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_keeps_heading_after_page_break_separate",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_ignores_page_number_before_continuation_decision",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_preserves_complete_short_transition_after_page_break",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_persists_failed_state_after_mid_run_error",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_plain_text_uses_pseudo_segments_without_output_change",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_batches_pseudo_segment_checkpoints",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_displays_dialogue_markers_on_new_lines",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_preserves_original_newline_after_dialogue_line",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_does_not_merge_cjk_after_terminal_punctuation",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_merges_hangul_continuation_without_lowercase_assumption",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_removes_expanded_page_number_forms",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_formats_unicode_dash_dialogue_markers",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-19T18:00:00Z"

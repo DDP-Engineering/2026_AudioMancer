@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-04f14261-484f-4cfc-a26f-3cb8df5aed6c"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Assembly state shall derive readiness, saved output/mix metadata and recoverable project projections from persisted assembly artifacts."
+rationale = "UI decisions must reflect actual generated audio rather than inferred progress."
+verification = "Focused assembly-state suite passed within E-0017."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_keeps_reset_disabled_for_default_metadata",
+  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_reports_completed_outputs",
+  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_ignores_scene_ambience_when_excluded",
+  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_returns_empty_state_without_project",
+]
+
+created_on = "2026-07-19T17:35:00Z"
+last_updated = "2026-07-19T21:35:00Z"

@@ -13,6 +13,11 @@ adapter note.
 
 If this file and `AGENTS.md` disagree, follow `AGENTS.md`.
 
+Before using repository tools, complete the mandatory workflow bootstrap in
+`AGENTS.md`: validate `.agentic/workflow.toml`, inspect effective modes, report
+the active restrictions and selected run, then obey both AEGIS policy and Qwen
+Code host safety controls.
+
 Shared workflow skills are model-invoked and also available from the `/skills`
 picker (for example `agentic-development`). Existing Codex-style references such
 as `$documentation-audit` mean the matching Qwen Code skill under `.qwen/skills/`,

@@ -1,0 +1,24 @@
+schema_version = 1
+id = "REQ-FUNC-3dc0c20a-8c0e-41d9-a01e-ed0e4d411fa5"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character voice state shall derive narrator-first targets, approved language, generated preview text, generation eligibility, missing-narrator warnings, and read-only refresh behavior."
+rationale = "The Character Voices page must accurately distinguish reviewable assignments from actions that require missing prerequisites."
+verification = "Focused character-voices state suite passed: 6 tests within E-0014."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_character_voices_state_service_omits_ai_profile_selector_builder",
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_initializes_character_preview_text_from_locked_voice_language",
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_same_narrator_mode_disables_character_edit_and_generate",
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_missing_narrator_sample_surfaces_warning",
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_refresh_is_read_only_when_character_voices_are_unchanged",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-19T21:05:00Z"

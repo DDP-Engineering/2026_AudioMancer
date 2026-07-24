@@ -14,8 +14,10 @@ import {
 } from "../extensions/agentic-guard/bridge";
 import {
   createHookBridge,
+  decideFromResult,
+  interpreterCandidates,
   parseHookDecision,
-  protectedPathDeny,
+  NO_INTERPRETER_REASON,
   type HookBridge,
   type SpawnResult,
 } from "../extensions/agentic-guard/hook-bridge";
@@ -44,7 +46,6 @@ function fakeBridge(denyReasons: Record<string, string> = {}): HookBridge & {
       calls.push({ hookName, payload });
       return denyReasons[hookName] ?? null;
     },
-    protectedPathDeny,
   };
 }
 
@@ -72,26 +73,6 @@ describe("parseHookDecision", () => {
       hookSpecificOutput: { permissionDecision: "deny" },
     });
     expect(parseHookDecision(stdout)).toBe("Blocked by agentic workflow guard.");
-  });
-});
-
-describe("protectedPathDeny", () => {
-  it.each([".env", ".env.local", "config/app.env", "deep/dir/server.pem", "tls.key", "deploy/id_rsa", "secrets.p12"])(
-    "blocks reading %s",
-    (path) => {
-      expect(protectedPathDeny(path, CWD)).not.toBeNull();
-    },
-  );
-
-  it.each(["src/app.py", "README.md", "tests/test_app.py", "envfile.txt"])(
-    "allows reading %s",
-    (path) => {
-      expect(protectedPathDeny(path, CWD)).toBeNull();
-    },
-  );
-
-  it("allows an undefined path", () => {
-    expect(protectedPathDeny(undefined, CWD)).toBeNull();
   });
 });
 
@@ -181,15 +162,54 @@ describe("handleToolCall mapping", () => {
     });
   });
 
-  it("blocks a read of a protected path natively (no Python call)", async () => {
-    const bridge = fakeBridge();
+  it("routes reads through the shared configured Python hook", async () => {
+    const bridge = fakeBridge({ "guard_read_path.py": "Reading configured protected path is blocked: private/data" });
     const result = await handleToolCall(
-      { toolName: "read", toolCallId: "t6", input: { path: ".env" } },
+      { toolName: "read", toolCallId: "t6", input: { path: "private/data" } },
       CWD,
       bridge,
     );
-    expect(result).toMatchObject({ block: true });
-    expect(bridge.calls).toHaveLength(0);
+    expect(result).toEqual({
+      block: true,
+      reason: "Reading configured protected path is blocked: private/data",
+    });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0]).toMatchObject({
+      hookName: "guard_read_path.py",
+      payload: {
+        hook_event_name: "PreToolUse",
+        // The real Pi tool name, not a hardcoded "Read": the shared guard keys
+        // its strictness off it, denying a read that names no file while
+        // allowing an unscoped search.
+        tool_name: "read",
+        tool_input: { path: "private/data" },
+        cwd: CWD,
+      },
+    });
+  });
+
+  it.each([
+    ["grep", { path: "private" }, { path: "private" }],
+    ["ls", { path: "private" }, { path: "private" }],
+    ["find", { pattern: "private/**" }, { pattern: "private/**" }],
+  ])("routes %s through the protected-read hook", async (toolName, input, expected) => {
+    // A protected-read policy enforced only on `read` was bypassable by asking
+    // Pi for the same bytes through `grep`, and for the file names through
+    // `find` or `ls`. Pi's built-in set is read/grep/find/ls — no glob or list.
+    const bridge = fakeBridge({ "guard_read_path.py": "blocked" });
+
+    const result = await handleToolCall(
+      { toolName, toolCallId: "t-search", input },
+      CWD,
+      bridge,
+    );
+
+    expect(result).toEqual({ block: true, reason: "blocked" });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0]).toMatchObject({
+      hookName: "guard_read_path.py",
+      payload: { tool_name: toolName, tool_input: expected },
+    });
   });
 
   it("allows a read of an ordinary file", async () => {
@@ -200,12 +220,17 @@ describe("handleToolCall mapping", () => {
       bridge,
     );
     expect(result).toBeUndefined();
+    expect(bridge.calls.map((c) => c.hookName)).toEqual(["guard_read_path.py"]);
   });
 
   it("ignores unrelated tools", async () => {
+    // `grep` used to stand in for "unrelated" here, which is exactly the
+    // protected-read bypass this suite now covers above: it reads file content
+    // and is routed to the guard. A tool that touches no repository file is the
+    // right example of one the bridge should ignore.
     const bridge = fakeBridge();
     const result = await handleToolCall(
-      { toolName: "grep", toolCallId: "t8", input: { pattern: "x" } },
+      { toolName: "todowrite", toolCallId: "t8", input: { items: [] } },
       CWD,
       bridge,
     );
@@ -265,13 +290,64 @@ describe("createHookBridge.runPythonHook", () => {
     expect(await bridge.runPythonHook(CWD, "secret_scan.py", {})).toBeNull();
   });
 
-  it("fails open (null) when the interpreter cannot be spawned", async () => {
+  it("fails closed when the interpreter cannot be spawned", async () => {
     const bridge = createHookBridge({
       spawn: async () => {
         throw new Error("ENOENT");
       },
       interpreter: { command: "py", args: ["-3"] },
     });
-    expect(await bridge.runPythonHook(CWD, "secret_scan.py", {})).toBeNull();
+    const reason = await bridge.runPythonHook(CWD, "secret_scan.py", {});
+    expect(reason).toContain("could not run secret_scan.py");
+    expect(reason).toContain("ENOENT");
+  });
+
+  it("fails closed when no interpreter could be resolved", async () => {
+    const spawn = vi.fn();
+    const bridge = createHookBridge({ spawn, interpreter: null });
+    expect(await bridge.runPythonHook(CWD, "guard_write_zone.py", {})).toBe(NO_INTERPRETER_REASON);
+    // A guard that cannot run must never reach the spawn path and report allow.
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the hook exits non-zero without a decision", async () => {
+    const bridge = createHookBridge({
+      spawn: async () => ({
+        stdout: "",
+        stderr: "Traceback (most recent call last):\nValueError: broken policy",
+        code: 1,
+      }),
+      interpreter: { command: "python3", args: [] },
+    });
+    const reason = await bridge.runPythonHook(CWD, "guard_read_path.py", {});
+    expect(reason).toContain("guard_read_path.py exited with status 1");
+    expect(reason).toContain("ValueError: broken policy");
+  });
+});
+
+describe("decideFromResult", () => {
+  it("allows only on a clean exit with no denial", () => {
+    expect(decideFromResult("secret_scan.py", { stdout: "", stderr: "", code: 0 })).toBeNull();
+  });
+
+  it("prefers an explicit denial over the exit status", () => {
+    expect(
+      decideFromResult("secret_scan.py", { stdout: denyJson("Possible secret"), stderr: "", code: 0 }),
+    ).toBe("Possible secret");
+  });
+
+  it("blocks a non-zero exit even when stderr is empty", () => {
+    const reason = decideFromResult("delivery_preflight.py", { stdout: "", stderr: "", code: 9 });
+    expect(reason).toContain("exited with status 9");
+    expect(reason).toContain("no diagnostic output");
+  });
+});
+
+describe("interpreter resolution parity", () => {
+  it("offers the same ordered launchers as the shared run_hook.mjs launcher", () => {
+    const expected = process.platform === "win32"
+      ? [{ command: "py", args: ["-3"] }, { command: "python", args: [] }]
+      : [{ command: "python3", args: [] }, { command: "python", args: [] }];
+    expect(interpreterCandidates()).toEqual(expected);
   });
 });

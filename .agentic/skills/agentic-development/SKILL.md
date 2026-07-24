@@ -19,7 +19,13 @@ next prompt options.
 
 ## Ground Rules
 
-- Treat `.agentic/workflow.toml` as the project-specific source of truth.
+- Before repository inspection or edits, run `<workflow> config validate --json`
+  and `<workflow> config show --effective --json`. Report the effective write,
+  protected-read/path, scope, secret, gate, coverage, and delivery modes and
+  active rule counts. State the selected worktree run or explicit `--run-id`.
+- Treat validated `.agentic/workflow.toml` as the only AEGIS repository-policy
+  source. Do not infer defaults from code or adapters. External host safety and
+  approval controls remain separate and always apply.
 - Treat `.agentic/requirements/` as the durable project contract.
 - Use `<workflow>` in examples below as the project-local workflow runner:
   `.\.agentic\tools\run.ps1` on Windows or `bash .agentic/tools/run.sh` on
@@ -56,6 +62,10 @@ next prompt options.
    - Classify the request as `feature`, `fix`, or `change`.
    - Run `<workflow> start --kind <kind> --statement "<request>"` if no
      active run exists.
+   - For automation that must pin an existing run, pass
+     `--run-id <existing-run-id>` to each graph-dependent command. Never copy
+     `.agentic/.workspace/state/current_run` between worktrees or stage
+     `.agentic/.workspace/`.
    - Run `<workflow> audit traceability` and `<workflow> audit coverage`
      to understand existing traceability debt.
    - Run `<workflow> impact <planned-files>` when likely files are known;
@@ -82,16 +92,27 @@ next prompt options.
 3. Requirement
    - Create or update minimal spec items: one testable sentence, `behavior` or
      `property`, examples or thresholds.
-   - Create or update durable requirement rows in `.agentic/requirements/`.
+   - Run `<workflow> requirement list --json` and inspect matching contracts
+     before creating a requirement.
+   - Create a durable snapshot with `<workflow> requirement create ...` and use
+     the returned UUID-backed ID, or update the existing snapshot with
+     `<workflow> requirement update --id <requirement-id> ...`.
    - If the work creates or materially changes a component, include the
      expected component documentation update in the scope and acceptance notes.
-   - New rows start as `Planned`; flip to `Active` only after linked checks pass.
+   - New snapshots start as `Planned`; activate only after linked checks pass.
    - Record each item with `<workflow> add-spec`.
    - Run `<workflow> invariants`.
    - Stop and ask the human to review the spec.
 
 4. Check
-   - Add tests/checks that cite spec IDs.
+   - Add tests/checks that cite spec IDs. For each `behavior` spec item cover
+     the happy path *and* the failure paths it implies: invalid input, boundary
+     and empty values, and the specific error or rejection the behavior is meant
+     to produce. A single assertion of the obvious case rarely fixes the
+     behavior or catches a regression.
+   - Prefer several small, focused checks over one broad one, so that when a
+     check goes red later it names the specific behavior that broke. Match the
+     depth of coverage to the risk in the spec item, not to a fixed count.
    - Also cite durable requirement IDs in test comments, docstrings, or names
      where practical.
    - For new components, include checks or review expectations that make the
@@ -115,8 +136,10 @@ next prompt options.
    - If impact reports untraced files, run full configured regression gates.
    - Run relevant checks until the new checks pass and prior checks remain green.
    - Record passing evidence with `<workflow> record-evidence --kind test-run --result pass --check-id <id>`.
-   - When a new requirement-linked check is green, activate the durable row with
+   - When a new requirement-linked check is green, activate the snapshot with
      `<workflow> requirement activate --id <requirement-id> --linked-test <test-id> --verification "<method>"`.
+   - Replace complete linked-test and affected-path sets when associations
+     change; preserve the ID for revisions of the same behavioral contract.
    - Record touched paths with `<workflow> record-change`.
    - Stop for validation.
 

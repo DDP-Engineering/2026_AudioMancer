@@ -5,488 +5,305 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# AEGIS Configuration
+# AEGIS Workflow Configuration
 
-This document explains `.agentic/workflow.toml`, the main repository-local
-configuration file for the agentic workflow. It defines where the workflow looks
-for source code, tests, requirements, documentation, component maps, validation
-commands, secret patterns, alignment policy, and stage-specific write zones.
+`.agentic/workflow.toml` is mandatory and is the only source of AEGIS
+repository policy. Schema version 2 has no implicit Python, hook, or adapter
+defaults. Missing, malformed, incomplete, unknown, or inconsistent policy is an
+actionable error.
 
-The file is intentionally repository-relative. Paths should normally use
-forward slashes and should not be absolute unless a local wrapper command
-requires it.
+External platform safety remains independent. A valid unrestricted AEGIS
+configuration does not disable host sandboxes, approvals, operating-system
+permissions, organization policy, or network controls.
 
-## Mental Model
+## Required Agent Bootstrap
 
-`workflow.toml` answers these questions:
-
-- Where are the implementation files?
-- Where are the tests?
-- Where are durable requirements stored?
-- Where should component documentation live?
-- Which files need requirement coverage?
-- Which commands make up validation gates?
-- Which secret-like patterns must block delivery?
-- Which paths may be edited at each workflow stage?
-- When must intent alignment pause for human input?
-- Which component manifest should adoption commands read?
-
-The workflow CLI and hooks read this file during commands such as:
-
-- `<workflow> audit traceability`
-- `<workflow> audit coverage`
-- `<workflow> impact`
-- `<workflow> gates run`
-- `<workflow> adoption component-status`
-- `<workflow> adoption scope-check`
-- `<workflow> working-tree audit`
-- `<workflow> delivery-preflight`
-- write-zone hook checks before edits
-
-## Root Sections
-
-### `[source]`
-
-Defines implementation roots used by scope checks and impact analysis.
-
-```toml
-[source]
-roots = ["src/package"]
-```
-
-Use this for code that implements product or library behavior. Do not include
-tests, generated reports, or workflow state here.
-
-### `[tests]`
-
-Defines test roots used by traceability and impact checks.
-
-```toml
-[tests]
-roots = ["tests"]
-```
-
-Use every root that contains first-party tests the workflow should discover.
-
-### `[requirements]`
-
-Defines where durable requirement registers live.
-
-```toml
-[requirements]
-roots = [".agentic/requirements"]
-```
-
-Requirement registers are long-lived Markdown files. Run-local specs are stored
-in the active workflow graph, while durable requirements live under these roots.
-
-### `[documentation]`
-
-Defines component documentation roots and the template used when a new component
-document is created.
-
-```toml
-[documentation]
-roots = ["docs/components"]
-component_template = "docs/components/component_template.md"
-```
-
-`roots` is used by scope invariants when implementation changes must be paired
-with matching component documentation. `component_template` tells agents which
-document structure to follow.
-
-## Adoption Sections
-
-### `[adoption]`
-
-Controls existing-project adoption behavior.
-
-```toml
-[adoption]
-default_completion_level = "baseline-usable"
-allow_component_bundles = true
-max_bundle_components = 5
-behavior_changes_allowed = false
-```
-
-Settings:
-
-| Setting | Meaning |
-| --- | --- |
-| `default_completion_level` | Minimum component status required before behavior-changing work proceeds. |
-| `allow_component_bundles` | Whether related components may be adopted as an approved bundle. |
-| `max_bundle_components` | Maximum components allowed in one bundle. |
-| `behavior_changes_allowed` | Whether adoption work may include behavior changes by default. |
-
-Common completion levels are described in
-`.agentic/documents/COMPONENTS_CONFIGURATION.md`.
-
-### `[components]`
-
-Points to the component manifest.
-
-```toml
-[components]
-manifest = ".agentic/components.toml"
-```
-
-The manifest is read by adoption commands and component baseline checks.
-
-### `[knowledge]`
-
-Defines roots used by adoption and documentation-oriented workflows.
-
-```toml
-[knowledge]
-roots = [".agentic/knowledge"]
-```
-
-Use this for workflow knowledge files, adoption notes, reusable references, or
-other agentic context that is not product source.
-
-### `[reports]`
-
-Defines where adoption reports are written.
-
-```toml
-[reports]
-adoption_root = ".agentic/reports/adoption"
-```
-
-## Traceability
-
-The `[traceability]` section controls requirement coverage and test discovery.
-
-```toml
-[traceability]
-language = "python"
-source_extensions = [".py"]
-coverable_roots = ["src/package/services", "src/package/controllers"]
-coverable_exclude = ["__init__.py"]
-test_file_patterns = ["test_*.py", "*_test.py"]
-```
-
-Settings:
-
-| Setting | Meaning |
-| --- | --- |
-| `language` | Primary language used by requirement and test resolution helpers. |
-| `source_extensions` | File extensions considered source files for coverage. |
-| `coverable_roots` | Source subtrees where files must have requirement coverage or waivers. |
-| `coverable_exclude` | File names or glob patterns excluded from coverable scans. |
-| `test_file_patterns` | Test filename patterns used when resolving linked tests. |
-
-Use `coverable_roots` narrowly at first. A broad value such as `src` makes every
-source file require requirement coverage unless explicitly waived.
-
-### Linked-test resolution by language
-
-AEGIS has structure-aware linked-test resolvers for `python`, `java`, `c`, and
-`cpp`. Every other configured language — including WAEGIS presets such as
-`typescript`, `javascript`, `go`, `rust`, and `csharp` — uses name-substring
-matching inside the configured test roots. For those languages, choose stable,
-distinct linked-test identifiers and confirm them with `audit traceability`.
-
-### Pattern semantics
-
-All AEGIS path matchers use the same `fnmatch`-based policy. In this policy,
-`*` crosses `/`: `src/*` behaves like `src/**`, and `*.tmp` also matches nested
-temporary files. A bare directory pattern such as `src/module` additionally
-covers its subtree, but does not match a sibling such as `src/module2`. Configure
-write zones, component paths, coverage exclusions, and working-tree blockers
-with these semantics in mind rather than assuming Git-glob behavior.
-
-## Gates
-
-The `[gates]` section defines named command groups for `<workflow> gates run`.
-
-```toml
-[gates]
-test = [
-  "python -m pytest -q tests"
-]
-lint = [
-  "python -m ruff check src tests"
-]
-docs = [
-  "python tools/check_docs.py"
-]
-```
-
-Each key is a gate name. Each value is an ordered list of shell commands. A
-plain string value is also accepted and treated as a one-command list; any
-other value type stops with an error naming the offending key. A command that
-cannot be launched (missing executable) or exceeds the timeout is recorded as
-a normal failing gate (exit 127 / 124, with the error text in the journal)
-rather than crashing the run.
-
-Examples:
+Before repository inspection or edits, run:
 
 ```powershell
-<workflow> gates run
-<workflow> gates run --name test
-<workflow> gates run --name test --name lint --timeout 600
+<workflow> config validate --json
+<workflow> config show --effective --json
 ```
 
-Guidelines:
+Report the effective write-access, protected-read/path, scope, secret, gate,
+coverage, and delivery modes and their active rule counts. For graph-dependent
+work, also report whether the worktree pointer or an explicit `--run-id` selects
+the run.
 
-- Keep commands deterministic and local.
-- Prefer repository-local wrappers or pinned environments.
-- Avoid interactive commands.
-- Avoid commands that publish, deploy, push, or mutate external systems.
-- Split slow or specialized checks into named gates so they can be run
-  selectively.
+## Schema Rules
 
-## Secrets
+- `schema_version = 2` is required and must be an integer.
+- Every required table and key must be present.
+- Unknown top-level keys, tables, policy keys, and stage names are errors.
+- Scalar strings and command strings must be non-empty after trimming.
+- Booleans and integers require exact TOML types; a Boolean is not an integer.
+- Restrictive modes require their rules; disabled or unrestricted modes reject
+  dormant non-empty rules.
+- Configuration is validated once per operation and passed to consumers.
+- Hooks import the canonical parser and never reinterpret TOML independently.
 
-The `[secrets]` section defines regular expressions treated as secret-like
-content.
+## Structural Tables
+
+Structural values describe repository shape. They are explicit even when every
+policy mode is unrestricted or disabled.
+
+| Table | Required keys | Contract |
+| --- | --- | --- |
+| `source` | `roots` | Non-empty repository-relative source roots. |
+| `tests` | `roots` | Non-empty test roots used for selector resolution. |
+| `requirements` | `roots` | Non-empty roots containing canonical requirement snapshots. |
+| `documentation` | `roots`, `component_template` | Component-document roots and template path. |
+| `components` | `manifest` | Repository-relative component manifest path. |
+| `knowledge` | `roots` | Non-empty knowledge roots. |
+| `reports` | `adoption_root` | Repository-relative adoption-report root. |
+| `traceability` | `language`, `source_extensions`, `test_file_patterns` | Language and deterministic discovery rules. |
+| `adoption` | `allow_component_bundles`, `max_bundle_components` | Bundle behavior; maximum must be a positive integer. |
+| `alignment` | `enabled`, `pause_on_open_questions`, `risk_threshold`, `allow_recommended_responses` | Intrinsic alignment behavior. |
+
+`alignment.risk_threshold` accepts `low`, `medium`, or `high`.
+
+## Policy Mode Truth Table
+
+| Policy table | Modes | Rule contract |
+| --- | --- | --- |
+| `guardrails.secrets` | `disabled`, `enforce` | Disabled requires `patterns = []`; enforce requires valid non-empty regexes. |
+| `guardrails.protected_paths` | `disabled`, `enforce` | Disabled requires empty `patterns` and `operations`; enforce requires both. |
+| `guardrails.working_tree` | `unrestricted`, `restricted` | Unrestricted requires `blocked_patterns = []`; restricted requires patterns. |
+| `guardrails.write_access` | `unrestricted`, `stage_restricted` | Unrestricted has no `stages`; restricted requires the complete stage map. |
+| `guardrails.scope` | `unrestricted`, `advisory`, `enforce` | Unrestricted requires no roots; advisory/enforce require `allowed_roots`. |
+| `guardrails.delivery` | `disabled`, `enforce` | Disabled requires no command patterns; enforce requires normalized patterns. |
+| `traceability.coverage` | `disabled`, `enforce` | Disabled requires no roots; enforce requires `coverable_roots`. |
+| `alignment.protected_scope` | `disabled`, `enforce` | Disabled requires no patterns; enforce requires patterns and enabled alignment. |
+| `gates` | `disabled`, `enforce` | Disabled requires empty command lists; enforce requires at least one command. |
+| `components.baseline_guard` | `disabled`, `enforce` | Enforce requires a valid manifest and completion threshold. |
+| `adoption.source_changes` | `unrestricted`, `blocked` | Explicitly permits or blocks product source changes during adoption. |
+
+### Secrets
 
 ```toml
-[secrets]
-patterns = [
-  "sk-[A-Za-z0-9_-]{20,}",
-  "ghp_[A-Za-z0-9_]{20,}",
-  "-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----"
-]
+[guardrails.secrets]
+mode = "enforce"
+patterns = ["(?i)api[_-]?key\\s*[:=]\\s*[^\\s]+"]
 ```
 
-These patterns are used by secret checks and delivery readiness. The
-`secret_scan.py` PreToolUse hook scans their union with its built-in credential
-formats, so project-specific tokens are protected during shell commands and
-file edits too. If the hook cannot read or parse `workflow.toml`, it continues
-with built-in patterns; invalid configured regular expressions are ignored by
-the hook instead of crashing or blocking tool use. Keep valid patterns specific
-enough to avoid constant false positives, but broad enough to catch common
-credential formats used by the repository.
+Patterns are Python regular expressions. The hook and delivery audit use only
+configured patterns. There are no built-in credential patterns.
 
-## Working Tree
+### Protected paths
 
-The `[working_tree]` section declares Git status path patterns that should block
-delivery preflight.
+Read policy applies to every tool that returns file content or file names —
+the single-file read, grep-style search, glob, and directory listing — on all
+adapters. It blocks a protected path from being **targeted**.
+
+It cannot redact results: a repository-wide search that names no path is
+allowed and may still surface a line from a protected file, because no
+supported host lets a pre-tool hook rewrite tool output. Protected paths are a
+guard against direct access, not a secrecy boundary — keep real secrets out of
+the working tree.
+
+Pattern shape decides whether a directory listing is blocked: `dir` matches the
+directory entry and everything under it, while `dir/**` matches only what is
+inside it. Use the bare directory to protect the listing itself.
 
 ```toml
-[working_tree]
-blocked_patterns = [
-  "dist/**",
-  "build/**",
-  "*.tmp"
-]
+[guardrails.protected_paths]
+mode = "enforce"
+patterns = ["secrets/**", ".env"]
+operations = ["read", "write"]
 ```
 
-Use this for generated artifacts or local scratch files that should never be
-present during delivery. Leave the list empty when untracked files should be
-treated as advisory unless they match other protected rules.
+`operations` accepts only `read` and `write`, without duplicates. The shared
+repository glob matcher applies the same decision to CLI and adapter hooks.
 
-## Alignment
-
-The `[alignment]` section controls the Intent Alignment stage.
+### Working-tree blockers
 
 ```toml
-[alignment]
-enabled = true
-pause_on_open_questions = true
-risk_threshold = "medium"
-allow_recommended_responses = true
-protected_scope_patterns = ["infrastructure/**", "security/**"]
+[guardrails.working_tree]
+mode = "restricted"
+blocked_patterns = ["*.pem", "private/**"]
 ```
 
-Settings:
+Matching Git status paths become blocking findings. Unmatched untracked files
+remain advisory context unless another configured policy applies.
 
-| Setting | Meaning |
-| --- | --- |
-| `enabled` | Whether `next` routes through `alignment` after `intake`. |
-| `pause_on_open_questions` | Whether open questions force `decision pause`. |
-| `risk_threshold` | Minimum risk level that forces `decision pause`; valid values are `low`, `medium`, and `high`. |
-| `allow_recommended_responses` | Whether every open question can be paired with a recommended response to permit automated continuation. |
-| `protected_scope_patterns` | Planned path globs that force a pause even when other alignment fields look safe. |
+### Write access
 
-Example: automated continuation for a low-risk documentation change.
-
-```powershell
-<workflow> alignment `
-  --source "human prompt" `
-  --understanding "Refresh a configuration manual." `
-  --scope "in: manual files; out: runtime behavior" `
-  --acceptance "Manual describes each setting and includes examples." `
-  --risk low `
-  --decision proceed `
-  --reason "No open questions and no protected paths."
-```
-
-Example: forced pause for a protected path.
-
-```powershell
-<workflow> alignment `
-  --source "ticket" `
-  --understanding "Change deployment credentials handling." `
-  --scope "in: security configuration" `
-  --acceptance "Credential loading is updated safely." `
-  --risk medium `
-  --decision pause `
-  --reason "Risk meets the configured threshold and protected paths are planned." `
-  --planned-path security/credentials.py
-```
-
-## Write Zones
-
-The `[write_zones]` section maps workflow stages to edit allowlists. The
-write-zone hook reads these values before allowing edit tools.
+Unrestricted mode has no stage map:
 
 ```toml
-[write_zones]
-intake = [".agentic/**"]
-alignment = [".agentic/**"]
-requirement = [".agentic/requirements/**"]
-check = ["tests/**"]
-implementation = ["src/**", "tests/**", "docs/components/**"]
-validation = []
-delivery = [".agentic/**", "CHANGELOG.md"]
+[guardrails.write_access]
+mode = "unrestricted"
 ```
 
-Normal stages:
-
-| Stage | Typical write zone |
-| --- | --- |
-| `intake` | Workflow state only. |
-| `alignment` | Workflow state only. |
-| `requirement` | Durable requirements and run-local requirement state. |
-| `check` | Tests and checks only. |
-| `implementation` | Source, required docs, and sometimes tests when the approved workflow allows it. |
-| `validation` | Usually read-only. |
-| `delivery` | Workflow reports, registries, changelog, and delivery notes. |
-
-Adoption stages:
-
-| Stage | Typical write zone |
-| --- | --- |
-| `adoption-intake` | Workflow state only. |
-| `adoption-alignment` | Workflow state only. |
-| `repo-discovery` | Discovery notes and workflow state. |
-| `component-map` | Component manifest and workflow state. |
-| `component-adoption` | Component docs, tests, adoption records, and approved local files. |
-| `baseline-review` | Adoption reports and workflow state. |
-| `adoption-delivery` | Adoption reports and delivery state. |
-
-Guidelines:
-
-- Keep early stages narrow so requirements and checks cannot be bypassed.
-- Keep `validation = []` when validation should be read-only.
-- Add paths only when a stage genuinely needs to edit them.
-- Protected files such as `.git`, credential files, key material, and `.env`
-  files remain blocked even when the workflow is in repo-wide access mode.
-
-## Complete Minimal Example
+Stage-restricted mode requires every standard and adoption stage. An empty list
+means the stage is read-only.
 
 ```toml
-[source]
-roots = ["src"]
+[guardrails.write_access]
+mode = "stage_restricted"
 
-[tests]
-roots = ["tests"]
+[guardrails.write_access.stages]
+intake = []
+alignment = [".agentic/runs/**"]
+requirement = [".agentic/requirements/**", ".agentic/runs/**"]
+check = ["tests/**", ".agentic/runs/**"]
+implementation = ["src/**", ".agentic/knowledge/**", ".agentic/runs/**"]
+validation = [".agentic/runs/**"]
+delivery = [".agentic/runs/**"]
+adoption-intake = []
+adoption-alignment = [".agentic/runs/**"]
+repo-discovery = []
+component-map = [".agentic/components.toml", ".agentic/runs/**"]
+component-adoption = [".agentic/**"]
+baseline-review = [".agentic/runs/**"]
+adoption-delivery = [".agentic/runs/**"]
+```
 
-[requirements]
-roots = [".agentic/requirements"]
+The run-local `standard` access mode applies the current stage list.
+`repo-wide` bypasses stage lists only; it never bypasses enforced protected
+paths. Under unrestricted write access, a run is not resolved merely to
+authorize a write.
 
-[documentation]
-roots = ["docs/components"]
-component_template = "docs/components/component_template.md"
+### Scope
 
-[components]
-manifest = ".agentic/components.toml"
+```toml
+[guardrails.scope]
+mode = "advisory"
+allowed_roots = ["src", "tests", ".agentic"]
+```
 
-[traceability]
-language = "python"
-source_extensions = [".py"]
+`unrestricted` passes explicitly. `advisory` reports overflow without blocking.
+`enforce` blocks. A run `scope_hint` may narrow intent inside configured roots;
+it cannot authorize a path outside enforced roots.
+
+### Coverage
+
+```toml
+[traceability.coverage]
+mode = "enforce"
 coverable_roots = ["src"]
-coverable_exclude = ["__init__.py"]
-test_file_patterns = ["test_*.py", "*_test.py"]
+exclude = ["src/generated/**"]
+```
 
+Coverage uses current requirement `affected_paths` and resolvable linked tests.
+`exclude` may be empty in enforce mode. Disabled coverage returns an explicit
+pass message and does not pretend an empty root list was audited.
+
+### Alignment protected scope
+
+```toml
+[alignment.protected_scope]
+mode = "enforce"
+patterns = ["security/**", "infrastructure/**"]
+```
+
+This mode is inconsistent when `alignment.enabled = false`.
+
+### Gates
+
+```toml
 [gates]
-test = ["python -m pytest -q tests"]
-
-[alignment]
-enabled = true
-pause_on_open_questions = true
-risk_threshold = "medium"
-allow_recommended_responses = true
-protected_scope_patterns = []
-
-[write_zones]
-intake = [".agentic/**"]
-alignment = [".agentic/**"]
-requirement = [".agentic/requirements/**"]
-check = ["tests/**"]
-implementation = ["src/**", "tests/**", "docs/components/**"]
-validation = []
-delivery = [".agentic/**", "CHANGELOG.md"]
+mode = "enforce"
+test = ["python -m pytest -q"]
+lint = ["python -m ruff check ."]
 ```
 
-## Real Case Pattern: Documentation-Only Change
+`test` and `lint` are lists of complete, non-empty command strings. Scalar
+strings are invalid. Schema version 2 defines no additional gate names.
 
-For a documentation-only workflow, the configuration normally needs:
-
-- source and test roots unchanged
-- documentation root included in `documentation.roots`
-- implementation write zone including the documentation folder
-- validation write zone left empty
-- a gate command only if the repository has a documentation checker
-
-Example implementation zone:
+### Component baseline
 
 ```toml
-[write_zones]
-implementation = ["docs/**", ".agentic/documents/**"]
-validation = []
+[components.baseline_guard]
+mode = "enforce"
+minimum_completion_level = "baseline-usable"
 ```
 
-This allows the implementation gate to update manuals while keeping validation
-read-only.
+The configured `[components].manifest` must resolve to a valid manifest.
 
-## Real Case Pattern: Existing-Project Adoption
-
-For an adoption run, the configuration normally needs:
-
-- `[components].manifest` pointing to `.agentic/components.toml`
-- `[adoption].default_completion_level = "baseline-usable"`
-- `[adoption].behavior_changes_allowed = false`
-- write zones for `repo-discovery`, `component-map`, and `component-adoption`
-
-Example:
+### Adoption source changes
 
 ```toml
-[adoption]
-default_completion_level = "baseline-usable"
-allow_component_bundles = true
-max_bundle_components = 3
-behavior_changes_allowed = false
-
-[write_zones]
-repo-discovery = [".agentic/**", "docs/discovery/**"]
-component-map = [".agentic/**"]
-component-adoption = [".agentic/**", "tests/**", "docs/components/**"]
+[adoption.source_changes]
+mode = "blocked"
 ```
 
-This lets adoption document and verify existing behavior without changing the
-runtime behavior by default.
+This replaces the retired Boolean `behavior_changes_allowed` contract.
+
+### Delivery command matching
+
+```toml
+[guardrails.delivery]
+mode = "enforce"
+command_patterns = ["git push", "gh pr create"]
+```
+
+Patterns are lowercase command fragments after whitespace normalization. A
+match triggers the shared delivery preflight. Passing preflight allows the
+command; failing preflight denies it. External approval remains required.
+
+## Path, Glob, Regex, and Command Normalization
+
+- Repository paths and globs use `/` and are repository-relative.
+- Absolute paths, drive prefixes, empty values, and `..` segments are invalid.
+- The parser converts `\\` to `/`, removes leading `./`, collapses repeated
+  separators, and removes a trailing `/` before duplicate detection.
+- Case is preserved.
+- Globs support `*`, `**`, `?`, and balanced bracket expressions.
+- A pattern naming a directory matches that directory and everything beneath
+  it, so `src/security` and `src/security/**` select the same subtree. The
+  match is on whole path segments: `src/security` never matches
+  `src/securityaudit/`. Every pattern setting in this file — secrets, protected
+  paths, working-tree blockers, write access, scope, coverage, alignment
+  protected scope, and component baselines — resolves through one shared
+  matcher, so a pattern means the same thing wherever it appears.
+- Malformed bracket expressions and invalid regular expressions are errors.
+- Set-like lists reject duplicates after normalization instead of discarding
+  them silently.
+- Delivery fragments are non-empty, lowercase, and whitespace-normalized.
+
+## Default Template
+
+The shipped template is operationally unrestricted:
+
+- secrets, protected paths, coverage, protected alignment scope, gates,
+  component baseline, and delivery are `disabled`;
+- working-tree, write-access, scope, and adoption source changes are
+  `unrestricted`; and
+- every inactive rule collection is empty.
+
+This is explicit policy, not fallback behavior. Operators opt into restrictions
+by choosing a restrictive mode and supplying its required rules.
+
+## Configuration Errors
+
+All failures use one typed error with `code`, `config_path`, `key_path`,
+`received`, `expected`, and `remediation`. CLI configuration failures exit `2`;
+JSON output contains the same fields and no traceback.
+
+| Code | Meaning |
+| --- | --- |
+| `CONFIG-MISSING` | File is absent or not a readable regular file. |
+| `CONFIG-TOML-INVALID` | TOML decoding failed. |
+| `CONFIG-SCHEMA-UNSUPPORTED` | Schema version is missing, wrong-type, or not `2`. |
+| `CONFIG-SECTION-MISSING` | A required table is absent. |
+| `CONFIG-KEY-MISSING` | A required or conditionally required key is absent. |
+| `CONFIG-TYPE-INVALID` | A value has the wrong type or an unknown key/table exists. |
+| `CONFIG-MODE-INVALID` | A policy mode is not ratified. |
+| `CONFIG-RULE-INVALID` | A path, glob, regex, operation, command, stage, threshold, manifest, or duplicate is invalid. |
+| `CONFIG-INCONSISTENT` | Valid values contradict their mode or another option. |
+
+Pre-tool hooks deny on configuration errors with the same remediation. Post-tool
+hooks warn and avoid policy-dependent recording. No consumer continues under an
+inferred configuration.
 
 ## Change Checklist
 
-When editing `workflow.toml`:
-
-- Keep paths repository-relative.
-- Verify renamed roots exist.
-- Update write zones when folder layout changes.
-- Update gate commands when test or tool commands change.
-- Keep secret patterns current.
-- Keep documentation roots aligned with component documentation rules.
-- Run focused validation, usually:
-
-```powershell
-<workflow> status
-<workflow> audit traceability
-<workflow> audit coverage
-<workflow> gates run --name test
-```
-
-Use the gates that are relevant for the repository and the change.
+1. Edit `.agentic/workflow.toml` deliberately.
+2. Run `config validate --json`.
+3. Run `config show --effective --json`.
+4. Confirm inactive modes have no dormant rules and restrictive modes have all
+   required rules.
+5. Exercise the affected CLI, hook, audit, invariant, adapter, and preflight
+   paths.
+6. Keep AEGIS repository policy distinct from external platform safety.

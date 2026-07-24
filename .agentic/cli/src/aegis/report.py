@@ -12,8 +12,8 @@
 @details Renders persisted workflow evidence, including optional failure
 classifications, for generated projects.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.5.0
+@date 2026-07-22
+@version 0.7.0
 """
 
 # IMPORTS
@@ -24,29 +24,31 @@ from collections import Counter
 from pathlib import Path
 
 from .components import audit_local_scope, load_components
-from .config import load_config
+from .config import WorkflowConfig
 from .invariants import evaluate
 from .models import Graph
-from .requirements import audit_coverage, audit_registry, audit_traceability
+from .requirements import audit_coverage, audit_traceability
 
 # PUBLIC API
 
 
-def render_report(repo_root: Path, graph: Graph) -> str:
+def render_report(
+    repo_root: Path, graph: Graph, config: WorkflowConfig
+) -> str:
     """
     @brief      Render a complete Markdown report for the active workflow graph.
     @param[in]  repo_root Input value used by the workflow helper.
     @param[in]  graph Input value used by the workflow helper.
+    @param[in]  config Validated workflow configuration.
     @return     Result produced by the workflow helper.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-20
-    @version    0.5.0
+    @version    0.7.0
     """
-    results = evaluate(repo_root, graph)
-    traceability_issues = audit_traceability(repo_root)
-    coverage_issues = audit_coverage(repo_root)
-    registry_issues = audit_registry(repo_root)
+    results = evaluate(repo_root, graph, config)
+    traceability_issues = audit_traceability(repo_root, config)
+    coverage_issues = audit_coverage(repo_root, config)
     lines = [
         f"# AEGIS Report: {graph.run_id}",
         "",
@@ -109,16 +111,14 @@ def render_report(repo_root: Path, graph: Graph) -> str:
         lines.append(f"- `{item.id}` {marker} ({item.policy}): {item.message}")
 
     lines.extend(["", "## Traceability Audits"])
-    if not traceability_issues and not coverage_issues and not registry_issues:
-        lines.append("- PASS: traceability, coverage, and registry audits have no findings.")
+    if not traceability_issues and not coverage_issues:
+        lines.append("- PASS: live traceability and coverage audits have no findings.")
     for issue in traceability_issues:
         lines.append(f"- `{issue.code}` {issue.message}")
     for issue in coverage_issues:
         lines.append(f"- `{issue.code}` {issue.message}")
-    for issue in registry_issues:
-        lines.append(f"- `{issue.code}` {issue.message}")
 
-    adoption_lines = _render_adoption_baseline(repo_root, graph)
+    adoption_lines = _render_adoption_baseline(repo_root, graph, config)
     if adoption_lines:
         lines.extend(["", *adoption_lines])
 
@@ -130,46 +130,49 @@ def render_report(repo_root: Path, graph: Graph) -> str:
     return "\n".join(lines)
 
 
-def write_report(repo_root: Path, graph: Graph) -> Path:
+def write_report(repo_root: Path, graph: Graph, rendered: str) -> Path:
     """
     @brief      Write report workflow behavior.
     @param[in]  repo_root Input value used by the workflow helper.
     @param[in]  graph Input value used by the workflow helper.
+    @param[in]  rendered Complete report text rendered with the operation config.
     @return     Result produced by the workflow helper.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.2.0
     """
     path = repo_root / ".agentic" / "runs" / graph.run_id / "report.md"
-    path.write_text(render_report(repo_root, graph), encoding="utf-8")
+    path.write_text(rendered, encoding="utf-8")
     return path
 
 
 # HELPER FUNCTIONS
 
 
-def _render_adoption_baseline(repo_root: Path, graph: Graph) -> list[str]:
+def _render_adoption_baseline(
+    repo_root: Path, graph: Graph, config: WorkflowConfig
+) -> list[str]:
     """
     @brief      Render adoption baseline details when relevant to a run.
     @param[in]  repo_root Repository root.
     @param[in]  graph Workflow graph.
+    @param[in]  config Validated workflow configuration.
     @return     Markdown lines for the adoption section, or an empty list.
     @exception  tomllib.TOMLDecodeError Raised when component TOML is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-22
-    @version    0.1.0
+    @version    0.2.0
     """
-    cfg = load_config(repo_root)
-    manifest = load_components(repo_root, cfg.component_manifest)
+    manifest = load_components(repo_root, config.component_manifest)
     if graph.intent.kind != "adoption" and not manifest.components:
         return []
 
     lines = [
         "## Adoption Baseline",
-        f"- Component manifest: `{cfg.component_manifest}`",
-        f"- Minimum baseline: `{cfg.adoption_default_completion_level}`",
-        f"- Adoption report root: `{cfg.adoption_report_root}`",
+        f"- Component manifest: `{config.component_manifest}`",
+        f"- Minimum baseline: `{config.adoption_default_completion_level}`",
+        f"- Adoption report root: `{config.adoption_report_root}`",
         "",
         "### Component Status Counts",
     ]
@@ -191,7 +194,12 @@ def _render_adoption_baseline(repo_root: Path, graph: Graph) -> list[str]:
     touched_paths = _touched_paths(graph)
     if touched_paths:
         lines.extend(["", "### Local Scope Findings"])
-        issues = audit_local_scope(repo_root, touched_paths, cfg.adoption_default_completion_level)
+        issues = audit_local_scope(
+            repo_root,
+            touched_paths,
+            config,
+            config.adoption_default_completion_level,
+        )
         if issues:
             for issue in issues:
                 location = f" [{issue.path}]" if issue.path else ""

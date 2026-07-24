@@ -1,0 +1,24 @@
+schema_version = 1
+id = "REQ-FUNC-a328491f-5eda-42e5-95e7-7ea98b1aa05a"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character Voices, Audio Blocks, narrator state, and applicable UI controllers shall resolve the selected narrator profile, compact sample metadata, derived language, and canonical profile WAV at read time through the narrator document service, report not-ready when metadata or WAV is missing, and never open or depend on removed narrator metadata or selected-copy artifacts."
+rationale = "Every selected-narrator consumer must share one truthful resolution path and cannot revive the fragmented persistence contract indirectly."
+verification = "Downstream selected-profile resolution test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_character_voice_readiness_uses_selected_profile_resolution",
+]
+
+created_on = "2026-07-21T13:27:00Z"
+last_updated = "2026-07-21T14:40:00Z"

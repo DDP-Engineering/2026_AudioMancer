@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-2d73a0f9-c593-4bc3-aca8-f4ced40d66fa"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Narrator profile, sample, and selection mutations shall update the authoritative document atomically, keep each profile identity immutable and unique, store compact sample metadata inside its profile, use only `audio_narator_<normalized_profile_id>.wav` for sample bytes, preserve that WAV across display-name edits, repair invalid selection after edit/delete, and persist selection only as `selected_profile_id` without JSON or WAV copies."
+rationale = "Stable profile ownership removes duplicated selected artifacts while preserving explicit review and independent samples."
+verification = "Canonical profile WAV ownership and no-copy selection test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_profile_sample_and_selection_use_only_document_and_canonical_wav",
+]
+
+created_on = "2026-07-21T13:27:00Z"
+last_updated = "2026-07-21T14:40:00Z"

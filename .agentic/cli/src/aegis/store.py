@@ -28,19 +28,26 @@
          following its advice scaffolded a nested ``src/.agentic/`` silently;
          a working directory inside ``.agentic`` itself now heals to the
          surrounding project root instead of exiting.
-@details ``init_graph`` (0.3.0) persists optional scope hints in the run intent
-         and initial journal event so INV-5 can honor explicit extra roots.
+@details ``init_graph`` (0.4.0) publishes the active-run selector atomically
+         below ignored, worktree-local workspace state only after the initial
+         graph has been saved successfully.
+@details ``resolve_run_id`` and ``load_graph`` (0.1.0) implement the strict
+         explicit-first active-run contract with typed, actionable failures.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-20
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 import json
+import os
 from pathlib import Path
+import re
 from uuid import uuid4
 
 from .models import ADOPTION_STAGES, AccessMode, Evidence, Graph, Intent, RunKind, Stage, now_iso
@@ -49,9 +56,65 @@ from .models import ADOPTION_STAGES, AccessMode, Evidence, Graph, Intent, RunKin
 
 AGENTIC_DIR = ".agentic"
 RUNS_DIR = "runs"
+WORKSPACE_DIR = ".workspace"
+WORKSPACE_STATE_DIR = "state"
 CURRENT_RUN = "current_run"
 GRAPH_FILE = "graph.json"
 JOURNAL_FILE = "journal.jsonl"
+RUN_ID_PATTERN = re.compile(
+    r"^(feature|fix|change|adoption)-"
+    r"(?P<timestamp>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6}Z)-"
+    r"[0-9a-f]{8}$"
+)
+
+# DATA MODELS / TYPEDEFINITIONS
+
+
+@dataclass
+class RunResolutionError(Exception):
+    """
+    @brief      Describe one stable active-run resolution failure.
+    @param[in]  code Stable machine-readable error code.
+    @param[in]  pointer_path Repository-relative pointer path, when applicable.
+    @param[in]  run_id Valid-shaped candidate run ID, when available.
+    @param[in]  message Human-readable failure description.
+    @param[in]  remediation Concrete corrective action for an agent.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.2.0
+    """
+
+    code: str
+    pointer_path: str | None
+    run_id: str | None
+    message: str
+    remediation: str
+
+    def __str__(self) -> str:
+        """
+        @brief      Render the stable text error contract.
+        @return     Error code, message, and remediation.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-22
+        @version    0.1.0
+        """
+        return f"{self.code}: {self.message}\n{self.remediation}"
+
+    def to_dict(self) -> dict[str, str | None]:
+        """
+        @brief      Serialize the stable run-resolution fields.
+        @return     JSON-compatible error mapping.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-22
+        @version    0.1.0
+        """
+        return {
+            "code": self.code,
+            "pointer_path": self.pointer_path,
+            "run_id": self.run_id,
+            "message": self.message,
+            "remediation": self.remediation,
+        }
 
 # PUBLIC API
 
@@ -165,17 +228,41 @@ def runs_root(repo_root: Path) -> Path:
     return agentic_root(repo_root) / RUNS_DIR
 
 
-def current_run_path(repo_root: Path) -> Path:
+def workspace_root(repo_root: Path) -> Path:
     """
-    @brief      Resolve current run path workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
+    @brief      Return the ignored, worktree-local AEGIS workspace root.
+    @param[in]  repo_root Repository root.
+    @return     `.agentic/.workspace` path without creating it.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
+    @date       2026-07-22
     @version    0.1.0
     """
-    return agentic_root(repo_root) / CURRENT_RUN
+    return agentic_root(repo_root) / WORKSPACE_DIR
+
+
+def workspace_state_root(repo_root: Path) -> Path:
+    """
+    @brief      Return the worktree-local state directory.
+    @param[in]  repo_root Repository root.
+    @return     `.agentic/.workspace/state` path without creating it.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.1.0
+    """
+    return workspace_root(repo_root) / WORKSPACE_STATE_DIR
+
+
+def current_run_path(repo_root: Path) -> Path:
+    """
+    @brief      Return the worktree-local active-run pointer path.
+    @param[in]  repo_root Repository root.
+    @return     `.agentic/.workspace/state/current_run` path.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.2.0
+    """
+    return workspace_state_root(repo_root) / CURRENT_RUN
 
 
 def new_run_id(kind: str) -> str:
@@ -235,33 +322,228 @@ def journal_path(repo_root: Path, run_id: str) -> Path:
 
 def write_current_run(repo_root: Path, run_id: str) -> None:
     """
-    @brief      Write current run workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  run_id Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
+    @brief      Atomically publish the worktree-local active-run pointer.
+    @param[in]  repo_root Repository root.
+    @param[in]  run_id Valid run ID to publish.
+    @return     None.
+    @exception  RunResolutionError If `run_id` is malformed.
+    @exception  OSError If the state directory or pointer cannot be written.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-22
+    @version    0.2.0
     """
-    agentic_root(repo_root).mkdir(parents=True, exist_ok=True)
-    current_run_path(repo_root).write_text(run_id, encoding="utf-8")
+    if not _is_valid_run_id(run_id):
+        raise _explicit_run_error(None, received=run_id)
+    state_root = workspace_state_root(repo_root)
+    state_root.mkdir(parents=True, exist_ok=True)
+    destination = current_run_path(repo_root)
+    temporary = destination.with_name(f".{CURRENT_RUN}.{uuid4().hex}.tmp")
+    try:
+        with temporary.open("xb") as handle:
+            handle.write(f"{run_id}\n".encode("utf-8"))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
-def read_current_run(repo_root: Path) -> str:
+def resolve_run_id(repo_root: Path, explicit_run_id: str | None = None) -> str:
     """
-    @brief      Read current run workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
+    @brief      Resolve and validate an explicit or worktree-selected run ID.
+    @param[in]  repo_root Repository root.
+    @param[in]  explicit_run_id Optional run ID that takes precedence over the
+                workspace pointer.
+    @return     Validated run ID whose graph is readable and internally
+                consistent.
+    @exception  RunResolutionError If the selection or graph is invalid.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
+    @date       2026-07-22
     @version    0.1.0
     """
-    path = current_run_path(repo_root)
-    if not path.exists():
-        raise SystemExit("No active agentic run. Start one with: aegis start")
-    return path.read_text(encoding="utf-8").strip()
+    if explicit_run_id is not None:
+        if not _is_valid_run_id(explicit_run_id):
+            raise _explicit_run_error(None, received=explicit_run_id)
+        _load_selected_graph(repo_root, explicit_run_id, explicit=True)
+        return explicit_run_id
+
+    pointer = current_run_path(repo_root)
+    pointer_relative = _pointer_relative_path()
+    if not pointer.exists():
+        raise RunResolutionError(
+            code="RUN-POINTER-MISSING",
+            pointer_path=pointer_relative,
+            run_id=None,
+            message="No active AEGIS run is selected for this worktree.",
+            remediation=(
+                "Start one with `aegis start ...` or rerun this command with "
+                "`--run-id <existing-run-id>`.\n"
+                f"Expected pointer: {pointer_relative}"
+            ),
+        )
+    try:
+        raw = pointer.read_bytes()
+        text = raw.decode("utf-8")
+    except (OSError, UnicodeError):
+        raise _invalid_pointer_error() from None
+    if not text.endswith("\n") or text.count("\n") != 1:
+        raise _invalid_pointer_error()
+    run_id = text[:-1]
+    if not _is_valid_run_id(run_id):
+        raise _invalid_pointer_error()
+    _load_selected_graph(repo_root, run_id, explicit=False)
+    return run_id
+
+
+# LOCAL HELPERS
+
+
+def _pointer_relative_path() -> str:
+    """
+    @brief      Return the stable repository-relative pointer path.
+    @return     POSIX-form pointer path used in errors and JSON.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.1.0
+    """
+    return f"{AGENTIC_DIR}/{WORKSPACE_DIR}/{WORKSPACE_STATE_DIR}/{CURRENT_RUN}"
+
+
+def _is_valid_run_id(run_id: str) -> bool:
+    """
+    @brief      Validate the lexical and real-UTC run-ID contract.
+    @param[in]  run_id Candidate run ID.
+    @return     `True` only for a canonical supported run ID.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.1.0
+    """
+    match = RUN_ID_PATTERN.fullmatch(run_id)
+    if match is None:
+        return False
+    try:
+        datetime.strptime(match.group("timestamp"), "%Y-%m-%dT%H%M%SZ")
+    except ValueError:
+        return False
+    return True
+
+
+def _invalid_pointer_error() -> RunResolutionError:
+    """
+    @brief      Build the stable malformed-pointer error.
+    @return     `RUN-POINTER-INVALID` error.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.1.0
+    """
+    pointer_relative = _pointer_relative_path()
+    return RunResolutionError(
+        code="RUN-POINTER-INVALID",
+        pointer_path=pointer_relative,
+        run_id=None,
+        message=f"{pointer_relative} does not contain a valid run ID.",
+        remediation=(
+            "Start a new run or replace the pointer by starting/selecting a valid run; "
+            "do not edit run graphs by guessing an ID."
+        ),
+    )
+
+
+def _explicit_run_error(
+    run_id: str | None,
+    *,
+    received: str | None = None,
+) -> RunResolutionError:
+    """
+    @brief      Build the stable explicit-selection error.
+    @param[in]  run_id Valid-shaped candidate, when available.
+    @param[in]  received Original malformed value, when no valid candidate is
+                available for the serialized `run_id` field.
+    @return     `RUN-ID-NOT-FOUND` error.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.2.0
+    """
+    display = run_id if run_id is not None else (received or "<invalid-run-id>")
+    return RunResolutionError(
+        code="RUN-ID-NOT-FOUND",
+        pointer_path=None,
+        run_id=run_id,
+        message=(
+            f"Explicit run {display} does not resolve to a valid graph under "
+            f"{AGENTIC_DIR}/{RUNS_DIR}/."
+        ),
+        remediation=(
+            "List the available run directories or start a new run, then retry "
+            "with the exact ID."
+        ),
+    )
+
+
+def _stale_pointer_error(run_id: str) -> RunResolutionError:
+    """
+    @brief      Build the stable stale-pointer error.
+    @param[in]  run_id Valid-shaped workspace selection.
+    @return     `RUN-POINTER-STALE` error.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.1.0
+    """
+    return RunResolutionError(
+        code="RUN-POINTER-STALE",
+        pointer_path=_pointer_relative_path(),
+        run_id=run_id,
+        message=(
+            f"This worktree selects {run_id}, but {AGENTIC_DIR}/{RUNS_DIR}/"
+            f"{run_id}/{GRAPH_FILE} is missing or invalid."
+        ),
+        remediation=(
+            "Start a new run or pass `--run-id <existing-run-id>` explicitly."
+        ),
+    )
+
+
+def _load_selected_graph(repo_root: Path, run_id: str, *, explicit: bool) -> Graph:
+    """
+    @brief      Validate containment and parse one selected graph.
+    @param[in]  repo_root Repository root.
+    @param[in]  run_id Canonical run ID.
+    @param[in]  explicit Whether failures use the explicit-selection contract.
+    @return     Parsed, internally consistent graph.
+    @exception  RunResolutionError If containment, I/O, JSON, model parsing,
+                or graph identity validation fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-22
+    @version    0.2.0
+    """
+    error = _explicit_run_error(run_id) if explicit else _stale_pointer_error(run_id)
+    root = runs_root(repo_root).resolve()
+    path = graph_path(repo_root, run_id)
+    try:
+        resolved = path.resolve()
+        resolved.relative_to(root)
+    except (OSError, ValueError):
+        raise error from None
+    if not resolved.is_file():
+        raise error
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("graph JSON must be an object")
+        graph = Graph.from_dict(payload)
+    except (
+        AttributeError,
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        KeyError,
+        TypeError,
+        ValueError,
+    ):
+        raise error from None
+    if graph.run_id != run_id:
+        raise error
+    return graph
 
 
 def init_graph(
@@ -282,7 +564,7 @@ def init_graph(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-20
-    @version    0.3.0
+    @version    0.4.0
     """
     run_id = new_run_id(kind)
     starting_stage: Stage = ADOPTION_STAGES[0] if kind == "adoption" else "intake"
@@ -314,22 +596,22 @@ def init_graph(
     return graph
 
 
-def load_graph(repo_root: Path, run_id: str | None = None) -> Graph:
+def load_graph(repo_root: Path, run_id: str) -> Graph:
     """
-    @brief      Load graph workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  run_id Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
+    @brief      Load one already selected run graph without consulting state.
+    @param[in]  repo_root Repository root.
+    @param[in]  run_id Explicit, previously resolved run ID.
+    @return     Parsed graph whose internal run ID matches `run_id`.
+    @exception  RunResolutionError If the ID or graph is invalid.
+    @note       Call :func:`resolve_run_id` before this function when a command
+                may use the workspace pointer.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @date       2026-07-22
+    @version    0.2.0
     """
-    active_id = run_id or read_current_run(repo_root)
-    path = graph_path(repo_root, active_id)
-    if not path.exists():
-        raise SystemExit(f"Graph not found for run {active_id}")
-    return Graph.from_dict(json.loads(path.read_text(encoding="utf-8")))
+    if not _is_valid_run_id(run_id):
+        raise _explicit_run_error(None, received=run_id)
+    return _load_selected_graph(repo_root, run_id, explicit=True)
 
 
 def save_graph(repo_root: Path, graph: Graph) -> None:

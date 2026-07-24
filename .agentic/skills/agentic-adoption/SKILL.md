@@ -24,7 +24,13 @@ behavior unless the human stops adoption and starts a normal development run.
 
 ## Ground Rules
 
-- Treat `.agentic/workflow.toml` as the project-specific source of truth.
+- Before repository inspection or edits, run `<workflow> config validate --json`
+  and `<workflow> config show --effective --json`. Report the effective write,
+  protected-read/path, scope, secret, gate, coverage, and delivery modes and
+  active rule counts; state the selected run and distinguish AEGIS policy from
+  external platform safety.
+- Treat validated `.agentic/workflow.toml` as the only AEGIS repository-policy
+  source; never infer fallback restrictions from language or adapter settings.
 - Treat `.agentic/components.toml` as the component map when present.
 - Use `<workflow>` as the project-local workflow runner:
   `.\.agentic\tools\run.ps1` on Windows or `bash .agentic/tools/run.sh` on
@@ -76,7 +82,7 @@ behavior unless the human stops adoption and starts a normal development run.
    - Stop after alignment is recorded or skipped by config.
 
 3. repo-discovery
-   - Inventory configured source roots, test roots, requirement registers,
+   - Inventory configured source roots, test roots, requirement snapshot roots,
      documentation roots, gate commands, and adapters.
    - Run `<workflow> audit traceability` and `<workflow> audit coverage` when
      the current configuration can support them.

@@ -1,0 +1,39 @@
+schema_version = 1
+id = "REQ-FUNC-fa988b58-3522-4c35-a12d-f377370ba470"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Character Voices controller/page shall expose explicit edit/save/import/batch-generation flows, preserve samples on failed generation, synchronize project status, and redact runtime model identifiers from progress messages."
+rationale = "Operators need controllable per-character voice review without exposing implementation-specific runtime details."
+verification = "Focused Character Voices UI suites passed: 20 tests within E-0014."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after_audio_invalidation",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_page_activation_warns_when_narrator_sample_is_missing",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_page_activation_syncs_home_status",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_page_activation_uses_persisted_targets_before_page_load",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_prompt_persists_preview_text",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_generate_stops_preview_before_deleting_sample",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_regenerates_all_current_character_samples",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_targets_only_generatable_characters",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_sample_generation_cancel_during_model_load",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_failed_character_sample_generation_preserves_existing_sample",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_progress_messages_hide_model_id",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_narrator_target_is_preview_only",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_import_button_emits_for_character_targets",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_enables_for_current_character_targets",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_disables_when_character_targets_cannot_generate",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_editor_payload_includes_preview_text",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_header_indicators_render_languages_and_assignment_mode",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-19T21:05:00Z"

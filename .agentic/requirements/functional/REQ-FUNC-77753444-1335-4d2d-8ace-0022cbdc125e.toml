@@ -1,0 +1,37 @@
+schema_version = 1
+id = "REQ-FUNC-77753444-1335-4d2d-8ace-0022cbdc125e"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Narrator profile generation/import shall use bounded approved text and operator rules, preserve existing profiles on invalid/cancelled work, resume checkpoints safely, record usage, and admit only valid audible WAV samples."
+rationale = "Generated profiles and imported audio must be safe to review without corrupting the existing voice inventory."
+verification = "Focused profile-generation/import suites passed: 18 tests within E-0014."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_prefers_approved_translation_for_voice_language",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_odd_allocation_appends_without_deleting_existing",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_adds_operator_prompt_rules",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_short_preview_text",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_preview_text_below_six_seconds",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_merges_token_usage_into_report_and_state",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_leaves_profiles_unchanged",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_after_completed_style_window",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_final_generation_without_reanalyzing_style",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_compacts_style_observations_for_final_prompt",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_falls_back_to_clean_text",
+  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_accepts_valid_sample",
+  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_short_sample",
+  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_silent_sample",
+  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_non_wav",
+  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_unreadable_wav",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-19T21:05:00Z"

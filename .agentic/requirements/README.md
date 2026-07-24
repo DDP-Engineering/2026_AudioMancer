@@ -5,44 +5,71 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# Requirements Registers
+# Requirement Snapshots
 
-These Markdown registers are the durable project contract. The active workflow
-run graph records what happened in one run; these registers record what the
-project promises over time.
+This directory is the canonical durable project contract. Each requirement is
+one complete current TOML snapshot. Run graphs record the work performed in an
+individual run; requirement files record the behavior the project currently
+promises.
 
-## Registers And ID Prefixes
+## Identity And Layout
 
-| File | Prefix | Scope |
+Use the workflow CLI to create IDs. An ID has the form
+`REQ-<CATEGORY-CODE>-<lowercase UUIDv4>` and its filename is exactly
+`<id>.toml` below the matching category directory:
+
+| Category | Directory | Code |
 | --- | --- | --- |
-| `functional.md` | `REQ-FUNC` | Observable product behavior |
-| `ux_workflow.md` | `REQ-UX` | User-facing flows and interaction contracts |
-| `non_functional.md` | `REQ-NFR` | Performance, robustness, determinism, quality |
-| `security.md` | `REQ-SEC` | Access, secrets, threat boundaries |
-| `data_privacy.md` | `REQ-DATA` | Persistence, privacy, retention, sensitive values |
-| `platform.md` | `REQ-PLAT` | OS, runtime, and toolchain targets |
-| `release.md` | `REQ-REL` | Packaging and delivery constraints |
-| `testing.md` | `REQ-TEST` | Verification process rules and gates |
+| `functional` | `functional/` | `FUNC` |
+| `ux` | `ux/` | `UX` |
+| `non_functional` | `non_functional/` | `NFR` |
+| `security` | `security/` | `SEC` |
+| `data_privacy` | `data_privacy/` | `DATA` |
+| `platform` | `platform/` | `PLAT` |
+| `release` | `release/` | `REL` |
+| `testing` | `testing/` | `TEST` |
 
-IDs use `PREFIX-NNN`, are stable forever, and are never reused after
-retirement.
+Search and list existing requirements before creating one so a semantically
+equivalent contract is not duplicated. Keep the same ID when revising the
+wording, rationale, priority, status, verification, affected paths, or linked
+tests of the same behavioral contract.
 
-## Normative Table Schema
+## Complete Record
 
-Every register uses exactly this header:
+Every file uses schema version 1 and contains all fields below in this order:
 
-```text
-| ID | Status | Priority | Requirement | Rationale | Related Components | Verification Method | Linked Tests | Created On | Last Updated |
+```toml
+schema_version = 1
+id = "REQ-FUNC-6f3a61e8-84fc-438a-9b0b-53554cd04789"
+category = "functional"
+status = "Planned"
+priority = "Must"
+requirement = "One testable current behavioral contract."
+rationale = "Why the contract is required."
+verification = "Automated test"
+
+affected_paths = [
+  "src/example.py",
+]
+
+linked_tests = [
+  "tests/test_example.py::test_contract",
+]
+
+created_on = "2026-07-22T10:20:00Z"
+last_updated = "2026-07-22T10:20:00Z"
 ```
 
-- `Status`: `Planned`, `Active`, or `Retired`.
-- `Priority`: `Must`, `Should`, or `Could`.
-- `Related Components`: repository paths in backticks, separated by `;`.
-- `Verification Method`: `Automated test`, `Manual <description>`, or
-  `Automated test and inspection`.
-- `Linked Tests`: exact test identifiers in backticks, separated by `;`.
-- `Created On` / `Last Updated`: `YYYY-MM-DD HH:MM`.
+`status` is `Planned`, `Active`, or `Retired`; `priority` is `Must`, `Should`,
+or `Could`. Arrays are the complete current sets and are replaced rather than
+appended during updates. Empty arrays never inherit earlier values.
 
-`Active` rows need at least one resolvable linked test or an explicit manual
-verification method. New rows normally start as `Planned` and become `Active`
-only after their linked check passes.
+An Active automated requirement needs resolvable exact test selectors. A
+manual-only Active requirement uses `Manual: <method>` or
+`Inspection: <method>`. Current snapshots do not contain revision history,
+parent IDs, supersession chains, or previous wording.
+
+Use requirement create/show/list/update/activate commands instead of inventing
+IDs or editing a shared index. Traceability, coverage, and impact read these
+files directly and build reverse mappings only in memory. Concurrent changes
+to the same TOML file are a semantic conflict that must be reconciled.

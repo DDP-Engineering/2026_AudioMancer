@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-8fd4bd61-fce8-4e48-8458-4ae296fbc00a"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Deterministic and AI-assisted Chunking shall atomically create the running document before work, commit only complete deterministic units or validated AI windows, emit progress only in memory, preserve committed chunks and resume fields on cancellation or failure, and complete with every paragraph represented and `next_paragraph` set to null."
+rationale = "Crash-safe unit commits must never publish partial provider output or split canonical chunks from resumable operation state."
+verification = "Deterministic and AI lifecycle contract suite passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress",
+]
+
+created_on = "2026-07-20T20:56:00Z"
+last_updated = "2026-07-20T22:20:00Z"
