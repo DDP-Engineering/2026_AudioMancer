@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Text Extraction now persists exactly `extracted_text.txt` and the strict
+  authoritative `extraction_metadata.json` document. Status, progress,
+  warnings, PDF page count, and final text statistics are read from that
+  document, including rerun/resume and Text Cleanup availability decisions.
+- Extraction reset and project-open repair now reject legacy or mixed
+  extraction artifacts and destructively clear Extraction plus downstream
+  outputs while preserving the imported source document.
 - Narrator Voice now persists its complete strict metadata contract in
   `narrator_voice.json`; selection stores only the profile ID and downstream
   services resolve the selected profile-owned WAV at read time.
@@ -23,6 +30,10 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
+- Removed `extraction_report.json`, `extraction_state.json`,
+  `extraction_warning_count`, and `operations.extraction` from active
+  persistence contracts. Legacy sidecar names remain reset-only and are not
+  migrated or used as fallback data.
 - Removed the fragmented narrator profile, selection, selected-sample,
   generation-report, and generation-state contracts. No compatibility reader,
   automatic migration, or selected-sample copy remains.

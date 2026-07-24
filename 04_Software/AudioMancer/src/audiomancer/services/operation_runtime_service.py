@@ -53,8 +53,10 @@ TEXT_REVISION_PRESERVED_OPERATION_KINDS = frozenset(
 _OPERATION_ARTIFACT_FILE_NAMES = {
     "extraction": (
         config.EXTRACTED_TEXT_FILE_NAME,
-        config.EXTRACTION_REPORT_FILE_NAME,
-        config.EXTRACTION_STATE_FILE_NAME,
+        config.EXTRACTION_METADATA_FILE_NAME,
+        # Reset-only legacy sidecars; Extraction never reads or writes them.
+        "extraction_report.json",
+        "extraction_state.json",
     ),
     "cleanup": (
         config.CLEANED_TEXT_FILE_NAME,
@@ -113,7 +115,6 @@ _OPERATION_AI_LOG_TOKENS = {
 
 # @brief Optional operation-state file names that may be initialized on first page open.
 _OPERATION_STATE_FILE_NAMES = {
-    "extraction": config.EXTRACTION_STATE_FILE_NAME,
     "character_discovery": config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     "speech_blocks": config.SPEECH_BLOCKS_STATE_FILE_NAME,
     "audio_blocks": config.AUDIO_BLOCKS_STATE_FILE_NAME,

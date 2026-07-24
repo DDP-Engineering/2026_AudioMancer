@@ -88,11 +88,11 @@ Project runtime artifact contracts currently include:
 - `PROJECT_ROOT_ARTIFACT_RELATIVE_PATH = "."`
 - no per-operation workflow folder constants
 - no required-workflow-subdirectory configuration for new projects
-- root-level state files such as `extraction_state.json`,
-  `cleanup_state.json`, `translation_state.json`,
+- root-level state files such as `cleanup_state.json`, `translation_state.json`,
   `characters_state.json`, `speech_blocks_state.json`, and
   `audio_blocks_state.json`
 - root-level output/report artifacts such as `extracted_text.txt`,
+  `extraction_metadata.json`,
   `clean_text.txt`, `chunks_text.json`, `translated_text.json`,
   `characters_profile.json`, `narrator_voice.json`, `characters_voice.json`,
   `speech_blocks.json`, `audio_blocks.json`, and

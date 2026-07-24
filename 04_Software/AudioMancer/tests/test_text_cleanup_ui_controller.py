@@ -21,14 +21,32 @@ import json
 
 import pytest
 
-import pytest
-
 from audiomancer import config
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import text_cleanup_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
 # PUBLIC API
+
+
+def _write_completed_extraction(project_root, text: str) -> None:
+    """Persist one valid completed extraction fixture."""
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(text, encoding="utf-8")
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "progress_current": 1,
+                "progress_total": 1,
+                "warnings": [],
+                "character_count": len(text),
+                "word_count": len(text.split()),
+                "line_count": len(text.splitlines()),
+                "page_count": None,
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def test_text_cleanup_ui_controller_start_operation_clears_dialog(
@@ -210,8 +228,7 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
         "ControllerAiCleanupProject",
         tmp_path,
     )
-    extracted_path = project_root / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
+    _write_completed_extraction(project_root, "Paragraph one.\n\nParagraph two.\n")
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -299,7 +316,7 @@ def test_text_cleanup_ui_controller_cancelled_optional_instructions_restore_acti
         "ControllerAiCleanupPromptCancelProject",
         tmp_path,
     )
-    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
+    _write_completed_extraction(project_root, "Paragraph one.\n")
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -388,7 +405,7 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
         "ControllerAiCleanupResumeProject",
         tmp_path,
     )
-    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
+    _write_completed_extraction(project_root, "Paragraph one.\n")
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -513,7 +530,7 @@ def test_text_cleanup_ui_controller_save_cleaned_text_updates_project_state(
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Clean text\n", encoding="utf-8")
     extraction_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     extraction_root.mkdir(exist_ok=True)
-    (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Raw text\n", encoding="utf-8")
+    _write_completed_extraction(project_root, "Raw text\n")
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/story.txt",

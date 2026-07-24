@@ -246,7 +246,7 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     window._activate_project(project_root, manifest)
 
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
-    assert (project_root / config.EXTRACTION_STATE_FILE_NAME).exists() is False
+    assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
     assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
     assert (project_root / "chunking_state.json").exists() is False
     assert (project_root / "chunking_report.json").exists() is False
@@ -256,9 +256,7 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
 
     window.set_current_page("text_cleanup")
 
-    assert json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))["status"] == (
-        "not_started"
-    )
+    assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
     assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
     assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
@@ -308,10 +306,24 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"
-    manifest["extraction_report_relative_path"] = f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"
-    manifest["operations"]["extraction"]["status"] = "completed"
     manifest["operations"]["cleanup"]["status"] = "completed"
+    extracted_text = "Story body\n"
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(extracted_text, encoding="utf-8")
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "progress_current": 1,
+                "progress_total": 1,
+                "warnings": [],
+                "character_count": len(extracted_text),
+                "word_count": len(extracted_text.split()),
+                "line_count": len(extracted_text.splitlines()),
+                "page_count": None,
+            }
+        ),
+        encoding="utf-8",
+    )
     project_workspace_service.save_manifest(manifest, project_root)
 
     question_calls = []
@@ -375,9 +387,22 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["operations"]["extraction"]["status"] = "failed"
-    manifest["operations"]["extraction"]["progress_current"] = 1
-    manifest["operations"]["extraction"]["progress_total"] = 3
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Partial", encoding="utf-8")
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "failed",
+                "progress_current": 1,
+                "progress_total": 3,
+                "warnings": [],
+                "character_count": None,
+                "word_count": None,
+                "line_count": None,
+                "page_count": None,
+            }
+        ),
+        encoding="utf-8",
+    )
     project_workspace_service.save_manifest(manifest, project_root)
 
     question_calls = []
@@ -392,54 +417,34 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     def _fake_extract_text(*args, **kwargs):
         """
         @brief      Record one resumed extraction call and return a minimal report.
-        @return     Minimal extraction report payload.
+        @return     Final extraction metadata payload.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
         @version    0.1.0
         """
         extract_calls.append(args)
-        extraction_root = project_root / "00_extraction"
-        extraction_root.mkdir(exist_ok=True)
-        (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Story body\n", encoding="utf-8")
-        (extraction_root / config.EXTRACTION_REPORT_FILE_NAME).write_text(
-            "{}\n",
-            encoding="utf-8",
-        )
-        (extraction_root / config.EXTRACTION_STATE_FILE_NAME).write_text(
+        extracted_text = "Story body\n"
+        (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(extracted_text, encoding="utf-8")
+        metadata = {
+            "status": "completed",
+            "progress_current": 1,
+            "progress_total": 1,
+            "warnings": [],
+            "character_count": len(extracted_text),
+            "word_count": len(extracted_text.split()),
+            "line_count": len(extracted_text.splitlines()),
+            "page_count": None,
+        }
+        (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
             json.dumps(
-                {
-                    "folder_relative_path": "00_extraction",
-                    "status": "completed",
-                    "input_paths": [],
-                    "output_paths": [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"],
-                    "artifact_paths": [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"],
-                    "progress_current": 1,
-                    "progress_total": 1,
-                    "mode": "deterministic",
-                    "started_at": "2026-04-06T12:00:00+00:00",
-                    "completed_at": "2026-04-06T12:01:00+00:00",
-                    "updated_at": "2026-04-06T12:01:00+00:00",
-                    "warning_count": 0,
-                    "metadata": {"warnings": []},
-                    "resume_checkpoint": None,
-                },
+                metadata,
                 indent=2,
             )
             + "\n",
             encoding="utf-8",
         )
-        return {
-            "source_relative_path": "00_extraction/input_story.txt",
-            "source_type": "txt",
-            "extracted_text_relative_path": f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}",
-            "extracted_at": "2026-04-06T12:01:00+00:00",
-            "page_count": None,
-            "warnings": [],
-            "character_count": 10,
-            "word_count": 2,
-            "line_count": 1,
-        }
+        return metadata
 
     monkeypatch.setattr(
         text_cleanup_ui_controller.text_extraction_service,

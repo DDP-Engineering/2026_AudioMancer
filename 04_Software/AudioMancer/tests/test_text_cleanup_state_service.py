@@ -44,12 +44,7 @@ def test_build_manifest_after_cleanup_reset_preserves_extraction_outputs() -> No
     """
     manifest = {
         "current_stage": "text_chunking_ready",
-        "extraction_warning_count": 0,
         "operations": {
-            "extraction": {
-                "status": "completed",
-                "output_paths": ["00_extraction/output_raw_text.txt"],
-            },
             "cleanup": {
                 "status": "completed",
                 "output_paths": ["10_cleanup/output_clean_text.txt"],
@@ -69,7 +64,7 @@ def test_build_manifest_after_cleanup_reset_preserves_extraction_outputs() -> No
 
     assert "extracted_text_relative_path" not in reset_manifest
     assert "extraction_report_relative_path" not in reset_manifest
-    assert reset_manifest["operations"]["extraction"]["status"] == "completed"
+    assert "extraction" not in reset_manifest["operations"]
     assert reset_manifest["operations"]["cleanup"]["status"] == "not_started"
     assert reset_manifest["operations"]["chunking"]["status"] == "not_started"
 
@@ -94,6 +89,21 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
     cleanup_root.mkdir(exist_ok=True)
     (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         "Extracted text\n",
+        encoding="utf-8",
+    )
+    (extraction_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "progress_current": 1,
+                "progress_total": 1,
+                "warnings": [],
+                "character_count": 14,
+                "word_count": 2,
+                "line_count": 1,
+                "page_count": None,
+            }
+        ),
         encoding="utf-8",
     )
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
@@ -161,6 +171,21 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
     )
     source_text = "Extracted text\n"
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(source_text, encoding="utf-8")
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "progress_current": 1,
+                "progress_total": 1,
+                "warnings": [],
+                "character_count": 14,
+                "word_count": 2,
+                "line_count": 1,
+                "page_count": None,
+            }
+        ),
+        encoding="utf-8",
+    )
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Cleaned text\n", encoding="utf-8")
     (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
         json.dumps(
@@ -362,14 +387,9 @@ def test_build_manifest_after_character_discovery_reset_returns_translation_read
     """
     manifest = {
         "current_stage": "character_discovery_ready",
-        "extraction_warning_count": 0,
         "narrator_profile_name": "Warm Narrator",
         "narrator_language": "en",
         "operations": {
-            "extraction": {
-                "status": "completed",
-                "output_paths": ["00_extraction/output_raw_text.txt"],
-            },
             "cleanup": {
                 "status": "completed",
                 "output_paths": ["10_cleanup/output_clean_text.txt"],

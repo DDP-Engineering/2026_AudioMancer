@@ -340,8 +340,19 @@ def test_workflow_impact_refreshes_manifest_from_completed_artifacts(tmp_path) -
     project_workspace_service.save_manifest(manifest, project_root)
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Story", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Story", encoding="utf-8")
-    _write_json(project_root / config.EXTRACTION_STATE_FILE_NAME, _operation_state("completed", 1, 1))
-    _write_json(project_root / config.EXTRACTION_REPORT_FILE_NAME, {"warning_count": 0})
+    _write_json(
+        project_root / config.EXTRACTION_METADATA_FILE_NAME,
+        {
+            "status": "completed",
+            "progress_current": 1,
+            "progress_total": 1,
+            "warnings": [],
+            "character_count": 5,
+            "word_count": 1,
+            "line_count": 1,
+            "page_count": None,
+        },
+    )
     _write_json(project_root / config.CLEANUP_STATE_FILE_NAME, _operation_state("completed", 1, 1))
     _write_json(project_root / config.CLEANUP_REPORT_FILE_NAME, {"warning_count": 0})
 

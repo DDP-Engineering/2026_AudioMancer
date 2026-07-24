@@ -34,7 +34,7 @@ from audiomancer.services import project_workspace_service, text_extraction_serv
 
 def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -> None:
     """
-    @brief      Verify TXT extraction writes flat output, report, and state files.
+    @brief      Verify TXT extraction writes only canonical text and authoritative metadata.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -50,19 +50,36 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     source_path.write_text("First line\r\n\r\nSecond line", encoding="utf-8")
     manifest["source_document"] = _build_source_document(source_path, "txt")
 
-    report_payload = text_extraction_service.extract_text(project_root, manifest)
+    metadata = text_extraction_service.extract_text(project_root, manifest)
 
     assert source_path.is_file()
     assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8") == (
         "First line\n\nSecond line\n"
     )
-    assert report_payload["source_type"] == "txt"
-    assert report_payload["word_count"] == 4
-
-    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["status"] == "completed"
-    for field_name in ("input_paths", "output_paths", "artifact_paths", "started_at", "completed_at", "updated_at"):
-        assert field_name not in state_payload
+    assert metadata == {
+        "status": "completed",
+        "progress_current": 1,
+        "progress_total": 1,
+        "warnings": [],
+        "character_count": 23,
+        "word_count": 4,
+        "line_count": 3,
+        "page_count": None,
+    }
+    assert json.loads(
+        (project_root / config.EXTRACTION_METADATA_FILE_NAME).read_text(encoding="utf-8")
+    ) == metadata
+    generated_artifact_names = {
+        path.name
+        for path in project_root.iterdir()
+        if path.name not in {config.PROJECT_MANIFEST_FILE_NAME, source_path.name}
+    }
+    assert generated_artifact_names == {
+        config.EXTRACTED_TEXT_FILE_NAME,
+        config.EXTRACTION_METADATA_FILE_NAME,
+    }
+    assert (project_root / "extraction_report.json").exists() is False
+    assert (project_root / "extraction_state.json").exists() is False
 
 
 @pytest.mark.parametrize(
@@ -108,11 +125,11 @@ def test_extract_text_supports_document_formats(
     builder(source_path)
     manifest["source_document"] = _build_source_document(source_path, file_type)
 
-    report_payload = text_extraction_service.extract_text(project_root, manifest)
+    metadata = text_extraction_service.extract_text(project_root, manifest)
 
     output_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
-    assert file_type == report_payload["source_type"]
-    assert report_payload["character_count"] > 0
+    assert metadata["status"] == "completed"
+    assert metadata["character_count"] > 0
     assert "Story" in output_text
 
 
@@ -131,17 +148,16 @@ def test_extract_text_reports_pdf_warnings_and_total_pages(tmp_path) -> None:
         tmp_path,
     )
     source_path = project_root / "story.pdf"
-    _write_pdf_source(source_path, ["", "Story page two"])
+    _write_pdf_source(source_path, ["Story page one", "", "Story page three"])
     manifest["source_document"] = _build_source_document(source_path, "pdf")
 
-    report_payload = text_extraction_service.extract_text(project_root, manifest)
+    metadata = text_extraction_service.extract_text(project_root, manifest)
 
-    assert report_payload["page_count"] == 2
-    assert report_payload["warnings"] == ["PDF page 1 did not contain extractable text."]
+    assert metadata["page_count"] == 3
+    assert metadata["warnings"] == ["PDF page 2 did not contain extractable text."]
     output_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
-    assert output_text == "Story page two\n"
-    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["progress_total"] == 2
+    assert output_text == "Story page one\n\n\f\n\nStory page three\n"
+    assert metadata["progress_total"] == 3
 
 
 def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
@@ -164,6 +180,10 @@ def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="OCR is not supported"):
         text_extraction_service.extract_text(project_root, manifest)
+    metadata = text_extraction_service.load_extraction_metadata(project_root)
+    assert metadata is not None
+    assert metadata["status"] == "failed"
+    assert metadata["progress_current"] == 2
 
 
 def test_extract_text_splits_rtf_into_multiple_progress_units(tmp_path) -> None:
@@ -189,8 +209,9 @@ def test_extract_text_splits_rtf_into_multiple_progress_units(tmp_path) -> None:
 
     text_extraction_service.extract_text(project_root, manifest)
 
-    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["progress_total"] >= 2
+    metadata = text_extraction_service.load_extraction_metadata(project_root)
+    assert metadata is not None
+    assert metadata["progress_total"] >= 2
 
 
 def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None:
@@ -224,8 +245,9 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
 
     text_extraction_service.extract_text(project_root, manifest)
 
-    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["progress_total"] >= 2
+    metadata = text_extraction_service.load_extraction_metadata(project_root)
+    assert metadata is not None
+    assert metadata["progress_total"] >= 2
 
 
 def test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension(tmp_path) -> None:
@@ -248,6 +270,9 @@ def test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension(tmp_path) -
 
     with pytest.raises(ValueError, match="legacy Word \\.doc container"):
         text_extraction_service.extract_text(project_root, manifest)
+    metadata = text_extraction_service.load_extraction_metadata(project_root)
+    assert metadata is not None
+    assert metadata["status"] == "failed"
 
 
 def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
@@ -270,31 +295,104 @@ def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
 
     output_path = project_root / config.EXTRACTED_TEXT_FILE_NAME
     output_path.write_text("Story first", encoding="utf-8")
-    state_payload = {
-        "folder_relative_path": ".",
+    metadata = {
         "status": "running",
-        "input_paths": ["story.docx"],
-        "output_paths": [config.EXTRACTED_TEXT_FILE_NAME],
-        "artifact_paths": [],
         "progress_current": 1,
         "progress_total": 2,
-        "mode": "deterministic",
-        "started_at": "2026-04-06T12:00:00+00:00",
-        "completed_at": None,
-        "updated_at": "2026-04-06T12:00:00+00:00",
-        "warning_count": 0,
-        "metadata": {"warnings": [], "source_type": "docx"},
-        "resume_checkpoint": {"next_unit_index": 1},
+        "warnings": [],
+        "character_count": None,
+        "word_count": None,
+        "line_count": None,
+        "page_count": None,
     }
-    (project_root / config.EXTRACTION_STATE_FILE_NAME).write_text(
-        json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
-    report_payload = text_extraction_service.extract_text(project_root, manifest)
+    completed_metadata = text_extraction_service.extract_text(project_root, manifest)
 
-    assert report_payload["word_count"] == 4
+    assert completed_metadata["word_count"] == 4
     assert output_path.read_text(encoding="utf-8") == "Story first\n\nStory second\n"
+
+
+def test_extract_text_persists_cancelled_progress_and_resumes(tmp_path) -> None:
+    """Verify cancellation persists one resumable strict metadata checkpoint."""
+    project_root, manifest = project_workspace_service.create_project("CancelledExtraction", tmp_path)
+    source_path = project_root / "story.docx"
+    _write_docx_source(source_path, paragraphs=["Story first", "Story second"])
+    manifest["source_document"] = _build_source_document(source_path, "docx")
+    cancellation_checks = iter((False, True))
+
+    with pytest.raises(text_extraction_service.OperationCancelledError):
+        text_extraction_service.extract_text(
+            project_root,
+            manifest,
+            cancel_requested=lambda: next(cancellation_checks),
+        )
+
+    cancelled_metadata = text_extraction_service.load_extraction_metadata(project_root)
+    assert cancelled_metadata is not None
+    assert cancelled_metadata["status"] == "cancelled"
+    assert cancelled_metadata["progress_current"] == 1
+    assert cancelled_metadata["character_count"] is None
+
+    completed_metadata = text_extraction_service.extract_text(project_root, manifest)
+
+    assert completed_metadata["status"] == "completed"
+    assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8") == (
+        "Story first\n\nStory second\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "payload_update",
+    [
+        {"unexpected": True},
+        {"status": "unknown"},
+        {"progress_current": 3, "progress_total": 2},
+        {"word_count": 1},
+    ],
+)
+def test_load_extraction_metadata_rejects_incompatible_schema(tmp_path, payload_update) -> None:
+    """Verify exact fields, status, progress, and incomplete statistics are strict."""
+    project_root, _manifest = project_workspace_service.create_project("InvalidExtraction", tmp_path)
+    payload = {
+        "status": "running",
+        "progress_current": 0,
+        "progress_total": 2,
+        "warnings": [],
+        "character_count": None,
+        "word_count": None,
+        "line_count": None,
+        "page_count": None,
+    }
+    payload.update(payload_update)
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(payload),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(text_extraction_service.ExtractionMetadataError, match="Reset Extraction"):
+        text_extraction_service.load_extraction_metadata(project_root)
+
+
+def test_load_extraction_metadata_rejects_legacy_sidecars(tmp_path) -> None:
+    """Verify old report/state artifacts require a destructive extraction reset."""
+    project_root, _manifest = project_workspace_service.create_project("LegacyExtraction", tmp_path)
+    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(text_extraction_service.ExtractionMetadataError, match="Legacy extraction sidecars"):
+        text_extraction_service.load_extraction_metadata(project_root)
+
+
+def test_load_extraction_metadata_rejects_invalid_json(tmp_path) -> None:
+    """Verify malformed metadata JSON requires a destructive extraction reset."""
+    project_root, _manifest = project_workspace_service.create_project("InvalidExtractionJson", tmp_path)
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text("{broken", encoding="utf-8")
+
+    with pytest.raises(text_extraction_service.ExtractionMetadataError, match="Reset Extraction"):
+        text_extraction_service.load_extraction_metadata(project_root)
 
 
 def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> None:
@@ -314,6 +412,23 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
     source_path = project_root / "story.txt"
     source_path.write_text("snapshot", encoding="utf-8")
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("output", encoding="utf-8")
+    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "progress_current": 1,
+                "progress_total": 1,
+                "warnings": [],
+                "character_count": 6,
+                "word_count": 1,
+                "line_count": 1,
+                "page_count": None,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
+    (project_root / "extraction_state.json").write_text("{}", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("cleanup", encoding="utf-8")
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / "operator_note.txt").write_text("keep", encoding="utf-8")
@@ -323,6 +438,9 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
     assert source_path.is_file()
     assert (project_root / "operator_note.txt").is_file()
     assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).exists() is False
+    assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
+    assert (project_root / "extraction_report.json").exists() is False
+    assert (project_root / "extraction_state.json").exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
 
