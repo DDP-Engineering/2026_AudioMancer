@@ -71,9 +71,18 @@ helpers, never separate report/state files.
 
 ## 9. Validation And Tests
 
-Focused re-characterization ran all four mapped modules: 28 passed. Coverage
-includes document schema/authority, resume/retranslation/approval/reset,
+Primary automated coverage:
+
+- `tests/test_ai_translation_service.py`
+- `tests/test_ai_translation_state_service.py`
+- `tests/test_ai_translation_ui_controller.py`
+- `tests/test_ai_translation_page.py`
+
+These cover document schema/authority, resume/retranslation/approval/reset,
 state summaries/notes, controller dispatch, and page editing/busy controls.
+Minimum validation after a change: run the focused modules above with
+`uv run pytest`, plus `uv run python -m py_compile` and `uv run ruff check` on
+changed files.
 
 ## 10. Limitations And Future Work
 

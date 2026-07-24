@@ -50,7 +50,22 @@ Open Speech Blocks after selecting voices, generate or resume the block plan, in
 
 ## 9. Validation And Tests
 
-Focused suite E-0015 passed 131 tests across all seven mapped modules. It covers source resolution, normalization, splitting, artifact/report/state recovery, warning/approval transitions, controller operations, and page editing/selection. Run all mapped modules after changes with redirected temporary/cache locations. Operators must manually review semantic speaker assignment, ambience suitability, and pause interpretation.
+Primary automated coverage:
+
+- `tests/test_speech_blocks_service.py`
+- `tests/test_speech_blocks_normalization_service.py`
+- `tests/test_speech_blocks_text_split_service.py`
+- `tests/test_speech_blocks_report_state_service.py`
+- `tests/test_speech_blocks_state_service.py`
+- `tests/test_speech_blocks_ui_controller.py`
+- `tests/test_speech_blocks_page.py`
+
+These cover source resolution, normalization, splitting, artifact/report/state
+recovery, warning/approval transitions, controller operations, and page
+editing/selection. Minimum validation after a change: run the focused modules
+above with `uv run pytest`, plus `uv run python -m py_compile` and
+`uv run ruff check` on changed files. Operators must manually review semantic
+speaker assignment, ambience suitability, and pause interpretation.
 
 ## 10. Limitations And Future Work
 

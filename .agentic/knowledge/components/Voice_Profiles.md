@@ -78,11 +78,25 @@ assets before starting TTS.
 
 ## 9. Validation And Tests
 
-Primary coverage: `test_narrator_voice_single_document_contract.py`, narrator
-definition/generation/state/controller suites, Character Voices suites, Audio
-Blocks, operation runtime, workspace, export, snapshot, and project-flow tests.
-Run traceability, coverage, documentation, style, focused regression, and full
-deterministic gates before delivery.
+Primary automated coverage:
+
+- `tests/test_narrator_definition_service.py`
+- `tests/test_narrator_voice_single_document_contract.py`
+- `tests/test_narrator_definition_state_service.py`
+- `tests/test_narrator_profile_generation_service.py`
+- `tests/test_narator_voice_page.py`
+- `tests/test_narator_voice_ui_controller.py`
+- `tests/test_character_voices_service.py`
+- `tests/test_character_voices_state_service.py`
+- `tests/test_character_voices_page.py`
+- `tests/test_character_voices_ui_controller.py`
+- `tests/test_voice_sample_import_service.py`
+
+Adjacent Audio Blocks, workspace, export, and snapshot suites also consume the
+narrator/character voice contracts. Minimum validation after a change: run the
+focused modules above with `uv run pytest`, plus `uv run python -m py_compile`
+and `uv run ruff check` on changed files. Automated tests cannot judge voice
+naturalness or suitability, so operators must audition and approve samples.
 
 ## 10. Limitations And Future Work
 

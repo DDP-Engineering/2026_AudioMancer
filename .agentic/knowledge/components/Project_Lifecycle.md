@@ -175,7 +175,7 @@ exports and snapshots.
 
 ## 9. Validation And Tests
 
-Focused automated coverage is mapped in `.agentic/components.toml`, principally:
+Primary automated coverage:
 
 - `04_Software/AudioMancer/tests/test_project_workspace_service.py`
 - `04_Software/AudioMancer/tests/test_import_service.py`
@@ -189,9 +189,10 @@ Focused automated coverage is mapped in `.agentic/components.toml`, principally:
 - `04_Software/AudioMancer/tests/test_main_window_home_exports.py`
 - `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
 
-After changes, run those focused tests and the repository traceability and
-coverage audits. Changes to persistence or path containment require the atomic
-I/O and unsafe-path cases as part of focused validation.
+After changes, run those focused tests with `uv run pytest`, plus
+`uv run python -m py_compile` and `uv run ruff check` on changed files. Changes
+to persistence or path containment require the atomic I/O and unsafe-path cases
+as part of focused validation.
 
 ## 10. Limitations And Future Work
 
@@ -203,5 +204,3 @@ I/O and unsafe-path cases as part of focused validation.
   assembly artifacts; PDF export is not implemented.
 - Snapshots are filesystem snapshots taken at start time, not transactional
   captures; the UI prevents starting them while another operation is active.
-- Repository-wide requirement coverage remains incomplete until the other
-  discovered components receive their own adoption slices.

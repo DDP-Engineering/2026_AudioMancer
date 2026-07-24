@@ -78,12 +78,29 @@ than maintaining separate language or theme state.
 
 ## 9. Validation And Tests
 
-Focused platform tests ran with 77 passing results. The two settings-hygiene
-checks report an existing nonblank credential in the local settings file; that
-security/configuration issue is recorded as a delivery blocker and is not
-changed by this adoption slice.
+Primary automated coverage:
+
+- `tests/test_config_contract.py`
+- `tests/test_settings_service.py`
+- `tests/test_logging_service.py`
+- `tests/test_url_service.py`
+- `tests/test_ui_scroll_service.py`
+- `tests/test_ui_state_service.py`
+- `tests/test_ui_theme_service.py`
+- `tests/test_settings_page.py`
+- `tests/test_localization_parity.py`
+
+These cover configuration constants, settings load/validate/self-heal/save,
+component logging, URL joining, scroll-step behavior, runtime language/theme
+application, theme schema validation, and Settings-page editing. Minimum
+validation after a change: run the focused modules above with `uv run pytest`,
+plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 
 ## 10. Limitations And Future Work
 
-Configuration hygiene needs a separate, explicitly authorized remediation that
-removes or rotates the local credential without committing it.
+- Settings are stored as a plaintext UTF-8 JSON object, including any AI or TTS
+  API keys; secret hygiene remains the operator's responsibility and is not
+  scrubbed by validation.
+- Settings and themes are dictionary-based and not yet modeled with typed
+  classes.
+- Unknown extra settings keys are preserved rather than strictly validated.

@@ -54,7 +54,24 @@ Probe the runtime in TTS Settings, choose supported settings, then open Audio Bl
 
 ## 9. Validation And Tests
 
-Focused suite E-0016 passed 83 tests (one performance case deselected) across all nine mapped modules: artifact paths/WAV validation, orchestration/resume, state, runtime probing, UI, settings, main-window integration and performance baseline. Run the same mapped suite with redirected temporary/cache paths. Manual listening and an installed compatible runtime remain required.
+Primary automated coverage:
+
+- `tests/test_audio_blocks_service.py`
+- `tests/test_audio_blocks_state_service.py`
+- `tests/test_audio_blocks_artifact_service.py`
+- `tests/test_audio_blocks_page.py`
+- `tests/test_audio_blocks_ui_controller.py`
+- `tests/test_audio_blocks_main_window.py`
+- `tests/test_voiceweaver_runtime_service.py`
+- `tests/test_tts_settings_page.py`
+- `tests/test_blocks_performance_baseline.py`
+
+These cover artifact paths/WAV validation, orchestration/resume, state, runtime
+probing, UI, settings, main-window integration, and a performance baseline.
+Minimum validation after a change: run the focused modules above with
+`uv run pytest`, plus `uv run python -m py_compile` and `uv run ruff check` on
+changed files. Manual listening and an installed compatible runtime remain
+required.
 
 ## 10. Limitations And Future Work
 

@@ -87,12 +87,24 @@ probe connectivity, select defaults, and save the resulting settings payload.
 
 ## 9. Validation And Tests
 
-Focused re-characterization evidence ran the mapped suites. They cover backend
-models/failures, context budgets, token normalization/merge/ordered restore and
-localized notes, prompt placeholder rules, chat JSON parsing/retries/
-cancellation/format fallbacks/redaction, profile dialog layout/editing/probing,
-direct controller persistence/reload/refresh behavior, and main-window
-feedback.
+Primary automated coverage:
+
+- `tests/test_ai_backend_service.py`
+- `tests/test_ai_budget_service.py`
+- `tests/test_ai_state_note_service.py`
+- `tests/test_prompt_template_service.py`
+- `tests/test_token_usage_service.py`
+- `tests/test_llm_provider_service.py`
+- `tests/test_url_service.py`
+- `tests/test_ai_settings_page.py`
+- `tests/test_ai_settings_ui_controller.py`
+
+These cover backend models/failures, context budgets, token
+normalization/merge/ordered restore and localized notes, prompt placeholder
+rules, chat JSON parsing/retries/cancellation/format fallbacks/redaction, and
+profile dialog editing/probing/persistence. Minimum validation after a change:
+run the focused modules above with `uv run pytest`, plus
+`uv run python -m py_compile` and `uv run ruff check` on changed files.
 
 ## 10. Limitations And Future Work
 
