@@ -100,7 +100,7 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "running",
                 "input_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME}"
                 ],
                 "output_paths": [
                     f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"
@@ -371,13 +371,10 @@ def test_build_audio_blocks_state_starts_when_any_speech_block_is_approved(tmp_p
     @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksRequiresSpeechApproval")
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
     speech_blocks[1]["approved"] = False
     speech_blocks[1]["approved_at"] = None
-    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
 
     state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
 
@@ -452,10 +449,7 @@ def test_build_audio_blocks_state_reenables_start_when_completed_report_has_miss
     @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCompletedWithMissing")
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
     speech_blocks.append(
         {
             "speech_block_id": "0002-000002",
@@ -472,7 +466,7 @@ def test_build_audio_blocks_state_reenables_start_when_completed_report_has_miss
             "warning_flags": [],
         }
     )
-    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
     _write_json(
         project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
         [
@@ -633,8 +627,8 @@ def _create_audio_blocks_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
+    _write_speech_blocks_fixture_document(
+        project_root,
             [
                 {
                     "speech_block_id": "0001-000001",
@@ -665,10 +659,6 @@ def _create_audio_blocks_project(tmp_path, name: str):
                     "warning_flags": [],
                 },
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
     )
     return project_root, project_workspace_service.load_manifest(project_root)
 
@@ -704,5 +694,40 @@ def _write_wav(path: Path, frame_count: int) -> None:
         wav_file.setframerate(24_000)
         wav_file.writeframes(b"\x00\x00" * frame_count)
 
+
+
+def _write_speech_blocks_fixture_document(project_root, blocks, *, status: str = "completed"):
+    """Persist a valid single Speech Blocks document wrapping fixture blocks."""
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": status,
+            "source": {"kind": "original", "language": "en", "fingerprint": "sb-fixture-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260423T120000Z.log",
+                "source_snapshot_fingerprint": "sb-fixture-fingerprint",
+                "source_language": "en",
+                "ai_profile_id": "profile-1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
+            },
+            "failure": None,
+            "blocks": list(blocks),
+        },
+    )
+
+
+def _read_speech_blocks_fixture_blocks(project_root):
+    """Return the persisted Speech Blocks document blocks for fixture mutation."""
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    return document["blocks"] if document else []
 
 # END OF FILE

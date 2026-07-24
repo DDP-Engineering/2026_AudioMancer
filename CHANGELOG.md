@@ -12,6 +12,20 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Speech Blocks now persists a single authoritative `speech_blocks.json`
+  document (fixed top-level field set: status, source, ai_profile_id,
+  instructions, scene_ambience, response_contract, token_usage,
+  budget_metadata, checkpoint, failure, blocks). The separate
+  `speech_blocks_report.json` and `speech_blocks_state.json` artifacts are no
+  longer written; the legacy report and operation-state shapes are
+  compatibility projections recomputed from the single document, so
+  `load_speech_blocks_report()` and `load_operation_state()` keep their
+  signatures. The artifact no longer stores a copy of the source-chunk text
+  (only `source.fingerprint`); source chunks are re-resolved from upstream.
+  **Breaking (persistence):** existing projects with the old Speech Blocks
+  artifacts read as not-started and must re-run Speech Blocks; reset now clears
+  the single document and any residual legacy report/state files.
+
 - Text Extraction now persists exactly `extracted_text.txt` and the strict
   authoritative `extraction_metadata.json` document. Status, progress,
   warnings, PDF page count, and final text statistics are read from that

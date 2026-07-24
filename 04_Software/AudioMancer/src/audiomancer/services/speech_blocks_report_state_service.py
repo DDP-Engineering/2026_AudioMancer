@@ -14,7 +14,7 @@
          orchestration service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -198,14 +198,6 @@ def build_operation_state(
         "total_block_count": len(speech_blocks),
         "warnings": warning_entries,
         "source_snapshot_fingerprint": input_fingerprint,
-        "source_chunks": [
-            {
-                "chunk_id": str(chunk.get("chunk_id", "")),
-                "sequence_index": int(chunk.get("sequence_index", 0)),
-                "text": str(chunk.get("text", "")),
-            }
-            for chunk in source_chunks
-        ],
         "log_relative_path": relative_to_project(project_root, log_path),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }

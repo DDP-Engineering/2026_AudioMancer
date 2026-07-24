@@ -83,9 +83,34 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
         + "\n",
         encoding="utf-8",
     )
-    (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "review_pending",
+            "source": {"kind": "original", "language": "en", "fingerprint": "state-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {
+                "input_tokens": 30,
+                "output_tokens": 10,
+                "total_tokens": 40,
+                "usage_available": True,
+            },
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-21T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260421T120000Z.log",
+                "source_snapshot_fingerprint": "state-fingerprint",
+                "source_language": "en",
+                "ai_profile_id": "profile-1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
+            },
+            "failure": None,
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
@@ -99,62 +124,7 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
                     "warning_flags": [],
                 }
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (speech_blocks_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "source_language": "en",
-                "source_kind": "original",
-                "ai_profile_id": "profile-1",
-                "speech_blocks_stage_status": "completed",
-                "processed_chunk_count": 1,
-                "total_chunk_count": 1,
-                "speech_block_count": 1,
-                "warning_count": 0,
-                "warnings": [],
-                "updated_at": "2026-04-21T12:10:00+00:00",
-                "token_usage": {
-                    "input_tokens": 30,
-                    "output_tokens": 10,
-                    "total_tokens": 40,
-                    "usage_available": True,
-                },
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (speech_blocks_root / config.SPEECH_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-                "status": "completed",
-                "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/input_source_chunks.json"],
-                "output_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"
-                ],
-                "artifact_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_REPORT_FILE_NAME}"
-                ],
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "ai_assisted",
-                "started_at": "2026-04-21T12:00:00+00:00",
-                "completed_at": "2026-04-21T12:10:00+00:00",
-                "updated_at": "2026-04-21T12:10:00+00:00",
-                "warning_count": 0,
-                "metadata": {"ai_profile_id": "profile-1", "source_language": "en"},
-                "resume_checkpoint": None,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+        },
     )
     (speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME).mkdir(parents=True, exist_ok=True)
     (speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").write_bytes(
@@ -191,7 +161,7 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     )
 
     assert state["selected_profile_id"] == "profile-1"
-    assert state["stage_status"] == "completed"
+    assert state["stage_status"] == speech_blocks_service.SPEECH_BLOCKS_STAGE_IN_PROGRESS
     assert state["processed_chunk_count"] == 1
     assert state["total_chunk_count"] == 2
     assert state["speech_blocks"][0]["speech_block_id"] == "0001-000001"
@@ -227,9 +197,20 @@ def test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generati
         + "\n",
         encoding="utf-8",
     )
-    (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "review_pending",
+            "source": {"kind": "original", "language": "en", "fingerprint": "scene-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": True},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": None,
+            "failure": None,
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
@@ -248,29 +229,7 @@ def test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generati
                     "warning_flags": [],
                 }
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (speech_blocks_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "source_language": "en",
-                "source_kind": "original",
-                "ai_profile_id": "profile-1",
-                "speech_blocks_stage_status": "completed",
-                "processed_chunk_count": 1,
-                "total_chunk_count": 1,
-                "speech_block_count": 1,
-                "warning_count": 0,
-                "warnings": [],
-                "updated_at": "2026-05-20T12:10:00+00:00",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+        },
     )
     audio_root = speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir(parents=True, exist_ok=True)

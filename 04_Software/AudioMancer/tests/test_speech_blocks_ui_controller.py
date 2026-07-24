@@ -24,7 +24,7 @@ from types import SimpleNamespace
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
-from audiomancer.services import character_voices_service, project_workspace_service
+from audiomancer.services import character_voices_service, project_workspace_service, speech_blocks_service
 from audiomancer.ui.controllers import speech_blocks_ui_controller
 from audiomancer.ui.main_window import MainWindow
 from chunking_test_support import build_chunking_document
@@ -744,7 +744,7 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     manifest["operations"]["audio_assembly"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     stale_artifacts = [
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
     ]
@@ -783,40 +783,44 @@ def test_speech_blocks_sync_manifest_completes_only_after_full_approval(tmp_path
     """
     project_root = _create_project(tmp_path, "SpeechBlocksManifestApproval")
     manifest = project_workspace_service.load_manifest(project_root)
-    artifacts_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    report_path = artifacts_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME
-    state_path = artifacts_root / config.SPEECH_BLOCKS_STATE_FILE_NAME
-    state_path.write_text(
-        json.dumps(
-            {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-                "status": "review_pending",
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "ai_assisted",
-                "started_at": "2026-04-27T10:00:00+00:00",
-                "completed_at": "2026-04-27T10:01:00+00:00",
-                "updated_at": "2026-04-27T10:01:00+00:00",
-                "warning_count": 0,
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "review_pending",
+            "source": {"kind": "original", "language": "en", "fingerprint": "sync-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-27T10:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260427T100000Z.log",
+                "source_snapshot_fingerprint": "sync-fingerprint",
+                "source_language": "en",
+                "ai_profile_id": "profile-1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
             },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    report_path.write_text(
-        json.dumps(
-            {
-                "speech_blocks_stage_status": "in_progress",
-                "processed_chunk_count": 1,
-                "total_chunk_count": 1,
-                "speech_block_count": 1,
-                "approved_block_count": 0,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+            "failure": None,
+            "blocks": [
+                {
+                    "speech_block_id": "0001-000001",
+                    "sequence_index": 1,
+                    "chunk_id": "chunk-0001",
+                    "source_language": "en",
+                    "speaker_kind": "narrator",
+                    "speaker_id": "narrator",
+                    "speaker_display_name": "Narrator",
+                    "content_kind": "narration",
+                    "text": "Narration.",
+                    "warning_flags": [],
+                    "approved": False,
+                }
+            ],
+        },
     )
     window = SimpleNamespace(_current_project_root=project_root, _current_manifest=manifest)
 
@@ -838,10 +842,9 @@ def test_speech_blocks_sync_manifest_completes_only_after_full_approval(tmp_path
     assert window._current_manifest["current_stage"] == "character_voices_ready"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "review_pending"
 
-    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
-    report_payload["speech_blocks_stage_status"] = "completed"
-    report_payload["approved_block_count"] = 1
-    report_path.write_text(json.dumps(report_payload, indent=2) + "\n", encoding="utf-8")
+    approved_document = speech_blocks_service.load_speech_blocks_document(project_root)
+    approved_document["blocks"][0]["approved"] = True
+    speech_blocks_service.write_speech_blocks_document(project_root, approved_document)
 
     speech_blocks_ui_controller._sync_manifest_after_speech_blocks_update(window)  # noqa: SLF001
 

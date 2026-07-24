@@ -69,7 +69,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert not hasattr(config, "NARRATOR_SELECTION_FILE_NAME")
     assert not hasattr(config, "SELECTED_NARRATOR_AUDIO_FILE_NAME")
     assert not hasattr(config, "SELECTED_NARRATOR_METADATA_FILE_NAME")
-    assert config.SPEECH_BLOCKS_OUTPUT_FILE_NAME == "speech_blocks.json"
+    assert config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512
     assert config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS

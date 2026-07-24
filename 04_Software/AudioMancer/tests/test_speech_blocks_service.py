@@ -194,9 +194,9 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
     speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    assert (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).is_file()
-    assert (speech_blocks_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).is_file()
-    assert (speech_blocks_root / config.SPEECH_BLOCKS_STATE_FILE_NAME).is_file()
+    assert (speech_blocks_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).is_file()
+    assert not (speech_blocks_root / "speech_blocks_report.json").exists()
+    assert not (speech_blocks_root / "speech_blocks_state.json").exists()
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert [block["speech_block_id"] for block in speech_blocks] == [
         "0001-000001",
@@ -1208,7 +1208,8 @@ def test_insert_speech_block_initializes_manual_state_without_generation(tmp_pat
     assert report["total_chunk_count"] == 2
     assert operation_state is not None
     assert operation_state["status"] == "review_pending"
-    assert len(operation_state["metadata"]["source_chunks"]) == 2
+    assert "source_chunks" not in operation_state["metadata"]
+    assert operation_state["metadata"]["total_chunk_count"] == 2
     assert manifest["operations"]["speech_blocks"]["status"] == "review_pending"
     assert manifest["current_stage"] == "character_voices_ready"
 
@@ -1379,18 +1380,6 @@ def test_null_like_started_at_creates_timestamped_speech_blocks_log(tmp_path) ->
     @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksNullTimestamp")
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_STATE_FILE_NAME
-    state_path.write_text(
-        json.dumps(
-            {
-                "started_at": None,
-                "artifact_paths": ["log_ai_speech_blocks_None.log"],
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
 
     started_at = speech_blocks_service._resolve_started_at({"started_at": None})  # noqa: SLF001
     log_path = speech_blocks_service._resolve_log_path(project_root, started_at)  # noqa: SLF001
@@ -1412,12 +1401,10 @@ def test_review_update_replaces_null_like_started_at(tmp_path) -> None:
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksReviewNullTimestamp")
     _seed_review_speech_blocks(project_root)
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_STATE_FILE_NAME
-    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
-    state_payload["started_at"] = "None"
-    state_payload["completed_at"] = "null"
-    state_payload["artifact_paths"] = ["speech_blocks_report.json", "log_ai_speech_blocks_None.log"]
-    state_path.write_text(json.dumps(state_payload, indent=2) + "\n", encoding="utf-8")
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    document["checkpoint"]["run_token"] = "None"
+    document["checkpoint"]["log_relative_path"] = "log_ai_speech_blocks_None.log"
+    speech_blocks_service.write_speech_blocks_document(project_root, document)
 
     speech_blocks_service.approve_speech_block(project_root, "0001-000001")
 
@@ -1532,16 +1519,13 @@ def test_update_character_speech_block_display_name_preserves_approval(tmp_path)
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksCharacterDisplayName")
     _seed_review_speech_blocks(project_root)
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
-    speech_blocks[0]["speaker_kind"] = speech_blocks_service.SPEAKER_KIND_CHARACTER
-    speech_blocks[0]["speaker_id"] = "alice"
-    speech_blocks[0]["speaker_display_name"] = "Alice"
-    speech_blocks[0]["approved"] = True
-    speech_blocks[0]["approved_at"] = "2026-04-24T12:00:00+00:00"
-    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    document["blocks"][0]["speaker_kind"] = speech_blocks_service.SPEAKER_KIND_CHARACTER
+    document["blocks"][0]["speaker_id"] = "alice"
+    document["blocks"][0]["speaker_display_name"] = "Alice"
+    document["blocks"][0]["approved"] = True
+    document["blocks"][0]["approved_at"] = "2026-04-24T12:00:00+00:00"
+    speech_blocks_service.write_speech_blocks_document(project_root, document)
 
     report, affected_ids = speech_blocks_service.update_character_speech_block_display_name(
         project_root,
@@ -3714,19 +3698,6 @@ def _seed_review_speech_blocks(project_root) -> None:
     @date       2026-04-24
     @version    0.1.0
     """
-    speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    source_chunks_payload = [
-        {
-            "chunk_id": "chunk-0001",
-            "sequence_index": 1,
-            "text": 'Narration. "Hello there."',
-        },
-        {
-            "chunk_id": "chunk-0002",
-            "sequence_index": 2,
-            "text": 'Maria smiled. "Welcome."',
-        },
-    ]
     speech_blocks_payload = [
         {
             "speech_block_id": "0001-000001",
@@ -3759,52 +3730,35 @@ def _seed_review_speech_blocks(project_root) -> None:
             "approved_at": None,
         },
     ]
-    _ = source_chunks_payload
-    (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(speech_blocks_payload, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (speech_blocks_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "review_pending",
+            "source": {"kind": "original", "language": "en", "fingerprint": "seed-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+                "usage_available": False,
+            },
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 2,
+                "run_token": "2026-04-24T10:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260424T100000Z.log",
+                "source_snapshot_fingerprint": "seed-fingerprint",
                 "source_language": "en",
-                "source_kind": "original",
                 "ai_profile_id": "profile-1",
-                "speech_blocks_stage_status": speech_blocks_service.SPEECH_BLOCKS_STAGE_IN_PROGRESS,
-                "processed_chunk_count": 2,
-                "total_chunk_count": 2,
-                "speech_block_count": 2,
-                "approved_block_count": 0,
-                "total_block_count": 2,
-                "warning_count": 1,
-                "warnings": [],
-                "token_usage": {
-                    "input_tokens": 0,
-                    "output_tokens": 0,
-                    "total_tokens": 0,
-                    "usage_available": False,
-                },
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
             },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (speech_blocks_root / config.SPEECH_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "status": "review_pending",
-                "metadata": {
-                    "source_language": "en",
-                    "source_kind": "original",
-                    "ai_profile_id": "profile-1",
-                    "source_chunks": source_chunks_payload,
-                },
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+            "failure": None,
+            "blocks": speech_blocks_payload,
+        },
     )
 
 

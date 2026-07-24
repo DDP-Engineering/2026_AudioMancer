@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.18.9
+@version 0.18.10
 """
 
 # IMPORTS
@@ -3298,7 +3298,7 @@ def _speech_blocks_snapshot_path(project_root: Path) -> Path:
     @date       2026-04-23
     @version    0.1.0
     """
-    return project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    return project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
 
 
 def _voice_target_id_for_block(

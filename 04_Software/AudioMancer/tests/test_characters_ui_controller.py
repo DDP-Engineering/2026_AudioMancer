@@ -737,27 +737,31 @@ def _write_downstream_artifacts(project_root, window: MainWindow) -> None:
             "approved_at": "2026-04-08T12:03:00+00:00",
         },
     ]
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(speech_blocks, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "speech_block_count": 2,
-                "approved_block_count": 2,
-                "speech_blocks_stage_status": "completed",
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "source": {"kind": "original", "language": "en", "fingerprint": "chars-fixture-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-08T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260408T120000Z.log",
+                "source_snapshot_fingerprint": "chars-fixture-fingerprint",
                 "source_language": "en",
-                "source_kind": "original",
                 "ai_profile_id": "profile-1",
-                "token_usage": {},
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
             },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+            "failure": None,
+            "blocks": speech_blocks,
+        },
     )
-    _write_operation_state(project_root, config.SPEECH_BLOCKS_STATE_FILE_NAME, "completed", "speech_blocks")
     generated_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
     (generated_root / "0001-000001.wav").write_bytes(b"RIFFalice-block")

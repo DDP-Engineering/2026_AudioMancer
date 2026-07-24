@@ -215,7 +215,7 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
         encoding="utf-8",
     )
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "character_discovery_ready"
     manifest["narrator_profile_name"] = "Warm Narrator"
     manifest["narrator_language"] = "fr"
