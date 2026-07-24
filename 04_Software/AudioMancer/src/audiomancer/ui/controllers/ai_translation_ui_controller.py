@@ -25,6 +25,7 @@ from PySide6.QtWidgets import QMessageBox
 from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
+    character_discovery_service,
     chunking_document_service,
     operation_runtime_service,
     project_workspace_service,
@@ -199,11 +200,28 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     if decision != QMessageBox.StandardButton.Yes:
         return
     ai_translation_service.reset_translation(window._current_project_root)
-    updated_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
-        window._current_manifest,
-        "translation",
-        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+    source_invalidated = character_discovery_service.invalidate_if_source_changed(
+        window._current_project_root
     )
+    updated_manifest = dict(window._current_manifest)
+    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    operations["translation"] = default_operations["translation"]
+    if source_invalidated:
+        for selected_kind in operation_runtime_service.downstream_operation_kinds(
+            "translation",
+            include_current=False,
+        ):
+            if (
+                selected_kind in default_operations
+                and selected_kind
+                not in operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
+            ):
+                operations[selected_kind] = default_operations[selected_kind]
+        updated_manifest["current_stage"] = "text_chunking_ready"
+    elif str(updated_manifest.get("current_stage", "")) == "translation_ready":
+        updated_manifest["current_stage"] = "text_chunking_ready"
+    updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
         window._current_project_root,
@@ -396,7 +414,10 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
     assert window._current_manifest is not None
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    if _translation_manifest_stage(report) == "translation_ready":
+    source_invalidated = character_discovery_service.invalidate_if_source_changed(
+        window._current_project_root
+    )
+    if source_invalidated:
         operation_runtime_service.reset_operation_data(
             window._current_project_root,
             "translation",

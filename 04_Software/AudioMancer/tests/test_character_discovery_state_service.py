@@ -86,7 +86,7 @@ def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> Non
     assert any("fresh discovery rerun replaces" in note for note in state["notes"])
 
 
-def test_build_character_state_uses_loaded_chunks_without_discovery_enrichment(monkeypatch, tmp_path) -> None:
+def test_build_character_state_uses_resolved_discovery_source(tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-013 page state avoids discovery chunk enrichment during refresh.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -98,17 +98,6 @@ def test_build_character_state_uses_loaded_chunks_without_discovery_enrichment(m
     @version    0.1.0
     """
     project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryStateNoDiscoveryEnrichment")
-    monkeypatch.setattr(
-        character_discovery_state_service.character_discovery_service,
-        "load_input_chunks",
-        lambda _project_root: (_ for _ in ()).throw(AssertionError("load_input_chunks should not be called")),
-    )
-    monkeypatch.setattr(
-        character_discovery_state_service.character_discovery_service,
-        "_detect_dialogue_spans",
-        lambda _text: (_ for _ in ()).throw(AssertionError("_detect_dialogue_spans should not be called")),
-    )
-
     state = character_discovery_state_service.build_character_discovery_state(
         project_root,
         manifest,
@@ -234,16 +223,39 @@ def _create_project(tmp_path, name: str):
         json.dumps(chunk_payload, indent=2) + "\n",
         encoding="utf-8",
     )
-    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
+    (discovery_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
         json.dumps(
-            [
+            {
+                "status": "completed",
+                "source": {
+                    "kind": "original",
+                    "language": "en",
+                    "fingerprint": "fixture",
+                },
+                "instructions": "",
+                "token_usage": {
+                    "input_tokens": 140,
+                    "output_tokens": 35,
+                    "total_tokens": 175,
+                    "usage_available": True,
+                },
+                "checkpoint": None,
+                "failure": None,
+                "characters": [
                 {
                     "character_id": "alice",
                     "canonical_name": "Alice",
                     "aliases": ["Al"],
-                    "gender_hint": "female",
-                    "voice_definition_prompt": "A confident female voice for Alice.",
-                    "confidence": "high",
+                    "traits": {
+                        "gender": {"value": "female", "confidence": "high"},
+                        "age": {"value": "", "confidence": ""},
+                    },
+                    "voice": {
+                        "definition_prompt": "A confident female voice for Alice.",
+                        "preview_text": "",
+                    },
+                    "discovery_confidence": "high",
+                    "provenance": {"origin": "ai", "edited": False},
                     "evidence": [
                         {
                             "chunk_id": "chunk-0001",
@@ -252,64 +264,8 @@ def _create_project(tmp_path, name: str):
                             "reason": "Alice speaks.",
                         }
                     ],
-                    "updated_at": "2026-04-08T12:01:00+00:00",
                 }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "input_chunk_count": 1,
-                "analyzed_window_count": 1,
-                "merged_candidate_count": 1,
-                "character_count": 1,
-                "character_discovery_mode": "ai_assisted",
-                "character_profile_id_last_used": "profile-1",
-                "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-                "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-                "warning_count": 0,
-                "warnings": [],
-                "generated_at": "2026-04-08T12:01:00+00:00",
-                "token_usage": {
-                    "input_tokens": 140,
-                    "output_tokens": 35,
-                    "total_tokens": 175,
-                    "usage_available": True,
-                },
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "status": "completed",
-                "phase": "completed",
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "ai_assisted",
-                "started_at": "2026-04-08T12:00:00+00:00",
-                "completed_at": "2026-04-08T12:01:00+00:00",
-                "updated_at": "2026-04-08T12:01:00+00:00",
-                "warning_count": 0,
-                "ai_profile_id": "profile-1",
-                "input_fingerprint": "",
-                "additional_character_discovery_instructions": "",
-                "additional_character_discovery_instructions_fingerprint": "",
-                "token_usage": {
-                    "input_tokens": 140,
-                    "output_tokens": 35,
-                    "total_tokens": 175,
-                    "usage_available": True,
-                },
-                "log_relative_path": "log_ai_characters_saved.log",
-                "checkpoint": None,
+                ],
             },
             indent=2,
         )

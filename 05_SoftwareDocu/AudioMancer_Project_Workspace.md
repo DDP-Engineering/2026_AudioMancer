@@ -228,7 +228,7 @@ chunking state is treated as incompatible so the next run restarts cleanly.
 Default operation-state files are lazy page metadata. Opening a workflow page
 may create a `not_started` state file with zero progress, operation-specific
 default `metadata`, and `resume_checkpoint = null`. For example, opening the
-Characters page creates `characters_state.json` with zero-valued
+Character Discovery creates `characters.json` on the first run with zero-valued
 character-discovery metadata counters. This initialization does not imply that
 the workflow step has run and does not create reports or canonical outputs.
 

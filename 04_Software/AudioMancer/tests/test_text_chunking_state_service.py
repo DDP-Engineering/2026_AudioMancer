@@ -190,10 +190,28 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
         encoding="utf-8",
     )
     narrator_definition_service.ensure_narrator_voice_document(project_root)
-    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
-    (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
-        json.dumps({"status": "completed", "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}) + "\n",
+    (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "source": {
+                    "kind": "translated",
+                    "language": "en",
+                    "fingerprint": "fixture",
+                },
+                "instructions": "",
+                "token_usage": {
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "total_tokens": 0,
+                    "usage_available": False,
+                },
+                "checkpoint": None,
+                "failure": None,
+                "characters": [],
+            }
+        )
+        + "\n",
         encoding="utf-8",
     )
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -222,9 +240,9 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     assert updated_manifest["current_stage"] == "translation_ready"
     assert updated_manifest["operations"]["chunking"]["status"] == "completed"
     assert updated_manifest["operations"]["translation"]["status"] == "in_progress"
-    assert updated_manifest["operations"]["character_discovery"]["status"] == "completed"
+    assert updated_manifest["operations"]["character_discovery"]["status"] == "not_started"
     assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
-    assert updated_manifest["operations"]["character_voices"]["status"] == "completed"
+    assert updated_manifest["operations"]["character_voices"]["status"] == "not_started"
     assert updated_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert updated_manifest["narrator_profile_name"] == "Warm Narrator"
     assert updated_manifest["narrator_language"] == "fr"
@@ -234,10 +252,8 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     assert translation_document["chunks"][0]["translated_text"] == ""
     assert translation_document["chunks"][0]["approved"] is False
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).is_file()
-    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
+    assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
 
 
 def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> None:

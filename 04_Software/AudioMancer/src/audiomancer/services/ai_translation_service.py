@@ -32,9 +32,9 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     OperationCancelledError,
     build_operation_output_path,
+    downstream_operation_kinds,
     raise_if_cancelled,
     reset_operation_data,
 )
@@ -546,7 +546,10 @@ def approve_all(project_root: str | Path) -> dict[str, object]:
 @trace_function(_AI_TRANSLATION_LOGGER)
 def reset_translation(project_root: str | Path) -> None:
     """
-    @brief      Delete translation and downstream runtime artifacts while preserving narrator profiles.
+    @brief      Delete only the authoritative translation document and its diagnostic logs.
+    @details    The translation UI invalidates Character Discovery and downstream
+                operations separately, and only when the effective Character
+                Discovery source changes.
     @param[in]  project_root Active project root folder.
     @return     None.
     @version    0.1.0
@@ -555,7 +558,10 @@ def reset_translation(project_root: str | Path) -> None:
         project_root,
         "translation",
         include_current=True,
-        preserve_operation_kinds=NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+        preserve_operation_kinds=downstream_operation_kinds(
+            "translation",
+            include_current=False,
+        ),
     )
 
 

@@ -288,7 +288,7 @@ Inputs:
 - canonical chunking output in `chunks_text.json`
 - approved translated chunks and `translation_report.json` when the selected
   voice language is translated
-- discovered character profiles from `characters_profile.json`
+- discovered character profiles projected from `characters.json`
 - selected enabled AI profile from `settings.json`
 - prompt templates:
   `04_Software/AudioMancer/prompts/speech_blocks_system.txt`
@@ -483,7 +483,7 @@ Upstream integrations:
 - canonical chunk output from `chunks_text.json`
 - approved translation output from `translated_text.json` when the selected voice
   language is translated
-- discovered character speaker catalog from `characters_profile.json`
+- discovered character speaker catalog projected from `characters.json`
 - locked project target language and narration mode from `project.json`
 
 Downstream integrations:

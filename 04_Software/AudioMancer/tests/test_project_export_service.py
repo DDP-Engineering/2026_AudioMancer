@@ -212,16 +212,8 @@ def test_project_export_markdown_character_dossiers_survive_separator_and_colon_
     project_root, manifest = _build_export_project(tmp_path)
     tricky_prompt = "Whispered: intimate.\n\n----\n\nTone: warm and resonant."
     _write_json(
-        project_root / config.CHARACTER_PROFILE_FILE_NAME,
-        [
-            {
-                "character_id": "stefan",
-                "canonical_name": "Ștefan",
-                "gender_hint": "male",
-                "age_hint": "old",
-                "voice_definition_prompt": tricky_prompt,
-            }
-        ],
+        project_root / config.CHARACTERS_DOCUMENT_FILE_NAME,
+        _characters_document(tricky_prompt),
     )
 
     markdown = project_export_service.render_export(
@@ -487,27 +479,9 @@ def _build_export_project(tmp_path):
     _write_ai_log(project_root / "log_ai_translation_20260425.log")
 
     _write_json(
-        project_root / config.CHARACTER_PROFILE_FILE_NAME,
-        [
-            {
-                "character_id": "stefan",
-                "canonical_name": "Ștefan",
-                "gender_hint": "male",
-                "age_hint": "old",
-                "voice_definition_prompt": "A dramatic Romanian baritone voice.",
-            }
-        ],
+        project_root / config.CHARACTERS_DOCUMENT_FILE_NAME,
+        _characters_document("A dramatic Romanian baritone voice."),
     )
-    _write_json(
-        project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
-        {
-            "character_profile_id_last_used": "profile_1",
-            "analyzed_window_count": 1,
-            "input_chunk_count": 2,
-            "character_count": 1,
-        },
-    )
-    _write_json(project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
 
     narrator_profile = narrator_definition_service.create_custom_profile(
         project_root,
@@ -604,6 +578,45 @@ def _build_export_project(tmp_path):
         },
     )
     return project_root, manifest
+
+
+def _characters_document(voice_prompt: str) -> dict[str, object]:
+    """Build one strict Character Discovery export fixture."""
+    return {
+        "status": "completed",
+        "source": {
+            "kind": "original",
+            "language": "ro",
+            "fingerprint": "fixture",
+        },
+        "instructions": "",
+        "token_usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "usage_available": False,
+        },
+        "checkpoint": None,
+        "failure": None,
+        "characters": [
+            {
+                "character_id": "stefan",
+                "canonical_name": "Ștefan",
+                "aliases": [],
+                "traits": {
+                    "gender": {"value": "male", "confidence": ""},
+                    "age": {"value": "old", "confidence": ""},
+                },
+                "voice": {
+                    "definition_prompt": voice_prompt,
+                    "preview_text": "",
+                },
+                "discovery_confidence": "",
+                "provenance": {"origin": "ai", "edited": False},
+                "evidence": [],
+            }
+        ],
+    }
 
 
 def _write_json(path, payload: object) -> None:

@@ -54,7 +54,7 @@ def test_character_discovery_prompts_request_demographic_confidence() -> None:
     assert "Demographic synthesis rules:" in synthesis_prompt_text
 
 
-def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> None:
+def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_path) -> None:
     """
     @brief      Validate start discovery persists outputs and report.
     @return     None.
@@ -128,7 +128,7 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
         lambda *_args, **_kwargs: next(responses),
     )
 
-    report = character_discovery_service.start_or_continue_discovery(
+    document = character_discovery_service.start_or_continue_discovery(
         project_root,
         manifest,
         _profile_payload("profile-1"),
@@ -136,8 +136,30 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
         cancel_requested=lambda: False,
     )
 
-    assert report["character_count"] == 1
-    assert report["character_profile_id_last_used"] == "profile-1"
+    assert document["status"] == "completed"
+    assert document["checkpoint"] is None
+    assert document["failure"] is None
+    assert document["source"]["kind"] == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL
+    assert document["token_usage"]["total_tokens"] == 135
+    assert set(document) == {
+        "status",
+        "source",
+        "instructions",
+        "token_usage",
+        "checkpoint",
+        "failure",
+        "characters",
+    }
+    assert set(document["characters"][0]) == {
+        "character_id",
+        "canonical_name",
+        "aliases",
+        "traits",
+        "voice",
+        "discovery_confidence",
+        "provenance",
+        "evidence",
+    }
     profiles = character_discovery_service.load_character_profiles(project_root)
     assert len(profiles) == 1
     assert profiles[0]["canonical_name"] == "Alice"
@@ -154,38 +176,23 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert character_discovery_service.load_input_chunks(project_root)[0]["chunk_id"] == "chunk-0001"
     assert (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
     assert (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME).is_file()
-    state = character_discovery_service.load_operation_state(project_root)
-    assert state is not None
-    assert state["status"] == "completed"
-    assert state["metadata"]["phase"] == "completed"
-    assert state["resume_checkpoint"] is None
-    assert state["metadata"]["log_relative_path"].startswith("log_ai_characters_")
-    assert (project_root / str(state["metadata"]["log_relative_path"])).is_file()
-    for field_name in ("output_paths", "artifact_paths", "started_at", "completed_at", "updated_at"):
-        assert field_name not in state
+    document_path = (
+        project_root
+        / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+        / config.CHARACTERS_DOCUMENT_FILE_NAME
+    )
+    assert document_path.is_file()
+    assert character_discovery_service.load_character_document(project_root) == document
+    assert list(project_root.glob("log_ai_characters_*.log"))
     manifest_operation = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]
     assert manifest_operation["status"] == "completed"
     assert "checkpoint" not in manifest_operation
     assert "log_relative_path" not in manifest_operation
-    assert report["budget_metadata"]["context_window"] == 4096
-    assert report["budget_metadata"]["max_output_tokens"] == 512
-    assert state["metadata"]["token_usage"] == report["token_usage"]
-    assert report["model_settings"] == {
-        "model_name": "qwen3-8b",
-        "context_window": 4096,
-        "max_output_tokens": 512,
-        "temperature": 0.2,
-    }
-    assert report["model_settings_history"] == [
-        {
-            "profile_id": "profile-1",
-            "model_name": "qwen3-8b",
-            "context_window": 4096,
-            "max_output_tokens": 512,
-            "temperature": 0.2,
-        }
-    ]
-    assert report["token_usage"]["total_tokens"] == 135
+    serialized_document = document_path.read_text(encoding="utf-8")
+    assert "profile-1" not in serialized_document
+    assert "qwen3-8b" not in serialized_document
+    assert "temperature" not in serialized_document
+    assert "max_output_tokens" not in serialized_document
 
 
 def test_start_discovery_appends_and_persists_operator_character_rules(monkeypatch, tmp_path) -> None:
@@ -263,27 +270,18 @@ def test_start_discovery_appends_and_persists_operator_character_rules(monkeypat
 
     monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _fake_chat_json)
 
-    report = character_discovery_service.start_or_continue_discovery(
+    document = character_discovery_service.start_or_continue_discovery(
         project_root,
         manifest,
         _profile_payload("profile-1"),
         additional_character_discovery_instructions=additional_rules,
     )
 
-    state = character_discovery_service.load_operation_state(project_root)
     assert len(requested_prompts) == 2
     assert all("Additional operator Character Discovery instructions:" in prompt for prompt in requested_prompts)
     assert all(additional_rules in prompt for prompt in requested_prompts)
-    assert report["additional_character_discovery_instructions"] == additional_rules
-    assert report["additional_character_discovery_instructions_fingerprint"] == (
-        character_discovery_service._compute_prompt_fingerprint(additional_rules)  # noqa: SLF001
-    )
-    assert state is not None
-    assert state["metadata"]["additional_character_discovery_instructions"] == additional_rules
-    assert (
-        state["metadata"]["additional_character_discovery_instructions_fingerprint"]
-        == report["additional_character_discovery_instructions_fingerprint"]
-    )
+    assert document["instructions"] == additional_rules
+    assert "instructions_fingerprint" not in document
 
 
 def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tmp_path) -> None:
@@ -296,8 +294,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
-    source_chunks = character_discovery_service.load_input_chunks(project_root)
-    fingerprint = character_discovery_service._build_input_fingerprint(source_chunks)
+    _resolved_chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
     monkeypatch.setattr(
         character_discovery_service.prompt_template_service,
         "validate_required_prompts",
@@ -323,49 +320,17 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         ],
         "has_dialogue_evidence": True,
     }
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTER_DISCOVERY_STATE_FILE_NAME
-    state_path.write_text(
-        json.dumps(
-            {
-                "status": "running",
-                "progress_current": 1,
-                "progress_total": 2,
-                "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-                "warning_count": 0,
-                "metadata": {
-                    "phase": "synthesis",
-                    "ai_profile_id": "profile-1",
-                    "additional_character_discovery_instructions": "",
-                    "additional_character_discovery_instructions_fingerprint": (
-                        character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
-                    ),
-                    "token_usage": {
-                        "input_tokens": None,
-                        "output_tokens": None,
-                        "total_tokens": None,
-                        "usage_available": False,
-                    },
-                    "log_relative_path": "saved_character_discovery.log",
-                },
-                "resume_checkpoint": {
-                    "run_token": "2026-04-08T12:00:00+00:00",
-                    "input_fingerprint": fingerprint,
-                    "log_relative_path": "saved_character_discovery.log",
-                    "additional_character_discovery_instructions_fingerprint": (
-                        character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
-                    ),
-                    "completed_window_count": 1,
-                    "next_discovery_start_chunk_index": len(source_chunks),
-                    "raw_candidates": [resume_candidate],
-                    "merged_candidates": [resume_candidate],
-                    "rejected_candidates": [],
-                    "synthesized_profiles": [],
-                },
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            source,
+            status="running",
+            checkpoint={
+                "phase": "synthesis",
+                "next_candidate_index": 0,
+                "candidates": [resume_candidate],
             },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+        ),
     )
     call_profiles = []
     log_paths = []
@@ -419,36 +384,21 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     )
 
     assert len(call_profiles) == 1
-    assert log_paths == ["saved_character_discovery.log"]
+    assert len(log_paths) == 1
+    assert log_paths[0].startswith("log_ai_characters_")
     assert call_profiles[0]["id"] == "profile-2"
     assert call_profiles[0]["model_name"] == "qwen3-14b"
-    assert report["character_count"] == 1
-    assert report["character_profile_id_last_used"] == "profile-2"
-    assert report["model_settings"] == {
-        "model_name": "qwen3-14b",
-        "context_window": 8192,
-        "max_output_tokens": 1024,
-        "temperature": 0.4,
-    }
-    assert report["model_settings_history"][-1] == {
-        "profile_id": "profile-2",
-        "model_name": "qwen3-14b",
-        "context_window": 8192,
-        "max_output_tokens": 1024,
-        "temperature": 0.4,
-    }
-    assert report["input_source"] == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
+    assert report["status"] == "completed"
+    assert len(report["characters"]) == 1
+    assert report["source"]["kind"] == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL
     assert report["token_usage"]["total_tokens"] == 90
-    state = character_discovery_service.load_operation_state(project_root)
-    assert state is not None
-    assert state["resume_checkpoint"] is None
-    assert state["metadata"]["log_relative_path"] == "saved_character_discovery.log"
+    assert report["checkpoint"] is None
     resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
     assert resumed_profile["gender_hint"] == "female"
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
 
 
-def test_character_discovery_tolerates_malformed_profiles_and_report(tmp_path) -> None:
+def test_character_discovery_strictly_rejects_malformed_and_old_root_payloads(tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-012 malformed Character Discovery artifacts degrade to missing data.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -460,11 +410,18 @@ def test_character_discovery_tolerates_malformed_profiles_and_report(tmp_path) -
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryMalformedArtifacts")
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text('{"broken": ', encoding="utf-8")
-    (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text('{"broken": ', encoding="utf-8")
+    document_path = discovery_root / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document_path.write_text('{"broken": ', encoding="utf-8")
+    with pytest.raises(character_discovery_service.CharacterDocumentError):
+        character_discovery_service.load_character_document(project_root)
 
-    assert character_discovery_service.load_character_profiles(project_root) == []
-    assert character_discovery_service.load_character_discovery_report(project_root) is None
+    document_path.write_text("[]\n", encoding="utf-8")
+    with pytest.raises(character_discovery_service.CharacterDocumentError):
+        character_discovery_service.load_character_document(project_root)
+
+    document_path.write_text(json.dumps({"status": "completed"}) + "\n", encoding="utf-8")
+    with pytest.raises(character_discovery_service.CharacterDocumentError):
+        character_discovery_service.load_character_document(project_root)
 
 
 def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypatch, tmp_path) -> None:
@@ -508,13 +465,13 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
             cancel_requested=lambda: False,
         )
 
-    cancelled_state = character_discovery_service.load_operation_state(project_root)
-    assert cancelled_state is not None
-    assert cancelled_state["status"] == "cancelled"
-    assert cancelled_state["metadata"]["phase"] == "synthesis"
-    assert cancelled_state["resume_checkpoint"]["completed_window_count"] == 1
-    assert len(cancelled_state["resume_checkpoint"]["raw_candidates"]) == 1
-    assert len(cancelled_state["resume_checkpoint"]["synthesized_profiles"]) == 0
+    cancelled_document = character_discovery_service.load_character_document(project_root)
+    assert cancelled_document is not None
+    assert cancelled_document["status"] == "cancelled"
+    assert cancelled_document["checkpoint"]["phase"] == "synthesis"
+    assert cancelled_document["checkpoint"]["next_candidate_index"] == 0
+    assert len(cancelled_document["checkpoint"]["candidates"]) == 1
+    assert cancelled_document["characters"] == []
 
     resumed_stages: list[str] = []
 
@@ -542,7 +499,7 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
 
     assert call_stages == ["character_discovery_window", "character_profile_synthesis"]
     assert resumed_stages == ["character_profile_synthesis"]
-    assert report["character_count"] == 1
+    assert len(report["characters"]) == 1
 
 
 def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
@@ -583,11 +540,12 @@ def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
             cancel_requested=lambda: False,
         )
 
-    failed_state = character_discovery_service.load_operation_state(project_root)
-    assert failed_state is not None
-    assert failed_state["status"] == "failed"
-    assert failed_state["metadata"]["phase"] == "synthesis"
-    assert failed_state["resume_checkpoint"]["completed_window_count"] == 1
+    failed_document = character_discovery_service.load_character_document(project_root)
+    assert failed_document is not None
+    assert failed_document["status"] == "failed"
+    assert failed_document["checkpoint"]["phase"] == "synthesis"
+    assert failed_document["checkpoint"]["next_candidate_index"] == 0
+    assert failed_document["failure"]["phase"] == "synthesis"
 
 
 def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
@@ -649,34 +607,15 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryManual")
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
-        json.dumps([_saved_profile_payload()], indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "status": "completed",
-                "phase": "completed",
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "ai_assisted",
-                "started_at": "2026-04-08T12:00:00+00:00",
-                "completed_at": "2026-04-08T12:01:00+00:00",
-                "updated_at": "2026-04-08T12:01:00+00:00",
-                "warning_count": 0,
-                "ai_profile_id": "profile-1",
-                "input_fingerprint": "",
-                "additional_character_discovery_instructions": "",
-                "additional_character_discovery_instructions_fingerprint": "",
-                "token_usage": {},
-                "log_relative_path": "log_ai_characters_saved.log",
-                "checkpoint": None,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            source,
+            status="completed",
+            checkpoint=None,
+            characters=[_nested_saved_character()],
+        ),
     )
     narrator_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     narrator_root.mkdir(parents=True, exist_ok=True)
@@ -690,6 +629,13 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     bob_profile = next(profile for profile in added_profiles if str(profile.get("canonical_name")) == "Bob")
     assert bob_profile["evidence"][0]["chunk_id"] == character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID
     assert bob_profile["review_status"] == character_discovery_service.CHARACTER_REVIEW_STATUS_MANUAL
+    added_document = character_discovery_service.load_character_document(project_root)
+    added_bob = next(
+        item
+        for item in added_document["characters"]
+        if item["character_id"] == bob_profile["character_id"]
+    )
+    assert added_bob["provenance"] == {"origin": "manual", "edited": False}
 
     updated_profiles = character_discovery_service.update_character_profile(
         project_root,
@@ -709,6 +655,13 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     )
     assert "Bob" in updated_bob["voice_definition_prompt"]
     assert updated_bob["review_status"] == character_discovery_service.CHARACTER_REVIEW_STATUS_MANUAL
+    edited_document = character_discovery_service.load_character_document(project_root)
+    edited_bob = next(
+        item
+        for item in edited_document["characters"]
+        if item["character_id"] == bob_profile["character_id"]
+    )
+    assert edited_bob["provenance"] == {"origin": "manual", "edited": True}
 
     remaining_profiles = character_discovery_service.delete_character_profile(
         project_root,
@@ -716,16 +669,14 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     )
     assert len(remaining_profiles) == 1
     assert remaining_profiles[0]["character_id"] == "alice"
-    updated_state = character_discovery_service.load_operation_state(project_root)
-    assert updated_state is not None
-    assert "metadata" not in updated_state
-    assert updated_state["status"] == "completed"
+    updated_document = character_discovery_service.load_character_document(project_root)
+    assert updated_document is not None
+    assert updated_document["status"] == "completed"
+    assert updated_document["characters"][0]["provenance"] == {"origin": "ai", "edited": False}
 
     character_discovery_service.reset_character_discovery(project_root)
 
-    assert not (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
-    assert not (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).exists()
-    assert not (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).exists()
+    assert not (discovery_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
     assert (narrator_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (discovery_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
 
@@ -994,7 +945,7 @@ def test_window_candidate_normalization_preserves_demographic_confidence() -> No
     assert "voice_definition_prompt" not in normalized_candidates[0]
 
 
-def test_load_input_chunks_uses_source_chunks_when_translation_exists(tmp_path) -> None:
+def test_load_input_chunks_uses_fully_approved_translation(tmp_path) -> None:
     """
     @brief      Verify character discovery keeps source chunks as the authoritative discovery input.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -1008,17 +959,20 @@ def test_load_input_chunks_uses_source_chunks_when_translation_exists(tmp_path) 
     artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (artifact_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
-            [
+            {
+                "target_language": "fr",
+                "status": "completed",
+                "token_usage": _empty_token_usage(),
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [
                 {
                     "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "source_text": '"Hello there," said Alice.',
                     "translated_text": "\u00abBonjour\u00bb, dit Alice.",
-                    "status": "approved",
                     "approved": True,
-                    "target_language": "fr",
                 }
-            ],
+                ],
+            },
             indent=2,
             ensure_ascii=False,
         )
@@ -1028,8 +982,11 @@ def test_load_input_chunks_uses_source_chunks_when_translation_exists(tmp_path) 
 
     input_chunks = character_discovery_service.load_input_chunks(project_root)
 
-    assert input_chunks[0]["text"] == '"Hello there," said Alice.'
-    assert input_chunks[0]["input_source"] == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
+    assert input_chunks[0]["text"] == "\u00abBonjour\u00bb, dit Alice."
+    assert (
+        input_chunks[0]["input_source"]
+        == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_TRANSLATED
+    )
     assert input_chunks[0]["dialogue_spans"][0]["dialogue_span_id"] == "dialogue-001"
 
 
@@ -1077,7 +1034,7 @@ def test_load_input_chunks_derives_runtime_chapter_context(tmp_path) -> None:
     assert "chapter_label" not in persisted_chunks[0]
 
 
-def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
+def test_load_input_chunks_uses_original_when_translation_is_not_fully_approved(tmp_path) -> None:
     """
     @brief      Verify character discovery never consumes mixed-language translation records.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -1112,26 +1069,25 @@ def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
     )
     (artifact_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
-            [
+            {
+                "target_language": "fr",
+                "status": "review_pending",
+                "token_usage": _empty_token_usage(),
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [
                 {
                     "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "source_text": '"Hello there," said Alice.',
                     "translated_text": "\u00abBonjour\u00bb, dit Alice.",
-                    "status": "approved",
                     "approved": True,
-                    "target_language": "fr",
                 },
                 {
                     "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "source_text": '"Goodbye," said Bob.',
-                    "translated_text": "\u00abAdios\u00bb, dijo Bob.",
-                    "status": "approved",
-                    "approved": True,
-                    "target_language": "es",
+                    "translated_text": "\u00abAu revoir\u00bb, dit Bob.",
+                    "approved": False,
                 },
-            ],
+                ],
+            },
             indent=2,
             ensure_ascii=False,
         )
@@ -1142,8 +1098,8 @@ def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
     input_chunks = character_discovery_service.load_input_chunks(project_root)
 
     assert [chunk["input_source"] for chunk in input_chunks] == [
-        character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
-        character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
+        character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL,
+        character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL,
     ]
     assert input_chunks[0]["text"] == '"Hello there," said Alice.'
 
@@ -1412,16 +1368,12 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
         {
             "status": "running",
-            "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-            "input_fingerprint": "abc",
-            "additional_character_discovery_instructions_fingerprint": (
-                character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
-            ),
-            "log_relative_path": "log_ai_characters_saved.log",
+            "source": {"kind": "original", "language": "en", "fingerprint": "abc"},
+            "characters": [],
             "checkpoint": {
-                "completed_window_count": 1,
-                "next_discovery_start_chunk_index": 1,
-                "raw_candidates": [resume_candidate],
+                "phase": "discovery",
+                "next_chunk_index": 1,
+                "candidates": [resume_candidate],
             },
         },
         input_fingerprint="abc",
@@ -1435,14 +1387,11 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     stale_restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
         {
             "status": "running",
-            "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-            "input_fingerprint": "abc",
-            "additional_character_discovery_instructions_fingerprint": (
-                character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
-            ),
+            "source": {"kind": "original", "language": "en", "fingerprint": "abc"},
+            "characters": [],
             "checkpoint": {
-                "completed_window_count": 1,
-                "raw_candidates": [resume_candidate],
+                "phase": "discovery",
+                "candidates": [resume_candidate],
             },
         },
         input_fingerprint="abc",
@@ -1681,7 +1630,7 @@ def _chunk_payload(chunk_id: str, sequence_index: int, text: str) -> dict[str, o
     return {
         "chunk_id": chunk_id,
         "sequence_index": sequence_index,
-        "input_source": character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
+        "input_source": character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_ORIGINAL,
         "text": text,
         "dialogue_spans": [],
     }
@@ -1738,6 +1687,42 @@ def _saved_profile_payload() -> dict[str, object]:
         ],
         "updated_at": "2026-04-08T12:01:00+00:00",
     }
+
+
+def _empty_token_usage() -> dict[str, object]:
+    """Return the strict persisted token-usage shape."""
+    return {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "usage_available": False,
+    }
+
+
+def _character_document(
+    source: dict[str, str],
+    *,
+    status: str,
+    checkpoint: dict[str, object] | None,
+    characters: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
+    """Build one strict Character Discovery test document."""
+    return {
+        "status": status,
+        "source": dict(source),
+        "instructions": "",
+        "token_usage": _empty_token_usage(),
+        "checkpoint": checkpoint,
+        "failure": None,
+        "characters": list(characters or []),
+    }
+
+
+def _nested_saved_character() -> dict[str, object]:
+    """Return one nested character record for persistence tests."""
+    return character_discovery_service._nested_character_profile(  # noqa: SLF001
+        _saved_profile_payload()
+    )
 
 
 # END OF FILE

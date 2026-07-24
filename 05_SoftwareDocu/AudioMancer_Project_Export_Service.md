@@ -79,7 +79,7 @@ Inputs:
 - Active project root path.
 - Active `project.json` manifest dictionary.
 - Root-level runtime artifacts such as `clean_text.txt`,
-  `chunks_text.json`, `translated_text.json`, `characters_profile.json`, and
+  `chunks_text.json`, `translated_text.json`, `characters.json`, and
   `speech_blocks.json`.
 - Optional operation reports and state files used for export parameters.
 - Generated narrator/character voice sample WAV files and Audio Assembly WAV

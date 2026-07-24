@@ -3,57 +3,115 @@
 
 ## 1. Purpose
 
-Derives a reviewable character inventory from the canonical project text so later voice and speech workflows have explicit character context.
+Character Discovery derives a reviewable inventory of speaking characters from
+the effective project text. Voice Profiles and Speech Blocks consume that
+inventory through the stable profile projection.
 
 ## 2. Responsibilities
 
-- Render discovery and synthesis prompts, budget source chunks, call the configured AI profile, merge candidates, and persist resumable discovery artifacts.
-- Maintain operator-created or edited character records, evidence, demographic confidence, and character voice-definition prompts.
-- Project persisted state into the Characters page and coordinate start, resume, cancellation, selection, edit, add, save, and delete actions.
-- It does not select final narrator/character voices or generate speech/audio.
+- Resolve original versus fully approved translated text.
+- Discover candidates in bounded chunk windows and synthesize one character per
+  AI request.
+- Persist operation status, resume progress, token usage, characters, and
+  manual edits in one authoritative document.
+- Maintain evidence, demographic confidence, voice prompts, and provenance.
+- Invalidate its own and downstream output when the effective source changes.
+- It does not select voices or generate speech/audio.
 
 ## 3. Implementation Overview
 
-`character_discovery_service.py` loads compatible source chunks, builds bounded discovery windows, collects structured candidates, groups and synthesizes them, and writes profiles, report, checkpoint, and operation state. It preserves completed work on cancellation/failure and supports offline manual maintenance. `character_discovery_state_service.py` derives page-ready state and validates that an enabled AI profile is available before a run. The controller delegates long work through the shared operation runner; the page keeps review fields read-only until an operator deliberately enters edit/add mode.
+`04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py`
+owns source resolution, strict persistence, discovery, synthesis, resume, and
+manual CRUD. `load_character_document()` validates the authoritative document;
+`load_character_profiles()` exposes the flat projection expected by existing
+consumers.
+
+`character_discovery_state_service.py` derives Characters-page state.
+`characters_ui_controller.py` coordinates start, resume, cancellation, reset,
+and manual maintenance.
+
+Discovery checkpoints after every successful window. Synthesis remains
+sequential: each candidate is compacted to the current profile budget and sent
+in one AI request, then the resulting character and next index are committed
+atomically.
 
 ## 4. Dependencies
 
-- Internal: project/operation runtime artifacts, AI Runtime provider, budget and prompt-template services, canonical chunks or compatible translation artifacts, shared operation runner, and Qt page widgets.
-- External: the selected AI provider is required only for discovery/synthesis or regeneration; persisted JSON project artifacts are used for recovery and review.
+- Internal: strict Chunking and AI Translation documents, project manifest,
+  prompt templates, AI provider, budget/token-usage helpers, atomic JSON
+  persistence, operation reset helpers, and the Qt Characters page.
+- External: the currently selected AI provider is required only for discovery
+  and synthesis.
 
 ## 5. Inputs And Outputs
 
-- Inputs: project root, canonical source chunks, selected enabled AI profile, optional operator rules, persisted checkpoint/state, and page edit/add/delete requests.
-- Outputs: `characters_profile.json`, `characters_report.json`,
-  `characters_state.json`, a per-run AI transaction log, character profiles
-  with evidence and demographic confidence, page view state, and downstream
-  invalidation when a saved character affects voice or speech work.
+- Inputs: canonical chunks, optional fully approved translations, the current
+  enabled AI profile, optional operator instructions, and manual CRUD requests.
+- Output: `characters.json` in the project artifact root.
+- Diagnostics: per-run `log_ai_characters_*.log` files are separate and are not
+  referenced by the authoritative document.
+- Side effects: the manifest character-discovery entry is refreshed as a
+  reconstructible cache; source changes reset dependent runtime artifacts while
+  preserving Narrator Definition.
 
 ## 6. Data Contracts
 
-Canonical source chunks are loaded through the strict shared Chunking document
-reader. Legacy arrays and Chunking report/state sidecars are not input fallbacks.
+The root of `characters.json` contains exactly:
 
-- Character records retain stable identifiers, name validation, evidence, dialogue previews, demographic fields/confidence, and a compact voice-definition prompt.
-- Discovery progress uses the shared operation-state envelope. Candidate payloads are normalized and trimmed to context-budget metadata before synthesis.
-- Translation chunks are usable only when they are compatible with the selected target; otherwise source chunks remain authoritative.
-- Malformed profile/report JSON is treated as absent with a logged warning for
-  page recovery; the next successful atomic write replaces it. A generated
-  preview must be grounded in that character's direct dialogue evidence before
-  it can be retained for downstream voice work.
+```text
+status, source, instructions, token_usage, checkpoint, failure, characters
+```
+
+`source` contains exactly `kind`, `language`, and `fingerprint`. `kind` is
+`translated` only when every canonical chunk has a non-empty approved
+translation; otherwise it is `original`. The fingerprint covers source kind,
+language, and ordered chunk ID, sequence index, and selected text.
+
+`checkpoint` is null or one of:
+
+- discovery: `phase`, `next_chunk_index`, `candidates`
+- synthesis: `phase`, `next_candidate_index`, `candidates`
+
+Characters contain exactly `character_id`, `canonical_name`, `aliases`,
+`traits`, `voice`, `discovery_confidence`, `provenance`, and `evidence`.
+`provenance` separates `origin` (`ai` or `manual`) from `edited`.
+
+The file is absent before the first run. Persisted statuses are `running`,
+`cancelled`, `failed`, and `completed`. Invalid JSON, arrays, extra root fields,
+or incompatible nested records are rejected. There is no migration or fallback
+reader.
 
 ## 7. Workflow Integration
 
-Character Discovery follows text chunking and is the review gate before Voice Profiles and Speech Blocks. Operators may resume a saved synthesis checkpoint, manually correct a record, or reset downstream work when a material character change invalidates it.
+Character Discovery follows Chunking and optional Translation. Translation
+approval/edit/reset actions recalculate the effective source and invalidate
+Character Discovery only when kind or fingerprint changes. Character Voices,
+Speech Blocks, export, manifest summaries, and UI previews consume the new
+document or its profile projection.
 
 ## 8. Usage
 
-Open the Characters page after chunking, select an enabled character-discovery profile, optionally provide rules, and start or resume discovery. Review evidence and demographics, then use Edit or Add for intentional manual changes. Save before proceeding to voice-definition or speech-block work; cancel leaves resumable completed work intact.
+Call `start_or_continue_discovery()` with the project root, manifest, and
+current profile. A resumable run retains its saved instructions but always uses
+the current profile configuration. Call `reset_character_discovery()` to delete
+the document and dependent artifacts. Manual add/edit/delete functions update
+the same document atomically.
 
 ## 9. Validation And Tests
 
-Focused suite E-0013 passed 55 tests across discovery service, state service, page, and controller. It covers prompts, source selection, budgets, normalization/merge/synthesis, checkpoints, cancellation/failure recovery, manual mutation validation, profile state, and review UI flows. After changes, run all four mapped test modules with temporary/cache paths redirected outside `.agentic`. Manual review remains necessary for the truthfulness and completeness of AI-derived identities, evidence, and demographics.
+Primary coverage is in:
+
+- `04_Software/AudioMancer/tests/test_character_discovery_service.py`
+- `04_Software/AudioMancer/tests/test_character_discovery_state_service.py`
+- `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
+- translation, runtime, export, and text-state consumer tests
+
+Minimum validation includes focused pytest runs, Python compilation, Ruff, and
+a repository search confirming that removed artifact contracts are absent from
+active code and tests.
 
 ## 10. Limitations And Future Work
 
-Automated tests prove structural contracts and recovery behavior, not that a provider correctly identifies fictional characters or assigns accurate demographics. Candidate quality depends on the source, selected model, prompt response, and operator review; ambiguous entities, aliases, or weak dialogue evidence require human judgment before downstream voice or speech decisions.
+Character quality still depends on source clarity, provider behavior, and human
+review. Synthesis deliberately uses one AI call per character; adaptive batch
+synthesis is not implemented.

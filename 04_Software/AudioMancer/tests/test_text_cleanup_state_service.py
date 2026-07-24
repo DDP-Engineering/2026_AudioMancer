@@ -245,9 +245,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
     (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
-    (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -282,9 +280,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     assert updated_manifest["narrator_profile_name"] is None
     assert updated_manifest["narrator_language"] is None
     assert not (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).exists()
-    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
-    assert not (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).exists()
-    assert not (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
     assert not (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
