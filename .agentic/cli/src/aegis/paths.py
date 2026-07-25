@@ -15,9 +15,13 @@
 @details ``contained_relative_path`` (0.4.0) is the lenient containment check
          used by policy evaluators reading persisted data; ``relative_to_root``
          remains the strict form used at input boundaries.
+@details The unused ``is_allowed_path`` convenience wrapper was removed (0.5.0,
+         code-review follow-up): no production caller used it, and every policy
+         consumer composes ``relative_to_root``/``contained_relative_path`` with
+         ``matches_pattern`` directly.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-23
-@version 0.4.0
+@date 2026-07-24
+@version 0.5.0
 """
 
 # IMPORTS
@@ -114,22 +118,6 @@ def matches_pattern(path: str, pattern: str) -> bool:
     return fnmatchcase(normalized_path, normalized_pattern) or fnmatchcase(
         normalized_path, f"{normalized_pattern}/**"
     )
-
-
-def is_allowed_path(path: str | Path, root: Path, patterns: list[str]) -> bool:
-    """
-    @brief      Check is allowed path workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  root Input value used by the workflow helper.
-    @param[in]  patterns Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    rel = relative_to_root(path, root)
-    return any(matches_pattern(rel, pattern) for pattern in patterns)
 
 
 # END OF FILE

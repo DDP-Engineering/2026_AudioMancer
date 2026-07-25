@@ -15,9 +15,12 @@
          path, so a protected/blocked/secret path pattern can no longer be
          dodged by a non-ASCII filename that Git would otherwise report as an
          escaped, quoted string.
+@details `_git_status` (0.5.0, code-review follow-up) only splits an entry on
+         `" -> "` when the status code marks a rename or copy (`R`/`C`), so a
+         file whose own name contains that sequence is no longer misparsed.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-18
-@version 0.4.0
+@date 2026-07-24
+@version 0.5.0
 """
 
 # IMPORTS
@@ -155,7 +158,12 @@ def _git_status(repo_root: Path) -> tuple[list[dict[str, str]], str | None]:
         status = line[:2]
         path = line[3:]
         previous_path = None
-        if " -> " in path:
+        # ``old -> new`` is only a rename/copy record, marked ``R`` or ``C`` in
+        # the porcelain status code. Splitting on `" -> "` unconditionally would
+        # corrupt an ordinary entry for a file whose own name literally contains
+        # that sequence (e.g. an untracked ``a -> b``), which Git leaves unquoted
+        # because it has no special characters.
+        if ("R" in status or "C" in status) and " -> " in path:
             previous_path, path = path.split(" -> ", 1)
         entry = {"status": status, "path": _unquote_git_path(path).replace("\\", "/")}
         if previous_path:

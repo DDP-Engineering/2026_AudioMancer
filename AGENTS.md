@@ -114,6 +114,11 @@ project on first start; see `.qwen/README.md`.
 - Activate a proven snapshot with
   `<workflow> requirement activate [--run-id <run-id>] --id <requirement-id> --linked-test <test-id> --verification "<method>"`.
 - Link each active requirement to exact test identifiers when practical.
+- Keep the `requirement` sentence atomic and put concrete detail (data
+  structures, interface formats, dialog text, worked examples) in a companion
+  spec file named by the optional `spec_ref`. When `spec_ref` is set the file
+  must exist; a deleted target is reported as `REQ-SPEC-MISSING` by the
+  traceability audit. `feature` and `change` work should carry a `spec_ref`.
 - When adding or changing tests, cite relevant requirement IDs in comments,
   docstrings, or test names where practical.
 - New source files under configured `coverable_roots` need a file-level

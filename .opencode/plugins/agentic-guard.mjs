@@ -260,7 +260,9 @@ export async function handleBeforeTool(input, output, cwd, runPythonHook) {
 
   if (tool === "bash") {
     const command = commandFromArgs(args);
-    for (const hook of ["secret_scan.py", "delivery_preflight.py"]) {
+    // `guard_shell_write.py` first: a write-zone violation is more specific than
+    // a secret match, so report it before scanning the command for secrets.
+    for (const hook of ["guard_shell_write.py", "secret_scan.py", "delivery_preflight.py"]) {
       const reason = await runPythonHook(
         hook,
         hookPayload(cwd, "PreToolUse", "Bash", { command }, undefined, undefined),

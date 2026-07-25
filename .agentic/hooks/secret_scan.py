@@ -12,9 +12,13 @@
 @details Uses only patterns validated under ``guardrails.secrets`` by the
          canonical parser. Missing or invalid policy is an actionable deny;
          disabled scanning carries no dormant built-in expressions.
+@details Serializes the scanned tool input with ``ensure_ascii=False`` (0.4.0,
+         code-review follow-up) so a configured pattern can match a secret that
+         contains non-ASCII characters instead of comparing it against
+         ``\\uXXXX`` escapes.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-22
-@version 0.3.0
+@date 2026-07-24
+@version 0.4.0
 """
 
 # IMPORTS
@@ -53,7 +57,11 @@ def main() -> int:
     if policy.mode == "disabled":
         return 0
     compiled_patterns = [re.compile(pattern) for pattern in policy.patterns]
-    text = json.dumps(payload.get("tool_input", {}))
+    # `ensure_ascii=False` keeps non-ASCII characters literal. With the default
+    # escaping a secret containing accented or non-Latin characters would be
+    # serialized as `\uXXXX` escapes, and a pattern written to match the real
+    # characters would never fire against that escaped text.
+    text = json.dumps(payload.get("tool_input", {}), ensure_ascii=False)
     if any(pattern.search(text) for pattern in compiled_patterns):
         return deny("Possible secret detected by configured workflow policy.")
     return 0

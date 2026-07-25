@@ -169,6 +169,7 @@ def create_requirement(
     rationale: str,
     verification: str,
     config: WorkflowConfig,
+    spec_ref: str = "",
     affected_paths: list[str] | None = None,
     linked_tests: list[str] | None = None,
     timestamp: str | None = None,
@@ -176,13 +177,14 @@ def create_requirement(
     """
     @brief Create one independent Planned requirement snapshot.
     @return Newly persisted UUID-backed record.
-    @exception ValueError If fields or linked tests are invalid.
+    @exception ValueError If fields, linked tests, or the spec reference are invalid.
     @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
+    @date 2026-07-25
+    @version 0.3.0
     """
     tests = linked_tests or []
     _require_resolvable_tests(repo_root, tests, config)
+    _require_existing_spec(repo_root, spec_ref)
     return create_requirement_record(
         repo_root,
         config,
@@ -191,6 +193,7 @@ def create_requirement(
         requirement=requirement,
         rationale=rationale,
         verification=verification,
+        spec_ref=spec_ref,
         affected_paths=affected_paths or [],
         linked_tests=tests,
         timestamp=timestamp,
@@ -260,6 +263,8 @@ def update_requirement(
     requirement: str | None = None,
     rationale: str | None = None,
     verification: str | None = None,
+    spec_ref: str | None = None,
+    clear_spec_ref: bool = False,
     linked_tests: list[str] | None = None,
     clear_linked_tests: bool = False,
     affected_paths: list[str] | None = None,
@@ -271,17 +276,19 @@ def update_requirement(
     @return Resulting complete current record.
     @exception ValueError If options conflict, no update is supplied, or validation fails.
     @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
+    @date 2026-07-25
+    @version 0.3.0
     """
     if linked_tests is not None and clear_linked_tests:
         raise ValueError("linked_tests and clear_linked_tests are mutually exclusive")
     if affected_paths is not None and clear_affected_paths:
         raise ValueError("affected_paths and clear_affected_paths are mutually exclusive")
+    if spec_ref is not None and clear_spec_ref:
+        raise ValueError("spec_ref and clear_spec_ref are mutually exclusive")
     supplied = any(
         value is not None
-        for value in (status, priority, requirement, rationale, verification, linked_tests, affected_paths)
-    ) or clear_linked_tests or clear_affected_paths
+        for value in (status, priority, requirement, rationale, verification, spec_ref, linked_tests, affected_paths)
+    ) or clear_linked_tests or clear_affected_paths or clear_spec_ref
     if not supplied:
         raise ValueError("At least one requirement update option is required.")
     current = find_requirement_record(repo_root, requirement_id, config)
@@ -299,6 +306,13 @@ def update_requirement(
         if affected_paths is not None
         else current.affected_paths
     )
+    new_spec_ref = (
+        ""
+        if clear_spec_ref
+        else spec_ref
+        if spec_ref is not None
+        else current.spec_ref
+    )
     candidate = replace(
         current,
         status=status if status is not None else current.status,
@@ -306,12 +320,14 @@ def update_requirement(
         requirement=requirement if requirement is not None else current.requirement,
         rationale=rationale if rationale is not None else current.rationale,
         verification=verification if verification is not None else current.verification,
+        spec_ref=new_spec_ref,
         linked_tests=new_tests,
         affected_paths=new_paths,
         last_updated=timestamp or utc_timestamp(),
     )
     normalized = validate_requirement_record(candidate, config)
     _require_resolvable_tests(repo_root, list(normalized.linked_tests), config)
+    _require_existing_spec(repo_root, normalized.spec_ref)
     return write_requirement_record(repo_root, normalized, config)
 
 
@@ -381,6 +397,19 @@ def audit_traceability(
                 AuditIssue(
                     "REQ-NO-VERIFICATION",
                     f"{record.id} ({record.status}) has no resolvable linked-test set and no explicit manual verification",
+                    record.id,
+                    record.source_file,
+                )
+            )
+        if (
+            record.status != "Retired"
+            and record.spec_ref
+            and not (repo_root / record.spec_ref).is_file()
+        ):
+            issues.append(
+                AuditIssue(
+                    "REQ-SPEC-MISSING",
+                    f"{record.id} references spec {record.spec_ref} which does not exist",
                     record.id,
                     record.source_file,
                 )
@@ -594,6 +623,15 @@ def _require_resolvable_tests(
             failures.append(f"{selector}: {reason}")
     if failures:
         raise ValueError(f"linked test(s) do not resolve: {'; '.join(failures)}")
+
+
+def _require_existing_spec(repo_root: Path, spec_ref: str) -> None:
+    """@brief Reject a write when a non-empty spec reference does not name an existing file."""
+    if not spec_ref.strip():
+        return
+    normalized = normalize_repository_path(spec_ref, allow_glob=False)
+    if not (repo_root / normalized).is_file():
+        raise ValueError(f"spec_ref does not resolve to an existing file: {normalized}")
 
 
 def _is_covered(

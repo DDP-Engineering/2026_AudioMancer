@@ -35,6 +35,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.agentic/tools/run_hook.mjs\" \"${CLAUDE_PROJECT_DIR}/.agentic/hooks/guard_shell_write.py\"",
+            "statusMessage": "Checking agentic write zone for shell writes"
+          },
+          {
+            "type": "command",
             "command": "node \"${CLAUDE_PROJECT_DIR}/.agentic/tools/run_hook.mjs\" \"${CLAUDE_PROJECT_DIR}/.agentic/hooks/secret_scan.py\"",
             "statusMessage": "Checking command for secrets"
           },

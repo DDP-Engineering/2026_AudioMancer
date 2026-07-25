@@ -71,6 +71,14 @@ resolve_python() {
   if [ -f "$pointer" ]; then
     IFS= read -r registered < "$pointer" || true
     registered="$(trim "${registered:-}")"
+    # Packaged WAEGIS writes a native path, so on Windows the pointer holds a
+    # backslash path (`C:\...\python.exe`). This script also runs under Git
+    # Bash there, where `[ -f ]` and `exec` handle a forward-slash `C:/...`
+    # path reliably but treat backslashes inconsistently. Folding them to `/`
+    # is a no-op for a genuine POSIX path (which contains none) and removes the
+    # ambiguity on Windows. The Node and PowerShell readers accept the native
+    # form as-is, so only this wrapper needs the conversion.
+    registered="${registered//\\//}"
     if [ -n "$registered" ] && [ -f "$registered" ]; then
       PYTHON_CMD=("$registered")
       return 0

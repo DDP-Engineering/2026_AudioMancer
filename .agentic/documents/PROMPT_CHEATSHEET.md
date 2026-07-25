@@ -107,6 +107,11 @@ isolated purpose: one requirement per functionality, and split anything that
 joins distinct behaviors with "and", "or", or a list. Write the failure and
 boundary behaviors as their own requirements, not only as tests, and make sure
 every acceptance criterion from alignment maps to at least one requirement.
+For a feature or behavior change, write the concrete companion spec — data
+structures, interface/format, exact dialog and copy text, example payloads,
+worked examples — from .agentic/requirements/spec_template.md and attach it with
+--spec-ref, so implementation cannot drift. Keep each requirement sentence itself
+atomic.
 Check existing requirements first and reuse or revise where one already covers
 this. Record accepted specs into the workflow graph.
 Do not write tests or code yet. Stop and show me the specs and the invariant
@@ -399,6 +404,11 @@ Use <workflow> requirement create for a new behavioral contract and use the
 returned UUID-backed ID. Use <workflow> requirement update for a revision of
 the same contract, preserving its ID and replacing complete linked-test or
 affected-path sets when associations change.
+For a feature or behavior change, author the concrete companion spec from
+.agentic/requirements/spec_template.md (data structures, interface/format, exact
+dialog and copy text, example payloads, worked acceptance examples) and pass its
+path with --spec-ref on create/update; the referenced file must exist. A small
+fix may omit it. Keep the requirement sentence itself atomic.
 If this creates or materially changes a component, include the expected
 .agentic/knowledge/components component-documentation update in the acceptance
 notes.
@@ -685,6 +695,23 @@ Stop after reporting the PR URL and final status.
 ```
 
 ## Resume Or Inspect A Run
+
+To continue an existing run in a fresh session (a new agent with no prior chat
+context), reconstruct the full picture first:
+
+```text
+Use the agentic development workflow to continue an existing run.
+Run the session bootstrap, then:
+<workflow> resume
+
+This returns the current stage and next stage, the intent and alignment, spec
+items, checks, recent evidence, and the run's requirements with their spec_ref.
+Open each spec_ref file for the concrete detail, then continue at the reported
+stage. If I provide <existing-run-id>, append --run-id <existing-run-id>.
+Do not edit files until you have read the brief.
+```
+
+For a lighter inspection of an active run:
 
 ```text
 Use the agentic development workflow.

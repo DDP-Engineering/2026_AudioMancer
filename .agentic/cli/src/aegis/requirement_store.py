@@ -58,6 +58,7 @@ REQUIREMENT_KEYS = (
     "requirement",
     "rationale",
     "verification",
+    "spec_ref",
     "affected_paths",
     "linked_tests",
     "created_on",
@@ -118,6 +119,7 @@ class RequirementRecord:
     linked_tests: tuple[str, ...]
     created_on: str
     last_updated: str
+    spec_ref: str = ""
     source_file: str | None = field(default=None, compare=False)
 
     @property
@@ -142,6 +144,7 @@ class RequirementRecord:
             "requirement": self.requirement,
             "rationale": self.rationale,
             "verification": self.verification,
+            "spec_ref": self.spec_ref,
             "affected_paths": list(self.affected_paths),
             "linked_tests": list(self.linked_tests),
             "created_on": self.created_on,
@@ -344,6 +347,7 @@ def create_requirement_record(
     requirement: str,
     rationale: str,
     verification: str,
+    spec_ref: str = "",
     affected_paths: list[str] | tuple[str, ...] = (),
     linked_tests: list[str] | tuple[str, ...] = (),
     timestamp: str | None = None,
@@ -379,6 +383,7 @@ def create_requirement_record(
                 requirement=requirement,
                 rationale=rationale,
                 verification=verification,
+                spec_ref=spec_ref,
                 affected_paths=tuple(affected_paths),
                 linked_tests=tuple(linked_tests),
                 created_on=now,
@@ -467,6 +472,14 @@ def validate_requirement_record(
         if not isinstance(value, str) or not value.strip():
             raise RequirementValidationError(source, key, "must be a non-empty string")
         normalized_scalars[key] = value.strip()
+    if not isinstance(record.spec_ref, str):
+        raise RequirementValidationError(source, "spec_ref", "must be a string")
+    spec_ref = record.spec_ref.strip()
+    if spec_ref:
+        try:
+            spec_ref = normalize_repository_path(spec_ref, allow_glob=False)
+        except ValueError as exc:
+            raise RequirementValidationError(source, "spec_ref", str(exc)) from exc
     affected = _normalize_set(
         record.affected_paths,
         source,
@@ -498,6 +511,7 @@ def validate_requirement_record(
         requirement=normalized_scalars["requirement"],
         rationale=normalized_scalars["rationale"],
         verification=normalized_scalars["verification"],
+        spec_ref=spec_ref,
         affected_paths=affected,
         linked_tests=linked,
         created_on=record.created_on,
@@ -524,6 +538,7 @@ def render_requirement_toml(record: RequirementRecord) -> str:
         f"requirement = {_toml_string(record.requirement)}",
         f"rationale = {_toml_string(record.rationale)}",
         f"verification = {_toml_string(record.verification)}",
+        f"spec_ref = {_toml_string(record.spec_ref)}",
         "",
         *_render_array("affected_paths", record.affected_paths),
         "",
@@ -565,6 +580,7 @@ def _record_from_mapping(
         "requirement",
         "rationale",
         "verification",
+        "spec_ref",
         "created_on",
         "last_updated",
     )
@@ -585,6 +601,7 @@ def _record_from_mapping(
             requirement=data["requirement"],
             rationale=data["rationale"],
             verification=data["verification"],
+            spec_ref=data["spec_ref"],
             affected_paths=tuple(data["affected_paths"]),
             linked_tests=tuple(data["linked_tests"]),
             created_on=data["created_on"],

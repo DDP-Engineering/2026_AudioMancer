@@ -105,6 +105,8 @@ def main(argv: list[str] | None = None) -> None:
 
     status = sub.add_parser("status")
     _add_run_id_argument(status)
+    resume = sub.add_parser("resume")
+    _add_run_id_argument(resume)
     next_command = sub.add_parser("next")
     _add_run_id_argument(next_command)
     invariants = sub.add_parser("invariants")
@@ -174,6 +176,7 @@ def main(argv: list[str] | None = None) -> None:
     requirement_create.add_argument("--requirement", required=True)
     requirement_create.add_argument("--rationale", required=True)
     requirement_create.add_argument("--verification", required=True)
+    requirement_create.add_argument("--spec-ref", default="")
     requirement_create.add_argument("--affected-path", action="append", default=[])
     requirement_create.add_argument("--linked-test", action="append", default=[])
 
@@ -202,6 +205,8 @@ def main(argv: list[str] | None = None) -> None:
     requirement_update.add_argument("--requirement")
     requirement_update.add_argument("--rationale")
     requirement_update.add_argument("--verification")
+    requirement_update.add_argument("--spec-ref")
+    requirement_update.add_argument("--clear-spec-ref", action="store_true")
     requirement_update.add_argument("--linked-test", action="append")
     requirement_update.add_argument("--clear-linked-tests", action="store_true")
     requirement_update.add_argument("--affected-path", action="append")
@@ -294,6 +299,11 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "status":
         graph = _load_active_graph(root, args.run_id)
         print(json.dumps(_status(root, graph, workflow_config), indent=2))
+        return
+
+    if args.command == "resume":
+        graph = _load_active_graph(root, args.run_id)
+        print(json.dumps(_resume(root, graph, workflow_config), indent=2))
         return
 
     if args.command == "next":
@@ -404,6 +414,7 @@ def main(argv: list[str] | None = None) -> None:
                     requirement=args.requirement,
                     rationale=args.rationale,
                     verification=args.verification,
+                    spec_ref=args.spec_ref,
                     affected_paths=args.affected_path,
                     linked_tests=args.linked_test,
                     config=workflow_config,
@@ -444,6 +455,8 @@ def main(argv: list[str] | None = None) -> None:
                 requirement=args.requirement,
                 rationale=args.rationale,
                 verification=args.verification,
+                spec_ref=args.spec_ref,
+                clear_spec_ref=args.clear_spec_ref,
                 linked_tests=args.linked_test,
                 clear_linked_tests=args.clear_linked_tests,
                 affected_paths=args.affected_path,
@@ -747,6 +760,79 @@ def _status(root: Path, graph, config: WorkflowConfig) -> dict:
         "check_count": len(graph.checks),
         "evidence_count": len(graph.evidence),
         "blocking_failures": [item.__dict__ for item in blocking_failures(results)],
+    }
+
+
+def _resume(root: Path, graph, config: WorkflowConfig) -> dict:
+    """
+    @brief      Build a compact bootstrap brief so a fresh session resumes a run.
+    @param[in]  root Repository root.
+    @param[in]  graph Active workflow graph for the resolved run.
+    @param[in]  config Validated workflow configuration.
+    @return     JSON-ready brief: stage, next stage, intent, alignment, spec
+                items, checks, recent evidence, and cited requirements with
+                their spec_ref so concrete detail can be reopened.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    next_stage = _next_stage(graph.stage, config)
+    requirement_ids = sorted(
+        {req_id for check in graph.checks for req_id in check.cites_requirement}
+    )
+    requirements: list[dict] = []
+    for req_id in requirement_ids:
+        try:
+            record = show_requirement(root, req_id, config)
+        except ValueError:
+            requirements.append({"id": req_id, "status": "unresolved"})
+            continue
+        requirements.append(
+            {
+                "id": record.id,
+                "status": record.status,
+                "priority": record.priority,
+                "requirement": record.requirement,
+                "verification": record.verification,
+                "spec_ref": record.spec_ref,
+                "linked_tests": list(record.linked_tests),
+            }
+        )
+    recent_evidence = [
+        {
+            "id": item.id,
+            "kind": item.kind,
+            "result": item.result,
+            "summary": item.summary,
+        }
+        for item in graph.evidence
+        if item.status == "active"
+    ][-5:]
+    return {
+        "run_id": graph.run_id,
+        "stage": graph.stage,
+        "next_stage": next_stage,
+        "access_mode": graph.access_mode,
+        "intent": graph.intent.__dict__,
+        "alignment": asdict(graph.alignment) if graph.alignment else None,
+        "spec_items": [asdict(item) for item in graph.spec_items],
+        "checks": [
+            {
+                "id": check.id,
+                "state": check.state,
+                "cites_spec": list(check.cites_spec),
+                "cites_requirement": list(check.cites_requirement),
+            }
+            for check in graph.checks
+        ],
+        "recent_evidence": recent_evidence,
+        "requirements": requirements,
+        "guidance": (
+            f"Resume at stage `{graph.stage}`. Read the intent, alignment, and each "
+            "requirement with its spec_ref file for concrete detail, then complete the "
+            f"`{graph.stage}` stage before continuing to `{next_stage}`."
+        ),
     }
 
 

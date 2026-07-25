@@ -125,7 +125,7 @@ test("write tools run write-zone and secret hooks", async () => {
   assert.equal(calls[0].payload.tool_input.file_path, "src/app.py");
 });
 
-test("bash tools run secret and delivery hooks", async () => {
+test("bash tools run shell-write, secret and delivery hooks", async () => {
   const calls = [];
   const hooks = await AgenticGuard(
     { directory: "/repo" },
@@ -145,7 +145,7 @@ test("bash tools run secret and delivery hooks", async () => {
 
   assert.deepEqual(
     calls.map((call) => call.hook),
-    ["secret_scan.py", "delivery_preflight.py"],
+    ["guard_shell_write.py", "secret_scan.py", "delivery_preflight.py"],
   );
   assert.equal(calls[0].payload.tool_name, "Bash");
   assert.equal(calls[0].payload.tool_input.command, "git push origin main");

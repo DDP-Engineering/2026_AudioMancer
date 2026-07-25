@@ -16,9 +16,13 @@
 @details INV-5 (0.6.0) reports a recorded path that escapes the repository as
          its own finding instead of raising: an exception here aborts the whole
          `evaluate` pass and with it every command that reads invariants.
+@details INV-7 (0.7.0, code-review follow-up) also scans `git diff --cached`,
+         closing a gap where a secret in a staged-but-never-committed file in a
+         repository with no `HEAD` yet slipped past both `git diff HEAD` and the
+         untracked-file listing.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-23
-@version 0.6.0
+@date 2026-07-24
+@version 0.7.0
 """
 
 # IMPORTS
@@ -362,10 +366,17 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
                 unstaged working-tree diff: a secret dropped into a newly
                 created or already-`git add`-ed file would otherwise never
                 appear in a plain `git diff`.
+    @details    Also scans `git diff --cached` (0.4.0, code-review follow-up).
+                In a repository with no commits yet there is no `HEAD`, so
+                `git diff HEAD` fails with empty output and `git ls-files
+                --others` lists only untracked files — a secret in a staged but
+                never-committed file would slip through both. The cached diff
+                covers exactly that gap and is a harmless superset of `git diff
+                HEAD` once a `HEAD` exists.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.3.0
+    @date       2026-07-24
+    @version    0.4.0
     """
     if cfg.secrets.mode == "disabled":
         return InvariantResult(
@@ -379,7 +390,13 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
     if not patterns:
         return InvariantResult("INV-7", "Clean secrets", True, "non-waivable", "No secret patterns configured.")
     try:
-        text = _tracked_changes_text(repo_root) + "\n" + _untracked_files_text(repo_root)
+        text = (
+            _tracked_changes_text(repo_root)
+            + "\n"
+            + _staged_changes_text(repo_root)
+            + "\n"
+            + _untracked_files_text(repo_root)
+        )
     except (OSError, subprocess.TimeoutExpired):
         return InvariantResult("INV-7", "Clean secrets", False, "non-waivable", "Could not inspect git diff for secrets.")
     matches = []
@@ -408,6 +425,34 @@ def _tracked_changes_text(repo_root: Path) -> str:
     """
     return subprocess.run(
         ["git", "diff", "--no-ext-diff", "HEAD"],
+        cwd=repo_root,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=30,
+        check=False,
+    ).stdout
+
+
+def _staged_changes_text(repo_root: Path) -> str:
+    """
+    @brief      Return staged changes against the index as diff text.
+    @param[in]  repo_root Repository the staged diff is read for.
+    @return     `git diff --cached` text.
+    @details    Unlike `git diff HEAD`, this works in a repository with no
+                commits yet: with no `HEAD` to diff against, staged files show
+                as additions against the empty tree. Once a `HEAD` exists this
+                is a subset of `git diff HEAD`, so scanning both is redundant
+                but never wrong.
+    @exception  OSError Raised when Git cannot be invoked.
+    @exception  subprocess.TimeoutExpired Raised when Git does not finish in time.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-24
+    @version    0.1.0
+    """
+    return subprocess.run(
+        ["git", "diff", "--no-ext-diff", "--cached"],
         cwd=repo_root,
         text=True,
         encoding="utf-8",
