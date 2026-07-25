@@ -10,10 +10,11 @@
 @file test_app_entrypoint.py
 @brief Startup tests for the AudioMancer application bootstrap.
 @details Uses lightweight fakes to verify that the main entrypoint wires the
-         Qt application and main window correctly.
+         Qt application and main window correctly, including when logging
+         degraded to console-only output.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.5
+@date 2026-07-25
+@version 0.1.6
 """
 
 # IMPORTS
@@ -413,6 +414,111 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
     assert created["shutdown_logging_called"] is True
     assert created["logger_request"] == ("app", None)
     assert created["exception_messages"][0][1]["event"] == "fatal-bootstrap-error"
+
+
+def test_main_reports_an_unavailable_log_file_when_logging_is_console_only(monkeypatch) -> None:
+    """
+    @brief      Verify the bootstrap survives console-only logging and reports it.
+    @details    Covers REQ-NFR-d0afcd7a-79fd-4337-a2a9-713277e6411a / S-0004. A
+                read-only installation directory makes initialize_logging return no
+                path, which must neither crash main() nor be interpolated as None.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    created = {}
+
+    def _initialize_logging():
+        """
+        @brief      Report that logging degraded to console output only.
+        @return     None, matching a failed log-file creation.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        created["initialize_logging_called"] = True
+        return None
+
+    def _get_component_logger(component_name, level_name=None):
+        """
+        @brief      Return one fake component logger for the console-only path.
+        @param[in]  component_name Requested component name.
+        @param[in]  level_name Optional requested level override.
+        @return     Fake logger instance.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        _ = (component_name, level_name)
+
+        class _FakeLogger:
+            """
+            @brief      Minimal logger fake used by the console-only bootstrap test.
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-07-25
+            @version    0.1.0
+            """
+
+            def info(self, message, extra=None):
+                """
+                @brief      Record one info log event.
+                @param[in]  message Logged message text.
+                @param[in]  extra Optional structured extras.
+                @return     None.
+                @exception  None
+                @author     Eng. Dan Dumitru Pasare
+                @date       2026-07-25
+                @version    0.1.0
+                """
+                created.setdefault("info_messages", []).append((message, extra))
+
+            def exception(self, message, extra=None):
+                """
+                @brief      Record one exception log event.
+                @param[in]  message Logged message text.
+                @param[in]  extra Optional structured extras.
+                @return     None.
+                @exception  None
+                @author     Eng. Dan Dumitru Pasare
+                @date       2026-07-25
+                @version    0.1.0
+                """
+                created.setdefault("exception_messages", []).append((message, extra))
+
+        return _FakeLogger()
+
+    def _create_application(argv):
+        """
+        @brief      Raise a bootstrap failure so the log-file reference is emitted.
+        @param[in]  argv Process argument vector.
+        @return     None.
+        @exception  RuntimeError Always raised for this test path.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        _ = argv
+        raise RuntimeError("bootstrap failure")
+
+    monkeypatch.setattr(app_module, "initialize_logging", _initialize_logging)
+    monkeypatch.setattr(app_module, "shutdown_logging", lambda: None)
+    monkeypatch.setattr(app_module, "get_component_logger", _get_component_logger)
+    monkeypatch.setattr(app_module, "load_settings", lambda: {"language": "en"})
+    monkeypatch.setattr(app_module, "QApplication", _create_application)
+
+    with pytest.raises(RuntimeError, match="bootstrap failure"):
+        app_module.main()
+
+    failure_message = created["exception_messages"][0][0]
+
+    assert created["initialize_logging_called"] is True
+    assert "None" not in failure_message
+    assert "unavailable" in failure_message
 
 
 # END OF FILE

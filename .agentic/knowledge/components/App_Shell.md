@@ -15,7 +15,7 @@ window frame in which all AudioMancer workflow components run.
 ## 2. Responsibilities
 
 - Expose the package version and `audiomancer` / `python -m audiomancer` entry points.
-- Initialize logging, settings, scroll filtering, application-wide theme, and the application icon before constructing the main window.
+- Initialize logging, settings, scroll filtering, application-wide theme, and the application icon before constructing the main window, tolerating logging that degraded to console output only.
 - Compose the toolbar, left navigation sidebar, pages, dialogs, project summaries, and lifecycle cleanup in `MainWindow`.
 - Provide shared user-facing help, about/license, message, progress, and title helpers.
 
@@ -28,6 +28,12 @@ state, or persistence contracts of individual workflow domains.
 installs global scrolling, shows `MainWindow`, and always shuts down logging.
 `__main__.py` delegates module invocation to that entry point, while
 `__init__.py` exposes `main` and the release version.
+
+`initialize_logging()` runs before the bootstrap `try/except` and therefore never
+raises: when the log file cannot be created it installs a console-only root
+logger and returns `None`, and `main` reports the log file as unavailable instead
+of aborting. This is what keeps a read-only installation directory from crashing
+startup with no diagnostic. See `.agentic/specs/user_data_location.spec.md`.
 
 `MainWindow` creates the fixed left `NavigationSidebar`, page stack, shared
 toolbar and settings dialogs. It routes selection to a current page, refreshes
@@ -56,7 +62,9 @@ activation updates the Home summary and each page's active-project state.
 The package API exports `__version__` and `main`. Page identifiers must match
 the sidebar and stacked-page registration. Theme is applied before widgets are
 constructed at startup; page refreshes are limited to the current workflow page
-to avoid unrelated state work.
+to avoid unrelated state work. `initialize_logging()` returns `Path | None`, and
+`None` means logging degraded to console output only rather than that startup
+failed.
 
 ## 7. Workflow Integration
 

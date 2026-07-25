@@ -10,11 +10,12 @@
 @file settings_service.py
 @brief Application settings lifecycle helpers for AudioMancer.
 @details Builds default settings, validates persisted and in-memory payloads,
-         self-heals missing or invalid values, and saves the normalized
-         settings file to the application root.
+         self-heals missing or invalid values, seeds a fresh settings file from
+         the packaged scaffold, and saves the normalized settings file to the
+         resolved writable data root.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.10.4
+@date 2026-07-25
+@version 0.11.0
 """
 
 # IMPORTS
@@ -147,6 +148,33 @@ def _write_settings_file(settings_payload: dict[str, Any]) -> None:
     settings_path = config.APP_SETTINGS_PATH
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     write_json_atomic(settings_path, settings_payload)
+
+
+def _seed_settings_payload() -> tuple[dict[str, Any], str]:
+    """
+    @brief      Build the payload used to create a missing settings file.
+    @details    A fresh per-user settings file inherits the packaged scaffold when
+                one is available, which carries an existing installation over to
+                the per-user location instead of resetting the operator to factory
+                defaults. The packaged file is only ever read.
+    @return     Tuple of seed payload and a human-readable seed-source label.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    default_settings_path = config.APP_DEFAULT_SETTINGS_PATH
+    if default_settings_path == config.APP_SETTINGS_PATH:
+        return build_default_settings(), "built-in defaults"
+
+    try:
+        bundled_payload = json.loads(default_settings_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return build_default_settings(), "built-in defaults"
+
+    if not isinstance(bundled_payload, dict):
+        return build_default_settings(), "built-in defaults"
+    return validate_settings(bundled_payload), f"packaged defaults at {default_settings_path}"
 
 
 def _validate_llm_profile(
@@ -792,18 +820,18 @@ def ensure_settings_file() -> dict[str, Any]:
     @return     Validated settings payload currently persisted on disk.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.1
+    @date       2026-07-25
+    @version    0.2.0
     """
     settings_path = config.APP_SETTINGS_PATH
     if not settings_path.exists():
-        default_settings = build_default_settings()
-        _write_settings_file(default_settings)
+        seed_settings, seed_source = _seed_settings_payload()
+        _write_settings_file(seed_settings)
         _SETTINGS_LOGGER.info(
-            f"Created missing settings file at {settings_path} using defaults.",
+            f"Created missing settings file at {settings_path} using {seed_source}.",
             extra={"func_name": "ensure_settings_file", "event": "settings-create"},
         )
-        return default_settings
+        return seed_settings
     return load_settings()
 
 

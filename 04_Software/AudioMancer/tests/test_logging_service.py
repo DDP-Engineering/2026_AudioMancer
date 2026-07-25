@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -9,11 +9,12 @@
 """
 @file test_logging_service.py
 @brief Focused tests for the AudioMancer logging service.
-@details Verifies per-run log creation, cleanup, formatting, component-level
-         overrides, and optional function-trace behavior.
+@details Verifies per-run log creation under the resolved writable data root,
+         graceful degradation to console-only output, cleanup, formatting,
+         component-level overrides, and optional function-trace behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.1
+@date 2026-07-25
+@version 0.2.0
 """
 
 # IMPORTS
@@ -59,7 +60,7 @@ def test_initialize_logging_creates_per_run_log_file(tmp_path, monkeypatch) -> N
     @date       2026-04-04
     @version    0.1.0
     """
-    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "text")
 
     log_file_path = logging_service.initialize_logging()
@@ -98,7 +99,7 @@ def test_initialize_logging_removes_only_expired_log_files(tmp_path, monkeypatch
     os.utime(expired_file, (old_timestamp, old_timestamp))
     os.utime(recent_file, (recent_timestamp, recent_timestamp))
 
-    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_RETENTION_DAYS", 14)
 
     log_file_path = logging_service.initialize_logging()
@@ -139,7 +140,7 @@ def test_initialize_logging_uses_json_formatter_when_configured(tmp_path, monkey
     @date       2026-04-04
     @version    0.1.0
     """
-    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
 
     log_file_path = logging_service.initialize_logging()
@@ -165,7 +166,7 @@ def test_trace_function_logs_start_finish_and_duration(tmp_path, monkeypatch) ->
     @date       2026-04-04
     @version    0.1.0
     """
-    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
 
     log_file_path = logging_service.initialize_logging()
@@ -208,7 +209,7 @@ def test_trace_function_logs_exception_and_reraises(tmp_path, monkeypatch) -> No
     @date       2026-04-04
     @version    0.1.0
     """
-    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
 
     log_file_path = logging_service.initialize_logging()
@@ -250,7 +251,7 @@ def test_trace_function_truncates_long_values(tmp_path, monkeypatch) -> None:
     @date       2026-04-04
     @version    0.1.0
     """
-    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
 
     log_file_path = logging_service.initialize_logging()
@@ -275,6 +276,110 @@ def test_trace_function_truncates_long_values(tmp_path, monkeypatch) -> None:
     payloads = [json.loads(line) for line in _read_log_lines(log_file_path)]
     assert payloads[0]["params"]["payload"].endswith("...<truncated>")
     assert payloads[1]["result"].endswith("...<truncated>")
+
+
+def test_initialize_logging_degrades_to_console_when_log_directory_is_unusable(
+    tmp_path,
+    monkeypatch,
+    capsys,
+) -> None:
+    """
+    @brief      Verify an uncreatable log directory degrades logging instead of raising.
+    @details    Covers REQ-NFR-d0afcd7a-79fd-4337-a2a9-713277e6411a / S-0004. The
+                data root is placed under a regular file, so the real mkdir call
+                fails the same way a read-only installation directory does.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  capsys Pytest captured-output fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    blocking_file = tmp_path / "blocking_file"
+    blocking_file.write_text("not a directory", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", blocking_file / "AudioMancer")
+    monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "text")
+
+    log_file_path = logging_service.initialize_logging()
+    logging_service.get_component_logger("app").info(
+        "still reachable",
+        extra={"func_name": "test", "event": "check"},
+    )
+    root_handlers = list(logging.getLogger().handlers)
+    logging_service.shutdown_logging()
+    console_output = capsys.readouterr().out
+
+    assert log_file_path is None
+    assert len(root_handlers) == 1
+    assert isinstance(root_handlers[0], logging.StreamHandler)
+    assert "logging-degraded" in console_output
+    assert "still reachable" in console_output
+
+
+def test_initialize_logging_degrades_to_console_when_log_file_cannot_be_opened(
+    tmp_path,
+    monkeypatch,
+    capsys,
+) -> None:
+    """
+    @brief      Verify a log file that cannot be opened degrades logging instead of raising.
+    @details    Covers REQ-NFR-d0afcd7a-79fd-4337-a2a9-713277e6411a / S-0004. A
+                directory occupies the log file path, so FileHandler raises the
+                same OSError an ACL denial would.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  capsys Pytest captured-output fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
+    monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "text")
+    blocked_log_file = tmp_path / config.APP_LOG_DIRECTORY_NAME / "blocked.log"
+    blocked_log_file.mkdir(parents=True)
+    monkeypatch.setattr(logging_service, "_build_log_file_path", lambda timestamp=None: blocked_log_file)
+
+    log_file_path = logging_service.initialize_logging()
+    logging_service.shutdown_logging()
+    console_output = capsys.readouterr().out
+
+    assert log_file_path is None
+    assert "logging-degraded" in console_output
+
+
+def test_initialize_logging_survives_unremovable_expired_log_entries(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify retention cleanup errors do not prevent the run from logging.
+    @details    Covers REQ-NFR-d0afcd7a-79fd-4337-a2a9-713277e6411a / S-0004. An
+                expired entry that is a directory cannot be unlinked, which must
+                not stop the new run log from being created.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    log_directory = tmp_path / config.APP_LOG_DIRECTORY_NAME
+    unremovable_entry = log_directory / "expired.log"
+    unremovable_entry.mkdir(parents=True)
+    old_timestamp = (datetime.now() - timedelta(days=30)).timestamp()
+    os.utime(unremovable_entry, (old_timestamp, old_timestamp))
+
+    monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
+    monkeypatch.setattr(config, "DEFAULT_LOG_RETENTION_DAYS", 14)
+
+    log_file_path = logging_service.initialize_logging()
+    logging_service.shutdown_logging()
+
+    assert log_file_path is not None
+    assert log_file_path.is_file()
+    assert unremovable_entry.is_dir()
 
 
 # END OF FILE

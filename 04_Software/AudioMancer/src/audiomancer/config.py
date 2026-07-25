@@ -11,15 +11,19 @@
 @brief Shared configuration constants for AudioMancer.
 @details Centralizes application names, paths, defaults, artifact names, and
          file support used by the current AudioMancer implementation scaffold.
+         Keeps the read-only packaged resource root separate from the resolved
+         writable data root that owns settings and logs.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 1.42.0
+@date 2026-07-25
+@version 1.43.0
 """
 
 # IMPORTS
 
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 # CONSTANTS
 # Application Identity
@@ -28,6 +32,12 @@ APP_NAME = "AudioMancer"
 
 # @brief Internal Python package name.
 PACKAGE_NAME = "audiomancer"
+
+# @brief Environment variable that pins the writable application data root.
+APP_DATA_DIR_ENVIRONMENT_VARIABLE = "AUDIOMANCER_DATA_DIR"
+
+# @brief Prefix used by the transient probe file that tests directory writability.
+_WRITE_PROBE_FILE_PREFIX = ".audiomancer_write_probe_"
 
 
 # PUBLIC API
@@ -52,6 +62,31 @@ def resolve_app_runtime_root() -> Path:
     if installed_resource_root is not None:
         return installed_resource_root
     return package_root
+
+
+def resolve_user_data_root(app_root: Path | None = None) -> Path:
+    """
+    @brief      Resolve the folder that owns writable application data.
+    @details    Candidates are tried in order: the explicit
+                `AUDIOMANCER_DATA_DIR` override, then the application root when a
+                probe file proves it writable (portable and source layouts), then
+                the per-user location standard for the running platform. The
+                PyInstaller extraction folder is never accepted, because a
+                onefile bootloader deletes it on exit.
+    @param[in]  app_root Optional resolved application root reused by the caller.
+    @return     Absolute writable data root; the folder may not exist yet.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    override_root = _explicit_data_root_override()
+    if override_root is not None:
+        return override_root
+    candidate_app_root = resolve_app_runtime_root() if app_root is None else Path(app_root).resolve()
+    if _is_portable_data_root(candidate_app_root):
+        return candidate_app_root
+    return _per_user_data_root()
 
 
 # LOCAL HELPERS
@@ -141,6 +176,124 @@ def _has_runtime_resource_markers(candidate_root: Path | None) -> bool:
     )
 
 
+def _explicit_data_root_override() -> Path | None:
+    """
+    @brief      Resolve the operator-pinned writable data root, when configured.
+    @details    An explicit instruction is honoured without a writability probe:
+                a bad value must surface as a normal settings or logging error
+                rather than being silently ignored.
+    @return     Override path or `None` when the variable is unset or blank.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    override_value = str(os.environ.get(APP_DATA_DIR_ENVIRONMENT_VARIABLE, "") or "").strip()
+    if not override_value:
+        return None
+    return Path(override_value).expanduser().resolve()
+
+
+def _is_portable_data_root(candidate_root: Path) -> bool:
+    """
+    @brief      Return whether one application root may also own writable data.
+    @param[in]  candidate_root Resolved application root.
+    @return     True for a writable root that is not the frozen extraction folder.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    if _is_frozen_extraction_root(candidate_root):
+        return False
+    return _directory_accepts_writes(candidate_root)
+
+
+def _is_frozen_extraction_root(candidate_root: Path) -> bool:
+    """
+    @brief      Return whether one folder is the PyInstaller extraction folder.
+    @param[in]  candidate_root Resolved candidate folder.
+    @return     True when the candidate is `_MEIPASS` or lives inside it.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    extraction_root = _optional_meipass_root()
+    if extraction_root is None:
+        return False
+    return candidate_root == extraction_root or extraction_root in candidate_root.parents
+
+
+def _directory_accepts_writes(candidate_root: Path) -> bool:
+    """
+    @brief      Return whether one existing directory accepts a new file.
+    @details    Writability is proven by creating and removing a probe file
+                rather than by `os.access`, which on Windows only reflects the
+                read-only attribute and reports `C:\\Program Files` as writable.
+    @param[in]  candidate_root Candidate directory.
+    @return     True when a probe file could be created and removed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    if not candidate_root.is_dir():
+        return False
+    try:
+        with tempfile.NamedTemporaryFile(dir=candidate_root, prefix=_WRITE_PROBE_FILE_PREFIX):
+            return True
+    except OSError:
+        return False
+
+
+def _per_user_data_root() -> Path:
+    """
+    @brief      Resolve the per-user application data folder for this platform.
+    @return     Absolute per-user data root; the folder may not exist yet.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    if sys.platform.startswith("win"):
+        return _windows_per_user_data_root()
+    if sys.platform == "darwin":
+        return (Path.home() / "Library" / "Application Support" / APP_NAME).resolve()
+    return _xdg_per_user_data_root()
+
+
+def _windows_per_user_data_root() -> Path:
+    """
+    @brief      Resolve the Windows per-user application data folder.
+    @return     `%LOCALAPPDATA%`, `%APPDATA%`, or the default local app-data path.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    for variable_name in ("LOCALAPPDATA", "APPDATA"):
+        base_value = str(os.environ.get(variable_name, "") or "").strip()
+        if base_value:
+            return (Path(base_value) / APP_NAME).resolve()
+    return (Path.home() / "AppData" / "Local" / APP_NAME).resolve()
+
+
+def _xdg_per_user_data_root() -> Path:
+    """
+    @brief      Resolve the XDG per-user application data folder.
+    @return     `$XDG_DATA_HOME` based path or the `~/.local/share` default.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    base_value = str(os.environ.get("XDG_DATA_HOME", "") or "").strip()
+    if base_value:
+        return (Path(base_value) / APP_NAME).resolve()
+    return (Path.home() / ".local" / "share" / APP_NAME).resolve()
+
+
 def _unique_paths(paths: list[Path | None]) -> list[Path]:
     """
     @brief      Return unique existing path objects while preserving order.
@@ -176,8 +329,14 @@ APP_SOURCE_ROOT = _source_tree_root_from_package(APP_PACKAGE_ROOT) or resolve_ap
 # @brief Application runtime root containing settings, prompts, help, and license resources.
 APP_ROOT = resolve_app_runtime_root()
 
-# @brief Absolute path to the app-level settings file.
-APP_SETTINGS_PATH = APP_ROOT / "settings.json"
+# @brief Writable root owning per-user data; equals APP_ROOT for portable and source layouts.
+APP_USER_DATA_ROOT = resolve_user_data_root(APP_ROOT)
+
+# @brief Absolute path to the read-only packaged settings scaffold used to seed a fresh install.
+APP_DEFAULT_SETTINGS_PATH = APP_ROOT / "settings.json"
+
+# @brief Absolute path to the active, writable app-level settings file.
+APP_SETTINGS_PATH = APP_USER_DATA_ROOT / "settings.json"
 
 # @brief Absolute path to the application-owned prompt template folder.
 APP_PROMPTS_PATH = APP_ROOT / "prompts"

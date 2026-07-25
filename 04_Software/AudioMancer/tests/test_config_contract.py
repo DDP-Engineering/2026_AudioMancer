@@ -9,11 +9,12 @@
 """
 @file test_config_contract.py
 @brief Focused contract tests for the AudioMancer configuration scaffold.
-@details Verifies that the adapted configuration constants and persisted
-         settings scaffold exist with the expected baseline contract.
+@details Verifies that the adapted configuration constants, the packaged
+         settings scaffold, and the frozen-bundle resource layout exist with the
+         expected baseline contract.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 0.9.0
+@date 2026-07-25
+@version 0.10.0
 """
 
 # IMPORTS
@@ -77,23 +78,32 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert "text_extraction" in config.AVAILABLE_LOG_COMPONENTS
 
 
-def test_settings_json_scaffold_matches_service_defaults() -> None:
+def test_settings_json_scaffold_matches_service_defaults(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify the persisted settings scaffold is service-readable.
+    @brief      Verify the bundled settings scaffold is service-readable without repair.
+    @details    The scaffold is read from the bundled default path and loaded through a
+                temporary active path, so the committed file is never rewritten by a
+                repair pass during the test.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.2
+    @date       2026-07-25
+    @version    0.2.0
     """
-    settings_path = config.APP_SETTINGS_PATH
-    payload = json.loads(Path(settings_path).read_text(encoding="utf-8"))
+    scaffold_path = config.APP_DEFAULT_SETTINGS_PATH
+    payload = json.loads(Path(scaffold_path).read_text(encoding="utf-8"))
+
+    active_settings_path = tmp_path / "settings.json"
+    active_settings_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", active_settings_path)
     loaded_payload = settings_service.load_settings()
 
     assert isinstance(payload, dict)
     assert isinstance(loaded_payload, dict)
     assert payload == loaded_payload
-    assert settings_path == config.APP_SETTINGS_PATH
+    assert scaffold_path == config.APP_ROOT / "settings.json"
 
 
 def test_config_resolves_frozen_packaged_runtime_resources(monkeypatch, tmp_path) -> None:
@@ -137,7 +147,9 @@ def test_config_resolves_frozen_packaged_runtime_resources(monkeypatch, tmp_path
             importlib.reload(misc_ui_controller)
 
             assert bundle_root.resolve() == config.APP_ROOT
+            assert bundle_root.resolve() / "settings.json" == config.APP_DEFAULT_SETTINGS_PATH
             assert bundle_root.resolve() / "settings.json" == config.APP_SETTINGS_PATH
+            assert bundle_root.resolve() == config.APP_USER_DATA_ROOT
             assert bundle_root.resolve() / "prompts" == config.APP_PROMPTS_PATH
             assert settings_service.load_settings()["language"] == config.DEFAULT_LANGUAGE
             assert prompt_template_service.load_prompt("sample") == "Packaged prompt"
