@@ -9,12 +9,14 @@
 """
 @file logging_service.py
 @brief Centralized application logging helpers for AudioMancer.
-@details Initializes per-run logging, supports text and JSON formatting,
-         applies per-component log-level overrides, and provides optional
-         function tracing decorators for selected call sites.
+@details Initializes per-run logging under the resolved writable data root,
+         degrading to console-only output instead of raising when no log file
+         can be created, supports text and JSON formatting, applies
+         per-component log-level overrides, and provides optional function
+         tracing decorators for selected call sites.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.0
+@date 2026-07-25
+@version 0.2.0
 """
 
 # IMPORTS
@@ -167,13 +169,16 @@ def _resolve_component_level(component_name: str, level_name: str | None) -> int
 def _log_directory_path() -> Path:
     """
     @brief      Build the application log directory path.
+    @details    Logs follow the resolved writable data root, not the packaged
+                application root, so a read-only installation folder cannot make
+                logging impossible.
     @return     Absolute application log directory path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
+    @date       2026-07-25
+    @version    0.2.0
     """
-    return config.APP_ROOT / config.APP_LOG_DIRECTORY_NAME
+    return config.APP_USER_DATA_ROOT / config.APP_LOG_DIRECTORY_NAME
 
 
 def _build_log_file_path(timestamp: datetime | None = None) -> Path:
@@ -194,22 +199,33 @@ def _build_log_file_path(timestamp: datetime | None = None) -> Path:
 def _cleanup_old_log_files(current_log_file: Path) -> None:
     """
     @brief      Remove expired application log files from the log directory.
+    @details    Retention is best-effort. An entry that cannot be listed,
+                inspected, or removed is skipped, because failing to tidy old
+                logs must never stop the current run from logging.
     @param[in]  current_log_file Active run log file that must be kept.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
+    @date       2026-07-25
+    @version    0.2.0
     """
     retention_window = timedelta(days=max(config.DEFAULT_LOG_RETENTION_DAYS, 0))
     now = datetime.now()
 
-    for candidate in _log_directory_path().glob("*.log"):
+    try:
+        candidates = list(_log_directory_path().glob("*.log"))
+    except OSError:
+        return
+
+    for candidate in candidates:
         if candidate == current_log_file:
             continue
-        file_age = now - datetime.fromtimestamp(candidate.stat().st_mtime)
-        if file_age > retention_window:
-            candidate.unlink(missing_ok=True)
+        try:
+            file_age = now - datetime.fromtimestamp(candidate.stat().st_mtime)
+            if file_age > retention_window:
+                candidate.unlink(missing_ok=True)
+        except OSError:
+            continue
 
 
 # FORMATTERS
@@ -275,6 +291,39 @@ class _SafeTextFormatter(logging.Formatter):
         return super().format(record)
 
 
+def _open_run_log_file(
+    formatter: logging.Formatter,
+) -> tuple[Path | None, logging.FileHandler | None, str]:
+    """
+    @brief      Create the per-run log file handler without propagating errors.
+    @param[in]  formatter Formatter applied to the created handler.
+    @return     Tuple of log file path, file handler, and failure reason. The
+                path and handler are `None` when creation failed, in which case
+                the reason names the path and the underlying error.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    log_directory = _log_directory_path()
+    try:
+        log_directory.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        return None, None, f"log directory {log_directory} could not be created ({error})"
+
+    log_file_path = _build_log_file_path()
+    _cleanup_old_log_files(log_file_path)
+
+    try:
+        file_handler = logging.FileHandler(log_file_path, mode="w", encoding="utf-8")
+    except OSError as error:
+        return None, None, f"log file {log_file_path} could not be opened ({error})"
+
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.NOTSET)
+    return log_file_path, file_handler, ""
+
+
 def _build_formatter() -> logging.Formatter:
     """
     @brief      Create the configured runtime log formatter.
@@ -292,39 +341,42 @@ def _build_formatter() -> logging.Formatter:
 # PUBLIC API
 
 
-def initialize_logging() -> Path:
+def initialize_logging() -> Path | None:
     """
     @brief      Initialize application logging for the current app run.
-    @return     Absolute path to the newly created run log file.
+    @details    This runs before the bootstrap error handler, so it must never
+                raise. The console handler is installed first so a diagnostic is
+                always reachable; if the log file cannot be created the run
+                continues with console output only.
+    @return     Absolute path to the run log file, or `None` when logging
+                degraded to console output only.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
+    @date       2026-07-25
+    @version    0.2.0
     """
-    log_directory = _log_directory_path()
-    log_directory.mkdir(parents=True, exist_ok=True)
-
-    log_file_path = _build_log_file_path()
-    _cleanup_old_log_files(log_file_path)
-
     formatter = _build_formatter()
     root_logger = logging.getLogger()
 
     shutdown_logging()
-
-    file_handler = logging.FileHandler(log_file_path, mode="w", encoding="utf-8")
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.NOTSET)
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     console_handler.setLevel(logging.NOTSET)
 
     root_logger.handlers.clear()
-    root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
     root_logger.setLevel(logging.NOTSET)
 
+    log_file_path, file_handler, failure_reason = _open_run_log_file(formatter)
+    if file_handler is None:
+        root_logger.warning(
+            f"Application logging degraded to console output only: {failure_reason}",
+            extra={"func_name": "initialize_logging", "event": "logging-degraded"},
+        )
+        return None
+
+    root_logger.addHandler(file_handler)
     return log_file_path
 
 

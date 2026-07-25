@@ -15,7 +15,8 @@ locale/theme state, and settings-page integration used by every workflow page.
 ## 2. Responsibilities
 
 - Define application paths, defaults, resource identity, and configuration constants.
-- Load, validate, migrate, and save operator settings.
+- Resolve the writable data root that owns per-user settings and application logs, separately from the read-only packaged resource root.
+- Load, validate, migrate, and save operator settings, seeding a fresh settings file from the packaged scaffold.
 - Configure component logging, time and URL helpers, scrolling, translations, and UI theme/state.
 - Present and apply settings through the Settings page and controller.
 
@@ -26,6 +27,19 @@ normalize settings and theme payloads before the app shell consumes them;
 `settings_ui_controller` and `settings_page` render operator changes. This
 component provides cross-cutting platform behavior but does not own any domain
 workflow artifact.
+
+`config.py` keeps two roots apart. `APP_ROOT` owns read-only packaged resources
+(prompts, help, licences, icon, `pyproject.toml`). `APP_USER_DATA_ROOT`, produced
+by `resolve_user_data_root()`, owns everything the application writes: the active
+`settings.json` and the `Logs/` directory. The resolver takes the
+`AUDIOMANCER_DATA_DIR` override first, then `APP_ROOT` when a probe file proves
+it writable and it is not the PyInstaller `_MEIPASS` extraction folder, and
+otherwise the per-user OS location (`%LOCALAPPDATA%` on Windows,
+`~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share`
+elsewhere). Portable and source-tree layouts therefore keep data beside the
+application exactly as before, while an installation into a non-writable prefix
+such as `C:\Program Files` or `/opt` no longer fails. See
+`.agentic/specs/user_data_location.spec.md`.
 
 ## 4. Dependencies
 
@@ -52,9 +66,14 @@ in `chunks_text.json`. A resumable AI Chunking run uses the currently selected
 enabled profile and current runtime budget while retaining strategy and operator
 instructions from the Chunking document.
 
-- Settings remain a UTF-8 JSON object. Missing files receive defaults; invalid
-  supported values are repaired, while unknown future keys are preserved unless
-  an explicit migration removes them.
+- Settings remain a UTF-8 JSON object. A missing settings file is seeded from the
+  validated payload at `APP_DEFAULT_SETTINGS_PATH` (`APP_ROOT/settings.json`, the
+  scaffold the packaging script stages beside the executable with API keys and
+  discovery cache stripped) when that path differs from the active path and is
+  readable; otherwise it receives built-in defaults. The packaged file is only
+  ever read. `settings.example.json` is placeholder documentation and is never a
+  seed source. Invalid supported values are repaired, while unknown future keys
+  are preserved unless an explicit migration removes them.
 - Theme payloads have normalized IDs, display names, font and color fields;
   settings validation normalizes AI profile/default IDs and cached TTS runtime
   discovery data before they are consumed.
@@ -81,6 +100,7 @@ than maintaining separate language or theme state.
 Primary automated coverage:
 
 - `tests/test_config_contract.py`
+- `tests/test_user_data_location.py`
 - `tests/test_settings_service.py`
 - `tests/test_logging_service.py`
 - `tests/test_url_service.py`
@@ -90,8 +110,10 @@ Primary automated coverage:
 - `tests/test_settings_page.py`
 - `tests/test_localization_parity.py`
 
-These cover configuration constants, settings load/validate/self-heal/save,
-component logging, URL joining, scroll-step behavior, runtime language/theme
+These cover configuration constants, writable data-root resolution across
+portable, override and read-only installation layouts, settings
+load/validate/self-heal/seed/save, component logging, URL joining, scroll-step
+behavior, runtime language/theme
 application, theme schema validation, and Settings-page editing. Minimum
 validation after a change: run the focused modules above with `uv run pytest`,
 plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
@@ -104,3 +126,9 @@ plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 - Settings and themes are dictionary-based and not yet modeled with typed
   classes.
 - Unknown extra settings keys are preserved rather than strictly validated.
+- The writable data root is resolved once at `config` import time, so changing
+  `AUDIOMANCER_DATA_DIR` or the writability of the application root requires a
+  process restart to take effect.
+- Writability is decided by a probe file rather than `os.access`, which costs one
+  transient file creation per process start. `os.access` is not usable here
+  because on Windows it ignores directory ACLs.

@@ -31,6 +31,30 @@ All notable changes to this project will be documented in this file.
   the 61 `audioop` comparison tests skipped). Python 3.14 stays excluded pending
   its own validation.
 
+### Fixed
+
+- AudioMancer no longer fails to start when installed into a directory the
+  running user cannot write to, such as `C:\Program Files\AudioMancer` on Windows
+  or a system-wide prefix on Linux. `settings.json` and the `Logs/` directory
+  were both derived from the application root, so creating them failed; because
+  logging is initialized before the bootstrap error handler, that failure crashed
+  startup with a bare traceback and no log file to diagnose it from. Writable
+  data now resolves to a per-user location — `%LOCALAPPDATA%\AudioMancer`,
+  `$XDG_DATA_HOME/AudioMancer` or `~/.local/share/AudioMancer`, or
+  `~/Library/Application Support/AudioMancer` — whenever the application root
+  cannot accept writes. Existing installations are unaffected: a writable
+  application root keeps settings and logs exactly where they are, so running
+  from source or from a portable folder behaves as before. Set
+  `AUDIOMANCER_DATA_DIR` to pin the location explicitly.
+- On first run at a new per-user location, settings are seeded from the packaged
+  `settings.json` beside the executable, so an installation that is converted to
+  the per-user layout keeps its existing configuration instead of resetting to
+  defaults. The packaged file is only ever read.
+- Logging initialization can no longer abort startup. When the log file cannot be
+  created the application keeps running with console output only and records one
+  `logging-degraded` warning naming the path and the underlying error. Expired-log
+  cleanup likewise no longer propagates filesystem errors.
+
 ### Known Limitations
 
 - The internal codec is a per-sample Python loop rather than a C extension, so
@@ -38,6 +62,12 @@ All notable changes to this project will be documented in this file.
   second of audio resampled. This only affects sources whose WAV parameters
   differ from the target; when parameters already match, frames are copied
   without touching the codec.
+- The writable data location is resolved once when the application starts, so
+  changing `AUDIOMANCER_DATA_DIR`, or the writability of the application root,
+  requires a restart to take effect.
+- The project open/create dialogs still offer the application root as their
+  default browse directory, which is a poor starting point on a system-wide
+  install even though it no longer causes a write failure.
 
 ## [1.7.0] - 2026-07-25
 

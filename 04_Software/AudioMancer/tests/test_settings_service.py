@@ -10,10 +10,11 @@
 @file test_settings_service.py
 @brief Focused tests for the AudioMancer settings service.
 @details Verifies default settings generation, automatic file creation,
-         persisted settings self-healing, and validated save behavior.
+         packaged-scaffold seeding, persisted settings self-healing, and
+         validated save behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.7.3
+@date 2026-07-25
+@version 0.8.0
 """
 
 # IMPORTS
@@ -37,7 +38,7 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     @date       2026-04-04
     @version    0.3.0
     """
-    committed_settings = json.loads(config.APP_SETTINGS_PATH.read_text(encoding="utf-8"))
+    committed_settings = json.loads(config.APP_DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8"))
     validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
 
     assert validated_settings == committed_settings
@@ -91,16 +92,21 @@ def test_validate_settings_repairs_invalid_chunking_context_mode() -> None:
 def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify missing settings create and return the default file.
+    @details    Covers REQ-PLAT-f18086ef-3896-4be9-8afa-580b00534dbd / S-0003 for the
+                case where no packaged scaffold is available to seed from. The bundled
+                default path is pinned to the temporary root so the developer's own
+                settings.json cannot leak into the assertion.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.2
+    @date       2026-07-25
+    @version    0.2.0
     """
     settings_path = tmp_path / "settings.json"
     monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+    monkeypatch.setattr(config, "APP_DEFAULT_SETTINGS_PATH", tmp_path / "missing_scaffold.json")
     monkeypatch.setattr(config, "APP_ROOT", tmp_path)
 
     loaded_settings = settings_service.load_settings()
@@ -759,6 +765,90 @@ def test_validate_settings_repairs_and_migrates_font_size_steps() -> None:
     assert "ui_text_scale" not in migrated
     assert migrated["ui_font_size_step"] == "very_large"
     assert migrated["text_font_size_step"] == "very_large"
+
+
+def test_ensure_settings_file_seeds_from_the_bundled_default(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify a missing per-user settings file is seeded from the bundled default.
+    @details    Covers REQ-PLAT-f18086ef-3896-4be9-8afa-580b00534dbd / S-0003. This is
+                what carries an existing installation over to the per-user location
+                instead of silently resetting the operator to factory defaults.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    bundled_settings_path = tmp_path / "install" / "settings.json"
+    bundled_settings_path.parent.mkdir(parents=True)
+    bundled_payload = settings_service.build_default_settings()
+    bundled_payload["language"] = "ro"
+    bundled_payload["play_completion_beep"] = True
+    bundled_settings_path.write_text(json.dumps(bundled_payload, indent=2), encoding="utf-8")
+    bundled_settings_bytes = bundled_settings_path.read_bytes()
+
+    active_settings_path = tmp_path / "userdata" / "settings.json"
+    monkeypatch.setattr(config, "APP_DEFAULT_SETTINGS_PATH", bundled_settings_path)
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", active_settings_path)
+
+    seeded_settings = settings_service.ensure_settings_file()
+
+    assert seeded_settings["language"] == "ro"
+    assert seeded_settings["play_completion_beep"] is True
+    assert json.loads(active_settings_path.read_text(encoding="utf-8")) == seeded_settings
+    assert bundled_settings_path.read_bytes() == bundled_settings_bytes
+
+
+def test_ensure_settings_file_falls_back_when_the_bundled_default_is_unusable(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify an unusable bundled default falls back to the built-in defaults.
+    @details    Covers REQ-PLAT-f18086ef-3896-4be9-8afa-580b00534dbd / S-0003.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    bundled_settings_path = tmp_path / "install" / "settings.json"
+    bundled_settings_path.parent.mkdir(parents=True)
+    bundled_settings_path.write_text("{ not json", encoding="utf-8")
+
+    active_settings_path = tmp_path / "userdata" / "settings.json"
+    monkeypatch.setattr(config, "APP_DEFAULT_SETTINGS_PATH", bundled_settings_path)
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", active_settings_path)
+
+    seeded_settings = settings_service.ensure_settings_file()
+
+    assert seeded_settings == settings_service.build_default_settings()
+    assert json.loads(active_settings_path.read_text(encoding="utf-8")) == seeded_settings
+
+
+def test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_path(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify the portable layout still creates a factory-default settings file.
+    @details    Covers REQ-PLAT-f18086ef-3896-4be9-8afa-580b00534dbd / S-0003. When the
+                application root is writable, the active and bundled paths coincide and
+                there is nothing to seed from.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    portable_settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_DEFAULT_SETTINGS_PATH", portable_settings_path)
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", portable_settings_path)
+
+    created_settings = settings_service.ensure_settings_file()
+
+    assert created_settings == settings_service.build_default_settings()
+    assert json.loads(portable_settings_path.read_text(encoding="utf-8")) == created_settings
 
 
 # END OF FILE

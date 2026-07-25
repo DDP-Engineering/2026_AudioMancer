@@ -10,10 +10,11 @@
 @file app.py
 @brief Desktop application bootstrap for AudioMancer.
 @details Creates the Qt application instance, opens the main window, and
-         starts the event loop for the initial UI scaffold.
+         starts the event loop for the initial UI scaffold. Tolerates logging
+         that degraded to console-only output.
 @author Eng. Dan Dumitru Pasare
-@date 2026-05-23
-@version 0.1.6
+@date 2026-07-25
+@version 0.1.7
 @example
     uv run audiomancer
 """
@@ -44,10 +45,14 @@ def main() -> int:
     @return     Process exit code returned by QApplication.exec().
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.6
+    @date       2026-07-25
+    @version    0.1.7
     """
+    # initialize_logging() degrades to console-only output and returns None when
+    # the log file cannot be created, so a read-only installation directory
+    # cannot abort the bootstrap before the error handler below is in place.
     log_file_path = initialize_logging()
+    log_file_reference = str(log_file_path) if log_file_path is not None else "unavailable (console-only logging)"
     logger = get_component_logger("app")
     logger.info(
         "AudioMancer bootstrap started",
@@ -97,7 +102,7 @@ def main() -> int:
         return exit_code
     except Exception:
         logger.exception(
-            f"AudioMancer bootstrap failed. Log file: {log_file_path}",
+            f"AudioMancer bootstrap failed. Log file: {log_file_reference}",
             extra={"func_name": "main", "event": "fatal-bootstrap-error"},
         )
         raise
