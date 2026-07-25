@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-9a7e98c9-4952-46c2-a0bc-f577e1b90dfe"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The translation page shall debounce and flush operator edits, flushing pending edits before approval."
+rationale = "Edits must not be lost between typing and approval."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_edit_debounce_and_flush",
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_approve_selected_flushes_pending_edit_before_signal",
+]
+
+created_on = "2026-07-19T17:18:00Z"
+last_updated = "2026-07-24T19:30:55Z"

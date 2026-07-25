@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-0ceae61f-45ef-4b20-af9f-48a74e33348a"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Character Voices controller shall redact runtime model identifiers from progress messages."
+rationale = "Progress must not expose runtime model IDs."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_progress_messages_hide_model_id",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-24T19:30:55Z"

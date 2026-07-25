@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-96dbd53f-f7ba-4e8e-a234-33c47d0ceaae"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Open project shall heal completed manifest summaries and advance the current stage from contiguous completed artifacts."
+rationale = "Manifest lifecycle state must be recoverable from completed artifacts."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_heals_completed_speech_blocks_manifest_summary",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_heals_audio_blocks_manifest_from_completed_report_with_stale_state",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_heals_completed_character_voices_manifest_summary",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_advances_current_stage_from_contiguous_completed_artifacts",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

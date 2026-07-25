@@ -299,6 +299,16 @@ def _validate_llm_profile(
     return normalized_profile
 
 
+# @brief Maps deprecated ui_text_scale presets to the nearest new font-size step.
+_LEGACY_TEXT_SCALE_TO_STEP = {
+    "very_small": "extra_small",
+    "small": "small",
+    "normal": "normal",
+    "large": "large",
+    "very_large": "very_large",
+}
+
+
 def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any], bool]:
     """
     @brief      Validate one settings payload and report whether any repair occurred.
@@ -320,6 +330,17 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             repair_tracker=repairs_made,
         )
 
+    legacy_text_scale = normalized_settings.pop("ui_text_scale", None)
+    if legacy_text_scale is not None:
+        migrated_step = _LEGACY_TEXT_SCALE_TO_STEP.get(str(legacy_text_scale), config.DEFAULT_UI_FONT_SIZE_STEP)
+        normalized_settings.setdefault("ui_font_size_step", migrated_step)
+        normalized_settings.setdefault("text_font_size_step", migrated_step)
+        _log_settings_repair(
+            "Migrated deprecated 'ui_text_scale' setting into the font-size step settings.",
+            "ui_text_scale",
+            repair_tracker=repairs_made,
+        )
+
     for field_name, default_value in defaults.items():
         if field_name not in normalized_settings:
             normalized_settings[field_name] = copy.deepcopy(default_value)
@@ -336,14 +357,6 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             repair_tracker=repairs_made,
         )
         normalized_settings["language"] = defaults["language"]
-
-    if "ui_text_scale" in normalized_settings:
-        normalized_settings.pop("ui_text_scale", None)
-        _log_settings_repair(
-            "Removed deprecated 'ui_text_scale' setting; theme font scale now owns interface sizing.",
-            "ui_text_scale",
-            repair_tracker=repairs_made,
-        )
 
     for deprecated_field_name in (
         "scene_ambience_generation_enabled",
@@ -382,6 +395,15 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         normalized_settings["ui_theme_id"] = defaults["ui_theme_id"]
     else:
         normalized_settings["ui_theme_id"] = normalized_settings["ui_theme_id"].strip()
+
+    for step_field_name in ("ui_font_size_step", "text_font_size_step"):
+        if normalized_settings.get(step_field_name) not in config.UI_FONT_SIZE_STEPS:
+            _log_settings_repair(
+                f"Repaired invalid '{step_field_name}' using the default value.",
+                step_field_name,
+                repair_tracker=repairs_made,
+            )
+            normalized_settings[step_field_name] = defaults[step_field_name]
 
     if normalized_settings["default_ai_chunking_strategy"] not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         _log_settings_repair(
@@ -707,6 +729,8 @@ def build_default_settings() -> dict[str, Any]:
         "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
         "ui_scroll_steps_per_wheel_notch": config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
+        "ui_font_size_step": config.DEFAULT_UI_FONT_SIZE_STEP,
+        "text_font_size_step": config.DEFAULT_TEXT_FONT_SIZE_STEP,
         "ui_theme_id": config.DEFAULT_UI_THEME_ID,
         "ui_themes": [],
         "tts_runtime_base_url": config.DEFAULT_TTS_RUNTIME_BASE_URL,

@@ -49,8 +49,19 @@ After TTS completes, open Audio Assembly, inspect readiness/settings, generate o
 
 ## 9. Validation And Tests
 
-Focused suite E-0017 passed 48 tests across all four mapped modules. It covers WAV composition/validation, output/state recovery, controller operation flow and page selection/playback behavior. Run all four mapped modules after changes with redirected temporary/cache paths. Manual listening remains required.
+Primary automated coverage:
+
+- `tests/test_audio_assembly_service.py`
+- `tests/test_audio_assembly_state_service.py`
+- `tests/test_audio_assembly_page.py`
+- `tests/test_audio_assembly_ui_controller.py`
+
+These cover WAV composition/validation, output/state recovery, controller
+operation flow, and page selection/playback behavior. Minimum validation after a
+change: run the focused modules above with `uv run pytest`, plus
+`uv run python -m py_compile` and `uv run ruff check` on changed files. Manual
+listening remains required.
 
 ## 10. Limitations And Future Work
 
-Automated tests cannot assess audible mixing, loudness, transitions, ambience balance, clipping or artistic sequencing. Source WAV quality and operator audition remain decisive before delivery.
+Automated tests cannot assess audible mixing, loudness, transitions, ambience balance, clipping or artistic sequencing. Source WAV quality and operator audition remain decisive before the final audiobook output is accepted.

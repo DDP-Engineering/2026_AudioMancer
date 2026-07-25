@@ -18,13 +18,11 @@
 
 # IMPORTS
 
-import json
-from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PySide6.QtWidgets import QApplication
 
 from audiomancer import config
-from audiomancer.services import persistence_service, settings_service, ui_scroll_service, ui_state_service
+from audiomancer.services import settings_service, ui_scroll_service, ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
 
 # CONSTANTS
@@ -104,99 +102,6 @@ def save_settings_from_dialog(window) -> None:
     @version    0.2.0
     """
     _persist_settings_from_dialog(window, close_dialog=True)
-
-
-def import_theme_from_dialog(window) -> None:
-    """
-    @brief      Import one theme JSON file into the Settings dialog draft.
-    @param[in]  window Active main window shell.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
-    """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    selected_path, _selected_filter = QFileDialog.getOpenFileName(
-        window,
-        ui_state_service.translate("dialog.theme_import_title", current_language),
-        str(config.APP_ROOT),
-        THEME_JSON_FILTER,
-    )
-    if not selected_path:
-        return
-
-    theme_path = Path(selected_path)
-    try:
-        if theme_path.stat().st_size > MAX_THEME_IMPORT_BYTES:
-            raise ValueError(ui_state_service.translate("settings.theme_import_too_large", current_language))
-        imported_payload = json.loads(theme_path.read_text(encoding="utf-8"))
-        imported_theme = window._settings_page.add_imported_theme_payload(imported_payload)
-    except (OSError, json.JSONDecodeError, ValueError) as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.theme_import_title", current_language),
-            f"{ui_state_service.translate('settings.theme_import_failed', current_language)}\n\n{error}",
-        )
-        return
-
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("settings.theme_imported", current_language).format(
-            theme_name=imported_theme["display_name"]
-        ),
-    )
-
-
-def export_theme_from_dialog(window) -> None:
-    """
-    @brief      Export the selected Settings theme to one portable JSON file.
-    @param[in]  window Active main window shell.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
-    """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    try:
-        export_payload = window._settings_page.selected_theme_export_payload()
-        default_file_name = window._settings_page.selected_theme_export_file_name()
-    except ValueError as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.theme_export_title", current_language),
-            str(error),
-        )
-        return
-
-    selected_path, _selected_filter = QFileDialog.getSaveFileName(
-        window,
-        ui_state_service.translate("dialog.theme_export_title", current_language),
-        str(config.APP_ROOT / default_file_name),
-        THEME_JSON_FILTER,
-    )
-    if not selected_path:
-        return
-
-    export_path = Path(selected_path)
-    if export_path.suffix.lower() != ".json":
-        export_path = export_path.with_suffix(".json")
-
-    try:
-        persistence_service.write_json_atomic(export_path, export_payload)
-    except (OSError, TypeError) as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.theme_export_title", current_language),
-            f"{ui_state_service.translate('settings.theme_export_failed', current_language)}\n\n{error}",
-        )
-        return
-
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("settings.theme_exported", current_language).format(path=str(export_path)),
-    )
 
 
 def apply_current_ui_settings(window) -> None:

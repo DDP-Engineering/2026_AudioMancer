@@ -16,7 +16,10 @@
  *   write -> guard_write_zone.py (Write), then secret_scan.py (full input)
  *   edit  -> guard_write_zone.py (Edit),  then secret_scan.py (full input)
  *   bash  -> secret_scan.py (Bash), then delivery_preflight.py (Bash)
- *   read  -> native protected-path deny (no Python equivalent)
+ *   read  -> guard_read_path.py (configured protected-read policy)
+ *   grep  -> guard_read_path.py (returns lines *from* files, so same policy)
+ *   find  -> guard_read_path.py (enumerates paths; `pattern` is a path glob)
+ *   ls    -> guard_read_path.py (enumerates paths)
  * PostToolUse via `tool_result`:
  *   any   -> post_tool_evidence.py (fire-and-forget)
  */
@@ -92,8 +95,26 @@ export async function handleToolCall(
       return undefined;
     }
 
-    case "read": {
-      const reason = bridge.protectedPathDeny(event.input?.path as string | undefined, cwd);
+    // `read` returns file contents and `grep` returns matching lines from them;
+    // `find` and `ls` enumerate paths. All four can target a protected path, so
+    // all four are checked. Pi's built-in set is `read`/`grep`/`find`/`ls` — it
+    // has no `glob` or `list`. The real tool name is forwarded rather than a
+    // hardcoded "Read" so the guard can tell a read that must name a file from
+    // a search whose scope argument is optional.
+    case "read":
+    case "grep":
+    case "find":
+    case "ls": {
+      const input = event.input ?? {};
+      const reason = await bridge.runPythonHook(cwd, "guard_read_path.py", {
+        hook_event_name: "PreToolUse",
+        tool_name: event.toolName,
+        tool_input:
+          event.toolName === "find"
+            ? { path: input.path, pattern: input.pattern }
+            : { path: input.path },
+        cwd,
+      });
       if (reason) return { block: true, reason };
       return undefined;
     }

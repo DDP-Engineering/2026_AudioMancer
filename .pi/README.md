@@ -16,6 +16,12 @@ Do not duplicate the workflow contract here. `AGENTS.md` remains the canonical
 source for gate order, requirements, documentation rules, safety rules, and stop
 format. Pi reads `AGENTS.md` natively.
 
+Before repository work, run the project-local `config validate --json` and
+`config show --effective --json` commands. Report write, protected-read/path,
+scope, secret, gate, coverage, and delivery modes and active rule counts, plus
+the selected worktree run or explicit `--run-id`. AEGIS policy comes only from
+the validated file; Pi trust and host controls remain separate.
+
 ## Contents
 
 - `package.json` - Pi package manifest. Declares the `agentic-guard` extension
@@ -28,12 +34,12 @@ format. Pi reads `AGENTS.md` natively.
   - `index.ts` - subscribes to `tool_call` / `tool_result` and wires the bridge.
   - `bridge.ts` - maps Pi tool events onto the Python guard hooks.
   - `hook-bridge.ts` - spawns the `.agentic/hooks/*.py` scripts and parses their
-    deny signal; also the protected-path read check.
+    deny signal without interpreting repository policy.
 - `tests/hook-bridge.test.ts` - vitest specs for the mapping and decision logic.
 
 ## How it works
 
-Pi's hooks are in-process TypeScript, but the four guard hooks under
+Pi's hooks are in-process TypeScript, but the shared guard hooks under
 `.agentic/hooks/` already speak a clean JSON-on-stdin protocol. The extension
 translates Pi tool events into the existing hook payloads and reuses the Python
 **byte-for-byte**:
@@ -42,11 +48,13 @@ translates Pi tool events into the existing hook payloads and reuses the Python
 |---|---|---|
 | `write` / `edit` | `guard_write_zone.py`, then `secret_scan.py` (full input) | block with reason |
 | `bash` | `secret_scan.py`, then `delivery_preflight.py` | block with reason |
-| `read` | native protected-path check (mirrors the `.claude` Read denies) | block with reason |
+| `read` | `guard_read_path.py` | block with reason |
 | `tool_result` (any) | `post_tool_evidence.py` | fire-and-forget journal entry |
 
 `block` is returned as `{ block: true, reason }`. Pi enforces this in every mode
 (TUI, RPC, JSON, print) because blocking is a return value, not a UI prompt.
+Read, write, secret, and delivery rules come only from the validated
+`.agentic/workflow.toml`; the TypeScript bridge contains no repository denylist.
 
 > **Transport note:** Pi's `pi.exec()` cannot pass stdin (its options are only
 > `{ signal, timeout }`, with no `cwd` option either), so the hooks are spawned
@@ -57,14 +65,25 @@ translates Pi tool events into the existing hook payloads and reuses the Python
 ## Prerequisites and trust
 
 - **Python runtime.** Set `AEGIS_PYTHON` to pin an interpreter. Otherwise the
-  bridge uses the runtime registered by packaged WAEGIS, then a supported
-  system Python. If no interpreter can be
-  run, the guard fails open (allows) — the same "needs Python on PATH" caveat as
-  the Codex/Claude adapters.
+  bridge uses the runtime registered by packaged WAEGIS, then the first system
+  launcher that actually resolves on `PATH` (`py -3` then `python` on Windows,
+  `python3` then `python` elsewhere) — the same ordered list the Codex, Claude
+  Code, and Qwen Code launcher uses. If no interpreter can be run, the guard
+  **blocks** with an actionable reason rather than allowing the call: the
+  shared hooks always exit 0 and answer on stdout, so silence is never an
+  allow. Install Python, set `AEGIS_PYTHON`, or run a packaged WAEGIS command
+  to register a runtime.
 - **Project trust.** Project-local extensions and skills load only after the
   project is trusted (`ctx.isProjectTrusted()`). This is the one behavioral
   difference from the Codex and Claude adapters, which do not require a trust
   step. Trust the project when Pi prompts on first start.
+- **Launch directory.** Start Pi from the repository root, the directory holding
+  `.agentic/`. Pi resolves project-local resources from the current working
+  directory; started in a subdirectory it finds no `.pi/`, so the guard
+  extension is never registered and every guard is silently absent for that
+  session — tool calls are not blocked, they are never inspected. Declining
+  trust has the same effect and is at least visible; this one is not. See
+  [`../.agentic/hooks/README.md`](../.agentic/hooks/README.md).
 
 ## Install & usage
 

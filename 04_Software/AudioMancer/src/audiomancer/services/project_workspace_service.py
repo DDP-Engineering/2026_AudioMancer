@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.1.2
+@version    2.1.3
 """
 
 # IMPORTS
@@ -966,16 +966,18 @@ def _speech_blocks_completion_evidence(project_root: Path, warnings: list[str]) 
     @date       2026-04-25
     @version    0.1.0
     """
-    state = _load_json_artifact(project_root, config.SPEECH_BLOCKS_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.SPEECH_BLOCKS_REPORT_FILE_NAME)
-    speech_blocks = _load_json_artifact(project_root, config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
+    from audiomancer.services import speech_blocks_service
+
+    report = speech_blocks_service.load_speech_blocks_report(project_root) or {}
+    state = speech_blocks_service.load_operation_state(project_root) or {}
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     if (
         not isinstance(report, dict)
         or str(report.get("speech_blocks_stage_status", "")).strip() != "completed"
         or not _non_empty_payload_list(speech_blocks)
         or not all(isinstance(block, dict) and bool(block.get("approved", False)) for block in speech_blocks)
     ):
-        if _artifact_exists(project_root, config.SPEECH_BLOCKS_OUTPUT_FILE_NAME):
+        if speech_blocks:
             warnings.append("Speech Blocks artifacts exist but do not prove a completed, fully approved stage.")
         return None
     return _completed_or_report_healed_operation(
@@ -983,7 +985,7 @@ def _speech_blocks_completion_evidence(project_root: Path, warnings: list[str]) 
         state,
         report,
         warnings,
-        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
     )
 
 

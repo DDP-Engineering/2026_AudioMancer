@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-c4ba43fc-e21d-4526-a490-49d066ebd8ef"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Open project shall resolve the flat project root and accept the current required folder contract without demanding a speech-blocks folder."
+rationale = "Opening must accept the current flat layout contract."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_resolves_flat_project_root",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_accepts_current_required_folder_contract",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_does_not_require_speech_blocks_folder_for_flat_layout",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

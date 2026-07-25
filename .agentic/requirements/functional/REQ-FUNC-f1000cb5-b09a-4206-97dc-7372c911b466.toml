@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-f1000cb5-b09a-4206-97dc-7372c911b466"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Narrator state shall keep generate enabled when the cached runtime is stale."
+rationale = "A stale runtime cache must not block generation availability."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_stale",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

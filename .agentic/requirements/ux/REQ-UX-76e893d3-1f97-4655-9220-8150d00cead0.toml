@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-UX-76e893d3-1f97-4655-9220-8150d00cead0"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "Theme import shall make duplicate IDs unique and strip the built-in flag while generating a missing ID."
+rationale = "Imported themes must not collide with or masquerade as built-ins."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_import_theme_payload_makes_duplicate_ids_unique",
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_import_theme_payload_strips_built_in_flag_and_generates_missing_id",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

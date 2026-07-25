@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-5692f984-04af-46a1-bbf0-b71cfad0f3cd"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The default built-in UI theme identifier returned by default_theme_id() shall be 'audiomancer_dark'."
+rationale = "The application should open in the branded look out of the box, and unresolved theme ids should fall back to the brand default (via the existing theme_by_id fallback contract)."
+verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark",
+]
+
+created_on = "2026-07-24T22:20:31Z"
+last_updated = "2026-07-24T22:25:23Z"

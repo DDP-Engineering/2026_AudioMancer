@@ -137,7 +137,7 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
         encoding="utf-8",
     )
     narrator_definition_service.ensure_narrator_voice_document(project_root)
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     assert window._current_manifest is not None
     window._current_manifest["operations"]["narrator_definition"]["status"] = "completed"
@@ -160,7 +160,7 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
-    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).exists()
 
 
 def test_translation_controller_reset_removes_monofile_and_preserves_narrator(monkeypatch, qtbot, tmp_path) -> None:

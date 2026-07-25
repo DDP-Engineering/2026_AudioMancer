@@ -176,7 +176,7 @@ runtime and provider/profile contracts.
 
 ## 9. Validation And Tests
 
-Focused automated coverage is mapped in `.agentic/components.toml`:
+Primary automated coverage:
 
 - `04_Software/AudioMancer/tests/test_text_extraction_service.py`
 - `04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py`
@@ -187,11 +187,12 @@ Focused automated coverage is mapped in `.agentic/components.toml`:
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
 
-After changes, run all eight focused modules plus the traceability and coverage
-audits. Changes to extraction formats require their format-specific cases;
-deterministic rules require structure and multilingual cases; AI contract
-changes require the entire AI contract module; state or UI changes require
-state, controller, and page tests.
+After changes, run the focused modules above with `uv run pytest`, plus
+`uv run python -m py_compile` and `uv run ruff check` on changed files. Changes
+to extraction formats require their format-specific cases; deterministic rules
+require structure and multilingual cases; AI contract changes require the entire
+AI contract module; state or UI changes require state, controller, and page
+tests.
 
 ## 10. Limitations And Future Work
 

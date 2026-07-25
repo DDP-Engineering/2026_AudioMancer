@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-ac0451b0-5fc6-4ee5-8c5f-8bb5d3b63527"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "A legacy list-format speech_blocks.json or a missing document shall be treated as not-started: load_speech_blocks_document() shall return None and no legacy report or state file shall be read or converted."
+rationale = "Reset-and-regenerate migration avoids tolerant legacy readers; non-conforming artifacts must present as not-started."
+verification = "Legacy list/corrupt artifact yields None."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_legacy_list_artifact_is_treated_as_absent",
+]
+
+created_on = "2026-07-24T17:27:53Z"
+last_updated = "2026-07-24T18:37:57Z"

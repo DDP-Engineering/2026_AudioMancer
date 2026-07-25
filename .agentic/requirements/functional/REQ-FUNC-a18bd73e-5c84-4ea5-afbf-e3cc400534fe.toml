@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-a18bd73e-5c84-4ea5-afbf-e3cc400534fe"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Narrator profile generation shall complete in the authoritative document only."
+rationale = "Completion state must live solely in the authoritative narrator document."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_completes_in_authoritative_document_only",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

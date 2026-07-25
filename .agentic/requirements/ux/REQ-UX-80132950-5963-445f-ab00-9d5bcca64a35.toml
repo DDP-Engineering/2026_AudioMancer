@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-80132950-5963-445f-ab00-9d5bcca64a35"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "Applying text scale shall update the application font."
+rationale = "Text-scale changes must take effect on the application font."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_apply_text_scale_updates_application_font",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

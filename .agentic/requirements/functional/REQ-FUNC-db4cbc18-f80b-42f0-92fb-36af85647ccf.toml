@@ -1,0 +1,23 @@
+schema_version = 1
+id = "REQ-FUNC-db4cbc18-f80b-42f0-92fb-36af85647ccf"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block chunk normalization shall support multilingual dialogue delimiters and strip only wrapping dialogue quotes, preserving narrator-only delimiters and operation blocks."
+rationale = "Delimiter handling must be lossless across languages and modes."
+verification = "Automated: 5 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_supports_french_guillemets",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_supports_dash_dialogue",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_block_text_only_strips_wrapping_dialogue_quotes",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_delimiters",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_operation_blocks",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -24,7 +24,41 @@ from pathlib import Path
 import pytest
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, project_export_service, project_workspace_service
+from audiomancer.services import (
+    narrator_definition_service,
+    project_export_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
+
+
+def _write_speech_blocks_document(project_root, blocks, *, status="completed", kind="original", language="en"):
+    """Persist a valid single Speech Blocks document for workspace fixtures."""
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": status,
+            "source": {"kind": kind, "language": language, "fingerprint": "ws-fixture-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 0,
+                "run_token": "2026-04-25T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260425T120000Z.log",
+                "source_snapshot_fingerprint": "ws-fixture-fingerprint",
+                "source_language": language,
+                "ai_profile_id": "profile-1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
+            },
+            "failure": None,
+            "blocks": list(blocks),
+        },
+    )
 
 # PUBLIC API
 
@@ -601,22 +635,11 @@ def test_open_project_heals_completed_speech_blocks_manifest_summary(tmp_path) -
     @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SpeechHeal", tmp_path)
-    _write_json(project_root / config.SPEECH_BLOCKS_STATE_FILE_NAME, _operation_state("completed", 2, 2))
-    _write_json(
-        project_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME,
-        {
-            "speech_blocks_stage_status": "completed",
-            "speech_block_count": 2,
-            "approved_block_count": 2,
-            "total_block_count": 2,
-            "warning_count": 0,
-        },
-    )
-    _write_json(
-        project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+    _write_speech_blocks_document(
+        project_root,
         [
-            {"speech_block_id": "sb-1", "speaker_name": "Narrator", "text": "One", "approved": True},
-            {"speech_block_id": "sb-2", "speaker_name": "Narrator", "text": "Two", "approved": True},
+            {"speech_block_id": "sb-1", "chunk_id": "chunk-0001", "speaker_name": "Narrator", "text": "One", "approved": True},  # noqa: E501
+            {"speech_block_id": "sb-2", "chunk_id": "chunk-0001", "speaker_name": "Narrator", "text": "Two", "approved": True},  # noqa: E501
         ],
     )
     manifest["current_stage"] = "speech_blocks_ready"
@@ -772,9 +795,10 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
         "A selected narrator preview sentence.",
     )
     narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
-    _write_json(
-        project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
-        [{"speech_block_id": "sb-1", "approved": False}],
+    _write_speech_blocks_document(
+        project_root,
+        [{"speech_block_id": "sb-1", "chunk_id": "chunk-0001", "approved": False}],
+        status="review_pending",
     )
     _write_json(
         project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
@@ -1032,7 +1056,7 @@ def test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing(t
     project_root, manifest = project_workspace_service.create_project("CorruptSpeech", tmp_path)
     manifest["current_stage"] = "speech_blocks_ready"
     project_workspace_service.save_manifest(manifest, project_root)
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("{broken", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("{broken", encoding="utf-8")
 
     open_result = project_workspace_service.open_project(project_root)
 

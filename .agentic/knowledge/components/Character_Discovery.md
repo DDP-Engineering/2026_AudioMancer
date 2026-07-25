@@ -48,8 +48,8 @@ atomically.
 - Inputs: canonical chunks, optional fully approved translations, the current
   enabled AI profile, optional operator instructions, and manual CRUD requests.
 - Output: `characters.json` in the project artifact root.
-- Diagnostics: per-run `log_ai_characters_*.log` files are separate and are not
-  referenced by the authoritative document.
+- Diagnostics: per-run `log_ai_character_discovery_*.log` files are separate and
+  are not referenced by the authoritative document.
 - Side effects: the manifest character-discovery entry is refreshed as a
   reconstructible cache; source changes reset dependent runtime artifacts while
   preserving Narrator Definition.

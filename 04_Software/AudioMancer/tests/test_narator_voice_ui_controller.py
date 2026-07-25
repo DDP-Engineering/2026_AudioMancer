@@ -24,7 +24,7 @@ from PySide6.QtWidgets import QMessageBox
 import pytest
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, project_workspace_service
+from audiomancer.services import narrator_definition_service, project_workspace_service, speech_blocks_service
 from audiomancer.ui.controllers import narator_voice_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
@@ -1149,9 +1149,29 @@ def _write_generated_audio_blocks(project_root) -> None:
     (generated_root / "0001-000001.json").write_text("{}\n", encoding="utf-8")
     (generated_root / "0001-000002.wav").write_bytes(b"RIFF-character")
     (generated_root / "0001-000002.json").write_text("{}\n", encoding="utf-8")
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "source": {"kind": "original", "language": "en", "fingerprint": "narrator-fixture-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260423T120000Z.log",
+                "source_snapshot_fingerprint": "narrator-fixture-fingerprint",
+                "source_language": "en",
+                "ai_profile_id": "profile-1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
+            },
+            "failure": None,
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
@@ -1179,10 +1199,7 @@ def _write_generated_audio_blocks(project_root) -> None:
                     "warning_flags": [],
                 },
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+        },
     )
     (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(

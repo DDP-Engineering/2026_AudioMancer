@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-0f86cd83-3b2c-45f6-8245-9db822aa6673"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Characters controller shall gate edit entry through a confirmation, keeping view mode on cancel and entering edit mode on accept."
+rationale = "Entering edit mode must be a deliberate confirmed action."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_cancel_keeps_view_mode",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_accepts_edit_mode",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:30:55Z"

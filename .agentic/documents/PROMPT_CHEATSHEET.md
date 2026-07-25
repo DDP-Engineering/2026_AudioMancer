@@ -2,7 +2,7 @@
 Copyright (c) 2026 DDP Engineering
 This software is licensed under the PolyForm Noncommercial License 1.0.0.
 Commercial use requires a separate commercial license.
-See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+See the LICENSE.txt file for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
 # AEGIS Prompt Cheat Sheet
@@ -10,6 +10,11 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 This is a human operator flyer. Use these prompts in an agentic development tool
 after the target repo has AEGIS installed. Replace text in
 `<angle brackets>`.
+
+**New here, or just want to run a change?** Go straight to
+[The Development Workflow, Stage By Stage](#the-development-workflow-stage-by-stage) —
+the seven prompts, in order, that carry one change from request to delivery.
+Everything else on this sheet is reference.
 
 The authoritative agent workflow rules live in `AGENTS.md`, `.agentic/`
 configuration, and the platform skill/adaptor files. This cheat sheet provides
@@ -23,16 +28,183 @@ In copied target projects, use `<workflow>` as the workflow command placeholder:
 - Windows after optional install: `.\.agentic\.venv\Scripts\aegis.exe`
 - Ubuntu after optional install: `.agentic/.venv/bin/aegis`
 
-## Create A New Project From This Template
+## Mandatory Session Bootstrap
 
-Use the helper script from the template repository:
+Begin every procedure below with this prompt:
 
-```powershell
-python 02_Tools\create_project_from_template.py D:\Path\To\NewProject
+```text
+Before inspecting or changing repository files, run:
+<workflow> config validate --json
+<workflow> config show --effective --json
+Report the effective write-access, protected-read/path, scope, secret, gate,
+coverage, and delivery modes and active rule counts. State whether the run is
+selected by this worktree or by an explicit --run-id. Treat AEGIS repository
+policy as separate from external host, sandbox, approval, and OS safety.
+Stop on any configuration or run-resolution error; do not infer defaults or
+guess a run ID.
 ```
 
-Or copy the contents of `template/` into the new project root manually. The
-new project should receive:
+## The Development Workflow, Stage By Stage
+
+This is the fast path: **one prompt per stage, given in order.** After the
+bootstrap above, paste the prompt for the stage you are on, read what the agent
+reports, and only then approve the move to the next stage. The agent advances;
+you decide when it may.
+
+The golden rule for every prompt below: **do one stage, then stop and wait for
+me.** That single instruction is what keeps a human in control of an AI that
+would otherwise run to the end on its own.
+
+Seven stages, start to finish:
+
+```text
+Intake → Alignment → Requirement → Check → Implementation → Validation → Delivery
+```
+
+Each block gives you the plain prompt to paste and the signal that the stage is
+done. The detailed rules for each gate — exact commands, edge cases, revisions —
+are in the per-gate sections further down; this spine is the everyday path.
+
+### Stage 1 — Intake · commit to what you are doing
+
+```text
+Use the agentic development workflow.
+I want to <feature / fix / behavior change, in one or two sentences>.
+Start a run at intake. Inspect the repository and run impact analysis for the
+files this is likely to touch. Ask me any clarifying questions now.
+Do not write requirements, tests, or code yet. Stop and summarize your
+understanding for my approval.
+```
+
+Move on when: the agent has restated the request and you agree it understood you.
+
+### Stage 2 — Alignment · prove it understood you
+
+```text
+Continue to Intent Alignment.
+Record: your understanding of the request, what is in and out of scope, your
+assumptions, the acceptance criteria (one per checkable outcome — the success
+paths plus the failures and limits that define "done"), any open questions with
+your recommended answers, a risk level, and the paths you plan to touch. Decide
+proceed or pause.
+If risk is high, questions are still open, or a protected area is in scope,
+pause for me rather than proceeding.
+Stop after recording alignment and show me the result.
+```
+
+Move on when: alignment is recorded and any pause has been resolved by you.
+
+### Stage 3 — Requirement · make it testable
+
+```text
+Continue to the requirement gate.
+First decompose the feature: list every behavior it implies — the success path,
+each input or branch, each rejection or error, and boundary/empty/limit cases —
+plus any ux, security, data_privacy, non_functional, or platform aspect that
+applies. Then draft the minimal spec items (one testable sentence each, tagged
+behavior or property). Keep each requirement to one behavior with a single,
+isolated purpose: one requirement per functionality, and split anything that
+joins distinct behaviors with "and", "or", or a list. Write the failure and
+boundary behaviors as their own requirements, not only as tests, and make sure
+every acceptance criterion from alignment maps to at least one requirement.
+Check existing requirements first and reuse or revise where one already covers
+this. Record accepted specs into the workflow graph.
+Do not write tests or code yet. Stop and show me the specs and the invariant
+status for approval.
+```
+
+Move on when: you approve the specs and the workflow reports the expected
+missing-check state.
+
+### Stage 4 — Check · write the tests, and watch them fail
+
+```text
+Approved. Continue to the check gate.
+Write the minimal tests for the accepted specs. Each test must cite the spec it
+verifies, and cover the failure paths too — invalid input, boundaries, and the
+error the behavior should produce — not only the happy path.
+Run them and confirm the new tests fail first. Record each test and its failing
+evidence.
+Do not touch source yet. Stop and report the test IDs, the red evidence, and the
+invariant status.
+```
+
+Move on when: the new tests exist, cite their specs, and are recorded failing.
+
+### Stage 5 — Implementation · write only enough to pass
+
+```text
+Approved. Continue to implementation.
+Write only the code needed to make the failing tests pass. Stay inside the
+source area; do not edit the tests. If a test turns out to be wrong, stop and
+ask me to route back to the check gate rather than changing it quietly.
+Run the linked tests until the new ones pass and the existing ones stay green.
+Record the changed paths and the passing evidence.
+Stop and report what changed, the green evidence, and the invariant status.
+```
+
+Move on when: the new tests pass, nothing else regressed, and evidence is recorded.
+
+### Stage 6 — Validation · audit the whole change
+
+```text
+Approved. Continue to validation. Do not edit files.
+Run the invariants, traceability audit, coverage audit, impact analysis, and the
+full test suite. Then read the diff and check for scope creep, weakened or
+deleted tests, missing spec citations, secrets, and any mismatch between the
+approved specs and what was built.
+Record the validation evidence. Stop and tell me whether this is ready to
+prepare for delivery.
+```
+
+Move on when: the audits are clean and you are satisfied reading the diff.
+
+### Stage 7 — Delivery · the final gate
+
+```text
+Approved to run delivery preflight and generate the report.
+Do not commit, push, or open a PR.
+Run delivery-preflight and the report, then show me the git status.
+Stop and tell me the preflight result, the report location, and whether this is
+ready for a human-approved commit.
+```
+
+Move on when: preflight passes — then **you** commit, push, or open the PR. A
+clean preflight means the work is ready, not that it is authorized. That last
+decision is always yours.
+
+---
+
+The rest of this sheet is reference: deployment and adoption, the detailed
+version of each gate, scope and maintenance access, and how to resume, park, or
+inspect a run.
+
+## Create A New Project From This Template
+
+Use WAEGIS as the recommended deployment and lifecycle tool. WAEGIS is a
+separate, stdlib-only package: it configures and deploys the AEGIS payload but
+is not copied into the target repository.
+
+Preview and deploy a new project:
+
+```powershell
+waegis new D:\Path\To\NewProject --dry-run
+waegis new D:\Path\To\NewProject
+```
+
+Preview and deploy AEGIS into an existing repository:
+
+```powershell
+waegis adopt D:\Path\To\ExistingRepo --dry-run
+waegis adopt D:\Path\To\ExistingRepo
+```
+
+After deployment, use `waegis doctor --repo <path>` to verify installation
+health. Use `waegis configure`, `waegis repair`, and `waegis upgrade` for the
+managed lifecycle. When running WAEGIS from a source checkout, use that
+checkout's documented environment runner, for example `uv run waegis ...`.
+
+The deployed AEGIS payload contains:
 
 - `.agentic/` workflow state, hooks, requirements, documents, and config.
 - `.agentic/cli/` bundled Python CLI for the workflow.
@@ -42,14 +214,20 @@ new project should receive:
 - `.claude/` Claude Code settings, hooks config, and thin skill adapters.
 - `.pi/` Pi adapter and Pi package: a bridge extension plus a `pi.skills`
   manifest reusing `.agentic/skills/`.
+- `.opencode/` OpenCode skills, commands, agents, and the local guard plugin,
+  plus the root `opencode.json` configuration.
+- `.qwen/` Qwen Code settings, commands, hooks, and thin skill adapters, plus
+  the root `QWEN.md` adapter note.
 - `AGENTS.md` repository workflow instructions.
 - `CLAUDE.md` Claude Code adapter note that points back to `AGENTS.md`.
 - `CHANGELOG.md` starter release/change log.
 - `.agentic/documents/PROMPT_CHEATSHEET.md` human operator prompts for the copied workflow.
 - `.agentic/knowledge/components/` component documentation template and index.
 
-After copying, adjust `.agentic/workflow.toml` for the target repository's real
-source roots, test roots, gate commands, write zones, and documentation roots.
+After deployment, adjust `.agentic/workflow.toml` for the target repository's
+real structural roots. The shipped schema-version-2 policy is explicitly
+unrestricted/disabled; opt into gates and guardrails only by selecting a
+restrictive mode and providing its required rules.
 The copied workflow can be run immediately with:
 
 ```powershell
@@ -74,8 +252,11 @@ Use this prompt in the new project:
 
 ```text
 Use the agentic development workflow installed in this repository.
-Read AGENTS.md and .agentic/workflow.toml.
+Read AGENTS.md, then run config validate --json and
+config show --effective --json.
 Inspect the configured source, test, requirement, and documentation roots.
+Report every effective restriction mode and active rule count, distinguishing
+AEGIS repository policy from external platform safety.
 Tell me whether the workflow configuration matches this project and list any
 paths or gate commands that need adjustment.
 Do not edit files yet.
@@ -93,6 +274,16 @@ beforehand). The same skills are invoked as `/skill:agentic-development`,
 `/skill:documentation-audit`, `/skill:write-component-documentation`,
 `/skill:regression-traceability`, and `/skill:python-codestyle-audit`.
 
+For OpenCode, start `opencode` from the repository root. The configured AEGIS
+agent loads the shared skills by name. Use `/workflow-status`,
+`/workflow-preflight`, and `/workflow-report` in the TUI, or run the matching
+`opencode run --command <command>` form from the shell.
+
+For Qwen Code, start `qwen` from the repository root and trust the project.
+Confirm that `AGENTS.md` is loaded with `/memory show`; the shared skills appear
+in `/skills`. The same `/workflow-status`, `/workflow-preflight`, and
+`/workflow-report` command prompts are available.
+
 ## Adopt An Existing Project
 
 Start adoption mode:
@@ -102,12 +293,12 @@ Use $agentic-adoption.
 Adopt this existing project into the agentic workflow.
 Rules:
 - No application behavior changes during adoption.
-- Start with adoption-intake and adoption-alignment, then repo-discovery and
+- Start with adoption-intake, then Intent Alignment, then repo-discovery and
   component-map before changing adoption artifacts.
 - Default to one component at a time unless I approve a named bundle.
 - Establish local scope before change for each component-adoption slice.
-Stop after adoption-alignment and tell me the proposed scope, open questions,
-recommended default responses, risk, and planned discovery path.
+Stop after adoption-alignment and tell me the proposed scope, assumptions,
+open questions, recommended default responses, risk, and proceed/pause decision.
 ```
 
 Approve the component map:
@@ -149,10 +340,11 @@ Do not implement the feature until I approve the adoption result.
 ```text
 Use the agentic development workflow.
 Implement feature: <feature description>.
-Before drafting requirements, complete Intent Alignment: record what you
-understood, scope, assumptions, open questions with recommended default
-responses, risk, decision, reason, and planned paths.
-Then run traceability and coverage audits, and map impact for likely changed files.
+Before drafting requirements, run traceability and coverage audits, then map
+impact for likely changed files.
+Complete Intent Alignment with your understanding, scope, assumptions,
+acceptance target, open questions with recommended responses, risk, and
+proceed/pause decision.
 If .agentic/components.toml exists, check whether the target component is
 baseline-usable before behavior-changing work.
 Stop at each gate and wait for my approval.
@@ -163,9 +355,9 @@ More explicit:
 ```text
 Use the agentic development workflow.
 Start a feature run for: <feature description>.
-At intake, start the run. At alignment, inspect the repo, record understanding,
-scope, assumptions, open questions with recommended default responses, risk,
-decision, reason, and planned paths.
+At intake, inspect the repo and ask clarification questions if needed.
+Then continue to Intent Alignment and record what you understood before
+drafting requirements.
 Do not create requirements, tests, or implementation yet.
 Stop after the alignment gate.
 ```
@@ -177,6 +369,7 @@ Use the agentic development workflow.
 Fix bug: <bug description>.
 First determine whether an existing spec covers the expected behavior.
 Run traceability audit, coverage audit, and impact analysis before editing code.
+Complete Intent Alignment before drafting or updating specs.
 If yes, create a reproduction check first.
 If no, draft the missing spec before creating the check.
 Stop at each gate and wait for my approval.
@@ -188,16 +381,31 @@ Ask the agentic assistant to draft requirements:
 
 ```text
 Continue to the requirement gate.
+First list every behavior <feature or fix> implies: the success path, each input
+or branch, each rejection or error, boundary/empty/limit cases, and any ux,
+security, data_privacy, non_functional, or platform aspect that applies.
 Draft the minimal spec items for <feature or fix>.
 Allowed spec tags are only behavior and property.
 Use one testable sentence per spec item.
-Also draft/update the durable requirement rows under .agentic/requirements/.
+Keep each requirement to one behavior with a single, isolated purpose: one
+requirement per functionality, and split anything that joins distinct behaviors
+with "and", "or", or a list.
+Write the failure and boundary behaviors as their own requirements, not only as
+tests, and make sure every acceptance criterion from alignment maps to at least
+one requirement.
+Run <workflow> requirement list --json before creating anything and identify
+semantically related current snapshots.
+Use <workflow> requirement create for a new behavioral contract and use the
+returned UUID-backed ID. Use <workflow> requirement update for a revision of
+the same contract, preserving its ID and replacing complete linked-test or
+affected-path sets when associations change.
 If this creates or materially changes a component, include the expected
 .agentic/knowledge/components component-documentation update in the acceptance
 notes.
-New requirement rows start as Planned.
+New requirement snapshots start as Planned.
 Do not implement anything.
-Stop after showing me the drafted spec items for approval.
+Stop after showing me the drafted spec items and requirement command results
+for approval.
 ```
 
 Approve requirements:
@@ -285,8 +493,8 @@ Declare intentional extra roots when starting the run:
 ```
 
 `--scope-hint` is repeatable and journaled. It extends the INV-5 advisory scope
-for the new run, but does not relax write zones, protected-file controls, or
-host permissions.
+for the new run, but does not relax configured stage write access, protected
+paths, or host permissions.
 
 Accept intentional scope overflow:
 
@@ -335,17 +543,16 @@ still applies whenever an executable behavior check is introduced or changed.
 
 ## Parallel Work Guidance
 
-Use one Git worktree per active run. The current selector under
-`.agentic/current_run` is worktree-local in practice but represents only one
-active run, so two agents must not share the same worktree and mutate the same
-workflow state concurrently. Automation should pin every invocation to its
-dedicated worktree and run from that repository tree.
+Use one Git worktree per active run. The selector under
+`.agentic/.workspace/state/current_run` is ignored and explicitly local to that
+worktree, but represents only one active run. Two agents must not share the
+same worktree and mutate the same workflow state concurrently. Never copy or
+stage `.agentic/.workspace/`.
 
-The ratified future design is
-`AEGIS_Parallel_Branch_Merge_Simplification_Plan.md`. It introduces an optional
-global `--run-id` override for automation; the current CLI does not expose that
-flag yet. Until that plan is implemented, do not script `--run-id` against the
-current CLI and do not add locking or multi-run state to one worktree.
+Graph-dependent commands accept `--run-id <existing-run-id>`. Use it when
+automation must pin a run; explicit selection wins over the pointer and does
+not rewrite it. Run automation from its dedicated worktree and do not add
+locking, caches, or multi-run pointer state to one worktree.
 
 ## Validation Gate
 
@@ -390,11 +597,15 @@ Prepare delivery only:
 Approved to run delivery preflight and generate the report.
 Do not commit, push, or create a PR.
 Run:
-<workflow> registry sync
-<workflow> registry audit
+<workflow> impact
 <workflow> working-tree audit
+<workflow> audit traceability
+<workflow> audit coverage
 <workflow> delivery-preflight
 <workflow> report
+
+Traceability and impact read canonical requirement TOML snapshots directly.
+There is no registry synchronization, registry audit, or generated cache.
 
 Run $documentation-audit or an equivalent manual documentation review before
 delivery. Confirm new or materially changed components have matching
@@ -440,7 +651,8 @@ repo folders:
 Start or switch this workflow run to repo-wide access mode.
 Reason: <why broad repo maintenance is needed>.
 Scope: <folders or categories expected to change>.
-Keep protected Git, secret, environment, and key files blocked.
+Honor only restrictions active in validated workflow.toml; repo-wide access
+never bypasses configured protected paths or external platform safety.
 ```
 
 Audit Python style:
@@ -480,7 +692,9 @@ Inspect the active run with:
 <workflow> status
 <workflow> invariants
 
-Tell me the current stage, blocking failures, and the next safe prompt.
+If I provide <existing-run-id>, append --run-id <existing-run-id> to both
+commands. Tell me whether selection is explicit or worktree-local, the current
+stage, blocking failures, and the next safe prompt.
 Do not edit files.
 ```
 

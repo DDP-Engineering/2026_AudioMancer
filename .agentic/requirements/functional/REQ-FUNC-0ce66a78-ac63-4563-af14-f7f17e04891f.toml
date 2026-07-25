@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-0ce66a78-ac63-4563-af14-f7f17e04891f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character discovery state shall project persisted character records and manual-maintenance flags."
+rationale = "The UI must reflect saved records and manual-maintenance status."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_build_character_state_exposes_manual_maintenance_flags",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:30:55Z"

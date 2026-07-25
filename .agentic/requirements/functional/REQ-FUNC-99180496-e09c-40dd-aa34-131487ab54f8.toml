@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-99180496-e09c-40dd-aa34-131487ab54f8"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Deterministic cleanup shall write canonical clean text preserving structure and require the canonical extracted-text artifact."
+rationale = "Cleanup must improve extracted text from a required canonical input."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_writes_runtime_artifacts_and_preserves_structure",
+  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_requires_canonical_extracted_text_artifact",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

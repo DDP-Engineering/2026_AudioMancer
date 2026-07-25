@@ -15,9 +15,6 @@ Repeatable repository audits live in `02_Tools/audits/`.
 Run them from the repository root with Python:
 
 ```powershell
-# Check changed implementation files for stale documentation.
-python 02_Tools/audits/audit_documentation.py --changed-only
-
 # Check changed Python files for repository Doxygen/style requirements.
 python 02_Tools/audits/audit_codestyle.py --changed-only
 

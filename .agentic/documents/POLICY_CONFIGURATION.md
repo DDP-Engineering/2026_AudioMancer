@@ -5,257 +5,183 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# Agentic Policy Configuration
+# AEGIS Policy Configuration
 
-This document explains `.agentic/policy.toml`, the manual operating policy for
-the agentic workflow. It describes how gates, human asks, and invariants should
-be treated by agents and human operators.
+AEGIS separates intrinsic workflow contracts from repository policy. This
+boundary makes the engine repository-neutral without making it workflow-free.
 
-`policy.toml` is deliberately small. The executable workflow behavior is split
-between the CLI, hooks, `AGENTS.md`, and `.agentic/workflow.toml`; this file is
-the compact policy map that keeps the manual workflow easy to read.
+- Intrinsic contracts define how governed evidence and stages work.
+- Repository policy defines which paths, contents, commands, and scopes are
+  restricted in this repository.
+- External safety is supplied by the host, operating system, organization, or
+  platform and is never disabled by AEGIS configuration.
 
-## Mental Model
+## Mandatory Policy Inspection
 
-`policy.toml` answers these questions:
+Before repository inspection or edits:
 
-- Does each workflow gate stop for human review?
-- Should the agent ask, decide, notify, or continue for common interaction
-  types?
-- Which invariant failures block progress?
-- Which invariant failures are advisory?
-- Which invariant failures are non-waivable?
-
-The policy is most useful as a reference when writing agent instructions,
-reviewing stage summaries, or deciding whether a workflow run can move forward.
-
-## Manual Gates
-
-The `[manual_gates]` section controls whether each stage should stop.
-
-```toml
-[manual_gates]
-intake = "stop"
-requirement = "stop"
-check = "stop"
-implementation = "stop"
-validation = "stop"
-delivery = "stop"
+```powershell
+<workflow> config validate --json
+<workflow> config show --effective --json
 ```
 
-`stop` means the agent should finish the current gate, summarize artifacts and
-evidence, and wait for human approval before moving to the next gate.
+Report write-access, protected-read/path, scope, secret, gate, coverage, and
+delivery modes with active rule counts. Also report the selected run for
+graph-dependent work. Do not continue when configuration is missing or invalid.
 
-Typical gate meanings:
+## Three Independent Control Layers
 
-| Gate | Purpose of the stop |
-| --- | --- |
-| `intake` | Confirm the request, current run, initial impact, and next gate. |
-| `requirement` | Review spec items and durable requirement rows before tests are written. |
-| `check` | Review red checks before implementation changes begin. |
-| `implementation` | Review source/docs changes and passing focused evidence before validation. |
-| `validation` | Review full validation evidence before delivery preparation. |
-| `delivery` | Review preflight, report, and final status before commit, push, PR, merge, or publish. |
-
-Intent alignment is configured in `.agentic/workflow.toml` because it has
-additional risk and open-question settings.
-
-## Asks
-
-The `[asks]` section defines how the agent should handle common interaction
-types.
-
-```toml
-[asks]
-clarify = "ask"
-review = "ask"
-decide = "ask"
-approve = "ask"
-notify = "report"
-```
-
-Meanings:
-
-| Ask type | Policy | Meaning |
+| Layer | Examples | Authority |
 | --- | --- | --- |
-| `clarify` | `ask` | Ask the human when missing information changes scope, risk, or correctness. |
-| `review` | `ask` | Ask the human to review artifacts at gate boundaries. |
-| `decide` | `ask` | Ask the human to choose when tradeoffs cannot be safely assumed. |
-| `approve` | `ask` | Ask before actions that require explicit approval. |
-| `notify` | `report` | Report status or evidence without blocking on a response. |
+| Intrinsic AEGIS workflow | check citations, red-before-green, evidence lifecycle, stage transitions | AEGIS code |
+| AEGIS repository policy | protected paths, secret regexes, write stages, coverage roots, delivery patterns | validated `.agentic/workflow.toml` |
+| External safety | sandbox, approvals, filesystem permissions, network policy, organization controls | host/platform/operator |
 
-The workflow can still continue automatically when the active stage policy and
-alignment policy allow it, but approval-sensitive actions should remain explicit.
+An unrestricted AEGIS mode means only that AEGIS applies no rule for that
+policy. It never grants permission beyond the external layer.
 
-Examples of `approve` actions:
+## Intrinsic Workflow Contracts
 
-- moving from red checks into implementation
-- accepting changed requirements after scope changes
-- switching to repo-wide access mode
-- committing
-- pushing
-- opening a pull request
-- merging
-- publishing or deploying
+The following remain engine behavior and are not configurable repository
+opinions:
 
-## Invariants
-
-The `[invariants]` section maps workflow invariant ids to severity.
-
-```toml
-[invariants]
-INV-1 = "blocking"
-INV-2 = "blocking"
-INV-3 = "blocking"
-INV-4 = "blocking"
-INV-5 = "advisory"
-INV-6 = "blocking"
-INV-7 = "non-waivable"
-```
-
-Severity meanings:
-
-| Severity | Meaning |
+| Invariant | Contract |
 | --- | --- |
-| `blocking` | Must be resolved before the run can be considered ready. |
-| `advisory` | Must be explained or accepted, but does not automatically block delivery. |
-| `non-waivable` | Must pass; do not bypass or accept as risk. |
+| `INV-1` | Every accepted or realized spec item is covered by a check. |
+| `INV-2` | Every check cites an existing spec item. |
+| `INV-3` | A check records failing evidence before passing evidence. |
+| `INV-4` | No active failing regression evidence remains for implementation, validation, or delivery. |
+| `INV-6` | The run has recorded evidence. |
+| `INV-8` | Green checks citing durable requirements cite current `Active` snapshots. |
 
-Common invariant meanings:
+Stage transitions, journaling, immutable evidence IDs, evidence supersession,
+explicit human approval for outward actions, and the distinction between
+standard and repo-wide access are also intrinsic workflow contracts.
 
-| Invariant | Name | Meaning |
+Repository-specific path and content decisions are not intrinsic. `INV-5`,
+`INV-7`, and `INV-9` consume configured scope, secret, and component policies
+and return explicit pass results when their policy is unrestricted or disabled.
+
+## Repository Policy Modes
+
+The complete key and validation reference is in
+`WORKFLOW_CONFIGURATION.md`. The policy decisions are summarized here.
+
+| Concern | Non-restrictive mode | Restrictive mode |
 | --- | --- | --- |
-| `INV-1` | Coverage | Accepted or realized specs must have checks. |
-| `INV-2` | Citation | Checks must cite existing spec items. |
-| `INV-3` | Red-before-green | Green checks must have prior red evidence. |
-| `INV-4` | No regression | Implementation, validation, and delivery evidence must not contain active failing gates or tests. |
-| `INV-5` | In scope | Recorded change units should stay within source, test, documentation, or approved scope paths. |
-| `INV-6` | Evidence | The run must contain recorded evidence. |
-| `INV-7` | Clean secrets | Configured secret patterns must not appear in staged/unstaged changes against the last commit or in untracked files. |
+| Secret scanning | `disabled` | `enforce` |
+| Protected paths | `disabled` | `enforce` |
+| Working-tree blockers | `unrestricted` | `restricted` |
+| Write access | `unrestricted` | `stage_restricted` |
+| Scope | `unrestricted` | `advisory` or `enforce` |
+| Coverage | `disabled` | `enforce` |
+| Alignment protected scope | `disabled` | `enforce` |
+| Gate execution | `disabled` | `enforce` |
+| Component baseline | `disabled` | `enforce` |
+| Adoption source changes | `unrestricted` | `blocked` |
+| Delivery hook | `disabled` | `enforce` |
 
-Some workflow versions may evaluate additional invariants beyond those listed
-in the policy file. Treat new blocking or non-waivable invariant failures as
-real until the workflow documentation and policy are updated together.
+Inactive modes require empty rule collections. AEGIS rejects dormant rules so
+operators cannot mistake configured-looking text for enforced behavior.
 
-## Real Case Pattern: Advisory Scope Overflow
+## Scope and Write Decisions
 
-If `INV-5` reports out-of-scope paths, the run should not hide the finding.
-Because `INV-5` is advisory, the human can accept the scope overflow when the
-extra paths are intentional.
+Scope and write access answer different questions:
 
-Example stage summary:
+- Scope asks whether planned or touched paths fit the repository policy.
+- Write access asks whether the current workflow stage may edit a path.
+- Protected paths can deny configured read and/or write operations regardless
+  of stage access.
+- External host safety can still deny an operation that AEGIS allows.
 
-```text
-Invariant status: INV-5 advisory finding for docs/operations.md.
-Needs human: confirm whether the documentation update is intentional scope.
-```
+`scope_hint` documents or narrows a run's intended work. It never expands an
+enforced configured scope root.
 
-If accepted, record a decision or evidence note explaining why the extra path is
-part of the approved change. If rejected, revise the diff or route back to the
-proper gate.
+Under `stage_restricted`, standard access applies the configured stage list. An
+empty stage list means read-only. Repo-wide access bypasses stage lists after a
+human records the reason, but cannot bypass enforced protected paths.
 
-## Real Case Pattern: Non-Waivable Secret Finding
+## Secret and Delivery Decisions
 
-If `INV-7` fails, do not ask the human to waive it. Remove the secret-like
-content from the diff, rotate any exposed credential if needed, and rerun the
-secret check or delivery preflight.
+Secret scanning uses only configured regular expressions in `enforce` mode.
+There are no built-in secret patterns. Invalid configuration denies a pre-tool
+operation rather than skipping policy.
 
-Example response:
+Delivery command patterns use normalized lowercase fragments. A match invokes
+the shared delivery preflight. Passing preflight does not perform the outward
+action and does not replace explicit human or platform approval.
 
-```text
-Invariant status: INV-7 failed and is non-waivable.
-Next action: remove the matched credential pattern and rerun delivery preflight.
-```
+## Gates and Coverage
 
-## Real Case Pattern: Manual Gate Stop
+Disabled gates contain no commands and are reported as disabled. Enforced gates
+run complete configured command strings from `gates.test` and `gates.lint`.
 
-A manual gate stop should include enough context for the human to choose the
-next step without reading the entire run graph.
+Disabled coverage has no coverable roots. Enforced coverage evaluates current
+requirement snapshot `affected_paths`, current linked tests, and explicit
+waivers. It builds any reverse mapping in memory and writes no registry or cache.
 
-Example:
+## Requirement Policy
 
-```text
-Stage: check
-Artifacts changed: tests/export/test_report_writer.py
-Evidence: E-0003 red test evidence recorded for CHECK-001
-Invariant status: expected implementation evidence is still missing
-Needs human: approve implementation or revise the check
-Next prompt options:
-- Continue to implementation
-- Revise CHECK-001
-- Abort or park this run
-```
+Durable requirements are current TOML snapshots, not workflow history:
 
-## Example Policy For A Strict Manual Workflow
+- list/search before creating to avoid semantic duplicates;
+- create UUIDv4-backed IDs only through the CLI;
+- preserve the ID for revisions of the same behavioral contract;
+- replace complete linked-test and affected-path sets when associations change;
+- activate only after automated selectors resolve or an explicit `Manual:` or
+  `Inspection:` method is supplied; and
+- reconcile concurrent edits to the same requirement file as a real semantic
+  conflict.
 
-```toml
-[manual_gates]
-intake = "stop"
-requirement = "stop"
-check = "stop"
-implementation = "stop"
-validation = "stop"
-delivery = "stop"
+Traceability, coverage, impact, reports, and delivery preflight read canonical
+snapshots directly. Registry sync and registry audit do not exist.
 
-[asks]
-clarify = "ask"
-review = "ask"
-decide = "ask"
-approve = "ask"
-notify = "report"
+## Run Selection Policy
 
-[invariants]
-INV-1 = "blocking"
-INV-2 = "blocking"
-INV-3 = "blocking"
-INV-4 = "blocking"
-INV-5 = "advisory"
-INV-6 = "blocking"
-INV-7 = "non-waivable"
-```
+The worktree-local pointer is
+`.agentic/.workspace/state/current_run`. The entire `.agentic/.workspace/`
+directory is ignored and must not be staged or copied to another worktree.
 
-## Example Policy For Faster Internal Maintenance
+Graph-dependent commands accept an explicit `--run-id`. Explicit selection
+wins over the pointer and does not mutate it. Missing, malformed, or stale state
+produces typed `RUN-*` errors with setup instructions; agents must not guess an
+ID or edit graphs to bypass resolution.
 
-Use this only when the repository instructions allow more autonomous movement
-between low-risk gates. Delivery approval should still remain explicit.
+## Configuration Failure Policy
 
-```toml
-[manual_gates]
-intake = "stop"
-requirement = "stop"
-check = "stop"
-implementation = "stop"
-validation = "stop"
-delivery = "stop"
+Missing, malformed, incomplete, unknown, wrong-type, or inconsistent
+configuration is never a default. CLI operations fail before acting and exit
+with status `2`. Pre-tool hooks deny with the same stable code and remediation.
+Post-tool hooks emit a warning and skip policy-dependent evidence recording.
 
-[asks]
-clarify = "ask"
-review = "ask"
-decide = "ask"
-approve = "ask"
-notify = "report"
+The guard transports also fail closed beyond configuration errors. Because the
+shared guards always exit `0` and signal a denial on stdout, a guard that cannot
+run at all — a missing or unlaunchable Python interpreter, or a hook that
+crashed — is treated as a block, not an allow, on every adapter. An unavailable
+guard therefore denies the operation it was meant to check rather than silently
+permitting it.
 
-[invariants]
-INV-1 = "blocking"
-INV-2 = "blocking"
-INV-3 = "blocking"
-INV-4 = "blocking"
-INV-5 = "advisory"
-INV-6 = "blocking"
-INV-7 = "non-waivable"
-```
+Examples:
 
-This example intentionally keeps the same gate stops. In most repositories, the
-safer way to speed up maintenance is to use clear alignment recommended
-responses and focused validation commands, not to remove review gates.
+- `CONFIG-MISSING`: create the complete schema-version-2 file.
+- `CONFIG-MODE-INVALID`: select one ratified mode for the reported key.
+- `CONFIG-INCONSISTENT`: align the rule collection with its selected mode.
+- `CONFIG-RULE-INVALID`: repair the exact path, glob, regex, command, or stage.
 
-## Change Checklist
+## Operator Decision Checklist
 
-When editing `policy.toml`:
+Before enabling a restriction, decide:
 
-- Keep the file aligned with `AGENTS.md` stage rules.
-- Keep delivery approval explicit.
-- Do not make secret findings waivable.
-- Update this document when adding or renaming invariant ids.
-- Update workflow instructions when changing gate behavior.
-- Validate policy-sensitive changes with a dry run or stage summary review.
+1. Which concrete repository risk the policy addresses.
+2. Whether the policy should advise or block.
+3. Which exact normalized rules are required.
+4. Which CLI, hook, adapter, audit, invariant, and delivery paths consume it.
+5. How an agent can repair a failure without guessing.
+
+After editing policy:
+
+1. Run `config validate --json`.
+2. Run `config show --effective --json`.
+3. Exercise both a matching and non-matching case.
+4. Confirm every adapter reaches the shared configured hook decision.
+5. Confirm external host safety remains unchanged.

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-6ebf3787-3c64-4659-b19c-5745566e7433"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The provider client shall cancel while waiting for a model response."
+rationale = "Long provider calls must be cooperatively cancellable."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_can_cancel_while_waiting_for_model_response",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-24T19:30:55Z"

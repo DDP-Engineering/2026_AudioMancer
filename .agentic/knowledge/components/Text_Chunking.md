@@ -93,10 +93,22 @@ and resumability from the document and does not create default state artifacts.
 
 ## 9. Validation And Tests
 
-Focused re-characterization ran all six mapped modules: 69 passed. They cover
-deterministic artifacts/chapter behavior, AI descriptor validation/resume/
-fallback contracts, state edits/invalidation, controller dispatch, and page
-controls, previews, localization, search, and profile/strategy behavior.
+Primary automated coverage:
+
+- `tests/test_chunking_single_document_contract.py`
+- `tests/test_deterministic_chunking_service.py`
+- `tests/test_ai_chunking_service.py`
+- `tests/test_ai_chunking_descriptor_contract.py`
+- `tests/test_text_chunking_state_service.py`
+- `tests/test_text_chunking_ui_controller.py`
+- `tests/test_text_chunking_page.py`
+
+These cover deterministic artifacts/chapter behavior, AI descriptor
+validation/resume/fallback contracts, state edits/invalidation, controller
+dispatch, and page controls, previews, localization, search, and
+profile/strategy behavior. Minimum validation after a change: run the focused
+modules above with `uv run pytest`, plus `uv run python -m py_compile` and
+`uv run ruff check` on changed files.
 
 ## 10. Limitations And Future Work
 

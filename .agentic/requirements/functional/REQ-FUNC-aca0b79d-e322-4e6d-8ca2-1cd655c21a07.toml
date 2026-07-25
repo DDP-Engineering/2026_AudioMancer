@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-aca0b79d-e322-4e6d-8ca2-1cd655c21a07"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI cleanup validation shall accept uniquely bracketed modified story text and normalized story edges with bounded internal gaps."
+rationale = "Valid modifications and gaps must be accepted unambiguously."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_validation_accepts_uniquely_bracketed_modified_story_text",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_validation_accepts_arbitrary_interior_with_normalized_story_edges",
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_validation_preserves_uniquely_bounded_internal_source_gap",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

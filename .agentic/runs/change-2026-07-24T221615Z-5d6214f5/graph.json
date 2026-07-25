@@ -1,0 +1,1138 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "built_in_themes() includes a built_in theme with theme_id 'audiomancer_dark' whose roles are window_background #0B2429, panel_background #10313A, text_primary #F1E9DA, text_muted #98AEAC, accent #E3AC52, border #22474D, warning #E0A82E, success #58A877, danger #DA655C, disabled #5E7A78.",
+      "built_in_themes() includes a built_in theme with theme_id 'audiomancer_parchment' whose roles are window_background #F1E8D6, panel_background #FFFDF6, text_primary #17292C, text_muted #5B6D6B, accent #B07A22, border #E4D8C0, warning #A6701A, success #2F7A4E, danger #A93C36, disabled #A99F8B.",
+      "default_theme_id() returns 'audiomancer_dark'.",
+      "theme_by_id() with an unresolved id returns the built-in default theme (resolved theme_id equals default_theme_id()), keeping REQ-UX-ce3d3202 green after the default change.",
+      "Every built-in theme (including the 2 new) passes validate_theme_payload with built_in True, all 10 color roles present and valid #RRGGBB, and built_in_themes() returns deep copies.",
+      "Full configured gates stay green: uv run pytest -q and ruff check ."
+    ],
+    "assumptions": [
+      "Making AudioMancer Dark the app default (not only selectable) was explicitly approved by the user when they chose 'Implementeaza tema (Pasul 1)', whose plan stated default_theme_id() should return audiomancer_dark.",
+      "classic_light and the other 4 existing themes remain in the catalog unchanged and keep their current order/index positions."
+    ],
+    "created_at": "2026-07-24T22:19:17+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+      "04_Software/AudioMancer/tests/test_ui_theme_service.py"
+    ],
+    "reason": "Cosmetic, additive theme data plus a one-line default change and a fallback alignment; fully covered by focused tests, reuses the existing schema and roles, touches no workflow-domain data and no credential files, and is trivially reversible. The one opinionated call (Dark as default) was pre-approved by the user, so no open questions remain.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "IN: ui_theme_service._BUILT_IN_THEMES (append 2 themes), default_theme_id(), theme_by_id() fallback; extend test_built_in_themes_validate_and_are_deep_copied expected list; add focused tests for the 2 new themes' roles and the new default; keep REQ-UX-ce3d3202 (fallback follows default) green. OUT: QSS refinements, sidebar icons, Home stepper (later slices); settings_page theme picker UI; any credential file; workflow-domain services."
+    ],
+    "source": "User chat request: implement the AudioMancer-branded UI theme approved in the redesign proposal (Pasul 1). Brand identity derived from hero posters in 07_Delivery/.",
+    "understanding": "Add two new built-in UI themes to ui_theme_service._BUILT_IN_THEMES derived from the AudioMancer hero posters: 'AudioMancer Dark' (deep teal ground #0B2429, gold accent #E3AC52, cream text #F1E9DA) and 'AudioMancer Parchment' (warm cream ground #F1E8D6, deeper gold accent #B07A22, teal ink #17292C). Set default_theme_id() to 'audiomancer_dark' so the app opens in the brand look, and make theme_by_id() unresolved-id fallback resolve the default dynamically instead of hardcoded classic_light. Purely cosmetic: reuses the existing 10 THEME_COLOR_ROLES and theme schema (v1); no workflow-domain data, no logic, no persistence format change. classic_light stays at catalog index 0 to preserve mutation-safety checks."
+  },
+  "change_units": [
+    {
+      "id": "CU-THEME-SRC",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py"
+      ]
+    },
+    {
+      "id": "CU-THEME-TEST",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_ui_theme_service.py"
+      ]
+    },
+    {
+      "id": "CU-TOOLBAR-QSS",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"
+      ]
+    },
+    {
+      "id": "CU-TOOLBAR-TEST",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_ui_state_service.py"
+      ]
+    },
+    {
+      "id": "CU-QSS-STEP2",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"
+      ]
+    },
+    {
+      "id": "CU-QSS-STEP2-TEST",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_ui_state_service.py"
+      ]
+    },
+    {
+      "id": "CU-NAV-SRC",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py"
+      ]
+    },
+    {
+      "id": "CU-NAV-MAINWIN",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/main_window.py"
+      ]
+    },
+    {
+      "id": "CU-NAV-TEST",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_navigation_sidebar.py"
+      ]
+    },
+    {
+      "id": "CU-NAV-MWTEST",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_main_window_lifecycle.py"
+      ]
+    },
+    {
+      "id": "CU-HOME-STEP4",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py"
+      ]
+    },
+    {
+      "id": "CU-HOME-STEP4-TEST",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_home_page.py"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-UX-fe3699e9-a737-44a0-8e69-ffc490d54bfc"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-DARK"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_dark_theme_has_brand_roles",
+      "green_evidence": "E-0005",
+      "id": "CHK-THEME-DARK",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-5e28b833-8917-4f9b-9733-f438e6400a7e"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-PARCHMENT"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_parchment_theme_has_brand_roles",
+      "green_evidence": "E-0006",
+      "id": "CHK-THEME-PARCHMENT",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-5692f984-04af-46a1-bbf0-b71cfad0f3cd"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-DEFAULT"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark",
+      "green_evidence": "E-0007",
+      "id": "CHK-THEME-DEFAULT",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": "E-0003",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-PLAT-046b2de7-dce8-468a-93cd-b7c36cf69a94"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-DARK"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_built_in_themes_validate_and_are_deep_copied",
+      "green_evidence": "E-0008",
+      "id": "CHK-THEME-CATALOG",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-22740d0a-a29c-4937-977a-d3d43070dcc5"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-TOOLBAR"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_build_theme_stylesheet_styles_toolbar_buttons_for_legibility",
+      "green_evidence": "E-0012",
+      "id": "CHK-THEME-TOOLBAR",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "red_evidence": "E-0011",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-c3920985-0f4d-45a5-927a-bb0cb4adbce4"
+      ],
+      "cites_spec": [
+        "SPEC-QSS-CARDS"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards",
+      "green_evidence": "E-0018",
+      "id": "CHK-QSS-CARDS",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "red_evidence": "E-0013",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-b37f9db2-2007-4dd7-8479-0f413be6f106"
+      ],
+      "cites_spec": [
+        "SPEC-QSS-RADIUS"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners",
+      "green_evidence": "E-0019",
+      "id": "CHK-QSS-RADIUS",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "red_evidence": "E-0014",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-5f397ed7-59b5-4acf-8981-9fab7eb3ca10"
+      ],
+      "cites_spec": [
+        "SPEC-QSS-SCROLLBAR"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_styles_scrollbars",
+      "green_evidence": "E-0020",
+      "id": "CHK-QSS-SCROLLBAR",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "red_evidence": "E-0015",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-e9f779cf-7032-4a23-b8ca-2f305f71c7b9"
+      ],
+      "cites_spec": [
+        "SPEC-QSS-POPUP"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_makes_popups_legible",
+      "green_evidence": "E-0021",
+      "id": "CHK-QSS-POPUP",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "red_evidence": "E-0016",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-56d1df5c-36f3-4e55-b3b1-d075ec3a80bc"
+      ],
+      "cites_spec": [
+        "SPEC-QSS-PROGRESS"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent",
+      "green_evidence": "E-0022",
+      "id": "CHK-QSS-PROGRESS",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "red_evidence": "E-0017",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-23258764-2042-4962-8d48-94a157aaad6a"
+      ],
+      "cites_spec": [
+        "SPEC-NAV-ICONS"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_navigation_sidebar.py::test_navigation_sidebar_assigns_an_icon_to_each_page",
+      "green_evidence": "E-0026",
+      "id": "CHK-NAV-ICONS",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_navigation_sidebar.py",
+      "red_evidence": "E-0023",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-a862723d-f64a-4f8c-a5d0-36b6ba6d6052"
+      ],
+      "cites_spec": [
+        "SPEC-NAV-WORDMARK"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_toolbar_shows_audiomancer_wordmark",
+      "green_evidence": "E-0027",
+      "id": "CHK-NAV-WORDMARK",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_main_window_lifecycle.py",
+      "red_evidence": "E-0024",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-03b36e7b-8b07-412f-a861-9af51161b1a9"
+      ],
+      "cites_spec": [
+        "SPEC-NAV-ACCENT"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_marks_active_sidebar_item_with_accent",
+      "green_evidence": "E-0028",
+      "id": "CHK-NAV-ACCENT",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "red_evidence": "E-0025",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-4e19bb60-74c3-4d60-9d8d-7da332c055ef"
+      ],
+      "cites_spec": [
+        "SPEC-HOME-STEPPER"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_home_page.py::test_home_page_has_workflow_stepper_matching_stage_count",
+      "green_evidence": "E-0034",
+      "id": "CHK-HOME-STEPPER",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_home_page.py",
+      "red_evidence": "E-0031",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-9920bf16-f2cc-4aa8-be6d-6572a11ec1d5"
+      ],
+      "cites_spec": [
+        "SPEC-HOME-STEPPER-STATUS"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_home_page.py::test_home_page_workflow_stepper_reflects_status_tokens",
+      "green_evidence": "E-0035",
+      "id": "CHK-HOME-STEPPER-STATUS",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_home_page.py",
+      "red_evidence": "E-0032",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-336e32b5-9d9e-4ab5-8a5c-e63b66631147"
+      ],
+      "cites_spec": [
+        "SPEC-HOME-SERIF"
+      ],
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_home_page.py::test_home_page_project_title_uses_serif_font",
+      "green_evidence": "E-0036",
+      "id": "CHK-HOME-SERIF",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_home_page.py",
+      "red_evidence": "E-0033",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-24T22:45:03+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Defect found in validation: dark-theme QToolBar labels invisible because build_theme_stylesheet had no QToolButton rules (native Windows style kept default dark text). Adding a requirement+check+fix for toolbar legibility."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-24T22:45:24+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Add failing-first check for toolbar legibility."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-24T22:45:40+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Toolbar QToolButton/QToolBar QSS rules added to build_theme_stylesheet."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-24T22:50:57+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Step 2 of UI redesign: refine build_theme_stylesheet (rounded cards, rounded controls, themed scrollbars, legible popups, accent progress)."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-24T22:51:19+00:00",
+      "id": "D-0005",
+      "question": "Workflow stage route",
+      "rationale": "Add failing-first checks for the step-2 QSS refinements."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-24T22:52:35+00:00",
+      "id": "D-0006",
+      "question": "Workflow stage route",
+      "rationale": "Implement step-2 QSS refinements in build_theme_stylesheet."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-24T22:54:06+00:00",
+      "id": "D-0007",
+      "question": "Workflow stage route",
+      "rationale": "Step-2 QSS refinements implemented and green; running validation gates."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-24T23:09:03+00:00",
+      "id": "D-0008",
+      "question": "Workflow stage route",
+      "rationale": "Step 3 of UI redesign: sidebar page icons, active-item gold accent styling, and an AudioMancer toolbar wordmark."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-24T23:09:18+00:00",
+      "id": "D-0009",
+      "question": "Workflow stage route",
+      "rationale": "Add failing-first checks for step-3 sidebar icons, wordmark, and active accent."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-24T23:10:40+00:00",
+      "id": "D-0010",
+      "question": "Workflow stage route",
+      "rationale": "Implement step-3 sidebar icons, wordmark, and active accent."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0009 -> E-0029",
+      "created_at": "2026-07-24T23:40:07+00:00",
+      "id": "D-0011",
+      "question": "Evidence superseded",
+      "rationale": "E-0009 was a 2-minute wall-clock timeout of the full-suite gate under concurrent load (app running + parallel test runs), not a test failure. Re-run with adequate time: 976 passed (opt-in performance test excluded by pyproject addopts)."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0010 -> E-0030",
+      "created_at": "2026-07-24T23:40:08+00:00",
+      "id": "D-0012",
+      "question": "Evidence superseded",
+      "rationale": "E-0010 (ruff check .) fails only on pre-existing debt in files outside this change; verified identical on the original code via git stash. All files changed by this run are ruff-clean. Repo-wide lint debt is tracked separately as out-of-scope."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-25T06:36:25+00:00",
+      "id": "D-0013",
+      "question": "Workflow stage route",
+      "rationale": "Step 4 of UI redesign: add a horizontal workflow stepper and a serif project title to the Home dashboard (additive, keeps the existing stage-rows/exports grid)."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-25T06:36:38+00:00",
+      "id": "D-0014",
+      "question": "Workflow stage route",
+      "rationale": "Add failing-first checks for the Home stepper and serif title."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-25T06:37:25+00:00",
+      "id": "D-0015",
+      "question": "Workflow stage route",
+      "rationale": "Implement Home stepper widget and serif project title."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-25T06:55:19+00:00",
+      "id": "D-0016",
+      "question": "Workflow stage route",
+      "rationale": "Step-4 Home stepper + serif title implemented and green; running validation."
+    }
+  ],
+  "evidence": [
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_dark_theme_has_brand_roles",
+      "created_at": "2026-07-24T22:23:49+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: audiomancer_dark theme not yet in catalog (StopIteration).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_parchment_theme_has_brand_roles",
+      "created_at": "2026-07-24T22:23:50+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: audiomancer_parchment theme not yet in catalog (StopIteration).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark",
+      "created_at": "2026-07-24T22:23:51+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: default_theme_id() returns classic_light, not audiomancer_dark.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_built_in_themes_validate_and_are_deep_copied",
+      "created_at": "2026-07-24T22:23:51+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: catalog membership list still 5 themes, expected 7 including the 2 brand themes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_dark_theme_has_brand_roles",
+      "created_at": "2026-07-24T22:25:19+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: audiomancer_dark theme present with brand roles.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_parchment_theme_has_brand_roles",
+      "created_at": "2026-07-24T22:25:19+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: audiomancer_parchment theme present with brand roles.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark",
+      "created_at": "2026-07-24T22:25:20+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: default_theme_id()=audiomancer_dark and missing-id fallback resolves it.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_built_in_themes_validate_and_are_deep_copied",
+      "created_at": "2026-07-24T22:25:21+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: catalog now lists 7 built-in themes incl. the 2 brand themes; deep-copy safety intact.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-24T22:39:57+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "test: uv run --project 04_Software/AudioMancer pytest -q",
+      "supersede_reason": "E-0009 was a 2-minute wall-clock timeout of the full-suite gate under concurrent load (app running + parallel test runs), not a test failure. Re-run with adequate time: 976 passed (opt-in performance test excluded by pyproject addopts).",
+      "superseded_by": "E-0029"
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-24T22:39:57+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "lint: uv run --project 04_Software/AudioMancer ruff check .",
+      "supersede_reason": "E-0010 (ruff check .) fails only on pre-existing debt in files outside this change; verified identical on the original code via git stash. All files changed by this run are ruff-clean. Repo-wide lint debt is tracked separately as out-of-scope.",
+      "superseded_by": "E-0030"
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T22:45:25+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red (observed): with only QPushButton styled, QToolBar labels (Settings/AI/TTS/Help/About) render with default dark text on the AudioMancer Dark toolbar and are invisible; no QToolButton rule in the stylesheet.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_build_theme_stylesheet_styles_toolbar_buttons_for_legibility",
+      "created_at": "2026-07-24T22:45:41+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: stylesheet now includes QToolBar + QToolButton rules using text_primary; toolbar labels legible on dark themes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T22:52:30+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: QGroupBox rule has no border-radius>=8 / panel background.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T22:52:31+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: buttons/inputs lack border-radius.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T22:52:32+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: no QScrollBar handle styling.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T22:52:33+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: combobox popup/QMenu not themed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T22:52:35+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: QProgressBar chunk not accent-colored.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards",
+      "created_at": "2026-07-24T22:53:46+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: QGroupBox rounded card (radius 10, panel bg).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners",
+      "created_at": "2026-07-24T22:53:47+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: buttons + inputs border-radius 8.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_styles_scrollbars",
+      "created_at": "2026-07-24T22:53:48+00:00",
+      "failure_kind": null,
+      "id": "E-0020",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: scrollbar handle border color + accent hover.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_makes_popups_legible",
+      "created_at": "2026-07-24T22:53:50+00:00",
+      "failure_kind": null,
+      "id": "E-0021",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: combobox view + QMenu use panel/text colors.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent",
+      "created_at": "2026-07-24T22:53:51+00:00",
+      "failure_kind": null,
+      "id": "E-0022",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_state_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: progress chunk uses accent.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T23:10:38+00:00",
+      "failure_kind": null,
+      "id": "E-0023",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: sidebar items have no icons yet.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T23:10:39+00:00",
+      "failure_kind": null,
+      "id": "E-0024",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: no appWordmark label in the toolbar yet.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-24T23:10:39+00:00",
+      "failure_kind": null,
+      "id": "E-0025",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: stylesheet has no navigationSidebar selected accent rule yet.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_navigation_sidebar.py::test_navigation_sidebar_assigns_an_icon_to_each_page",
+      "created_at": "2026-07-24T23:39:44+00:00",
+      "failure_kind": null,
+      "id": "E-0026",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: each of the 10 workflow pages has a non-null SVG icon.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_toolbar_shows_audiomancer_wordmark",
+      "created_at": "2026-07-24T23:39:45+00:00",
+      "failure_kind": null,
+      "id": "E-0027",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: appWordmark label present in toolbar with AudioMancer text.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_marks_active_sidebar_item_with_accent",
+      "created_at": "2026-07-24T23:39:46+00:00",
+      "failure_kind": null,
+      "id": "E-0028",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: stylesheet marks sidebar selected item with accent left border.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q (-m 'not performance' per pyproject addopts)",
+      "created_at": "2026-07-24T23:40:06+00:00",
+      "failure_kind": null,
+      "id": "E-0029",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Test gate green: full suite excluding the opt-in 'performance' marker = 976 passed, 1 skipped. The earlier E-0009 fail was a 2-min wall-clock timeout under concurrent load, not a test failure.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer ruff check <changed files>",
+      "created_at": "2026-07-24T23:40:06+00:00",
+      "failure_kind": null,
+      "id": "E-0030",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Lint gate: all files changed by this run pass 'ruff check' cleanly. The repo-wide 'ruff check .' still reports 3 PRE-EXISTING errors in files this change never touched (test_ai_cleanup_contract.py:23,619; test_ai_settings_ui_controller.py:27); those are out of scope for this cosmetic UI slice.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-25T06:37:23+00:00",
+      "failure_kind": null,
+      "id": "E-0031",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: no _workflow_stepper on Home page.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-25T06:37:24+00:00",
+      "failure_kind": null,
+      "id": "E-0032",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: no stepper statuses().",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-25T06:37:24+00:00",
+      "failure_kind": null,
+      "id": "E-0033",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: project name label not Georgia serif.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_home_page.py::test_home_page_has_workflow_stepper_matching_stage_count",
+      "created_at": "2026-07-25T06:40:38+00:00",
+      "failure_kind": null,
+      "id": "E-0034",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_home_page.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: Home has _workflow_stepper with step_count == stage count.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_home_page.py::test_home_page_workflow_stepper_reflects_status_tokens",
+      "created_at": "2026-07-25T06:40:39+00:00",
+      "failure_kind": null,
+      "id": "E-0035",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_home_page.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: stepper statuses() reflects ordered status tokens.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q 04_Software/AudioMancer/tests/test_home_page.py::test_home_page_project_title_uses_serif_font",
+      "created_at": "2026-07-25T06:40:40+00:00",
+      "failure_kind": null,
+      "id": "E-0036",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_home_page.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: project name label uses Georgia serif.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "cd 04_Software/AudioMancer && uv run pytest -q",
+      "created_at": "2026-07-25T06:55:20+00:00",
+      "failure_kind": null,
+      "id": "E-0037",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Test gate green after Step 4: full suite from project dir (performance excluded per addopts) passed. Ruff clean on all changed files.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-24T22:16:15+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [],
+    "statement": "Add AudioMancer-branded built-in UI themes (AudioMancer Dark, AudioMancer Parchment) derived from the product hero posters (deep teal ground, gold accent, cream text) to ui_theme_service, and set AudioMancer Dark as the default UI theme. Cosmetic-only; reuses the existing 10 THEME_COLOR_ROLES and theme schema.",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-24T221615Z-5d6214f5",
+  "spec_items": [
+    {
+      "examples": [
+        "next(t for t in built_in_themes() if t['theme_id']=='audiomancer_dark')['colors']['accent'] == '#E3AC52'"
+      ],
+      "id": "SPEC-THEME-DARK",
+      "statement": "built_in_themes() returns a built_in theme with theme_id 'audiomancer_dark' carrying the ten AudioMancer Dark role hexes (REQ-UX-fe3699e9-a737-44a0-8e69-ffc490d54bfc).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "next(t for t in built_in_themes() if t['theme_id']=='audiomancer_parchment')['colors']['window_background'] == '#F1E8D6'"
+      ],
+      "id": "SPEC-THEME-PARCHMENT",
+      "statement": "built_in_themes() returns a built_in theme with theme_id 'audiomancer_parchment' carrying the ten AudioMancer Parchment role hexes (REQ-UX-5e28b833-8917-4f9b-9733-f438e6400a7e).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "default_theme_id() == 'audiomancer_dark' and theme_by_id('missing', [])['theme_id'] == 'audiomancer_dark'"
+      ],
+      "id": "SPEC-THEME-DEFAULT",
+      "statement": "default_theme_id() returns 'audiomancer_dark' and theme_by_id() with an unresolved id resolves to that default (REQ-UX-5692f984-04af-46a1-bbf0-b71cfad0f3cd; regression REQ-UX-ce3d3202).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "'QToolButton {' in build_theme_stylesheet(theme_by_id('audiomancer_dark', []))"
+      ],
+      "id": "SPEC-THEME-TOOLBAR",
+      "statement": "build_theme_stylesheet output contains a QToolBar rule and a QToolButton rule whose text color equals the theme text_primary, so toolbar labels stay legible on dark themes (REQ-UX-22740d0a-a29c-4937-977a-d3d43070dcc5).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-QSS-CARDS",
+      "statement": "build_theme_stylesheet QGroupBox rule has border-radius>=8px and background-color=panel_background (REQ-UX-c3920985-0f4d-45a5-927a-bb0cb4adbce4).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-QSS-RADIUS",
+      "statement": "build_theme_stylesheet applies border-radius>=6px to QPushButton and single-line inputs (REQ-UX-b37f9db2-2007-4dd7-8479-0f413be6f106).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-QSS-SCROLLBAR",
+      "statement": "build_theme_stylesheet styles QScrollBar::handle with border color and accent on hover (REQ-UX-5f397ed7-59b5-4acf-8981-9fab7eb3ca10).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-QSS-POPUP",
+      "statement": "build_theme_stylesheet styles QComboBox QAbstractItemView and QMenu with panel_background and text_primary (REQ-UX-e9f779cf-7032-4a23-b8ca-2f305f71c7b9).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-QSS-PROGRESS",
+      "statement": "build_theme_stylesheet QProgressBar::chunk uses the accent color (REQ-UX-56d1df5c-36f3-4e55-b3b1-d075ec3a80bc).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-NAV-ICONS",
+      "statement": "NavigationSidebar.add_page assigns a non-null icon to each of the ten workflow pages (REQ-UX-23258764-2042-4962-8d48-94a157aaad6a).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-NAV-WORDMARK",
+      "statement": "MainWindow builds a QLabel named appWordmark in the toolbar with text containing Audio and Mancer (REQ-UX-a862723d-f64a-4f8c-a5d0-36b6ba6d6052).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-NAV-ACCENT",
+      "statement": "build_theme_stylesheet contains a QListWidget#navigationSidebar item:selected rule using the accent color as a left border (REQ-UX-03b36e7b-8b07-412f-a861-9af51161b1a9).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-HOME-STEPPER",
+      "statement": "HomeProjectPage exposes _workflow_stepper whose step_count() equals the number of stages passed to set_stage_statuses (REQ-UX-4e19bb60-74c3-4d60-9d8d-7da332c055ef).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-HOME-STEPPER-STATUS",
+      "statement": "The workflow stepper statuses() returns the stage status tokens in provided order (REQ-UX-9920bf16-f2cc-4aa8-be6d-6572a11ec1d5).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SPEC-HOME-SERIF",
+      "statement": "HomeProjectPage._name_label uses the 'Georgia' serif font family (REQ-UX-336e32b5-9d9e-4ab5-8a5c-e63b66631147).",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "validation"
+}

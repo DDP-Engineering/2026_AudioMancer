@@ -25,7 +25,6 @@ paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py",
   "04_Software/AudioMancer/tests/conftest.py",
   "04_Software/AudioMancer/tests/test_app_entrypoint.py",
-  "04_Software/AudioMancer/tests/test_documentation_audit.py",
   "04_Software/AudioMancer/tests/test_main_window_lifecycle.py",
   "04_Software/AudioMancer/tests/test_package_import.py",
   "04_Software/AudioMancer/tests/test_traceability.py",

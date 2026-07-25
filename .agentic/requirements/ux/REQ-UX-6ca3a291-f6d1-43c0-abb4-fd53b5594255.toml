@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-6ca3a291-f6d1-43c0-abb4-fd53b5594255"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "Applying UI settings shall set the running application font point size to the base font point size multiplied by the ui_font_size_step factor."
+rationale = "The interface (labels, buttons, controls) must scale with the chosen UI step."
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_apply_ui_settings_scales_ui_and_text_fonts_independently",
+]
+
+created_on = "2026-07-25T07:22:18Z"
+last_updated = "2026-07-25T07:34:03Z"

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-e9e70b03-3fb6-435e-b468-508cf5b6647d"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Deterministic chunking shall return empty for a malformed chunk artifact."
+rationale = "Downstream readers must degrade safely on malformed artifacts."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_load_chunks_returns_empty_for_malformed_artifact",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

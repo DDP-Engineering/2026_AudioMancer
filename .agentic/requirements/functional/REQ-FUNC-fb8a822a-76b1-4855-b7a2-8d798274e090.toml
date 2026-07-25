@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-fb8a822a-76b1-4855-b7a2-8d798274e090"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character discovery state shall use compatible loaded chunks without rediscovery enrichment."
+rationale = "State building must not trigger provider rediscovery."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_build_character_state_uses_resolved_discovery_source",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:36:10Z"

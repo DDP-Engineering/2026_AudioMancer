@@ -99,7 +99,7 @@ Fields:
 Path matching uses normalized forward slashes. Prefer patterns such as
 `src/package/storage/**` over operating-system-specific separators.
 A bare directory path such as `src/package/storage` owns that directory and its
-entire subtree, using the same tree-root semantics as workflow write zones. An
+entire subtree, using the same tree-root semantics as configured stage paths. An
 explicit `src/package/storage/**` pattern remains supported. Matching retains
 Python `fnmatch` semantics, so `*` can cross `/`; use deliberate component
 boundaries and verify them with `adoption scope-check`.
@@ -116,16 +116,18 @@ The workflow compares status levels in this order:
 | `baseline-usable` | The component has enough requirements, tests, and documentation for normal behavior-changing work. |
 | `baseline-strict` | The component has stronger-than-default coverage or review expectations. |
 
-The minimum status required before behavior-changing work is configured by:
+The minimum status required before behavior-changing work is configured in
+`.agentic/workflow.toml` by the component baseline guard:
 
 ```toml
-[adoption]
-default_completion_level = "baseline-usable"
+[components.baseline_guard]
+mode = "enforce"
+minimum_completion_level = "baseline-usable"
 ```
 
 If a run records changes to a mapped component below that level, the component
-baseline invariant can block delivery until adoption is completed or scope is
-revised.
+baseline invariant (`INV-9`) can block delivery until adoption is completed or
+scope is revised. When the guard is `disabled`, the level is not enforced.
 
 ## Bundle Fields
 

@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-581e71fe-24d3-4cfe-a025-f48964ca581d"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block generation shall add and normalize scene-ambience blocks and disable generation for none placement."
+rationale = "Scene ambience must be planned deterministically and be disableable."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_adds_scene_ambience_blocks",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_none_placement_disables_generation",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_normalization_splits_composed_sound_prompts",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

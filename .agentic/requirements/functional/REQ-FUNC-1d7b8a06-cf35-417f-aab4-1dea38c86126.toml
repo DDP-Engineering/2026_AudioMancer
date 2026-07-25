@@ -1,0 +1,23 @@
+schema_version = 1
+id = "REQ-FUNC-1d7b8a06-cf35-417f-aab4-1dea38c86126"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block approval and regeneration shall mark only targeted blocks, preserve approval on display-name edits, and renumber after regenerating a chunk."
+rationale = "Approvals and regeneration must be precise and non-destructive."
+verification = "Automated: 5 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_approve_all_and_edit_preserve_warning_cleared_state",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_approve_selected_speech_block_only_marks_target_block",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_unapprove_selected_speech_block_only_clears_target_block",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_update_character_speech_block_display_name_preserves_approval",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

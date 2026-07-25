@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-5be9f6fe-6c53-4e6d-a5b7-a9e67a9045d7"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Audio Assembly page shall enable the duration control at time limit and use two-column settings with a scene-ambience option."
+rationale = "Assembly settings must be laid out and gated correctly."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_time_limit_enables_duration_control",
+  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_uses_two_column_settings_and_scene_ambience_option",
+]
+
+created_on = "2026-07-19T17:35:00Z"
+last_updated = "2026-07-24T19:30:55Z"

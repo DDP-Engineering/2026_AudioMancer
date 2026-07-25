@@ -277,4 +277,68 @@ def test_home_page_theme_fallback_keeps_source_lock_style_valid(qtbot) -> None:
     assert f"color: {default_colors['danger']};" in page._source_lock_label.styleSheet()
 
 
+def test_home_page_has_workflow_stepper_matching_stage_count(qtbot) -> None:
+    """
+    @brief      Verify the Home page exposes a workflow stepper with one step per stage.
+    @details    Covers REQ-UX-4e19bb60-74c3-4d60-9d8d-7da332c055ef / SPEC-HOME-STEPPER.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+
+    stages = [
+        {"label": f"Stage {index}", "status": "not_started", "note": ""} for index in range(len(page._stage_rows))
+    ]
+    page.set_stage_statuses(stages)
+
+    assert hasattr(page, "_workflow_stepper")
+    assert page._workflow_stepper.step_count() == len(page._stage_rows)
+
+
+def test_home_page_workflow_stepper_reflects_status_tokens(qtbot) -> None:
+    """
+    @brief      Verify the stepper reports stage status tokens in provided order.
+    @details    Covers REQ-UX-9920bf16-f2cc-4aa8-be6d-6572a11ec1d5 / SPEC-HOME-STEPPER-STATUS.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+
+    stages = [
+        {"label": "Text Cleanup", "status": "finished", "note": ""},
+        {"label": "Text Chunking", "status": "in_progress", "note": ""},
+        {"label": "AI Translation", "status": "not_started", "note": ""},
+    ]
+    page.set_stage_statuses(stages)
+
+    assert page._workflow_stepper.statuses() == ["finished", "in_progress", "not_started"]
+
+
+def test_home_page_project_title_uses_serif_font(qtbot) -> None:
+    """
+    @brief      Verify the project-name label uses the Georgia serif display family.
+    @details    Covers REQ-UX-336e32b5-9d9e-4ab5-8a5c-e63b66631147 / SPEC-HOME-SERIF.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+
+    assert page._name_label.font().family() == "Georgia"
+
+
 # END OF FILE

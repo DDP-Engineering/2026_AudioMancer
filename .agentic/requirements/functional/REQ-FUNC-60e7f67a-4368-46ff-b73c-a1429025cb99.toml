@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-60e7f67a-4368-46ff-b73c-a1429025cb99"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Removed Speech Blocks config constants shall not survive in the codebase."
+rationale = "Obsolete report/state constants must not be reachable."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_removed_config_constants_do_not_survive",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

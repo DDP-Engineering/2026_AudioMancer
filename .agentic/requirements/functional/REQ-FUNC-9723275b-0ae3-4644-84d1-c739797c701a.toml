@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-9723275b-0ae3-4644-84d1-c739797c701a"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Translation state shall prefer the default translation profile."
+rationale = "The projection must select the configured default translation profile."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_build_ai_translation_profile_state_prefers_default_translation_profile",
+]
+
+created_on = "2026-07-19T17:18:00Z"
+last_updated = "2026-07-24T19:30:55Z"

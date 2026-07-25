@@ -1,9 +1,20 @@
 {
   "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
   "_comment": "Claude Code hook configuration for the transboarded project root. Hook commands are anchored with ${CLAUDE_PROJECT_DIR} per Claude Code's hook-reliability guidance, so they resolve correctly even in worktree/subagent sessions where cwd can diverge from the project root.",
-  "_comment_permissions": "Outward delivery (git push, gh pr create, gh pr merge, git merge) is denied by default and also gated by the delivery-preflight hook; a human runs those actions after preflight passes. Secret and key files are denied for read and write to mirror the shared write-zone protection list.",
+  "_comment_permissions": "Repository read, write, secret, and delivery policy comes only from validated .agentic/workflow.toml through the shared Python hooks. Claude host approvals remain independent external safety controls.",
+  "_comment_multiedit": "MultiEdit is retained in the write matchers on purpose. Current Claude Code no longer emits it, so on an up-to-date host the alternation never fires and costs nothing; on an older host that still ships the tool, removing it would silently drop write-zone and secret-scan coverage for every batched edit. A matcher that is merely redundant is the safe side of that trade.",
   "hooks": {
     "PreToolUse": [
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.agentic/tools/run_hook.mjs\" \"${CLAUDE_PROJECT_DIR}/.agentic/hooks/guard_read_path.py\"",
+            "statusMessage": "Checking configured read policy"
+          }
+        ]
+      },
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
@@ -46,66 +57,6 @@
           }
         ]
       }
-    ]
-  },
-  "permissions": {
-    "deny": [
-      "Read(.env)",
-      "Read(.env.*)",
-      "Read(**/*.env)",
-      "Read(**/*.pem)",
-      "Read(**/*.key)",
-      "Read(**/*.p12)",
-      "Read(**/*.pfx)",
-      "Read(**/*_rsa)",
-      "Read(**/*_rsa.pub)",
-      "Read(**/id_rsa)",
-      "Read(**/id_rsa.pub)",
-      "Read(**/id_ed25519)",
-      "Read(**/id_ed25519.pub)",
-      "Edit(.env)",
-      "Edit(.env.*)",
-      "Edit(**/*.env)",
-      "Edit(**/*.pem)",
-      "Edit(**/*.key)",
-      "Edit(**/*.p12)",
-      "Edit(**/*.pfx)",
-      "Edit(**/*_rsa)",
-      "Edit(**/*_rsa.pub)",
-      "Edit(**/id_rsa)",
-      "Edit(**/id_rsa.pub)",
-      "Edit(**/id_ed25519)",
-      "Edit(**/id_ed25519.pub)",
-      "Write(.env)",
-      "Write(.env.*)",
-      "Write(**/*.env)",
-      "Write(**/*.pem)",
-      "Write(**/*.key)",
-      "Write(**/*.p12)",
-      "Write(**/*.pfx)",
-      "Write(**/*_rsa)",
-      "Write(**/*_rsa.pub)",
-      "Write(**/id_rsa)",
-      "Write(**/id_rsa.pub)",
-      "Write(**/id_ed25519)",
-      "Write(**/id_ed25519.pub)",
-      "MultiEdit(.env)",
-      "MultiEdit(.env.*)",
-      "MultiEdit(**/*.env)",
-      "MultiEdit(**/*.pem)",
-      "MultiEdit(**/*.key)",
-      "MultiEdit(**/*.p12)",
-      "MultiEdit(**/*.pfx)",
-      "MultiEdit(**/*_rsa)",
-      "MultiEdit(**/*_rsa.pub)",
-      "MultiEdit(**/id_rsa)",
-      "MultiEdit(**/id_rsa.pub)",
-      "MultiEdit(**/id_ed25519)",
-      "MultiEdit(**/id_ed25519.pub)",
-      "Bash(git push*)",
-      "Bash(gh pr create*)",
-      "Bash(gh pr merge*)",
-      "Bash(git merge*)"
     ]
   }
 }

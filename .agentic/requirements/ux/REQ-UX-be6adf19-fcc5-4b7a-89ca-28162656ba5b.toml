@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-be6adf19-fcc5-4b7a-89ca-28162656ba5b"
+category = "ux"
+status = "Active"
+priority = "Should"
+requirement = "The Settings page shall not expose per-color theme editing or custom-theme creation, import, or export controls."
+rationale = "The operator asked to remove color/button customization entirely, keeping only theme selection and font sizing."
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_has_no_color_or_custom_theme_editor",
+]
+
+created_on = "2026-07-25T08:06:49Z"
+last_updated = "2026-07-25T08:13:38Z"

@@ -1,0 +1,23 @@
+schema_version = 1
+id = "REQ-FUNC-c9e38006-7dbd-48ac-8dcc-f5d3f2812145"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech-block direct-block alignment shall map mixed narration and dialogue to source text, default unknown speakers to the review narrator, preserve source gaps, and split long blocks to the TTS budget."
+rationale = "Direct blocks must align to source without loss or fabricated text."
+verification = "Automated: 5 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_align_mixed_narration_dialogue_to_source_text",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_unknown_speaker_defaults_to_review_narrator",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_preserve_source_gaps_and_reject_unmatched_text",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_ignore_whitespace_model_blocks_and_preserve_source_gaps",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_split_long_blocks_to_tts_budget",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

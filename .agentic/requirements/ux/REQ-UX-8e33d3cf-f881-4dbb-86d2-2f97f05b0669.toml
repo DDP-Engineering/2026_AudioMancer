@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-8e33d3cf-f881-4dbb-86d2-2f97f05b0669"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The Settings page shall present a theme selector listing the built-in themes, load the persisted ui_theme_id into it, and write the chosen theme id back into the built settings payload."
+rationale = "Operators need to pick among the few built-in themes without a full theme editor."
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_theme_selector_loads_and_persists",
+]
+
+created_on = "2026-07-25T08:06:47Z"
+last_updated = "2026-07-25T08:13:35Z"

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-dabbd7fc-34e8-44a1-bd38-19a7fde2ce88"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Text cleanup shall persist a confirmed manual clean-text edit and reset downstream work."
+rationale = "Operator edits must persist and invalidate incompatible later stages."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_save_cleaned_text_edit_persists_text_and_resets_downstream",
+]
+
+created_on = "2026-07-18T18:14:00Z"
+last_updated = "2026-07-24T19:30:55Z"

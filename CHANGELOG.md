@@ -10,7 +10,56 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-25
+
+### Added
+
+- Two AudioMancer brand themes derived from the product hero art —
+  **AudioMancer Dark** (deep teal with a gold accent, now the default) and
+  **AudioMancer Parchment** (warm light) — alongside the existing built-in themes.
+- Global, theme-independent font-size steps with seven levels (Extra small →
+  Huge), applied independently to the interface controls and to the text-editor
+  windows, both adjustable from Settings.
+- The Home dashboard now shows a horizontal workflow pipeline stepper with
+  per-stage status (done / in progress / pending) and a serif project title.
+- The navigation sidebar now shows a per-page icon, an "AudioMancer" wordmark,
+  and a gold accent on the active page; each entry carries its full label as a
+  tooltip so long labels stay readable.
+- Workflow pages and the Settings, AI Settings, and TTS Settings dialogs are
+  wrapped in scroll areas so content stays reachable at large font sizes or the
+  minimum window resolution.
+
 ### Changed
+
+- Settings was simplified into an **Appearance** panel: choose a built-in theme
+  and set the interface and text-window font sizes, with a live preview. The
+  default UI theme is now AudioMancer Dark.
+- The theme stylesheet was refined across the app: rounded card group boxes,
+  rounded controls, gold-accented buttons and active states, themed scrollbars
+  and combo/menu popups, and accent-coloured progress bars. Top toolbar labels
+  are now legible on dark themes.
+- Characters demographic fields (Gender/Age Hint and Confidence) now align to
+  the same width as the other Character Profile fields instead of overflowing
+  the panel at the default window size.
+- Speech Blocks source selection now matches Character Discovery: once the AI
+  translation is complete and every chunk is approved, Speech Blocks uses the
+  translated (repair-normalized) text as its source regardless of the selected
+  Character Voices language; otherwise it uses the original chunking text.
+  Selecting a translated voice language no longer raises when the translation is
+  absent or only partially approved — it falls back to the original text.
+- Speech Blocks now persists a single authoritative `speech_blocks.json`
+  document (fixed top-level field set: status, source, ai_profile_id,
+  instructions, scene_ambience, response_contract, token_usage,
+  budget_metadata, checkpoint, failure, blocks). The separate
+  `speech_blocks_report.json` and `speech_blocks_state.json` artifacts are no
+  longer written; the legacy report and operation-state shapes are
+  compatibility projections recomputed from the single document, so
+  `load_speech_blocks_report()` and `load_operation_state()` keep their
+  signatures. The artifact no longer stores a copy of the source-chunk text
+  (only `source.fingerprint`); source chunks are re-resolved from upstream.
+  **Breaking (persistence):** existing projects with the old Speech Blocks
+  artifacts read as not-started and must re-run Speech Blocks; reset now clears
+  the single document and any residual legacy report/state files.
 
 - Text Extraction now persists exactly `extracted_text.txt` and the strict
   authoritative `extraction_metadata.json` document. Status, progress,
@@ -30,6 +79,11 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
+- Removed the Settings colour/custom-theme editor, the per-theme font-family and
+  font-size controls, and theme import/export. Appearance is now the curated
+  built-in themes plus the interface/text font-size steps.
+- Removed the deprecated global `ui_text_scale` setting; existing values are
+  migrated into the new interface/text font-size steps.
 - Removed `extraction_report.json`, `extraction_state.json`,
   `extraction_warning_count`, and `operations.extraction` from active
   persistence contracts. Legacy sidecar names remain reset-only and are not

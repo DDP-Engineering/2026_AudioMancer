@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-8c456cb3-879c-4565-a049-089af132e661"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Audio Assembly page shall render outputs, progress, playback state, and scene-mix previews with localized rows."
+rationale = "The final review surface must present output state readably."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_renders_outputs_progress_and_playback_state",
+  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_renders_scene_mix_previews",
+  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_localizes_mode_and_output_rows",
+]
+
+created_on = "2026-07-19T17:35:00Z"
+last_updated = "2026-07-24T19:30:55Z"

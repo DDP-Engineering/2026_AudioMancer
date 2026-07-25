@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-c0d8d572-0ed6-471c-ab33-b3ba16e55679"
+category = "ux"
+status = "Active"
+priority = "Should"
+requirement = "Each navigation sidebar page entry shall carry its full page label as a tooltip so labels remain readable when elided at large font sizes on the fixed-width sidebar."
+rationale = "The sidebar stays 160px fixed, so long labels can elide; a tooltip keeps them readable."
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_navigation_sidebar.py::test_navigation_sidebar_sets_full_label_tooltip",
+]
+
+created_on = "2026-07-25T08:27:28Z"
+last_updated = "2026-07-25T08:30:40Z"

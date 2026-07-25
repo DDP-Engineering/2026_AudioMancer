@@ -44,6 +44,8 @@ def test_built_in_themes_validate_and_are_deep_copied() -> None:
         "high_contrast",
         "default_dark",
         "dark_contrast",
+        "audiomancer_dark",
+        "audiomancer_parchment",
     ]
     for theme_payload in built_in_themes:
         validated_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
@@ -253,6 +255,100 @@ def test_exported_built_in_theme_imports_as_custom_copy_with_unique_id() -> None
     assert imported_theme["theme_id"] == "classic_light_2"
     assert imported_theme["display_name"] == "Classic Light"
     assert imported_theme["built_in"] is False
+
+
+# @brief Expected color roles for the AudioMancer Dark brand theme (REQ-UX-fe3699e9, SPEC-THEME-DARK).
+_AUDIOMANCER_DARK_COLORS = {
+    "window_background": "#0B2429",
+    "panel_background": "#10313A",
+    "text_primary": "#F1E9DA",
+    "text_muted": "#98AEAC",
+    "accent": "#E3AC52",
+    "border": "#22474D",
+    "warning": "#E0A82E",
+    "success": "#58A877",
+    "danger": "#DA655C",
+    "disabled": "#5E7A78",
+}
+
+# @brief Expected color roles for the AudioMancer Parchment brand theme (REQ-UX-5e28b833, SPEC-THEME-PARCHMENT).
+_AUDIOMANCER_PARCHMENT_COLORS = {
+    "window_background": "#F1E8D6",
+    "panel_background": "#FFFDF6",
+    "text_primary": "#17292C",
+    "text_muted": "#5B6D6B",
+    "accent": "#B07A22",
+    "border": "#E4D8C0",
+    "warning": "#A6701A",
+    "success": "#2F7A4E",
+    "danger": "#A93C36",
+    "disabled": "#A99F8B",
+}
+
+
+def _theme_with_id(theme_id: str) -> dict[str, object]:
+    """
+    @brief      Return the built-in theme payload with the given id.
+    @param[in]  theme_id Target built-in theme identifier.
+    @return     Matching built-in theme payload.
+    @exception  StopIteration Raised when no built-in theme has the id.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    return next(theme for theme in ui_theme_service.built_in_themes() if theme["theme_id"] == theme_id)
+
+
+def test_audiomancer_dark_theme_has_brand_roles() -> None:
+    """
+    @brief      Verify the AudioMancer Dark built-in theme exposes the brand color roles.
+    @details    Covers REQ-UX-fe3699e9-a737-44a0-8e69-ffc490d54bfc / SPEC-THEME-DARK.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    dark_theme = _theme_with_id("audiomancer_dark")
+
+    assert dark_theme["built_in"] is True
+    assert dark_theme["display_name"] == "AudioMancer Dark"
+    assert dark_theme["colors"] == _AUDIOMANCER_DARK_COLORS
+
+
+def test_audiomancer_parchment_theme_has_brand_roles() -> None:
+    """
+    @brief      Verify the AudioMancer Parchment built-in theme exposes the brand color roles.
+    @details    Covers REQ-UX-5e28b833-8917-4f9b-9733-f438e6400a7e / SPEC-THEME-PARCHMENT.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    parchment_theme = _theme_with_id("audiomancer_parchment")
+
+    assert parchment_theme["built_in"] is True
+    assert parchment_theme["display_name"] == "AudioMancer Parchment"
+    assert parchment_theme["colors"] == _AUDIOMANCER_PARCHMENT_COLORS
+
+
+def test_default_theme_id_is_audiomancer_dark() -> None:
+    """
+    @brief      Verify AudioMancer Dark is the default theme and the missing-id fallback resolves it.
+    @details    Covers REQ-UX-5692f984-04af-46a1-bbf0-b71cfad0f3cd / SPEC-THEME-DEFAULT and keeps the
+                REQ-UX-ce3d3202 fallback-follows-default contract green.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    assert ui_theme_service.default_theme_id() == "audiomancer_dark"
+
+    resolved_theme = ui_theme_service.theme_by_id("missing_theme", [])
+    assert resolved_theme["theme_id"] == "audiomancer_dark"
+    assert resolved_theme["built_in"] is True
 
 
 # END OF FILE

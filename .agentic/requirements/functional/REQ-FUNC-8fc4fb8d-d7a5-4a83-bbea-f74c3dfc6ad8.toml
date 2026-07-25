@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-8fc4fb8d-d7a5-4a83-bbea-f74c3dfc6ad8"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Source import shall reject a previous-source path that escapes the project root."
+rationale = "Replacement must not delete files outside the project."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_previous_source_traversal_path",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

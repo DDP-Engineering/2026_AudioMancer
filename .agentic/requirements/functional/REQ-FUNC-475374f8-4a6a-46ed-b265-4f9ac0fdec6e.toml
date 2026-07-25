@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-475374f8-4a6a-46ed-b265-4f9ac0fdec6e"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Home presenter shall mark cleanup as in-progress in the derived stage statuses."
+rationale = "The Home surface must reflect derived per-stage lifecycle status."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_cleanup_as_in_progress",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

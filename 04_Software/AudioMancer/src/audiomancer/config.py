@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.41.6
+@version 1.42.0
 """
 
 # IMPORTS
@@ -340,14 +340,8 @@ NARRATOR_VOICE_FILE_NAME = "narrator_voice.json"
 # @brief File name used for persisted character-voices target records.
 CHARACTER_VOICES_TARGETS_FILE_NAME = "characters_voice.json"
 
-# @brief File name used for persisted Speech Blocks output.
-SPEECH_BLOCKS_OUTPUT_FILE_NAME = "speech_blocks.json"
-
-# @brief File name used for persisted Speech Blocks report metadata.
-SPEECH_BLOCKS_REPORT_FILE_NAME = "speech_blocks_report.json"
-
-# @brief File name used for persisted Speech Blocks runtime state.
-SPEECH_BLOCKS_STATE_FILE_NAME = "speech_blocks_state.json"
+# @brief File name used for the authoritative single Speech Blocks document.
+SPEECH_BLOCKS_DOCUMENT_FILE_NAME = "speech_blocks.json"
 
 # @brief Default pause duration used when a pause Speech Block has no valid duration.
 DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS = 1000
@@ -423,8 +417,17 @@ DEFAULT_UI_TEXT_SCALE = "normal"
 # @brief Supported operator-selectable UI text-scale presets.
 UI_TEXT_SCALE_OPTIONS = ("very_small", "small", "normal", "large", "very_large")
 
+# @brief Ordered, operator-selectable UI font-size steps (extra small -> huge).
+UI_FONT_SIZE_STEPS = ("extra_small", "small", "medium", "normal", "large", "very_large", "huge")
+
+# @brief Default control/interface font-size step.
+DEFAULT_UI_FONT_SIZE_STEP = "normal"
+
+# @brief Default text-window (editor) font-size step.
+DEFAULT_TEXT_FONT_SIZE_STEP = "normal"
+
 # @brief Default selected UI theme identifier.
-DEFAULT_UI_THEME_ID = "classic_light"
+DEFAULT_UI_THEME_ID = "audiomancer_dark"
 
 # @brief Current persisted UI theme schema version.
 UI_THEME_SCHEMA_VERSION = 1

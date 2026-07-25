@@ -1,0 +1,188 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "When translation is complete and all chunks approved, resolve_source_chunks returns source_kind=translated with translated_text regardless of selected voice language; when translation is absent/incomplete/not-fully-approved it returns source_kind=original; behavior mirrors character_discovery._resolve_discovery_input_chunks; suite green."
+    ],
+    "assumptions": [
+      "The change mirrors Character Discovery exactly: translation-complete-and-fully-approved unconditionally selects translated text; the selected Character Voices language no longer influences SOURCE selection.",
+      "'Complete and fully approved' means every original chunk has a non-empty approved translated_text (same predicate Character Discovery uses)."
+    ],
+    "created_at": "2026-07-24T19:40:07+00:00",
+    "decision": "pause",
+    "open_questions": [
+      "When a translation is complete and fully approved, should Speech Blocks ALWAYS use the translated text (fully matching Character Discovery, so the selected voice language no longer influences source selection) even if the operator selected the original voice language?"
+    ],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py"
+    ],
+    "reason": "Behavior change to core source selection that re-contracts an Active requirement (REQ-FUNC-e85a7cf0) and 3 tests; one open design question about whether to fully drop the voice-language gate. Risk medium meets policy threshold, so human approval is required before requirement/spec work.",
+    "recommended_responses": [
+      "Yes: always use translated text when translation is complete+approved, mirroring Character Discovery; drop the voice-language gate from source selection. This makes the two operations consistent and always uses the repair-normalized text."
+    ],
+    "risk": "medium",
+    "scope": [
+      "IN: speech_blocks_service.resolve_source_chunks() source-selection rule; re-contract the 3 linked tests (test_resolve_source_chunks_uses_original_language_selection, _requires_fully_approved_translation, _uses_approved_translated_language_selection) and update REQ-FUNC-e85a7cf0. OUT: Character Discovery (already correct), Speech Blocks persistence (just delivered), voice/speaker assignment and narrator-language logic, AI logic/prompts, UI."
+    ],
+    "source": "User request (chat): use translated text for Speech Blocks once translation is complete and fully approved, matching Character Discovery; translated text is also repair-normalized.",
+    "understanding": "Speech Blocks currently selects its source text via resolve_source_chunks() keyed on the selected Character Voices language (original vs translated target), only using translation when that language is selected. Character Discovery already keys purely on translation being complete and every chunk approved (_resolve_discovery_input_chunks). This change makes Speech Blocks consistent: when a translation exists, is complete, and every chunk is approved, use the translated (repair-normalized) text as the source regardless of the selected voice language; otherwise use the original chunking text."
+  },
+  "change_units": [
+    {
+      "id": "CHG-XLAT-1",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py"
+      ]
+    },
+    {
+      "id": "CHG-XLAT-2",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_speech_blocks_service.py"
+      ]
+    },
+    {
+      "id": "CHG-XLAT-3",
+      "touched_paths": [
+        ".agentic/knowledge/components/Speech_Blocks.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-e85a7cf0-31c4-4f7b-8b05-e01691a47074"
+      ],
+      "cites_spec": [
+        "SPEC-SB-XLAT-SOURCE"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_translated_when_fully_approved 04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_translated_regardless_of_selected_voice_language",
+      "green_evidence": "E-0002",
+      "id": "CHK-SB-XLAT-SOURCE",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-e85a7cf0-31c4-4f7b-8b05-e01691a47074"
+      ],
+      "cites_spec": [
+        "SPEC-SB-XLAT-PARTIAL"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_original_when_no_translation 04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_falls_back_to_original_when_translation_partially_approved",
+      "green_evidence": "E-0003",
+      "id": "CHK-SB-XLAT-PARTIAL",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "red_evidence": "E-0004",
+      "state": "red"
+    }
+  ],
+  "decisions": [],
+  "evidence": [
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py -k resolve_source_chunks",
+      "created_at": "2026-07-24T19:56:08+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red-before-green: 3 changed-behavior resolve_source_chunks tests fail against the current voice-language-driven rule (translated-regardless-of-voice, original-when-no-translation, original-when-partial); 1 preserved case passes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py -k resolve_source_chunks",
+      "created_at": "2026-07-24T19:59:56+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "resolve_source_chunks now mirrors Character Discovery: 4 target tests pass (translated when complete+approved regardless of voice language; original when absent/partial). Speech-blocks suites: 109 passed. ruff clean; character_voices_service import removed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q (targeted suites)",
+      "created_at": "2026-07-24T20:23:10+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "No regressions from the translated-source change: all targeted suites green (resolve_source_chunks 4/4; speech-blocks 109; audio+voices+home 91; ai_translation+discovery+narrator+workspace+export+config+chunking 126). Only pre-existing failures remain (test_blocks_performance_baseline chunking-tool debt; test_traceability legacy module-coverage), both verified independent of this change.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py -k resolve_source_chunks",
+      "created_at": "2026-07-24T20:24:18+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red-first (check gate): against the old voice-language rule, _uses_original_when_no_translation and _falls_back_to_original_when_translation_partially_approved failed (old impl raised instead of returning original).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "aegis invariants; aegis audit traceability; aegis audit coverage; ruff check",
+      "created_at": "2026-07-24T20:25:21+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Validation clean: INV-1..9 hold; audit traceability OK (no issues); audit coverage OK; ruff clean on changed files. No regressions (targeted suites green); only pre-existing failures (perf-baseline chunking-tool debt, verified independent) remain.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-24T19:39:41+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [],
+    "statement": "Align Speech Blocks source selection with Character Discovery: when AI translation is complete and every chunk is approved, Speech Blocks uses the translated (repair-normalized) text as its source, independent of the selected Character Voices language. Mirrors character_discovery_service._resolve_discovery_input_chunks. Rationale: translated text is also repaired (e.g. newlines mid-phrase).",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-24T193941Z-5b1fccaa",
+  "spec_items": [
+    {
+      "examples": [
+        "All chunks approved + original voice language selected -> still source_kind=translated."
+      ],
+      "id": "SPEC-SB-XLAT-SOURCE",
+      "statement": "resolve_source_chunks() returns source_kind=translated with translated_text when the translation is complete and every chunk approved, independent of the selected voice language; otherwise source_kind=original.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "One chunk unapproved -> source_kind=original."
+      ],
+      "id": "SPEC-SB-XLAT-PARTIAL",
+      "statement": "resolve_source_chunks() falls back to source_kind=original when no translation exists, or the translation is missing any chunk, unapproved, or has empty translated_text.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "validation"
+}

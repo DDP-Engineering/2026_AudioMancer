@@ -195,17 +195,17 @@ def test_operation_json_artifact_round_trips_via_shared_io(tmp_path) -> None:
     output_path = operation_runtime_service.write_operation_json_artifact(
         project_root,
         "speech_blocks",
-        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
         {"status": "completed", "progress_current": 3, "progress_total": 3},
     )
     state_payload = operation_runtime_service.load_operation_state_payload(
         project_root,
         "speech_blocks",
-        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
     )
     artifact_payload = operation_runtime_service.load_optional_json_artifact(output_path)
 
-    assert output_path == project_root / config.SPEECH_BLOCKS_STATE_FILE_NAME
+    assert output_path == project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
     assert state_payload == {"status": "completed", "progress_current": 3, "progress_total": 3}
     assert artifact_payload == state_payload
 
@@ -375,7 +375,7 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
     narrator_audio_path.write_bytes(b"RIFF")
     (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
 
     operation_runtime_service.reset_operation_data(
         project_root,
@@ -388,7 +388,7 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
     assert narrator_audio_path.is_file()
     assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
-    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).exists()
 
 
 def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> None:
@@ -405,7 +405,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
 
     operation_runtime_service.reset_operation_data(
@@ -418,7 +418,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     assert (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).is_file()
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
-    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).exists()
     assert not (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()
 
 

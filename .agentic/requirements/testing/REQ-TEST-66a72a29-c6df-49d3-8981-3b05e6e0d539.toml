@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-TEST-66a72a29-c6df-49d3-8981-3b05e6e0d539"
+category = "testing"
+status = "Active"
+priority = "Must"
+requirement = "All Active requirements shall declare a resolvable verification."
+rationale = "Every active contract must have a verifiable method."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/tests/test_traceability.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_traceability.py::test_active_requirements_declare_verification",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

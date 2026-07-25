@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-c8f487fb-3c1a-49a7-a246-f404997ebdd5"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The translation controller reset shall remove the single translation document and preserve narrator work."
+rationale = "Reset must clear translation state without disturbing narrator artifacts."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_controller_reset_removes_monofile_and_preserves_narrator",
+]
+
+created_on = "2026-07-19T17:18:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -16,6 +16,13 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Use this skill when creating a new component document or updating an existing
 component document after a material implementation change.
 
+Before repository inspection or edits, read `AGENTS.md`, run
+`<workflow> config validate --json` and
+`<workflow> config show --effective --json`, and report the effective write,
+protected-read/path, scope, secret, gate, coverage, and delivery modes and
+active rule counts. State the selected run when graph state is needed and
+distinguish AEGIS repository policy from external platform safety.
+
 Read these files before drafting the document:
 
 - `.agentic/knowledge/components/component_template.md`
@@ -55,7 +62,7 @@ Content expectations by section:
 - `5. Inputs And Outputs`: cover arguments, config, files, artifacts, logs, and
   state changes.
 - `6. Data Contracts`: document stable fields, schemas, file naming,
-  invariants, and deterministic fallbacks when relevant.
+  invariants, and deterministic error behavior when relevant.
 - `7. Workflow Integration`: explain upstream callers, downstream consumers, and
   in-repo usage.
 - `8. Usage`: show short repo-relevant examples or command patterns.

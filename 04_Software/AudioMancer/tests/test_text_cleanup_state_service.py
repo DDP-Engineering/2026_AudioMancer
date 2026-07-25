@@ -248,7 +248,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "text_chunking_ready"
     manifest["narrator_profile_name"] = "Warm Narrator"
     manifest["narrator_language"] = "fr"
@@ -283,7 +283,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
     assert not (project_root / config.NARRATOR_VOICE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
-    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).exists()
     assert not (cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).exists()
     assert not (cleanup_root / config.CLEANUP_STATE_FILE_NAME).exists()
     assert not (cleanup_root / config.CLEANUP_DOCUMENT_FILE_NAME).exists()

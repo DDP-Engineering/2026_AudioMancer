@@ -8,117 +8,53 @@
 # -----------------------------------------------------------------------------
 """
 @file requirements.py
-@brief Requirement registry, coverage, and traceability helpers.
-@details Provides reusable implementation behavior for the standalone AEGIS system,
-including linked-test validation and read-only registry freshness checks.
+@brief Requirement snapshot, coverage, impact, and traceability helpers.
+@details Builds all reverse mappings in memory from canonical UUID-backed TOML
+         snapshots and never persists a generated registry or cache.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.4.0
+@date 2026-07-22
+@version 0.7.0
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
-from fnmatch import fnmatch
-import json
-import re
+from dataclasses import dataclass, replace
+from fnmatch import fnmatchcase
 from pathlib import Path
+import re
 from typing import Any
 
-from .components import audit_components, load_components
-from .config import WorkflowConfig, load_config
+from .config import WorkflowConfig
+from .paths import matches_pattern
+from .requirement_store import (
+    RequirementRecord,
+    RequirementValidationError,
+    create_requirement_record,
+    find_requirement_record,
+    load_all_requirement_records,
+    manual_verification,
+    normalize_linked_test,
+    normalize_repository_path,
+    utc_timestamp,
+    validate_requirement_record,
+    write_requirement_record,
+)
 from .working_tree import _git_status
-
-# CONSTANTS
-
-REGISTER_HEADER = [
-    "ID",
-    "Status",
-    "Priority",
-    "Requirement",
-    "Rationale",
-    "Related Components",
-    "Verification Method",
-    "Linked Tests",
-    "Created On",
-    "Last Updated",
-]
-
-VALID_STATUS = {"Planned", "Active", "Retired"}
-VALID_PRIORITY = {"Must", "Should", "Could"}
-ID_PATTERN = re.compile(r"^REQ-[A-Z]+-\d{3,}$")
-DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
-MANUAL_MARKERS = ("manual", "inspection")
 
 # DATA MODELS / TYPEDEFINITIONS
 
 
-@dataclass
-class RequirementRow:
-    """
-    @brief      Represent RequirementRow data used by the workflow.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    req_id: str
-    status: str
-    priority: str
-    requirement: str
-    rationale: str
-    related_components: list[str]
-    verification: str
-    linked_tests: list[str]
-    created_on: str
-    last_updated: str
-    source_file: str
-    line_number: int
-
-    def file_components(self) -> list[str]:
-        """
-        @brief      Handle file components workflow behavior.
-        @return     Result produced by the workflow helper.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-20
-        @version    0.1.0
-        """
-        return [item for item in self.related_components if _looks_like_file(item)]
-
-    def directory_components(self) -> list[str]:
-        """
-        @brief      Handle directory components workflow behavior.
-        @return     Result produced by the workflow helper.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-20
-        @version    0.1.0
-        """
-        return [item for item in self.related_components if not _looks_like_file(item)]
-
-    def to_dict(self) -> dict[str, Any]:
-        """
-        @brief      Handle to dict workflow behavior.
-        @return     Result produced by the workflow helper.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-20
-        @version    0.1.0
-        """
-        return asdict(self)
-
-
-@dataclass
+@dataclass(frozen=True)
 class AuditIssue:
     """
-    @brief      Represent AuditIssue data used by the workflow.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Represent one deterministic traceability or coverage finding.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
     """
+
     code: str
     message: str
     req_id: str | None = None
@@ -126,172 +62,257 @@ class AuditIssue:
 
     def to_dict(self) -> dict[str, Any]:
         """
-        @brief      Handle to dict workflow behavior.
-        @return     Result produced by the workflow helper.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-20
-        @version    0.1.0
+        @brief Return a JSON-compatible finding.
+        @return Finding fields in stable order.
+        @author Eng. Dan Dumitru Pasare
+        @date 2026-07-22
+        @version 0.2.0
         """
-        return asdict(self)
+        return {
+            "code": self.code,
+            "message": self.message,
+            "req_id": self.req_id,
+            "path": self.path,
+        }
+
+
+@dataclass(frozen=True)
+class RequirementIndex:
+    """
+    @brief Hold non-persisted requirement reverse mappings.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.1.0
+    """
+
+    by_id: dict[str, RequirementRecord]
+    by_test: dict[str, tuple[str, ...]]
+    by_path: dict[str, tuple[str, ...]]
 
 
 # PUBLIC API
 
 
-def load_all_requirements(repo_root: Path, config: WorkflowConfig | None = None) -> list[RequirementRow]:
+def load_all_requirements(
+    repo_root: Path, config: WorkflowConfig
+) -> list[RequirementRecord]:
     """
-    @brief      Load all requirements workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Load every canonical requirement snapshot.
+    @param[in] repo_root Repository root.
+    @param[in] config Already validated workflow configuration.
+    @return Records sorted by ID and source path.
+    @exception RequirementValidationError If a snapshot is malformed.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.3.0
     """
-    cfg = config or load_config(repo_root)
-    rows: list[RequirementRow] = []
-    for root_name in cfg.requirement_roots:
-        root = repo_root / root_name
-        if not root.exists():
-            continue
-        for path in sorted(root.glob("*.md")):
-            if path.name.lower() == "readme.md":
-                continue
-            rows.extend(parse_register_file(path, repo_root))
-    return rows
+    return load_all_requirement_records(repo_root, config)
 
 
-def parse_register_file(path: Path, repo_root: Path | None = None) -> list[RequirementRow]:
+def build_requirement_index(records: list[RequirementRecord]) -> RequirementIndex:
     """
-    @brief      Parse register file workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Build deterministic in-memory ID, test, and affected-path mappings.
+    @param[in] records Canonical validated requirement records.
+    @return Non-persisted reverse index.
+    @exception RequirementValidationError If a requirement ID is duplicated.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.1.0
     """
-    text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    header_index = _find_header(lines)
-    if header_index is None:
-        return []
-    rows: list[RequirementRow] = []
-    source = _relative(path, repo_root) if repo_root else path.as_posix()
-    for index, line in enumerate(lines[header_index + 2 :], start=header_index + 3):
-        if not line.strip().startswith("|"):
-            continue
-        cells = _split_markdown_row(line)
-        if len(cells) != len(REGISTER_HEADER):
-            continue
-        rows.append(
-            RequirementRow(
-                req_id=cells[0],
-                status=cells[1],
-                priority=cells[2],
-                requirement=cells[3],
-                rationale=cells[4],
-                related_components=_split_cell(cells[5]),
-                verification=cells[6],
-                linked_tests=_split_cell(cells[7]),
-                created_on=cells[8],
-                last_updated=cells[9],
-                source_file=source,
-                line_number=index,
+    by_id: dict[str, RequirementRecord] = {}
+    test_sets: dict[str, set[str]] = {}
+    path_sets: dict[str, set[str]] = {}
+    for record in sorted(records, key=lambda item: (item.id, item.source_file or "")):
+        if record.id in by_id:
+            previous = by_id[record.id].source_file or "<unknown>"
+            current = record.source_file or "<unknown>"
+            raise RequirementValidationError(
+                current,
+                "id",
+                f"duplicate requirement ID {record.id}; first defined at {previous}",
             )
-        )
-    return rows
+        by_id[record.id] = record
+        for selector in record.linked_tests:
+            test_sets.setdefault(selector, set()).add(record.id)
+        for pattern in record.affected_paths:
+            path_sets.setdefault(pattern, set()).add(record.id)
+    return RequirementIndex(
+        by_id=dict(sorted(by_id.items())),
+        by_test={key: tuple(sorted(value)) for key, value in sorted(test_sets.items())},
+        by_path={key: tuple(sorted(value)) for key, value in sorted(path_sets.items())},
+    )
 
 
-def validate_rows(rows: list[RequirementRow]) -> list[AuditIssue]:
+def load_requirement_index(
+    repo_root: Path, config: WorkflowConfig
+) -> RequirementIndex:
     """
-    @brief      Validate rows workflow behavior.
-    @param[in]  rows Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Load canonical records and build their process-local reverse index.
+    @param[in] repo_root Repository root.
+    @param[in] config Already validated workflow configuration.
+    @return Deterministic in-memory index.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
     """
-    issues: list[AuditIssue] = []
-    seen: set[str] = set()
-    for row in rows:
-        location = f"{row.source_file}:{row.line_number}"
-        if row.req_id in seen:
-            issues.append(AuditIssue("REQ-DUPLICATE-ID", f"{row.req_id} is duplicated at {location}", row.req_id))
-        seen.add(row.req_id)
-        if not ID_PATTERN.match(row.req_id):
-            issues.append(AuditIssue("REQ-BAD-ID", f"{row.req_id} has invalid ID format at {location}", row.req_id))
-        if row.status not in VALID_STATUS:
-            issues.append(AuditIssue("REQ-BAD-STATUS", f"{row.req_id} has invalid status {row.status}", row.req_id))
-        if row.priority not in VALID_PRIORITY:
-            issues.append(AuditIssue("REQ-BAD-PRIORITY", f"{row.req_id} has invalid priority {row.priority}", row.req_id))
-        if row.created_on and not DATE_PATTERN.match(row.created_on):
-            issues.append(AuditIssue("REQ-BAD-CREATED-ON", f"{row.req_id} has invalid Created On timestamp", row.req_id))
-        if row.last_updated and not DATE_PATTERN.match(row.last_updated):
-            issues.append(AuditIssue("REQ-BAD-LAST-UPDATED", f"{row.req_id} has invalid Last Updated timestamp", row.req_id))
-    return issues
+    return build_requirement_index(
+        load_all_requirement_records(repo_root, config)
+    )
 
 
-def audit_traceability(repo_root: Path, config: WorkflowConfig | None = None) -> list[AuditIssue]:
+def create_requirement(
+    repo_root: Path,
+    *,
+    category: str,
+    priority: str,
+    requirement: str,
+    rationale: str,
+    verification: str,
+    config: WorkflowConfig,
+    affected_paths: list[str] | None = None,
+    linked_tests: list[str] | None = None,
+    timestamp: str | None = None,
+) -> RequirementRecord:
     """
-    @brief      Audit traceability workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Create one independent Planned requirement snapshot.
+    @return Newly persisted UUID-backed record.
+    @exception ValueError If fields or linked tests are invalid.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
     """
-    cfg = config or load_config(repo_root)
-    rows = load_all_requirements(repo_root, cfg)
-    issues = validate_rows(rows)
-    for row in rows:
-        unresolved = []
-        for test_id in row.linked_tests:
-            resolves, reason = resolve_test(repo_root, test_id, cfg)
-            if not resolves:
-                unresolved.append((test_id, reason))
-                issues.append(AuditIssue("REQ-LINK-MISSING", f"{row.req_id} linked test {test_id} does not resolve: {reason}", row.req_id))
-        if row.status == "Active":
-            has_automated = bool(row.linked_tests) and not unresolved
-            has_manual = any(marker in row.verification.lower() for marker in MANUAL_MARKERS)
-            if not has_automated and not has_manual:
-                issues.append(AuditIssue("REQ-NO-VERIFICATION", f"{row.req_id} is Active without a resolvable linked test or manual verification", row.req_id))
-    return issues
+    tests = linked_tests or []
+    _require_resolvable_tests(repo_root, tests, config)
+    return create_requirement_record(
+        repo_root,
+        config,
+        category=category,
+        priority=priority,
+        requirement=requirement,
+        rationale=rationale,
+        verification=verification,
+        affected_paths=affected_paths or [],
+        linked_tests=tests,
+        timestamp=timestamp,
+    )
 
 
-def audit_coverage(repo_root: Path, config: WorkflowConfig | None = None) -> list[AuditIssue]:
+def show_requirement(
+    repo_root: Path, requirement_id: str, config: WorkflowConfig
+) -> RequirementRecord:
     """
-    @brief      Audit coverage workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Return one current requirement snapshot by canonical ID.
+    @param[in] repo_root Repository root.
+    @param[in] requirement_id Canonical UUID-backed requirement ID.
+    @param[in] config Validated workflow configuration.
+    @return Matching current record.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
     """
-    cfg = config or load_config(repo_root)
-    rows = load_all_requirements(repo_root, cfg)
-    waivers = load_waivers(repo_root, cfg)
-    coverable = iter_coverable_files(repo_root, cfg)
-    issues: list[AuditIssue] = []
-    for relative_path in coverable:
-        covered = _is_covered(repo_root, rows, relative_path, cfg)
-        waived = relative_path in waivers
-        if not covered and not waived:
-            issues.append(AuditIssue("REQ-COVERAGE-MISSING", f"{relative_path} has no file-level test-linked requirement and is not waived", path=relative_path))
-        if covered and waived:
-            issues.append(AuditIssue("REQ-COVERAGE-STALE-WAIVER", f"{relative_path} is covered; remove stale waiver", path=relative_path))
-    for waived_path in waivers:
-        if waived_path not in coverable:
-            issues.append(AuditIssue("REQ-COVERAGE-STALE-WAIVER", f"{waived_path} is waived but not coverable; remove stale waiver", path=waived_path))
-    return issues
+    return find_requirement_record(repo_root, requirement_id, config)
+
+
+def list_requirements(
+    repo_root: Path,
+    *,
+    config: WorkflowConfig,
+    category: str | None = None,
+    status: str | None = None,
+) -> list[RequirementRecord]:
+    """
+    @brief List current snapshots with optional exact category and status filters.
+    @return Matching records ordered by ID.
+    @exception ValueError If a filter value is unsupported.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
+    """
+    records = load_all_requirement_records(repo_root, config)
+    if category is not None:
+        categories = {
+            "functional",
+            "ux",
+            "non_functional",
+            "security",
+            "data_privacy",
+            "platform",
+            "release",
+            "testing",
+        }
+        if category not in categories:
+            raise ValueError(f"Unsupported requirement category: {category}")
+        records = [record for record in records if record.category == category]
+    if status is not None:
+        if status not in {"Planned", "Active", "Retired"}:
+            raise ValueError(f"Unsupported requirement status: {status}")
+        records = [record for record in records if record.status == status]
+    return records
+
+
+def update_requirement(
+    repo_root: Path,
+    requirement_id: str,
+    *,
+    config: WorkflowConfig,
+    status: str | None = None,
+    priority: str | None = None,
+    requirement: str | None = None,
+    rationale: str | None = None,
+    verification: str | None = None,
+    linked_tests: list[str] | None = None,
+    clear_linked_tests: bool = False,
+    affected_paths: list[str] | None = None,
+    clear_affected_paths: bool = False,
+    timestamp: str | None = None,
+) -> RequirementRecord:
+    """
+    @brief Atomically apply scalar patches and complete collection replacements.
+    @return Resulting complete current record.
+    @exception ValueError If options conflict, no update is supplied, or validation fails.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
+    """
+    if linked_tests is not None and clear_linked_tests:
+        raise ValueError("linked_tests and clear_linked_tests are mutually exclusive")
+    if affected_paths is not None and clear_affected_paths:
+        raise ValueError("affected_paths and clear_affected_paths are mutually exclusive")
+    supplied = any(
+        value is not None
+        for value in (status, priority, requirement, rationale, verification, linked_tests, affected_paths)
+    ) or clear_linked_tests or clear_affected_paths
+    if not supplied:
+        raise ValueError("At least one requirement update option is required.")
+    current = find_requirement_record(repo_root, requirement_id, config)
+    new_tests = (
+        tuple()
+        if clear_linked_tests
+        else tuple(linked_tests)
+        if linked_tests is not None
+        else current.linked_tests
+    )
+    new_paths = (
+        tuple()
+        if clear_affected_paths
+        else tuple(affected_paths)
+        if affected_paths is not None
+        else current.affected_paths
+    )
+    candidate = replace(
+        current,
+        status=status if status is not None else current.status,
+        priority=priority if priority is not None else current.priority,
+        requirement=requirement if requirement is not None else current.requirement,
+        rationale=rationale if rationale is not None else current.rationale,
+        verification=verification if verification is not None else current.verification,
+        linked_tests=new_tests,
+        affected_paths=new_paths,
+        last_updated=timestamp or utc_timestamp(),
+    )
+    normalized = validate_requirement_record(candidate, config)
+    _require_resolvable_tests(repo_root, list(normalized.linked_tests), config)
+    return write_requirement_record(repo_root, normalized, config)
 
 
 def activate_requirement(
@@ -299,71 +320,158 @@ def activate_requirement(
     req_id: str,
     linked_tests: list[str],
     verification: str,
-    config: WorkflowConfig | None = None,
-) -> RequirementRow:
+    config: WorkflowConfig,
+    *,
+    timestamp: str | None = None,
+) -> RequirementRecord:
     """
-    @brief      Activate a requirement after validating each newly linked test.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  req_id Input value used by the workflow helper.
-    @param[in]  linked_tests Input value used by the workflow helper.
-    @param[in]  verification Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  ValueError If activation data is invalid, a linked test does not
-                resolve, or the requirement cannot be found.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.2.0
+    @brief Activate a record while replacing its complete linked-test set.
+    @return Persisted Active snapshot.
+    @exception ValueError If verification or any selector is invalid.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.4.0
     """
-    cfg = config or load_config(repo_root)
-    if not linked_tests and not any(marker in verification.lower() for marker in MANUAL_MARKERS):
-        raise ValueError("Requirement activation needs at least one linked test or manual verification text.")
-    unresolved_tests: list[str] = []
-    for test_id in linked_tests:
-        resolved, reason = resolve_test(repo_root, test_id, cfg)
-        if not resolved:
-            unresolved_tests.append(f"{test_id}: {reason}")
-    if unresolved_tests:
-        raise ValueError(f"linked test(s) do not resolve: {'; '.join(unresolved_tests)}")
-    for root_name in cfg.requirement_roots:
-        root = repo_root / root_name
-        if not root.exists():
-            continue
-        for path in sorted(root.glob("*.md")):
-            if path.name.lower() == "readme.md":
-                continue
-            updated = _activate_requirement_in_file(path, repo_root, req_id, linked_tests, verification)
-            if updated:
-                return updated
-    raise ValueError(f"Requirement not found: {req_id}")
+    if not linked_tests and not manual_verification(verification.strip()):
+        raise ValueError(
+            "Requirement activation needs linked tests or explicit `Manual:`/`Inspection:` verification."
+        )
+    _require_resolvable_tests(repo_root, linked_tests, config)
+    return update_requirement(
+        repo_root,
+        req_id,
+        status="Active",
+        verification=verification,
+        linked_tests=linked_tests,
+        config=config,
+        timestamp=timestamp,
+    )
 
 
-def impact(repo_root: Path, files: list[str] | None = None, config: WorkflowConfig | None = None) -> list[dict[str, Any]]:
+def audit_traceability(
+    repo_root: Path, config: WorkflowConfig
+) -> list[AuditIssue]:
     """
-    @brief      Build impact workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  files Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Validate current linked tests and Active verification contracts.
+    @return Deterministically ordered findings.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.3.0
     """
-    cfg = config or load_config(repo_root)
-    rows = load_all_requirements(repo_root, cfg)
-    coverable = set(iter_coverable_files(repo_root, cfg))
-    candidates = files or _git_working_set(repo_root)
-    report = []
+    index = load_requirement_index(repo_root, config)
+    issues: list[AuditIssue] = []
+    for record in index.by_id.values():
+        unresolved: list[tuple[str, str]] = []
+        for selector in record.linked_tests:
+            resolved, reason = resolve_test(repo_root, selector, config)
+            if not resolved:
+                unresolved.append((selector, reason))
+                issues.append(
+                    AuditIssue(
+                        "REQ-LINK-MISSING",
+                        f"{record.id} linked test {selector} does not resolve: {reason}",
+                        record.id,
+                        record.source_file,
+                    )
+                )
+        if record.status != "Retired" and (
+            (not record.linked_tests or unresolved) and not manual_verification(record.verification)
+        ):
+            issues.append(
+                AuditIssue(
+                    "REQ-NO-VERIFICATION",
+                    f"{record.id} ({record.status}) has no resolvable linked-test set and no explicit manual verification",
+                    record.id,
+                    record.source_file,
+                )
+            )
+    return sorted(issues, key=lambda item: (item.req_id or "", item.code, item.path or ""))
+
+
+def audit_coverage(
+    repo_root: Path, config: WorkflowConfig
+) -> list[AuditIssue]:
+    """
+    @brief Check configured coverable files against live current snapshots.
+    @return Coverage and stale-waiver findings ordered by path.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.3.0
+    """
+    if config.coverage.mode == "disabled":
+        return []
+    records = load_all_requirement_records(repo_root, config)
+    build_requirement_index(records)
+    waivers = load_waivers(repo_root, config)
+    coverable = iter_coverable_files(repo_root, config)
+    issues: list[AuditIssue] = []
+    for relative_path in coverable:
+        covered = _is_covered(repo_root, records, relative_path, config)
+        waived = relative_path in waivers
+        if not covered and not waived:
+            issues.append(
+                AuditIssue(
+                    "REQ-COVERAGE-MISSING",
+                    f"{relative_path} has no Active test-linked requirement and is not waived",
+                    path=relative_path,
+                )
+            )
+        if covered and waived:
+            issues.append(
+                AuditIssue(
+                    "REQ-COVERAGE-STALE-WAIVER",
+                    f"{relative_path} is covered; remove stale waiver",
+                    path=relative_path,
+                )
+            )
+    for waived_path in waivers:
+        if waived_path not in coverable:
+            issues.append(
+                AuditIssue(
+                    "REQ-COVERAGE-STALE-WAIVER",
+                    f"{waived_path} is waived but not coverable; remove stale waiver",
+                    path=waived_path,
+                )
+            )
+    return sorted(issues, key=lambda item: (item.path or "", item.code))
+
+
+def impact(
+    repo_root: Path,
+    files: list[str] | None = None,
+    *,
+    config: WorkflowConfig,
+) -> list[dict[str, Any]]:
+    """
+    @brief Map changed paths to live requirement snapshots and current tests.
+    @return One deterministic impact object per normalized candidate path.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.3.0
+    """
+    records = load_all_requirement_records(repo_root, config)
+    build_requirement_index(records)
+    coverable = (
+        set(iter_coverable_files(repo_root, config))
+        if config.coverage.mode == "enforce"
+        else set()
+    )
+    candidates = files if files is not None else _git_working_set(repo_root)
+    report: list[dict[str, Any]] = []
+    seen: set[str] = set()
     for file_path in candidates:
-        relative_path = _normalize_relative(file_path)
-        related = rows_touching_file(rows, relative_path)
-        linked_tests = sorted({test for row in related for test in row.linked_tests})
+        relative_path = normalize_repository_path(file_path, allow_glob=False)
+        if relative_path in seen:
+            continue
+        seen.add(relative_path)
+        related = records_touching_file(records, relative_path)
+        linked_tests = sorted({selector for record in related for selector in record.linked_tests})
         report.append(
             {
                 "file": relative_path,
-                "uncovered": relative_path in coverable and not rows_covering_file(rows, relative_path),
-                "requirements": [row.to_dict() for row in related],
+                "uncovered": relative_path in coverable
+                and not _is_covered(repo_root, records, relative_path, config),
+                "requirements": [record.to_dict() for record in related],
                 "linked_tests": linked_tests,
                 "full_regression_recommended": relative_path in coverable and not related,
             }
@@ -371,195 +479,88 @@ def impact(repo_root: Path, files: list[str] | None = None, config: WorkflowConf
     return report
 
 
-def sync_registry(repo_root: Path) -> dict[str, int]:
+def records_touching_file(
+    records: list[RequirementRecord], relative_path: str
+) -> list[RequirementRecord]:
     """
-    @brief      Synchronize sync registry workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.2.0
+    @brief Match one path through the shared repository glob semantics.
+    @return Matching records ordered by ID.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.1.0
     """
-    cfg = load_config(repo_root)
-    rows = load_all_requirements(repo_root)
-    registry = repo_root / ".agentic" / "registry"
-    registry.mkdir(parents=True, exist_ok=True)
-    specs = {row.req_id: row.to_dict() for row in rows}
-    checks = {}
-    for row in rows:
-        for test_id in row.linked_tests:
-            checks[test_id] = {
-                "id": test_id,
-                "requirement_ids": sorted({*(checks.get(test_id, {}).get("requirement_ids", [])), row.req_id}),
-            }
-    features = _load_active_feature(repo_root)
-    registry.joinpath("requirements.json").write_text(json.dumps(specs, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    registry.joinpath("checks.json").write_text(json.dumps(checks, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    registry.joinpath("features.json").write_text(json.dumps(features, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    components = _load_component_registry(repo_root, cfg)
-    registry.joinpath("components.json").write_text(json.dumps(components, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return {
-        "requirement_count": len(specs),
-        "check_count": len(checks),
-        "feature_count": len(features),
-        "component_count": len(components["components"]),
-        "bundle_count": len(components["bundles"]),
-    }
+    normalized = normalize_repository_path(relative_path, allow_glob=False)
+    return sorted(
+        (
+            record
+            for record in records
+            if any(matches_pattern(normalized, pattern) for pattern in record.affected_paths)
+        ),
+        key=lambda item: item.id,
+    )
 
 
-def audit_registry(repo_root: Path) -> list[AuditIssue]:
+def resolve_test(
+    repo_root: Path, test_id: str, config: WorkflowConfig
+) -> tuple[bool, str]:
     """
-    @brief      Audit registry presence, JSON validity, and requirements freshness.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.3.0
+    @brief Resolve an exact linked-test selector against current source.
+    @return ``(True, "resolved")`` or an actionable failure reason.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
     """
-    registry = repo_root / ".agentic" / "registry"
-    requirements_path = registry / "requirements.json"
-    checks_path = registry / "checks.json"
-    features_path = registry / "features.json"
-    components_path = registry / "components.json"
-    issues: list[AuditIssue] = []
-    if not requirements_path.exists():
-        issues.append(AuditIssue("REGISTRY-MISSING", "requirements registry cache is missing; run registry sync"))
-    if not checks_path.exists():
-        issues.append(AuditIssue("REGISTRY-MISSING", "checks registry cache is missing; run registry sync"))
-    if not features_path.exists():
-        issues.append(AuditIssue("REGISTRY-MISSING", "features registry cache is missing; run registry sync"))
-    if not components_path.exists():
-        issues.append(AuditIssue("REGISTRY-MISSING", "components registry cache is missing; run registry sync"))
-    if issues:
-        return issues
     try:
-        cached_requirements = json.loads(requirements_path.read_text(encoding="utf-8"))
-        cached_checks = json.loads(checks_path.read_text(encoding="utf-8"))
-        json.loads(features_path.read_text(encoding="utf-8"))
-        json.loads(components_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        issues.append(AuditIssue("REGISTRY-BAD-JSON", str(exc)))
+        normalized = normalize_linked_test(test_id, config.test_roots)
+    except ValueError as exc:
+        return False, str(exc)
+    test_path, identifier = normalized.split("::", 1)
+    path = repo_root / test_path
+    if not path.is_file():
+        return False, f"{test_path} does not exist"
+    source = path.read_text(encoding="utf-8", errors="ignore")
+    language = config.traceability_language.lower()
+    if language == "python":
+        resolved = _resolve_python(source, identifier)
+    elif language == "java":
+        resolved = _resolve_java(source, identifier)
+    elif language in {"c", "cpp"}:
+        resolved = _resolve_cpp(source, identifier)
     else:
-        rows = load_all_requirements(repo_root)
-        live_requirements = {row.req_id: row.to_dict() for row in rows}
-        live_check_ids = {test_id for row in rows for test_id in row.linked_tests}
-        cached_check_ids = set(cached_checks) if isinstance(cached_checks, dict) else None
-        if cached_requirements != live_requirements or cached_check_ids != live_check_ids:
-            issues.append(
-                AuditIssue(
-                    "REGISTRY-STALE",
-                    "requirements registry cache does not match the registers; run registry sync",
-                )
-            )
-    for component_issue in audit_components(repo_root):
-        issues.append(
-            AuditIssue(
-                component_issue.code,
-                component_issue.message,
-                path=component_issue.path,
-            )
-        )
-    return issues
-
-
-# HELPER FUNCTIONS
-
-
-def _load_component_registry(repo_root: Path, config: WorkflowConfig) -> dict[str, Any]:
-    """
-    @brief      Load component adoption data for registry sync.
-    @param[in]  repo_root Repository root.
-    @param[in]  config Workflow configuration.
-    @return     JSON-serializable component registry payload.
-    @exception  tomllib.TOMLDecodeError Raised when component TOML is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
-    """
-    manifest = load_components(repo_root, config.component_manifest)
-    return {
-        "generated_from": config.component_manifest,
-        "minimum_baseline": config.adoption_default_completion_level,
-        "components": {
-            name: asdict(component)
-            for name, component in sorted(manifest.components.items())
-        },
-        "bundles": {
-            name: asdict(bundle)
-            for name, bundle in sorted(manifest.bundles.items())
-        },
-    }
-
-
-def _load_active_feature(repo_root: Path) -> dict[str, Any]:
-    """
-    @brief      Load active feature workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    current = repo_root / ".agentic" / "current_run"
-    if not current.exists():
-        return {}
-    run_id = current.read_text(encoding="utf-8").strip()
-    graph_path = repo_root / ".agentic" / "runs" / run_id / "graph.json"
-    if not graph_path.exists():
-        return {}
-    data = json.loads(graph_path.read_text(encoding="utf-8"))
-    return {
-        run_id: {
-            "run_id": run_id,
-            "stage": data.get("stage"),
-            "intent": data.get("intent", {}),
-            "spec_ids": [item.get("id") for item in data.get("spec_items", [])],
-            "check_ids": [item.get("id") for item in data.get("checks", [])],
-            "touched_paths": sorted({path for unit in data.get("change_units", []) for path in unit.get("touched_paths", [])}),
-            "report_path": f".agentic/runs/{run_id}/report.md",
-        }
-    }
-
-
-# PUBLIC API
+        resolved = identifier.split("::")[-1] in source
+    return (True, "resolved") if resolved else (False, f"{identifier} not found in {test_path}")
 
 
 def load_waivers(repo_root: Path, config: WorkflowConfig) -> list[str]:
     """
-    @brief      Load waivers workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Load and normalize the current coverage-waiver snapshot.
+    @return Sorted duplicate-free waived paths.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
     """
+    values: set[str] = set()
     for root_name in config.requirement_roots:
         path = repo_root / root_name / "coverage_waivers.txt"
-        if path.exists():
-            return [
-                line.strip().replace("\\", "/")
-                for line in path.read_text(encoding="utf-8").splitlines()
-                if line.strip() and not line.strip().startswith("#")
-            ]
-    return []
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                values.add(normalize_repository_path(stripped, allow_glob=False))
+    return sorted(values)
 
 
 def iter_coverable_files(repo_root: Path, config: WorkflowConfig) -> list[str]:
     """
-    @brief      Iterate iter coverable files workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Enumerate configured source files subject to coverage policy.
+    @return Sorted repository-relative file paths.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-07-22
+    @version 0.2.0
     """
+    if config.coverage.mode == "disabled":
+        return []
     extensions = set(config.source_extensions)
     found: list[str] = []
     for root_name in config.coverable_roots:
@@ -569,347 +570,75 @@ def iter_coverable_files(repo_root: Path, config: WorkflowConfig) -> list[str]:
         for path in root.rglob("*"):
             if not path.is_file() or path.suffix not in extensions:
                 continue
-            rel = _relative(path, repo_root)
-            if any(fnmatch(path.name, pattern) or fnmatch(rel, pattern.replace("\\", "/")) for pattern in config.coverable_exclude):
+            relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
+            if any(
+                fnmatchcase(path.name, pattern) or matches_pattern(relative, pattern)
+                for pattern in config.coverable_exclude
+            ):
                 continue
-            found.append(rel)
+            found.append(relative)
     return sorted(found)
 
 
-def rows_covering_file(rows: list[RequirementRow], relative_path: str) -> list[RequirementRow]:
-    """
-    @brief      Collect rows covering file workflow behavior.
-    @param[in]  rows Input value used by the workflow helper.
-    @param[in]  relative_path Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    normalized = _normalize_relative(relative_path)
-    return [row for row in rows if normalized in row.file_components()]
+# LOCAL HELPERS
 
 
-def rows_touching_file(rows: list[RequirementRow], relative_path: str) -> list[RequirementRow]:
-    """
-    @brief      Collect rows touching file workflow behavior.
-    @param[in]  rows Input value used by the workflow helper.
-    @param[in]  relative_path Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    normalized = _normalize_relative(relative_path)
-    matches = rows_covering_file(rows, normalized)
-    matches.extend(
-        row
-        for row in rows
-        if row not in matches and any(normalized.startswith(directory.rstrip("/") + "/") for directory in row.directory_components())
-    )
-    return matches
+def _require_resolvable_tests(
+    repo_root: Path, selectors: list[str], config: WorkflowConfig
+) -> None:
+    """@brief Reject a write before persistence when any linked test is unresolved."""
+    failures: list[str] = []
+    for selector in selectors:
+        resolved, reason = resolve_test(repo_root, selector, config)
+        if not resolved:
+            failures.append(f"{selector}: {reason}")
+    if failures:
+        raise ValueError(f"linked test(s) do not resolve: {'; '.join(failures)}")
 
 
-def resolve_test(repo_root: Path, test_id: str, config: WorkflowConfig) -> tuple[bool, str]:
-    """
-    @brief      Resolve test workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  test_id Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    try:
-        test_path, ident = _split_test_id(test_id)
-    except ValueError as exc:
-        return False, str(exc)
-    path = repo_root / test_path
-    if not path.exists():
-        return False, f"{test_path} does not exist"
-    source = path.read_text(encoding="utf-8", errors="ignore")
-    language = config.traceability_language.lower()
-    if language == "python":
-        resolved = _resolve_python(source, ident)
-    elif language == "java":
-        resolved = _resolve_java(source, ident)
-    elif language in {"c", "cpp"}:
-        resolved = _resolve_cpp(source, ident)
-    else:
-        resolved = ident.split("::")[-1].split("#")[-1] in source
-    return (True, "resolved") if resolved else (False, f"{ident} not found in {test_path}")
-
-
-# HELPER FUNCTIONS
-
-
-def _activate_requirement_in_file(
-    path: Path,
+def _is_covered(
     repo_root: Path,
-    req_id: str,
-    linked_tests: list[str],
-    verification: str,
-) -> RequirementRow | None:
-    """
-    @brief      Activate requirement in file workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  req_id Input value used by the workflow helper.
-    @param[in]  linked_tests Input value used by the workflow helper.
-    @param[in]  verification Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    lines = path.read_text(encoding="utf-8").splitlines()
-    header_index = _find_header(lines)
-    if header_index is None:
-        return None
-    for index, line in enumerate(lines[header_index + 2 :], start=header_index + 2):
-        if not line.strip().startswith("|"):
-            continue
-        cells = _split_markdown_row(line)
-        if len(cells) != len(REGISTER_HEADER) or cells[0] != req_id:
-            continue
-        existing_tests = _split_cell(cells[7])
-        merged_tests = _merge_unique(existing_tests, [_normalize_relative(item) for item in linked_tests])
-        cells[1] = "Active"
-        cells[6] = verification
-        cells[7] = _format_list_cell(merged_tests)
-        cells[9] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
-        lines[index] = "| " + " | ".join(cells) + " |"
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        # Re-parse and locate the updated row by ID instead of by line offset so
-        # activation stays correct even when the register has blank or malformed
-        # lines between the header and this row.
-        for updated_row in parse_register_file(path, repo_root):
-            if updated_row.req_id == req_id:
-                return updated_row
-        return None
-    return None
+    records: list[RequirementRecord],
+    relative_path: str,
+    config: WorkflowConfig,
+) -> bool:
+    """@brief Check for an Active matching record with a current resolvable test."""
+    return any(
+        record.status == "Active"
+        and record.linked_tests
+        and all(resolve_test(repo_root, selector, config)[0] for selector in record.linked_tests)
+        for record in records_touching_file(records, relative_path)
+    )
 
 
-def _is_covered(repo_root: Path, rows: list[RequirementRow], relative_path: str, config: WorkflowConfig) -> bool:
-    """
-    @brief      Check is covered workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  rows Input value used by the workflow helper.
-    @param[in]  relative_path Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    for row in rows_covering_file(rows, relative_path):
-        if row.status not in {"Active", "Planned"}:
-            continue
-        if any(resolve_test(repo_root, test_id, config)[0] for test_id in row.linked_tests):
-            return True
-    return False
-
-
-def _find_header(lines: list[str]) -> int | None:
-    """
-    @brief      Handle find header workflow behavior.
-    @param[in]  lines Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    expected = "| " + " | ".join(REGISTER_HEADER) + " |"
-    for index, line in enumerate(lines):
-        if line.strip() == expected:
-            return index
-    return None
-
-
-def _split_markdown_row(line: str) -> list[str]:
-    """
-    @brief      Handle split markdown row workflow behavior.
-    @param[in]  line Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    return [cell.strip() for cell in line.strip().strip("|").split("|")]
-
-
-def _split_cell(cell: str) -> list[str]:
-    """
-    @brief      Handle split cell workflow behavior.
-    @param[in]  cell Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    values = re.findall(r"`([^`]+)`", cell)
-    if values:
-        return [_normalize_relative(value) for value in values]
-    if not cell.strip() or cell.strip() in {"-", "None", "N/A"}:
-        return []
-    return [_normalize_relative(part.strip()) for part in cell.split(";") if part.strip()]
-
-
-def _format_list_cell(values: list[str]) -> str:
-    """
-    @brief      Handle format list cell workflow behavior.
-    @param[in]  values Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    return "; ".join(f"`{value}`" for value in values) if values else "-"
-
-
-def _merge_unique(existing: list[str], new_items: list[str]) -> list[str]:
-    """
-    @brief      Handle merge unique workflow behavior.
-    @param[in]  existing Input value used by the workflow helper.
-    @param[in]  new_items Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    merged: list[str] = []
-    for item in [*existing, *new_items]:
-        if item and item not in {"-", "None", "N/A"} and item not in merged:
-            merged.append(item)
-    return merged
-
-
-def _split_test_id(test_id: str) -> tuple[str, str]:
-    """
-    @brief      Handle split test id workflow behavior.
-    @param[in]  test_id Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    if "#" in test_id:
-        path, ident = test_id.split("#", 1)
-        return _normalize_relative(path), ident
-    if "::" in test_id:
-        path, ident = test_id.split("::", 1)
-        return _normalize_relative(path), ident
-    raise ValueError(f"Linked test id must contain '::' or '#': {test_id}")
-
-
-def _resolve_python(source: str, ident: str) -> bool:
-    """
-    @brief      Resolve python workflow behavior.
-    @param[in]  source Input value used by the workflow helper.
-    @param[in]  ident Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    name = ident.split("::")[-1]
+def _resolve_python(source: str, identifier: str) -> bool:
+    """@brief Resolve the final Python test function segment."""
+    name = identifier.split("::")[-1]
     return re.search(rf"^\s*def\s+{re.escape(name)}\s*\(", source, flags=re.MULTILINE) is not None
 
 
-def _resolve_java(source: str, ident: str) -> bool:
-    """
-    @brief      Resolve java workflow behavior.
-    @param[in]  source Input value used by the workflow helper.
-    @param[in]  ident Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    return re.search(rf"\b{re.escape(ident)}\s*\(", source) is not None
+def _resolve_java(source: str, identifier: str) -> bool:
+    """@brief Resolve a Java test method name."""
+    return re.search(rf"\b{re.escape(identifier)}\s*\(", source) is not None
 
 
-def _resolve_cpp(source: str, ident: str) -> bool:
-    """
-    @brief      Resolve cpp workflow behavior.
-    @param[in]  source Input value used by the workflow helper.
-    @param[in]  ident Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    test_name = ident.split(".")[-1]
-    return test_name in source
-
-
-def _looks_like_file(path: str) -> bool:
-    """
-    @brief      Handle looks like file workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    return bool(Path(path).suffix)
-
-
-def _relative(path: Path, repo_root: Path) -> str:
-    """
-    @brief      Handle relative workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    return path.resolve().relative_to(repo_root.resolve()).as_posix()
-
-
-def _normalize_relative(path: str) -> str:
-    """
-    @brief      Normalize relative workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
-    """
-    return path.replace("\\", "/").strip().strip("`")
+def _resolve_cpp(source: str, identifier: str) -> bool:
+    """@brief Resolve a C or C++ test identifier."""
+    return identifier.split(".")[-1] in source
 
 
 def _git_working_set(repo_root: Path) -> list[str]:
     """
-    @brief      Return current and previous paths from the shared Git status parser.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Normalized repository-relative paths in Git status order.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.2.0
+    @brief Return current and previous paths from the shared Git status parser.
+    @details An unreadable status yields no paths here rather than a finding.
+             This feeds impact analysis, which widens a result set as a
+             convenience; the blocking judgement on an unreadable working tree
+             belongs to `working_tree.audit_working_tree`, and duplicating it
+             here would report the same problem twice.
     """
     files: list[str] = []
-    for entry in _git_status(repo_root):
+    entries, _status_error = _git_status(repo_root)
+    for entry in entries:
         files.append(entry["path"])
         previous_path = entry.get("previous_path")
         if previous_path:

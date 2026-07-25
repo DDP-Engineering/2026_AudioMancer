@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-5b8fc09e-52ee-4f47-9a9b-2b6f622c9d98"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Text Cleanup controller shall skip confirmations when resuming AI cleanup."
+rationale = "Resuming AI cleanup must not re-prompt the operator."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

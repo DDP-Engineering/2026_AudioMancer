@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.19.10
+@version 0.21.0
 """
 
 # IMPORTS
@@ -30,7 +30,6 @@ from audiomancer.services import (
     ai_budget_service,
     ai_translation_service,
     character_discovery_service,
-    character_voices_service,
     chunking_document_service,
     llm_provider_service,
     narrator_definition_service,
@@ -46,7 +45,6 @@ from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     build_operation_output_path,
     build_operation_state_payload,
-    load_operation_state_payload,
     load_optional_json_artifact,
     raise_if_cancelled,
     reset_operation_data,
@@ -132,11 +130,304 @@ _split_text_for_ai_context_budget = speech_blocks_text_split_service.split_text_
 SpeechBlockPayload = dict[str, object]
 SpeechBlocksReportPayload = dict[str, object]
 OperationStatePayload = dict[str, object]
+SpeechBlocksDocumentPayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
 
+# @brief Fixed top-level field set of the authoritative single Speech Blocks document.
+_SPEECH_BLOCKS_DOCUMENT_FIELDS = frozenset(
+    (
+        "status",
+        "source",
+        "ai_profile_id",
+        "instructions",
+        "scene_ambience",
+        "response_contract",
+        "token_usage",
+        "budget_metadata",
+        "checkpoint",
+        "failure",
+        "blocks",
+    )
+)
+_SPEECH_BLOCKS_SOURCE_FIELDS = frozenset(("kind", "language", "fingerprint"))
+_SPEECH_BLOCKS_SOURCE_KINDS = frozenset(("original", "translated"))
+_SPEECH_BLOCKS_DOCUMENT_STATUSES = frozenset(
+    ("not_started", "running", "review_pending", "completed", "failed", "cancelled")
+)
+_SPEECH_BLOCKS_RESPONSE_CONTRACTS = frozenset(
+    (
+        _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT,
+        _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT,
+        _SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT,
+    )
+)
+
+
+class SpeechBlocksDocumentError(ValueError):
+    """Raised when the authoritative single Speech Blocks document is invalid."""
+
+
+def _validate_speech_blocks_document(payload: object) -> None:
+    """Validate the strict, hard-break single Speech Blocks document contract."""
+    if not isinstance(payload, dict) or set(payload) != set(_SPEECH_BLOCKS_DOCUMENT_FIELDS):
+        raise SpeechBlocksDocumentError("Speech Blocks data has an incompatible root contract.")
+    if str(payload.get("status", "")) not in _SPEECH_BLOCKS_DOCUMENT_STATUSES:
+        raise SpeechBlocksDocumentError("Speech Blocks data has an invalid status.")
+    source = payload.get("source")
+    if not isinstance(source, dict) or set(source) != set(_SPEECH_BLOCKS_SOURCE_FIELDS):
+        raise SpeechBlocksDocumentError("Speech Blocks data has an invalid source contract.")
+    if str(source.get("kind", "")) not in _SPEECH_BLOCKS_SOURCE_KINDS:
+        raise SpeechBlocksDocumentError("Speech Blocks data has an invalid source kind.")
+    if not all(isinstance(source.get(field), str) for field in _SPEECH_BLOCKS_SOURCE_FIELDS):
+        raise SpeechBlocksDocumentError("Speech Blocks source fields must be strings.")
+    if not isinstance(payload.get("ai_profile_id"), str):
+        raise SpeechBlocksDocumentError("Speech Blocks ai_profile_id must be a string.")
+    if not isinstance(payload.get("instructions"), str):
+        raise SpeechBlocksDocumentError("Speech Blocks instructions must be a string.")
+    if not isinstance(payload.get("scene_ambience"), dict):
+        raise SpeechBlocksDocumentError("Speech Blocks scene_ambience must be an object.")
+    if str(payload.get("response_contract", "")) not in _SPEECH_BLOCKS_RESPONSE_CONTRACTS:
+        raise SpeechBlocksDocumentError("Speech Blocks response_contract is invalid.")
+    if not isinstance(payload.get("token_usage"), dict):
+        raise SpeechBlocksDocumentError("Speech Blocks token_usage must be an object.")
+    if not isinstance(payload.get("budget_metadata"), dict):
+        raise SpeechBlocksDocumentError("Speech Blocks budget_metadata must be an object.")
+    checkpoint = payload.get("checkpoint")
+    if checkpoint is not None and not isinstance(checkpoint, dict):
+        raise SpeechBlocksDocumentError("Speech Blocks checkpoint must be null or an object.")
+    failure = payload.get("failure")
+    if failure is not None and not isinstance(failure, dict):
+        raise SpeechBlocksDocumentError("Speech Blocks failure must be null or an object.")
+    if not isinstance(payload.get("blocks"), list):
+        raise SpeechBlocksDocumentError("Speech Blocks blocks must be an array.")
+
 
 # PUBLIC API
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def load_speech_blocks_document(project_root: str | Path) -> SpeechBlocksDocumentPayload | None:
+    """
+    @brief      Load and leniently validate the authoritative single Speech Blocks document.
+    @param[in]  project_root Active project root folder.
+    @return     Document payload, or `None` when missing or in an incompatible legacy format.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-24
+    @version    0.1.0
+    """
+    document_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME)
+    try:
+        payload = load_optional_json_artifact(document_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    try:
+        _validate_speech_blocks_document(payload)
+    except SpeechBlocksDocumentError:
+        return None
+    return dict(payload)
+
+
+def write_speech_blocks_document(
+    project_root: str | Path,
+    document: SpeechBlocksDocumentPayload,
+) -> Path:
+    """
+    @brief      Strictly validate and atomically persist the single Speech Blocks document.
+    @param[in]  project_root Active project root folder.
+    @param[in]  document Complete Speech Blocks document payload.
+    @return     Absolute project-local document path.
+    @exception  SpeechBlocksDocumentError Raised when the document violates the strict contract.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-24
+    @version    0.1.0
+    """
+    _validate_speech_blocks_document(document)
+    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME, document)
+    return build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME)
+
+
+def _document_checkpoint(operation_state: OperationStatePayload) -> dict[str, object] | None:
+    """Project the persisted document checkpoint from one in-memory operation state."""
+    if not isinstance(operation_state, dict):
+        return None
+    started_at = str(_valid_runtime_value(operation_state.get("started_at")) or "").strip()
+    resume_checkpoint = operation_state.get("resume_checkpoint")
+    if isinstance(resume_checkpoint, dict):
+        checkpoint = dict(resume_checkpoint)
+        if started_at:
+            checkpoint["run_token"] = started_at
+        return checkpoint
+    metadata = operation_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    log_relative_path = str(metadata.get("log_relative_path", "")).strip()
+    run_token = started_at
+    if not run_token and not log_relative_path:
+        return None
+    checkpoint: dict[str, object] = {
+        "next_chunk_index": int(metadata.get("processed_chunk_count", 0) or 0),
+        "run_token": run_token,
+        "log_relative_path": log_relative_path,
+        "source_snapshot_fingerprint": str(metadata.get("source_snapshot_fingerprint", "")).strip(),
+        "source_language": str(metadata.get("source_language", "")).strip(),
+        "ai_profile_id": str(metadata.get("ai_profile_id", "")).strip(),
+        "additional_speech_block_instructions_fingerprint": str(
+            metadata.get("additional_speech_block_instructions_fingerprint", "")
+        ).strip(),
+        "speech_blocks_response_contract": str(metadata.get("speech_blocks_response_contract", "")).strip(),
+    }
+    if isinstance(metadata.get("budget_metadata"), dict):
+        checkpoint["budget_metadata"] = dict(metadata["budget_metadata"])
+    return checkpoint
+
+
+def _compose_speech_blocks_document(
+    speech_blocks: list[SpeechBlockPayload],
+    report: SpeechBlocksReportPayload,
+    operation_state: OperationStatePayload,
+) -> SpeechBlocksDocumentPayload:
+    """Assemble the single authoritative Speech Blocks document from report and operation state."""
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    source = {
+        "kind": str(report.get("source_kind", metadata.get("source_kind", ""))).strip(),
+        "language": str(report.get("source_language", metadata.get("source_language", ""))).strip(),
+        "fingerprint": str(metadata.get("source_snapshot_fingerprint", "")).strip(),
+    }
+    scene_ambience = report.get("scene_ambience_generation")
+    if not isinstance(scene_ambience, dict):
+        scene_ambience = metadata.get("scene_ambience_generation")
+    if not isinstance(scene_ambience, dict):
+        scene_ambience = _resolve_scene_ambience_settings(None, False)
+    response_contract = (
+        str(metadata.get("speech_blocks_response_contract", "")).strip() or _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT
+    )
+    budget_metadata = report.get("budget_metadata")
+    if not isinstance(budget_metadata, dict):
+        budget_metadata = metadata.get("budget_metadata")
+    status = str(operation_state.get("status", "not_started")) if isinstance(operation_state, dict) else "not_started"
+    return {
+        "status": status,
+        "source": source,
+        "ai_profile_id": str(report.get("ai_profile_id", metadata.get("ai_profile_id", ""))).strip(),
+        "instructions": str(
+            report.get("additional_speech_block_instructions", metadata.get("additional_speech_block_instructions", ""))
+        ),
+        "scene_ambience": dict(scene_ambience),
+        "response_contract": response_contract,
+        "token_usage": token_usage_service.coerce_token_usage(report.get("token_usage", metadata.get("token_usage"))),
+        "budget_metadata": dict(budget_metadata) if isinstance(budget_metadata, dict) else {},
+        "checkpoint": _document_checkpoint(operation_state),
+        "failure": None,
+        "blocks": [dict(block) for block in speech_blocks],
+    }
+
+
+def _projection_source_chunk_count(project_root: str | Path, document: SpeechBlocksDocumentPayload) -> int:
+    """Recompute the source chunk count for read projections, re-resolving upstream when available."""
+    blocks = document.get("blocks", []) if isinstance(document, dict) else []
+    processed = len(
+        {str(block.get("chunk_id", "")).strip() for block in blocks if isinstance(block, dict)}
+        - {""}
+    )
+    try:
+        manifest = project_workspace_service.load_manifest(Path(project_root))
+        source_resolution = resolve_source_chunks(Path(project_root), manifest)
+    except (FileNotFoundError, OSError, ValueError, KeyError):
+        return processed
+    return max(len(source_resolution["source_chunks"]), processed)
+
+
+def _project_speech_blocks_report(
+    document: SpeechBlocksDocumentPayload,
+    source_chunk_count: int,
+) -> SpeechBlocksReportPayload:
+    """Project the legacy report shape from the single Speech Blocks document."""
+    blocks = [block for block in document.get("blocks", []) if isinstance(block, dict)]
+    source = document.get("source", {}) if isinstance(document.get("source"), dict) else {}
+    checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else {}
+    processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in blocks} - {""})
+    total_chunk_count = max(int(source_chunk_count), processed_chunk_count)
+    budget_metadata = document.get("budget_metadata")
+    report = _rebuild_report(
+        blocks,
+        str(source.get("language", "")),
+        str(source.get("kind", "")),
+        str(document.get("ai_profile_id", "")),
+        total_chunk_count,
+        processed_chunk_count,
+        [],
+        document.get("token_usage", {}),
+        dict(budget_metadata) if isinstance(budget_metadata, dict) else None,
+    )
+    scene_ambience = document.get("scene_ambience") if isinstance(document.get("scene_ambience"), dict) else {}
+    report["additional_speech_block_instructions"] = str(document.get("instructions", ""))
+    report["scene_ambience_generation"] = dict(scene_ambience)
+    report["additional_speech_block_instructions_fingerprint"] = str(
+        checkpoint.get("additional_speech_block_instructions_fingerprint", "")
+    )
+    return report
+
+
+def _project_operation_state(
+    document: SpeechBlocksDocumentPayload,
+    source_chunk_count: int,
+) -> OperationStatePayload:
+    """Project the legacy operation-state shape from the single Speech Blocks document."""
+    blocks = [block for block in document.get("blocks", []) if isinstance(block, dict)]
+    source = document.get("source", {}) if isinstance(document.get("source"), dict) else {}
+    checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else None
+    processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in blocks} - {""})
+    total_chunk_count = max(int(source_chunk_count), processed_chunk_count)
+    warning_entries = _warning_records_from_blocks(blocks)
+    scene_ambience = document.get("scene_ambience") if isinstance(document.get("scene_ambience"), dict) else {}
+    log_relative_path = str(checkpoint.get("log_relative_path", "")).strip() if checkpoint else ""
+    metadata: dict[str, object] = {
+        "source_language": str(source.get("language", "")),
+        "source_kind": str(source.get("kind", "")),
+        "ai_profile_id": str(document.get("ai_profile_id", "")),
+        "processed_chunk_count": processed_chunk_count,
+        "total_chunk_count": total_chunk_count,
+        "speech_block_count": len(blocks),
+        "approved_block_count": _approved_block_count(blocks),
+        "total_block_count": len(blocks),
+        "warnings": warning_entries,
+        "source_snapshot_fingerprint": str(source.get("fingerprint", "")),
+        "log_relative_path": log_relative_path,
+        "token_usage": token_usage_service.coerce_token_usage(document.get("token_usage")),
+        "additional_speech_block_instructions": str(document.get("instructions", "")),
+        "additional_speech_block_instructions_fingerprint": str(
+            checkpoint.get("additional_speech_block_instructions_fingerprint", "")
+        )
+        if checkpoint
+        else "",
+        "scene_ambience_generation": dict(scene_ambience),
+        "speech_blocks_response_contract": str(document.get("response_contract", ""))
+        or _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT,
+    }
+    budget_metadata = document.get("budget_metadata")
+    if isinstance(budget_metadata, dict) and budget_metadata:
+        metadata["budget_metadata"] = dict(budget_metadata)
+    status = str(document.get("status", "not_started"))
+    state = build_operation_state_payload(
+        status=status,
+        progress_current=processed_chunk_count,
+        progress_total=total_chunk_count,
+        mode="ai_assisted",
+        warning_count=len(warning_entries),
+        metadata=metadata,
+        resume_checkpoint=dict(checkpoint) if isinstance(checkpoint, dict) else None,
+    )
+    state["started_at"] = str(checkpoint.get("run_token", "")).strip() if checkpoint else ""
+    state["completed_at"] = _utc_now_iso() if status == "completed" else None
+    log_name = Path(log_relative_path).name if log_relative_path else ""
+    state["artifact_paths"] = [config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME, *([log_name] if log_name else [])]
+    return state
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -150,7 +441,10 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-21
     @version    0.4.0
     """
-    return load_operation_state_payload(project_root, "speech_blocks", config.SPEECH_BLOCKS_STATE_FILE_NAME)
+    document = load_speech_blocks_document(project_root)
+    if document is None:
+        return None
+    return _project_operation_state(document, _projection_source_chunk_count(project_root, document))
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -164,32 +458,30 @@ def load_speech_blocks_report(project_root: str | Path) -> SpeechBlocksReportPay
     @date       2026-04-21
     @version    0.4.0
     """
-    report_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
-    payload = load_optional_json_artifact(report_path)
-    if payload is None:
+    document = load_speech_blocks_document(project_root)
+    if document is None:
         return None
-    return dict(payload)
+    return _project_speech_blocks_report(document, _projection_source_chunk_count(project_root, document))
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
 def load_input_source_chunks(project_root: str | Path) -> list[dict[str, object]]:
     """
-    @brief      Load one optional Speech Blocks source payload from operation state.
+    @brief      Re-resolve the current Speech Blocks source chunks from upstream artifacts.
     @param[in]  project_root Active project root folder.
-    @return     Ordered source-chunk snapshot payloads.
+    @return     Ordered source-chunk payloads, or an empty list when upstream is unavailable.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
+    @date       2026-07-24
+    @version    0.3.0
     """
-    operation_state = load_operation_state(project_root) or {}
-    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
-    if not isinstance(metadata, dict):
+    resolved_project_root = Path(project_root)
+    try:
+        manifest = project_workspace_service.load_manifest(resolved_project_root)
+        source_resolution = resolve_source_chunks(resolved_project_root, manifest)
+    except (FileNotFoundError, OSError, ValueError, KeyError):
         return []
-    payload = metadata.get("source_chunks")
-    if not isinstance(payload, list):
-        return []
-    return [dict(item) for item in payload if isinstance(item, dict)]
+    return [dict(chunk) for chunk in source_resolution["source_chunks"]]
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -203,11 +495,13 @@ def load_speech_blocks(project_root: str | Path) -> list[SpeechBlockPayload]:
     @date       2026-04-21
     @version    0.2.0
     """
-    output_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
-    payload = load_optional_json_artifact(output_path)
-    if not isinstance(payload, list):
+    document = load_speech_blocks_document(project_root)
+    if document is None:
         return []
-    return sort_speech_blocks([_normalize_persisted_speech_block(item) for item in payload if isinstance(item, dict)])
+    blocks = document.get("blocks", [])
+    if not isinstance(blocks, list):
+        return []
+    return sort_speech_blocks([_normalize_persisted_speech_block(item) for item in blocks if isinstance(item, dict)])
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -216,14 +510,17 @@ def resolve_source_chunks(
     manifest: dict[str, object],
 ) -> dict[str, object]:
     """
-    @brief      Resolve the source chunk set currently selected through Character Voices.
+    @brief      Resolve the Speech Blocks source chunks, preferring the approved translation.
+    @details    Mirrors Character Discovery: when a translation exists, is complete, and every
+                chunk is approved, the translated (repair-normalized) text is used regardless of
+                the selected Character Voices language; otherwise the original chunking text is used.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @return     Source-resolution payload with normalized source chunks.
-    @exception  ValueError Raised when chunking or the selected language source is unavailable.
+    @exception  ValueError Raised when chunking output is unavailable.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.1
+    @date       2026-07-24
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     original_chunks = sorted(
@@ -233,39 +530,52 @@ def resolve_source_chunks(
     if not original_chunks:
         raise ValueError("Run text chunking before starting Speech Blocks.")
 
-    selected_voice_language = character_voices_service.load_selected_voice_language(
-        resolved_project_root,
-        narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
-    )
+    translated_resolution = _resolve_translated_source_chunks(resolved_project_root, original_chunks)
+    if translated_resolution is not None:
+        return translated_resolution
+
     original_language = narrator_definition_service.narrator_language_code(
         manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
     )
-    if selected_voice_language == original_language:
-        return {
-            "selected_source_language": selected_voice_language,
-            "source_kind": "original",
-            "source_chunks": [
-                {
-                    "chunk_id": str(chunk.get("chunk_id", "")),
-                    "sequence_index": int(chunk.get("sequence_index", 0)),
-                    "text": str(chunk.get("text", "")),
-                }
-                for chunk in original_chunks
-            ],
-        }
+    return {
+        "selected_source_language": original_language,
+        "source_kind": "original",
+        "source_chunks": [
+            {
+                "chunk_id": str(chunk.get("chunk_id", "")),
+                "sequence_index": int(chunk.get("sequence_index", 0)),
+                "text": str(chunk.get("text", "")),
+            }
+            for chunk in original_chunks
+        ],
+    }
 
-    translation_document = ai_translation_service.load_translation_document(resolved_project_root)
-    if translation_document is None:
-        raise ValueError("The selected Character Voices language is not available for Speech Blocks yet.")
-    translated_language = str(translation_document["target_language"]).strip()
-    if selected_voice_language != translated_language:
-        raise ValueError("The selected Character Voices language is not available for Speech Blocks yet.")
-    if not ai_translation_service.translation_is_completed(resolved_project_root):
-        raise ValueError("Approve all translated chunks before generating Speech Blocks in the translated language.")
 
+def _resolve_translated_source_chunks(
+    project_root: Path,
+    original_chunks: list[dict[str, object]],
+) -> dict[str, object] | None:
+    """
+    @brief      Resolve translated source chunks when the translation is complete and fully approved.
+    @param[in]  project_root Active project root folder.
+    @param[in]  original_chunks Ordered original source chunks.
+    @return     Translated source-resolution payload, or `None` when the translation is absent,
+                incomplete, or not fully approved (caller then falls back to the original text).
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-24
+    @version    0.1.0
+    """
+    try:
+        translation_document = ai_translation_service.load_translation_document(project_root)
+        if translation_document is None or not ai_translation_service.translation_is_completed(project_root):
+            return None
+        translated_records = ai_translation_service.load_translated_chunks(project_root)
+    except (OSError, ValueError):
+        return None
     translated_by_id = {
         str(chunk.get("chunk_id", "")): dict(chunk)
-        for chunk in ai_translation_service.load_translated_chunks(resolved_project_root)
+        for chunk in translated_records
         if isinstance(chunk, dict) and str(chunk.get("chunk_id", "")).strip()
     }
     source_chunks: list[dict[str, object]] = []
@@ -274,9 +584,7 @@ def resolve_source_chunks(
         translated_chunk = translated_by_id.get(chunk_id)
         translated_text = "" if translated_chunk is None else str(translated_chunk.get("translated_text", ""))
         if not translated_text.strip():
-            raise ValueError(
-                "Approve all translated chunks before generating Speech Blocks in the translated language."
-            )
+            return None
         source_chunks.append(
             {
                 "chunk_id": chunk_id,
@@ -285,7 +593,7 @@ def resolve_source_chunks(
             }
         )
     return {
-        "selected_source_language": selected_voice_language,
+        "selected_source_language": str(translation_document["target_language"]).strip(),
         "source_kind": "translated",
         "source_chunks": source_chunks,
     }
@@ -3493,9 +3801,8 @@ def _persist_state(
     @version    0.3.0
     """
     _ = source_chunks
-    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME, speech_blocks)
-    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME, report)
-    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_STATE_FILE_NAME, operation_state)
+    document = _compose_speech_blocks_document(speech_blocks, report, operation_state)
+    write_speech_blocks_document(project_root, document)
 
 
 def _rebuild_report_with_prompt_rules(
@@ -3622,9 +3929,7 @@ def _build_operation_state_with_prompt_rules(
     state["started_at"] = started_at
     state["completed_at"] = completed_at
     state["artifact_paths"] = [
-        config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
-        config.SPEECH_BLOCKS_REPORT_FILE_NAME,
-        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
         str(log_path.name),
     ]
     normalized_instructions = _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
@@ -3711,14 +4016,8 @@ def _persist_compact_review_update(
         updated_report,
         speech_blocks,
     )
-    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME, speech_blocks)
-    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME, updated_report)
-    write_operation_json_artifact(
-        project_root,
-        "speech_blocks",
-        config.SPEECH_BLOCKS_STATE_FILE_NAME,
-        updated_state,
-    )
+    document = _compose_speech_blocks_document(speech_blocks, updated_report, updated_state)
+    write_speech_blocks_document(project_root, document)
     project_workspace_service.sync_manifest_operation_summary(
         project_root,
         "speech_blocks",
@@ -3791,6 +4090,14 @@ def _build_compact_review_operation_state(
     elif status != "completed":
         completed_at = None
     log_path = _resolve_log_path(project_root, started_at)
+    metadata["log_relative_path"] = str(log_path.name)
+    resume_checkpoint = operation_state.get("resume_checkpoint")
+    if isinstance(resume_checkpoint, dict):
+        resume_checkpoint = dict(resume_checkpoint)
+        resume_checkpoint["run_token"] = started_at
+        resume_checkpoint["log_relative_path"] = str(log_path.name)
+    else:
+        resume_checkpoint = None
     state = build_operation_state_payload(
         status=status,
         progress_current=int(report.get("processed_chunk_count", 0)),
@@ -3798,16 +4105,12 @@ def _build_compact_review_operation_state(
         mode=str(operation_state.get("mode", "ai_assisted") or "ai_assisted"),
         warning_count=int(report.get("warning_count", 0)),
         metadata=metadata,
-        resume_checkpoint=operation_state.get("resume_checkpoint")
-        if isinstance(operation_state.get("resume_checkpoint"), dict)
-        else None,
+        resume_checkpoint=resume_checkpoint,
     )
     state["started_at"] = started_at
     state["completed_at"] = completed_at
     state["artifact_paths"] = [
-        config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
-        config.SPEECH_BLOCKS_REPORT_FILE_NAME,
-        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
         str(log_path.name),
     ]
     return state
@@ -3951,9 +4254,6 @@ def _load_or_resolve_source_context(project_root: Path) -> tuple[list[dict[str, 
         metadata = {}
     source_language = str(report.get("source_language", metadata.get("source_language", ""))).strip()
     source_kind = str(report.get("source_kind", metadata.get("source_kind", ""))).strip()
-    source_chunks = load_input_source_chunks(project_root)
-    if source_chunks:
-        return source_chunks, source_language, source_kind
     try:
         manifest = project_workspace_service.load_manifest(project_root)
         source_resolution = resolve_source_chunks(project_root, manifest)
@@ -3961,8 +4261,8 @@ def _load_or_resolve_source_context(project_root: Path) -> tuple[list[dict[str, 
         return [], source_language, source_kind
     return (
         list(source_resolution["source_chunks"]),
-        str(source_resolution["selected_source_language"]),
-        str(source_resolution["source_kind"]),
+        source_language or str(source_resolution["selected_source_language"]),
+        source_kind or str(source_resolution["source_kind"]),
     )
 
 
@@ -4408,7 +4708,7 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     if not isinstance(resume_checkpoint, dict):
         resume_checkpoint = {}
     relative_path = str(metadata.get("log_relative_path") or resume_checkpoint.get("log_relative_path") or "").strip()
-    if relative_path:
+    if relative_path and "None" not in relative_path and "null" not in relative_path:
         resolved_path = project_root / relative_path
         resolved_path.parent.mkdir(parents=True, exist_ok=True)
         if not resolved_path.exists():

@@ -22,7 +22,12 @@ import json
 import zipfile
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, project_export_service, project_workspace_service
+from audiomancer.services import (
+    narrator_definition_service,
+    project_export_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 from chunking_test_support import build_chunking_document
 
 # PUBLIC API
@@ -523,32 +528,43 @@ def _build_export_project(tmp_path):
         ],
     )
 
-    _write_json(
-        project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
-        [
-            {
-                "speech_block_id": "0001-000001",
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "speaker_id": "stefan",
-                "speaker_display_name": "Ștefan",
-                "text": "Voi spune adevărul.",
-                "content_kind": "dialogue",
-                "warning_flags": [],
-            }
-        ],
-    )
-    _write_json(
-        project_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME,
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
         {
-            "source_language": "ro",
-            "source_kind": "translated_chunks",
-            "speech_blocks_profile_id_last_used": "profile_1",
-            "speech_block_count": 1,
-            "warning_count": 0,
+            "status": "completed",
+            "source": {"kind": "translated", "language": "ro", "fingerprint": "export-fingerprint"},
+            "ai_profile_id": "profile_1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-25T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260425T120000Z.log",
+                "source_snapshot_fingerprint": "export-fingerprint",
+                "source_language": "ro",
+                "ai_profile_id": "profile_1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
+            },
+            "failure": None,
+            "blocks": [
+                {
+                    "speech_block_id": "0001-000001",
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "speaker_id": "stefan",
+                    "speaker_display_name": "Ștefan",
+                    "text": "Voi spune adevărul.",
+                    "content_kind": "dialogue",
+                    "warning_flags": [],
+                    "approved": True,
+                }
+            ],
         },
     )
-    _write_json(project_root / config.SPEECH_BLOCKS_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
 
     audiobook_path = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav"
     audiobook_path.parent.mkdir(parents=True, exist_ok=True)

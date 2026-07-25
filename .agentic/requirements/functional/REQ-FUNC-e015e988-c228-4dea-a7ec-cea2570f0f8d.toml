@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-e015e988-c228-4dea-a7ec-cea2570f0f8d"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Speech Blocks page shall edit block fields including scene ambience and show only the disabled narrator on same-narrator edits."
+rationale = "Block editing must expose the right fields per mode."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_same_narrator_edit_shows_only_disabled_narrator",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_edits_scene_ambience_fields",
+]
+
+created_on = "2026-07-19T17:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

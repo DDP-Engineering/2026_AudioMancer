@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-91e20a10-e223-4370-843c-c72d478ed335"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The provider client shall retry with max_completion_tokens when the backend requires it."
+rationale = "Some backends require the alternate token parameter to succeed."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_with_max_completion_tokens_when_required",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-24T19:30:55Z"

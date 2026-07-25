@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-7981a0a1-8204-413f-9165-8774756da4f4"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI cleanup removal policy shall ignore confidence."
+rationale = "Removal decisions must not depend on provider confidence."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_removal_policy_ignores_confidence",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

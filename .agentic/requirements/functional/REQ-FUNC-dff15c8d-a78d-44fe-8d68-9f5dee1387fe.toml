@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-dff15c8d-a78d-44fe-8d68-9f5dee1387fe"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Workflow controllers shall request operation cancel by setting the worker-visible cancel event."
+rationale = "Cancellation must reach the running worker cooperatively."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_request_operation_cancel_sets_worker_visible_event",
+]
+
+created_on = "2026-07-19T18:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

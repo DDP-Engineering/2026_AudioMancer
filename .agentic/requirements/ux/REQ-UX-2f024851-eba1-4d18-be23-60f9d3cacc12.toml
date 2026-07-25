@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-2f024851-eba1-4d18-be23-60f9d3cacc12"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "Operator status editors shall use the UI font role."
+rationale = "Operator status text must follow the UI font role, not the content font."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operator_status_font_role.py::test_operator_status_editors_use_ui_font_role",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

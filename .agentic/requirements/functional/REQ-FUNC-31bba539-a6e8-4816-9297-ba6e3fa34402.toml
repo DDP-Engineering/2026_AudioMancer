@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-31bba539-a6e8-4816-9297-ba6e3fa34402"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The provider client shall log raw message content on a parse failure."
+rationale = "Parse failures need diagnostic evidence for review."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_logs_raw_message_content_on_parse_failure",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-24T19:30:55Z"

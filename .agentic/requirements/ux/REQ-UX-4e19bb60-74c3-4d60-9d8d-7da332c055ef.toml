@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-4e19bb60-74c3-4d60-9d8d-7da332c055ef"
+category = "ux"
+status = "Active"
+priority = "Should"
+requirement = "The Home page shall display a horizontal workflow stepper widget that shows one step per workflow stage passed to set_stage_statuses."
+rationale = "A horizontal pipeline stepper gives an at-a-glance view of the audiobook workflow, matching the redesign proposal, without removing the detailed stage list."
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_has_workflow_stepper_matching_stage_count",
+]
+
+created_on = "2026-07-25T06:36:25Z"
+last_updated = "2026-07-25T06:40:39Z"

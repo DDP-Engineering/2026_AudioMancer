@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-UX-d495ebfa-a519-4924-b05c-d715793d324d"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The Settings page shall import a theme payload into the draft and export a built-in as a portable payload."
+rationale = "Themes must be portable between projects and installs."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_imports_theme_payload_into_draft",
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_exports_selected_built_in_as_portable_payload",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

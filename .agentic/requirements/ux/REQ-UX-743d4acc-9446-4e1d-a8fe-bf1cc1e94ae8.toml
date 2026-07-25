@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-743d4acc-9446-4e1d-a8fe-bf1cc1e94ae8"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The Settings page shall load and build merged settings."
+rationale = "Settings editing must start from correctly merged current settings."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_loads_and_builds_merged_settings",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

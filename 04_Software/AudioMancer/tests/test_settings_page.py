@@ -8,21 +8,20 @@
 # -----------------------------------------------------------------------------
 """
 @file test_settings_page.py
-@brief Focused tests for the AudioMancer settings page.
-@details Verifies settings-page widget loading and merged settings payload
-         generation for the operator-facing settings dialog.
+@brief Focused tests for the simplified AudioMancer settings (Appearance) page.
+@details Verifies theme selection, interface/text font-size step selectors, merged
+         settings output, and the removal of the color/custom-theme editor.
 @author Eng. Dan Dumitru Pasare
-@date 2026-05-14
-@version 0.6.1
+@date 2026-07-25
+@version 0.7.0
 """
 
 # IMPORTS
 
-from PySide6.QtGui import QFont
-
 from audiomancer import config
-from audiomancer.services import ui_theme_service
 from audiomancer.ui.pages.settings_page import SettingsPage
+
+# PUBLIC API
 
 
 def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
@@ -32,8 +31,8 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.3.1
+    @date       2026-07-25
+    @version    0.4.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
@@ -54,6 +53,8 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
             "ui_themes": [],
             "play_completion_beep": True,
             "ui_scroll_steps_per_wheel_notch": 4,
+            "ui_font_size_step": "large",
+            "text_font_size_step": "very_large",
         }
     )
 
@@ -61,6 +62,8 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     assert page._language_combo.minimumWidth() >= 96
     assert page._completion_beep_checkbox.isChecked() is True
     assert page._scroll_steps_spin.value() == 4
+    assert page._ui_font_size_combo.currentData() == "large"
+    assert page._text_font_size_combo.currentData() == "very_large"
 
     page._language_combo.setCurrentText("en")
     page._completion_beep_checkbox.setChecked(False)
@@ -71,190 +74,102 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     assert rebuilt["language"] == "en"
     assert "ui_text_scale" not in rebuilt
     assert rebuilt["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
-    assert rebuilt["ui_themes"] == []
     assert rebuilt["play_completion_beep"] is False
     assert rebuilt["ui_scroll_steps_per_wheel_notch"] == 2
+    assert rebuilt["ui_font_size_step"] == "large"
+    assert rebuilt["text_font_size_step"] == "very_large"
     assert rebuilt["llm_profiles"] == [{"id": "kept"}]
 
 
-def test_settings_page_loads_selected_built_in_theme_and_disables_delete(qtbot) -> None:
+def test_settings_page_theme_selector_loads_and_persists(qtbot) -> None:
     """
-    @brief      Verify built-in theme selection loads and remains protected from deletion.
+    @brief      Verify the theme selector reflects the loaded id and persists a new choice.
+    @details    Covers REQ-UX-8e33d3cf-f881-4dbb-86d2-2f97f05b0669 / SPEC-SET-THEME.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.2.0
+    @date       2026-07-25
+    @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
-
-    page.load_settings(
-        {
-            "language": "en",
-            "ui_text_scale": "normal",
-            "ui_theme_id": "warm_reading",
-            "ui_themes": [],
-            "play_completion_beep": False,
-        }
-    )
+    page.load_settings({"language": "en", "ui_theme_id": "warm_reading"})
 
     assert page._theme_combo.currentData() == "warm_reading"
-    assert page._theme_delete_button.isEnabled() is False
-    assert page._theme_name_edit.isEnabled() is False
+
+    high_contrast_index = page._theme_combo.findData("high_contrast")
+    assert high_contrast_index >= 0
+    page._theme_combo.setCurrentIndex(high_contrast_index)
+
+    rebuilt = page.build_settings({"language": "en"})
+    assert rebuilt["ui_theme_id"] == "high_contrast"
 
 
-def test_settings_page_creates_custom_theme_in_built_payload(qtbot) -> None:
+def test_settings_page_interface_font_size_selector_persists(qtbot) -> None:
     """
-    @brief      Verify creating a theme adds an editable custom theme to settings output.
+    @brief      Verify the interface font-size selector loads and persists a step.
+    @details    Covers REQ-UX-bcc4485f-102b-4e39-9f48-c5bde30b99f3 / SPEC-SET-UIFONT.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
+    @date       2026-07-25
     @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
-    page.load_settings({"language": "en", "ui_text_scale": "normal", "ui_theme_id": "classic_light", "ui_themes": []})
+    page.load_settings({"language": "en", "ui_font_size_step": "small"})
 
-    page._create_custom_theme()
+    assert page._ui_font_size_combo.currentData() == "small"
+    assert page._ui_font_size_combo.count() == len(config.UI_FONT_SIZE_STEPS)
+
+    page._ui_font_size_combo.setCurrentIndex(page._ui_font_size_combo.findData("huge"))
     rebuilt = page.build_settings({"language": "en"})
-
-    assert rebuilt["ui_theme_id"] == "custom_theme"
-    assert len(rebuilt["ui_themes"]) == 1
-    assert rebuilt["ui_themes"][0]["display_name"] == "Custom Theme"
-    assert rebuilt["ui_themes"][0]["built_in"] is False
+    assert rebuilt["ui_font_size_step"] == "huge"
 
 
-def test_settings_page_deletes_custom_theme_and_selects_fallback(qtbot) -> None:
+def test_settings_page_text_font_size_selector_persists(qtbot) -> None:
     """
-    @brief      Verify deleting a custom theme removes it and falls back to the default theme.
+    @brief      Verify the text-window font-size selector loads and persists a step.
+    @details    Covers REQ-UX-a3f0f73c-54ea-4ddd-9ec7-4ab8a84d57b1 / SPEC-SET-TEXTFONT.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
-    """
-    custom_theme = ui_theme_service.import_theme_payload(
-        {
-            "schema_version": config.UI_THEME_SCHEMA_VERSION,
-            "theme_id": "reading_theme",
-            "display_name": "Reading Theme",
-            "built_in": False,
-            "font": {},
-            "colors": {},
-        },
-        [],
-    )
-    page = SettingsPage()
-    qtbot.addWidget(page)
-    page.load_settings(
-        {
-            "language": "en",
-            "ui_text_scale": "normal",
-            "ui_theme_id": "reading_theme",
-            "ui_themes": [custom_theme],
-        }
-    )
-
-    page._delete_selected_theme()
-    rebuilt = page.build_settings({"language": "en"})
-
-    assert rebuilt["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
-    assert rebuilt["ui_themes"] == []
-
-
-def test_settings_page_persists_edited_custom_theme_font_and_color(qtbot) -> None:
-    """
-    @brief      Verify edited custom UI/text font and color values appear in built settings.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.3.0
-    """
-    page = SettingsPage()
-    qtbot.addWidget(page)
-    page.load_settings({"language": "en", "ui_text_scale": "normal", "ui_theme_id": "classic_light", "ui_themes": []})
-    page._create_custom_theme()
-
-    page._theme_name_edit.setText("Studio Theme")
-    page._theme_font_family_combo.setCurrentFont(QFont("Courier New"))
-    page._theme_font_size_spin.setValue(12.5)
-    page._theme_text_font_family_combo.setCurrentFont(QFont("Georgia"))
-    page._theme_text_font_size_spin.setValue(14.0)
-    page._set_color_button("accent", "#ABCDEF")
-    page._editor_value_changed()
-
-    rebuilt = page.build_settings({"language": "en"})
-    custom_theme = rebuilt["ui_themes"][0]
-
-    assert custom_theme["display_name"] == "Studio Theme"
-    assert custom_theme["font"]["family"] == "Courier New"
-    assert custom_theme["font"]["point_size"] == 12.5
-    assert custom_theme["font"]["scale"] == config.DEFAULT_UI_TEXT_SCALE
-    assert custom_theme["text_font"]["family"] == "Georgia"
-    assert custom_theme["text_font"]["point_size"] == 14.0
-    assert custom_theme["text_font"]["scale"] == config.DEFAULT_UI_TEXT_SCALE
-    assert custom_theme["colors"]["accent"] == "#ABCDEF"
-
-
-def test_settings_page_imports_theme_payload_into_draft(qtbot) -> None:
-    """
-    @brief      Verify imported theme payloads become selected custom themes in settings output.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
+    @date       2026-07-25
     @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
-    page.load_settings({"language": "en", "ui_text_scale": "normal", "ui_theme_id": "classic_light", "ui_themes": []})
-    imported_payload = {
-        "schema_version": config.UI_THEME_SCHEMA_VERSION,
-        "theme_id": "portable_theme",
-        "display_name": "Portable Theme",
-        "built_in": True,
-        "font": {"family": "", "point_size": None, "scale": "small"},
-        "colors": {"accent": "#123ABC"},
-    }
+    page.load_settings({"language": "en", "text_font_size_step": "medium"})
 
-    imported_theme = page.add_imported_theme_payload(imported_payload)
+    assert page._text_font_size_combo.currentData() == "medium"
+    assert page._text_font_size_combo.count() == len(config.UI_FONT_SIZE_STEPS)
+
+    page._text_font_size_combo.setCurrentIndex(page._text_font_size_combo.findData("extra_small"))
     rebuilt = page.build_settings({"language": "en"})
-
-    assert imported_theme["theme_id"] == "portable_theme"
-    assert imported_theme["built_in"] is False
-    assert rebuilt["ui_theme_id"] == "portable_theme"
-    assert rebuilt["ui_themes"][0]["theme_id"] == imported_theme["theme_id"]
-    assert rebuilt["ui_themes"][0]["font"]["scale"] == config.DEFAULT_UI_TEXT_SCALE
+    assert rebuilt["text_font_size_step"] == "extra_small"
 
 
-def test_settings_page_exports_selected_built_in_as_portable_payload(qtbot) -> None:
+def test_settings_page_has_no_color_or_custom_theme_editor(qtbot) -> None:
     """
-    @brief      Verify selected built-in themes export as portable custom-safe JSON payloads.
+    @brief      Verify the simplified settings page drops color/custom-theme editing.
+    @details    Covers REQ-UX-be6adf19-fcc5-4b7a-89ca-28162656ba5b / SPEC-SET-NOCOLOR.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
+    @date       2026-07-25
     @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
-    page.load_settings({"language": "en", "ui_text_scale": "normal", "ui_theme_id": "warm_reading", "ui_themes": []})
 
-    export_payload = page.selected_theme_export_payload()
-    export_file_name = page.selected_theme_export_file_name()
-
-    assert export_payload["theme_id"] == "warm_reading"
-    assert export_payload["built_in"] is False
-    assert export_file_name == "AudioMancer_warm_reading_theme.json"
+    assert hasattr(page, "_color_buttons") is False
+    assert hasattr(page, "_create_custom_theme") is False
+    assert hasattr(page, "add_imported_theme_payload") is False
+    assert hasattr(page, "selected_theme_export_payload") is False
 
 
 # END OF FILE

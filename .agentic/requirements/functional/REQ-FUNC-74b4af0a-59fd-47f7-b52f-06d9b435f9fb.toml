@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-74b4af0a-59fd-47f7-b52f-06d9b435f9fb"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The provider client shall normalize provider usage."
+rationale = "Usage reporting must be normalized across providers."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_normalizes_provider_usage",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-24T19:30:55Z"

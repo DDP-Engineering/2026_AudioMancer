@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-d335d502-df1f-4d25-b031-74d0037d2220"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The AI Settings controller shall persist, reload, and refresh the window after applying settings."
+rationale = "Applied settings must persist and refresh dependent UI."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window",
+]
+
+created_on = "2026-07-19T18:42:00Z"
+last_updated = "2026-07-24T19:30:55Z"

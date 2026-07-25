@@ -23,7 +23,7 @@
          124 respectively), so they end as recorded failing gate evidence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-20
-@version 0.3.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -34,27 +34,39 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from .config import load_config
+from .config import WorkflowConfig
 from .models import Evidence
 from .store import add_evidence, append_journal, load_graph, save_graph
 
 # PUBLIC API
 
 
-def run_gates(repo_root: Path, names: list[str] | None = None, timeout: int = 300) -> int:
+def run_gates(
+    repo_root: Path,
+    run_id: str,
+    config: WorkflowConfig,
+    names: list[str] | None = None,
+    timeout: int = 300,
+) -> int:
     """
     @brief      Run gates workflow behavior.
     @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  run_id Already resolved run ID selected by CLI orchestration.
+    @param[in]  config Validated workflow configuration.
     @param[in]  names Input value used by the workflow helper.
     @param[in]  timeout Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
-    @exception  None
+    @exception  ValueError If a requested gate name is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.4.0
     """
-    config = load_config(repo_root)
-    graph = load_graph(repo_root)
+    unknown = sorted(set(names or ()) - {"test", "lint"})
+    if unknown:
+        raise ValueError(
+            f"Unknown gate name(s): {', '.join(unknown)}. Expected test or lint."
+        )
+    graph = load_graph(repo_root, run_id)
     selected = names or list(config.gate_commands)
     if not selected:
         append_journal(repo_root, graph.run_id, "gates.skipped", {"reason": "no gates configured"})

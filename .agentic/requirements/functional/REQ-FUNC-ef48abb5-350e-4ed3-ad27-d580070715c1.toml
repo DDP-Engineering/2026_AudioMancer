@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-ef48abb5-350e-4ed3-ad27-d580070715c1"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Text Chunking page shall render chunks and the selected preview and keep selectors and full-list preview readable while busy."
+rationale = "Chunk results must stay reviewable during operations."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_renders_chunks_and_selected_preview",
+  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_keeps_selectors_readable_while_busy",
+  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_keeps_full_chunk_list_preview_text",
+]
+
+created_on = "2026-07-19T17:15:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -408,13 +408,10 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
     @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApprovedOnly")
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks_payload = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks_payload = _read_speech_blocks_fixture_blocks(project_root)
     speech_blocks_payload[1]["approved"] = False
     speech_blocks_payload[1]["approved_at"] = None
-    speech_blocks_path.write_text(json.dumps(speech_blocks_payload, indent=2) + "\n", encoding="utf-8")
+    _write_speech_blocks_fixture_document(project_root, speech_blocks_payload)
 
     wait_payloads = [
         {
@@ -498,10 +495,7 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     @version    0.3.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceMetadataOnly")
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks_payload = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks_payload = _read_speech_blocks_fixture_blocks(project_root)
     speech_blocks_payload.append(
         {
             "speech_block_id": "0001-000003",
@@ -534,7 +528,7 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
             "warning_flags": [],
         }
     )
-    speech_blocks_path.write_text(json.dumps(speech_blocks_payload, indent=2) + "\n", encoding="utf-8")
+    _write_speech_blocks_fixture_document(project_root, speech_blocks_payload)
     wait_payloads = [
         {
             "active_model": {"model_id": "Qwen3-TTS-12Hz-1.7B-Base"},
@@ -1232,11 +1226,8 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     @version    0.2.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceResplitReconcile")
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks_path.write_text(
-        json.dumps(
+    _write_speech_blocks_fixture_document(
+        project_root,
             [
                 {
                     "speech_block_id": "0001-000001",
@@ -1263,10 +1254,6 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
                     "warning_flags": [],
                 },
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
     )
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -1497,9 +1484,6 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceContinueMissingOnly")
     _seed_generated_audio_blocks(project_root)
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     speech_blocks[1]["sequence_index"] = 3
     speech_blocks.insert(
@@ -1519,7 +1503,7 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
             "warning_flags": [],
         },
     )
-    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
     original_blocks = audio_blocks_service.load_audio_blocks(project_root)
     original_audio_by_id = {
         str(block["speech_block_id"]): (project_root / str(block["audio_relative_path"])).read_bytes()
@@ -1917,10 +1901,7 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
     @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSceneAmbience")
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
     speech_blocks.append(
         {
             "speech_block_id": "0001-000003",
@@ -1941,7 +1922,7 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
             "warning_flags": [],
         }
     )
-    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
     runtime_settings = _runtime_settings()
     runtime_settings["generate_scene_ambience_audio"] = True
     runtime_settings["discovered_models"].append(
@@ -2045,10 +2026,7 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSceneAmbienceRegenerate")
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
-    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
     speech_blocks.append(
         {
             "speech_block_id": "0001-000003",
@@ -2069,7 +2047,7 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
             "warning_flags": [],
         }
     )
-    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
     stale_state = {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
@@ -2242,10 +2220,7 @@ def _create_audio_blocks_project(tmp_path, name: str):
             "warning_flags": [],
         },
     ]
-    (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(speech_blocks_payload, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    _write_speech_blocks_fixture_document(project_root, speech_blocks_payload)
     narrator_profile = narrator_definition_service.create_custom_profile(
         project_root,
         "Test Narrator",
@@ -2408,7 +2383,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
     operation_state = {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
-        "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"],
+        "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME}"],
         "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"],
         "artifact_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
         "progress_current": 2,
@@ -2491,5 +2466,40 @@ def _runtime_settings() -> dict[str, object]:
         ],
     }
 
+
+
+def _write_speech_blocks_fixture_document(project_root, blocks, *, status: str = "completed"):
+    """Persist a valid single Speech Blocks document wrapping fixture blocks."""
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": status,
+            "source": {"kind": "original", "language": "en", "fingerprint": "sb-fixture-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260423T120000Z.log",
+                "source_snapshot_fingerprint": "sb-fixture-fingerprint",
+                "source_language": "en",
+                "ai_profile_id": "profile-1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
+            },
+            "failure": None,
+            "blocks": list(blocks),
+        },
+    )
+
+
+def _read_speech_blocks_fixture_blocks(project_root):
+    """Return the persisted Speech Blocks document blocks for fixture mutation."""
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    return document["blocks"] if document else []
 
 # END OF FILE

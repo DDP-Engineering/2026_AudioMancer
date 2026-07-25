@@ -100,8 +100,7 @@ state transition.
 
 ## 9. Validation And Tests
 
-Focused baseline-review evidence covers the component's focused modules and
-direct UI/controller gaps:
+Primary automated coverage:
 
 - `test_operation_runtime_service.py` covers progress, common state/artifact
   IO, malformed/missing data handling, path containment, default state, and
@@ -118,7 +117,8 @@ direct UI/controller gaps:
   title/cancel label, clamped progress, status replacement, and localized token
   usage rendering.
 
-After changes run all six modules, then traceability and coverage audits.
+After changes, run the focused modules above with `uv run pytest`, plus
+`uv run python -m py_compile` and `uv run ruff check` on changed files.
 
 ## 10. Limitations And Future Work
 

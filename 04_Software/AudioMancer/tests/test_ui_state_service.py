@@ -338,7 +338,9 @@ def test_apply_theme_updates_application_font_family(qtbot) -> None:
         _restore_application_state(application, original_font, original_palette, original_stylesheet)
 
     assert themed_font.family() == "Courier New"
-    assert themed_font.pointSizeF() == 11.0
+    # Font size is now owned by the global font-size steps, not the theme point_size:
+    # with the default 'normal' step the applied size equals the pre-apply base font size.
+    assert themed_font.pointSizeF() == original_font.pointSizeF()
 
 
 def test_apply_theme_updates_application_palette_roles(qtbot) -> None:
@@ -397,6 +399,160 @@ def test_build_theme_stylesheet_applies_text_window_font() -> None:
     assert "font-size: 11.0pt;" in stylesheet
 
 
+def test_build_theme_stylesheet_styles_toolbar_buttons_for_legibility() -> None:
+    """
+    @brief      Verify the theme stylesheet gives QToolBar buttons the theme text color.
+    @details    Toolbar actions are QToolButtons; without explicit QToolButton rules the native
+                Windows style keeps default (dark) text, so labels like "Settings" become invisible
+                on a dark themed toolbar. Covers REQ-UX-22740d0a-a29c-4937-977a-d3d43070dcc5 / SPEC-THEME-TOOLBAR.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    theme_payload = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    text_primary = theme_payload["colors"]["text_primary"]
+
+    stylesheet = ui_state_service.build_theme_stylesheet(theme_payload, base_point_size=10.0)
+
+    assert "QToolBar {" in stylesheet
+    assert "QToolButton {" in stylesheet
+    toolbutton_block = stylesheet.split("QToolButton {", 1)[1].split("}", 1)[0]
+    assert f"color: {text_primary};" in toolbutton_block
+
+
+def _qss_block(stylesheet: str, selector: str) -> str:
+    """
+    @brief      Return the declaration body of one flat (non-nested) QSS rule.
+    @param[in]  stylesheet Full stylesheet text.
+    @param[in]  selector Rule selector without the opening brace.
+    @return     Text between the rule's braces.
+    @exception  AssertionError Raised when the selector is not present.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    marker = f"{selector} {{"
+    assert marker in stylesheet, f"missing rule: {selector}"
+    return stylesheet.split(marker, 1)[1].split("}", 1)[0]
+
+
+def test_theme_stylesheet_group_boxes_are_rounded_cards() -> None:
+    """
+    @brief      Verify QGroupBox renders as a rounded, filled card.
+    @details    Covers REQ-UX-c3920985-0f4d-45a5-927a-bb0cb4adbce4 / SPEC-QSS-CARDS.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    block = _qss_block(stylesheet, "QGroupBox")
+    assert "border-radius: 10px;" in block
+    assert f"background-color: {theme['colors']['panel_background']};" in block
+
+
+def test_theme_stylesheet_controls_use_rounded_corners() -> None:
+    """
+    @brief      Verify buttons and single-line inputs use rounded corners.
+    @details    Covers REQ-UX-b37f9db2-2007-4dd7-8479-0f413be6f106 / SPEC-QSS-RADIUS.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    assert "border-radius: 8px;" in _qss_block(stylesheet, "QPushButton")
+    input_block = _qss_block(
+        stylesheet,
+        "QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QTableWidget, QListWidget",
+    )
+    assert "border-radius: 8px;" in input_block
+
+
+def test_theme_stylesheet_styles_scrollbars() -> None:
+    """
+    @brief      Verify scrollbar handles use theme colors with an accent hover.
+    @details    Covers REQ-UX-5f397ed7-59b5-4acf-8981-9fab7eb3ca10 / SPEC-QSS-SCROLLBAR.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    handle = _qss_block(stylesheet, "QScrollBar::handle:vertical")
+    assert f"background: {theme['colors']['border']};" in handle
+    hover = _qss_block(stylesheet, "QScrollBar::handle:vertical:hover")
+    assert f"background: {theme['colors']['accent']};" in hover
+
+
+def test_theme_stylesheet_makes_popups_legible() -> None:
+    """
+    @brief      Verify combobox popups and menus use theme panel/text colors.
+    @details    Covers REQ-UX-e9f779cf-7032-4a23-b8ca-2f305f71c7b9 / SPEC-QSS-POPUP.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    panel = theme["colors"]["panel_background"]
+    text_primary = theme["colors"]["text_primary"]
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    view = _qss_block(stylesheet, "QComboBox QAbstractItemView")
+    assert f"background-color: {panel};" in view
+    assert f"color: {text_primary};" in view
+    menu = _qss_block(stylesheet, "QMenu")
+    assert f"background-color: {panel};" in menu
+    assert f"color: {text_primary};" in menu
+
+
+def test_theme_stylesheet_progress_bar_uses_accent() -> None:
+    """
+    @brief      Verify progress-bar chunks use the theme accent color.
+    @details    Covers REQ-UX-56d1df5c-36f3-4e55-b3b1-d075ec3a80bc / SPEC-QSS-PROGRESS.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    chunk = _qss_block(stylesheet, "QProgressBar::chunk")
+    assert f"background-color: {theme['colors']['accent']};" in chunk
+
+
+def test_theme_stylesheet_marks_active_sidebar_item_with_accent() -> None:
+    """
+    @brief      Verify the sidebar's selected item gets a left accent border in the stylesheet.
+    @details    Covers REQ-UX-03b36e7b-8b07-412f-a861-9af51161b1a9 / SPEC-NAV-ACCENT.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    selected = _qss_block(stylesheet, "QListWidget#navigationSidebar::item:selected")
+    assert f"3px solid {theme['colors']['accent']}" in selected
+
+
 def test_apply_ui_settings_falls_back_to_default_theme_for_missing_theme_id(qtbot) -> None:
     """
     @brief      Verify missing selected theme ids fall back to the default built-in theme at runtime.
@@ -430,6 +586,61 @@ def test_apply_ui_settings_falls_back_to_default_theme_for_missing_theme_id(qtbo
     default_colors = default_theme["colors"]
     assert isinstance(default_colors, dict)
     assert palette.color(QPalette.ColorRole.Window).name().upper() == default_colors["window_background"]
+
+
+def test_font_size_step_resolution() -> None:
+    """
+    @brief      Verify font-size step factors and point-size resolution.
+    @details    Covers REQ-UX-b5b21ac7-95f0-43bc-823e-6b8f769de448 / SPEC-FONT-RESOLVE.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    assert ui_state_service.font_size_step_factor("extra_small") == 0.80
+    assert ui_state_service.font_size_step_factor("normal") == 1.00
+    assert ui_state_service.font_size_step_factor("huge") == 1.50
+    assert ui_state_service.font_size_step_factor("does_not_exist") == 1.00
+
+    assert round(ui_state_service.resolve_font_point_size("large", 10.0), 4) == 11.5
+    assert round(ui_state_service.resolve_font_point_size("small", 10.0), 4) == 9.0
+    assert round(ui_state_service.resolve_font_point_size("does_not_exist", 10.0), 4) == 10.0
+
+
+def test_apply_ui_settings_scales_ui_and_text_fonts_independently(qtbot) -> None:
+    """
+    @brief      Verify the UI step scales the app font and the text step sizes text editors independently.
+    @details    Covers REQ-UX-6ca3a291-f6d1-43c0-abb4-fd53b5594255 / SPEC-FONT-UISCALE and
+                REQ-UX-012a6341-ef3a-4098-af0d-a614e353d70e / SPEC-FONT-TEXTSCALE.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    application = QApplication.instance()
+    window = QWidget()
+    qtbot.addWidget(window)
+    settings_payload = {
+        "language": config.DEFAULT_LANGUAGE,
+        "ui_theme_id": ui_theme_service.default_theme_id(),
+        "ui_font_size_step": "large",
+        "text_font_size_step": "very_large",
+    }
+
+    ui_state_service.apply_ui_settings(application, window, settings_payload)
+
+    base_point_size = ui_state_service._BASE_FONT_POINT_SIZE
+    assert base_point_size is not None
+    ui_point = ui_state_service.resolve_font_point_size("large", base_point_size)
+    text_point = ui_state_service.resolve_font_point_size("very_large", base_point_size)
+
+    assert round(application.font().pointSizeF(), 2) == round(ui_point, 2)
+    stylesheet = application.styleSheet()
+    assert f"font-size: {ui_point:.1f}pt;" in stylesheet
+    assert f"font-size: {text_point:.1f}pt;" in stylesheet
 
 
 # END OF FILE

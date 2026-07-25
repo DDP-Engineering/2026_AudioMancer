@@ -21,30 +21,36 @@ the final preflight.
 Use `<workflow>` as the project-local workflow runner: `.\.agentic\tools\run.ps1`
 on Windows or `bash .agentic/tools/run.sh` on POSIX shells.
 
-1. Load the active run with `<workflow> status`.
-2. Run `<workflow> registry sync`.
-3. Run `<workflow> registry audit`.
-4. Run `<workflow> impact` against the Git working set.
-5. Run `<workflow> working-tree audit` and report untracked files as
+1. Run `<workflow> config validate --json` and
+   `<workflow> config show --effective --json`. Report the effective write,
+   protected-read/path, scope, secret, gate, coverage, and delivery modes and
+   active rule counts; distinguish them from external platform safety.
+2. Load the worktree-selected run with `<workflow> status`, or pin an existing
+   run with `<workflow> status --run-id <existing-run-id>`. Report which
+   selection is used and never stage `.agentic/.workspace/`.
+3. Run `<workflow> impact` against the Git working set. Impact reads canonical
+   requirement snapshots directly; no registry synchronization exists.
+4. Run `<workflow> working-tree audit` and report untracked files as
    advisory context unless the audit reports blocking findings.
-6. Run `<workflow> audit traceability`.
-7. Run `<workflow> audit coverage`.
-8. Run `$documentation-audit` or perform the same documentation review manually
+5. Run `<workflow> audit traceability`.
+6. Run `<workflow> audit coverage`.
+7. Run `$documentation-audit` or perform the same documentation review manually
    when the target repo has no documentation audit tooling.
    Treat broad README, overview, setup, and validation docs as opt-in or
    scope-triggered maintenance, not a default delivery blocker.
-9. Confirm component documents under `.agentic/knowledge/components/` were
+8. Confirm component documents under `.agentic/knowledge/components/` were
    added or updated for new or materially changed components.
-10. Run `<workflow> delivery-preflight`.
-11. If preflight fails, stop and report failed invariants or audit findings.
-12. If preflight passes, run or refresh `<workflow> report`.
-13. Run the configured test gates if they were not already run in this turn.
-14. Summarize the branch status, report path, gate results, traceability status,
+9. Run `<workflow> delivery-preflight` with the same run selection.
+10. If preflight fails, stop and report failed invariants or audit findings.
+11. If preflight passes, run or refresh `<workflow> report` with the same run.
+12. Run configured gates when `gates.mode = "enforce"`; report explicitly when
+    gates are disabled.
+13. Summarize the branch status, report path, gate results, traceability status,
    documentation status, and remaining risks.
-15. Stage only explicit intended paths for commits or PRs; do not stage
+14. Stage only explicit intended paths for commits or PRs; do not stage
    unrelated human notes, saved messages, meeting notes, or generated local
    artifacts unless the human explicitly includes them.
-16. Ask the human for explicit approval before push, PR creation, merge, or any
+15. Ask the human for explicit approval before push, PR creation, merge, or any
    outward-facing action.
 
 ## Required Stop Format

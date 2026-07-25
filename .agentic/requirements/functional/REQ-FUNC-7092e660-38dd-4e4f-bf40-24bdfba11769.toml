@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-7092e660-38dd-4e4f-bf40-24bdfba11769"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Prompt templates shall load only from their configured root and require exact replacement placeholders."
+rationale = "Prompt contracts must fail clearly rather than submit malformed instructions."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_requires_exact_placeholders",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-24T19:30:55Z"

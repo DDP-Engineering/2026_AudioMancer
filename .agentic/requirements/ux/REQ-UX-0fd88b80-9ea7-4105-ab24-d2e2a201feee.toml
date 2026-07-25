@@ -1,0 +1,26 @@
+schema_version = 1
+id = "REQ-UX-0fd88b80-9ea7-4105-ab24-d2e2a201feee"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The Text Cleanup page shall enable actions from project readiness, present source and cleaned previews with edit/find support, expose AI profile and spacing choices, and route extraction, cleanup, cancellation, edit, and spacing actions through its controller with project-state refresh."
+rationale = "Operators need a reviewable and recoverable workflow surface that prevents unavailable actions and keeps visible state synchronized with persisted artifacts."
+verification = "Automated focused pytest coverage passed for action readiness, previews/editing, AI controls, operation dispatch, and project-state refresh."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_enables_actions_only_with_project_inputs",
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_allows_cleaned_text_edit_and_save",
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_emits_selected_ai_profile",
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_text_cleanup_page_exposes_selectable_ai_spacing_controls",
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_extract_request_uses_controller_start",
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile",
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_text_cleanup_ui_controller_save_cleaned_text_updates_project_state",
+]
+
+created_on = "2026-07-18T18:14:00Z"
+last_updated = "2026-07-18T21:07:00Z"

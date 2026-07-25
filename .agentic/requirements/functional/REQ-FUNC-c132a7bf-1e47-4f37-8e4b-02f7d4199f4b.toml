@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-c132a7bf-1e47-4f37-8e4b-02f7d4199f4b"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Home page shall lock project options that control source import."
+rationale = "Source import must be gated by the project-options lock."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_project_options_lock_controls_source_import",
+]
+
+created_on = "2026-07-18T15:49:00Z"
+last_updated = "2026-07-24T19:30:55Z"

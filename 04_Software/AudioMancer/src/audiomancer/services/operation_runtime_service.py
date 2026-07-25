@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.15.1
+@version 0.15.2
 """
 
 # IMPORTS
@@ -85,9 +85,10 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     ),
     "character_voices": (config.CHARACTER_VOICES_TARGETS_FILE_NAME,),
     "speech_blocks": (
-        config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
-        config.SPEECH_BLOCKS_REPORT_FILE_NAME,
-        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
+        # Legacy sidecars from the pre-single-document format; kept for reset cleanup only.
+        "speech_blocks_report.json",
+        "speech_blocks_state.json",
     ),
     "audio_blocks": (
         config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
@@ -112,8 +113,9 @@ _OPERATION_AI_LOG_TOKENS = {
 }
 
 # @brief Optional operation-state file names that may be initialized on first page open.
+# @details Speech Blocks has no separate state file; its single document is created by the
+#          operation itself and a missing document reads as not-started.
 _OPERATION_STATE_FILE_NAMES = {
-    "speech_blocks": config.SPEECH_BLOCKS_STATE_FILE_NAME,
     "audio_blocks": config.AUDIO_BLOCKS_STATE_FILE_NAME,
     "audio_assembly": config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
 }

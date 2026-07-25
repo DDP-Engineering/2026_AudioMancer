@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-1f95cddf-6f25-47a2-aee5-c2820e8fc77e"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI translation shall use a stable prompt with minimal user contract."
+rationale = "The translation prompt contract must be stable and minimal."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_prompt_has_stable_rules_and_minimal_user_contract",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-5b15b8ba-448f-43ea-bad4-12a4e39e0305"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Workflow impact shall reject an unknown operation kind."
+rationale = "Invalid operation kinds must fail rather than corrupt the summary."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_rejects_unknown_operation_kind",
+]
+
+created_on = "2026-07-19T17:10:00Z"
+last_updated = "2026-07-24T19:30:55Z"

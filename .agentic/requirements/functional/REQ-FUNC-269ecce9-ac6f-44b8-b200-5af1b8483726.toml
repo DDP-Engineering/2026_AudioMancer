@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-269ecce9-ac6f-44b8-b200-5af1b8483726"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Characters controller shall persist a new character and select it."
+rationale = "A saved manual character must become the active selection."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_new_character_persists_and_selects",
+]
+
+created_on = "2026-07-19T17:22:00Z"
+last_updated = "2026-07-24T19:30:55Z"

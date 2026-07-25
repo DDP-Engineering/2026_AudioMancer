@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-fe3699e9-a737-44a0-8e69-ffc490d54bfc"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The built-in UI theme catalog shall include an 'AudioMancer Dark' theme (theme_id 'audiomancer_dark', built_in) whose color roles are window_background #0B2429, panel_background #10313A, text_primary #F1E9DA, text_muted #98AEAC, accent #E3AC52, border #22474D, warning #E0A82E, success #58A877, danger #DA655C, and disabled #5E7A78."
+rationale = "The product brand (hero posters) is a deep-teal-and-gold cinematic identity; the desktop app needs a matching built-in theme so its look expresses the brand."
+verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_dark_theme_has_brand_roles (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_dark_theme_has_brand_roles",
+]
+
+created_on = "2026-07-24T22:20:30Z"
+last_updated = "2026-07-24T22:25:21Z"

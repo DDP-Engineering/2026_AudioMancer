@@ -69,7 +69,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert not hasattr(config, "NARRATOR_SELECTION_FILE_NAME")
     assert not hasattr(config, "SELECTED_NARRATOR_AUDIO_FILE_NAME")
     assert not hasattr(config, "SELECTED_NARRATOR_METADATA_FILE_NAME")
-    assert config.SPEECH_BLOCKS_OUTPUT_FILE_NAME == "speech_blocks.json"
+    assert config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512
     assert config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
@@ -167,6 +167,42 @@ def test_config_translation_languages_include_qwen3_tts_languages_with_chinese()
     language_codes = [language_code for language_code, _label in config.TRANSLATION_LANGUAGE_OPTIONS]
 
     assert language_codes == ["en", "ro", "ja", "ko", "zh", "de", "fr", "ru", "pt", "es", "it"]
+
+
+def test_config_defines_seven_font_size_steps() -> None:
+    """
+    @brief      Verify the seven ordered UI font-size steps and their default.
+    @details    Covers REQ-UX-7f2722c8-68e6-460b-a79a-1ee5577cadb5 / SPEC-FONT-STEPS.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    assert config.UI_FONT_SIZE_STEPS == (
+        "extra_small",
+        "small",
+        "medium",
+        "normal",
+        "large",
+        "very_large",
+        "huge",
+    )
+    assert config.DEFAULT_UI_FONT_SIZE_STEP == "normal"
+    assert config.DEFAULT_TEXT_FONT_SIZE_STEP == "normal"
+
+
+def test_config_default_theme_is_audiomancer_dark() -> None:
+    """
+    @brief      Verify the default UI theme id is the AudioMancer brand dark theme.
+    @details    Covers REQ-PLAT-2b9b91fe-a021-4e8e-a52b-9070926315ca / SPEC-SET-DEFAULTTHEME.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    assert config.DEFAULT_UI_THEME_ID == "audiomancer_dark"
 
 
 # END OF FILE

@@ -41,6 +41,17 @@ _UI_SCALE_FACTORS = {
     "very_large": 1.24,
 }
 
+# @brief Multiplier applied to the base font point size for each operator font-size step.
+FONT_SIZE_STEP_FACTORS = {
+    "extra_small": 0.80,
+    "small": 0.90,
+    "medium": 0.95,
+    "normal": 1.00,
+    "large": 1.15,
+    "very_large": 1.30,
+    "huge": 1.50,
+}
+
 # @brief Dynamic Qt property used by read-only operator status editors.
 CONTROL_TEXT_FONT_ROLE_PROPERTY = "audiomancerFontRole"
 # @brief Dynamic Qt property value for editors that should use the UI font.
@@ -2440,23 +2451,31 @@ def build_theme_stylesheet(theme_payload: dict[str, object], base_point_size: fl
     disabled = colors["disabled"]
     focus_text = _readable_foreground(_qcolor(accent)).name().upper()
     hover_background = _qcolor(accent).lighter(128).name().upper()
+    accent_qcolor = _qcolor(accent)
+    accent_rgb = f"{accent_qcolor.red()}, {accent_qcolor.green()}, {accent_qcolor.blue()}"
+    sidebar_hover_background = f"rgba({accent_rgb}, 0.12)"
+    sidebar_selected_background = f"rgba({accent_rgb}, 0.20)"
 
     return f"""
 QGroupBox {{
+    background-color: {panel_background};
     border: 1px solid {border};
-    border-radius: 4px;
-    margin-top: 0.7em;
+    border-radius: 10px;
+    margin-top: 0.9em;
+    padding: 10px 10px 8px 10px;
 }}
 QGroupBox::title {{
     color: {text_muted};
     subcontrol-origin: margin;
-    left: 8px;
-    padding: 0 3px;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 2px 4px;
 }}
 QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QTableWidget, QListWidget {{
     background-color: {panel_background};
     color: {text_primary};
     border: 1px solid {border};
+    border-radius: 8px;
     selection-background-color: {accent};
     selection-color: {focus_text};
 }}
@@ -2471,9 +2490,55 @@ QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBo
 QTableWidget:focus, QListWidget:focus {{
     border: 1px solid {accent};
 }}
-QPushButton {{
+QComboBox::drop-down {{
+    border: none;
+    width: 22px;
+}}
+QComboBox QAbstractItemView {{
+    background-color: {panel_background};
     color: {text_primary};
     border: 1px solid {border};
+    border-radius: 8px;
+    padding: 4px;
+    selection-background-color: {accent};
+    selection-color: {focus_text};
+    outline: none;
+}}
+QToolBar {{
+    background-color: {panel_background};
+    border: none;
+    spacing: 2px;
+    padding: 2px;
+}}
+QToolBar::separator {{
+    background-color: {border};
+    width: 1px;
+    margin: 4px 6px;
+}}
+QToolButton {{
+    color: {text_primary};
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 4px 10px;
+}}
+QToolButton:hover {{
+    color: {focus_text};
+    background-color: {hover_background};
+    border-color: {accent};
+}}
+QToolButton:pressed, QToolButton:checked {{
+    color: {focus_text};
+    background-color: {accent};
+}}
+QToolButton:disabled {{
+    color: {disabled};
+}}
+QPushButton {{
+    color: {text_primary};
+    background-color: {panel_background};
+    border: 1px solid {border};
+    border-radius: 8px;
     padding: 4px 10px;
 }}
 QPushButton:hover {{
@@ -2487,42 +2552,173 @@ QPushButton:focus {{
 QPushButton:disabled {{
     color: {disabled};
     border-color: {border};
+    background-color: {panel_background};
+}}
+QScrollBar:vertical {{
+    background: {panel_background};
+    width: 12px;
+    margin: 0;
+    border: none;
+}}
+QScrollBar::handle:vertical {{
+    background: {border};
+    border-radius: 5px;
+    min-height: 28px;
+    margin: 2px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {accent};
+}}
+QScrollBar:horizontal {{
+    background: {panel_background};
+    height: 12px;
+    margin: 0;
+    border: none;
+}}
+QScrollBar::handle:horizontal {{
+    background: {border};
+    border-radius: 5px;
+    min-width: 28px;
+    margin: 2px;
+}}
+QScrollBar::handle:horizontal:hover {{
+    background: {accent};
+}}
+QScrollBar::add-line, QScrollBar::sub-line {{
+    height: 0;
+    width: 0;
+    background: none;
+    border: none;
+}}
+QScrollBar::add-page, QScrollBar::sub-page {{
+    background: none;
+}}
+QProgressBar {{
+    background-color: {panel_background};
+    border: 1px solid {border};
+    border-radius: 6px;
+    text-align: center;
+    color: {text_primary};
+}}
+QProgressBar::chunk {{
+    background-color: {accent};
+    border-radius: 5px;
+}}
+QMenu {{
+    background-color: {panel_background};
+    color: {text_primary};
+    border: 1px solid {border};
+    border-radius: 8px;
+    padding: 4px;
+}}
+QMenu::item {{
+    padding: 5px 18px;
+    border-radius: 6px;
+}}
+QMenu::item:selected {{
+    background-color: {accent};
+    color: {focus_text};
+}}
+QListWidget#navigationSidebar {{
+    background-color: {panel_background};
+    border: 1px solid {border};
+    border-radius: 10px;
+    padding: 6px;
+    outline: none;
+}}
+QListWidget#navigationSidebar::item {{
+    color: {text_muted};
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 8px;
+    margin: 1px 2px;
+}}
+QListWidget#navigationSidebar::item:hover {{
+    color: {text_primary};
+    background-color: {sidebar_hover_background};
+}}
+QListWidget#navigationSidebar::item:selected {{
+    color: {text_primary};
+    background-color: {sidebar_selected_background};
+    border-left: 3px solid {accent};
 }}
 """.strip()
+
+
+def font_size_step_factor(step: object) -> float:
+    """
+    @brief      Return the base-font multiplier for one font-size step.
+    @param[in]  step Candidate font-size step name.
+    @return     Multiplier for a known step, or the 'normal' multiplier otherwise.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    return FONT_SIZE_STEP_FACTORS.get(str(step), FONT_SIZE_STEP_FACTORS[config.DEFAULT_UI_FONT_SIZE_STEP])
+
+
+def resolve_font_point_size(step: object, base_point_size: float) -> float:
+    """
+    @brief      Resolve one font-size step to an absolute point size.
+    @param[in]  step Candidate font-size step name.
+    @param[in]  base_point_size Unscaled base font point size.
+    @return     Base point size multiplied by the step factor.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    return float(base_point_size) * font_size_step_factor(step)
 
 
 def apply_theme(
     application: QApplication | None,
     theme_payload: dict[str, object],
-    ui_text_scale: str | None,
+    ui_text_scale: str | None = None,
+    ui_font_size_step: str | None = None,
+    text_font_size_step: str | None = None,
 ) -> None:
     """
-    @brief      Apply one validated UI theme to the running Qt application.
+    @brief      Apply one validated UI theme plus the operator font-size steps to the application.
     @param[in]  application Running Qt application instance.
     @param[in]  theme_payload Theme payload to apply.
     @param[in]  ui_text_scale Deprecated fallback text-scale preset.
+    @param[in]  ui_font_size_step Control/interface font-size step.
+    @param[in]  text_font_size_step Text-window (editor) font-size step.
     @return     None.
     @exception  ValueError Raised when the theme payload is invalid.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.3.0
+    @date       2026-07-25
+    @version    0.4.0
     """
     if application is None:
         return
 
     normalized_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
     current_font = _capture_base_font(application)
+
+    base_point_size = _BASE_FONT_POINT_SIZE if _BASE_FONT_POINT_SIZE is not None else 10.0
+    ui_step = ui_font_size_step if ui_font_size_step is not None else config.DEFAULT_UI_FONT_SIZE_STEP
+    text_step = text_font_size_step if text_font_size_step is not None else config.DEFAULT_TEXT_FONT_SIZE_STEP
+    minimum_point_size = ui_theme_service.MIN_FONT_POINT_SIZE
+    maximum_point_size = ui_theme_service.MAX_FONT_POINT_SIZE
+    ui_point_size = max(minimum_point_size, min(maximum_point_size, resolve_font_point_size(ui_step, base_point_size)))
+    text_point_size = max(
+        minimum_point_size, min(maximum_point_size, resolve_font_point_size(text_step, base_point_size))
+    )
+
     font_payload = normalized_theme["font"]
     assert isinstance(font_payload, dict)
+    text_font_payload = normalized_theme["text_font"]
+    assert isinstance(text_font_payload, dict)
+    font_payload["point_size"] = ui_point_size
+    text_font_payload["point_size"] = text_point_size
 
     theme_font_family = str(font_payload.get("family", "")).strip()
-    theme_point_size = font_payload.get("point_size")
-    base_point_size = float(theme_point_size) if isinstance(theme_point_size, (int, float)) else _BASE_FONT_POINT_SIZE
-    assert base_point_size is not None
-
     themed_font = QFont(current_font)
     themed_font.setFamily(theme_font_family or str(_BASE_FONT_FAMILY or current_font.family()))
-    themed_font.setPointSizeF(base_point_size)
+    themed_font.setPointSizeF(ui_point_size)
     application.setFont(themed_font)
 
     colors = _theme_colors(normalized_theme)
@@ -2627,7 +2823,13 @@ def apply_ui_settings(
         settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID),
         settings_payload.get("ui_themes", []),
     )
-    apply_theme(application, selected_theme, None)
+    apply_theme(
+        application,
+        selected_theme,
+        None,
+        ui_font_size_step=str(settings_payload.get("ui_font_size_step", config.DEFAULT_UI_FONT_SIZE_STEP)),
+        text_font_size_step=str(settings_payload.get("text_font_size_step", config.DEFAULT_TEXT_FONT_SIZE_STEP)),
+    )
     apply_language(
         main_window,
         str(settings_payload.get("language", config.DEFAULT_LANGUAGE)),

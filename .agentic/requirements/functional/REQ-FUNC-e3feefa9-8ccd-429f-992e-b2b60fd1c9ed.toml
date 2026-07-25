@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-e3feefa9-8ccd-429f-992e-b2b60fd1c9ed"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character discovery shall preserve resumable, cancelled, and failed progress against the current checkpoint boundary."
+rationale = "Completed discovery work must survive interruption and provider failure."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_resumes_from_saved_synthesis_checkpoint",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_cancelled_state_and_resumes_synthesis",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_failed_state",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_resume_state_requires_current_checkpoint_boundary",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:37:49Z"

@@ -19,34 +19,27 @@
  * `child_process` instead, which also gives explicit control over the working
  * directory. The Python hooks are reused byte-for-byte; only the transport
  * differs from a plain `pi.exec`.
+ *
+ * Fail-closed contract: because the guards always exit 0 and answer on stdout,
+ * a non-zero exit is always an abnormal guard failure, never an allow. A
+ * missing interpreter, an unlaunchable interpreter, and a crashed hook all
+ * block with an actionable reason. Interpreter resolution and this decision
+ * contract are kept identical to `.agentic/tools/run_hook.mjs` (the Claude
+ * Code / Codex / Qwen Code launcher) and to
+ * `.opencode/plugins/agentic-guard.mjs`, so one repository policy cannot
+ * resolve to a different interpreter — or a different answer — depending on
+ * which agent is driving.
  */
 
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 
-/**
- * Secret/key file patterns that must never be read. Mirrors the Read denies in
- * `.claude/settings.json` and the secret subset of `PROTECTED_PATH_PATTERNS` in
- * `.agentic/hooks/guard_write_zone.py`. Matched against the file basename so a
- * secret is blocked wherever it lives.
- */
-export const PROTECTED_READ_PATTERNS: readonly string[] = [
-  ".env",
-  ".env.*",
-  "*.env",
-  "*.pem",
-  "*.key",
-  "*.p12",
-  "*.pfx",
-  "*_rsa",
-  "*_rsa.pub",
-  "id_rsa",
-  "id_rsa.pub",
-  "id_ed25519",
-  "id_ed25519.pub",
-];
+/** Actionable reason used whenever no interpreter can be resolved. */
+export const NO_INTERPRETER_REASON =
+  "AEGIS guard could not run: no Python runtime was found. "
+  + "Set AEGIS_PYTHON to an interpreter, or run a packaged WAEGIS command to register one.";
 
 /** Result of running a spawned process. */
 export interface SpawnResult {
@@ -69,32 +62,58 @@ export interface Interpreter {
   args: string[];
 }
 
-/** Options for {@link createHookBridge}. */
+/**
+ * Options for {@link createHookBridge}. Passing `interpreter: null` explicitly
+ * models "no interpreter is available" and is distinct from omitting the key,
+ * which resolves one from the environment.
+ */
 export interface HookBridgeOptions {
   spawn?: SpawnFn;
-  interpreter?: Interpreter;
+  interpreter?: Interpreter | null;
 }
 
 /** Bridge surface consumed by the tool-event handlers in `bridge.ts`. */
 export interface HookBridge {
   /**
-   * Run one Python hook with `payload` on stdin and return the deny reason, or
-   * `null` when the hook allows the action (empty stdout) or cannot be run.
+   * Run one Python hook with `payload` on stdin and return the block reason, or
+   * `null` only when the hook actually ran and allowed the action. A guard that
+   * could not run returns a reason, so an unavailable guard blocks.
    */
   runPythonHook(
     cwd: string,
     hookName: string,
     payload: Record<string, unknown>,
   ): Promise<string | null>;
-  /** Return a deny reason when `path` points at a protected secret/key file, else `null`. */
-  protectedPathDeny(path: string | undefined, cwd: string): string | null;
+}
+
+/** Whether a bare command name resolves on PATH (or an explicit path exists). */
+export function pathCommandExists(command: string): boolean {
+  if (command.includes("/") || command.includes("\\")) return existsSync(command);
+  const extensions = process.platform === "win32"
+    ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";")
+    : [""];
+  return (process.env.PATH || "").split(delimiter).some((directory) =>
+    extensions.some((extension) => existsSync(join(directory, command + extension))),
+  );
+}
+
+/**
+ * System launcher candidates, in order. Must match `interpreterCandidates()`
+ * in `.agentic/tools/run_hook.mjs`.
+ */
+export function interpreterCandidates(): Interpreter[] {
+  return process.platform === "win32"
+    ? [{ command: "py", args: ["-3"] }, { command: "python", args: [] }]
+    : [{ command: "python3", args: [] }, { command: "python", args: [] }];
 }
 
 /**
  * Resolve explicit `AEGIS_PYTHON`, the per-user WAEGIS runtime pointer, then
- * supported system launchers. The hooks are stdlib-only.
+ * supported system launchers. The hooks are stdlib-only. Returns `null` when
+ * no interpreter is available, which the bridge turns into a block rather than
+ * an allow.
  */
-export function resolveInterpreter(): Interpreter {
+export function resolveInterpreter(): Interpreter | null {
   const override = process.env.AEGIS_PYTHON;
   if (override && override.trim()) {
     return { command: override.trim(), args: [] };
@@ -111,10 +130,7 @@ export function resolveInterpreter(): Interpreter {
   } catch {
     // No valid registered WAEGIS runtime; continue with system launchers.
   }
-  if (process.platform === "win32") {
-    return { command: "py", args: ["-3"] };
-  }
-  return { command: "python3", args: [] };
+  return interpreterCandidates().find(({ command }) => pathCommandExists(command)) ?? null;
 }
 
 /** Default {@link SpawnFn} backed by `child_process.spawn`, writing `input` to stdin. */
@@ -173,44 +189,35 @@ export function parseHookDecision(stdout: string): string | null {
   return null;
 }
 
-/** Translate a simple fnmatch-style pattern (`*`, `?`) into a `RegExp`. */
-function fnmatchToRegExp(pattern: string): RegExp {
-  let regex = "";
-  for (const ch of pattern) {
-    if (ch === "*") regex += ".*";
-    else if (ch === "?") regex += ".";
-    else regex += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-  }
-  return new RegExp(`^${regex}$`);
-}
-
-const PROTECTED_READ_MATCHERS = PROTECTED_READ_PATTERNS.map(fnmatchToRegExp);
-
 /**
- * Deny reads of secret/key files. Matches the file basename against
- * {@link PROTECTED_READ_PATTERNS}. `cwd` is accepted for signature parity with
- * the other guard checks; the basename test is location-independent.
+ * Turn one completed hook run into a block reason, or `null` to allow.
+ *
+ * The guards always exit 0 and answer on stdout, so a non-zero exit is always
+ * an abnormal failure. Reading only stdout — the previous behavior — made a
+ * crashed guard indistinguishable from one that ran and permitted the call.
  */
-export function protectedPathDeny(
-  path: string | undefined,
-  _cwd: string,
-): string | null {
-  if (!path) return null;
-  const basename = path.replace(/\\/g, "/").split("/").filter(Boolean).pop();
-  if (!basename) return null;
-  const lower = basename.toLowerCase();
-  if (PROTECTED_READ_MATCHERS.some((matcher) => matcher.test(lower))) {
-    return `Reading protected path is blocked: ${path}`;
-  }
-  return null;
+export function decideFromResult(hookName: string, result: SpawnResult): string | null {
+  const denial = parseHookDecision(result.stdout ?? "");
+  if (denial) return denial;
+  const code = result.code ?? 0;
+  if (code === 0) return null;
+  const stderr = (result.stderr ?? "").trim();
+  const detail = stderr
+    ? stderr.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).pop()
+    : "no diagnostic output";
+  return `AEGIS guard ${hookName} exited with status ${code} without a decision; blocking. ${detail}`;
 }
 
 /** Build a {@link HookBridge}, optionally injecting a spawn function/interpreter for tests. */
 export function createHookBridge(options: HookBridgeOptions = {}): HookBridge {
   const spawnImpl = options.spawn ?? defaultSpawn;
-  const interpreter = options.interpreter ?? resolveInterpreter();
+  // `?? resolveInterpreter()` would silently re-resolve an explicit null, so an
+  // injected "no interpreter available" case must be honored by key presence.
+  const interpreter = "interpreter" in options ? options.interpreter ?? null : resolveInterpreter();
   return {
     async runPythonHook(cwd, hookName, payload) {
+      // No interpreter is a guard that cannot run, not a guard that allowed.
+      if (!interpreter) return NO_INTERPRETER_REASON;
       const hookPath = join(cwd, ".agentic", "hooks", hookName);
       let result: SpawnResult;
       try {
@@ -220,14 +227,11 @@ export function createHookBridge(options: HookBridgeOptions = {}): HookBridge {
           JSON.stringify(payload),
           cwd,
         );
-      } catch {
-        // Python unavailable or hook missing: fail open. The guard contract is
-        // that a denial is an explicit stdout signal; absence means allow. The
-        // Python prerequisite is documented in the adapter README.
-        return null;
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        return `AEGIS guard could not run ${hookName}: ${detail}`;
       }
-      return parseHookDecision(result.stdout);
+      return decideFromResult(hookName, result);
     },
-    protectedPathDeny,
   };
 }

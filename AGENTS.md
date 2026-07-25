@@ -35,6 +35,23 @@ or `python -m aegis` may also be used.
 Examples below use `<workflow>` for the selected project-local or installed
 workflow command.
 
+## Mandatory Workflow Bootstrap
+
+Before inspecting or changing repository files:
+
+1. Run `<workflow> config validate --json`.
+2. Run `<workflow> config show --effective --json`.
+3. Report the effective write-access, protected-read/path, scope, secret,
+   gate, coverage, and delivery modes and their active rule counts.
+4. State whether the work uses the worktree-local selected run or an explicit
+   `--run-id <existing-run-id>`.
+5. Follow configured AEGIS repository restrictions and separately respect all
+   external platform, host, sandbox, approval, and operating-system controls.
+
+Missing or invalid `.agentic/workflow.toml` is an actionable configuration
+error. Do not infer policy, continue with defaults, or copy policy from an
+adapter. The validated file is the only AEGIS repository-policy source.
+
 ## Pi Adapter
 
 Under [Pi](https://pi.dev), this `AGENTS.md` contract applies unchanged (Pi reads
@@ -78,26 +95,46 @@ project on first start; see `.qwen/README.md`.
 
 ## Durable Requirements Contract
 
-- Long-lived requirements live under `.agentic/requirements/`, one Markdown
-  register per requirement type.
+- Long-lived requirements live under `.agentic/requirements/`, one complete
+  TOML snapshot per UUIDv4-backed requirement.
 - The active run graph under `.agentic/runs/` records one workflow run; the
-  requirement registers describe durable project behavior.
+  requirement snapshots describe durable current project behavior.
 - Every behavior change starts by checking impact against existing requirement
-  rows before implementation code is written.
-- New requirement rows start as `Planned` and become `Active` only when a
+  snapshots before implementation code is written.
+- Search with `requirement list` before creating a requirement so semantically
+  duplicate contracts are not introduced.
+- Create requirements with `<workflow> requirement create ...`; use the
+  returned `REQ-<CATEGORY>-<uuid>` ID and never invent or renumber IDs.
+- New requirement snapshots start as `Planned` and become `Active` only when a
   linked test exists and passes, or when an explicit manual verification method
   is documented.
-- Activate proven requirement rows with
-  `<workflow> requirement activate --id <requirement-id> --linked-test <test-id> --verification "<method>"`
-  instead of editing workflow ledgers by hand.
+- Update the same snapshot and preserve its ID when the same behavioral
+  contract changes. Replace the complete linked-test and affected-path sets
+  with `requirement update`; do not retain renamed or stale associations.
+- Activate a proven snapshot with
+  `<workflow> requirement activate [--run-id <run-id>] --id <requirement-id> --linked-test <test-id> --verification "<method>"`.
 - Link each active requirement to exact test identifiers when practical.
 - When adding or changing tests, cite relevant requirement IDs in comments,
   docstrings, or test names where practical.
 - New source files under configured `coverable_roots` need a file-level
-  requirement row naming the file in `Related Components` and a linked check,
+  requirement snapshot naming the file in `affected_paths` and a linked test,
   unless the file is listed in `.agentic/requirements/coverage_waivers.txt`.
 - Waivers are a legacy baseline only. Remove stale waivers once a module is
   covered or deleted.
+- Run traceability, coverage, and impact directly from canonical snapshots.
+  There is no registry sync, registry audit, or generated traceability cache.
+- Treat concurrent edits to the same requirement TOML file as a semantic
+  conflict that requires reconciliation.
+
+## Worktree-Local Run Selection
+
+- The active pointer is `.agentic/.workspace/state/current_run`; the entire
+  `.agentic/.workspace/` tree is ignored local state and must never be staged.
+- One pointer belongs to one Git worktree. Never copy it between worktrees.
+- Use `--run-id <existing-run-id>` when automation must pin a particular run.
+  Explicit selection does not change the worktree pointer.
+- Treat `RUN-POINTER-*` and `RUN-ID-NOT-FOUND` messages as setup instructions.
+  Never guess a run ID or edit a graph to bypass resolution.
 
 ## Component Documentation Contract
 
@@ -111,7 +148,7 @@ project on first start; see `.qwen/README.md`.
 - When adding a new component page, update
   `.agentic/knowledge/components/index.md` in the same change.
 - Component documentation complements requirements and tests. It does not
-  replace durable requirement rows or linked verification.
+  replace durable requirement snapshots or linked verification.
 
 ## Required Order
 
@@ -119,7 +156,7 @@ project on first start; see `.qwen/README.md`.
 2. Intent Alignment: record understanding, scope, acceptance, risk, and open
    questions with recommended responses when automated flow is acceptable; pause
    when policy or risk requires human input.
-3. Requirement: create or update minimal spec items and durable requirement rows.
+3. Requirement: create or update minimal spec items and durable requirement snapshots.
 4. Check: create checks/tests that cite spec/requirement IDs and fail first.
 5. Implementation: edit source and required component documentation until
    checks pass.

@@ -17,12 +17,16 @@ Use this skill to preserve old behavior before changing code.
 
 This skill audits requirements and regression risk. Component documentation in
 `.agentic/knowledge/components/` complements this process, but it does not
-replace durable requirement rows, linked tests, or explicit manual verification.
+replace durable requirement snapshots, linked tests, or explicit manual verification.
 
 ## Procedure
 
-1. Read `AGENTS.md`, `.agentic/workflow.toml`, and
-   `.agentic/requirements/README.md`.
+1. Read `AGENTS.md` and `.agentic/requirements/README.md`. Run
+   `<workflow> config validate --json` and
+   `<workflow> config show --effective --json`; report write,
+   protected-read/path, scope, secret, gate, coverage, and delivery modes,
+   active rule counts, external safety boundaries, and the selected run when a
+   graph-dependent command is used.
 2. Run:
 
    ```powershell
@@ -37,13 +41,14 @@ replace durable requirement rows, linked tests, or explicit manual verification.
    ```
 
    If not known, run impact after the first scoped file list is available.
-4. Treat impacted requirement rows as existing contracts. Do not change them
+4. Treat impacted requirement snapshots as existing contracts. Do not change them
    unless the human approves a requirement revision.
 5. Run linked tests reported by impact analysis. If impact reports untraced
    coverable files, run full regression and author missing requirements/checks.
 6. For pre-existing legacy files, add waivers only with human approval and keep
    them in `.agentic/requirements/coverage_waivers.txt`.
-7. Before delivery, run registry sync/audit and both traceability audits.
+7. Before delivery, rerun impact and both traceability audits directly from
+   canonical TOML snapshots. There is no generated registry or registry audit.
 
 Report impacted requirements, linked tests, untraced files, waivers touched,
 commands run, and remaining audit findings.

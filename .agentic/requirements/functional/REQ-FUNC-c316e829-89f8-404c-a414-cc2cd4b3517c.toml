@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-c316e829-89f8-404c-a414-cc2cd4b3517c"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Audio Blocks controller shall invalidate voice-target audio while preserving unrelated audio and allowing skip of preserved paths."
+rationale = "Voice-target changes must not delete unrelated generated audio."
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelated_audio",
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_voice_target_invalidation_can_skip_preserved_paths",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-24T19:30:55Z"

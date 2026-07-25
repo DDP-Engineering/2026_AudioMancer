@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-ffe91dcf-1f7c-4d01-a81a-20b866bffc29"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The narrator definition service shall simplify the TTS plan to voice-assignment mode only."
+rationale = "The stored plan must carry only the supported voice-assignment mode."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-04ae35c8-6e30-480a-a063-e9fd80505e55"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Audio assembly shall compose per-chunk outputs, write pause blocks as silence, and use a default pause duration when missing."
+rationale = "Assembly must produce correct ordered output with pauses."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_per_chunk_outputs",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_missing_pause_duration_uses_default",
+]
+
+created_on = "2026-07-19T16:32:00Z"
+last_updated = "2026-07-24T19:30:55Z"

@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-d832eef6-1449-474d-9f15-f2fd16f075b0"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Audio assembly state shall keep reset disabled when only default assembly metadata is present."
+rationale = "Reset must not be offered when there is nothing generated to clear."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_keeps_reset_disabled_for_default_metadata",
+]
+
+created_on = "2026-07-19T17:35:00Z"
+last_updated = "2026-07-24T19:30:55Z"

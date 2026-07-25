@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-0186546f-967d-4cca-bab6-c2e026d2e307"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Audio Blocks page shall render source-list markers, selected details, scene-ambience rows, and translated labels."
+rationale = "The page must present artifact and progress state readably."
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_renders_source_list_markers_and_selected_details",
+  "04_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_advances_to_next_pending_generated_scene_ambience_row",
+  "04_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_places_scene_ambience_selector_on_progress_row",
+  "04_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_actions",
+]
+
+created_on = "2026-07-19T17:33:00Z"
+last_updated = "2026-07-24T19:30:55Z"

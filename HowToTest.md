@@ -35,12 +35,6 @@ uv run pytest tests/test_audio_blocks_service.py tests/test_audio_blocks_page.py
 uv run pytest tests/test_audio_assembly_service.py tests/test_audio_assembly_page.py tests/test_audio_assembly_ui_controller.py
 ```
 
-Documentation audit:
-
-```powershell
-python 02_Tools/audits/audit_documentation.py --changed-only
-```
-
 Full regression baseline:
 
 ```powershell

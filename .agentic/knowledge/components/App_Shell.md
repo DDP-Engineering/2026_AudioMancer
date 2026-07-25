@@ -73,13 +73,18 @@ hooks rather than recreating application or dialog infrastructure.
 
 ## 9. Validation And Tests
 
-Focused evidence E-0004 passed 20 tests in `tests/test_app_entrypoint.py`,
-`tests/test_main_window_lifecycle.py`, and `tests/test_package_import.py`.
-After App Shell changes, run these modules and the traceability and coverage
-audits.
+Primary automated coverage:
+
+- `tests/test_app_entrypoint.py`
+- `tests/test_main_window_lifecycle.py`
+- `tests/test_package_import.py`
+
+Minimum validation after a change: run the focused modules above with
+`uv run pytest`, plus `uv run python -m py_compile` and `uv run ruff check` on
+changed files.
 
 ## 10. Limitations And Future Work
 
 `MainWindow` is necessarily a broad integration seam. Changes that alter a
-domain page's lifecycle, state, or persistence behavior require the owning
-component's adoption or development work as well.
+domain page's lifecycle, state, or persistence behavior require corresponding
+work in the owning component as well.

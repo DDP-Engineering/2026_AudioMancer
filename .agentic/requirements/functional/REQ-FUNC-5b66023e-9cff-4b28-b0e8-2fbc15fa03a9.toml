@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-5b66023e-9cff-4b28-b0e8-2fbc15fa03a9"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Narrator profile generation shall merge token usage into the report and state."
+rationale = "Usage must be recorded across generation."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_merges_token_usage_into_report_and_state",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-24T19:30:55Z"

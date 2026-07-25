@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, project_workspace_service
+from audiomancer.services import narrator_definition_service, project_workspace_service, speech_blocks_service
 from audiomancer.ui.controllers import (
     home_ui_controller,
     text_cleanup_ui_controller,
@@ -802,19 +802,38 @@ def test_main_window_opens_confirmed_manifest_healing_repair(
     @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SpeechRepair", tmp_path)
-    _write_json(project_root / config.SPEECH_BLOCKS_STATE_FILE_NAME, _operation_state("completed", 1, 1))
-    _write_json(
-        project_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME,
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
         {
-            "speech_blocks_stage_status": "completed",
-            "speech_block_count": 1,
-            "approved_block_count": 1,
-            "total_block_count": 1,
+            "status": "completed",
+            "source": {"kind": "original", "language": "en", "fingerprint": "repair-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": {
+                "next_chunk_index": 1,
+                "run_token": "2026-04-25T12:00:00+00:00",
+                "log_relative_path": "log_ai_speech_blocks_20260425T120000Z.log",
+                "source_snapshot_fingerprint": "repair-fingerprint",
+                "source_language": "en",
+                "ai_profile_id": "profile-1",
+                "additional_speech_block_instructions_fingerprint": "",
+                "speech_blocks_response_contract": "direct_blocks",
+            },
+            "failure": None,
+            "blocks": [
+                {
+                    "speech_block_id": "sb-1",
+                    "chunk_id": "chunk-0001",
+                    "speaker_name": "Narrator",
+                    "text": "Line",
+                    "approved": True,
+                }
+            ],
         },
-    )
-    _write_json(
-        project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
-        [{"speech_block_id": "sb-1", "speaker_name": "Narrator", "text": "Line", "approved": True}],
     )
     manifest["current_stage"] = "speech_blocks_ready"
     manifest["operations"]["speech_blocks"]["status"] = "not_started"

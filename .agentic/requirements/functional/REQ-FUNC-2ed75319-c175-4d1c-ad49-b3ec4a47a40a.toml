@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-2ed75319-c175-4d1c-ad49-b3ec4a47a40a"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Context budget metadata shall apply the direct online context fraction where configured."
+rationale = "Online-provider policy must be applied to context budgeting when configured."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_budget_service.py::test_context_budget_metadata_uses_direct_online_context_fraction",
+]
+
+created_on = "2026-07-19T17:13:00Z"
+last_updated = "2026-07-24T19:30:55Z"

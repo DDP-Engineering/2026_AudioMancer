@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-NFR-39f56048-5c97-47c1-8bbc-0db8326b3383"
+category = "non_functional"
+status = "Active"
+priority = "Must"
+requirement = "Logging initialization shall remove only expired log files, apply component-level overrides, and use the JSON formatter when configured."
+rationale = "Observability setup must be correct and bounded."
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_removes_only_expired_log_files",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_get_component_logger_applies_component_level_override",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_uses_json_formatter_when_configured",
+]
+
+created_on = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-24T19:56:45Z"

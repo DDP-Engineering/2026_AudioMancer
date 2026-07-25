@@ -1,0 +1,23 @@
+schema_version = 1
+id = "REQ-FUNC-3091aae8-92e9-4db0-a0bc-44e9618675f6"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The Character Voices page shall present the narrator target as preview-only, gate edit mode, include preview text in the editor payload, and render language and sizing indicators."
+rationale = "The page must present per-character voice review clearly."
+verification = "Automated: 5 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_narrator_target_is_preview_only",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_editor_payload_includes_preview_text",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_header_indicators_render_languages_and_assignment_mode",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing",
+]
+
+created_on = "2026-07-19T17:27:00Z"
+last_updated = "2026-07-24T19:30:55Z"

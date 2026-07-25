@@ -136,9 +136,7 @@ def build_synthetic_project(out: Path, blocks: int = 3000, chunks: int = 150) ->
         out / CHUNKING_STATE_FILE_NAME,
         _operation_state("completed", len(source_chunks), len(source_chunks)),
     )
-    _write_json(out / SPEECH_BLOCKS_OUTPUT_FILE_NAME, speech_blocks)
-    _write_json(out / SPEECH_BLOCKS_REPORT_FILE_NAME, _speech_blocks_report(speech_blocks, source_chunks))
-    _write_json(out / SPEECH_BLOCKS_STATE_FILE_NAME, _speech_blocks_state(speech_blocks, source_chunks))
+    _write_json(out / SPEECH_BLOCKS_OUTPUT_FILE_NAME, _speech_blocks_document(speech_blocks, source_chunks, now_iso))
     _write_json(out / AUDIO_BLOCKS_OUTPUT_FILE_NAME, audio_blocks)
     _write_json(out / AUDIO_BLOCKS_REPORT_FILE_NAME, _audio_blocks_report(audio_blocks, speech_blocks))
     _write_json(
@@ -364,70 +362,44 @@ def _chunking_report(source_chunks: list[dict[str, object]]) -> dict[str, object
     }
 
 
-def _speech_blocks_report(
+def _speech_blocks_document(
     speech_blocks: list[dict[str, object]],
     source_chunks: list[dict[str, object]],
+    now_iso: str,
 ) -> dict[str, object]:
     """
-    @brief      Build a completed synthetic Speech Blocks report.
+    @brief      Build the single authoritative synthetic Speech Blocks document.
     @param[in]  speech_blocks Speech Blocks payload list.
     @param[in]  source_chunks Source chunk payload list.
-    @return     Speech Blocks report payload.
+    @param[in]  now_iso Synthetic run timestamp.
+    @return     Speech Blocks document payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
+    @date       2026-07-24
+    @version    0.2.0
     """
     return {
-        "source_language": "en",
-        "source_kind": "original",
+        "status": "completed",
+        "source": {"kind": "original", "language": "en", "fingerprint": "synthetic"},
         "ai_profile_id": "synthetic-profile",
-        "speech_blocks_stage_status": "completed",
-        "processed_chunk_count": len(source_chunks),
-        "total_chunk_count": len(source_chunks),
-        "speech_block_count": len(speech_blocks),
-        "approved_block_count": len(speech_blocks),
-        "total_block_count": len(speech_blocks),
-        "warning_count": 0,
-        "warnings": [],
+        "instructions": "",
+        "scene_ambience": {"enabled": False},
+        "response_contract": "direct_blocks",
         "token_usage": {"input_tokens": None, "output_tokens": None, "total_tokens": None, "usage_available": False},
-        "additional_speech_block_instructions": "",
-        "scene_ambience_generation": {},
-        "additional_speech_block_instructions_fingerprint": "",
+        "budget_metadata": {},
+        "checkpoint": {
+            "next_chunk_index": len(source_chunks),
+            "run_token": now_iso,
+            "log_relative_path": "speech_blocks_ai_transactions.jsonl",
+            "source_snapshot_fingerprint": "synthetic",
+            "source_language": "en",
+            "ai_profile_id": "synthetic-profile",
+            "additional_speech_block_instructions_fingerprint": "",
+            "speech_blocks_response_contract": "direct_blocks",
+        },
+        "failure": None,
+        "blocks": speech_blocks,
     }
-
-
-def _speech_blocks_state(
-    speech_blocks: list[dict[str, object]],
-    source_chunks: list[dict[str, object]],
-) -> dict[str, object]:
-    """
-    @brief      Build compact completed Speech Blocks operation state.
-    @param[in]  speech_blocks Speech Blocks payload list.
-    @param[in]  source_chunks Source chunk payload list.
-    @return     Speech Blocks operation-state payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    state = _operation_state("completed", len(source_chunks), len(source_chunks))
-    state["mode"] = "ai_assisted"
-    state["metadata"] = {
-        "source_language": "en",
-        "source_kind": "original",
-        "ai_profile_id": "synthetic-profile",
-        "processed_chunk_count": len(source_chunks),
-        "total_chunk_count": len(source_chunks),
-        "speech_block_count": len(speech_blocks),
-        "approved_block_count": len(speech_blocks),
-        "total_block_count": len(speech_blocks),
-        "warnings": [],
-        "source_snapshot_fingerprint": "synthetic",
-        "log_relative_path": "speech_blocks_ai_transactions.jsonl",
-        "token_usage": {"input_tokens": None, "output_tokens": None, "total_tokens": None, "usage_available": False},
-    }
-    return state
 
 
 def _audio_blocks_report(

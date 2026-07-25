@@ -13,7 +13,7 @@
 using the shared repository path-matching policy for component ownership.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-20
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 import tomllib
 
-from .config import load_config
+from .config import WorkflowConfig
 from .paths import matches_pattern
 
 
@@ -115,7 +115,7 @@ class ComponentIssue:
 
 # PUBLIC API
 
-def load_components(repo_root: Path, manifest_path: str = ".agentic/components.toml") -> ComponentManifest:
+def load_components(repo_root: Path, manifest_path: str) -> ComponentManifest:
     """
     @brief      Load the component manifest for a repository.
     @param[in]  repo_root Repository root.
@@ -124,7 +124,7 @@ def load_components(repo_root: Path, manifest_path: str = ".agentic/components.t
     @exception  tomllib.TOMLDecodeError Raised when the manifest TOML is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-22
-    @version    0.1.0
+    @version    0.2.0
     """
     path = repo_root / manifest_path
     if not path.exists():
@@ -165,33 +165,41 @@ def component_for_path(manifest: ComponentManifest, repo_relative_path: str) -> 
     return None
 
 
-def has_usable_baseline(status: str, minimum: str = "baseline-usable") -> bool:
+def has_usable_baseline(status: str, minimum: str) -> bool:
     """
     @brief      Compare an adoption status against a required baseline.
     @param[in]  status Adoption status to test.
     @param[in]  minimum Minimum adoption status accepted as usable.
     @return     True when status meets or exceeds the requested minimum.
-    @exception  None
+    @exception  ValueError If the required completion level is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-22
-    @version    0.1.0
+    @version    0.2.0
     """
-    return BASELINE_ORDER.get(status, -1) >= BASELINE_ORDER.get(minimum, BASELINE_ORDER["baseline-usable"])
+    if minimum not in BASELINE_ORDER:
+        raise ValueError(f"Unsupported baseline completion level: {minimum}")
+    return BASELINE_ORDER.get(status, -1) >= BASELINE_ORDER[minimum]
 
 
-def audit_components(repo_root: Path, manifest_path: str | None = None) -> list[ComponentIssue]:
+def audit_components(
+    repo_root: Path,
+    config: WorkflowConfig,
+    manifest_path: str | None = None,
+) -> list[ComponentIssue]:
     """
     @brief      Audit the component manifest contract.
     @param[in]  repo_root Repository root.
+    @param[in]  config Validated workflow configuration.
     @param[in]  manifest_path Optional repository-relative manifest path override.
     @return     List of component manifest audit issues.
     @exception  tomllib.TOMLDecodeError Raised when the manifest TOML is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-22
-    @version    0.1.1
+    @version    0.2.0
     """
-    cfg = load_config(repo_root)
-    resolved_manifest_path = cfg.component_manifest if manifest_path is None else manifest_path
+    resolved_manifest_path = (
+        config.component_manifest if manifest_path is None else manifest_path
+    )
     manifest = load_components(repo_root, resolved_manifest_path)
     issues: list[ComponentIssue] = []
 
@@ -214,7 +222,7 @@ def audit_components(repo_root: Path, manifest_path: str | None = None) -> list[
                     name=bundle.name,
                 )
             )
-        if not cfg.adoption_allow_component_bundles:
+        if not config.adoption_allow_component_bundles:
             issues.append(
                 ComponentIssue(
                     code="COMPONENT-BUNDLE-DISALLOWED",
@@ -222,13 +230,13 @@ def audit_components(repo_root: Path, manifest_path: str | None = None) -> list[
                     name=bundle.name,
                 )
             )
-        if len(bundle.components) > cfg.adoption_max_bundle_components:
+        if len(bundle.components) > config.adoption_max_bundle_components:
             issues.append(
                 ComponentIssue(
                     code="COMPONENT-BUNDLE-TOO-LARGE",
                     message=(
                         f"{bundle.name} includes {len(bundle.components)} components; "
-                        f"maximum is {cfg.adoption_max_bundle_components}"
+                        f"maximum is {config.adoption_max_bundle_components}"
                     ),
                     name=bundle.name,
                 )
@@ -245,36 +253,46 @@ def audit_components(repo_root: Path, manifest_path: str | None = None) -> list[
     return issues
 
 
-def audit_local_scope(repo_root: Path, paths: list[str], minimum: str = "baseline-usable") -> list[ComponentIssue]:
+def audit_local_scope(
+    repo_root: Path,
+    paths: list[str],
+    config: WorkflowConfig,
+    minimum: str | None = None,
+) -> list[ComponentIssue]:
     """
     @brief      Audit changed paths against component baseline requirements.
     @param[in]  repo_root Repository root.
     @param[in]  paths Repository-relative paths to inspect.
-    @param[in]  minimum Minimum adoption status accepted as usable.
+    @param[in]  config Validated workflow configuration.
+    @param[in]  minimum Optional minimum adoption status override.
     @return     Blocking component scope issues.
     @exception  tomllib.TOMLDecodeError Raised when the manifest TOML is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-22
-    @version    0.1.0
+    @version    0.2.0
     """
-    cfg = load_config(repo_root)
-    manifest = load_components(repo_root, cfg.component_manifest)
+    resolved_minimum = minimum or config.adoption_default_completion_level
+    if resolved_minimum is None:
+        return []
+    manifest = load_components(repo_root, config.component_manifest)
     issues: list[ComponentIssue] = []
     for path in paths:
         normalized = _normalize_path(path)
         component = component_for_path(manifest, normalized)
         if component is None:
             continue
-        if has_usable_baseline(component.adoption_status, minimum):
+        if has_usable_baseline(component.adoption_status, resolved_minimum):
             continue
-        if _component_has_bundle_baseline(manifest, component.name, minimum):
+        if _component_has_bundle_baseline(
+            manifest, component.name, resolved_minimum
+        ):
             continue
         issues.append(
             ComponentIssue(
                 code="COMPONENT-BASELINE-MISSING",
                 message=(
                     f"{component.name} is {component.adoption_status}; "
-                    f"{minimum} is required before behavior-changing work"
+                    f"{resolved_minimum} is required before behavior-changing work"
                 ),
                 path=normalized,
                 name=component.name,

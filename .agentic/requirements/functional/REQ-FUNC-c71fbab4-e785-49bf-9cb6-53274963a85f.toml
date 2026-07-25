@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-c71fbab4-e785-49bf-9cb6-53274963a85f"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Speech Blocks shall persist all operation metadata and blocks in a single authoritative speech_blocks.json document with a fixed top-level field set, and shall not create speech_blocks_report.json or speech_blocks_state.json."
+rationale = "One authoritative document removes the redundant report and state artifacts that previously duplicated Speech Blocks metadata."
+verification = "Single-document round-trip and no report/state files; test passes in full green suite."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_document_round_trips_and_writes_only_one_artifact",
+]
+
+created_on = "2026-07-24T17:26:38Z"
+last_updated = "2026-07-24T18:37:55Z"

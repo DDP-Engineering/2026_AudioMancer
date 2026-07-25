@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-96847379-74f1-4e71-b065-461f32a0e63e"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Text extraction shall persist cancelled progress and resume."
+rationale = "Interrupted extraction must be resumable without losing progress."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_persists_cancelled_progress_and_resumes",
+]
+
+created_on = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-24T19:52:27Z"

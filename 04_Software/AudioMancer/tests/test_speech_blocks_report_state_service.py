@@ -114,7 +114,8 @@ def test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint(tmp_p
     assert "artifact_paths" not in state
     assert state["progress_current"] == 1
     assert state["warning_count"] == 1
-    assert state["metadata"]["source_chunks"] == source_chunks
+    assert "source_chunks" not in state["metadata"]
+    assert state["metadata"]["total_chunk_count"] == len(source_chunks)
     assert state["resume_checkpoint"]["next_chunk_index"] == 1
     assert str(state["resume_checkpoint"]["log_relative_path"]).endswith("log_ai_transactions.log")
     assert state["resume_checkpoint"]["budget_metadata"] == {"text_budget_tokens": 10}

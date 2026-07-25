@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-4e30623d-5aa9-403d-9d7c-78ed4dcd2e89"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI cleanup shall append operator instructions to the prompt and state."
+rationale = "Operator guidance must reach the provider and be recorded."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_appends_operator_instructions_to_prompt_and_state",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

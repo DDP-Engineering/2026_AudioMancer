@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-edba8e38-dc7c-4a6a-b501-5046a020c1f8"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI cleanup shall persist review artifacts and a log."
+rationale = "Cleanup review must be reproducible from durable artifacts."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_writes_cleanup_artifacts_and_log",
+]
+
+created_on = "2026-07-18T21:07:00Z"
+last_updated = "2026-07-24T19:30:55Z"

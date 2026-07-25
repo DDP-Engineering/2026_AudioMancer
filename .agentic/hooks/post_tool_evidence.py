@@ -9,17 +9,17 @@
 """
 @file post_tool_evidence.py
 @brief Post-tool hook recording agent tool-use evidence.
-@details Runs as part of the template hook layer and preserves workflow guard behavior.
+@details Resolves worktree-local state through the canonical AEGIS store and
+         emits a non-destructive structured warning when no valid run exists.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
@@ -34,29 +34,49 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.2.0
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PostToolUse":
         return 0
     cwd = Path(payload.get("cwd") or ".").resolve()
-    current = cwd / ".agentic" / "current_run"
-    if not current.exists():
+    try:
+        from workflow_config_bootstrap import find_repository_root
+
+        repo_root = find_repository_root(cwd)
+        source_root = repo_root / ".agentic" / "cli" / "src"
+        source_text = str(source_root)
+        if source_text not in sys.path:
+            sys.path.insert(0, source_text)
+        from aegis.store import append_journal, resolve_run_id
+
+        run_id = resolve_run_id(repo_root)
+    except Exception as exc:
+        serializer = getattr(exc, "to_dict", None)
+        error = serializer() if callable(serializer) else {"message": str(exc)}
+        print(
+            json.dumps(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PostToolUse",
+                        "additionalContext": str(exc),
+                    },
+                    "warning": error,
+                },
+                sort_keys=True,
+            )
+        )
         return 0
-    run_id = current.read_text(encoding="utf-8").strip()
-    journal = cwd / ".agentic" / "runs" / run_id / "journal.jsonl"
-    journal.parent.mkdir(parents=True, exist_ok=True)
-    entry = {
-        "time": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "event": "agentic.tool",
-        "data": {
+    append_journal(
+        repo_root,
+        run_id,
+        "agentic.tool",
+        {
             "tool_name": payload.get("tool_name"),
             "tool_use_id": payload.get("tool_use_id"),
             "has_response": payload.get("tool_response") is not None,
         },
-    }
-    with journal.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, sort_keys=True) + "\n")
+    )
     return 0
 
 

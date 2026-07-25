@@ -51,7 +51,16 @@ function Resolve-Python {
 
 $Interpreter = Resolve-Python
 if ($null -eq $Interpreter) {
-    Write-Error "No AEGIS Python runtime is available. Run a packaged WAEGIS command or set AEGIS_PYTHON."
+    # -ErrorAction Continue, then an explicit exit. Under the script-level
+    # $ErrorActionPreference = "Stop" a plain Write-Error raises a terminating
+    # error and ends the script with status 1, never reaching this exit and
+    # disagreeing with run.sh's 2 for the identical condition. A .NET call such
+    # as [Console]::Error.WriteLine would also report correctly, but it is a
+    # method invocation and fails outright under PowerShell Constrained
+    # Language Mode - the configuration a locked-down corporate host is most
+    # likely to be running, and precisely where this message matters most.
+    Write-Error "No AEGIS Python runtime is available. Run a packaged WAEGIS command or set AEGIS_PYTHON." -ErrorAction Continue
+    exit 2
 }
 
 & $Interpreter.Command @($Interpreter.Args) $Launcher @Args

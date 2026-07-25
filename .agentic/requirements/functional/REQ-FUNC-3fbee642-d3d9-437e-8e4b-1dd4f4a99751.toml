@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-3fbee642-d3d9-437e-8e4b-1dd4f4a99751"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "AI chunking shall reject profiles with no input budget."
+rationale = "A profile that cannot fit any input must be refused."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_rejects_profiles_with_no_input_budget",
+]
+
+created_on = "2026-07-19T20:30:00Z"
+last_updated = "2026-07-24T19:30:55Z"

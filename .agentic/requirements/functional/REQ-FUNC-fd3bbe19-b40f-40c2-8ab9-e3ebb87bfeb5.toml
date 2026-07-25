@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-FUNC-fd3bbe19-b40f-40c2-8ab9-e3ebb87bfeb5"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Character discovery shall strictly reject a malformed or legacy-root character document, surfacing it as invalid rather than tolerating or silently repairing it."
+rationale = "Incompatible or corrupt discovery data must be made operator-visible, not consumed as partial state."
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_malformed_and_old_root_payloads",
+]
+
+created_on = "2026-07-24T19:37:49Z"
+last_updated = "2026-07-24T19:37:49Z"
