@@ -12,8 +12,8 @@
 @details Handles project creation, opening, repair confirmation, activation,
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.9.6
+@date 2026-07-25
+@version 0.9.7
 """
 
 # IMPORTS
@@ -45,12 +45,14 @@ if TYPE_CHECKING:
 def handle_new_project_requested(window: "MainWindow") -> None:
     """
     @brief      Collect inputs and create a new project workspace.
+    @details    The parent-folder picker starts at the active project's parent
+                when one is open, and at the per-user documents root otherwise.
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.4.0
+    @date       2026-07-25
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_parent = QFileDialog.getExistingDirectory(
@@ -59,7 +61,9 @@ def handle_new_project_requested(window: "MainWindow") -> None:
             "dialog.select_project_parent_title",
             current_language,
         ),
-        str(window._current_project_root.parent) if window._current_project_root is not None else str(config.APP_ROOT),
+        str(window._current_project_root.parent)
+        if window._current_project_root is not None
+        else str(config.resolve_user_documents_root()),
     )
     if not selected_parent:
         return
@@ -104,18 +108,20 @@ def handle_new_project_requested(window: "MainWindow") -> None:
 def handle_open_project_requested(window: "MainWindow") -> None:
     """
     @brief      Let the operator select and open one existing project folder.
+    @details    The folder picker starts at the active project root when one is
+                open, and at the per-user documents root otherwise.
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
+    @date       2026-07-25
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_folder = QFileDialog.getExistingDirectory(
         window,
         ui_state_service.translate("dialog.open_project_title", current_language),
-        str(window._current_project_root or config.APP_ROOT),
+        str(window._current_project_root or config.resolve_user_documents_root()),
     )
     if not selected_folder:
         return

@@ -67,6 +67,13 @@ dialogs, project activation, option locking, threaded snapshots, and external
 save-path checks out of `HomeProjectPage`. The page owns Qt signals, controls,
 translated labels, theme roles, busy state, and readiness display.
 
+The create and open folder pickers start from the active project when one is
+open — its parent folder for create, the project root itself for open — and from
+`config.resolve_user_documents_root()` otherwise. They deliberately do not start
+from `config.APP_ROOT`: that root owns read-only packaged resources, so for a
+frozen build installed into a system location it would open the browser inside a
+directory where any created project fails to write.
+
 `project_export_service` reads ready downstream artifacts into format-neutral
 export documents or curated audio ZIP files. `project_snapshot_service` walks
 the active project, skips symlinks and AI transaction logs, archives files under
@@ -204,3 +211,6 @@ as part of focused validation.
   assembly artifacts; PDF export is not implemented.
 - Snapshots are filesystem snapshots taken at start time, not transactional
   captures; the UI prevents starting them while another operation is active.
+- No last-used project parent folder is persisted. Once the operator closes the
+  application, the create and open dialogs start again at the documents root
+  rather than wherever their projects actually live.

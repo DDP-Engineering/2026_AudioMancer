@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-PLAT-b463cefd-a2a7-4f53-8450-7411960f44b2"
+category = "platform"
+status = "Active"
+priority = "Must"
+requirement = "Configuration shall resolve a per-user documents directory that always exists and never derives from the application install root."
+rationale = "Project dialogs need an operator-facing start folder that stays correct when the application is installed into a read-only location such as C:\\Program Files\\AudioMancer, /opt, or /usr/share."
+verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ".agentic/specs/project_dialog_default_directory.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_resolves_user_documents_root_across_platforms",
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_user_documents_root_honours_xdg_documents_dir_on_posix_only",
+]
+
+created_on = "2026-07-25T16:17:20Z"
+last_updated = "2026-07-25T16:29:06Z"

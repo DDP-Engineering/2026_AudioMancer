@@ -16,13 +16,20 @@ locale/theme state, and settings-page integration used by every workflow page.
 
 - Define application paths, defaults, resource identity, and configuration constants.
 - Resolve the writable data root that owns per-user settings and application logs, separately from the read-only packaged resource root.
+- Resolve the per-user documents folder that operator-facing folder pickers start in.
 - Load, validate, migrate, and save operator settings, seeding a fresh settings file from the packaged scaffold.
 - Configure component logging, time and URL helpers, scrolling, translations, and UI theme/state.
 - Present and apply settings through the Settings page and controller.
 
 ## 3. Implementation Overview
 
-`config.py` supplies constants and packaged-resource resolution. The services
+`config.py` supplies constants and packaged-resource resolution. It also exposes
+`resolve_user_documents_root()`, which keeps the folder operators browse for
+their own content separate from `APP_ROOT`: that root owns read-only packaged
+resources and is a system directory for a frozen build installed into
+`C:\Program Files\AudioMancer`, `/opt`, or `/usr/share`. The resolver is pure
+standard library, because `config` is imported by every module and by every
+headless test and therefore must not import PySide6. The services
 normalize settings and theme payloads before the app shell consumes them;
 `settings_ui_controller` and `settings_page` render operator changes. This
 component provides cross-cutting platform behavior but does not own any domain
@@ -79,6 +86,11 @@ instructions from the Chunking document.
   discovery data before they are consumed.
 - `translate`, `apply_theme`, `apply_ui_settings`, `load_settings`, and
   `save_settings` are the shared public runtime entry points.
+- `resolve_user_documents_root()` returns the first existing directory among an
+  `XDG_DOCUMENTS_DIR` override (POSIX other than macOS), the home documents
+  folder, and the home directory. It never returns a missing path, because
+  `QFileDialog` silently falls back to the process working directory when given
+  one. It records nothing: no settings field remembers a last-used folder.
 
 ## 7. Workflow Integration
 

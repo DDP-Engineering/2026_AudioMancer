@@ -12,8 +12,8 @@
 @details Verifies the Home-page UI controller still drives project creation and
          activation correctly through the main-window shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.5.3
+@date 2026-07-25
+@version 0.6.0
 """
 
 # IMPORTS
@@ -75,6 +75,61 @@ def test_home_ui_controller_creates_and_activates_project(
     assert window._current_project_root == tmp_path / "ControllerProject"
     assert window._current_manifest is not None
     assert window._current_manifest["display_name"] == "ControllerProject"
+
+
+def test_home_ui_controller_project_dialogs_start_outside_the_install_root(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify both project dialogs start at the documents root, or at the open project.
+    @details    Covers REQ-UX-de071609-49bf-486b-b2f7-810d4abc61ec / SPEC-DIALOG-START.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    documents_root = tmp_path / "Documents"
+    documents_root.mkdir()
+    start_directories = []
+
+    monkeypatch.setattr(
+        home_ui_controller.config,
+        "resolve_user_documents_root",
+        lambda: documents_root,
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: start_directories.append(args[2]) or "",
+    )
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    home_ui_controller.handle_new_project_requested(window)
+    home_ui_controller.handle_open_project_requested(window)
+
+    assert start_directories == [str(documents_root), str(documents_root)]
+
+    projects_parent = tmp_path / "books"
+    projects_parent.mkdir()
+    project_root, manifest = project_workspace_service.create_project("DialogStartProject", projects_parent)
+    window._current_project_root = project_root
+    window._current_manifest = manifest
+    start_directories.clear()
+
+    home_ui_controller.handle_new_project_requested(window)
+    home_ui_controller.handle_open_project_requested(window)
+
+    assert start_directories == [str(project_root.parent), str(project_root)]
 
 
 def test_home_ui_controller_rejects_export_inside_project(
