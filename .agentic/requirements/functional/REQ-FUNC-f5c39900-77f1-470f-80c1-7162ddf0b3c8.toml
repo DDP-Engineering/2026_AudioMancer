@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block exact-block operations shall detect and remove audio for an exact speech block, approve and regenerate a selected block, and reconcile after resplit."
 rationale = "Per-block audio must be targeted exactly."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

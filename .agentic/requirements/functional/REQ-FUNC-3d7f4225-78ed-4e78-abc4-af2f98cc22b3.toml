@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Cleanup reset shall be able to preserve character discovery and voice artifacts."
 rationale = "Resetting cleanup must optionally keep downstream character and voice work."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",

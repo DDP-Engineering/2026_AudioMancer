@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text chunking state shall persist a chunk text edit and selectively reset downstream artifacts."
 rationale = "Manual chunk edits must persist and invalidate only affected later work."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",

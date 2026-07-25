@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio assembly state shall return an empty state when no project is loaded."
 rationale = "The projection must be safe without an active project."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",

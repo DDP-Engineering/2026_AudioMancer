@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block logging shall create a timestamped log from a null-like start and replace it on review update."
 rationale = "Run timestamps must be recorded truthfully."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

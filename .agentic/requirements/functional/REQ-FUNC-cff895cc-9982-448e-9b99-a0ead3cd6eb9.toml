@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The application shall prevent an unsafe close while a worker thread is active."
 rationale = "Closing during active work must be blocked to avoid corruption."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",

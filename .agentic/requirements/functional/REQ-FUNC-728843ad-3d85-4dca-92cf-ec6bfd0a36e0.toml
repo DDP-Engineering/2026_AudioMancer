@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voice targets and sample bytes shall be persisted atomically."
 rationale = "Durable voice artifacts must be written atomically."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",

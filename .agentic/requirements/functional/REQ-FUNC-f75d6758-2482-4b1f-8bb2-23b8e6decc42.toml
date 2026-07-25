@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Deterministic cleanup shall detect language, script, and chapter cues and merge CJK and Hangul continuations correctly."
 rationale = "Multilingual continuation must be handled without corrupting text."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",

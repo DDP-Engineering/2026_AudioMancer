@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking page shall render chunks and the selected preview and keep selectors and full-list preview readable while busy."
 rationale = "Chunk results must stay reviewable during operations."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",

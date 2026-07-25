@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The main window shall place each workflow page inside a resizable scroll area in the page stack so oversized page content scrolls instead of being clipped, while each page's own internal structure is unchanged."
 rationale = "At large font sizes or the minimum window resolution, page content must remain reachable by scrolling rather than being cut off."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",

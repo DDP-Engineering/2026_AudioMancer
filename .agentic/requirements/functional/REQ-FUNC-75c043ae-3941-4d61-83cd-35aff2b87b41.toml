@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text extraction shall write self-contained canonical text and report artifacts for a TXT source."
 rationale = "Cleanup needs one stable local text input with self-contained state."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",

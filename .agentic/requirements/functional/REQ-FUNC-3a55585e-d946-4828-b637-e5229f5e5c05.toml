@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voices state shall surface a warning when the narrator sample is missing."
 rationale = "Generation prerequisites must be visible before the operator acts."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",

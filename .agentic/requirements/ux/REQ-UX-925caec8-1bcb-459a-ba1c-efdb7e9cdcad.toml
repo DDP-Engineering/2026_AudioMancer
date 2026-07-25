@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Theme duplicate and export shall produce custom payloads, and an exported built-in shall import back as a unique custom copy."
 rationale = "Round-tripping a built-in theme must yield an editable custom copy."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",

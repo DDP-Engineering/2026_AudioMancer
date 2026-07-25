@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Characters controller save shall stay synchronous with progress and clear progress after a failure."
 rationale = "Save feedback must be responsive and reset on error."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",

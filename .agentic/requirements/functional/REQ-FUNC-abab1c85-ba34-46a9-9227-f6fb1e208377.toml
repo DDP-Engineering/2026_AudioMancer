@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking controller shall route deterministic starts through the shared operation and clear the dialog."
 rationale = "Deterministic chunking must run through one shared start path."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",

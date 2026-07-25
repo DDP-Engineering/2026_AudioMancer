@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Services and controllers shall have test coverage."
 rationale = "Core modules must be guarded by an automated coverage check."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/tests/test_traceability.py",

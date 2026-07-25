@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Assembly page shall render outputs, progress, playback state, and scene-mix previews with localized rows."
 rationale = "The final review surface must present output state readably."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",

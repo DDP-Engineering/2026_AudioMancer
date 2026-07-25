@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup budgeting shall target four pages with output reservation and reject a profile that cannot return one page or has no input budget."
 rationale = "Requests must fit the profile with room for output."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

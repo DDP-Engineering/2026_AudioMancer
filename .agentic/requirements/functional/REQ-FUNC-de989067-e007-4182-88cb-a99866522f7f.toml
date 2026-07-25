@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block manual insertion shall append blocks in the correct position and initialize manual state without generation."
 rationale = "Operators must insert blocks safely without triggering generation."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

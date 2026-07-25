@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI-context-budget splitting shall preserve ordered segments."
 rationale = "Budget-driven splitting must not reorder text."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",

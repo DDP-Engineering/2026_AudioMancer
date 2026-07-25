@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project export shall report not-ready and a missing artifact when export prerequisites are absent."
 rationale = "Export must truthfully report readiness and missing inputs."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",

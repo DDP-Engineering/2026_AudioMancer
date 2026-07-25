@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text-token estimation shall return a positive conservative token count."
 rationale = "Budgeting must never under-count input tokens."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Same-narrator sync shall copy the selected narrator sample to each character and skip unchanged copies."
 rationale = "Same-narrator mode must propagate the narrator sample without redundant writes."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The desktop application shall expose a package and module entrypoint that initializes shared Qt settings before composing a themed main window with a fixed left navigation sidebar, current-page-only refresh, common help/about dialogs, and orderly audio/logging shutdown."
 rationale = "Every workflow domain depends on one predictable desktop shell while preserving its own state and service ownership."
 verification = "Existing focused app-shell suite: linked navigation, dialogs, localization, settings, help/about, and page-refresh behavior after traceability review."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/__init__.py",

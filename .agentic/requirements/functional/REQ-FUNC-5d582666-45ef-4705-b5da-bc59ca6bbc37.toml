@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voice selection shall persist the selected voice language."
 rationale = "The chosen voice language must be durable."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",

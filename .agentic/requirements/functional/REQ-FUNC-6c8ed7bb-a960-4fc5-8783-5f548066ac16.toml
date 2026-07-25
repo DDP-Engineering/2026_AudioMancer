@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Context budget metadata shall build the common fields and reject a tiny text budget."
 rationale = "Requests below a workflow minimum text budget must be rejected."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",

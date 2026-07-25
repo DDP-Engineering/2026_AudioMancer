@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Deterministic chunking cancellation shall preserve committed chunks and the next_paragraph cursor."
 rationale = "Cancelled chunking must remain resumable without losing committed work."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",

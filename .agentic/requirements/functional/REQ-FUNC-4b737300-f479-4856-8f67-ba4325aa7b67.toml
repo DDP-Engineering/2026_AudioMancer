@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The provider client shall build a complete chat-completions endpoint."
 rationale = "Endpoint construction must preserve a complete, valid path."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",

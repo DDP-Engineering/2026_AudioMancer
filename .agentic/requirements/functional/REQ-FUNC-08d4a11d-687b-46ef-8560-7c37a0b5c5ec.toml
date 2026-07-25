@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text cleanup state shall build source and cleaned previews and notes from project artifacts."
 rationale = "The UI needs one consistent projection of cleanup state."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",

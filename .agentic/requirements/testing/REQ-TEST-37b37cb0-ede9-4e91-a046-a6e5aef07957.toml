@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "All linked requirement tests shall resolve to existing test selectors."
 rationale = "Traceability must be enforced by an automated guard."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/tests/test_traceability.py",

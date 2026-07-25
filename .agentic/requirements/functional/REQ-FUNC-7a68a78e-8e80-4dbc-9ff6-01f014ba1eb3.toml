@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Character Voices controller shall preserve the existing sample on cancelled or failed generation."
 rationale = "Failed generation must not destroy an existing sample."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",

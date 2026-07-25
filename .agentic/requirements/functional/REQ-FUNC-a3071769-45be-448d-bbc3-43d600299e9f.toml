@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Character Voices controller shall batch-generate current character samples, stop preview before deleting a sample, and target only generatable characters."
 rationale = "Batch generation must be safe and correctly scoped."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",

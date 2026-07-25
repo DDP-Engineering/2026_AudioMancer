@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Deterministic cleanup shall write canonical clean text preserving structure and require the canonical extracted-text artifact."
 rationale = "Cleanup must improve extracted text from a required canonical input."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",

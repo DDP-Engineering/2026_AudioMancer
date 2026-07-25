@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The operator status pane height shall scale with line count."
 rationale = "The status pane must grow to fit its content."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

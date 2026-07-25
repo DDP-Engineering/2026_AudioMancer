@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking controller shall persist a saved chunk into project state."
 rationale = "Saved chunk edits must update durable project state."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",

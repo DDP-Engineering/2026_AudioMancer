@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block source resolution shall use the translated text when a translation exists, is complete, and every chunk is approved (regardless of the selected Character Voices language); otherwise it shall use the original chunking text. This mirrors Character Discovery source selection."
 rationale = "The translated text is repair-normalized (e.g. mid-phrase newlines removed); once fully approved it is the canonical source, and Speech Blocks must match Character Discovery so both operations read the same approved source."
 verification = "resolve_source_chunks mirrors Character Discovery; 4 selector tests green (translated when complete+approved regardless of voice language; original when absent/partial)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

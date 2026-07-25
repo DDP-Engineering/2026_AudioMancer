@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block generation shall produce ordered clone-prompt WAVs, use the narrator prompt in same-narrator mode, and require selected narrator sample metadata."
 rationale = "Generation must produce ordered artifacts from a valid narrator sample."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking controller shall route AI chunking with the selected profile and strategy and resume without re-confirming."
 rationale = "AI chunking and resume must use the selected profile and strategy."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",

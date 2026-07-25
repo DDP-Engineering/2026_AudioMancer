@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Deterministic cleanup shall conservatively remove page artifacts: repeated headers, page numbers, expanded page-number forms, and separator marks."
 rationale = "Page furniture must be removed without touching story content."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",

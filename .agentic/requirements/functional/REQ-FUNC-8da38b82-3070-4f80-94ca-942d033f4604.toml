@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The operation runner shall run one worker, relay progress and terminal results on the UI thread, and clean up on success and failure."
 rationale = "Long-running actions need responsive, correctly finalized execution."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",

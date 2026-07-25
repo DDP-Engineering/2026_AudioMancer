@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The provider client shall parse fenced JSON from model output."
 rationale = "Model responses wrapped in fences must still yield valid JSON."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",

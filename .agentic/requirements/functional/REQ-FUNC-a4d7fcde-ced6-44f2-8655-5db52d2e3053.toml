@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "reset_speech_blocks shall remove the single speech_blocks.json document and any residual legacy speech_blocks_report.json and speech_blocks_state.json files so the operator can regenerate cleanly."
 rationale = "Operators regenerating after the format change must not be left with stale legacy artifacts."
 verification = "Reset removes document and legacy files."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

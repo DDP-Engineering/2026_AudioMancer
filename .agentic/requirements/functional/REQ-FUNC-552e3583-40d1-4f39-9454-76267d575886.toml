@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block review shall meet a large-block performance baseline."
 rationale = "Review must stay responsive at scale."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

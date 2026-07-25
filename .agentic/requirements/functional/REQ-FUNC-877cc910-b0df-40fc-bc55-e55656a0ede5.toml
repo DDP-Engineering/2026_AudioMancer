@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Prompt templates shall preserve braced source-text values during rendering."
 rationale = "Braces inside source text must not be treated as placeholders."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py",

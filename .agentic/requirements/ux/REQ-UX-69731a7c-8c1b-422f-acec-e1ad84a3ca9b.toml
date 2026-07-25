@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Theme payload validation shall reject invalid colors, fill missing color roles from Classic Light, and accept a distinct text font."
 rationale = "Theme data must be validated and completed before use."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",

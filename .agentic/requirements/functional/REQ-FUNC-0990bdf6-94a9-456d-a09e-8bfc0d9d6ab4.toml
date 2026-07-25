@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block approve-all shall mark only generated blocks and promote stale in-progress state."
 rationale = "Approve-all must act only on generated work."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

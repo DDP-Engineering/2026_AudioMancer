@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Character Voices controller shall redact runtime model identifiers from progress messages."
 rationale = "Progress must not expose runtime model IDs."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI chunking shall reject profiles with no input budget."
 rationale = "A profile that cannot fit any input must be refused."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",

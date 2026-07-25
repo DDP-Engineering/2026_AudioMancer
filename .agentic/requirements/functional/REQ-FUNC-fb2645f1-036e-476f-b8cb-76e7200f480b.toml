@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The provider client shall send, adapt, or omit the structured-output response format per backend support."
 rationale = "Structured-output compatibility varies by backend and must be negotiated correctly."
 verification = "Automated: 5 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Dialog and flow string sets shall cover all supported languages."
 rationale = "Every UI string set must be complete across supported languages."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The Home page shall display a horizontal workflow stepper widget that shows one step per workflow stage passed to set_stage_statuses."
 rationale = "A horizontal pipeline stepper gives an at-a-glance view of the audiobook workflow, matching the redesign proposal, without removing the detailed stage list."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",

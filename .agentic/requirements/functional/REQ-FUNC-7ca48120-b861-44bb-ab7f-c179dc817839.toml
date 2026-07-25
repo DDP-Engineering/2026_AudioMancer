@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project-name validation shall reject unsupported Windows characters, Linux reserved names, and reserved Windows device names."
 rationale = "Project names must be portable and filesystem-safe."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

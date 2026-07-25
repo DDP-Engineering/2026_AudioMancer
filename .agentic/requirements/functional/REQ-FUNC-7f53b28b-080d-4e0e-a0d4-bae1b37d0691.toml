@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Workflow impact shall preserve stable identities during resequencing."
 rationale = "Resequencing must not change stable artifact identities."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",

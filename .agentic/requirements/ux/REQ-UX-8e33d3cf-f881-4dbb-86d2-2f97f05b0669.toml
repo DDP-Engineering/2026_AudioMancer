@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Settings page shall present a theme selector listing the built-in themes, load the persisted ui_theme_id into it, and write the chosen theme id back into the built settings payload."
 rationale = "Operators need to pick among the few built-in themes without a full theme editor."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",

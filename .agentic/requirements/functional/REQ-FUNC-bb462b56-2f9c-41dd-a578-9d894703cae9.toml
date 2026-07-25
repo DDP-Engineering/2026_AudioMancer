@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text chunking chunk insertion shall preserve existing chunk IDs and translation, and create the first manual chunk when none exist."
 rationale = "Insertion must keep stable IDs and support an empty starting point."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",

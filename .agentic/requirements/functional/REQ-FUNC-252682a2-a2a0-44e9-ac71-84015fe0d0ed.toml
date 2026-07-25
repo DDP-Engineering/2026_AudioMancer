@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The translation controller shall sync the derived manifest summary."
 rationale = "The manifest must reflect the derived translation summary."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",

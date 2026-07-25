@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "validate_settings shall repair a missing or invalid ui_font_size_step or text_font_size_step to 'normal' and shall map a legacy 'ui_text_scale' value to the nearest supported font-size step."
 rationale = "Persisted settings must self-heal and migrate the deprecated global text-scale into the new step model."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",

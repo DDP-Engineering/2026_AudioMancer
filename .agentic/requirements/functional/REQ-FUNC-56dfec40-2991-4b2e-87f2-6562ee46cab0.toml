@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text chunking state notes shall show in-progress, resume, and persisted token-usage entries."
 rationale = "Operators need truthful workflow notes for running, failed, and cancelled chunking."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",

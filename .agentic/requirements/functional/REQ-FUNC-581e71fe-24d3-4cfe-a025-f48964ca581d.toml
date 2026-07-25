@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block generation shall add and normalize scene-ambience blocks and disable generation for none placement."
 rationale = "Scene ambience must be planned deterministically and be disableable."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

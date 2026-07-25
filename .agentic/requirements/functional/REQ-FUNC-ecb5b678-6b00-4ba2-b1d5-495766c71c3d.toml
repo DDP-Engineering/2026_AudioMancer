@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks document shall not persist a copy of upstream source-chunk text; it shall retain only source.fingerprint and re-resolve source chunks from upstream artifacts (chunks_text.json or translated_text.json) at read time."
 rationale = "Storing a full source-text copy duplicated upstream data; re-resolving from upstream keeps a single source of truth, matching Character Discovery."
 verification = "Artifact excludes source_chunks; source keeps only fingerprint."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

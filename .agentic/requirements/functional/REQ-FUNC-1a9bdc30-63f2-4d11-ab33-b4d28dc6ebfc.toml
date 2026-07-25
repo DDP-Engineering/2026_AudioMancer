@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text extraction shall reject a misnamed legacy document carrying an RTF extension."
 rationale = "Mislabeled sources must fail rather than extract incorrectly."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",

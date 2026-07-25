@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The narrator definition service shall store or import a single profile sample, mark selected metadata, preserve other profiles' samples, and resolve the sample path after a rename."
 rationale = "Sample storage must be per-profile, durable, and rename-safe."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

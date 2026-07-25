@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks controller shall reset downstream work on insert and confirmed delete."
 rationale = "Structural changes must invalidate downstream work."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",

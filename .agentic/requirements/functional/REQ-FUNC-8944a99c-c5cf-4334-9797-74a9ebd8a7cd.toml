@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator definition/state shall use one authoritative `narrator_voice.json` document with exactly the approved root, profile, sample, and resume fields; initialize the exact default only when the document is absent; reject a malformed current document without overwriting it; ignore every removed narrator artifact; and derive inventory, selected language, selection, and readiness from the current document plus canonical profile WAV presence."
 rationale = "A strict current-document boundary prevents split-brain narrator state and makes incompatible project data operator-visible instead of silently repairing or importing it."
 verification = "Strict document and removed-artifact contract test passes."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

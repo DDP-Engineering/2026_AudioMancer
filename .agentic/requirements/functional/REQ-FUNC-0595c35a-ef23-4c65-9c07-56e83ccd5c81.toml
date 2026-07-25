@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character default-prompt building shall derive a compact prompt, prefer a character-owned voice-definition prompt, and preserve an existing age instruction."
 rationale = "Prompts must come from character data and respect existing guidance."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",

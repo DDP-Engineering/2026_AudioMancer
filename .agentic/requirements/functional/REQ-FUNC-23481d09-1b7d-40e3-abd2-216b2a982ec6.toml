@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Assembly controller shall expose deliberate output and scene-mix selection with safe output paths."
 rationale = "Output selection must be explicit and path-safe."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",

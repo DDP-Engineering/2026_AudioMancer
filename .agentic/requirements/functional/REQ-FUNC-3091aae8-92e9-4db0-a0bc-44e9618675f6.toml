@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Character Voices page shall present the narrator target as preview-only, gate edit mode, include preview text in the editor payload, and render language and sizing indicators."
 rationale = "The page must present per-character voice review clearly."
 verification = "Automated: 5 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",

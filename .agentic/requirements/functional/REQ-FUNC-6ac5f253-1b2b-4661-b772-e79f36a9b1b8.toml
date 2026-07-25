@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Cleanup metadata shall omit paragraph text and reconstruct it from clean text."
 rationale = "Metadata must not duplicate paragraph text."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",

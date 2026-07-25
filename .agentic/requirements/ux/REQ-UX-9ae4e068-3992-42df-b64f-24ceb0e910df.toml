@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Theme collection normalization shall return empty for a malformed root payload."
 rationale = "A malformed theme collection must degrade to empty rather than crash."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",

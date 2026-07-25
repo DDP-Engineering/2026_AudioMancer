@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The application entrypoint shall log an exception and shut down cleanly."
 rationale = "A fatal startup error must be logged and terminate gracefully."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/app.py",

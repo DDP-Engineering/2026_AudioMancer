@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voice-plan sync shall reuse discovery preview text and refresh an unedited prompt with explicit gender."
 rationale = "Assignments must stay synchronized with discovery-derived data."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",

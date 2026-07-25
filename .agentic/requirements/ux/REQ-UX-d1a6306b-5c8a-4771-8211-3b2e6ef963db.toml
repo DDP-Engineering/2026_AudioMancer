@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Applying a theme shall update the application font family, and the theme stylesheet shall apply the text-window font."
 rationale = "Theme changes must propagate font family to the app and text windows."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

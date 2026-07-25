@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall persist outputs and report and append operator character rules."
 rationale = "Discovery results and operator rules must be durable."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

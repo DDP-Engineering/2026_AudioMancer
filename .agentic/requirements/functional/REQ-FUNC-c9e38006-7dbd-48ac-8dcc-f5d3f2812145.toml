@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block direct-block alignment shall map mixed narration and dialogue to source text, default unknown speakers to the review narrator, preserve source gaps, and split long blocks to the TTS budget."
 rationale = "Direct blocks must align to source without loss or fabricated text."
 verification = "Automated: 5 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

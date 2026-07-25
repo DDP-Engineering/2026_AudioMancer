@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home presenter shall mark cleanup as in-progress in the derived stage statuses."
 rationale = "The Home surface must reflect derived per-stage lifecycle status."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",

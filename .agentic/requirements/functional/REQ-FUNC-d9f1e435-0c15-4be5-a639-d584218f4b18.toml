@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block narrator-boundary normalization shall build exact source spans, skip and reject open-quote splits, and fall back on unusable IDs."
 rationale = "Narrator-only boundaries must be exact and safe."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

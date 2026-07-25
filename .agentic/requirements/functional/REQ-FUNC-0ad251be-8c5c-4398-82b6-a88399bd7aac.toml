@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block source-chunks input path shall select original or translated input."
 rationale = "Input resolution must follow the approved language source."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",

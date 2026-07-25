@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The main window shall refresh Home export readiness."
 rationale = "Export readiness on Home must stay in sync with project state."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",

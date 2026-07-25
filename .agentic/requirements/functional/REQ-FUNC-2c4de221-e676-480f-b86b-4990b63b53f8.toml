@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator profile generation shall leave existing profiles unchanged on invalid or cancelled work."
 rationale = "Failed or cancelled generation must not corrupt the profile inventory."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",

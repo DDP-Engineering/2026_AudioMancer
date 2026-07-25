@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The Home workflow stepper shall reflect each stage's status token (finished, in_progress, not_started) in the order the stages are provided."
 rationale = "The stepper must communicate progress, not just the stage list, so operators see what is done, running, and pending."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",

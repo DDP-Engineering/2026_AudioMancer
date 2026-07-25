@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Open project shall resolve the flat project root and accept the current required folder contract without demanding a speech-blocks folder."
 rationale = "Opening must accept the current flat layout contract."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI translation shall use the LLM even for same-language translation."
 rationale = "Same-language requests still route through the provider contract."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",

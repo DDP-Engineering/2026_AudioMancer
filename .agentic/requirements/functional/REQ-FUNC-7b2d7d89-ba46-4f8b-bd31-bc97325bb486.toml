@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block generation shall generate and regenerate scene ambience after spoken blocks, normalize legacy playability, and normalize speaker names."
 rationale = "Scene ambience and legacy data must be handled safely."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

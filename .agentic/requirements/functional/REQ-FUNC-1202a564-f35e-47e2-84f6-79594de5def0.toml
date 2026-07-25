@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator profile generation shall enforce preview-text bounds, rejecting short or sub-six-second text and accepting bounded word overage."
 rationale = "Preview text must be long enough to be audible and useful."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",

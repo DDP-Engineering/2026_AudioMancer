@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block artifacts shall validate WAV inputs and outputs before entering the generated-audio plan."
 rationale = "Malformed WAV files must not enter the assembly plan."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",

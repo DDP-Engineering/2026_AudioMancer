@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Endpoint URL joining shall append a missing endpoint once and collapse a duplicate version prefix."
 rationale = "Endpoint URLs must be well-formed without duplication."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/url_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Characters page and controller shall emit the requested character ID on selection change and restore the current row on cancellation."
 rationale = "Selection must be explicit and reversible."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",

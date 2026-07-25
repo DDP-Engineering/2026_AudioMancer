@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text cleanup shall persist a confirmed manual clean-text edit and reset downstream work."
 rationale = "Operator edits must persist and invalidate incompatible later stages."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",

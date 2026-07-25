@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voices state refresh shall be read-only when character voices are unchanged."
 rationale = "A refresh must not mutate durable state when nothing changed."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",

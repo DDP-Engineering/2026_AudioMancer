@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block approval and regeneration shall mark only targeted blocks, preserve approval on display-name edits, and renumber after regenerating a chunk."
 rationale = "Approvals and regeneration must be precise and non-destructive."
 verification = "Automated: 5 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

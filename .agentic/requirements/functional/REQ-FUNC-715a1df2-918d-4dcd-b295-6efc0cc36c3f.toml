@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text extraction shall reject an empty PDF source when OCR is not available."
 rationale = "An unreadable PDF must fail clearly rather than yield empty text."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",

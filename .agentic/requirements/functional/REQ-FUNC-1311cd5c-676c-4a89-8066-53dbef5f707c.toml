@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block prompts shall use direct blocks with aliases and attribution context, forbid text rewrites, hide atomic separators, and stay honest about local-model guidance."
 rationale = "The generation prompt contract must be stable and safe."
 verification = "Automated: 8 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

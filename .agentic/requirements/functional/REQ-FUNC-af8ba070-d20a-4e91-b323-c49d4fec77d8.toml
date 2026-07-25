@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI translation shall persist one authoritative target-language document aligned to canonical chunk IDs, writing once per completed chunk and review action."
 rationale = "Parallel or unaligned translation state would make downstream decisions unsafe."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator profile generation shall merge token usage into the report and state."
 rationale = "Usage must be recorded across generation."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",

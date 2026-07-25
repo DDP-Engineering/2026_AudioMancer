@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Deterministic chunking shall return empty for a malformed chunk artifact."
 rationale = "Downstream readers must degrade safely on malformed artifacts."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",

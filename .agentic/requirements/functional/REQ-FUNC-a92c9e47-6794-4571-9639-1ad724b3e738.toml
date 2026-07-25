@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Translation, Character Discovery, narrator generation, Speech Blocks, Audio Blocks readiness, project validation, and exports shall obtain canonical chunks through the shared document reader, while Text Chunks export derives document-level mode, strategy, and counts and discovers separate AI logs without a persisted log path."
 rationale = "Every downstream stage must consume the new root-object artifact consistently without reintroducing legacy readers or persistence shortcuts."
 verification = "All required downstream modules route through the shared reader."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The theme stylesheet built by build_theme_stylesheet shall style QToolBar and QToolButton so top-toolbar action labels render with the theme text color and stay legible on the themed toolbar background for every built-in theme (including dark themes)."
 rationale = "Toolbar actions are QToolButtons; with a stylesheet set but no QToolButton rules the native Windows style keeps default dark text, making labels like Settings/AI/TTS/Help/About invisible on a dark toolbar. Reported against the AudioMancer Dark default."
 verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_build_theme_stylesheet_styles_toolbar_buttons_for_legibility (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

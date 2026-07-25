@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character Voices, Audio Blocks, narrator state, and applicable UI controllers shall resolve the selected narrator profile, compact sample metadata, derived language, and canonical profile WAV at read time through the narrator document service, report not-ready when metadata or WAV is missing, and never open or depend on removed narrator metadata or selected-copy artifacts."
 rationale = "Every selected-narrator consumer must share one truthful resolution path and cannot revive the fragmented persistence contract indirectly."
 verification = "Downstream selected-profile resolution test passes."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",

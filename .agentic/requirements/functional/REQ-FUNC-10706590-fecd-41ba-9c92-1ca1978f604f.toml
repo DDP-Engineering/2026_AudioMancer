@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block state shall gate start correctly and not resolve missing chunks or unapproved translation."
 rationale = "Start availability must reflect true readiness."
 verification = "Automated: 6 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",

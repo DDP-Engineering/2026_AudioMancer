@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project snapshot cancellation shall remove the temporary ZIP without publishing a partial archive."
 rationale = "A cancelled snapshot must leave no partial final archive."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",

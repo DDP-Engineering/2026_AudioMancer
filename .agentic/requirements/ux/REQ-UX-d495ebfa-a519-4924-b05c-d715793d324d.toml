@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Settings page shall import a theme payload into the draft and export a built-in as a portable payload."
 rationale = "Themes must be portable between projects and installs."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",

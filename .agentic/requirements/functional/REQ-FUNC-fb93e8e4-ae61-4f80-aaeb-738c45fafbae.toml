@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Workflow impact operation order and stage map shall be single-sourced from configuration and target valid stages."
 rationale = "Order and stage mapping must derive from one configuration source."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",

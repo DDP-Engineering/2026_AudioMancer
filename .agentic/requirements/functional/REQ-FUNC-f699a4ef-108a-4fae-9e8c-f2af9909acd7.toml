@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Blocks controller approval flow shall advance the manifest after full approval, reset only audio assembly, and toggle unapprove without advancing."
 rationale = "Approval must gate downstream assembly correctly."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",

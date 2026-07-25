@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block resume shall continue from a saved checkpoint and reject invalid or escaping part checkpoints."
 rationale = "Resume must be crash-safe and path-safe."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

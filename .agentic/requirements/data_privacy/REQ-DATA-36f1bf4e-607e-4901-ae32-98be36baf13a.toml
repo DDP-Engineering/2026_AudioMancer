@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The authoritative Chunking document shall not persist AI profile identity, model or request parameters, profile history, budget metadata, runtime progress, derived counts, generic metadata, or transaction-log paths; AI transaction logs shall remain separate artifacts and Reset Chunking shall remove them."
 rationale = "Persisting only data required for canonical results and safe resume limits stale configuration coupling and keeps verbose provider exchanges outside the authoritative project contract."
 verification = "Persisted Chunking data excludes runtime/profile/budget/log-path fields and logs remain separate."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",

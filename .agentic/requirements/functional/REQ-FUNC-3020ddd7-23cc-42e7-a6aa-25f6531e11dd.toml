@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home presenter shall mark active, cancelled, and downstream operations as in-progress."
 rationale = "Running and cancelled work must surface as in-progress on the Home surface."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",

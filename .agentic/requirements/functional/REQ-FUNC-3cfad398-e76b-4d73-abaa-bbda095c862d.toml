@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home page export buttons shall follow readiness state."
 rationale = "Export controls must reflect which deliverables are currently available."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",

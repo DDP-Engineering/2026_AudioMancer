@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The AI Settings controller shall persist, reload, and refresh the window after applying settings."
 rationale = "Applied settings must persist and refresh dependent UI."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",

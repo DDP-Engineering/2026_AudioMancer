@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project snapshot shall append the ZIP extension and a default name."
 rationale = "Snapshots must have a valid archive name."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",

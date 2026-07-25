@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery state shall reject a run without a usable AI profile."
 rationale = "A provider operation must not start with invalid configuration."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",

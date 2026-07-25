@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup shall store modified story only as output text, avoid duplicating preserved-gap text, and retain whitespace-only gaps for spacing rendering."
 rationale = "Stored cleanup must not duplicate source text."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block artifacts shall use deterministic project-local names and paths."
 rationale = "Assembly needs durable, ordered, unambiguous artifact names."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",

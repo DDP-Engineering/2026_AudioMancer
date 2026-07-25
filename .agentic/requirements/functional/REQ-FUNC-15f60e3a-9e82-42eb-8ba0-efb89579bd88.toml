@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI chunking shall size windows by configured strategy, context mode, and budget, keeping oversized paragraphs whole."
 rationale = "Window sizing must respect strategy caps and profile context."
 verification = "Automated: 6 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",

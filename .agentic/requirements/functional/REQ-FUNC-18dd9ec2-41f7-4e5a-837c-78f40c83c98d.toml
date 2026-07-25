@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "A successful manual chunk edit, insertion, or deletion shall atomically mutate only a strictly valid completed Chunking document, preserve document-level generation and audit fields, retain stable IDs where possible, give inserted chunks only minimal cleanup provenance, resequence chunks, set `manual_adjusted` true, and calculate downstream invalidation without persisting its payload."
 rationale = "Operators need safe manual correction without corrupting origin metadata or embedding transient workflow-impact state."
 verification = "Manual edit, insert, and delete preserve the strict root contract."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Trailing-endpoint removal shall strip the present suffix only."
 rationale = "Only an actually present endpoint suffix may be removed."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/url_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Function tracing shall log start, finish, and duration, log and re-raise exceptions, and truncate long values."
 rationale = "Diagnostic tracing must be complete without leaking oversized payloads."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",

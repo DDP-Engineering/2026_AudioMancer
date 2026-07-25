@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Translation state construction shall be read-only."
 rationale = "Building the projection must not mutate durable translation artifacts."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",

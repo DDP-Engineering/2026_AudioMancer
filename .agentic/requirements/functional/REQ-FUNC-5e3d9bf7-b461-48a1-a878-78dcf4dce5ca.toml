@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI chunking shall persist artifacts and log, append operator instructions, and use absolute numbers preserving cleanup metadata."
 rationale = "Durable chunking output must be traceable and preserve upstream metadata."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",

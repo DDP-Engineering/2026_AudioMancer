@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The project manifest shall normalize audio-assembly settings."
 rationale = "Assembly settings must be stored in a normalized shape."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",

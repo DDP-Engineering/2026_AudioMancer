@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Prompt templates shall load only from their configured root and require exact replacement placeholders."
 rationale = "Prompt contracts must fail clearly rather than submit malformed instructions."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py",

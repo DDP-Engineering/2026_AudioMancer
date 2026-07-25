@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Cleanup controller shall clear the dialog on operation start."
 rationale = "Starting an operation must reset any prior dialog state."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall construct bounded budgeted source windows once, shrinking, capping, or rejecting per profile budget."
 rationale = "Windows must fit the selected profile context and be built deterministically."
 verification = "Automated: 6 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

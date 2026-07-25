@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home controller shall block snapshot creation during an active operation."
 rationale = "A snapshot must not run concurrently with another workflow operation."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",

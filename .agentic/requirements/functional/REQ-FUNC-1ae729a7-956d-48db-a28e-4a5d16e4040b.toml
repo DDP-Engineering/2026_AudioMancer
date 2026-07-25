@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Workflow impact shall derive ordered full and selective invalidation summaries with normalized affected IDs."
 rationale = "Downstream invalidation must be predictable and correctly ordered."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",

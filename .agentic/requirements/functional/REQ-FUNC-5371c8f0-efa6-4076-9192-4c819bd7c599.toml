@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Translation state shall derive translation counts and status."
 rationale = "The UI needs truthful translation counts and status."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",

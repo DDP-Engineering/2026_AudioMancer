@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Critical text and JSON persistence shall write a complete same-directory temporary file, flush and synchronize it, atomically replace the destination, and remove temporary files after failure."
 rationale = "A crash or failed replacement must not turn a previously valid project manifest or settings file into a partial payload."
 verification = "Automated focused pytest coverage passed for atomic replacement, failure preservation, cleanup, and manifest writer integration."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py",

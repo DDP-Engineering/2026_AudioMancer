@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "TTS settings shall present compact runtime-limit controls with working numeric increments."
 rationale = "Runtime/planning settings must be editable through compact numeric controls."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI Chunking resume shall accept only resumable AI-assisted documents whose source fingerprint matches current canonical clean text, reuse the stored strategy and normalized instructions, recalculate windows from the currently selected profile and settings, preserve cumulative usage and fallback count, and create a separate transaction log for each invocation without persisting its path."
 rationale = "Resume must continue the same source operation without coupling durable project state to stale provider configuration or a previous log file."
 verification = "AI resume contract uses stored operation data and current runtime profile."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",

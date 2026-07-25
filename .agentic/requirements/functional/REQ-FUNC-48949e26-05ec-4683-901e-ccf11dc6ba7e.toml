@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Character Voices page shall emit import for character targets and enable or disable the batch button by target generatability."
 rationale = "Import and batch controls must follow target state."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",

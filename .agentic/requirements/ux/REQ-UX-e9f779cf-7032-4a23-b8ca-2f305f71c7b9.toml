@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The theme stylesheet shall style dropdown and popup surfaces, specifically the QComboBox popup view (QComboBox QAbstractItemView) and QMenu, with the theme panel_background background and text_primary text so they stay legible on dark themes."
 rationale = "Unstyled combo/menu popups keep native light backgrounds and default text, becoming unreadable on dark themes."
 verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_makes_popups_legible (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

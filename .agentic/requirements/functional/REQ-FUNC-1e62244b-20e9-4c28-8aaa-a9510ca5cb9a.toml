@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks operation-state projection shall omit source chunks and expose the checkpoint."
 rationale = "The projection must carry resume state without duplicating source text."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",

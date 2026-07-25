@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Backend probing shall reject an invalid base URL."
 rationale = "A malformed backend URL must fail before domain work begins."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Settings page shall present a separate text-window font-size selector offering the seven font-size steps, load the persisted text_font_size_step, and write the chosen step into the built settings payload."
 rationale = "Reading/editing text windows must be sized independently from the interface controls."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",

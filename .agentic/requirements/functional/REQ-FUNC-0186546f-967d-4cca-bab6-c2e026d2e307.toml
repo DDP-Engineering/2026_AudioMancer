@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Blocks page shall render source-list markers, selected details, scene-ambience rows, and translated labels."
 rationale = "The page must present artifact and progress state readably."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py",

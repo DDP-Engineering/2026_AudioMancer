@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The application shell shall display an 'AudioMancer' wordmark label (object name appWordmark) in the top toolbar."
 rationale = "A brand wordmark in the shell anchors the identity from the hero posters without altering the fixed-width sidebar contract."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",

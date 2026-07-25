@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Blocks controller audiobook playback shall include the current pause even without an audio block."
 rationale = "Pause blocks must be represented in playback."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",

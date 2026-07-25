@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Assembly controller shall guard assembly, persist settings and start a threaded operation, reset artifacts and manifest summary, and reset only assembly outputs on settings change."
 rationale = "Assembly runs must be deliberate and reset scoped to assembly."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",

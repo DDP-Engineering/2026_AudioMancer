@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Translation shall return the expected English and Romanian strings."
 rationale = "Localized strings must resolve to the correct language values."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

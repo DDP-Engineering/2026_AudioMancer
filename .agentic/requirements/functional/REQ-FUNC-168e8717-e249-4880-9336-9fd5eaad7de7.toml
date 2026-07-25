@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block generation shall preserve existing audio on fingerprint change, start fresh on input-fingerprint mismatch, and skip later existing audio after an insert."
 rationale = "Completed audio must be reused when still valid."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

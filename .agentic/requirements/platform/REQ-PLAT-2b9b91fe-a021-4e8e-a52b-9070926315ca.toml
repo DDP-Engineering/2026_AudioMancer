@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The default UI theme identifier config.DEFAULT_UI_THEME_ID shall be 'audiomancer_dark' so a fresh valid settings file opens in the brand theme."
 rationale = "The application should open in the AudioMancer brand look out of the box, consistent with default_theme_id()."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",

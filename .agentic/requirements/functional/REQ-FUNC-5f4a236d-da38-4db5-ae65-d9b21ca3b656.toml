@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block generation shall preserve French dash and guillemet source spans and attach source spans to budgeted segments."
 rationale = "Source spans must survive multilingual splitting and budgeting."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

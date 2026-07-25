@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home page shall lock project options that control source import."
 rationale = "Source import must be gated by the project-options lock."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",

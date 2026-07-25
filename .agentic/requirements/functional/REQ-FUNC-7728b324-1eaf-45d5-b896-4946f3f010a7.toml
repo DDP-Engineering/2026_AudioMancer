@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Characters page evidence panel shall keep its minimum split layout and support preview find-next with wraparound."
 rationale = "Operators need a stable, searchable evidence view."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",

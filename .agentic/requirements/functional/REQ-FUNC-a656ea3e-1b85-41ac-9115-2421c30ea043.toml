@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Narrator Voice controller shall manage profile generation with worker start and count cancellation."
 rationale = "Profile generation must start a worker and honor cancellation before work."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",

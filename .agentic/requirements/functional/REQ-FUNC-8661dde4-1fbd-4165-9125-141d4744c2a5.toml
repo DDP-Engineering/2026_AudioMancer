@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block state merge shall use persisted playability without file checks."
 rationale = "Preview state must derive from persisted playability."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",

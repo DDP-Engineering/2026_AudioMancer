@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Workflow controllers shall request operation cancel by setting the worker-visible cancel event."
 rationale = "Cancellation must reach the running worker cooperatively."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",

@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The theme stylesheet shall style QScrollBar handles with the theme border color and highlight the handle with the theme accent color on hover, replacing the native scrollbar rendering."
 rationale = "Native scrollbars clash with dark themes; themed slim scrollbars keep the surface cohesive."
 verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_styles_scrollbars (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
