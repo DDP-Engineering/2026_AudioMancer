@@ -171,6 +171,46 @@ _BUILT_IN_THEMES: Final[tuple[dict[str, object], ...]] = (
             "disabled": "#8C8C8C",
         },
     },
+    {
+        "schema_version": THEME_SCHEMA_VERSION,
+        "theme_id": "audiomancer_dark",
+        "display_name": "AudioMancer Dark",
+        "built_in": True,
+        "font": copy.deepcopy(_DEFAULT_FONT),
+        "text_font": copy.deepcopy(_DEFAULT_FONT),
+        "colors": {
+            "window_background": "#0B2429",
+            "panel_background": "#10313A",
+            "text_primary": "#F1E9DA",
+            "text_muted": "#98AEAC",
+            "accent": "#E3AC52",
+            "border": "#22474D",
+            "warning": "#E0A82E",
+            "success": "#58A877",
+            "danger": "#DA655C",
+            "disabled": "#5E7A78",
+        },
+    },
+    {
+        "schema_version": THEME_SCHEMA_VERSION,
+        "theme_id": "audiomancer_parchment",
+        "display_name": "AudioMancer Parchment",
+        "built_in": True,
+        "font": copy.deepcopy(_DEFAULT_FONT),
+        "text_font": copy.deepcopy(_DEFAULT_FONT),
+        "colors": {
+            "window_background": "#F1E8D6",
+            "panel_background": "#FFFDF6",
+            "text_primary": "#17292C",
+            "text_muted": "#5B6D6B",
+            "accent": "#B07A22",
+            "border": "#E4D8C0",
+            "warning": "#A6701A",
+            "success": "#2F7A4E",
+            "danger": "#A93C36",
+            "disabled": "#A99F8B",
+        },
+    },
 )
 
 
@@ -348,9 +388,9 @@ def default_theme_id() -> str:
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.2.0
     """
-    return "classic_light"
+    return "audiomancer_dark"
 
 
 def validate_theme_payload(theme_payload: object, *, allow_built_in: bool = False) -> dict[str, object]:
@@ -432,11 +472,15 @@ def theme_by_id(theme_id: object, custom_themes: object) -> dict[str, object]:
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.2.0
     """
     candidate_id = str(theme_id).strip() if isinstance(theme_id, str) else ""
     for theme_payload in merged_theme_catalog(custom_themes):
         if theme_payload["theme_id"] == candidate_id:
+            return copy.deepcopy(theme_payload)
+    fallback_theme_id = default_theme_id()
+    for theme_payload in built_in_themes():
+        if theme_payload["theme_id"] == fallback_theme_id:
             return copy.deepcopy(theme_payload)
     return _classic_light_theme()
 

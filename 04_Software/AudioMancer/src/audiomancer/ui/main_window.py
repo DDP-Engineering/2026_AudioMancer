@@ -27,6 +27,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
+    QLabel,
     QMainWindow,
     QStackedWidget,
     QToolBar,
@@ -700,6 +701,21 @@ class MainWindow(QMainWindow):
 
     # LOCAL HELPERS
 
+    def _wordmark_html(self, accent: str) -> str:
+        """
+        @brief      Build the rich-text markup for the AudioMancer toolbar wordmark.
+        @param[in]  accent Accent color for the "Mancer" half.
+        @return     Rich-text HTML string.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        return (
+            "<span style=\"font-family:Georgia,'Times New Roman',serif; font-size:13pt; font-weight:600;\">"
+            f'Audio<span style="color:{accent}; font-style:italic;">Mancer</span></span>'
+        )
+
     def _build_toolbar(self) -> QToolBar:
         """
         @brief      Build the source-matched main toolbar.
@@ -710,6 +726,13 @@ class MainWindow(QMainWindow):
         @version    0.4.1
         """
         toolbar = QToolBar("Main Toolbar", self)
+        self._app_wordmark = QLabel(self)
+        self._app_wordmark.setObjectName("appWordmark")
+        self._app_wordmark.setTextFormat(Qt.TextFormat.RichText)
+        self._app_wordmark.setContentsMargins(10, 0, 12, 0)
+        self._app_wordmark.setText(self._wordmark_html("#E3AC52"))
+        toolbar.addWidget(self._app_wordmark)
+        toolbar.addSeparator()
         self._action_new_project = toolbar.addAction("New Project")
         self._action_open_project = toolbar.addAction("Open Project")
         toolbar.addSeparator()
@@ -1241,6 +1264,12 @@ class MainWindow(QMainWindow):
         for widget in self._page_registry.values():
             if hasattr(widget, "apply_theme"):
                 widget.apply_theme(theme_payload)
+        if hasattr(self, "_sidebar") and hasattr(self._sidebar, "apply_theme"):
+            self._sidebar.apply_theme(theme_payload)
+        if hasattr(self, "_app_wordmark"):
+            colors = theme_payload.get("colors") if isinstance(theme_payload, dict) else None
+            accent = str(colors.get("accent")) if isinstance(colors, dict) and colors.get("accent") else "#E3AC52"
+            self._app_wordmark.setText(self._wordmark_html(accent))
 
     def _activate_project(
         self,

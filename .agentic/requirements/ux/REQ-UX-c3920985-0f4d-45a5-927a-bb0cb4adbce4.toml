@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-c3920985-0f4d-45a5-927a-bb0cb4adbce4"
+category = "ux"
+status = "Active"
+priority = "Should"
+requirement = "In the theme stylesheet built by build_theme_stylesheet, QGroupBox shall render as a rounded card with a border-radius of at least 8px and its background filled with the theme panel_background color."
+rationale = "Flat 4px-border group boxes read as a generic form; rounded, filled cards express the AudioMancer brand and group content clearly."
+verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards",
+]
+
+created_on = "2026-07-24T22:50:58Z"
+last_updated = "2026-07-24T22:53:46Z"

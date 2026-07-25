@@ -18,8 +18,8 @@
 
 # IMPORTS
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (
     QComboBox,
     QGridLayout,
@@ -68,6 +68,195 @@ _STATUS_COLOR_ROLES = {
     "in_progress": "warning",
     "finished": "success",
 }
+
+
+class _WorkflowStepper(QWidget):
+    """
+    @brief      Horizontal workflow stepper that renders one status bead per stage.
+    @details    Draws a connected row of stage beads (finished / in_progress / not_started)
+                with captions, using the active Home theme color roles.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+
+    def __init__(self, parent=None) -> None:
+        """
+        @brief      Initialize an empty workflow stepper.
+        @param[in]  parent Optional parent widget.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        super().__init__(parent)
+        self._steps: list[tuple[str, str]] = []
+        self._colors = _normalize_home_theme_colors(None)
+        self.setMinimumHeight(66)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+    def set_steps(self, stages: list[dict[str, str]]) -> None:
+        """
+        @brief      Replace the rendered stage set.
+        @param[in]  stages Ordered stage dictionaries with label and status.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        self._steps = [(str(stage.get("label", "")), str(stage.get("status", "not_started"))) for stage in stages]
+        self.update()
+
+    def apply_theme(self, theme_colors: dict[str, str] | None) -> None:
+        """
+        @brief      Apply the active Home theme color roles to the stepper.
+        @param[in]  theme_colors Home theme color-role mapping.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        payload = {"colors": theme_colors} if isinstance(theme_colors, dict) else None
+        self._colors = _normalize_home_theme_colors(payload)
+        self.update()
+
+    def step_count(self) -> int:
+        """
+        @brief      Return the number of rendered steps.
+        @return     Step count.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        return len(self._steps)
+
+    def statuses(self) -> list[str]:
+        """
+        @brief      Return the ordered stage status tokens.
+        @return     Status token list.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        return [status for _label, status in self._steps]
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Paint the stepper beads, connectors, and captions.
+        @param[in]  event Qt paint event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        del event
+        if not self._steps:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        try:
+            self._paint_stepper(painter)
+        finally:
+            painter.end()
+
+    def _paint_stepper(self, painter: QPainter) -> None:
+        """
+        @brief      Render every stage bead, connector, and caption.
+        @param[in]  painter Active painter bound to this widget.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        colors = self._colors
+        count = len(self._steps)
+        margin_x = 26.0
+        bead_radius = 11.0
+        bead_center_y = 20.0
+        width = float(self.width())
+        span = max(width - 2.0 * margin_x, 1.0)
+        gap = span / (count - 1) if count > 1 else 0.0
+        centers = [(width / 2.0 if count == 1 else margin_x + index * gap) for index in range(count)]
+
+        border = QColor(colors.get("border", "#D7DDE5"))
+        muted = QColor(colors.get("text_muted", "#5F6368"))
+        text_primary = QColor(colors.get("text_primary", "#202124"))
+        panel = QColor(colors.get("panel_background", "#FFFFFF"))
+        finished_color = QColor(colors.get(_STATUS_COLOR_ROLES["finished"], "#2E8B57"))
+
+        for index in range(count - 1):
+            done = self._steps[index][1] == "finished"
+            connector_pen = QPen(finished_color if done else border)
+            connector_pen.setWidthF(2.0)
+            painter.setPen(connector_pen)
+            painter.drawLine(
+                QPointF(centers[index] + bead_radius + 2.0, bead_center_y),
+                QPointF(centers[index + 1] - bead_radius - 2.0, bead_center_y),
+            )
+
+        caption_font = QFont(self.font())
+        caption_font.setPointSizeF(max(caption_font.pointSizeF() - 1.5, 6.5))
+        caption_flags = (
+            int(Qt.AlignmentFlag.AlignHCenter) | int(Qt.AlignmentFlag.AlignTop) | int(Qt.TextFlag.TextWordWrap)
+        )
+
+        for index, (label, status) in enumerate(self._steps):
+            role = _STATUS_COLOR_ROLES.get(status, _STATUS_COLOR_ROLES["not_started"])
+            status_color = QColor(colors.get(role, "#A0A0A0"))
+            center_x = centers[index]
+            bead_rect = QRectF(
+                center_x - bead_radius,
+                bead_center_y - bead_radius,
+                bead_radius * 2.0,
+                bead_radius * 2.0,
+            )
+            if status == "not_started":
+                painter.setBrush(QBrush(panel))
+                outline_pen = QPen(status_color)
+                outline_pen.setWidthF(2.0)
+                painter.setPen(outline_pen)
+                painter.drawEllipse(bead_rect)
+            else:
+                painter.setBrush(QBrush(status_color))
+                painter.setPen(QPen(status_color, 0))
+                painter.drawEllipse(bead_rect)
+
+            if status == "finished":
+                check_pen = QPen(panel)
+                check_pen.setWidthF(2.0)
+                check_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                check_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                painter.setPen(check_pen)
+                painter.drawPolyline(
+                    [
+                        QPointF(center_x - 4.5, bead_center_y),
+                        QPointF(center_x - 1.5, bead_center_y + 3.0),
+                        QPointF(center_x + 4.5, bead_center_y - 3.5),
+                    ]
+                )
+            elif status == "in_progress":
+                painter.setBrush(QBrush(panel))
+                painter.setPen(QPen(panel, 0))
+                painter.drawEllipse(QRectF(center_x - 3.0, bead_center_y - 3.0, 6.0, 6.0))
+
+            caption_width = gap if gap else 88.0
+            caption_rect = QRectF(
+                center_x - caption_width / 2.0,
+                bead_center_y + bead_radius + 5.0,
+                caption_width,
+                32.0,
+            )
+            painter.setFont(caption_font)
+            painter.setPen(QPen(text_primary if status != "not_started" else muted))
+            painter.drawText(caption_rect, caption_flags, label)
 
 
 # PUBLIC API
@@ -128,8 +317,9 @@ class HomeProjectPage(QWidget):
         summary_layout.setVerticalSpacing(3)
         self._name_label = QLabel("Project: none")
         project_name_font = QFont(self.font())
+        project_name_font.setFamily("Georgia")
         project_name_font.setBold(True)
-        project_name_font.setPointSizeF(max(project_name_font.pointSizeF(), 1.0) * 1.25)
+        project_name_font.setPointSizeF(max(project_name_font.pointSizeF(), 1.0) * 1.3)
         self._name_label.setFont(project_name_font)
         self._path_label = QLabel("Path: none")
         self._path_label.setWordWrap(True)
@@ -170,6 +360,15 @@ class HomeProjectPage(QWidget):
         summary_layout.setColumnStretch(0, 1)
         summary_layout.setColumnStretch(1, 0)
         root_layout.addWidget(summary_group)
+
+        self._workflow_stepper = _WorkflowStepper(self)
+        pipeline_group = QGroupBox("Workflow Pipeline", self)
+        pipeline_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        pipeline_layout = QVBoxLayout(pipeline_group)
+        pipeline_layout.setContentsMargins(8, 6, 8, 4)
+        pipeline_layout.addWidget(self._workflow_stepper)
+        self._pipeline_group = pipeline_group
+        root_layout.addWidget(pipeline_group)
 
         lower_layout = QHBoxLayout()
         lower_layout.setSpacing(6)
@@ -399,6 +598,7 @@ class HomeProjectPage(QWidget):
             stage_row.setText(f"{label} | {_status_title(status, self._current_language)}")
             stage_row.setToolTip(note)
             stage_row.setStyleSheet(_stage_row_style(status, self._theme_colors))
+        self._workflow_stepper.set_steps(self._stage_entries)
 
     def set_export_states(self, export_states: list[dict[str, object]]) -> None:
         """
@@ -491,6 +691,7 @@ class HomeProjectPage(QWidget):
         @version    0.1.0
         """
         self._theme_colors = _normalize_home_theme_colors(theme_payload)
+        self._workflow_stepper.apply_theme(self._theme_colors)
         self.set_stage_statuses(self._stage_entries)
         self._refresh_summary_labels()
         self._apply_workflow_row_heights()

@@ -2440,23 +2440,31 @@ def build_theme_stylesheet(theme_payload: dict[str, object], base_point_size: fl
     disabled = colors["disabled"]
     focus_text = _readable_foreground(_qcolor(accent)).name().upper()
     hover_background = _qcolor(accent).lighter(128).name().upper()
+    accent_qcolor = _qcolor(accent)
+    accent_rgb = f"{accent_qcolor.red()}, {accent_qcolor.green()}, {accent_qcolor.blue()}"
+    sidebar_hover_background = f"rgba({accent_rgb}, 0.12)"
+    sidebar_selected_background = f"rgba({accent_rgb}, 0.20)"
 
     return f"""
 QGroupBox {{
+    background-color: {panel_background};
     border: 1px solid {border};
-    border-radius: 4px;
-    margin-top: 0.7em;
+    border-radius: 10px;
+    margin-top: 0.9em;
+    padding: 10px 10px 8px 10px;
 }}
 QGroupBox::title {{
     color: {text_muted};
     subcontrol-origin: margin;
-    left: 8px;
-    padding: 0 3px;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 2px 4px;
 }}
 QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QTableWidget, QListWidget {{
     background-color: {panel_background};
     color: {text_primary};
     border: 1px solid {border};
+    border-radius: 8px;
     selection-background-color: {accent};
     selection-color: {focus_text};
 }}
@@ -2471,9 +2479,55 @@ QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBo
 QTableWidget:focus, QListWidget:focus {{
     border: 1px solid {accent};
 }}
-QPushButton {{
+QComboBox::drop-down {{
+    border: none;
+    width: 22px;
+}}
+QComboBox QAbstractItemView {{
+    background-color: {panel_background};
     color: {text_primary};
     border: 1px solid {border};
+    border-radius: 8px;
+    padding: 4px;
+    selection-background-color: {accent};
+    selection-color: {focus_text};
+    outline: none;
+}}
+QToolBar {{
+    background-color: {panel_background};
+    border: none;
+    spacing: 2px;
+    padding: 2px;
+}}
+QToolBar::separator {{
+    background-color: {border};
+    width: 1px;
+    margin: 4px 6px;
+}}
+QToolButton {{
+    color: {text_primary};
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 4px 10px;
+}}
+QToolButton:hover {{
+    color: {focus_text};
+    background-color: {hover_background};
+    border-color: {accent};
+}}
+QToolButton:pressed, QToolButton:checked {{
+    color: {focus_text};
+    background-color: {accent};
+}}
+QToolButton:disabled {{
+    color: {disabled};
+}}
+QPushButton {{
+    color: {text_primary};
+    background-color: {panel_background};
+    border: 1px solid {border};
+    border-radius: 8px;
     padding: 4px 10px;
 }}
 QPushButton:hover {{
@@ -2487,6 +2541,95 @@ QPushButton:focus {{
 QPushButton:disabled {{
     color: {disabled};
     border-color: {border};
+    background-color: {panel_background};
+}}
+QScrollBar:vertical {{
+    background: {panel_background};
+    width: 12px;
+    margin: 0;
+    border: none;
+}}
+QScrollBar::handle:vertical {{
+    background: {border};
+    border-radius: 5px;
+    min-height: 28px;
+    margin: 2px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {accent};
+}}
+QScrollBar:horizontal {{
+    background: {panel_background};
+    height: 12px;
+    margin: 0;
+    border: none;
+}}
+QScrollBar::handle:horizontal {{
+    background: {border};
+    border-radius: 5px;
+    min-width: 28px;
+    margin: 2px;
+}}
+QScrollBar::handle:horizontal:hover {{
+    background: {accent};
+}}
+QScrollBar::add-line, QScrollBar::sub-line {{
+    height: 0;
+    width: 0;
+    background: none;
+    border: none;
+}}
+QScrollBar::add-page, QScrollBar::sub-page {{
+    background: none;
+}}
+QProgressBar {{
+    background-color: {panel_background};
+    border: 1px solid {border};
+    border-radius: 6px;
+    text-align: center;
+    color: {text_primary};
+}}
+QProgressBar::chunk {{
+    background-color: {accent};
+    border-radius: 5px;
+}}
+QMenu {{
+    background-color: {panel_background};
+    color: {text_primary};
+    border: 1px solid {border};
+    border-radius: 8px;
+    padding: 4px;
+}}
+QMenu::item {{
+    padding: 5px 18px;
+    border-radius: 6px;
+}}
+QMenu::item:selected {{
+    background-color: {accent};
+    color: {focus_text};
+}}
+QListWidget#navigationSidebar {{
+    background-color: {panel_background};
+    border: 1px solid {border};
+    border-radius: 10px;
+    padding: 6px;
+    outline: none;
+}}
+QListWidget#navigationSidebar::item {{
+    color: {text_muted};
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 8px;
+    margin: 1px 2px;
+}}
+QListWidget#navigationSidebar::item:hover {{
+    color: {text_primary};
+    background-color: {sidebar_hover_background};
+}}
+QListWidget#navigationSidebar::item:selected {{
+    color: {text_primary};
+    background-color: {sidebar_selected_background};
+    border-left: 3px solid {accent};
 }}
 """.strip()
 

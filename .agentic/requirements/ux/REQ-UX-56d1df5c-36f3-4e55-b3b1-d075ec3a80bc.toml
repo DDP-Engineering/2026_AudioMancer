@@ -1,0 +1,19 @@
+schema_version = 1
+id = "REQ-UX-56d1df5c-36f3-4e55-b3b1-d075ec3a80bc"
+category = "ux"
+status = "Active"
+priority = "Could"
+requirement = "The theme stylesheet shall fill QProgressBar chunks with the theme accent color."
+rationale = "Progress bars are a frequent focal point; the accent ties them to the brand."
+verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent",
+]
+
+created_on = "2026-07-24T22:51:00Z"
+last_updated = "2026-07-24T22:53:52Z"

@@ -19,10 +19,73 @@
 
 # IMPORTS
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QByteArray, QSize, Qt, Signal
+from PySide6.QtGui import QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QListWidget, QListWidgetItem, QSizePolicy
 
 from audiomancer.services import ui_state_service
+
+# CONSTANTS
+
+# @brief Default idle icon stroke color (AudioMancer Dark text_muted), used before a theme is applied.
+_ICON_STROKE_DEFAULT: str = "#98AEAC"
+
+# @brief Rendered sidebar icon size in logical pixels.
+_ICON_PIXELS: int = 18
+
+# @brief Monoline SVG path bodies per workflow page, drawn on a 24x24 grid with currentColor stroke.
+_PAGE_ICON_PATHS: dict[str, str] = {
+    "home": '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-5h4v5h5V9.5"/>',
+    "text_cleanup": '<path d="m5 19 7-7"/><path d="M14 4.5 16 3l1.5 2 2 .5-1.5 2 .5 2-2-.5-2 1.5-.5-2-2-.5 1.5-2z"/>',
+    "text_chunking": (
+        '<rect x="4" y="4" width="16" height="4" rx="1"/>'
+        '<rect x="4" y="10" width="16" height="4" rx="1"/>'
+        '<rect x="4" y="16" width="10" height="4" rx="1"/>'
+    ),
+    "ai_translation": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+    "characters": (
+        '<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/>'
+        '<circle cx="17" cy="8" r="2.4"/><path d="M15.5 13.6A4.6 4.6 0 0 1 21 18"/>'
+    ),
+    "narator_voice": '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/>',
+    "character_voices": (
+        '<rect x="8" y="3" width="5" height="10" rx="2.5"/>'
+        '<path d="M5.5 11a5 5 0 0 0 10 0M10.5 16v3"/><path d="M18 7v8M21 9v4"/>'
+    ),
+    "speech_blocks": (
+        '<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 12h5"/>'
+    ),
+    "audio_blocks": '<path d="M4 12h2M8 7v10M12 4v16M16 8v8M20 11v2"/>',
+    "audio_assembly": '<path d="M12 3 3 7l9 4 9-4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/>',
+}
+
+
+def _render_page_icon(inner_svg: str, color: str, px: int = 32) -> QIcon:
+    """
+    @brief      Render one monoline page icon to a colored QIcon.
+    @param[in]  inner_svg SVG path body drawn on a 24x24 grid.
+    @param[in]  color Stroke color as a #RRGGBB string.
+    @param[in]  px Rendered pixmap size in device pixels.
+    @return     Icon with the stroked glyph on a transparent background.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    svg_markup = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
+        f"{inner_svg}</svg>"
+    )
+    renderer = QSvgRenderer(QByteArray(svg_markup.encode("utf-8")))
+    pixmap = QPixmap(px, px)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
+
 
 # PUBLIC API
 
@@ -49,11 +112,14 @@ class NavigationSidebar(QListWidget):
         @version    0.4.0
         """
         super().__init__(parent)
-        self.setAlternatingRowColors(True)
+        self.setObjectName("navigationSidebar")
+        self.setAlternatingRowColors(False)
         self.setFixedWidth(160)
+        self.setIconSize(QSize(_ICON_PIXELS, _ICON_PIXELS))
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.itemSelectionChanged.connect(self._emit_selected_page)
         self._page_labels: dict[str, str] = {}
+        self._icon_color: str = _ICON_STROKE_DEFAULT
 
     def add_page(self, page_id: str, label: str, enabled: bool) -> None:
         """
@@ -69,9 +135,32 @@ class NavigationSidebar(QListWidget):
         """
         item = QListWidgetItem(label)
         item.setData(Qt.ItemDataRole.UserRole, page_id)
+        inner_svg = _PAGE_ICON_PATHS.get(page_id)
+        if inner_svg is not None:
+            item.setIcon(_render_page_icon(inner_svg, self._icon_color))
         self.addItem(item)
         self._page_labels[page_id] = label
         self.set_page_enabled(page_id, enabled)
+
+    def apply_theme(self, theme_payload: dict[str, object]) -> None:
+        """
+        @brief      Recolor the workflow page icons to match the active theme.
+        @param[in]  theme_payload Runtime UI theme payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        colors = theme_payload.get("colors") if isinstance(theme_payload, dict) else None
+        icon_color = str(colors.get("text_muted")) if isinstance(colors, dict) and colors.get("text_muted") else None
+        self._icon_color = icon_color or _ICON_STROKE_DEFAULT
+        for index in range(self.count()):
+            item = self.item(index)
+            page_id = str(item.data(Qt.ItemDataRole.UserRole))
+            inner_svg = _PAGE_ICON_PATHS.get(page_id)
+            if inner_svg is not None:
+                item.setIcon(_render_page_icon(inner_svg, self._icon_color))
 
     def set_page_label(self, page_id: str, label: str) -> None:
         """

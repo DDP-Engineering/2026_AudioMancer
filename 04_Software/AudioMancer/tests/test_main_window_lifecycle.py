@@ -129,6 +129,27 @@ def test_main_window_navigation_is_a_left_vertical_sidebar(qtbot, default_settin
     assert layout.stretch(layout.indexOf(window._stack)) == 1
 
 
+def test_main_window_toolbar_shows_audiomancer_wordmark(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify the shell shows an AudioMancer wordmark in the toolbar.
+    @details    Covers REQ-UX-a862723d-f64a-4f8c-a5d0-36b6ba6d6052 / SPEC-NAV-WORDMARK.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    wordmark = window.findChild(QLabel, "appWordmark")
+    assert wordmark is not None
+    assert "Audio" in wordmark.text()
+    assert "Mancer" in wordmark.text()
+
+
 def test_main_window_show_message_does_not_create_status_bar(qtbot, default_settings_payload) -> None:
     """
     @brief      Verify transient shell messages do not create bottom status UI.
