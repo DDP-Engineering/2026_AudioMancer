@@ -21,6 +21,7 @@
 
 import argparse
 from datetime import UTC, datetime
+from hashlib import sha256
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -30,8 +31,6 @@ import wave
 
 PROJECT_MANIFEST_FILE_NAME = "project.json"
 CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
-CHUNKING_REPORT_FILE_NAME = "chunking_report.json"
-CHUNKING_STATE_FILE_NAME = "chunking_state.json"
 SPEECH_BLOCKS_OUTPUT_FILE_NAME = "speech_blocks.json"
 SPEECH_BLOCKS_REPORT_FILE_NAME = "speech_blocks_report.json"
 SPEECH_BLOCKS_STATE_FILE_NAME = "speech_blocks_state.json"
@@ -125,17 +124,10 @@ def build_synthetic_project(out: Path, blocks: int = 3000, chunks: int = 150) ->
     source_chunks = _build_chunks(blocks, chunks)
     speech_blocks = _build_speech_blocks(source_chunks, blocks)
     audio_blocks = _build_audio_blocks(out, speech_blocks, now_iso)
-    (out / "synthetic_large_book.txt").write_text(
-        "\n\n".join(str(chunk["text"]) for chunk in source_chunks),
-        encoding="utf-8",
-    )
+    source_text = "\n\n".join(str(chunk["text"]) for chunk in source_chunks)
+    (out / "synthetic_large_book.txt").write_text(source_text, encoding="utf-8")
     _write_json(out / PROJECT_MANIFEST_FILE_NAME, manifest)
-    _write_json(out / CHUNK_ARTIFACT_FILE_NAME, source_chunks)
-    _write_json(out / CHUNKING_REPORT_FILE_NAME, _chunking_report(source_chunks))
-    _write_json(
-        out / CHUNKING_STATE_FILE_NAME,
-        _operation_state("completed", len(source_chunks), len(source_chunks)),
-    )
+    _write_json(out / CHUNK_ARTIFACT_FILE_NAME, _chunking_document(source_chunks, source_text))
     _write_json(out / SPEECH_BLOCKS_OUTPUT_FILE_NAME, _speech_blocks_document(speech_blocks, source_chunks, now_iso))
     _write_json(out / AUDIO_BLOCKS_OUTPUT_FILE_NAME, audio_blocks)
     _write_json(out / AUDIO_BLOCKS_REPORT_FILE_NAME, _audio_blocks_report(audio_blocks, speech_blocks))
@@ -224,13 +216,15 @@ def _write_json(path: Path, payload: object) -> None:
 def _build_chunks(blocks: int, chunks: int) -> list[dict[str, object]]:
     """
     @brief      Build deterministic source chunks for one synthetic project.
+    @details    Chunk records carry the exact canonical chunk fields required by
+                the strict `chunks_text.json` document contract.
     @param[in]  blocks Total Speech Blocks represented by the project.
     @param[in]  chunks Number of source chunks to create.
     @return     Ordered source chunk payload list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
+    @date       2026-07-25
+    @version    0.2.0
     """
     _ = blocks
     return [
@@ -238,6 +232,9 @@ def _build_chunks(blocks: int, chunks: int) -> list[dict[str, object]]:
             "chunk_id": f"chunk-{index:04d}",
             "sequence_index": index,
             "text": f"Synthetic source chunk {index} with enough text to produce review rows.",
+            "cleanup_boundary_confidence": None,
+            "cleanup_joined_across_page_break": False,
+            "cleanup_warning_flags": [],
         }
         for index in range(1, chunks + 1)
     ]
@@ -343,22 +340,39 @@ def _write_wav_stub(path: Path) -> None:
         wav_file.writeframes(b"\0\0")
 
 
-def _chunking_report(source_chunks: list[dict[str, object]]) -> dict[str, object]:
+def _chunking_document(source_chunks: list[dict[str, object]], source_text: str) -> dict[str, object]:
     """
-    @brief      Build a completed synthetic chunking report.
+    @brief      Build the single authoritative synthetic Chunking document.
+    @details    Mirrors the exact root contract enforced by the application
+                chunking document boundary: a completed deterministic document
+                with no checkpoint and zeroed cumulative token usage. The report
+                and operation-state views are derived at runtime and are never
+                persisted, so no sidecar files are written.
     @param[in]  source_chunks Source chunk payload list.
-    @return     Chunking report payload.
+    @param[in]  source_text Canonical source text represented by the chunks.
+    @return     Chunking document payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
+    @date       2026-07-25
     @version    0.1.0
     """
     return {
-        "chunking_stage_status": "completed",
-        "chunk_count": len(source_chunks),
-        "total_chunk_count": len(source_chunks),
-        "warning_count": 0,
+        "status": "completed",
+        "mode": "deterministic",
+        "manual_adjusted": False,
+        "source_fingerprint": f"sha256:{sha256(source_text.encode('utf-8')).hexdigest()}",
+        "semantic_strategy": None,
+        "additional_chunking_instructions": "",
+        "token_usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "usage_available": False,
+        },
         "warnings": [],
+        "next_paragraph": None,
+        "context_window_fallback_count": 0,
+        "chunks": source_chunks,
     }
 
 

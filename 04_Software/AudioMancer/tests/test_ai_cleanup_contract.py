@@ -20,7 +20,6 @@
 
 # IMPORTS
 
-import hashlib
 import json
 
 import pytest
@@ -616,7 +615,7 @@ def test_ai_cleanup_resume_uses_source_offset_after_budget_repartition(
     )
     assert failed_document["status"] == "failed"
     assert "progress_current" not in failed_document
-    expected_restored_offset = failed_document["decisions"]["items"][-1]["end"]
+    assert failed_document["decisions"]["items"][-1]["end"] == expected_restored_offset
 
     resumed_prompts: list[str] = []
 
