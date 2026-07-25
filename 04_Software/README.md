@@ -10,7 +10,7 @@ Implementation sources and runnable software artifacts.
 
 ## Contents
 
-- `AudioMancer/` contains the Python 3.12/PySide6 desktop application,
+- `AudioMancer/` contains the Python 3.12-3.13/PySide6 desktop application,
   package, prompt templates, focused tests, package metadata, and local runtime
   scaffolding.
 

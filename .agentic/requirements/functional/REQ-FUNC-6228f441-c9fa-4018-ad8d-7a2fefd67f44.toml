@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-6228f441-c9fa-4018-ad8d-7a2fefd67f44"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The PCM codec shall convert linear PCM sample data between 1, 2, 3 and 4 byte sample widths by arithmetic bit shift, producing bytes identical to the removed audioop.lin2lin."
+rationale = "Audio Assembly must retarget source WAV sample width without altering produced audio after audioop was removed from the standard library."
+verification = "Automated: golden vectors plus byte-exact differential comparison against audioop for every ordered width pair from {1,2,3,4}."
+spec_ref = ".agentic/specs/pcm_codec.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_sample_width_conversion_is_byte_identical_to_audioop",
+]
+
+created_on = "2026-07-25T13:12:40Z"
+last_updated = "2026-07-25T14:05:30Z"

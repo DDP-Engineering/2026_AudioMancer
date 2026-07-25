@@ -10,6 +10,35 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- New internal **PCM Codec** component providing the linear PCM conversions
+  Audio Assembly and Scene Mix need — sample-width, mono/stereo, and stateful
+  sample-rate conversion for 1/2/3/4-byte samples — using only the Python
+  standard library, with no third-party dependency.
+
+### Changed
+
+- Audio Assembly and Scene Mix no longer depend on the `audioop` standard-library
+  module, which was **removed in Python 3.13**. PCM conversion now runs through
+  the internal codec. Produced audio is unchanged: the codec reproduces every
+  former `audioop` result byte for byte, including the resampler's carry-over
+  state across chunk boundaries, verified by a differential test suite that
+  compares it against the real `audioop` on Python 3.12 and skips automatically
+  on newer interpreters.
+- Supported Python interpreters widened from `>=3.12,<3.13` to `>=3.12,<3.14`.
+  The full suite passes on both 3.12 (1076 passed) and 3.13 (1015 passed, with
+  the 61 `audioop` comparison tests skipped). Python 3.14 stays excluded pending
+  its own validation.
+
+### Known Limitations
+
+- The internal codec is a per-sample Python loop rather than a C extension, so
+  conversion is roughly 90-210x slower than `audioop` was: about 0.04s of CPU per
+  second of audio resampled. This only affects sources whose WAV parameters
+  differ from the target; when parameters already match, frames are copied
+  without touching the codec.
+
 ## [1.7.0] - 2026-07-25
 
 ### Added

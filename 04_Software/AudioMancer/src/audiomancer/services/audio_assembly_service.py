@@ -21,7 +21,6 @@
 
 # IMPORTS
 
-import audioop
 from contextlib import ExitStack, suppress
 from functools import partial
 import hashlib
@@ -33,6 +32,7 @@ from audiomancer import config
 from audiomancer.services import (
     audio_blocks_service,
     operation_runtime_service,
+    pcm_codec,
     project_workspace_service,
     speech_blocks_service,
 )
@@ -1434,7 +1434,7 @@ def _convert_wav_frame_chunk(frame_data: bytes, source_params, target_params, ra
     @param[in]  frame_data Source PCM bytes.
     @param[in]  source_params Source WAV parameters.
     @param[in]  target_params Target WAV parameters.
-    @param[in]  rate_state Running resampler state from `audioop.ratecv`.
+    @param[in]  rate_state Running resampler state from `pcm_codec.convert_frame_rate`.
     @return     Tuple of converted PCM bytes and updated rate-conversion state.
     @exception  RuntimeError Raised when channel conversion is unsupported.
     @author     Eng. Dan Dumitru Pasare
@@ -1447,7 +1447,7 @@ def _convert_wav_frame_chunk(frame_data: bytes, source_params, target_params, ra
     target_sample_width = int(target_params.sampwidth)
     target_channels = int(target_params.nchannels)
     if current_sample_width != target_sample_width:
-        converted_data = audioop.lin2lin(converted_data, current_sample_width, target_sample_width)
+        converted_data = pcm_codec.convert_sample_width(converted_data, current_sample_width, target_sample_width)
         current_sample_width = target_sample_width
     converted_data = _convert_wav_channels(
         converted_data,
@@ -1457,7 +1457,7 @@ def _convert_wav_frame_chunk(frame_data: bytes, source_params, target_params, ra
     )
     current_channels = target_channels
     if int(source_params.framerate) != int(target_params.framerate):
-        converted_data, rate_state = audioop.ratecv(
+        converted_data, rate_state = pcm_codec.convert_frame_rate(
             converted_data,
             current_sample_width,
             current_channels,
@@ -1484,9 +1484,9 @@ def _convert_wav_channels(frame_data: bytes, sample_width: int, source_channels:
     if source_channels == target_channels:
         return frame_data
     if source_channels == 1 and target_channels == 2:
-        return audioop.tostereo(frame_data, sample_width, 1.0, 1.0)
+        return pcm_codec.mono_to_stereo(frame_data, sample_width, 1.0, 1.0)
     if source_channels == 2 and target_channels == 1:
-        return audioop.tomono(frame_data, sample_width, 0.5, 0.5)
+        return pcm_codec.stereo_to_mono(frame_data, sample_width, 0.5, 0.5)
     raise RuntimeError("Audio Assembly supports WAV channel conversion only between mono and stereo.")
 
 

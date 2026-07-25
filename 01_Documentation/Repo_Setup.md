@@ -28,14 +28,14 @@ Current application subtree:
 
 Current environment and dependency workflow:
 
-- `Python 3.12`
+- `Python 3.12` or `3.13`
 - `uv`
 
 ## Prerequisites
 
 Before syncing the project environment, make sure these are available:
 
-- `Python 3.12`
+- `Python 3.12` or `3.13` (the package declares `>=3.12,<3.14`)
 - `git`
 - internet access for the first dependency installation
 - `GitHub CLI` (`gh`) when creating GitHub releases, uploading delivery
