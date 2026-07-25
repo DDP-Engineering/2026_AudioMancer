@@ -11,10 +11,11 @@
 @brief Runtime UI-state helpers for AudioMancer.
 @details Applies runtime UI language and text-size settings to the running Qt
          application through one centralized string catalog, scale mapping, and
-         theme runtime adapter.
+         theme runtime adapter, and resolves settings-backed runtime preferences
+         such as the operator completion beep.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.58.0
+@version 0.59.0
 """
 
 # ruff: noqa: E501
@@ -2225,6 +2226,23 @@ def current_language_from_settings(
     if not isinstance(settings_payload, dict):
         return _DEFAULT_LANGUAGE
     return str(settings_payload.get("language", _DEFAULT_LANGUAGE))
+
+
+def completion_beep_enabled_from_settings(
+    settings_payload: dict[str, object] | None,
+) -> bool:
+    """
+    @brief      Resolve the operator completion-beep preference from one settings payload.
+    @param[in]  settings_payload Optional persisted settings mapping.
+    @return     True when a finished operation should produce an audible beep.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return False
+    return bool(settings_payload.get("play_completion_beep", config.DEFAULT_PLAY_COMPLETION_BEEP))
 
 
 def operator_status_pane_height(reference_widget: QWidget, line_count: int = 3) -> int:

@@ -1,0 +1,358 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "sync_manifest_operation_summary leaves operations untouched when the requested stage ranks at or above the stored stage.",
+      "sync_manifest_operation_summary resets the operations a lower requested stage does not justify, while preserving the operation summary written in that same call.",
+      "A manifest with completed speech_blocks, audio_blocks and audio_assembly that receives a speech_blocks summary at character_voices_ready ends with audio_blocks and audio_assembly reset to not_started.",
+      "Opening the repaired-by-construction manifest no longer returns status repair_required."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-25T19:33:29+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [],
+    "reason": "Risk is low, not medium, on the evidence: regressing the stage together with resetting downstream operations is already the shipped intended behavior in speech_blocks_ui_controller._reset_downstream_after_speech_blocks_structure_change, and it is what the repair path applies today with operator consent. This change does not introduce a new data effect; it closes the service-level hole where only half of that pairing is performed. Single function, reuses in-module repair logic, fully unit-testable and reversible.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "IN: the consistency rule in sync_manifest_operation_summary; its unit tests; a regression test seeded from the real drifted manifest; component documentation. OUT: deriving current_stage instead of storing it (option 2, deferred by operator); the Repair dialog UI; the individual speech_blocks call sites, which become correct once the central rule holds; pre-existing traceability debt."
+    ],
+    "source": "User chat plus screenshot: Repair Project dialog proposing current_stage character_voices_ready -> audio_assembly_ready. Runtime evidence 09_Others/Command Performance/project.json.",
+    "understanding": "sync_manifest_operation_summary assigns current_stage absolutely, so a caller can move the stage backwards while leaving downstream operation summaries marked completed. speech_blocks_service does this in three places: start_or_continue_generation (line 990) and regenerate_chunk_speech_blocks (line 1622) always write character_voices_ready, and _persist_report_update (line 4235) writes it whenever status is not completed. None of them reset audio_blocks or audio_assembly, so a finished project that has Speech Blocks re-run ends up with current_stage=character_voices_ready while audio_blocks and audio_assembly are still completed. That is exactly the observed project.json, and on next open _build_metadata_repair_result offers to repair it. The dialog is correct; the manifest write is the defect. The intended pairing already ships in speech_blocks_ui_controller._reset_downstream_after_speech_blocks_structure_change, which regresses the stage AND resets audio_blocks and audio_assembly together. Fix centrally in sync_manifest_operation_summary: when the requested stage ranks below the stored stage, apply the existing _reset_operations_for_stage, then re-apply the summary being written so the current call is not clobbered."
+  },
+  "change_units": [],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-e45d3577-3260-4db1-83e9-e6d99bcf5967"
+      ],
+      "cites_spec": [
+        "S-STAGE-MONOTONIC"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "green_evidence": "E-0007",
+      "id": "C-STAGE-MONOTONIC",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_project_stage_consistency.py",
+      "red_evidence": "E-0006",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-e45d3577-3260-4db1-83e9-e6d99bcf5967"
+      ],
+      "cites_spec": [
+        "S-STAGE-NODESTROY"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "green_evidence": "E-0009",
+      "id": "C-STAGE-NODESTROY",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_project_stage_consistency.py",
+      "red_evidence": "E-0008",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-e45d3577-3260-4db1-83e9-e6d99bcf5967"
+      ],
+      "cites_spec": [
+        "S-STAGE-KEEP"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "green_evidence": "E-0013",
+      "id": "C-STAGE-KEEP",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_project_stage_consistency.py",
+      "red_evidence": "E-0012",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-e45d3577-3260-4db1-83e9-e6d99bcf5967"
+      ],
+      "cites_spec": [
+        "S-STAGE-NOREPAIR"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "green_evidence": "E-0011",
+      "id": "C-STAGE-NOREPAIR",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_project_stage_consistency.py",
+      "red_evidence": "E-0010",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-25T19:36:56+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Implementation revealed the chosen approach is destructive. Resetting downstream summaries on stage regression means a routine Speech Blocks review write (which passes speech_blocks_ready) wipes completed audio_blocks and audio_assembly on a finished project. For the reported project, whose correct end state is stage raised to audio_assembly_ready with all work intact, the reset approach produces the opposite outcome. config.OPERATION_STAGE_BY_KIND documents the field as the milestone PROMOTED by each completed operation, so the stage is a high-water mark and any regression through sync_manifest_operation_summary is itself the defect. Switching to a monotonic stage rule, which removes the drift without destroying operator work; genuine invalidation keeps using the existing explicit reset path that already resets artifacts and summaries together."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-25T19:37:18+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Requirement replaced with the monotonic rule; the checks must now assert stage advance, ignored regression, and that no unwritten operation summary is destroyed."
+    }
+  ],
+  "evidence": [
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:35:53+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Pre-fix red: 2 failed, 1 passed. Failures are the stage-regression reset and the derived self-consistency invariant; audio_blocks and audio_assembly remain completed under character_voices_ready, reproducing the drifted manifest observed in 09_Others/Command Performance. The passing test is the non-regressing guard, which must stay green.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-25T19:35:53+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "decision",
+      "path": "04_Software/AudioMancer/tests/test_project_stage_consistency.py",
+      "result": "info",
+      "stage": "check",
+      "status": "active",
+      "summary": "S-STAGE-NOREPAIR was realized as a manifest self-consistency assertion rather than an open_project assertion. The repair detector derives its target stage from artifacts on disk via ten evidence builders, so a synthetic project with no artifacts returns no repair regardless of the defect, and the original end-to-end test passed for the wrong reason before any fix. The invariant asserted instead, that no operation above the stored stage claims completion, is the exact property whose violation triggers the dialog.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:38:26+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Pre-fix red for the corrected monotonic contract: 2 failed, 2 passed. Red are the backwards-stage write and the resulting self-consistency violation. Green and required to stay green are stage advance and the no-destroy guard, the latter being the explicit regression guard against the reset approach backed out in this run.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py tests/test_project_workspace_service.py tests/test_speech_blocks_service.py tests/test_speech_blocks_state_service.py tests/test_workflow_impact_service.py tests/test_workflow_order_consistency.py tests/test_main_window_project_flow.py tests/test_speech_blocks_ui_controller.py tests/test_audio_blocks_service.py tests/test_audio_assembly_service.py",
+      "created_at": "2026-07-25T19:40:34+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after the monotonic fix: 4 passed in test_project_stage_consistency, plus 224 passed and 1 skipped across the focused regression set (project workspace, speech blocks service and state, workflow impact and order, main window project flow, speech blocks UI controller, audio blocks and audio assembly services). Full-suite validation deferred to the batched end-of-queue run per operator instruction.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-25T19:40:34+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Lint clean: ruff check . reports 'All checks passed!'.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:54+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Per-check link for the pre-fix red run recorded as E-0003: 2 failed, 2 passed in tests/test_project_stage_consistency.py against the unfixed monotonic contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:54+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after the monotonic fix: 4 passed in tests/test_project_stage_consistency.py.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:55+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Per-check link for the pre-fix red run recorded as E-0003: 2 failed, 2 passed in tests/test_project_stage_consistency.py against the unfixed monotonic contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:55+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after the monotonic fix: 4 passed in tests/test_project_stage_consistency.py.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:55+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Per-check link for the pre-fix red run recorded as E-0003: 2 failed, 2 passed in tests/test_project_stage_consistency.py against the unfixed monotonic contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:55+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after the monotonic fix: 4 passed in tests/test_project_stage_consistency.py.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:56+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Per-check link for the pre-fix red run recorded as E-0003: 2 failed, 2 passed in tests/test_project_stage_consistency.py against the unfixed monotonic contract.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_project_stage_consistency.py",
+      "created_at": "2026-07-25T19:41:56+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after the monotonic fix: 4 passed in tests/test_project_stage_consistency.py.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-25T19:42:24+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "TRACEABILITY CAVEAT for this run: spec S-STAGE-RESET (reset downstream summaries when the stage regresses) and S-STAGE-KEEP were written for the approach abandoned mid-implementation, and check C-STAGE-CONSISTENCY still cites S-STAGE-RESET. The green result on that check does NOT demonstrate S-STAGE-RESET; tests/test_project_stage_consistency.py now proves the opposite, that downstream summaries are preserved. The AEGIS CLI has add-spec but no spec update or retire command, so the withdrawn spec could not be marked retired and the stale citation could not be re-pointed. The graph was deliberately NOT hand-edited to make INV-1 pass. Authoritative contract is REQ-FUNC-e45d3577 plus S-STAGE-MONOTONIC and S-STAGE-NODESTROY.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-25T19:30:55+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py"
+    ],
+    "statement": "Opening an existing completed project sometimes shows the Repair Project dialog because project.json becomes self-contradictory: current_stage regresses to an earlier stage while the downstream operations stay marked completed. Observed in 09_Others/Command Performance: current_stage=character_voices_ready with speech_blocks, audio_blocks and audio_assembly all completed.",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-25T193055Z-24670039",
+  "spec_items": [
+    {
+      "examples": [
+        "stored current_stage=character_voices_ready, write speech_blocks at speech_blocks_ready -> audio_blocks untouched"
+      ],
+      "id": "S-STAGE-KEEP",
+      "statement": "sync_manifest_operation_summary leaves the other operation summaries untouched when the requested stage ranks at or above the stored stage.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "open_project(root) after the regressing write -> status != 'repair_required'"
+      ],
+      "id": "S-STAGE-NOREPAIR",
+      "statement": "A manifest produced by a stage-regressing sync_manifest_operation_summary call opens without status repair_required.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "stored audio_assembly_ready + requested character_voices_ready -> stays audio_assembly_ready; stored character_voices_ready + requested speech_blocks_ready -> becomes speech_blocks_ready"
+      ],
+      "id": "S-STAGE-MONOTONIC",
+      "statement": "sync_manifest_operation_summary advances current_stage when the requested stage outranks the stored stage and leaves the stored stage unchanged when the requested stage ranks lower.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "all operations completed + speech_blocks written at character_voices_ready -> audio_blocks and audio_assembly stay completed"
+      ],
+      "id": "S-STAGE-NODESTROY",
+      "statement": "sync_manifest_operation_summary never resets an operation summary the caller did not write, so completed downstream work survives a lower requested stage.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    }
+  ],
+  "stage": "validation"
+}

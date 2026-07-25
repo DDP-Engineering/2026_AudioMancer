@@ -530,10 +530,6 @@ CLEANUP_STATE_FILE_NAME = "cleanup_state.json"
 # @brief File name used for the persisted chunk list artifact.
 CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
 
-# @brief File name used for persisted chunking metadata.
-
-# @brief File name used for persisted chunking runtime state.
-
 # @brief File name used for persisted translated chunk records.
 TRANSLATED_CHUNKS_FILE_NAME = "translated_text.json"
 

@@ -33,6 +33,12 @@ The assembly service loads validated block WAVs, applies configured composition/
 
 - Outputs and referenced inputs remain project-relative and ordered by block identity; state records completed outputs, durations and resumable progress.
 - Assembly validates readable compatible WAVs and preserves previously completed work when a later operation cannot complete.
+- Accepted PCM sample widths are 2, 3 and 4 bytes. One-byte PCM is rejected on
+  purpose: WAV stores 8-bit samples unsigned while this component and PCM Codec
+  read every width as signed, so gap and pause silence would be written as a
+  negative-rail DC offset instead of quiet. Re-admitting 8-bit requires an
+  unsigned zero level of 0x80 in the silence writer and unsigned handling in PCM
+  Codec, whose current signed behavior is deliberate `audioop` compatibility.
 - Scene-ambience blocks group by chunk/position/anchor and share the same mixing
   helper for preview and final composition. Resume requires the current
   input/settings fingerprint; mismatched persisted state requires explicit

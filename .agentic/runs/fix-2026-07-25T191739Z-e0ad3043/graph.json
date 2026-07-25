@@ -1,0 +1,220 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "The nine named functions no longer exist in either controller module.",
+      "handle_operation_cancelled still exists in both modules and is still wired as the cancel_handler passed to operation_runner_controller.start_threaded_operation.",
+      "The full pytest suite still reports 1043 passed and 62 skipped, and ruff stays clean."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-25T19:18:24+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [],
+    "reason": "Behavior-neutral deletion of code with zero call sites, verified by a per-function census across src, tests and 02_Tools plus a check for dynamic getattr or string-name references, of which there are none. Impact analysis shows no requirement snapshot describes these handlers, and the two dialog-clearing requirements are verified by tests that stub the runner and exercise start_operation only. Fully reversible through git.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "IN: deleting the nine unreferenced functions from the two controllers and dropping any import left unused. OUT: handle_operation_cancelled; the shared runner; any behavior change; the pre-existing traceability debt; the completion-beep run already at delivery."
+    ],
+    "source": "User chat: 'can you clean also the text_chunking_ui_controller.handle_operation_success/failure and the text_cleanup_ui_controller equivalents are dead duplicates of the runner handlers'.",
+    "understanding": "A call-site census of every module-level function in both controllers shows nine unreferenced functions, more than the two pairs the user named. Dead in both modules: handle_operation_progress, handle_operation_success, handle_operation_failure, clear_active_operation. Dead in text_chunking only: the _resume_ai_profile_id stub, which ignores both parameters and always returns None. Each dead handler is behaviourally identical to the shared operation_runner_controller private handler that actually runs, so deleting them removes duplication without removing behavior. handle_operation_cancelled must stay in both modules: it is passed as cancel_handler by start_operation and performs manifest sync plus project-state refresh that the runner does not do."
+  },
+  "change_units": [],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-bd76a7dd-0756-4883-8c91-95e2e74df82a"
+      ],
+      "cites_spec": [
+        "S-NODUP-HANDLERS"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_operation_handler_delegation.py",
+      "green_evidence": "E-0008",
+      "id": "C-NODUP-HANDLERS",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_operation_handler_delegation.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-bd76a7dd-0756-4883-8c91-95e2e74df82a"
+      ],
+      "cites_spec": [
+        "S-KEEP-CANCEL"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_operation_handler_delegation.py -k cancellation_handler",
+      "green_evidence": "E-0009",
+      "id": "C-KEEP-CANCEL",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_operation_handler_delegation.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    }
+  ],
+  "decisions": [],
+  "evidence": [
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_operation_handler_delegation.py",
+      "created_at": "2026-07-25T19:19:39+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Pre-removal red run: 9 failed, 2 passed. The 9 failures are exactly the nine dead functions still present. The 2 passes are the cancel-handler guards, which must stay green throughout because handle_operation_cancelled is live and is deliberately not being removed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_operation_handler_delegation.py",
+      "created_at": "2026-07-25T19:19:40+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Pre-removal red run: 9 failed, 2 passed. The 9 failures are exactly the nine dead functions still present. The 2 passes are the cancel-handler guards, which must stay green throughout because handle_operation_cancelled is live and is deliberately not being removed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-25T19:22:43+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Lint gate clean after removal: ruff check . reports 'All checks passed!'. Confirms no import was orphaned by deleting the nine functions; misc_ui_controller is still used by the retained cancellation handler in both modules.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".agentic/tools/run.ps1 audit coverage",
+      "created_at": "2026-07-25T19:22:43+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "audit coverage: OK, no issues. Deleting functions from covered modules leaves coverage intact and the new test module needs no waiver.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".agentic/tools/run.ps1 audit traceability",
+      "created_at": "2026-07-25T19:22:43+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "scan",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "audit traceability: REQ-FUNC-bd76a7dd is clean after activation. Total findings remain 15, byte-identical to the count before this run, all pre-existing debt in files this change does not touch (missing tests/test_traceability.py; stale test_settings_page.py linked-test names).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer python -m py_compile <changed controllers>",
+      "created_at": "2026-07-25T19:22:43+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Python code-style audit against 01_Documentation/Code_Style.md: removing functions requires a module-level @version bump, applied as text_chunking_ui_controller 0.8.6->0.9.0 and text_cleanup_ui_controller 0.10.0->0.11.0, with @details rewritten to state the delegation split. New tests/test_operation_handler_delegation.py carries the required prologue, IMPORTS/CONSTANTS/HELPER FUNCTIONS/END OF FILE markers and Doxygen docstrings. py_compile clean.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_operation_handler_delegation.py tests/test_text_chunking_ui_controller.py tests/test_text_cleanup_ui_controller.py tests/test_operation_runner_controller.py tests/test_workflow_controller_service.py tests/test_main_window_operation_shutdown.py",
+      "created_at": "2026-07-25T19:29:59+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused validation for the dead-code removal: 36 passed in 33s across test_operation_handler_delegation, both touched controller test modules, the shared runner, the workflow controller facade and operation shutdown. Full-suite validation is deliberately DEFERRED at operator instruction: several tickets will be batched and validated together at the end, because a 16-minute full run per ticket costs too much time. The full run started for this change was stopped at ~38 percent and must not be counted as passing evidence.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_operation_handler_delegation.py",
+      "created_at": "2026-07-25T19:30:00+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after removal: 11 passed in tests/test_operation_handler_delegation.py. The 9 absence assertions flipped red to green and the 2 cancel-handler guards stayed green throughout, proving the retained live handler was untouched.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_operation_handler_delegation.py",
+      "created_at": "2026-07-25T19:30:00+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after removal: 11 passed in tests/test_operation_handler_delegation.py. The 9 absence assertions flipped red to green and the 2 cancel-handler guards stayed green throughout, proving the retained live handler was untouched.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-25T19:17:39+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py"
+    ],
+    "statement": "Remove dead duplicate operation handlers from text_chunking_ui_controller and text_cleanup_ui_controller. handle_operation_progress, handle_operation_success, handle_operation_failure and clear_active_operation in both modules have zero call sites and duplicate the shared operation_runner_controller handlers; text_chunking also carries an unreferenced _resume_ai_profile_id stub. handle_operation_cancelled stays: it is live and does manifest work the runner does not.",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-25T191739Z-e0ad3043",
+  "spec_items": [
+    {
+      "examples": [
+        "hasattr(text_cleanup_ui_controller, 'handle_operation_success') -> False"
+      ],
+      "id": "S-NODUP-HANDLERS",
+      "statement": "text_chunking_ui_controller and text_cleanup_ui_controller expose no handle_operation_progress, handle_operation_success, handle_operation_failure or clear_active_operation attribute, and text_chunking_ui_controller exposes no _resume_ai_profile_id attribute.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "start_operation(...) -> runner receives a cancel_handler that invokes the module's handle_operation_cancelled"
+      ],
+      "id": "S-KEEP-CANCEL",
+      "statement": "Both controllers still expose handle_operation_cancelled and still pass it as the cancel_handler given to operation_runner_controller.start_threaded_operation.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "validation"
+}

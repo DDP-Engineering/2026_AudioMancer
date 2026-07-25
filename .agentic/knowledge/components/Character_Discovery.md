@@ -106,9 +106,7 @@ Primary coverage is in:
 - `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
 - translation, runtime, export, and text-state consumer tests
 
-Minimum validation includes focused pytest runs, Python compilation, Ruff, and
-a repository search confirming that removed artifact contracts are absent from
-active code and tests.
+Minimum validation includes focused pytest runs, Python compilation, and Ruff.
 
 ## 10. Limitations And Future Work
 

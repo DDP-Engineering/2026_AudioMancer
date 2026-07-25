@@ -71,8 +71,11 @@ _TEMP_SUFFIX = ".tmp"
 _SCENE_MIX_PREVIEW_FOLDER_NAME = "scene_mix_previews"
 _SCENE_MIX_KEY_PREFIX = "scene_mix"
 _WAV_COPY_FRAME_CHUNK_SIZE = 65_536
+# Signed-PCM sample widths Audio Assembly can stitch. One-byte PCM is excluded on
+# purpose: WAV stores 8-bit samples unsigned, while this module and `pcm_codec` read
+# every width as signed, so an 8-bit render would write silence as a full negative-rail
+# DC offset instead of quiet. Rejecting the width is honest; rendering it is not.
 _WAV_SAMPLE_WIDTH_BY_FORMAT = {
-    1: 1,
     2: 2,
     3: 3,
     4: 4,
@@ -1329,6 +1332,10 @@ def _composition_block_count(block: dict[str, object]) -> int:
 def _write_silence(output_wav: wave.Wave_write, gap_ms: int, params) -> int:
     """
     @brief      Write PCM silence frames into one output WAV stream.
+    @details    Zero bytes are silence only for signed PCM. That holds for every width
+                in `_WAV_SAMPLE_WIDTH_BY_FORMAT`, which excludes unsigned 8-bit for
+                exactly this reason; do not re-admit one-byte PCM without also giving
+                this function an unsigned zero level of 0x80.
     @param[in]  output_wav Active output WAV writer.
     @param[in]  gap_ms Gap length in milliseconds.
     @param[in]  params WAV params from the current source file.
@@ -1336,7 +1343,7 @@ def _write_silence(output_wav: wave.Wave_write, gap_ms: int, params) -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     if gap_ms <= 0:
         return 0

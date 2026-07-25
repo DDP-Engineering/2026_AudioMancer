@@ -475,13 +475,19 @@ def sync_manifest_operation_summary(
     @param[in]  project_root Active project root folder.
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  operation_payload Candidate operation-state payload.
-    @param[in]  current_stage Optional workflow stage to persist with the summary.
+    @param[in]  current_stage Optional workflow stage milestone reached by this summary.
     @param[in]  extra_fields Optional additional manifest fields to merge.
     @return     Reloaded project manifest payload.
     @exception  ValueError Raised when the operation kind or stage is unsupported.
+    @note       `current_stage` only ever promotes the stage; a lower value is ignored.
+                The stage is the highest milestone the project has reached, so lowering
+                it here would leave completed downstream summaries stranded above it, and
+                that contradiction is what makes a finished project offer a repair on
+                every later open. Invalidating downstream work belongs to the explicit
+                reset path, which clears artifacts and summaries together.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-10
-    @version    0.2.0
+    @version    0.3.0
     """
     manifest = load_manifest(project_root)
     operations = _normalize_operations(manifest.get("operations"))
@@ -493,7 +499,9 @@ def sync_manifest_operation_summary(
         normalized_stage = str(current_stage).strip()
         if normalized_stage not in config.PROJECT_WORKFLOW_STAGES:
             raise ValueError(f"Unsupported workflow stage: {current_stage}")
-        manifest["current_stage"] = normalized_stage
+        stored_stage = str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
+        if _stage_rank(normalized_stage) > _stage_rank(stored_stage):
+            manifest["current_stage"] = normalized_stage
     if isinstance(extra_fields, dict):
         for field_name, field_value in extra_fields.items():
             manifest[str(field_name)] = field_value

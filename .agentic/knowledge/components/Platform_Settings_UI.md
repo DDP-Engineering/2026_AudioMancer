@@ -20,6 +20,7 @@ locale/theme state, and settings-page integration used by every workflow page.
 - Load, validate, migrate, and save operator settings, seeding a fresh settings file from the packaged scaffold.
 - Configure component logging, time and URL helpers, scrolling, translations, and UI theme/state.
 - Present and apply settings through the Settings page and controller.
+- Resolve the operator completion-beep preference and expose the shared emitter that consumes it.
 
 ## 3. Implementation Overview
 
@@ -86,6 +87,19 @@ instructions from the Chunking document.
   discovery data before they are consumed.
 - `translate`, `apply_theme`, `apply_ui_settings`, `load_settings`, and
   `save_settings` are the shared public runtime entry points.
+- `play_completion_beep` is the persisted operator preference for an audible
+  end-of-operation signal. `ui_state_service.completion_beep_enabled_from_settings`
+  is the pure resolver (a non-mapping payload and a missing key both yield the
+  `DEFAULT_PLAY_COMPLETION_BEEP` behavior of staying silent), and
+  `misc_ui_controller.play_completion_beep(window)` is the only emitter. Consumers
+  call the emitter rather than reading the settings key or `QApplication.beep()`
+  directly, so the preference has exactly one interpretation.
+- Each run writes one log file named
+  `<APP_NAME>_<YYYYMMDD>_<HHMMSS>_<pid>.log` under `Logs/`. The process id is
+  part of the name because the run handler opens with `mode="w"`: without it two
+  instances started in the same second share one path and the second truncates
+  the first run's log. Retention cleanup is best-effort and skips any entry it
+  cannot inspect or remove.
 - `resolve_user_documents_root()` returns the first existing directory among an
   `XDG_DOCUMENTS_DIR` override (POSIX other than macOS), the home documents
   folder, and the home directory. It never returns a missing path, because
@@ -120,13 +134,15 @@ Primary automated coverage:
 - `tests/test_ui_state_service.py`
 - `tests/test_ui_theme_service.py`
 - `tests/test_settings_page.py`
+- `tests/test_misc_ui_controller.py`
 - `tests/test_localization_parity.py`
 
 These cover configuration constants, writable data-root resolution across
 portable, override and read-only installation layouts, settings
 load/validate/self-heal/seed/save, component logging, URL joining, scroll-step
 behavior, runtime language/theme
-application, theme schema validation, and Settings-page editing. Minimum
+application, theme schema validation, Settings-page editing, and completion-beep
+preference resolution and emission. Minimum
 validation after a change: run the focused modules above with `uv run pytest`,
 plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 

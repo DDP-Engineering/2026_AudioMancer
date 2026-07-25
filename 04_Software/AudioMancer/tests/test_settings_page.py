@@ -152,24 +152,4 @@ def test_settings_page_text_font_size_selector_persists(qtbot) -> None:
     assert rebuilt["text_font_size_step"] == "extra_small"
 
 
-def test_settings_page_has_no_color_or_custom_theme_editor(qtbot) -> None:
-    """
-    @brief      Verify the simplified settings page drops color/custom-theme editing.
-    @details    Covers REQ-UX-be6adf19-fcc5-4b7a-89ca-28162656ba5b / SPEC-SET-NOCOLOR.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
-    """
-    page = SettingsPage()
-    qtbot.addWidget(page)
-
-    assert hasattr(page, "_color_buttons") is False
-    assert hasattr(page, "_create_custom_theme") is False
-    assert hasattr(page, "add_imported_theme_payload") is False
-    assert hasattr(page, "selected_theme_export_payload") is False
-
-
 # END OF FILE

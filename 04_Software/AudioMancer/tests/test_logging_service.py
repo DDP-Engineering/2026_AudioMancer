@@ -10,11 +10,12 @@
 @file test_logging_service.py
 @brief Focused tests for the AudioMancer logging service.
 @details Verifies per-run log creation under the resolved writable data root,
-         graceful degradation to console-only output, cleanup, formatting,
-         component-level overrides, and optional function-trace behavior.
+         per-process log file uniqueness, graceful degradation to console-only
+         output, cleanup, formatting, component-level overrides, and optional
+         function-trace behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-25
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -73,6 +74,34 @@ def test_initialize_logging_creates_per_run_log_file(tmp_path, monkeypatch) -> N
     assert log_file_path.name.endswith(".log")
     assert log_file_path.is_file()
     assert "Created test record" in log_file_path.read_text(encoding="utf-8")
+
+
+def test_log_file_name_is_unique_per_process_for_the_same_second(monkeypatch) -> None:
+    """
+    @brief      Verify concurrent starts in the same second cannot share one log path.
+    @details    Covers REQ-FUNC-ab7ace51-daf5-4289-addf-d91cc667e42b / S-LOG-UNIQUE. The
+                per-run handler opens with mode="w", so a shared path means the second
+                process silently truncates the first process's log.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    run_timestamp = datetime(2026, 7, 25, 19, 46, 57)
+
+    monkeypatch.setattr(os, "getpid", lambda: 111)
+    first_path = logging_service._build_log_file_path(run_timestamp)  # noqa: SLF001
+    monkeypatch.setattr(os, "getpid", lambda: 222)
+    second_path = logging_service._build_log_file_path(run_timestamp)  # noqa: SLF001
+
+    assert first_path != second_path
+    for log_path in (first_path, second_path):
+        assert log_path.name.startswith(f"{config.APP_NAME}_")
+        assert log_path.name.endswith(".log")
+        assert "20260725" in log_path.name
+        assert "194657" in log_path.name
 
 
 def test_initialize_logging_removes_only_expired_log_files(tmp_path, monkeypatch) -> None:

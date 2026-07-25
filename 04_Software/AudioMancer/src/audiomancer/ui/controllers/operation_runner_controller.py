@@ -10,11 +10,11 @@
 @file operation_runner_controller.py
 @brief Shared threaded modal-operation runner for AudioMancer UI controllers.
 @details Runs long workflow service calls on a QThread while the Qt UI thread
-         owns progress dialogs, cancellation requests, page busy state, and
-         operation finalization callbacks.
+         owns progress dialogs, cancellation requests, page busy state,
+         completion-beep requests, and operation finalization callbacks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -407,7 +407,7 @@ def _handle_operation_success(window: "MainWindow", success_handler, result_payl
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._operation_progress_dialog is not None:
         misc_ui_controller.update_progress_dialog(
@@ -416,6 +416,7 @@ def _handle_operation_success(window: "MainWindow", success_handler, result_payl
             window._operation_progress_dialog.status_message(),
         )
     misc_ui_controller.finish_progress_dialog(window)
+    misc_ui_controller.play_completion_beep(window)
     success_handler(result_payload)
 
 
@@ -429,16 +430,19 @@ def _handle_operation_failure(window: "MainWindow", failure_handler, error: obje
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     misc_ui_controller.update_progress_dialog(window, 100, str(error))
     misc_ui_controller.fail_progress_dialog(window, str(error))
+    misc_ui_controller.play_completion_beep(window)
     failure_handler(error if isinstance(error, Exception) else RuntimeError(str(error)))
 
 
 def _handle_operation_cancelled(window: "MainWindow", cancel_handler, message: str) -> None:
     """
     @brief      Finalize one cancelled worker operation on the UI thread.
+    @details    Deliberately plays no completion beep: the operator requested the
+                cancellation and is therefore already at the machine.
     @param[in]  window Active main window.
     @param[in]  cancel_handler Callback invoked with the cancellation message.
     @param[in]  message Operator-facing cancellation message.
@@ -446,7 +450,7 @@ def _handle_operation_cancelled(window: "MainWindow", cancel_handler, message: s
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     misc_ui_controller.update_progress_dialog(window, 100, message)
     misc_ui_controller.fail_progress_dialog(window, message)

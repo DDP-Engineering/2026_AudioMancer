@@ -27,6 +27,7 @@ from functools import wraps
 from inspect import signature
 import json
 import logging
+import os
 from pathlib import Path
 import sys
 import time
@@ -184,15 +185,20 @@ def _log_directory_path() -> Path:
 def _build_log_file_path(timestamp: datetime | None = None) -> Path:
     """
     @brief      Build the per-run application log file path.
+    @details    The process id is part of the name because the run handler opens
+                with mode="w". Two instances started inside the same wall-clock
+                second would otherwise resolve to one path, and the second would
+                truncate the first run's log exactly when two instances are
+                running and the diagnostics matter most.
     @param[in]  timestamp Optional run timestamp override.
     @return     Absolute log file path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.0
+    @version    0.2.0
     """
     run_timestamp = timestamp or datetime.now()
-    file_name = f"{config.APP_NAME}_{run_timestamp:%Y%m%d}_{run_timestamp:%H%M%S}.log"
+    file_name = f"{config.APP_NAME}_{run_timestamp:%Y%m%d}_{run_timestamp:%H%M%S}_{os.getpid()}.log"
     return _log_directory_path() / file_name
 
 

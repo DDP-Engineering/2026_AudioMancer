@@ -11,11 +11,13 @@
 @brief Text Cleanup page UI controller for AudioMancer.
 @details Handles extraction, deterministic cleanup, and AI-assisted cleanup
          workflows, including retained AI spacing reapplication, manual
-         cleaned-text saves, progress dialog lifecycle, cancellation, rerun
-         confirmations, and manifest synchronization for the Text Cleanup page.
+         cleaned-text saves, rerun confirmations, and manifest synchronization
+         for the Text Cleanup page. Progress and terminal operation outcomes are
+         delegated to the shared operation runner; only cancellation is handled
+         here, because it also syncs the manifest and refreshes project state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -373,71 +375,6 @@ def start_operation(
     )
 
 
-def handle_operation_progress(
-    window: "MainWindow",
-    progress_current: int,
-    progress_total: int,
-    percent: int,
-    message: str,
-    token_usage=None,
-) -> None:
-    """
-    @brief      Refresh the modal progress dialog for one running operation.
-    @param[in]  window Active main window shell.
-    @param[in]  progress_current Completed work units.
-    @param[in]  progress_total Total work units.
-    @param[in]  percent Current progress percent.
-    @param[in]  message Current operator-facing status message.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
-    """
-    _ = progress_current
-    _ = progress_total
-    misc_ui_controller.update_progress_dialog(window, percent, message, token_usage)
-
-
-def handle_operation_success(window: "MainWindow", success_handler, result_payload: object) -> None:
-    """
-    @brief      Finalize one successful long-running operation.
-    @param[in]  window Active main window shell.
-    @param[in]  success_handler Callback invoked with the worker result payload.
-    @param[in]  result_payload Worker result payload.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
-    """
-    if window._operation_progress_dialog is not None:
-        misc_ui_controller.update_progress_dialog(
-            window,
-            100,
-            window._operation_progress_dialog.status_message(),
-        )
-    misc_ui_controller.finish_progress_dialog(window)
-    success_handler(result_payload)
-
-
-def handle_operation_failure(window: "MainWindow", failure_handler, error: Exception) -> None:
-    """
-    @brief      Finalize one failed long-running operation.
-    @param[in]  window Active main window shell.
-    @param[in]  failure_handler Callback invoked with the raised exception.
-    @param[in]  error Raised operation exception.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
-    """
-    misc_ui_controller.update_progress_dialog(window, 100, str(error))
-    misc_ui_controller.fail_progress_dialog(window, str(error))
-    failure_handler(error)
-
-
 def handle_operation_cancelled(window: "MainWindow", message: str) -> None:
     """
     @brief      Finalize one cooperatively cancelled operation.
@@ -462,23 +399,6 @@ def handle_operation_cancelled(window: "MainWindow", message: str) -> None:
             ui_state_service.current_language_from_settings(window._settings_payload),
         ),
     )
-
-
-def clear_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Clear the current synchronous-operation bookkeeping after one run stops.
-    @param[in]  window Active main window shell.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    window._text_cleanup_page.set_busy(False)
-    misc_ui_controller.clear_progress_dialog(window)
-    window._active_operation_kind = None
-    window._active_operation_name = None
-    window._operation_cancel_requested = False
 
 
 def handle_extraction_success(window: "MainWindow", result_payload: object) -> None:

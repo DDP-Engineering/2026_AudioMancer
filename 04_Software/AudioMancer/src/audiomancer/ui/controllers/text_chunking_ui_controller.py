@@ -10,12 +10,14 @@
 @file text_chunking_ui_controller.py
 @brief Text Chunking page UI controller for AudioMancer.
 @details Handles deterministic and AI-assisted chunking workflows, including
-         selected-chunk saves, progress dialog lifecycle, resumable reruns,
-         destructive confirmation, and manifest synchronization for the Text
-         Chunking page.
+         selected-chunk saves, resumable reruns, destructive confirmation, and
+         manifest synchronization for the Text Chunking page. Progress and
+         terminal operation outcomes are delegated to the shared operation
+         runner; only cancellation is handled here, because it also syncs the
+         manifest and refreshes project state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.6
+@version 0.9.0
 """
 
 # IMPORTS
@@ -364,71 +366,6 @@ def start_operation(
     )
 
 
-def handle_operation_progress(
-    window: "MainWindow",
-    progress_current: int,
-    progress_total: int,
-    percent: int,
-    message: str,
-    token_usage=None,
-) -> None:
-    """
-    @brief      Refresh the modal progress dialog for one running operation.
-    @param[in]  window Active main window shell.
-    @param[in]  progress_current Completed work units.
-    @param[in]  progress_total Total work units.
-    @param[in]  percent Current progress percent.
-    @param[in]  message Current operator-facing status message.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
-    """
-    _ = progress_current
-    _ = progress_total
-    misc_ui_controller.update_progress_dialog(window, percent, message, token_usage)
-
-
-def handle_operation_success(window: "MainWindow", success_handler, result_payload: object) -> None:
-    """
-    @brief      Finalize one successful long-running operation.
-    @param[in]  window Active main window shell.
-    @param[in]  success_handler Callback invoked with the worker result payload.
-    @param[in]  result_payload Worker result payload.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    if window._operation_progress_dialog is not None:
-        misc_ui_controller.update_progress_dialog(
-            window,
-            100,
-            window._operation_progress_dialog.status_message(),
-        )
-    misc_ui_controller.finish_progress_dialog(window)
-    success_handler(result_payload)
-
-
-def handle_operation_failure(window: "MainWindow", failure_handler, error: Exception) -> None:
-    """
-    @brief      Finalize one failed long-running operation.
-    @param[in]  window Active main window shell.
-    @param[in]  failure_handler Callback invoked with the raised exception.
-    @param[in]  error Raised operation exception.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    misc_ui_controller.update_progress_dialog(window, 100, str(error))
-    misc_ui_controller.fail_progress_dialog(window, str(error))
-    failure_handler(error)
-
-
 def handle_operation_cancelled(window: "MainWindow", message: str) -> None:
     """
     @brief      Finalize one cooperatively cancelled operation.
@@ -453,23 +390,6 @@ def handle_operation_cancelled(window: "MainWindow", message: str) -> None:
             ui_state_service.current_language_from_settings(window._settings_payload),
         ),
     )
-
-
-def clear_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Clear the current synchronous-operation bookkeeping after one run stops.
-    @param[in]  window Active main window shell.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    window._text_chunking_page.set_busy(False)
-    misc_ui_controller.clear_progress_dialog(window)
-    window._active_operation_kind = None
-    window._active_operation_name = None
-    window._operation_cancel_requested = False
 
 
 def handle_chunking_success(window: "MainWindow", result_payload: object) -> None:
@@ -732,25 +652,6 @@ def _resolve_ai_profile(
             continue
         if str(profile.get("id", "")).strip() == str(profile_id).strip():
             return dict(profile)
-    return None
-
-
-def _resume_ai_profile_id(
-    window: "MainWindow",
-    chunking_operation: dict[str, object],
-) -> str | None:
-    """
-    @brief      Execute the resume ai profile id helper.
-    @param[in]  window Value for `window`.
-    @param[in]  chunking_operation Value for `chunking_operation`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    _ = window
-    _ = chunking_operation
-    # AI profile selection is runtime-only; resume uses the currently selected profile.
     return None
 
 

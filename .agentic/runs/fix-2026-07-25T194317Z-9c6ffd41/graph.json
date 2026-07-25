@@ -1,0 +1,163 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "Audio Assembly rejects an 8-bit PCM WAV source with its existing unsupported-format error instead of assembling it.",
+      "Gap and pause silence at the retained widths 2, 3 and 4 remains all-zero bytes and the rendered output length is unchanged.",
+      "pcm_codec is unmodified."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-25T19:43:47+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [],
+    "reason": "Removing a capability claim the code never implemented correctly, in a path the shipping TTS pipeline never exercises. One constant plus documentation; the rejection path and its error message already exist and are already covered for other unsupported inputs. Reversible, and the fuller alternative of implementing genuine unsigned 8-bit support remains open if an 8-bit source ever needs to be accepted.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "IN: _WAV_SAMPLE_WIDTH_BY_FORMAT in audio_assembly_service; the _write_silence docstring stating its signed-PCM assumption; unit tests for rejection and for correct silence at the retained widths; the Audio_Assembly component document. OUT: changing pcm_codec, whose audioop bit-compatibility contract is deliberate and documented and which is used by callers beyond Audio Assembly; adding real unsigned 8-bit support; the other queued tickets."
+    ],
+    "source": "User ticket 5: 'Silence' gresit pentru PCM 8-bit. _WAV_SAMPLE_WIDTH_BY_FORMAT declara 8-bit ca suportat dar _write_silence scrie 0x00; WAV 8-bit e unsigned deci linistea e 0x80.",
+    "understanding": "Audio Assembly accepts sample widths 1, 2, 3 and 4, and treats all of them as signed. _write_silence emits 0x00 for gaps and pause blocks, which is true silence for widths 2, 3 and 4 but a full negative-rail DC offset for unsigned 8-bit, producing an audible click or hum. The same signed assumption is baked into pcm_codec, whose module docstring states deliberately that it reads one-byte samples as signed to stay bit-for-bit compatible with the removed audioop. Fixing only the silence constant would leave width conversion still wrong while making 8-bit look supported, which is worse than the current state because the remaining defect becomes harder to find. Since the TTS pipeline emits 16-bit and no test or artifact in the repository uses 8-bit, remove 1 from _WAV_SAMPLE_WIDTH_BY_FORMAT so Audio Assembly rejects 8-bit sources with its existing explicit error instead of silently degrading them."
+  },
+  "change_units": [],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-5f68f94c-8485-4e04-88c1-28c34b42ca18"
+      ],
+      "cites_spec": [
+        "S-PCM-REJECT8"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_audio_assembly_sample_widths.py",
+      "green_evidence": "E-0003",
+      "id": "C-PCM-REJECT8",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-5f68f94c-8485-4e04-88c1-28c34b42ca18"
+      ],
+      "cites_spec": [
+        "S-PCM-KEEP16"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_audio_assembly_sample_widths.py",
+      "green_evidence": "E-0004",
+      "id": "C-PCM-KEEP16",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    }
+  ],
+  "decisions": [],
+  "evidence": [
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_audio_assembly_sample_widths.py",
+      "created_at": "2026-07-25T19:45:05+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Pre-fix red: 2 failed, 2 passed. The failures are the 8-bit acceptance checks; 8-bit is still advertised and still passes input validation. The two retained-width tests pass and must stay green.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_audio_assembly_sample_widths.py",
+      "created_at": "2026-07-25T19:45:05+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Pre-fix red: 2 failed, 2 passed. The failures are the 8-bit acceptance checks; 8-bit is still advertised and still passes input validation. The two retained-width tests pass and must stay green.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_audio_assembly_sample_widths.py tests/test_audio_assembly_service.py tests/test_audio_assembly_state_service.py tests/test_pcm_codec.py tests/test_audio_blocks_service.py tests/test_audio_assembly_ui_controller.py",
+      "created_at": "2026-07-25T19:46:07+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after removing 8-bit: 4 passed in tests/test_audio_assembly_sample_widths.py, and 110 passed with 61 skipped across the audio regression set (assembly service and state, PCM codec, audio blocks service, assembly UI controller). Lint clean.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_audio_assembly_sample_widths.py tests/test_audio_assembly_service.py tests/test_audio_assembly_state_service.py tests/test_pcm_codec.py tests/test_audio_blocks_service.py tests/test_audio_assembly_ui_controller.py",
+      "created_at": "2026-07-25T19:46:07+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Green after removing 8-bit: 4 passed in tests/test_audio_assembly_sample_widths.py, and 110 passed with 61 skipped across the audio regression set (assembly service and state, PCM codec, audio blocks service, assembly UI controller). Lint clean.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-25T19:46:07+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Lint clean after the 8-bit removal: ruff check . reports 'All checks passed!'.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-25T19:43:17+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py"
+    ],
+    "statement": "Audio Assembly declares 8-bit PCM as a supported sample width but handles it as signed everywhere: _write_silence emits 0x00 bytes where unsigned 8-bit silence is 0x80, and pcm_codec deliberately reproduces the audioop signed-8-bit quirk. Gaps and pauses in an 8-bit render therefore carry an audible DC offset. Remove 8-bit from the supported set rather than ship a half-correct implementation of a width the TTS pipeline never produces.",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-25T194317Z-9c6ffd41",
+  "spec_items": [
+    {
+      "examples": [
+        "assemble over an 8-bit WAV -> RuntimeError 'Audio Assembly supports uncompressed PCM WAV source files only.'"
+      ],
+      "id": "S-PCM-REJECT8",
+      "statement": "Audio Assembly raises its unsupported-PCM error for a WAV source whose sample width is one byte.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "16-bit stereo 100 ms gap at 8000 Hz -> 800 frames of b'\\\\x00' * 4"
+      ],
+      "id": "S-PCM-KEEP16",
+      "statement": "Gap and pause silence at the retained sample widths is written as zero bytes of the exact frame length.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "validation"
+}

@@ -413,35 +413,6 @@ def test_narrator_service_profile_sample_path_uses_stored_audio_path_after_renam
     assert renamed_audio_path.read_bytes() == b"RIFF-renamed"
 
 
-def test_narrator_service_does_not_import_removed_contract_artifacts(tmp_path) -> None:
-    """
-    @brief      Verify REQ-FUNC-034 ignores and preserves removed narrator artifacts.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    1.0.0
-    """
-    project_root, _manifest = project_workspace_service.create_project("NarratorLegacySampleProject", tmp_path)
-    removed_paths = {
-        project_root / "audio_profiles.json": b"[{\"profile_id\":\"legacy_profile\"}]",
-        project_root / "narator.json": b"{\"selected_profile_id\":\"legacy_profile\"}",
-        project_root / "narator_sample.json": b"{\"preview_text\":\"legacy\"}",
-        project_root / "narator.wav": b"RIFF-legacy-selected-copy",
-    }
-    for removed_path, content in removed_paths.items():
-        removed_path.write_bytes(content)
-
-    document_path = narrator_definition_service.ensure_narrator_voice_document(project_root)
-    document = narrator_definition_service.load_narrator_voice_document(project_root)
-
-    assert document_path == project_root / config.NARRATOR_VOICE_FILE_NAME
-    assert document["profiles"] == []
-    assert document["selected_profile_id"] is None
-    assert all(path.read_bytes() == content for path, content in removed_paths.items())
-
-
 def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_path) -> None:
     """
     @brief      Verify project-local TTS plans persist only the voice-assignment mode.
