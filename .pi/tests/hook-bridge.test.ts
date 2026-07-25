@@ -144,7 +144,7 @@ describe("handleToolCall mapping", () => {
     expect(bridge.calls[0].payload.tool_name).toBe("Edit");
   });
 
-  it("runs secret_scan then delivery_preflight for bash and blocks on preflight", async () => {
+  it("runs guard_shell_write, secret_scan then delivery_preflight for bash and blocks on preflight", async () => {
     const bridge = fakeBridge({ "delivery_preflight.py": "Delivery preflight failed." });
     const event: ToolCallLike = {
       toolName: "bash",
@@ -155,7 +155,11 @@ describe("handleToolCall mapping", () => {
     const result = await handleToolCall(event, CWD, bridge);
 
     expect(result).toEqual({ block: true, reason: "Delivery preflight failed." });
-    expect(bridge.calls.map((c) => c.hookName)).toEqual(["secret_scan.py", "delivery_preflight.py"]);
+    expect(bridge.calls.map((c) => c.hookName)).toEqual([
+      "guard_shell_write.py",
+      "secret_scan.py",
+      "delivery_preflight.py",
+    ]);
     expect(bridge.calls[0].payload).toMatchObject({
       tool_name: "Bash",
       tool_input: { command: "git push origin main" },

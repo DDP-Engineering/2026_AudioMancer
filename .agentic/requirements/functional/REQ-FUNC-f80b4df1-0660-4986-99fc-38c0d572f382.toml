@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block state shall load persisted blocks and summary."
 rationale = "State must reflect the saved plan and its summary."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",

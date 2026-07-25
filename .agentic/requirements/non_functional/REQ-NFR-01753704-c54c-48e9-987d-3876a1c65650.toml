@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "All durable JSON and byte writes shall use the atomic writer, including settings, operation state, cleanup metadata, manual clean-text edits, audio assembly state, and extraction running metadata."
 rationale = "Durable writes must be crash-safe to prevent torn artifacts."
 verification = "Automated: 6 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py",

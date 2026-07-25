@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator state status lines shall show counts and Qwen readiness."
 rationale = "Operators need visible profile counts and runtime readiness."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",

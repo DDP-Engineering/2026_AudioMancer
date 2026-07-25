@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The narrator definition service shall start with no predefined profiles."
 rationale = "A new project must begin with an empty, operator-built narrator inventory."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

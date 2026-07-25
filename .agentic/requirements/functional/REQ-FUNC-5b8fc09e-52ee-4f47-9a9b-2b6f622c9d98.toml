@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Cleanup controller shall skip confirmations when resuming AI cleanup."
 rationale = "Resuming AI cleanup must not re-prompt the operator."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project-relative source and artifact paths shall reject absolute paths, parent traversal, and symlink escapes, and project export or snapshot destinations shall be outside the active project root."
 rationale = "Containment prevents untrusted project metadata or operator destinations from reading, deleting, overwriting, or recursively archiving files beyond the intended workspace."
 verification = "Automated focused pytest coverage passed for traversal, symlink escape, and external export or snapshot destinations."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

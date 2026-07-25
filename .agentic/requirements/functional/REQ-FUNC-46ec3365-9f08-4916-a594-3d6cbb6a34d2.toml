@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The VoiceWeaver capability matrix shall ignore unhealthy models."
 rationale = "Unhealthy models must not appear as usable capabilities."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",

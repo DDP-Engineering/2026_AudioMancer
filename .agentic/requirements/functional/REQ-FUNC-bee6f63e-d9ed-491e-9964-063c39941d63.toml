@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Token usage merge shall sum available usage and tolerate a missing base."
 rationale = "Cross-operation usage must accumulate safely from partial inputs."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",

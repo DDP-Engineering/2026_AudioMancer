@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block chunk normalization shall preserve dialogue and attribution boundaries, resolve aliases, reconstruct text from source spans, and reject invalid or separator selections."
 rationale = "Normalized blocks must faithfully reflect the source with valid speakers."
 verification = "Automated: 8 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

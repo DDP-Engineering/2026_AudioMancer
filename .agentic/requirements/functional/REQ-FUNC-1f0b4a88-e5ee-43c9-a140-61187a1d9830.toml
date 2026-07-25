@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI translation manual edits shall preserve operator whitespace."
 rationale = "Manual edits must retain exactly what the operator typed."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",

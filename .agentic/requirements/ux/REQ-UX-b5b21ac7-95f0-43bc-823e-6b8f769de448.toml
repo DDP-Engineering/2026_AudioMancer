@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "ui_state_service shall resolve a font-size step to the base font point size multiplied by its factor (extra_small 0.80, small 0.90, medium 0.95, normal 1.00, large 1.15, very_large 1.30, huge 1.50), treating an unknown step as 'normal'."
 rationale = "The scale must be deterministic and safe against invalid input."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

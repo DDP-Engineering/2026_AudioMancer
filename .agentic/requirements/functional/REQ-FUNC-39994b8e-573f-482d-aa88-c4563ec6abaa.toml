@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block generation shall generate only approved blocks, skip TTS for metadata-only blocks, and reject invalid generated WAV bytes."
 rationale = "Only valid approved work may be synthesized."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

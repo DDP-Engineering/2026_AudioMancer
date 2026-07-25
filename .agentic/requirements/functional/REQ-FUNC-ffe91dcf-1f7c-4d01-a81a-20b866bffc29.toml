@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The narrator definition service shall simplify the TTS plan to voice-assignment mode only."
 rationale = "The stored plan must carry only the supported voice-assignment mode."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

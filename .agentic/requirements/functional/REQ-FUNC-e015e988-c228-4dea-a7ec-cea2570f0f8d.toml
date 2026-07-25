@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks page shall edit block fields including scene ambience and show only the disabled narrator on same-narrator edits."
 rationale = "Block editing must expose the right fields per mode."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",

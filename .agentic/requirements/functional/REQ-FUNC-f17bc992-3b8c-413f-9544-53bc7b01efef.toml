@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block planning shall split preferring sentences then word groups, order part-artifact paths by chunk, and derive the model budget from runtime effective parameters."
 rationale = "Splitting and budgeting must be deterministic and bounded."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

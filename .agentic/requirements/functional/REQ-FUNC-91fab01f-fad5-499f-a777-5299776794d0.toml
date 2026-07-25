@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text extraction shall split RTF and EPUB sources into multiple progress units."
 rationale = "Large structured sources must extract with granular progress."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks controller shall route generation and resplit with confirmation and pass extra prompts through."
 rationale = "Generation must start deliberately and carry operator prompts."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",

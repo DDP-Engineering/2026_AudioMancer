@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block state shall surface progress, current block, full source text, resume and ready notes, and measured audio duration."
 rationale = "The UI needs a truthful projection of audio-block progress."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup shall reject legacy metadata and label-only schemas and block a corrupt document without using legacy state."
 rationale = "Incompatible or corrupt documents must be refused."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

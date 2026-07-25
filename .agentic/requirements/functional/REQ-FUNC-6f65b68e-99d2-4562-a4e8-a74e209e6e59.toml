@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech Blocks resume shall read next_chunk_index, active_chunk_id, next_segment_index, completed_segment_count, run_token and source.fingerprint from document.checkpoint so chunk-level and segment-level resume behave identically to the previous state file."
 rationale = "Resume must survive the persistence change without altering chunk/segment continuation behavior."
 verification = "Resume cursors read from document.checkpoint."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

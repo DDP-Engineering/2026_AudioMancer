@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block normalization shall produce stable identifiers and warning flags."
 rationale = "Review and TTS depend on stable block IDs and warning flags."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",

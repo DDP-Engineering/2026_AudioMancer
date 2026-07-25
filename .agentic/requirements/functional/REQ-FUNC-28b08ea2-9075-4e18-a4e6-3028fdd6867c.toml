@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The translation page shall display the locked language and chunk preview."
 rationale = "Operators must see the locked language and the chunk being reviewed."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",

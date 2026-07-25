@@ -225,6 +225,18 @@ Example explicit selection:
 <workflow> status --run-id feature-2026-07-22T120000Z-1a2b3c4d
 ```
 
+To continue an existing run in a fresh session (a new agent with no prior chat
+context), reconstruct the full picture first:
+
+```powershell
+<workflow> resume
+```
+
+`resume` prints a read-only brief: the current stage and next stage, the intent
+and recorded alignment, spec items, checks, recent evidence, and the run's cited
+requirements resolved with their `spec_ref`. Open each `spec_ref` file for the
+concrete detail, then continue at the reported stage.
+
 ## 9. Manage Durable Requirements
 
 Requirements are one current TOML snapshot per UUIDv4-backed ID. They are not
@@ -239,8 +251,16 @@ Search before creating:
 Create and use the returned ID:
 
 ```powershell
-<workflow> requirement create --category functional --priority Must --requirement "Invoice export writes a CSV file." --rationale "Operators need a portable export." --verification "Inspection: inspect the exported CSV" --affected-path src/exporter.py
+<workflow> requirement create --category functional --priority Must --requirement "Invoice export writes a CSV file." --rationale "Operators need a portable export." --verification "Inspection: inspect the exported CSV" --spec-ref .agentic/requirements/functional/invoice_export.spec.md --affected-path src/exporter.py
 ```
+
+Keep the `requirement` sentence atomic and put the concrete detail — data
+structures, interface/format, exact dialog and copy text, example payloads,
+worked examples — in a companion spec file authored from
+`.agentic/requirements/spec_template.md` and referenced with `--spec-ref`. A
+non-empty `spec_ref` must resolve to an existing file, and a later-deleted target
+is reported as `REQ-SPEC-MISSING` by the traceability audit. `feature` and
+`change` work should carry a `spec_ref`; a small `fix` may omit it.
 
 Update the same behavioral contract without changing its ID:
 

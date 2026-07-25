@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Blocks controller shall preserve the selected block across regeneration refresh, selected-audio generation, and playback stop."
 rationale = "Operator selection must survive refresh and playback transitions."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",

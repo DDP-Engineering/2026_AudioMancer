@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks controller shall guard edits: start without refreshing, skip warning clear when clean, keep the editor locked on decline, and restore chunk scroll on save."
 rationale = "Editing must be a controlled, reversible boundary."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",

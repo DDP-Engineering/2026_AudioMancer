@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project export shall export AI request parameters without prompts."
 rationale = "Exports must expose request parameters but never internal prompts."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",

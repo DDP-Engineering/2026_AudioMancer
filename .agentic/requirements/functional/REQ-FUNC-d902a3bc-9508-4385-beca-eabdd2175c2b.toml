@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator state shall use the original or cleanup-detected language with no default selection."
 rationale = "Narrator state must derive language truthfully and not pre-select a profile."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",

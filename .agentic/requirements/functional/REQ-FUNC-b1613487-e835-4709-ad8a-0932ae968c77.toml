@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall merge and group candidates, keeping role speakers and strongest confidence and reporting rejected non-dialogue candidates."
 rationale = "Candidate merging must produce a truthful, deduplicated character set."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

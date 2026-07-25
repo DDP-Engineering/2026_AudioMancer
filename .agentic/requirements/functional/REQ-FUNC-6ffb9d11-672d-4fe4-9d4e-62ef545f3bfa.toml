@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Open project shall not over-heal: it shall skip repair for stale-state-only warnings, ignore narrator timestamp drift with non-completed downstream artifacts, refuse healing on traversal audio paths, and warn without healing a corrupt speech-blocks artifact."
 rationale = "Healing must be conservative and must never act on unsafe or ambiguous state."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

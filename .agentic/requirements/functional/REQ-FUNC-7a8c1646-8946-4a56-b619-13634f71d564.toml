@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Manifest validation shall accept structured source and legacy operation payloads, normalize voice-assignment mode and operations map, and project detailed operation state to a compact summary."
 rationale = "The manifest must accept supported inputs and normalize to a stable compact shape."
 verification = "Automated: 5 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

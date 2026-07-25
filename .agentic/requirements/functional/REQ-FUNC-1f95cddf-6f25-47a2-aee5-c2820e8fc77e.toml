@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI translation shall use a stable prompt with minimal user contract."
 rationale = "The translation prompt contract must be stable and minimal."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",

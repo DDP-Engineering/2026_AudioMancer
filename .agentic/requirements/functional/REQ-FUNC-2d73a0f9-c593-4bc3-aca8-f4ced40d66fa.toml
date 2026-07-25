@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator profile, sample, and selection mutations shall update the authoritative document atomically, keep each profile identity immutable and unique, store compact sample metadata inside its profile, use only `audio_narator_<normalized_profile_id>.wav` for sample bytes, preserve that WAV across display-name edits, repair invalid selection after edit/delete, and persist selection only as `selected_profile_id` without JSON or WAV copies."
 rationale = "Stable profile ownership removes duplicated selected artifacts while preserving explicit review and independent samples."
 verification = "Canonical profile WAV ownership and no-copy selection test passes."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

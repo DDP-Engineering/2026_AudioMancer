@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks page approval controls shall emit only the selected block and toggle the label for an approved block."
 rationale = "Approval controls must act precisely on the selected block."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",

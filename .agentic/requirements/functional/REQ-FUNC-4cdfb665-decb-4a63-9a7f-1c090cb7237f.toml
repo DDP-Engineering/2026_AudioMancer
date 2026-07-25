@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Token usage notes shall render 'unavailable' only when usage was previously persisted."
 rationale = "An unavailable note must not appear for operations that never recorded usage."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py",

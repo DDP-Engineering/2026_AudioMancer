@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall strictly reject a malformed or legacy-root character document, surfacing it as invalid rather than tolerating or silently repairing it."
 rationale = "Incompatible or corrupt discovery data must be made operator-visible, not consumed as partial state."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

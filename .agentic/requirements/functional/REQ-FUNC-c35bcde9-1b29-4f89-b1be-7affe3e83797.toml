@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The operation runtime shall reset only known root artifacts while preserving requested narrator and text-revision work."
 rationale = "Reset must respect the preservation policy."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",

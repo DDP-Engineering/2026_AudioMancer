@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text chunking chunk deletion shall remove only the selected chunk's translation record."
 rationale = "Deletion must not remove unrelated translation records."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",

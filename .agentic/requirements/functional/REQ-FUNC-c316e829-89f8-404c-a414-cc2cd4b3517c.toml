@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Blocks controller shall invalidate voice-target audio while preserving unrelated audio and allowing skip of preserved paths."
 rationale = "Voice-target changes must not delete unrelated generated audio."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",

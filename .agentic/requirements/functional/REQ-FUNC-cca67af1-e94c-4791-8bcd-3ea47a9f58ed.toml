@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "TTS-budget unit counting shall handle words and compact scripts."
 rationale = "Budget-safe pieces require correct unit counts for all scripts."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",

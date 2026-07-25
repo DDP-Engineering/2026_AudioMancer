@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Assembly page shall enable the duration control at time limit and use two-column settings with a scene-ambience option."
 rationale = "Assembly settings must be laid out and gated correctly."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",

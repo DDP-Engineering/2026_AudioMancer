@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator profile generation shall resume checkpoints safely without reanalyzing completed style."
 rationale = "Resume must continue without redoing completed work."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery state shall select an enabled default character profile."
 rationale = "The UI must default to a usable enabled profile."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",

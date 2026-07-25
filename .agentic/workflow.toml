@@ -74,9 +74,14 @@ patterns = []
 
 [gates]
 # Named command lists run by `aegis gates run`.
+# `--directory` (not `--project`) is required: it changes the working directory
+# so `04_Software/AudioMancer/pyproject.toml` is picked up as the pytest/ruff
+# config file. With `--project` the tools run from the repository root, where
+# testpaths, `addopts = -m 'not performance'`, and the registered markers are
+# all silently ignored.
 mode = "enforce"
-test = ["uv run --project 04_Software/AudioMancer pytest -q"]
-lint = ["uv run --project 04_Software/AudioMancer ruff check ."]
+test = ["uv run --directory 04_Software/AudioMancer pytest -q"]
+lint = ["uv run --directory 04_Software/AudioMancer ruff check ."]
 
 [guardrails.secrets]
 # Regular expressions scanned during secret checks (preserved from schema 1).

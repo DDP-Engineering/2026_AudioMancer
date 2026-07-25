@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Applying UI settings shall fall back to the default theme for a missing theme ID."
 rationale = "A missing theme ID must not break UI application."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

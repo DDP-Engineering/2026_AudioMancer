@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "All Active requirements shall declare a resolvable verification."
 rationale = "Every active contract must have a verifiable method."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/tests/test_traceability.py",

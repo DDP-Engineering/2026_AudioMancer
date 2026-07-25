@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "VoiceWeaver shall stop before reading terminal operation status when cancelled."
 rationale = "Cancellation must short-circuit before a further status read."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",

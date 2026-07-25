@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Character Voices controller shall, on page activation, warn on a missing narrator sample, sync Home status, and use persisted targets before load."
 rationale = "Activation must present truthful prerequisites and status."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",

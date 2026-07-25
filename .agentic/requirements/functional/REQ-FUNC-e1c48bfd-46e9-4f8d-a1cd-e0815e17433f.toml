@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Assembly page shall emit playback progress and restart on double-click of an output."
 rationale = "The page must relay playback interactions."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",

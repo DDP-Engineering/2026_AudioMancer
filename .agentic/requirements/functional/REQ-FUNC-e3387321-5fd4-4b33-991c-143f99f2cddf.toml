@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio assembly state shall exclude scene ambience from readiness when it is excluded."
 rationale = "Excluded ambience must not count toward assembly readiness."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",

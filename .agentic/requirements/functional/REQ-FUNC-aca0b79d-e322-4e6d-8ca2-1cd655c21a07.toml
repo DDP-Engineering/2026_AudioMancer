@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup validation shall accept uniquely bracketed modified story text and normalized story edges with bounded internal gaps."
 rationale = "Valid modifications and gaps must be accepted unambiguously."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "load_speech_blocks_report() and load_operation_state() shall return projections derived from the single Speech Blocks document that match the previous separate report and operation-state artifacts in shape and values (counts, warnings, stage/status, resume checkpoint, progress)."
 rationale = "External callers depend on the existing report/state shapes; projecting them from the single document keeps those consumers unchanged."
 verification = "Report/state projections match recomputed values."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",

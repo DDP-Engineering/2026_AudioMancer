@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Narrator Voice controller shall update the manifest after a deliberate profile selection and show or clear selection progress."
 rationale = "Selection is a review gate reflected in the manifest and progress."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",

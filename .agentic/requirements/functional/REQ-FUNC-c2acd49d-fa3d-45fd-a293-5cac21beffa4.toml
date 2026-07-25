@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Source import shall copy one supported source file into the project root and record normalized metadata."
 rationale = "A stable local source record is required before extraction."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/import_service.py",

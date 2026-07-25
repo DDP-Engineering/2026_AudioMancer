@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5"
+category = "platform"
+status = "Active"
+priority = "Must"
+requirement = "No AudioMancer source module shall depend on the audioop standard-library module removed in Python 3.13."
+rationale = "audioop has no stdlib replacement, so any remaining import makes Audio Assembly and Scene Mix fail at import time on Python 3.13."
+verification = "Automated: source tree scanned for audioop imports; also confirmed by importing audio_assembly_service on Python 3.13."
+spec_ref = ".agentic/specs/python_interpreter_range.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_sources_do_not_import_audioop",
+]
+
+created_on = "2026-07-25T13:12:55Z"
+last_updated = "2026-07-25T14:05:33Z"

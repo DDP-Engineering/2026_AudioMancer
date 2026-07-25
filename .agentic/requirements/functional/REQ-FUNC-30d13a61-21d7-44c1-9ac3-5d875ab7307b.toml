@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The operation runtime shall tolerate missing or malformed optional state and null-like values."
 rationale = "Optional state must degrade safely."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",

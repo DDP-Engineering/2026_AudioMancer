@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI translation resume shall continue from the first empty chunk under the current profile budget."
 rationale = "Resume must pick up exactly where translation stopped."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",

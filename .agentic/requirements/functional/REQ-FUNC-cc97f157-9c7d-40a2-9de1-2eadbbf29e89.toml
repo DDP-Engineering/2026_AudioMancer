@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voices state shall not build an AI profile selector."
 rationale = "Voice assignment is not an AI-provider operation and must not expose a profile selector."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",

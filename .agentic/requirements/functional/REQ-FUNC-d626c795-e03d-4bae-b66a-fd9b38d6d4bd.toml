@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator profile generation shall use approved text and operator rules, fall back to clean text, and compact style observations for the final prompt."
 rationale = "Generation must be grounded in approved, operator-guided context."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",

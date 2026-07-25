@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall request demographic-confidence candidates and preserve confidence during normalization."
 rationale = "Candidate demographics must be requested and preserved through normalization."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

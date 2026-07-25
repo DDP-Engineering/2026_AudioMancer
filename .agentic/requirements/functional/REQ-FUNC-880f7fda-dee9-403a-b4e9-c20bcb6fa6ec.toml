@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block clone prompts shall match and create using the reference sample language."
 rationale = "Clone prompts must use the correct sample language."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

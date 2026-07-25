@@ -22,6 +22,8 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 - [Speech Blocks](Speech_Blocks.md)
 - [TTS Audio Blocks](TTS_Audio_Blocks.md)
 - [Audio Assembly](Audio_Assembly.md)
+- [PCM Codec](PCM_Codec.md) — stdlib-only linear PCM sample-width, channel and
+  rate conversion replacing the removed `audioop` module.
 
 Component documentation and implementation notes belong here. New component
 pages should follow `component_template.md` and be listed in this index when

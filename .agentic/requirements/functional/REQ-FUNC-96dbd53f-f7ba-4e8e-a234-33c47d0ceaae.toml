@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Open project shall heal completed manifest summaries and advance the current stage from contiguous completed artifacts."
 rationale = "Manifest lifecycle state must be recoverable from completed artifacts."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

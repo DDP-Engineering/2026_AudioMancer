@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "VoiceWeaver probing shall normalize models and capabilities, map auth failures, and reject an invalid models payload."
 rationale = "Only a validated, normalized runtime view may be exposed."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",

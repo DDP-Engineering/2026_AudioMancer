@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup shall persist review artifacts and a log."
 rationale = "Cleanup review must be reproducible from durable artifacts."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

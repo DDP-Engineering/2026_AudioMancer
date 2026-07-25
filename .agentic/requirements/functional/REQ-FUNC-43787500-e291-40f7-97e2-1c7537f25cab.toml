@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks page shall render chunks, read-only block details, compact header, operation names, and translated labels."
 rationale = "The review surface must present the plan readably."
 verification = "Automated: 5 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",

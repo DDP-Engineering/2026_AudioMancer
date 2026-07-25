@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Cleanup reset shall preserve extraction outputs when building the post-reset manifest."
 rationale = "Resetting cleanup must not discard the upstream extraction result."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",

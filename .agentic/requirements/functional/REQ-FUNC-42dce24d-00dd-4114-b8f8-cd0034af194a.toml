@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup shall reapply compatible spacing selections without another provider call while preserving anchored story and internal gaps."
 rationale = "Spacing changes must be offline and non-destructive."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

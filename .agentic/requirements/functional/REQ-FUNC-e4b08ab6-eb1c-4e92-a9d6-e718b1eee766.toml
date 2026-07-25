@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The operation runtime shall ensure default not-started state, including compact character-discovery and zero audio-blocks metadata."
 rationale = "Default state must be created in the compact contract shape."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",

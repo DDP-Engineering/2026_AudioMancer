@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home controller shall apply the selected export extension, write UTF-8, and route ZIP exports to the archive writer with a snapshot extension."
 rationale = "Exports must be written with the correct extension and encoding."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",

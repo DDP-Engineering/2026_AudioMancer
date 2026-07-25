@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The AI Settings page shall lay out default selectors in workflow order, use a two-column numeric grid, and place structured output in the model-name row."
 rationale = "Settings layout must be consistent and readable."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",

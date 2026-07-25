@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall validate and persist deliberate manual character changes, rejecting duplicate or invalid names."
 rationale = "Manual corrections must be safe and validated."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

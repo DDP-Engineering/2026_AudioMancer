@@ -15,7 +15,7 @@
  * Mapping (PreToolUse via `tool_call`):
  *   write -> guard_write_zone.py (Write), then secret_scan.py (full input)
  *   edit  -> guard_write_zone.py (Edit),  then secret_scan.py (full input)
- *   bash  -> secret_scan.py (Bash), then delivery_preflight.py (Bash)
+ *   bash  -> guard_shell_write.py, secret_scan.py, then delivery_preflight.py (Bash)
  *   read  -> guard_read_path.py (configured protected-read policy)
  *   grep  -> guard_read_path.py (returns lines *from* files, so same policy)
  *   find  -> guard_read_path.py (enumerates paths; `pattern` is a path glob)
@@ -83,7 +83,9 @@ export async function handleToolCall(
 
     case "bash": {
       const command = event.input?.command;
-      for (const hook of ["secret_scan.py", "delivery_preflight.py"]) {
+      // `guard_shell_write.py` first: a write-zone violation is more specific
+      // than a secret match, so report it before scanning for secrets.
+      for (const hook of ["guard_shell_write.py", "secret_scan.py", "delivery_preflight.py"]) {
         const reason = await bridge.runPythonHook(cwd, hook, {
           hook_event_name: "PreToolUse",
           tool_name: "Bash",

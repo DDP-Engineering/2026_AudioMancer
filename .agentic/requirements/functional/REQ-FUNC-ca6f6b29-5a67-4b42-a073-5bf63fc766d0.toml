@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio-block voice-target invalidation shall remove target audio and clone profiles, preserve invalidated rows, and regenerate a stale-state row."
 rationale = "Voice-target changes must invalidate precisely."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",

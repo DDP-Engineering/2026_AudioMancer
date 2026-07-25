@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech Blocks shall persist all operation metadata and blocks in a single authoritative speech_blocks.json document with a fixed top-level field set, and shall not create speech_blocks_report.json or speech_blocks_state.json."
 rationale = "One authoritative document removes the redundant report and state artifacts that previously duplicated Speech Blocks metadata."
 verification = "Single-document round-trip and no report/state files; test passes in full green suite."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project snapshot shall preserve UTF-8 filenames and content."
 rationale = "Backups must retain filename and content fidelity."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",

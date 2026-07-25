@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block state shall filter the speaker catalog for same-narrator mode."
 rationale = "Same-narrator mode must restrict the speaker catalog."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",

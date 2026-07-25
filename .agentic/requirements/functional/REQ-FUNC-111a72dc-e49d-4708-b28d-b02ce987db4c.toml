@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Deterministic cleanup shall persist failed state after a mid-run error and batch pseudo-segment checkpoints for plain text."
 rationale = "Cleanup must be resumable and crash-safe for plain and segmented input."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",

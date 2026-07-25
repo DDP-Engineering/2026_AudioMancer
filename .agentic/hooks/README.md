@@ -13,7 +13,11 @@ parser; hooks must not parse `workflow.toml` independently or carry fallback
 repository policy.
 
 - `guard_read_path.py` applies configured protected-path rules for reads.
-- `guard_write_zone.py` applies configured protected paths and write access.
+- `guard_write_zone.py` applies configured protected paths and write access to
+  the dedicated editing tools.
+- `guard_shell_write.py` applies the same write-zone and protected-path policy
+  to file writes performed through the shell (redirections, `tee`, `cp`/`mv`,
+  `dd`, `sed -i`), best-effort, for in-repository targets only.
 - `secret_scan.py` applies configured secret expressions.
 - `delivery_preflight.py` recognizes configured delivery commands.
 - `post_tool_evidence.py` records against the selected worktree-local run.
@@ -41,6 +45,27 @@ hook protocols; passing a crashed hook's own status through would be read as a
 Keep the three transports in agreement. `tests/test_guard_transport_parity.py`
 fails if one of them drifts on interpreter resolution order or on this
 fail-closed contract.
+
+## The launcher needs Node.js on PATH
+
+Every adapter runs the Python guards through a Node launcher —
+`node .agentic/tools/run_hook.mjs …` for Claude Code, Codex, and Qwen Code, and
+the `.mjs`/`.ts` plugins for OpenCode and Pi. That launcher is where the
+fail-closed contract lives: it turns a missing Python interpreter or a crashed
+guard into the blocking status. But the launcher can only do that once it runs,
+and it only runs if `node` is on `PATH`.
+
+If `node` is absent, the hook **command itself** fails to start and exits `127`,
+which a host reads as a *non-blocking* error — so the tool call proceeds and the
+guards never inspect it. This is the same fail-open shape as the
+launched-from-a-subdirectory gap below, and like it, no hook can report it
+because no hook ran.
+
+The supported agent CLIs are Node applications, so `node` is normally present.
+Where it is not — a bare CI image, a restricted host — install Node.js (or put
+it on `PATH`) before relying on the guards. `waegis doctor` reports this as the
+`runnability.hook-runtime` warning, so run it after install to confirm the
+launcher can start.
 
 ## Start the agent at the repository root
 

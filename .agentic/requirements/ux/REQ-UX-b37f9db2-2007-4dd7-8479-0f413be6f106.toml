@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "In the theme stylesheet, QPushButton and the single-line input controls QLineEdit, QComboBox and QSpinBox shall use a border-radius of at least 6px."
 rationale = "Consistent rounded corners on buttons and inputs match the card language and the brand."
 verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

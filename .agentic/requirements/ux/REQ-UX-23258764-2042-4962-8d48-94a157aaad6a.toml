@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The navigation sidebar shall display a distinct non-empty icon for each of the ten workflow pages (home, text_cleanup, text_chunking, ai_translation, characters, narator_voice, character_voices, speech_blocks, audio_blocks, audio_assembly)."
 rationale = "Icons make the workflow steps scannable and express the brand, matching the redesign proposal."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",

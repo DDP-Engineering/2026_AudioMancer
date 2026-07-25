@@ -6,6 +6,7 @@ priority = "Could"
 requirement = "The Home page project-name label shall use the Georgia serif display font family."
 rationale = "A serif project title echoes the AudioMancer wordmark and the literary brand from the hero posters."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Characters controller shall preserve approved speech work when a voice-definition-only change permits it."
 rationale = "A voice-definition-only edit must not discard approved speech work."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",

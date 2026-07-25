@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Backend probing shall normalize Ollama model discovery."
 rationale = "Provider selection needs a normalized model list for Ollama backends."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",

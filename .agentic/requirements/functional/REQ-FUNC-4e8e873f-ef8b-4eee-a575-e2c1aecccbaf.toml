@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Workflow impact shall refresh the manifest from completed artifacts."
 rationale = "The manifest must reflect actually completed artifacts after impact."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",

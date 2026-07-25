@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall synthesize reviewable profiles with a dialogue-preview fallback."
 rationale = "Profiles must be reviewable even when preview data is sparse."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

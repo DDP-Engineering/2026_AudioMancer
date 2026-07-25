@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI chunking shall define an approved descriptor schema and anchor contract demonstrated in the prompt."
 rationale = "The descriptor contract must be fixed and shown to the provider."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",

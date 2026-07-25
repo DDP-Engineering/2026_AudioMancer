@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Audio assembly shall reject unapproved audio blocks and escaping input, output, and reference paths."
 rationale = "Assembly must not read or write outside safe project paths."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",

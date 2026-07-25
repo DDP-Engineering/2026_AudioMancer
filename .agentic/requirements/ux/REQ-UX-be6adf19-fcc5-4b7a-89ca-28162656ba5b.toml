@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The Settings page shall not expose per-color theme editing or custom-theme creation, import, or export controls."
 rationale = "The operator asked to remove color/button customization entirely, keeping only theme selection and font sizing."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",

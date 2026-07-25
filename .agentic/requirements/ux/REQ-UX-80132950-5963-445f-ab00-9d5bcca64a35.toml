@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Applying text scale shall update the application font."
 rationale = "Text-scale changes must take effect on the application font."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

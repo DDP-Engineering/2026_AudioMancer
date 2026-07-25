@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block audio-preview merge shall use persisted playability without file checks."
 rationale = "Preview state must derive from persisted playability, not disk probing."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",

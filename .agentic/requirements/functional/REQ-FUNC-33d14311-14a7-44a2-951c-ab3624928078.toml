@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block manual deletion and edits shall renumber remaining blocks, reject unknown blocks, normalize indications, and preserve operations on same-narrator edits."
 rationale = "Manual mutations must keep the plan consistent."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

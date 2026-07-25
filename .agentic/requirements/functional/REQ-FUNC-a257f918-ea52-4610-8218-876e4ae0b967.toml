@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Source-span building shall preserve exact text and paragraph boundaries across multilingual dialogue conventions."
 rationale = "Spans must retain the source text and structure without loss."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",

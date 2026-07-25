@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The scroll step filter shall move the scroll pane by configured steps and ignore non-scroll-area widgets."
 rationale = "Scroll behavior must be predictable and scoped to scroll areas."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py",

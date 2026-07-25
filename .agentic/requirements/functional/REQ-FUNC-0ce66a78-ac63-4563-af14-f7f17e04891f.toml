@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery state shall project persisted character records and manual-maintenance flags."
 rationale = "The UI must reflect saved records and manual-maintenance status."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",

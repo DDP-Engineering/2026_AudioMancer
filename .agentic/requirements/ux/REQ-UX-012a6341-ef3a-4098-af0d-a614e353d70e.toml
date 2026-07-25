@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "The theme stylesheet shall size text-editor windows (QTextEdit/QPlainTextEdit) at the base font point size multiplied by the text_font_size_step factor, independent of the ui_font_size_step, while control-role editors use the ui_font_size_step size."
 rationale = "Reading/editing text windows should be sizable separately from the compact interface controls."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

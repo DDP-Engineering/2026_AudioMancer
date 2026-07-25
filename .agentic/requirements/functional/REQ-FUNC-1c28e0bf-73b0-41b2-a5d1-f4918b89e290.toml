@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home controller shall lock project options in the manifest."
 rationale = "Locking project options must persist to the manifest."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",

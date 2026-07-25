@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Characters controller shall confirm and remove a character on delete."
 rationale = "Deletion must be confirmed and complete."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",

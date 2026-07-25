@@ -1,9 +1,9 @@
 {
   "manifest_version": 1,
   "product": "aegis",
-  "payload_version": "1.2.0",
+  "payload_version": "1.4.0",
   "installed_at": "2026-07-17T17:25:58Z",
-  "installed_by": "waegis 0.3.0",
+  "installed_by": "waegis 0.5.0",
   "mode": "adopt",
   "files": {
     ".agentic/LICENSE.txt": {
@@ -11,11 +11,11 @@
       "size": 5093
     },
     ".agentic/cli/pyproject.toml": {
-      "sha256": "d02f522a55c9c97127ba61bf82ea3a3227d84f978cda84d996df16581179b436",
+      "sha256": "6be947868952c6972feb759aeb9136388e8a633e6d58856629b5e401ed879118",
       "size": 1057
     },
     ".agentic/cli/src/aegis/__init__.py": {
-      "sha256": "8cfbafd9c781a70e099ae869580db9385e280a87c103fe4c0b43b78cacce0605",
+      "sha256": "cf29c1369ef40854254dac8f9f29fe47ca69bd23bfa1dd34252e48e732c669b2",
       "size": 802
     },
     ".agentic/cli/src/aegis/__main__.py": {
@@ -23,8 +23,8 @@
       "size": 843
     },
     ".agentic/cli/src/aegis/cli.py": {
-      "sha256": "29302e2603d6eeb5ad5f53d5ceebb95f76ccb18dd9fa4ef49d299165efd5a06d",
-      "size": 44465
+      "sha256": "0dd88fadaa8214b12997d74d8f090e0bf19366bcd3caa7b63c063607f71ba800",
+      "size": 47765
     },
     ".agentic/cli/src/aegis/components.py": {
       "sha256": "a523da7a0b47be58c194db42cf0706169f86d2819e3fe75fd316af5a9ce4db37",
@@ -39,52 +39,52 @@
       "size": 9273
     },
     ".agentic/cli/src/aegis/invariants.py": {
-      "sha256": "7cb423a18ea689a24850d73e2db7c520f64c1b3f38bcc34f7e1f52d31c192054",
-      "size": 17888
+      "sha256": "ad1f8845cfc913d402fabd56845e1883dfe8e2003be122d5175d5efd95cb683a",
+      "size": 19864
     },
     ".agentic/cli/src/aegis/models.py": {
       "sha256": "c9affcade5b8b72bb452cd7d587f5cf06d98394a5080c729d5acd8bfddca8eda",
       "size": 7849
     },
     ".agentic/cli/src/aegis/paths.py": {
-      "sha256": "4666b7485a5748214155384d4992c046f752baba1402e17d2d662fbb7471a649",
-      "size": 5747
+      "sha256": "ca1d514cfd8dfc66c516991b81069fbc9c6e59a08bc3070241ebd9c81ceaac9d",
+      "size": 5407
     },
     ".agentic/cli/src/aegis/report.py": {
       "sha256": "4417952a96c75c8d1c7e1eea2661f8db39cfed164eef5bcd2364df1b580fa564",
       "size": 8629
     },
     ".agentic/cli/src/aegis/requirement_store.py": {
-      "sha256": "63f600e6c42d87aafa49f4b6404b5a03bb25bce49d05d0f486ac957ea7d6078c",
-      "size": 26725
+      "sha256": "d0746ac36c8a0670b17ecaceb2ba8037b8f85910840c61d69981d0a69929b775",
+      "size": 27393
     },
     ".agentic/cli/src/aegis/requirements.py": {
-      "sha256": "3e72c5b23a92e56ff31101f6ba9e8bde90951d567a08219769ebec37336b7fc5",
-      "size": 22398
+      "sha256": "d82ede8c05857721e140aae0f3f28a5ce419ce5c52321a1fc252eb61b8e35d41",
+      "size": 23839
     },
     ".agentic/cli/src/aegis/store.py": {
       "sha256": "cf91036aad88848cf7382e13d02e7224447832034577e8fc77cfaff13a3062ca",
       "size": 26047
     },
     ".agentic/cli/src/aegis/working_tree.py": {
-      "sha256": "612b476f7466db7b61d4ef2f23c564a4da40019b1f3bf30bba80b5a328716a13",
-      "size": 12200
+      "sha256": "7ce1b88f610dd1c1a4ceb6dc571c5f5fac85c2b8030e6e88e33ae03ecbc09812",
+      "size": 12841
     },
     ".agentic/components.toml": {
       "sha256": "bd75bad91a5e571ca3bfcddfc65f24707d79d4c9aa398e028ac09778735bbc84",
       "size": 486
     },
     ".agentic/documents/CLI_API_REFERENCE.md": {
-      "sha256": "a071ea898dcdc551cc155f1dbbc9ebe679fecb05a941fce5f61be03dbae4775a",
-      "size": 39920
+      "sha256": "997efdef4a442935fdb6aa3924b36d20c4b1ddb0b8ce4b30a615719bac77d8cd",
+      "size": 41603
     },
     ".agentic/documents/COMPONENTS_CONFIGURATION.md": {
       "sha256": "97176c4378538f7573cce7ef72058785f6027d0b5124bd36c44b618b54299da8",
       "size": 10032
     },
     ".agentic/documents/How_To_Start_A_New_Project.md": {
-      "sha256": "2b8fe18c5e5dc518b93caf4d183e972b0af9d99c220f70b58258a21e27366659",
-      "size": 10083
+      "sha256": "94a10f455e25756dbe0c433d91f2032cead23a615e3222a0de950a0b2d61db09",
+      "size": 11122
     },
     ".agentic/documents/How_To_Start_A_New_Project.pdf": {
       "sha256": "00e8217520e718a5d520278187e7fcdfa22d676706bec0d1fb25e3e2bb2290ff",
@@ -95,16 +95,16 @@
       "size": 8255
     },
     ".agentic/documents/PROMPT_CHEATSHEET.md": {
-      "sha256": "6ee3b0564070b07d36510f0fce4a653c796c2ba5105388ee895bf559330c6689",
-      "size": 26938
+      "sha256": "4468739ab2e58cca6b66348e278344ffaf2c0507b21b4fdbedf3e0d784444a8c",
+      "size": 28302
     },
     ".agentic/documents/WORKFLOW_CONFIGURATION.md": {
       "sha256": "1d4d6ee532567ad3b379544914b0ec6ca7ae7062249276fb0e2ac2e3a09fb89f",
       "size": 12284
     },
     ".agentic/hooks/README.md": {
-      "sha256": "af5a1beb030a15e90ab54987a991f99887b6e29c2c63e6a01fd70eeabe73d207",
-      "size": 4493
+      "sha256": "e800544dcf660a59c0d4a74d75d3456eacea2c2a01338d35521911463af5ae5a",
+      "size": 5871
     },
     ".agentic/hooks/delivery_preflight.py": {
       "sha256": "0961be7f05d067c7cb2de3f2cff5d260f699ec76fd0cfa4ed37c73d109ae76de",
@@ -113,6 +113,10 @@
     ".agentic/hooks/guard_read_path.py": {
       "sha256": "3bc9b0d5c71c63286d75b78873da101e13003b17dfecddc0eecdae10cd518e65",
       "size": 8634
+    },
+    ".agentic/hooks/guard_shell_write.py": {
+      "sha256": "de7ab6c2b90b035b02cc593d5c59923a6fd6f31ee97551c7c60af3567e98c0fd",
+      "size": 14664
     },
     ".agentic/hooks/guard_write_zone.py": {
       "sha256": "1c1af27fad2cb47349dc53940a3c204836e7a3459425d669fa79cf3688b09b06",
@@ -123,8 +127,8 @@
       "size": 2669
     },
     ".agentic/hooks/secret_scan.py": {
-      "sha256": "928dbb96a5e3371e6b77d515b513fadd34f2f5504b8407ff721fa4b28edcf20c",
-      "size": 2842
+      "sha256": "687b0c55c4b216da0d65d180e8662c8dd0c1daea1b8213440c93b06569ab2bde",
+      "size": 3418
     },
     ".agentic/hooks/workflow_config_bootstrap.py": {
       "sha256": "647c81f6a27804940c784fea797c2b5a9fbacd4a2737c30cd73ee1c7c2ad926e",
@@ -143,8 +147,8 @@
       "size": 865
     },
     ".agentic/requirements/README.md": {
-      "sha256": "2025d3211feeed1429b675e460f0c9f47ff27fa1dfe14afa15ba2c6e24b7f5fe",
-      "size": 4849
+      "sha256": "b84141c884122750d50d917b12056a82821e9cfb4fc848245d4f029c10498daf",
+      "size": 6170
     },
     ".agentic/requirements/coverage_waivers.txt": {
       "sha256": "1dcc24ece65d0750a2730a8974650a9778cf086f937fc32f041c5dbdcbc28876",
@@ -174,6 +178,10 @@
       "sha256": "087e9aeb8669af18f15428be37d5cda21e9159de9330a1d5e0673c1eaed34242",
       "size": 53
     },
+    ".agentic/requirements/spec_template.md": {
+      "sha256": "64daf016a86ca16a6d3f11f3f58f973d87d44cdb0220e3f0558a992195bf86ff",
+      "size": 2016
+    },
     ".agentic/requirements/testing/.gitkeep": {
       "sha256": "087e9aeb8669af18f15428be37d5cda21e9159de9330a1d5e0673c1eaed34242",
       "size": 53
@@ -183,16 +191,68 @@
       "size": 53
     },
     ".agentic/skills/agentic-adoption/SKILL.md": {
-      "sha256": "1d42c174f020adacb65bf4031a1ad33ee1644e1f3d78d18fbeda4df7dc7a33af",
-      "size": 7987
+      "sha256": "81298d8abb6d1304256e46a75e3c0bafe8969ea707d4a5f2ca19c99663e1de68",
+      "size": 5290
+    },
+    ".agentic/skills/agentic-adoption/reference/adoption-alignment.md": {
+      "sha256": "d90ee031fae0bc69362f564d21136b100cdbc4b01ec92d6d2fc58e9a92f4c98d",
+      "size": 1123
+    },
+    ".agentic/skills/agentic-adoption/reference/adoption-delivery.md": {
+      "sha256": "2d235d5ee0a65aaebde6e866a77cb9676f6eed4b447ca4b68de8720590eac680",
+      "size": 896
+    },
+    ".agentic/skills/agentic-adoption/reference/adoption-intake.md": {
+      "sha256": "90cd0485831e943b51054e0f178cc608e5c9f2a528d6bdd6eab50fe7b468c9a5",
+      "size": 1078
+    },
+    ".agentic/skills/agentic-adoption/reference/baseline-review.md": {
+      "sha256": "5982824934b5a0d490de857299f7fcaa81981581a07221e74bb291c2562b6c53",
+      "size": 881
+    },
+    ".agentic/skills/agentic-adoption/reference/component-adoption.md": {
+      "sha256": "263ee473798a3cbe1b92fcf9b4f2865557a84fac9a0056db677c946ed58ef8ee",
+      "size": 903
+    },
+    ".agentic/skills/agentic-adoption/reference/component-map.md": {
+      "sha256": "3baffc2f9b6704e897fdf8726ed03458630f28be5730b914c6e0f8f180737bb8",
+      "size": 996
+    },
+    ".agentic/skills/agentic-adoption/reference/repo-discovery.md": {
+      "sha256": "1968107034a134729287c5b854300cc75c9e2c7d120943b4aa7c3b81923d82cc",
+      "size": 892
     },
     ".agentic/skills/agentic-delivery/SKILL.md": {
       "sha256": "b9b09561f66bc2402fe5e299e019a4abbe224df1ccd97653e6813984b60f2067",
       "size": 3194
     },
     ".agentic/skills/agentic-development/SKILL.md": {
-      "sha256": "75653851a03aac3f43e0467697b137d83d6795fbf94eec92ac40b71e92b03e0d",
-      "size": 13092
+      "sha256": "1214aafaf235f8d4193422cde724c02c2353d92caf3bf87ca6985a8decfe2c19",
+      "size": 5527
+    },
+    ".agentic/skills/agentic-development/reference/alignment.md": {
+      "sha256": "ddfb5beb1ae998c35d99c5b740dc9959bab6faf2f4c13d522edbe0d8bccd1860",
+      "size": 1478
+    },
+    ".agentic/skills/agentic-development/reference/check.md": {
+      "sha256": "237e47b3e6c1ab45e2cc5b64fbfd1fdfc3ac820103da44ad855cdd478c9757b2",
+      "size": 1448
+    },
+    ".agentic/skills/agentic-development/reference/implementation.md": {
+      "sha256": "51307cd7a808aff09c59016c8fce81c18eb486b82b2e89d4d569e60d293c059b",
+      "size": 1548
+    },
+    ".agentic/skills/agentic-development/reference/intake.md": {
+      "sha256": "6d9ff1cdd2cf898eaa6a28093d4faef531806fec311d3cec7a942713b70db9e9",
+      "size": 1285
+    },
+    ".agentic/skills/agentic-development/reference/requirement.md": {
+      "sha256": "f0f33360a390c68b1854518cb5c6b10ad7eb35d0867d4900e87ec8bedfc6f067",
+      "size": 4811
+    },
+    ".agentic/skills/agentic-development/reference/validation.md": {
+      "sha256": "5293b9eb3727e827cab4fb39350d0dd96f71b8d496f10a21abce61b605f6b95a",
+      "size": 1395
     },
     ".agentic/skills/documentation-audit/SKILL.md": {
       "sha256": "aba2d50672c87dc01738db4cf6e1619f5b392defbefcdfb9e3554732d06e75ac",
@@ -227,8 +287,8 @@
       "size": 2781
     },
     ".agentic/tools/run.sh": {
-      "sha256": "7b43967f369f1357abdfce8c656ad0a469ec08f5b7455c2c9c4fc04a35af4c94",
-      "size": 3655
+      "sha256": "38d9bd2cc776073407e1485013fa4efdc11939659fc7e8942cf639f8efa204a9",
+      "size": 4219
     },
     ".agentic/tools/run_aegis.py": {
       "sha256": "957d77dc7b4063320bd187438379ed17b993d8f39d61c147f6ceb90a63319442",
@@ -247,8 +307,8 @@
       "size": 698
     },
     ".claude/settings.json": {
-      "sha256": "8bb0042a589d485d8c8012eae24b8bd8bc515bc05851e2222c4b958ee73a442a",
-      "size": 3147
+      "sha256": "b53b21ea697144e7788220622336e4cba6ca4c67c0b2825bfc5ceba6491dd95d",
+      "size": 3426
     },
     ".claude/skills/agentic-adoption/SKILL.md": {
       "sha256": "c47e528894ad8b51fab3e282fad139e9dd6cd838cd91c13f2316ae897af525c5",
@@ -283,8 +343,8 @@
       "size": 1070
     },
     ".codex/hooks.json": {
-      "sha256": "465636f44c25fc7b22cb958ee58416153ea1832c1f4d045c05e7d0b49ddc23e2",
-      "size": 3414
+      "sha256": "4b37ab0177cc31ad516ece4b8a9cda6f8e690c4c096120579d15f2d0c707fa87",
+      "size": 3747
     },
     ".codex/skills/agentic-adoption/SKILL.md": {
       "sha256": "4adb5b061c25a65fae19ad20c1fff680b83b4b31c729c41e6563cdd072075266",
@@ -335,8 +395,8 @@
       "size": 1115
     },
     ".opencode/plugins/agentic-guard.mjs": {
-      "sha256": "03a9dd8daa99629f44cc31853c6bc07f58445dcbfd482326aa5ff0a680a0695b",
-      "size": 10638
+      "sha256": "7c9feb6ebb6500ca8a38de930656d6df279f9d10a4bc28234b576fd749f96410",
+      "size": 10821
     },
     ".opencode/skills/agentic-adoption/SKILL.md": {
       "sha256": "6bddb7f840c95fbf05bba2727a1197136542054a0b956b67b5b9ac9d0667f7f7",
@@ -367,8 +427,8 @@
       "size": 1260
     },
     ".opencode/tests/agentic-guard.test.mjs": {
-      "sha256": "a9a05e56d626d6c167fa5a40e102016af0c9fa939c6a2dd5a3d2c119aaf8d6cd",
-      "size": 7661
+      "sha256": "5a2a158808b7151b260bd6f0e1544861f795249eb3a5b7c1064a3e30e33144ed",
+      "size": 7698
     },
     ".pi/.gitignore": {
       "sha256": "5e99677547f569cd76d9db192dd1cb4ae62d766632eb77e3305376ae13749a0c",
@@ -379,8 +439,8 @@
       "size": 5722
     },
     ".pi/extensions/agentic-guard/bridge.ts": {
-      "sha256": "0b1f1afdf09b35c8888ee184cf2f8cb2214e616f8060afc84c6653a8a85e7ea3",
-      "size": 4917
+      "sha256": "c0a78c917017969a2d59ef853591b8e313449c5bd0c33c94e826b32e8175f8fb",
+      "size": 5107
     },
     ".pi/extensions/agentic-guard/hook-bridge.ts": {
       "sha256": "2d7471afa3f8d9161a8f3cbb542fe20dea8a3edfcad9c4d99bc45aadb1a62043",
@@ -399,8 +459,8 @@
       "size": 678
     },
     ".pi/tests/hook-bridge.test.ts": {
-      "sha256": "f8e6f32787c7c409f10119816bd8b07db67f5c7c441278c20b8ed57e9fff7a79",
-      "size": 12815
+      "sha256": "cb810c9c98ae6c3ea59323e3fafcf4887bd0998175b3261d6fa0bb41b599c72b",
+      "size": 12883
     },
     ".qwen/README.md": {
       "sha256": "1ffae4465c16b1f39138c25b764e16e6b5b41f40b3cfab352a251e925bf1bcad",
@@ -419,8 +479,8 @@
       "size": 1098
     },
     ".qwen/settings.json": {
-      "sha256": "7c4f752dd8dc9f5e8237444314ed2cb40e87cbefdb78eeb461d7333f69e89026",
-      "size": 3048
+      "sha256": "3de4ecee685522a5ff7da5c2724e0bc0812e509d9c56255fd515d144172a812f",
+      "size": 3324
     },
     ".qwen/skills/agentic-adoption/SKILL.md": {
       "sha256": "8cf834da0e772b31e714354e351f4acef79210535084d0bc1c8cfe2f6123ccf8",
@@ -451,8 +511,8 @@
       "size": 1341
     },
     "AGENTS.md": {
-      "sha256": "8bc7d8e644c4ee332814d18063a67dde9b1ea194c8901e43075b80fe0e36f525",
-      "size": 10407
+      "sha256": "a68c481bc091759c9795642c3d75f14545dd39396ed18352b4601df7229401c5",
+      "size": 10783
     },
     "CLAUDE.md": {
       "sha256": "c7f97b541129e270f9854247fe5a55f9463d7a704946ab5c0f5e49d5c8a0a546",
@@ -474,6 +534,6 @@
     ".gitignore",
     "CHANGELOG.md"
   ],
-  "payload_digest": "be60e07e771a2dc77acc3579abbb26b29926c5c2ca32e422e88915e3e4f19838",
+  "payload_digest": "21c94e401f179c1a77178594f49ffddd396299c286ba99e1862675f301182670",
   "configuration": {}
 }

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator profile generation shall append odd allocations without deleting existing profiles."
 rationale = "New profiles must not remove existing inventory."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",

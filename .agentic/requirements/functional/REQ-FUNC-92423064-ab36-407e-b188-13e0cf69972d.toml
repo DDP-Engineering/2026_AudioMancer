@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home presenter shall derive finished and not-started stage status from completed artifacts, trusting a not-started operation over an advanced stage."
 rationale = "Stage status must reflect actual completed artifacts, not assumptions."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",

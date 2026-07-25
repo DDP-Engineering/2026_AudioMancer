@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Audio Blocks page shall advance block selection within limits and update a single item without disturbing siblings."
 rationale = "Selection and per-item refresh must be stable."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py",

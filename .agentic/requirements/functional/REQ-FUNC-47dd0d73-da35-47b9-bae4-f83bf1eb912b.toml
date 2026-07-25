@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The narrator definition service shall normalize language labels to runtime codes."
 rationale = "Language values must be normalized to the runtime code contract."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

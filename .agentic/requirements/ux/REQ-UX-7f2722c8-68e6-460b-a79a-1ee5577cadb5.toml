@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The configuration shall define seven named UI font-size steps in ascending order (extra_small, small, medium, normal, large, very_large, huge) with 'normal' as the default step."
 rationale = "Operators need discrete font-size steps to adapt the UI to monitor resolution and eyesight."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",

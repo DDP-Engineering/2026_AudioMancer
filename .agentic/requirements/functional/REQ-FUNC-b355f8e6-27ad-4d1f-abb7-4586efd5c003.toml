@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Speech-block generation shall resume from persisted progress across profile, budget, ambience, cast, and review changes."
 rationale = "Interrupted generation must continue without losing completed work."
 verification = "Automated: 8 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

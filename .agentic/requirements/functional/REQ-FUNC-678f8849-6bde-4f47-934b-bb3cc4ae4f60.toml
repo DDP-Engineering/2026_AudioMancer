@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Atomic speech-unit building shall split many elements inside one span and classify multilingual attribution."
 rationale = "Units must isolate elements and attribution correctly across languages."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Source import shall store replacements collision-safely without overwriting existing files."
 rationale = "Re-importing must not clobber an existing stored source."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/import_service.py",

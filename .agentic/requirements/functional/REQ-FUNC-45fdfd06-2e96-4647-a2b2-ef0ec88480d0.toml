@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks page shall emit insert and delete selection, enable insert for an empty chunk, and resolve the delete replacement from visible order."
 rationale = "Insert and delete must follow the visible block order."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",

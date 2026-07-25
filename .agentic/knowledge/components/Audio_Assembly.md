@@ -18,8 +18,8 @@ The assembly service loads validated block WAVs, applies configured composition/
 
 ## 4. Dependencies
 
-- Internal: TTS Audio Blocks artifacts, Speech Blocks ordering/ambience metadata, operation runtime/persistence/project workspace, shared runner and Qt playback widgets.
-- External: Python WAV/audio processing facilities and local generated WAV artifacts.
+- Internal: TTS Audio Blocks artifacts, Speech Blocks ordering/ambience metadata, operation runtime/persistence/project workspace, PCM Codec for sample-width/channel/rate conversion, shared runner and Qt playback widgets.
+- External: Python `wave` container handling and local generated WAV artifacts. PCM sample conversion is internal; the removed `audioop` module is no longer used.
 
 ## 5. Inputs And Outputs
 

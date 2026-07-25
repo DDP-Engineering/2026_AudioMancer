@@ -24,7 +24,11 @@ def test_apply_ai_settings_persists_reloads_and_refreshes_window(monkeypatch) ->
     show_message = Mock()
     monkeypatch.setattr(ai_settings_ui_controller.settings_service, "save_settings", save_settings)
     monkeypatch.setattr(ai_settings_ui_controller.settings_service, "load_settings", lambda: persisted_settings)
-    monkeypatch.setattr(ai_settings_ui_controller.settings_ui_controller, "apply_current_ui_settings", apply_ui_settings)
+    monkeypatch.setattr(
+        ai_settings_ui_controller.settings_ui_controller,
+        "apply_current_ui_settings",
+        apply_ui_settings,
+    )
     monkeypatch.setattr(ai_settings_ui_controller.misc_ui_controller, "show_message", show_message)
 
     ai_settings_ui_controller.apply_ai_settings_from_dialog(window)

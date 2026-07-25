@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking page shall guard chunk editing: allow selected edit and save, keep read-only on cancelled confirmation, and emit insert and delete requests."
 rationale = "Chunk edits must be deliberate and reversible."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",

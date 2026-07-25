@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "VoiceWeaver generation, clone, and sound payloads shall use the current documented contract."
 rationale = "TTS invocation must match the runtime's current request contract."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",

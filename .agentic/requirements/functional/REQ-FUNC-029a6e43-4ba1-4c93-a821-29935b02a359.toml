@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup validation shall preserve exact block order and reconstruct whitespace and artifact separators for every block."
 rationale = "Provider output must not reorder or lose source blocks."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

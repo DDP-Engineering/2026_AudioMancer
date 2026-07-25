@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks page shall lay out selected-chunk actions, keep a minimum pane width, restore text selection, and align metadata controls."
 rationale = "Selected-chunk layout must be stable and usable."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",

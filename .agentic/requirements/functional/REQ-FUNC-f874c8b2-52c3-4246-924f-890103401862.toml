@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "A missing narrator document shall be ignored while preserving removed-contract artifacts."
 rationale = "Absence must be safe and must not delete out-of-contract files."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

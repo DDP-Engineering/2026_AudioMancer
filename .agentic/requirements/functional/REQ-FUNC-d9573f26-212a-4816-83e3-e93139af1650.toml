@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Extraction reset shall preserve the registered source document."
 rationale = "Operators must be able to rerun extraction without losing the imported source."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The application shall validate and persist shared settings, expose packaged configuration and localization resources, configure logging, scrolling and URLs, and apply validated theme/UI state through the settings UI without changing workflow-domain data."
 rationale = "Every domain requires a stable, safe platform configuration boundary."
 verification = "Existing focused settings suite: linked schema, self-healing, persistence, theme, profile, runtime-cache, timeout, and URL validation behavior after traceability review."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",

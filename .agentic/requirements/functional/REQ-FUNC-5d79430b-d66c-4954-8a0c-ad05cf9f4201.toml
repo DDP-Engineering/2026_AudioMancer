@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project completion healing, manifest projection, Narrator Voice export, snapshots, reset, and preservation shall derive narrator state from `narrator_voice.json` plus canonical profile WAVs; export the authoritative document and valid profile samples; exclude narrator AI logs from snapshots; delete the authoritative document, canonical profile WAV pattern, and actual narrator-profile log pattern only when narrator definition is in reset scope; preserve them when requested; and neither inspect nor delete removed-contract artifacts."
 rationale = "Project lifecycle operations must remain accurate and scoped while treating obsolete files as out-of-contract data rather than migration or cleanup inputs."
 verification = "Reset and lifecycle current-artifact scoping test passes; export companion test passes."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

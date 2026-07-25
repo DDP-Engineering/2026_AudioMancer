@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project Markdown export shall render deliverable content and character dossiers while hiding internal metadata and surviving separator and colon prompts."
 rationale = "Markdown deliverables must present character data without leaking internal fields."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",

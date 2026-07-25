@@ -6,6 +6,7 @@ priority = "Should"
 requirement = "Each navigation sidebar page entry shall carry its full page label as a tooltip so labels remain readable when elided at large font sizes on the fixed-width sidebar."
 rationale = "The sidebar stays 160px fixed, so long labels can elide; a tooltip keeps them readable."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character discovery shall preserve resumable, cancelled, and failed progress against the current checkpoint boundary."
 rationale = "Completed discovery work must survive interruption and provider failure."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

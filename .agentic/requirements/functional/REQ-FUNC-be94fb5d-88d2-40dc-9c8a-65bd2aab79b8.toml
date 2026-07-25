@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-be94fb5d-88d2-40dc-9c8a-65bd2aab79b8"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "The PCM codec shall return empty output for empty input, and rate conversion shall still return a usable carry-over state."
+rationale = "A stream may begin with or contain an empty chunk, which must not corrupt resampler state or raise."
+verification = "Automated: empty-input case asserted for all four sample widths across every conversion."
+spec_ref = ".agentic/specs/pcm_codec.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_returns_empty_output_for_empty_input",
+]
+
+created_on = "2026-07-25T13:12:42Z"
+last_updated = "2026-07-25T14:05:32Z"

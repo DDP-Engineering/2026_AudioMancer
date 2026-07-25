@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking component documentation shall describe the current single-document contract."
 rationale = "Component documentation must match the implemented contract."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   ".agentic/knowledge/components/Text_Chunking.md",

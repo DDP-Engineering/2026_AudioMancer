@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Deterministic cleanup shall repair page-boundary structure: uppercase name fragments, separate headings, and complete short transitions."
 rationale = "Page breaks must not corrupt sentence and heading structure."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",

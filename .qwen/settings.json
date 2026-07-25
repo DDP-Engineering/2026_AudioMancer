@@ -41,6 +41,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/guard_shell_write.py",
+            "name": "agentic-guard-shell-write",
+            "statusMessage": "Checking agentic write zone for shell writes"
+          },
+          {
+            "type": "command",
             "command": "node .agentic/tools/run_hook.mjs .agentic/hooks/secret_scan.py",
             "name": "agentic-secret-scan",
             "statusMessage": "Checking command for secrets"

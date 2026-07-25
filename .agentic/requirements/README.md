@@ -31,8 +31,8 @@ Use the workflow CLI to create IDs. An ID has the form
 
 Search and list existing requirements before creating one so a semantically
 equivalent contract is not duplicated. Keep the same ID when revising the
-wording, rationale, priority, status, verification, affected paths, or linked
-tests of the same behavioral contract.
+wording, rationale, priority, status, verification, spec reference, affected
+paths, or linked tests of the same behavioral contract.
 
 ## One Requirement, One Behavior
 
@@ -84,6 +84,7 @@ priority = "Must"
 requirement = "One testable current behavioral contract."
 rationale = "Why the contract is required."
 verification = "Automated test"
+spec_ref = ".agentic/requirements/functional/REQ-FUNC-6f3a61e8-84fc-438a-9b0b-53554cd04789.spec.md"
 
 affected_paths = [
   "src/example.py",
@@ -100,6 +101,27 @@ last_updated = "2026-07-22T10:20:00Z"
 `status` is `Planned`, `Active`, or `Retired`; `priority` is `Must`, `Should`,
 or `Could`. Arrays are the complete current sets and are replaced rather than
 appended during updates. Empty arrays never inherit earlier values.
+
+## Concrete Specification (`spec_ref`)
+
+`requirement` stays a single testable sentence; the concrete detail that keeps an
+implementation from drifting lives in a companion spec artifact referenced by
+`spec_ref`. Use `spec_template.md` as the starting point and record there the data
+structures, interface or message formats, exact dialog and copy text, example
+payloads, and worked acceptance examples the behavior depends on.
+
+- `spec_ref` is an optional repository-relative path (no globs). Empty string
+  means no companion spec.
+- When set, the file must exist at create/update time or the write is rejected;
+  the traceability audit reports a `REQ-SPEC-MISSING` finding when a referenced
+  spec is later deleted, so a stale reference cannot pass silently.
+- A companion spec complements, and does not replace, the durable requirement
+  snapshot, its `verification`, or its linked tests.
+- Place the spec beside its requirement (for example
+  `functional/<id>.spec.md`) or under a project `.agentic/specs/` area; either
+  is valid as long as the path resolves.
+- `feature` and `change` work should set `spec_ref`; a small `fix` may leave it
+  empty when the requirement sentence is already complete.
 
 Every non-Retired requirement (`Planned` or `Active`) needs resolvable exact
 test selectors or an explicit `Manual: <method>` / `Inspection: <method>`

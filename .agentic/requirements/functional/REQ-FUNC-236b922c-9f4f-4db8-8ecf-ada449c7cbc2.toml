@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking document API shall ignore obsolete sidecars and never migrate them."
 rationale = "Obsolete sidecars must be treated as out-of-contract, not migrated."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",

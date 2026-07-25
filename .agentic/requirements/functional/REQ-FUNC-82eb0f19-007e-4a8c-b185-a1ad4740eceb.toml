@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking page shall provide preview find with context menus and find-next reuse."
 rationale = "Operators need find support within the preview."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text extraction shall extract supported TXT, Markdown, PDF, RTF, DOCX, ODT, and EPUB formats into canonical text."
 rationale = "All supported source formats must normalize to one canonical text."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",

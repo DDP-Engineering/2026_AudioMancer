@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project lifecycle and reset logic shall derive Chunking completion and manifest summaries only from a strict completed non-empty Chunking document, shall not create Chunking state merely by opening its page, and shall require Reset Chunking for incompatible documents; Reset Chunking shall delete the authoritative document, matching AI logs, obsolete sidecars, and configured downstream artifacts without reading obsolete sidecars."
 rationale = "Project recovery must be truthful and deterministic without silently repairing or migrating unsupported Chunking formats."
 verification = "Lifecycle completion and page-open/reset contract tests derive from the document without sidecars."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Configured translation languages shall include the Qwen3-TTS languages, including Chinese."
 rationale = "The language contract must cover all supported TTS languages."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",

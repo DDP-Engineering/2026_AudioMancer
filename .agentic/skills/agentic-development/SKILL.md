@@ -13,9 +13,12 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Agentic Development
 
-Use this skill to run a manual, gate-by-gate development workflow. The human
-stays in control. Complete one stage, summarize evidence, and stop with exact
-next prompt options.
+Run a manual, gate-by-gate development workflow. The human stays in control.
+Complete one stage, summarize evidence, and stop with exact next prompt options.
+
+This file is a thin router. Load only the reference module for the stage you are
+in, so a session — including a fresh one resuming an existing run — carries just
+the guidance that stage needs rather than the whole workflow.
 
 ## Ground Rules
 
@@ -27,18 +30,18 @@ next prompt options.
   source. Do not infer defaults from code or adapters. External host safety and
   approval controls remain separate and always apply.
 - Treat `.agentic/requirements/` as the durable project contract.
-- Use `<workflow>` in examples below as the project-local workflow runner:
-  `.\.agentic\tools\run.ps1` on Windows or `bash .agentic/tools/run.sh` on
-  POSIX shells. If the optional local install was run, the installed
-  `.agentic/.venv` executable may also be used.
+- Use `<workflow>` in the modules as the project-local workflow runner:
+  `.\.agentic\tools\run.ps1` on Windows or `bash .agentic/tools/run.sh` on POSIX
+  shells. If the optional local install was run, the installed `.agentic/.venv`
+  executable may also be used.
 - Before any `add-spec` call, complete the Intent Alignment stage with
   `<workflow> alignment`. If there are questions, include recommended responses
   that state what the agent will assume in an automated flow. If the decision is
   `pause`, stop in alignment and ask for human answers before requirement work.
 - Keep requirements/spec edits, check/test edits, source edits, validation, and
-  delivery as separate manual gates.
-- Use `$write-component-documentation` when a new component is created or when
-  an existing component's behavior, contracts, responsibilities, data formats,
+  delivery as separate manual gates. Complete one gate at a time.
+- Use `$write-component-documentation` when a new component is created or when an
+  existing component's behavior, contracts, responsibilities, data formats,
   dependencies, or workflow integration materially change.
 - Before behavior-changing work, inspect `.agentic/components.toml` when it
   exists. If the target component is below `baseline-usable`, stop and ask the
@@ -47,148 +50,47 @@ next prompt options.
 - Use `$python-codestyle-audit` after Python implementation changes when the
   repository has Python style requirements or audit tooling.
 - Do not skip red-before-green evidence for new or changed checks.
-- Do not edit tests during implementation unless the human explicitly routes
-  back to the check stage.
-- Use `<workflow> set-stage <stage> --reason "<reason>"` for
-  human-approved routing back to requirement or check gates.
+- Do not edit tests during implementation unless the human explicitly routes back
+  to the check stage.
+- Use `<workflow> set-stage <stage> --reason "<reason>"` for human-approved
+  routing back to requirement or check gates.
 - Use `<workflow> supersede-evidence --id <old-evidence-id> --by <new-evidence-id> --reason "<reason>"`
   when a later passing rerun proves a late failure was external or stale.
-- Stop after each stage and report: stage, changed artifacts, evidence,
-  invariant status, blockers, and suggested next prompts.
+- Stop after each stage and report using the stop format below.
 
-## Stage Procedure
+## Session Resume
 
-1. Intake
-   - Classify the request as `feature`, `fix`, or `change`.
-   - Run `<workflow> start --kind <kind> --statement "<request>"` if no
-     active run exists.
-   - For automation that must pin an existing run, pass
-     `--run-id <existing-run-id>` to each graph-dependent command. Never copy
-     `.agentic/.workspace/state/current_run` between worktrees or stage
-     `.agentic/.workspace/`.
-   - Run `<workflow> audit traceability` and `<workflow> audit coverage`
-     to understand existing traceability debt.
-   - Run `<workflow> impact <planned-files>` when likely files are known;
-     otherwise inspect likely source areas and run impact after files are touched.
-   - Inspect configured source/test/spec roots.
-   - Ask clarification questions when behavior, scope, or acceptance criteria
-     are ambiguous.
-   - Run `<workflow> next` to enter `alignment` when alignment is enabled by
-     `.agentic/workflow.toml`.
-   - Stop after the intent is clear.
+When you continue an existing run in a fresh session (a new agent with no prior
+chat context), reconstruct state before acting:
 
-2. Intent Alignment
-   - Record the structured understanding checkpoint with:
-     `<workflow> alignment --source "<prompt-or-ticket>" --understanding "<one paragraph>" --scope "<in/out of scope>" --acceptance "<criterion>" --risk low|medium|high --decision proceed|pause --reason "<reason>"`.
-     Add repeatable `--assumption`, `--question`, and `--planned-path` values
-     when applicable. For each question in an automated flow, add a matching
-     `--recommended-response` with the answer the agent will assume.
-   - Enumerate acceptance criteria completely: pass `--acceptance` once per
-     distinct, checkable outcome — success paths plus the failures and limits
-     that define "done" — rather than one broad sentence. This list is the
-     coverage checklist the requirement stage must satisfy one-to-one.
-   - Use `decision proceed` only when the command accepts it under
-     `.agentic/workflow.toml` policy. If policy requires `pause`, stop and ask
-     the human to answer or approve the risk.
-   - Report impacted existing requirements/tests and any uncovered modules.
-   - Stop after alignment is recorded or skipped by config.
+1. Run the mandatory bootstrap (`<workflow> config validate --json` and
+   `<workflow> config show --effective --json`).
+2. Run `<workflow> resume` to load the current stage and computed next stage, the
+   intent and recorded alignment, spec items, checks, recent evidence, and the
+   run's cited requirements with their `spec_ref`.
+3. Open each `spec_ref` file for the concrete data structures, interface formats,
+   dialog text, and worked examples that pin the work.
+4. Load the reference module for the reported stage and continue there. Do not
+   redo earlier stages that already have recorded artifacts unless the human
+   routes back with `set-stage`.
 
-3. Requirement
-   - Decompose the feature first. Before drafting, enumerate the complete
-     behavior set the request implies: the primary success path, each distinct
-     input or branch, each rejection or error, boundary/empty/limit cases, and
-     state effects such as persistence, idempotency, and concurrency. Also scan
-     the cross-cutting categories (`ux`, `security`, `data_privacy`,
-     `non_functional`, `platform`) and list every one that applies. Aim to fully
-     cover and define the functionality, not the minimum that makes it work.
-   - Create or update minimal spec items: one testable sentence, `behavior` or
-     `property`, examples or thresholds.
-   - One requirement, one behavior. Each requirement and each spec item states a
-     single, independently verifiable behavior with one precise purpose. When a
-     request spans several distinct behaviors, create one requirement per
-     behavior rather than one combined requirement. If a statement needs "and",
-     "or", a list, or a semicolon to join *distinct* behaviors, split it. A
-     shared input, actor, or component is not a reason to merge; each behavior
-     that can pass or fail on its own is its own requirement.
-   - Cover failure modes as requirements, not only as tests. For each happy-path
-     functional requirement, create the sibling rejection and boundary
-     requirements the behavior implies — invalid input, empty or at-limit
-     values, and the specific error or refusal — or record explicitly that none
-     apply. A behavior that lives only in a test is a durable-contract gap: a
-     later change can drop it without any requirement going untraced.
-   - Trace every acceptance criterion. Each `--acceptance` item recorded at
-     alignment maps to at least one requirement, and each new requirement traces
-     back to an acceptance criterion or to a gap found while decomposing. Record
-     any acceptance item still without a requirement as an open question rather
-     than dropping it.
-   - Run `<workflow> requirement list --json` and inspect matching contracts
-     before creating a requirement.
-   - Create a durable snapshot with `<workflow> requirement create ...` and use
-     the returned UUID-backed ID, or update the existing snapshot with
-     `<workflow> requirement update --id <requirement-id> ...`.
-   - If the work creates or materially changes a component, include the
-     expected component documentation update in the scope and acceptance notes.
-   - New snapshots start as `Planned`; activate only after linked checks pass.
-   - Record each item with `<workflow> add-spec`.
-   - Run `<workflow> invariants`.
-   - Stop and ask the human to review the spec.
+## Stage Modules
 
-4. Check
-   - Add tests/checks that cite spec IDs. For each `behavior` spec item cover
-     the happy path *and* the failure paths it implies: invalid input, boundary
-     and empty values, and the specific error or rejection the behavior is meant
-     to produce. A single assertion of the obvious case rarely fixes the
-     behavior or catches a regression.
-   - Prefer several small, focused checks over one broad one, so that when a
-     check goes red later it names the specific behavior that broke. Match the
-     depth of coverage to the risk in the spec item, not to a fixed count.
-   - Also cite durable requirement IDs in test comments, docstrings, or names
-     where practical.
-   - For new components, include checks or review expectations that make the
-     required `.agentic/knowledge/components/` documentation visible before
-     delivery.
-   - Run the smallest relevant command and confirm new checks fail first.
-   - Record checks with `<workflow> add-check`.
-   - Record failing evidence with `<workflow> record-evidence --kind test-run --result fail --check-id <id>`.
-   - Stop before source implementation.
+The seven-stage required order is Intake, Intent Alignment, Requirement, Check,
+Implementation, Validation, Delivery. Load only the module for the current stage:
 
-5. Implementation
-   - Edit only configured implementation/source roots.
-   - Reconfirm local scope before change by checking mapped component paths
-     against `.agentic/components.toml` when present.
-   - Update required component documentation under
-     `.agentic/knowledge/components/` in the same change when component
-     boundaries, contracts, or behavior change.
-   - Use `$write-component-documentation` for new or materially changed
-     components.
-   - Run linked tests reported by impact analysis for changed files.
-   - If impact reports untraced files, run full configured regression gates.
-   - Run relevant checks until the new checks pass and prior checks remain green.
-   - Record passing evidence with `<workflow> record-evidence --kind test-run --result pass --check-id <id>`.
-   - When a new requirement-linked check is green, activate the snapshot with
-     `<workflow> requirement activate --id <requirement-id> --linked-test <test-id> --verification "<method>"`.
-   - Replace complete linked-test and affected-path sets when associations
-     change; preserve the ID for revisions of the same behavioral contract.
-   - Record touched paths with `<workflow> record-change`.
-   - Stop for validation.
+| Stage | Module |
+| --- | --- |
+| `intake` | `reference/intake.md` |
+| `alignment` | `reference/alignment.md` |
+| `requirement` | `reference/requirement.md` |
+| `check` | `reference/check.md` |
+| `implementation` | `reference/implementation.md` |
+| `validation` | `reference/validation.md` |
+| `delivery` | invoke the `agentic-delivery` skill |
 
-6. Validation
-   - Run `<workflow> invariants`.
-   - Run `<workflow> audit traceability`.
-   - Run `<workflow> audit coverage`.
-   - Run `$documentation-audit` or perform the same documentation review
-     manually when the target repo has no documentation audit tooling.
-   - Run `$python-codestyle-audit` when Python files changed and the target repo
-     has applicable style rules.
-   - Run `<workflow> impact` against the current Git working set and
-     verify linked tests or full regression were run.
-   - Run configured gates with `<workflow> gates run` when appropriate.
-   - If a gate failure is caused by a wrong command or environment issue, rerun
-     with the correct command, record the passing evidence, and supersede the
-     stale failure with `<workflow> supersede-evidence`.
-   - Inspect diff for scope creep, weakened assertions, missing traceability,
-     and secrets.
-   - Stop with a validation summary.
+Each module lists the actions and the stop condition for that stage. The
+`requirement` module also carries the requirement-stage review checklist.
 
 ## Required Stop Format
 
@@ -207,24 +109,3 @@ Next prompt options:
 - Revise <specific artifact>
 - Abort or park this run
 ```
-
-## Requirement Stage Review
-
-Before stopping at the requirement gate, report this checklist for the proposed
-set so the human approves on evidence, not trust. Answer each item and name any
-gap rather than omitting it:
-
-- Independent — each requirement states one behavior; none bundle distinct
-  behaviors with "and", "or", or a list.
-- Testable — each requirement admits a concrete check that can pass or fail on
-  it alone.
-- Failure modes — the rejection, boundary, and empty/at-limit behaviors exist as
-  their own requirements, or are explicitly marked not applicable.
-- Acceptance traced — every alignment acceptance criterion maps to at least one
-  requirement, and every requirement traces back to a criterion or a recorded
-  gap.
-- Dimensions — every applicable coverage dimension (`functional`, `ux`,
-  `non_functional`, `security`, `data_privacy`, `platform`, `release`,
-  `testing`) has a requirement or a stated reason it does not apply.
-- Category and priority — each requirement is filed under the correct category
-  and its priority reflects its real importance.

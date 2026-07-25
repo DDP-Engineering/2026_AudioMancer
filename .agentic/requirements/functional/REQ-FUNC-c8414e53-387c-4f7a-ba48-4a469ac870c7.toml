@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Project snapshot shall create a ZIP under one top-level project folder, excluding symlinks and AI transaction logs."
 rationale = "A portable backup must not recursively include itself or leak transaction logs."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",

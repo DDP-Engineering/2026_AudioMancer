@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voice-definition regeneration shall preserve the compact voice prompt and avoid stereotyping or duplicated age guidance."
 rationale = "Regenerated definitions must respect existing guidance and avoid demographic defaults."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",

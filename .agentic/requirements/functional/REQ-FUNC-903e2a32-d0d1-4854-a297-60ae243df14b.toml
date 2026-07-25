@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Character voices state shall derive narrator-first targets and the approved translated language."
 rationale = "The page must present the narrator first and the language actually approved upstream."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",

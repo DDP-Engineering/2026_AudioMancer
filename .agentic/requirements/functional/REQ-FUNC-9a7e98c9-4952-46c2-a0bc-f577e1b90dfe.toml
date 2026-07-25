@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The translation page shall debounce and flush operator edits, flushing pending edits before approval."
 rationale = "Edits must not be lost between typing and approval."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The narrator definition service shall reject a torn authoritative document without replacing it."
 rationale = "A corrupt narrator document must be surfaced, not silently overwritten."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Translation summary shall require canonical chunk-ID alignment with the source."
 rationale = "Chunk changes must not leave stale, misaligned translation summaries."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",

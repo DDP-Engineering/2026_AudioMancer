@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Speech Blocks controller shall handle approval and reset: preserve audio blocks while resetting assembly, toggle unapprove without advancing, clear on explicit reset, and complete the manifest only after full approval."
 rationale = "Approval must gate downstream work precisely."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",

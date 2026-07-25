@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup resume shall trim a mid-page window using absolute source offsets."
 rationale = "Resume must continue from an exact source offset."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Narrator AI profile generation shall atomically persist attempt status, cumulative token usage, budget metadata, current instructions, and a deterministic compact resume checkpoint in `narrator_voice.json`; retain matching resume state and leave profiles unchanged on cancellation/failure; append all validated profiles and clear resume in one write on success; and keep transaction logs separate without report/state sidecars, raw model payloads, persisted log paths, or generated-ID arrays."
 rationale = "One transaction document must support safe retries without coupling durable state to diagnostic files or publishing partial profile inventories."
 verification = "Compact AI resume checkpoint test passes; success-path companion test also passes."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",

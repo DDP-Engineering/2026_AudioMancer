@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Applying UI settings shall set the running application font point size to the base font point size multiplied by the ui_font_size_step factor."
 rationale = "The interface (labels, buttons, controls) must scale with the chosen UI step."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",

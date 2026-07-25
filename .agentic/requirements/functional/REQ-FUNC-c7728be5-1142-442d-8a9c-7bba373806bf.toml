@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Workflow impact shall delete only exact affected in-project audio artifacts, skipping unsafe paths."
 rationale = "Deletion must target exact affected artifacts inside the project only."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",

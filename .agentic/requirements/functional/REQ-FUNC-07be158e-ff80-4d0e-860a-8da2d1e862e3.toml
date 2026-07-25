@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Narrator Voice page shall lay out selection, editors, edit mode, preview toggle, status panel, and the AI profile selector."
 rationale = "The narrator review surface must be complete and readable."
 verification = "Automated: 6 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",

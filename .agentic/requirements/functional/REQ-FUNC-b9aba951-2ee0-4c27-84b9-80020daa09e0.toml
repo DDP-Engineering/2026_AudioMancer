@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI chunking shall validate descriptors, accepting consecutive anchor ranges and rejecting nonconsecutive or invalid responses."
 rationale = "Only source-aligned descriptors may be accepted."
 verification = "Automated: 5 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",

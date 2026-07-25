@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Open project shall reject a missing manifest, missing required field, and legacy numbered or downstream folder layouts."
 rationale = "Incompatible or incomplete projects must fail to open rather than load partially."
 verification = "Automated: 4 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The AI Settings page shall apply a probe result and update status."
 rationale = "Probe results must be reflected in the page status."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",

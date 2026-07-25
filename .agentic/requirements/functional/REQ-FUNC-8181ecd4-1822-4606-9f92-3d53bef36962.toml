@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The application shall create the required flat project structure and manifest, rejecting a non-empty target folder."
 rationale = "A new project needs its canonical structure and must not overwrite existing content."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",

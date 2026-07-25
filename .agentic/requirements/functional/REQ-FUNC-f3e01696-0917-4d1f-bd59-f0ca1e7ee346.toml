@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Characters page shall load and persist manual demographic fields."
 rationale = "Manual character records must be editable and durable."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "A legacy list-format speech_blocks.json or a missing document shall be treated as not-started: load_speech_blocks_document() shall return None and no legacy report or state file shall be read or converted."
 rationale = "Reset-and-regenerate migration avoids tolerant legacy readers; non-conforming artifacts must present as not-started."
 verification = "Legacy list/corrupt artifact yields None."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",

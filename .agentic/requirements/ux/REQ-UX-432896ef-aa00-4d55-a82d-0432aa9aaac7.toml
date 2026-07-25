@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Settings page shall create, edit, and delete custom themes, selecting a fallback after deletion."
 rationale = "Operators must fully manage custom themes with a safe fallback."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",

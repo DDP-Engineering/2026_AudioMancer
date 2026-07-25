@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup validation shall reject ambiguous gap delimiters, unsafe fallbacks, and changed or reordered preserved text."
 rationale = "Unsafe or lossy output must be rejected."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",

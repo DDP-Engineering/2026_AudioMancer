@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home page shall present export panel widgets and update export labels on language change."
 rationale = "Export controls must be present and localized."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",

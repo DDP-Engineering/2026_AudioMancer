@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text cleanup shall apply compatible AI spacing and refresh project state."
 rationale = "Spacing changes must apply without another provider call and refresh state."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",

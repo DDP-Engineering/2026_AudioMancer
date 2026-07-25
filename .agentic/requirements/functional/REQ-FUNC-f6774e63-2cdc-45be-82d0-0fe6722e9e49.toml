@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "TTS settings shall surface runtime limits without requiring an active project or plan."
 rationale = "Local runtime setup must be inspectable before a project exists."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",

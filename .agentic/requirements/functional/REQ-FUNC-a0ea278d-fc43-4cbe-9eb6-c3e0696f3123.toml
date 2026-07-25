@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Token usage normalization shall normalize provider usage into the canonical shape."
 rationale = "Provider usage variance must be normalized before aggregation."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",

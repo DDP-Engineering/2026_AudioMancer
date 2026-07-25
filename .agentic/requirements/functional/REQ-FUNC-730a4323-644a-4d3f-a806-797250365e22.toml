@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Text Chunking shall use one strict root-object `chunks_text.json` document with exactly the approved document and chunk fields, expose atomic load/write and defensive chunk-reader APIs, derive counts and effective status in memory, treat an absent document as not started, and reject every incompatible document with Reset Chunking guidance."
 rationale = "One authoritative validation boundary prevents divergent result, report, and resume state while making incompatible legacy data explicit."
 verification = "Strict document API contract suite passes."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",

@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Translation state shall surface an incompatible translation document."
 rationale = "Incompatible documents must be made operator-visible rather than silently used."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",

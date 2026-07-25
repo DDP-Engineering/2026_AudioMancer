@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Cleanup page shall keep read-only mode on a cancelled edit confirmation."
 rationale = "Cancelling an edit must not leave the editor writable."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",

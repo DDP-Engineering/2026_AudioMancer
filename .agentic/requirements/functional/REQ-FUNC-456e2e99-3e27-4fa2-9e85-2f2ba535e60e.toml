@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Home page shall use a compact, non-scrolled dashboard."
 rationale = "The dashboard must fit without scrolling."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",

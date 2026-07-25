@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The operation runtime shall build progress payloads that clamp percent, use the standard shape, and can omit token usage."
 rationale = "Progress payloads must be well-formed and bounded."
 verification = "Automated: 3 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",

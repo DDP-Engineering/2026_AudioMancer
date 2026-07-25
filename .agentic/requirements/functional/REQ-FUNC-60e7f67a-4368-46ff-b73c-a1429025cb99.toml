@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "Removed Speech Blocks config constants shall not survive in the codebase."
 rationale = "Obsolete report/state constants must not be reachable."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",

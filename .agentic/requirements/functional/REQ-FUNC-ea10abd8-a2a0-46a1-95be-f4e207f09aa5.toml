@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Characters page and controller shall enter add mode, creating a draft row with manual evidence."
 rationale = "Adding a character must start a clearly manual draft."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",

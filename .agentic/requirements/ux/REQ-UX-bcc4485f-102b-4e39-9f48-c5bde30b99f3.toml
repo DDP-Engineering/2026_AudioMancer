@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Settings page shall present an interface font-size selector offering the seven font-size steps, load the persisted ui_font_size_step, and write the chosen step into the built settings payload."
 rationale = "Operators must adjust the control font size in discrete steps for their monitor and eyesight."
 verification = "uv run pytest -q (passed)"
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",

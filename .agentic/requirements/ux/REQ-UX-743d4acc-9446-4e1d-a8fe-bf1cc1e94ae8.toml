@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Settings page shall load and build merged settings."
 rationale = "Settings editing must start from correctly merged current settings."
 verification = "Automated: 1 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",

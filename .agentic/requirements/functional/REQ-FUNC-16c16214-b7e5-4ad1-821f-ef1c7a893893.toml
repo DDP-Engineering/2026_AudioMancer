@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "The Text Chunking UI shall derive not-started, running, resumable, completed, warned, and manually adjusted states from the authoritative document, resume with its stored strategy and instructions and the currently selected AI profile without re-prompting, omit durable progress claims, and preserve existing rerun and reset confirmations."
 rationale = "Operators need an accurate workflow surface whose controls and notes reflect the sole persisted Chunking authority."
 verification = "Text Chunking UI state derives resume and strategy without durable progress."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",

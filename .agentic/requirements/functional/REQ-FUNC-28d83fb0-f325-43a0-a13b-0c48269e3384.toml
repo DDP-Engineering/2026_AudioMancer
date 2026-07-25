@@ -6,6 +6,7 @@ priority = "Must"
 requirement = "AI cleanup shall render the six artifact types deterministically."
 rationale = "Artifact rendering must be reproducible."
 verification = "Automated: 2 linked pytest selector(s)."
+spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
