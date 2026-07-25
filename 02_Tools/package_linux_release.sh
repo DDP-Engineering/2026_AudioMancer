@@ -197,8 +197,111 @@ BUILD_PATH="${APP_ROOT}/build"
 DIST_PATH="${APP_ROOT}/dist"
 DIST_BUNDLE_PATH="${DIST_PATH}/AudioMancer"
 
+# Build in a dedicated, isolated uv environment so a release build never touches
+# the developer .venv (important when the repo lives on a Windows-shared mount).
+export UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-${HOME}/.cache/audiomancer/linux-build-venv}"
+
+# Directory that caches downloaded build tools between runs (outside the repo).
+TOOL_CACHE_DIR="${HOME}/.cache/audiomancer/tools"
+
+# Resolved by ensure_prerequisites, consumed by build_appimage.
+APPIMAGETOOL_BIN=""
+
+# Detect the build prerequisites and install any that are missing. Everything is
+# installed into the user's home directory, so no root/sudo is required.
+ensure_prerequisites() {
+    export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+    mkdir -p "${TOOL_CACHE_DIR}"
+
+    local downloader=""
+    if command -v curl >/dev/null 2>&1; then
+        downloader="curl"
+    elif command -v wget >/dev/null 2>&1; then
+        downloader="wget"
+    fi
+
+    # uv: PyInstaller and the app environment are managed through uv.
+    if ! command -v uv >/dev/null 2>&1; then
+        if [[ -z "${downloader}" ]]; then
+            echo "Missing 'uv' and neither curl nor wget is available to install it." >&2
+            exit 1
+        fi
+        echo "Installing uv (official Astral installer, user-space)..."
+        if [[ "${downloader}" == "curl" ]]; then
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+        else
+            wget -qO- https://astral.sh/uv/install.sh | sh
+        fi
+        export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+    fi
+    command -v uv >/dev/null 2>&1 || { echo "uv is still unavailable after installation." >&2; exit 1; }
+    echo "uv: $(uv --version)"
+
+    # appimagetool: cached AppImage executed without FUSE via extract-and-run.
+    local cached_tool="${TOOL_CACHE_DIR}/appimagetool-x86_64.AppImage"
+    if command -v appimagetool >/dev/null 2>&1; then
+        APPIMAGETOOL_BIN="$(command -v appimagetool)"
+    elif [[ -x "${cached_tool}" ]]; then
+        APPIMAGETOOL_BIN="${cached_tool}"
+    else
+        if [[ -z "${downloader}" ]]; then
+            echo "Missing appimagetool and neither curl nor wget is available to fetch it." >&2
+            exit 1
+        fi
+        echo "Downloading appimagetool..."
+        local url="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+        if [[ "${downloader}" == "curl" ]]; then
+            curl -fL -o "${cached_tool}" "${url}"
+        else
+            wget -O "${cached_tool}" "${url}"
+        fi
+        chmod +x "${cached_tool}"
+        APPIMAGETOOL_BIN="${cached_tool}"
+    fi
+    echo "appimagetool: ${APPIMAGETOOL_BIN}"
+}
+
+# Build a portable AppImage from the already-assembled staging bundle.
+build_appimage() {
+    local appdir="${STAGING_ROOT}/${ARTIFACT_BASE_NAME}.AppDir"
+    local appimage_path="${DELIVERY_ROOT}/${ARTIFACT_BASE_NAME}.AppImage"
+
+    remove_path_if_exists "${appdir}"
+    mkdir -p "${appdir}"
+    cp -a "${STAGING_PATH}/." "${appdir}/"
+
+    # Top-level icon whose base name matches the desktop Icon key.
+    cp -- "${APP_ROOT}/src/audiomancer/assets/icons/audiomancer_icon.png" "${appdir}/AudioMancer.png"
+
+    # AppImage desktop entry: Exec and Icon are names, not paths.
+    cat >"${appdir}/AudioMancer.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=AudioMancer
+Comment=AudioMancer audiobook production application
+Exec=AudioMancer
+Icon=AudioMancer
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+DESKTOP
+
+    # AppRun launches the bundled PyInstaller executable.
+    cat >"${appdir}/AppRun" <<'APPRUN'
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "${HERE}/AudioMancer" "$@"
+APPRUN
+    chmod +x "${appdir}/AppRun"
+
+    remove_path_if_exists "${appimage_path}"
+    ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_BIN}" "${appdir}" "${appimage_path}"
+    remove_path_if_exists "${appdir}"
+}
+
 invoke_step "Prepare packaging workspace" mkdir -p "${DELIVERY_ROOT}" "${STAGING_ROOT}"
 remove_path_if_exists "${STAGING_PATH}"
+
+invoke_step "Detect and install build prerequisites" ensure_prerequisites
 
 pushd "${APP_ROOT}" >/dev/null
 # PyInstaller runs inside the uv-managed app environment.
@@ -285,6 +388,8 @@ EOF
 
 invoke_step "Create delivery archive" create_zip_archive "${STAGING_PATH}" "${ARCHIVE_PATH}"
 
+invoke_step "Build AppImage" build_appimage
+
 invoke_step "Clean build artifacts" remove_path_if_exists "${BUILD_PATH}"
 # Do not leave PyInstaller or staging folders in the working tree.
 remove_path_if_exists "${DIST_PATH}"
@@ -296,3 +401,4 @@ if [[ -d "${STAGING_ROOT}" ]] && [[ -z "$(find "${STAGING_ROOT}" -mindepth 1 -pr
 fi
 
 echo "Ubuntu delivery archive created: ${ARCHIVE_PATH}"
+echo "Ubuntu AppImage created: ${DELIVERY_ROOT}/${ARTIFACT_BASE_NAME}.AppImage"
