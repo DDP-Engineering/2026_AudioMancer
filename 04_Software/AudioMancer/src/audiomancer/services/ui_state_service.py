@@ -41,6 +41,17 @@ _UI_SCALE_FACTORS = {
     "very_large": 1.24,
 }
 
+# @brief Multiplier applied to the base font point size for each operator font-size step.
+FONT_SIZE_STEP_FACTORS = {
+    "extra_small": 0.80,
+    "small": 0.90,
+    "medium": 0.95,
+    "normal": 1.00,
+    "large": 1.15,
+    "very_large": 1.30,
+    "huge": 1.50,
+}
+
 # @brief Dynamic Qt property used by read-only operator status editors.
 CONTROL_TEXT_FONT_ROLE_PROPERTY = "audiomancerFontRole"
 # @brief Dynamic Qt property value for editors that should use the UI font.
@@ -2634,38 +2645,80 @@ QListWidget#navigationSidebar::item:selected {{
 """.strip()
 
 
+def font_size_step_factor(step: object) -> float:
+    """
+    @brief      Return the base-font multiplier for one font-size step.
+    @param[in]  step Candidate font-size step name.
+    @return     Multiplier for a known step, or the 'normal' multiplier otherwise.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    return FONT_SIZE_STEP_FACTORS.get(str(step), FONT_SIZE_STEP_FACTORS[config.DEFAULT_UI_FONT_SIZE_STEP])
+
+
+def resolve_font_point_size(step: object, base_point_size: float) -> float:
+    """
+    @brief      Resolve one font-size step to an absolute point size.
+    @param[in]  step Candidate font-size step name.
+    @param[in]  base_point_size Unscaled base font point size.
+    @return     Base point size multiplied by the step factor.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    return float(base_point_size) * font_size_step_factor(step)
+
+
 def apply_theme(
     application: QApplication | None,
     theme_payload: dict[str, object],
-    ui_text_scale: str | None,
+    ui_text_scale: str | None = None,
+    ui_font_size_step: str | None = None,
+    text_font_size_step: str | None = None,
 ) -> None:
     """
-    @brief      Apply one validated UI theme to the running Qt application.
+    @brief      Apply one validated UI theme plus the operator font-size steps to the application.
     @param[in]  application Running Qt application instance.
     @param[in]  theme_payload Theme payload to apply.
     @param[in]  ui_text_scale Deprecated fallback text-scale preset.
+    @param[in]  ui_font_size_step Control/interface font-size step.
+    @param[in]  text_font_size_step Text-window (editor) font-size step.
     @return     None.
     @exception  ValueError Raised when the theme payload is invalid.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.3.0
+    @date       2026-07-25
+    @version    0.4.0
     """
     if application is None:
         return
 
     normalized_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
     current_font = _capture_base_font(application)
+
+    base_point_size = _BASE_FONT_POINT_SIZE if _BASE_FONT_POINT_SIZE is not None else 10.0
+    ui_step = ui_font_size_step if ui_font_size_step is not None else config.DEFAULT_UI_FONT_SIZE_STEP
+    text_step = text_font_size_step if text_font_size_step is not None else config.DEFAULT_TEXT_FONT_SIZE_STEP
+    minimum_point_size = ui_theme_service.MIN_FONT_POINT_SIZE
+    maximum_point_size = ui_theme_service.MAX_FONT_POINT_SIZE
+    ui_point_size = max(minimum_point_size, min(maximum_point_size, resolve_font_point_size(ui_step, base_point_size)))
+    text_point_size = max(
+        minimum_point_size, min(maximum_point_size, resolve_font_point_size(text_step, base_point_size))
+    )
+
     font_payload = normalized_theme["font"]
     assert isinstance(font_payload, dict)
+    text_font_payload = normalized_theme["text_font"]
+    assert isinstance(text_font_payload, dict)
+    font_payload["point_size"] = ui_point_size
+    text_font_payload["point_size"] = text_point_size
 
     theme_font_family = str(font_payload.get("family", "")).strip()
-    theme_point_size = font_payload.get("point_size")
-    base_point_size = float(theme_point_size) if isinstance(theme_point_size, (int, float)) else _BASE_FONT_POINT_SIZE
-    assert base_point_size is not None
-
     themed_font = QFont(current_font)
     themed_font.setFamily(theme_font_family or str(_BASE_FONT_FAMILY or current_font.family()))
-    themed_font.setPointSizeF(base_point_size)
+    themed_font.setPointSizeF(ui_point_size)
     application.setFont(themed_font)
 
     colors = _theme_colors(normalized_theme)
@@ -2770,7 +2823,13 @@ def apply_ui_settings(
         settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID),
         settings_payload.get("ui_themes", []),
     )
-    apply_theme(application, selected_theme, None)
+    apply_theme(
+        application,
+        selected_theme,
+        None,
+        ui_font_size_step=str(settings_payload.get("ui_font_size_step", config.DEFAULT_UI_FONT_SIZE_STEP)),
+        text_font_size_step=str(settings_payload.get("text_font_size_step", config.DEFAULT_TEXT_FONT_SIZE_STEP)),
+    )
     apply_language(
         main_window,
         str(settings_payload.get("language", config.DEFAULT_LANGUAGE)),

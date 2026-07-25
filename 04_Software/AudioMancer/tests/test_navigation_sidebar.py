@@ -61,4 +61,25 @@ def test_navigation_sidebar_assigns_an_icon_to_each_page(qtbot) -> None:
         assert not item.icon().isNull(), f"missing icon for page row: {item.text()}"
 
 
+def test_navigation_sidebar_sets_full_label_tooltip(qtbot) -> None:
+    """
+    @brief      Verify each sidebar page entry carries its full label as a tooltip.
+    @details    Covers REQ-UX-c0d8d572-0ed6-471c-ab33-b3ba16e55679 / SPEC-NAV-TOOLTIP.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    sidebar = NavigationSidebar()
+    qtbot.addWidget(sidebar)
+
+    for page_id, label in _WORKFLOW_PAGES:
+        sidebar.add_page(page_id, label, enabled=True)
+
+    for index, (_page_id, label) in enumerate(_WORKFLOW_PAGES):
+        assert sidebar.item(index).toolTip() == label
+
+
 # END OF FILE

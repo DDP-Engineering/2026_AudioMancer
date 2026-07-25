@@ -725,4 +725,40 @@ def test_validate_settings_repairs_invalid_urls() -> None:
     assert validated_settings["llm_profiles"][0]["base_url"] == ""
 
 
+def test_default_settings_include_font_size_steps() -> None:
+    """
+    @brief      Verify default settings carry both font-size steps at 'normal'.
+    @details    Covers REQ-PLAT-0c2009a9-c691-4fd3-8e8c-e45e5e77d297 / SPEC-FONT-DEFAULTS.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    defaults = settings_service.build_default_settings()
+
+    assert defaults["ui_font_size_step"] == "normal"
+    assert defaults["text_font_size_step"] == "normal"
+
+
+def test_validate_settings_repairs_and_migrates_font_size_steps() -> None:
+    """
+    @brief      Verify invalid font-size steps repair to normal and legacy ui_text_scale migrates.
+    @details    Covers REQ-PLAT-46bbf1c0-5b82-45b8-a4e2-27748b1f5aeb / SPEC-FONT-VALIDATE.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    repaired = settings_service.validate_settings({"ui_font_size_step": "gigantic", "text_font_size_step": 5})
+    assert repaired["ui_font_size_step"] == "normal"
+    assert repaired["text_font_size_step"] == "normal"
+
+    migrated = settings_service.validate_settings({"ui_text_scale": "very_large"})
+    assert "ui_text_scale" not in migrated
+    assert migrated["ui_font_size_step"] == "very_large"
+    assert migrated["text_font_size_step"] == "very_large"
+
+
 # END OF FILE

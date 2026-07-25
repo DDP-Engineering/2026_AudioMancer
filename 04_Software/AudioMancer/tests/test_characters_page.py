@@ -53,8 +53,8 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert page._age_row_widget.layout().stretch(page._age_row_widget.layout().count() - 1) == 1
     assert page._gender_confidence_label.minimumWidth() == page._age_confidence_label.minimumWidth()
     assert page._gender_confidence_label.maximumWidth() == page._age_confidence_label.maximumWidth()
-    assert page._gender_hint_edit.maximumWidth() == 360
-    assert page._age_hint_edit.maximumWidth() == 360
+    assert page._gender_row_widget.layout().stretch(0) == 1
+    assert page._age_row_widget.layout().stretch(0) == 1
     assert page._list_group.minimumHeight() == page._list_group.maximumHeight()
     assert page._list_group.minimumHeight() > page._character_actions_widget.sizeHint().height()
     assert hasattr(page, "_summary_label") is False

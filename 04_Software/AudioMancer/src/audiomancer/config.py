@@ -417,8 +417,17 @@ DEFAULT_UI_TEXT_SCALE = "normal"
 # @brief Supported operator-selectable UI text-scale presets.
 UI_TEXT_SCALE_OPTIONS = ("very_small", "small", "normal", "large", "very_large")
 
+# @brief Ordered, operator-selectable UI font-size steps (extra small -> huge).
+UI_FONT_SIZE_STEPS = ("extra_small", "small", "medium", "normal", "large", "very_large", "huge")
+
+# @brief Default control/interface font-size step.
+DEFAULT_UI_FONT_SIZE_STEP = "normal"
+
+# @brief Default text-window (editor) font-size step.
+DEFAULT_TEXT_FONT_SIZE_STEP = "normal"
+
 # @brief Default selected UI theme identifier.
-DEFAULT_UI_THEME_ID = "classic_light"
+DEFAULT_UI_THEME_ID = "audiomancer_dark"
 
 # @brief Current persisted UI theme schema version.
 UI_THEME_SCHEMA_VERSION = 1

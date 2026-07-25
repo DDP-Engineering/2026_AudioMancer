@@ -21,7 +21,6 @@
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QApplication,
     QDialog,
     QGroupBox,
     QHBoxLayout,
@@ -30,6 +29,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QStackedWidget,
     QStatusBar,
     QToolBar,
@@ -148,6 +148,57 @@ def test_main_window_toolbar_shows_audiomancer_wordmark(qtbot, default_settings_
     assert wordmark is not None
     assert "Audio" in wordmark.text()
     assert "Mancer" in wordmark.text()
+
+
+def test_main_window_wraps_workflow_pages_in_scroll_areas(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify workflow pages are wrapped in resizable scroll areas in the stack.
+    @details    Covers REQ-UX-54ed55bb-7038-4d24-baac-aeb37fa87247 / SPEC-SCROLL-PAGES.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    container = window._page_containers["text_cleanup"]
+    assert isinstance(container, QScrollArea)
+    assert container.widgetResizable() is True
+    assert container.widget() is window._page_registry["text_cleanup"]
+
+    window.set_current_page("text_cleanup")
+    assert window._stack.currentWidget() is container
+
+    assert window._home_page.findChild(QScrollArea) is None
+
+
+def test_main_window_settings_dialogs_scroll(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify the settings/AI/TTS dialogs wrap their page in a scroll area.
+    @details    Covers REQ-UX-1757fa3f-cba7-4192-829e-7f7418b70a92 / SPEC-SCROLL-DIALOGS.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    for dialog, page in (
+        (window._settings_dialog, window._settings_page),
+        (window._ai_settings_dialog, window._ai_settings_page),
+        (window._tts_settings_dialog, window._tts_settings_page),
+    ):
+        scroll_area = dialog.findChild(QScrollArea)
+        assert scroll_area is not None
+        assert scroll_area.widget() is page
 
 
 def test_main_window_show_message_does_not_create_status_bar(qtbot, default_settings_payload) -> None:
@@ -564,19 +615,18 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
 
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
-    starting_font_size = QApplication.instance().font().pointSizeF()
 
     window.show_settings_dialog()
     window._settings_page._language_combo.setCurrentText("ro")
-    window._settings_page._create_custom_theme()
-    window._settings_page._theme_font_size_spin.setValue(min(max(starting_font_size + 2.0, 12.0), 18.0))
+    warm_reading_index = window._settings_page._theme_combo.findData("warm_reading")
+    window._settings_page._theme_combo.setCurrentIndex(warm_reading_index)
     window._settings_page._completion_beep_checkbox.setChecked(True)
     window._settings_page._apply_button.click()
 
     assert saved_payloads
     assert persisted_payload["language"] == "ro"
     assert "ui_text_scale" not in persisted_payload
-    assert persisted_payload["ui_theme_id"] == "custom_theme"
+    assert persisted_payload["ui_theme_id"] == "warm_reading"
     assert persisted_payload["play_completion_beep"] is True
     assert window._settings_dialog.isVisible() is True
     assert window.windowTitle() == ("AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!")
@@ -585,7 +635,6 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
     assert window._sidebar.item(0).text() == "Acasa / Proiect"
     assert window._settings_page._apply_button.text() == "Aplica"
     assert window._settings_page._ok_button.text() == "OK"
-    assert QApplication.instance().font().pointSizeF() > starting_font_size
 
     window._settings_page._ok_button.click()
 

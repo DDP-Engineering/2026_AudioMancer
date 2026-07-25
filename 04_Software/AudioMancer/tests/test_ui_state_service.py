@@ -338,7 +338,9 @@ def test_apply_theme_updates_application_font_family(qtbot) -> None:
         _restore_application_state(application, original_font, original_palette, original_stylesheet)
 
     assert themed_font.family() == "Courier New"
-    assert themed_font.pointSizeF() == 11.0
+    # Font size is now owned by the global font-size steps, not the theme point_size:
+    # with the default 'normal' step the applied size equals the pre-apply base font size.
+    assert themed_font.pointSizeF() == original_font.pointSizeF()
 
 
 def test_apply_theme_updates_application_palette_roles(qtbot) -> None:
@@ -584,6 +586,61 @@ def test_apply_ui_settings_falls_back_to_default_theme_for_missing_theme_id(qtbo
     default_colors = default_theme["colors"]
     assert isinstance(default_colors, dict)
     assert palette.color(QPalette.ColorRole.Window).name().upper() == default_colors["window_background"]
+
+
+def test_font_size_step_resolution() -> None:
+    """
+    @brief      Verify font-size step factors and point-size resolution.
+    @details    Covers REQ-UX-b5b21ac7-95f0-43bc-823e-6b8f769de448 / SPEC-FONT-RESOLVE.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    assert ui_state_service.font_size_step_factor("extra_small") == 0.80
+    assert ui_state_service.font_size_step_factor("normal") == 1.00
+    assert ui_state_service.font_size_step_factor("huge") == 1.50
+    assert ui_state_service.font_size_step_factor("does_not_exist") == 1.00
+
+    assert round(ui_state_service.resolve_font_point_size("large", 10.0), 4) == 11.5
+    assert round(ui_state_service.resolve_font_point_size("small", 10.0), 4) == 9.0
+    assert round(ui_state_service.resolve_font_point_size("does_not_exist", 10.0), 4) == 10.0
+
+
+def test_apply_ui_settings_scales_ui_and_text_fonts_independently(qtbot) -> None:
+    """
+    @brief      Verify the UI step scales the app font and the text step sizes text editors independently.
+    @details    Covers REQ-UX-6ca3a291-f6d1-43c0-abb4-fd53b5594255 / SPEC-FONT-UISCALE and
+                REQ-UX-012a6341-ef3a-4098-af0d-a614e353d70e / SPEC-FONT-TEXTSCALE.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    application = QApplication.instance()
+    window = QWidget()
+    qtbot.addWidget(window)
+    settings_payload = {
+        "language": config.DEFAULT_LANGUAGE,
+        "ui_theme_id": ui_theme_service.default_theme_id(),
+        "ui_font_size_step": "large",
+        "text_font_size_step": "very_large",
+    }
+
+    ui_state_service.apply_ui_settings(application, window, settings_payload)
+
+    base_point_size = ui_state_service._BASE_FONT_POINT_SIZE
+    assert base_point_size is not None
+    ui_point = ui_state_service.resolve_font_point_size("large", base_point_size)
+    text_point = ui_state_service.resolve_font_point_size("very_large", base_point_size)
+
+    assert round(application.font().pointSizeF(), 2) == round(ui_point, 2)
+    stylesheet = application.styleSheet()
+    assert f"font-size: {ui_point:.1f}pt;" in stylesheet
+    assert f"font-size: {text_point:.1f}pt;" in stylesheet
 
 
 # END OF FILE

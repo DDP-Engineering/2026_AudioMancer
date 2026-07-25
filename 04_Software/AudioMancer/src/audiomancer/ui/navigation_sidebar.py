@@ -135,6 +135,7 @@ class NavigationSidebar(QListWidget):
         """
         item = QListWidgetItem(label)
         item.setData(Qt.ItemDataRole.UserRole, page_id)
+        item.setToolTip(label)
         inner_svg = _PAGE_ICON_PATHS.get(page_id)
         if inner_svg is not None:
             item.setIcon(_render_page_icon(inner_svg, self._icon_color))
@@ -177,6 +178,7 @@ class NavigationSidebar(QListWidget):
         if item is None:
             return
         item.setText(label)
+        item.setToolTip(label)
         self._page_labels[page_id] = label
 
     def apply_language(self, language: str) -> None:

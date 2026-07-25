@@ -26,9 +26,11 @@ from PySide6.QtGui import QCloseEvent, QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QScrollArea,
     QStackedWidget,
     QToolBar,
     QVBoxLayout,
@@ -157,6 +159,7 @@ class MainWindow(QMainWindow):
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self._page_registry: dict[str, QWidget] = {}
+        self._page_containers: dict[str, QScrollArea] = {}
         self._current_page_id = "home"
         self._current_manifest: dict[str, object] | None = None
         self._current_project_root: Path | None = None
@@ -250,7 +253,7 @@ class MainWindow(QMainWindow):
             return
         self._ensure_page_default_metadata(page_id)
         self._current_page_id = page_id
-        self._stack.setCurrentWidget(page)
+        self._stack.setCurrentWidget(self._page_containers[page_id])
         was_blocked = self._sidebar.blockSignals(True)
         self._sidebar.set_current_page(page_id)
         self._sidebar.blockSignals(was_blocked)
@@ -761,6 +764,24 @@ class MainWindow(QMainWindow):
         self._action_about.triggered.connect(lambda _checked=False: misc_ui_controller.show_about_dialog(self))
         return toolbar
 
+    def _build_scrollable_container(self, page: QWidget) -> QScrollArea:
+        """
+        @brief      Wrap one page in a frameless, resizable scroll area.
+        @details    Lets oversized page content scroll instead of clipping at large font
+                    sizes or the minimum window resolution, without altering the page itself.
+        @param[in]  page Page widget to wrap.
+        @return     Scroll area hosting the page.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setWidget(page)
+        return scroll_area
+
     def _build_pages(self) -> None:
         """
         @brief      Build and register the stacked shell pages.
@@ -1150,7 +1171,9 @@ class MainWindow(QMainWindow):
         for page_id, label in self.PAGE_ORDER:
             page = pages[page_id]
             self._page_registry[page_id] = page
-            self._stack.addWidget(page)
+            container = self._build_scrollable_container(page)
+            self._page_containers[page_id] = container
+            self._stack.addWidget(container)
             self._sidebar.add_page(page_id, label, enabled=page_id == "home")
 
     def _build_dialogs(self) -> None:
@@ -1171,12 +1194,6 @@ class MainWindow(QMainWindow):
         settings_layout = QVBoxLayout(self._settings_dialog)
         self._settings_page = SettingsPage(self._settings_dialog)
         self._settings_page._cancel_button.clicked.connect(self._settings_dialog.close)
-        self._settings_page._theme_import_button.clicked.connect(
-            lambda _checked=False: settings_ui_controller.import_theme_from_dialog(self)
-        )
-        self._settings_page._theme_export_button.clicked.connect(
-            lambda _checked=False: settings_ui_controller.export_theme_from_dialog(self)
-        )
         self._settings_page._apply_button.clicked.connect(
             lambda _checked=False: settings_ui_controller.apply_settings_from_dialog(self)
         )
@@ -1184,7 +1201,7 @@ class MainWindow(QMainWindow):
             lambda _checked=False: settings_ui_controller.save_settings_from_dialog(self)
         )
         self._settings_page.load_settings(self._settings_payload)
-        settings_layout.addWidget(self._settings_page)
+        settings_layout.addWidget(self._build_scrollable_container(self._settings_page))
 
         self._ai_settings_dialog = QDialog(self)
         self._ai_settings_dialog.setWindowTitle(
@@ -1205,7 +1222,7 @@ class MainWindow(QMainWindow):
             lambda _checked=False: ai_settings_ui_controller.save_ai_settings_from_dialog(self)
         )
         self._ai_settings_page.load_settings(self._settings_payload)
-        ai_layout.addWidget(self._ai_settings_page)
+        ai_layout.addWidget(self._build_scrollable_container(self._ai_settings_page))
 
         self._tts_settings_dialog = QDialog(self)
         self._tts_settings_dialog.setWindowTitle(
@@ -1226,7 +1243,7 @@ class MainWindow(QMainWindow):
             lambda _checked=False: tts_settings_ui_controller.save_tts_settings_from_dialog(self)
         )
         self._tts_settings_page.load_state(self._settings_payload, None, False)
-        tts_layout.addWidget(self._tts_settings_page)
+        tts_layout.addWidget(self._build_scrollable_container(self._tts_settings_page))
 
     def _apply_current_ui_settings(self) -> None:
         """

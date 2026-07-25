@@ -21,7 +21,7 @@ from .app import main
 
 # CONSTANTS
 
-__version__ = "1.6.7"
+__version__ = "1.7.0"
 
 # PUBLIC API
 
