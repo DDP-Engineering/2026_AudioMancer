@@ -1,0 +1,242 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "config exposes resolve_user_documents_root() returning an absolute existing directory that is independent of config.APP_ROOT.",
+      "The resolver returns the home documents folder when it exists on Windows, macOS, and POSIX.",
+      "On POSIX the resolver prefers an existing XDG_DOCUMENTS_DIR over the home documents folder.",
+      "The resolver returns the home directory when no candidate documents folder exists.",
+      "The new-project dialog opens at the active project parent folder when a project is open, and at the resolved documents root otherwise.",
+      "The open-project dialog opens at the active project root when a project is open, and at the resolved documents root otherwise.",
+      "config.APP_ROOT is no longer used as a file-dialog default directory anywhere in home_ui_controller."
+    ],
+    "assumptions": [
+      "Modern Windows keeps the on-disk folder name Documents and localizes only its display name, so a plain ~/Documents probe is correct without Qt or ctypes.",
+      "config.py must stay free of PySide6 because it is imported by every headless test, so QStandardPaths is not used.",
+      "This worktree branch does not contain config.APP_USER_DATA_ROOT from the sibling run, so the change must not depend on it; projects are operator content and belong under documents rather than an application data root anyway."
+    ],
+    "created_at": "2026-07-25T16:15:28+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/config.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py"
+    ],
+    "reason": "Two dialog default arguments plus one additive stdlib resolver; no persisted state, no schema change, no workflow-domain data touched, fully unit-testable and reversible. The only open scope question was answered by the user before this run advanced.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "IN: config.py documents-root resolver; the two QFileDialog.getExistingDirectory default-directory arguments in home_ui_controller.py; their unit tests; one new spec file and two requirement snapshots. OUT: settings schema changes and any persisted last-used project parent (user chose the smaller scope); the writable data root, settings.json and Logs placement owned by run fix-2026-07-25T151844Z-85bc2369; import-source and export/snapshot dialog defaults, which already derive from the open project."
+    ],
+    "source": "User chat: project open/create dialogs default to config.APP_ROOT, which is the read-only install directory for a frozen build; sibling run fix-2026-07-25T151844Z-85bc2369 left this out of scope. Scope confirmed by user: documents/home only, no settings schema change.",
+    "understanding": "Add a pure-stdlib resolver config.resolve_user_documents_root() that returns the per-user documents directory for the running platform, falling back to the home directory when no documents folder exists. Windows and macOS use ~/Documents; Linux and other POSIX prefer XDG_DOCUMENTS_DIR when set and existing, then ~/Documents. The resolver always returns an existing directory so QFileDialog cannot silently fall back to the process working directory. home_ui_controller then uses that resolver instead of config.APP_ROOT for both project dialog defaults: the new-project dialog starts at the active project parent folder when a project is open and at the resolved documents root otherwise; the open-project dialog starts at the active project root when a project is open and at the resolved documents root otherwise."
+  },
+  "change_units": [
+    {
+      "id": "CU-DOCS-ROOT",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/config.py"
+      ]
+    },
+    {
+      "id": "CU-DIALOG-START",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py"
+      ]
+    },
+    {
+      "id": "CU-TEST-CONFIG",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_config_contract.py"
+      ]
+    },
+    {
+      "id": "CU-TEST-HOME",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_home_ui_controller.py"
+      ]
+    },
+    {
+      "id": "CU-DOC-PLATFORM",
+      "touched_paths": [
+        ".agentic/knowledge/components/Platform_Settings_UI.md"
+      ]
+    },
+    {
+      "id": "CU-DOC-LIFECYCLE",
+      "touched_paths": [
+        ".agentic/knowledge/components/Project_Lifecycle.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-PLAT-b463cefd-a2a7-4f53-8450-7411960f44b2"
+      ],
+      "cites_spec": [
+        "SPEC-DOCS-ROOT"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_config_contract.py::test_config_resolves_user_documents_root_across_platforms tests/test_config_contract.py::test_config_user_documents_root_honours_xdg_documents_dir_on_posix_only",
+      "green_evidence": "E-0003",
+      "id": "CHK-DOCS-ROOT",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_config_contract.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-de071609-49bf-486b-b2f7-810d4abc61ec"
+      ],
+      "cites_spec": [
+        "SPEC-DIALOG-START"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_home_ui_controller.py::test_home_ui_controller_project_dialogs_start_outside_the_install_root",
+      "green_evidence": "E-0004",
+      "id": "CHK-DIALOG-START",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    }
+  ],
+  "decisions": [],
+  "evidence": [
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_config_contract.py::test_config_resolves_user_documents_root_across_platforms tests/test_config_contract.py::test_config_user_documents_root_honours_xdg_documents_dir_on_posix_only",
+      "created_at": "2026-07-25T16:22:22+00:00",
+      "failure_kind": "missing-implementation",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_config_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: both documents-root tests fail with AttributeError, module audiomancer.config has no attribute resolve_user_documents_root.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_home_ui_controller.py::test_home_ui_controller_project_dialogs_start_outside_the_install_root",
+      "created_at": "2026-07-25T16:22:22+00:00",
+      "failure_kind": "missing-implementation",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red: the project dialog start-directory test fails with AttributeError while patching config.resolve_user_documents_root.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_config_contract.py",
+      "created_at": "2026-07-25T16:29:16+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/src/audiomancer/config.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: both documents-root tests pass against config.resolve_user_documents_root(); full tests/test_config_contract.py is 8 passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_home_ui_controller.py tests/test_main_window_project_flow.py",
+      "created_at": "2026-07-25T16:29:16+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green: the project dialog start-directory test passes; tests/test_home_ui_controller.py and tests/test_main_window_project_flow.py both pass alongside it.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-25T16:32:03+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-25T16:58:12+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: uv run --directory 04_Software/AudioMancer pytest -q",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-25T17:32:19+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: uv run --directory 04_Software/AudioMancer pytest -q",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-25T16:14:40+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/config.py",
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py"
+    ],
+    "statement": "Project open/create QFileDialog calls default to the application install root (config.APP_ROOT), which for a frozen build installed into a non-writable location opens the project browser inside the read-only install directory; default instead to a resolved per-user documents directory (falling back to the home directory) when no project is open.",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-25T161440Z-253b00dd",
+  "spec_items": [
+    {
+      "examples": [
+        "Linux with XDG_DOCUMENTS_DIR=/home/u/docs existing -> /home/u/docs; the same variable set on Windows is ignored and ~\\Documents wins.",
+        "No documents folder exists on any platform -> the home directory is returned so QFileDialog never falls back to the process working directory."
+      ],
+      "id": "SPEC-DOCS-ROOT",
+      "statement": "config.resolve_user_documents_root() returns the first existing candidate among an XDG_DOCUMENTS_DIR override (POSIX only, non-macOS), the home Documents folder, and the home directory, using only the standard library.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Project /data/books/Book5 open -> new-project dialog starts at /data/books, open-project dialog at /data/books/Book5.",
+        "No project open, application installed at C:\\Program Files\\AudioMancer -> both dialogs start at the resolved documents root, never the install root."
+      ],
+      "id": "SPEC-DIALOG-START",
+      "statement": "The Home new-project dialog starts at the active project parent folder and the open-project dialog at the active project root when a project is open; both start at config.resolve_user_documents_root() otherwise, and neither uses config.APP_ROOT.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "validation"
+}

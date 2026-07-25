@@ -12,10 +12,11 @@
 @details Centralizes application names, paths, defaults, artifact names, and
          file support used by the current AudioMancer implementation scaffold.
          Keeps the read-only packaged resource root separate from the resolved
-         writable data root that owns settings and logs.
+         writable data root that owns settings and logs, and from the per-user
+         documents folder offered by operator-facing folder pickers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-25
-@version 1.43.0
+@version 1.44.0
 """
 
 # IMPORTS
@@ -38,6 +39,12 @@ APP_DATA_DIR_ENVIRONMENT_VARIABLE = "AUDIOMANCER_DATA_DIR"
 
 # @brief Prefix used by the transient probe file that tests directory writability.
 _WRITE_PROBE_FILE_PREFIX = ".audiomancer_write_probe_"
+
+# @brief On-disk name of the per-user documents folder; Windows localizes only its display name.
+_USER_DOCUMENTS_DIRECTORY_NAME = "Documents"
+
+# @brief freedesktop.org variable that relocates the per-user documents folder on POSIX.
+_XDG_DOCUMENTS_DIR_ENVIRONMENT_VARIABLE = "XDG_DOCUMENTS_DIR"
 
 
 # PUBLIC API
@@ -89,7 +96,47 @@ def resolve_user_data_root(app_root: Path | None = None) -> Path:
     return _per_user_data_root()
 
 
+def resolve_user_documents_root() -> Path:
+    """
+    @brief      Resolve the per-user documents folder that project dialogs start in.
+    @details    Candidates are tried in order and the first existing directory
+                wins: the `XDG_DOCUMENTS_DIR` override on POSIX platforms other
+                than macOS, the home documents folder, and finally the home
+                directory itself. Every candidate must already exist, because
+                `QFileDialog` silently falls back to the process working
+                directory when handed a missing path.
+    @return     Absolute per-user documents root, independent of `APP_ROOT`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    for candidate_root in (_xdg_documents_root(), Path.home() / _USER_DOCUMENTS_DIRECTORY_NAME):
+        if candidate_root is not None and candidate_root.is_dir():
+            return candidate_root.resolve()
+    return Path.home().resolve()
+
+
 # LOCAL HELPERS
+
+
+def _xdg_documents_root() -> Path | None:
+    """
+    @brief      Resolve the freedesktop.org documents override, when it applies.
+    @details    The variable is meaningless on Windows and macOS, so any value
+                found there is accidental and is ignored.
+    @return     Override path, or `None` off POSIX or when the variable is blank.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    if sys.platform.startswith("win") or sys.platform == "darwin":
+        return None
+    override_value = str(os.environ.get(_XDG_DOCUMENTS_DIR_ENVIRONMENT_VARIABLE, "") or "").strip()
+    if not override_value:
+        return None
+    return Path(override_value).expanduser()
 
 
 def _resolve_frozen_runtime_root() -> Path:

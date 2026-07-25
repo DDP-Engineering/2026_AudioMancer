@@ -54,6 +54,13 @@ All notable changes to this project will be documented in this file.
   created the application keeps running with console output only and records one
   `logging-degraded` warning naming the path and the underlying error. Expired-log
   cleanup likewise no longer propagates filesystem errors.
+- The **New project** and **Open project** folder pickers no longer start in the
+  application install directory when no project is open. They now start in the
+  operator's documents folder, falling back to the home directory. For a build
+  installed into `C:\Program Files\AudioMancer`, `/opt`, or `/usr/share`, the
+  browser previously opened inside a read-only system directory where any
+  project the operator tried to create there failed to write. While a project is
+  open both dialogs still start from it, unchanged.
 
 ### Known Limitations
 

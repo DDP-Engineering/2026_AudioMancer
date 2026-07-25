@@ -204,6 +204,72 @@ def test_config_defines_seven_font_size_steps() -> None:
     assert config.DEFAULT_TEXT_FONT_SIZE_STEP == "normal"
 
 
+def test_config_resolves_user_documents_root_across_platforms(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify the documents root prefers the home documents folder and falls back to home.
+    @details    Covers REQ-PLAT-b463cefd-a2a7-4f53-8450-7411960f44b2 / SPEC-DOCS-ROOT.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    home_root = tmp_path / "home"
+    documents_root = home_root / "Documents"
+    documents_root.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home_root))
+    monkeypatch.setenv("USERPROFILE", str(home_root))
+    monkeypatch.delenv("XDG_DOCUMENTS_DIR", raising=False)
+
+    for platform_name in ("win32", "darwin", "linux"):
+        monkeypatch.setattr(config.sys, "platform", platform_name)
+        assert config.resolve_user_documents_root() == documents_root.resolve()
+
+    documents_root.rmdir()
+
+    for platform_name in ("win32", "darwin", "linux"):
+        monkeypatch.setattr(config.sys, "platform", platform_name)
+        assert config.resolve_user_documents_root() == home_root.resolve()
+
+
+def test_config_user_documents_root_honours_xdg_documents_dir_on_posix_only(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify XDG_DOCUMENTS_DIR wins on POSIX only, and only when it names an existing folder.
+    @details    Covers REQ-PLAT-b463cefd-a2a7-4f53-8450-7411960f44b2 / SPEC-DOCS-ROOT.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    home_root = tmp_path / "home"
+    documents_root = home_root / "Documents"
+    xdg_root = tmp_path / "xdg_documents"
+    documents_root.mkdir(parents=True)
+    xdg_root.mkdir()
+    monkeypatch.setenv("HOME", str(home_root))
+    monkeypatch.setenv("USERPROFILE", str(home_root))
+    monkeypatch.setenv("XDG_DOCUMENTS_DIR", str(xdg_root))
+
+    monkeypatch.setattr(config.sys, "platform", "linux")
+    assert config.resolve_user_documents_root() == xdg_root.resolve()
+
+    for ignoring_platform_name in ("win32", "darwin"):
+        monkeypatch.setattr(config.sys, "platform", ignoring_platform_name)
+        assert config.resolve_user_documents_root() == documents_root.resolve()
+
+    monkeypatch.setattr(config.sys, "platform", "linux")
+    monkeypatch.setenv("XDG_DOCUMENTS_DIR", "   ")
+    assert config.resolve_user_documents_root() == documents_root.resolve()
+
+    monkeypatch.setenv("XDG_DOCUMENTS_DIR", str(tmp_path / "missing_documents"))
+    assert config.resolve_user_documents_root() == documents_root.resolve()
+
+
 def test_config_default_theme_is_audiomancer_dark() -> None:
     """
     @brief      Verify the default UI theme id is the AudioMancer brand dark theme.
