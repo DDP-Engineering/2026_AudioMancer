@@ -12,7 +12,9 @@ worker lifecycle used by all long-running workflow pages.
 
 - Resolve and validate project-relative artifact paths, read optional JSON,
   persist operation state/artifacts atomically, and construct default compact
-  state envelopes.
+  state envelopes. Speech Blocks and Audio Blocks own single authoritative
+  documents instead of separate state artifacts, so no default state file is
+  initialized for them and a missing document reads as not-started.
 - Calculate bounded progress payloads and provide cooperative cancellation.
 - Define ordered full-reset and selective-invalidation impacts, preserve stable
   identities, and delete only safe, targeted audio/assembly artifacts.

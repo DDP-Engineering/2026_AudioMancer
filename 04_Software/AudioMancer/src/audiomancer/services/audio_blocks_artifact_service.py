@@ -25,7 +25,6 @@ import unicodedata
 import wave
 
 from audiomancer import config
-from audiomancer.services import speech_blocks_service
 
 # PUBLIC API
 
@@ -43,67 +42,51 @@ def generated_audio_root(project_root: Path) -> Path:
     return Path(project_root) / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
 
 
-def audio_artifact_paths(
-    project_root: Path,
-    chunk_id: str,
-    sequence_index: int,
-    normalized_speaker_name: str,
-) -> tuple[Path, Path]:
+def audio_artifact_path(project_root: Path, speech_block_id: str) -> Path:
     """
-    @brief      Resolve one stable WAV and JSON metadata path pair for a speech block.
+    @brief      Resolve one generated WAV path from the owning Speech Block identifier.
+    @details    The name depends only on `speech_block_id`, which is the block's
+                stable primary key, so it stays valid for the block's whole life
+                and never needs to be stored or repaired.
     @param[in]  project_root Active project root folder.
-    @param[in]  chunk_id Stable source chunk identifier.
-    @param[in]  sequence_index Stable chunk-local speech-block sequence index.
-    @param[in]  normalized_speaker_name Stable normalized speaker-name token.
-    @return     Tuple of WAV path and metadata JSON path.
+    @param[in]  speech_block_id Stable Speech Block identifier.
+    @return     Absolute generated WAV path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    file_stem = audio_artifact_file_stem(chunk_id, sequence_index, normalized_speaker_name)
-    audio_root = generated_audio_root(project_root)
-    return audio_root / f"{file_stem}.wav", audio_root / f"{file_stem}.json"
+    return generated_audio_root(project_root) / f"{audio_artifact_file_stem(speech_block_id)}.wav"
 
 
-def audio_part_artifact_path(project_root: Path, audio_block: dict[str, object], part_index: int) -> Path:
+def audio_part_artifact_path(project_root: Path, speech_block_id: str, part_index: int) -> Path:
     """
     @brief      Resolve one deterministic split-part WAV artifact path.
     @param[in]  project_root Active project root folder.
-    @param[in]  audio_block Current Audio Blocks entry.
+    @param[in]  speech_block_id Stable Speech Block identifier.
     @param[in]  part_index Zero-based split-part index.
     @return     Absolute split-part WAV path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    file_stem = audio_artifact_file_stem(
-        str(audio_block.get("chunk_id", "")).strip(),
-        int(audio_block.get("sequence_index", 0)),
-        str(audio_block.get("normalized_speaker_name", "")),
-    )
-    file_stem = f"{file_stem}_part{part_index + 1:03d}"
+    file_stem = f"{audio_artifact_file_stem(speech_block_id)}_part{max(int(part_index), 0) + 1:03d}"
     return generated_audio_root(project_root) / "parts" / f"{file_stem}.wav"
 
 
-def audio_artifact_file_stem(chunk_id: str, sequence_index: int, normalized_speaker_name: str) -> str:
+def audio_artifact_file_stem(speech_block_id: str) -> str:
     """
-    @brief      Build the compact Audio Blocks artifact file stem.
-    @param[in]  chunk_id Stable source chunk identifier.
-    @param[in]  sequence_index Stable chunk-local speech-block sequence index.
-    @param[in]  normalized_speaker_name Stable normalized speaker-name token.
-    @return     File stem in `<chunk_no_4digits>_<block_no_6digits>_<character_normalized_name>` format.
+    @brief      Build the Audio Blocks artifact file stem from the Speech Block identifier.
+    @param[in]  speech_block_id Stable Speech Block identifier.
+    @return     File stem equal to the sanitized `speech_block_id`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    chunk_sort_key = speech_blocks_service.speech_block_book_sort_key({"chunk_id": chunk_id, "sequence_index": 0})
-    safe_chunk = f"{chunk_sort_key[0]:04d}"
-    safe_sequence = f"{max(int(sequence_index), 0):06d}"
-    safe_name = str(normalized_speaker_name or "").strip() or "speaker"
-    return f"{safe_chunk}_{safe_sequence}_{safe_name}"
+    sanitized_id = re.sub(r"[^A-Za-z0-9_-]+", "", str(speech_block_id or "").strip())
+    return sanitized_id or "block"
 
 
 def normalize_speaker_name(value: str) -> str:

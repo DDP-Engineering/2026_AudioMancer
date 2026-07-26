@@ -21,7 +21,12 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import character_voices_service, project_workspace_service, speech_blocks_service
+from audiomancer.services import (
+    audio_blocks_service,
+    character_voices_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 from audiomancer.ui.main_window import MainWindow
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
 from chunking_test_support import build_chunking_document
@@ -148,89 +153,31 @@ def _create_project(tmp_path, name: str):
                 },
             ],
     )
-    audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    (audio_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "stable",
+            "checkpoint": {
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "current_phase": "generate_blocks",
+                "current_block_id": None,
+                "next_speech_block_index": 1,
+                "next_split_part_index": 0
+            },
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
-                    "sequence_index": 1,
-                    "chunk_id": "chunk-0001",
-                    "speaker_id": "narrator",
-                    "speaker_display_name": "Narrator",
-                    "normalized_speaker_name": "narrator",
-                    "text": "Narration one.",
                     "voice_target_id": "narrator",
-                    "voice_source_kind": "narrator_sample",
-                    "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
-                    "metadata_relative_path": "audio_blocks/0001_000001_narrator.json",
                     "generated": True,
                     "approved": False,
-                    "approved_at": None,
-                    "generated_at": "2026-04-23T12:09:00+00:00",
-                    "runtime_result_summary": "Narrator ready.",
-                    "warning_flags": [],
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None
                 }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (audio_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "voice_language": "en",
-                "audio_blocks_stage_status": "in_progress",
-                "generated_block_count": 1,
-                "approved_block_count": 0,
-                "total_block_count": 2,
-                "warning_count": 0,
-                "warnings": [],
-                "updated_at": "2026-04-23T12:10:00+00:00",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (audio_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-                "status": "running",
-                "input_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME}"
-                ],
-                "output_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"
-                ],
-                "artifact_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"
-                ],
-                "progress_current": 1,
-                "progress_total": 2,
-                "mode": "tts_generation",
-                "started_at": "2026-04-23T12:00:00+00:00",
-                "completed_at": None,
-                "updated_at": "2026-04-23T12:10:00+00:00",
-                "warning_count": 0,
-                "metadata": {
-                    "voice_language": "en",
-                    "input_fingerprint": "stable",
-                    "speech_block_count": 2,
-                    "generated_block_count": 1,
-                    "approved_block_count": 0,
-                    "clone_profile_count": 1,
-                    "current_phase": "generate_blocks",
-                    "current_block_id": "0001-000001",
-                },
-                "resume_checkpoint": {"next_profile_index": 1, "next_speech_block_index": 1},
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+            ]
+        },
     )
     return project_root
 

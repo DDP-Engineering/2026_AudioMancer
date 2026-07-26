@@ -155,48 +155,37 @@ def test_workflow_impact_deletes_audio_artifacts_for_affected_speech_block_only(
     project_root, _manifest = project_workspace_service.create_project("SelectiveAudioArtifacts", tmp_path)
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir()
-    affected_wav = audio_root / "affected.wav"
-    affected_json = audio_root / "affected.json"
-    preserved_wav = audio_root / "preserved.wav"
-    affected_part = audio_root / "parts" / "affected_part001.wav"
+    affected_wav = audio_root / "0001-000001.wav"
+    preserved_wav = audio_root / "0002-000001.wav"
+    affected_part = audio_root / "parts" / "0001-000001_part001.wav"
     affected_part.parent.mkdir()
-    for artifact_path in (affected_wav, affected_json, preserved_wav, affected_part):
+    for artifact_path in (affected_wav, preserved_wav, affected_part):
         artifact_path.write_bytes(b"artifact")
     audio_blocks = [
         {
-            "speech_block_id": "sb-1",
+            "speech_block_id": "0001-000001",
             "chunk_id": "chunk-0001",
             "voice_target_id": "narrator",
-            "audio_relative_path": affected_wav.relative_to(project_root).as_posix(),
-            "metadata_relative_path": affected_json.relative_to(project_root).as_posix(),
-            "generated_part_relative_paths": [affected_part.relative_to(project_root).as_posix()],
+            "split_part_count": 1,
         },
         {
-            "speech_block_id": "sb-2",
+            "speech_block_id": "0002-000001",
             "chunk_id": "chunk-0002",
             "voice_target_id": "character_alice",
-            "audio_relative_path": preserved_wav.relative_to(project_root).as_posix(),
-            "metadata_relative_path": None,
-            "generated_part_relative_paths": [],
+            "split_part_count": 1,
         },
     ]
 
     summary = workflow_impact_service.delete_audio_block_artifacts(
         project_root,
         audio_blocks,
-        speech_block_ids=("sb-1",),
+        speech_block_ids=("0001-000001",),
     )
 
-    assert summary.deleted_count == 3
-    assert sorted(summary.deleted_paths) == [
-        "audio_blocks/affected.json",
-        "audio_blocks/affected.wav",
-        "audio_blocks/parts/affected_part001.wav",
-    ]
-    assert summary.preserved_paths == ("audio_blocks/preserved.wav",)
+    assert summary.deleted_count == 1
+    assert sorted(summary.deleted_paths) == ["audio_blocks/0001-000001.wav"]
+    assert summary.preserved_paths == ("audio_blocks/0002-000001.wav",)
     assert not affected_wav.exists()
-    assert not affected_json.exists()
-    assert not affected_part.exists()
     assert preserved_wav.is_file()
 
 
@@ -213,33 +202,31 @@ def test_workflow_impact_can_skip_preserved_audio_artifact_collection(tmp_path) 
     project_root, _manifest = project_workspace_service.create_project("SelectiveAudioArtifactsFast", tmp_path)
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir()
-    affected_wav = audio_root / "affected.wav"
-    preserved_wav = audio_root / "preserved.wav"
+    affected_wav = audio_root / "0001-000001.wav"
+    preserved_wav = audio_root / "0002-000001.wav"
     affected_wav.write_bytes(b"affected")
     preserved_wav.write_bytes(b"preserved")
     audio_blocks = [
         {
-            "speech_block_id": "sb-1",
+            "speech_block_id": "0001-000001",
             "chunk_id": "chunk-0001",
             "voice_target_id": "narrator",
-            "audio_relative_path": affected_wav.relative_to(project_root).as_posix(),
         },
         {
-            "speech_block_id": "sb-2",
+            "speech_block_id": "0002-000001",
             "chunk_id": "chunk-0002",
             "voice_target_id": "character_alice",
-            "audio_relative_path": preserved_wav.relative_to(project_root).as_posix(),
         },
     ]
 
     summary = workflow_impact_service.delete_audio_block_artifacts(
         project_root,
         audio_blocks,
-        speech_block_ids=("sb-1",),
+        speech_block_ids=("0001-000001",),
         collect_preserved_paths=False,
     )
 
-    assert summary.deleted_paths == ("audio_blocks/affected.wav",)
+    assert summary.deleted_paths == ("audio_blocks/0001-000001.wav",)
     assert summary.preserved_paths == ()
     assert not affected_wav.exists()
     assert preserved_wav.is_file()
@@ -259,15 +246,17 @@ def test_workflow_impact_skips_unsafe_audio_artifact_paths(tmp_path) -> None:
     outside_path = tmp_path / "outside.wav"
     outside_path.write_bytes(b"outside")
 
+    # Paths are derived from a sanitized speech_block_id, so a traversal attempt
+    # cannot name a file outside the generated-audio folder at all.
     summary = workflow_impact_service.delete_audio_block_artifacts(
         project_root,
-        [{"speech_block_id": "sb-1", "audio_relative_path": "../outside.wav"}],
-        speech_block_ids=("sb-1",),
+        [{"speech_block_id": "../outside"}],
+        speech_block_ids=("../outside",),
     )
 
     assert summary.deleted_paths == ()
-    assert summary.skipped_paths == ("../outside.wav",)
     assert outside_path.is_file()
+    assert all(not path.startswith("..") for path in summary.deleted_paths + summary.skipped_paths)
 
 
 def test_workflow_impact_requires_exact_ids_for_audio_artifact_deletion(tmp_path) -> None:

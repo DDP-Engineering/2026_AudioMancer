@@ -24,6 +24,7 @@ from pathlib import Path
 from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
+    audio_blocks_artifact_service,
     audio_blocks_service,
     character_voices_service,
     chunking_document_service,
@@ -76,8 +77,6 @@ def build_audio_blocks_state(
     prompt_count = int(
         operation_metadata.get("prompt_count", report.get("prompt_count", 0) if isinstance(report, dict) else 0)
     )
-    reused_prompt_count = int(operation_metadata.get("reused_prompt_count", 0))
-    regenerated_prompt_count = int(operation_metadata.get("regenerated_prompt_count", 0))
     current_phase = str(operation_metadata.get("current_phase", "")).strip() or None
     invalidation_reason = str(operation_metadata.get("invalidation_reason", "")).strip() or None
     notes = build_audio_blocks_notes(
@@ -105,8 +104,6 @@ def build_audio_blocks_state(
         ),
         ui_state_service.translate("audio_blocks.status_prompts", language).format(
             prompt_count=prompt_count,
-            reused_prompt_count=reused_prompt_count,
-            regenerated_prompt_count=regenerated_prompt_count,
         ),
     ]
     return {
@@ -122,8 +119,6 @@ def build_audio_blocks_state(
         "progress_percent": 0 if progress_total <= 0 else int((progress_current / max(progress_total, 1)) * 100),
         "current_phase": current_phase,
         "prompt_count": prompt_count,
-        "reused_prompt_count": reused_prompt_count,
-        "regenerated_prompt_count": regenerated_prompt_count,
         "invalidation_reason": invalidation_reason,
         "stage_status": resolved_stage_status,
         "can_start_or_continue": _can_start_or_continue_generation(
@@ -241,8 +236,6 @@ def build_audio_blocks_notes(
     prompt_count = int(
         operation_metadata.get("prompt_count", report.get("prompt_count", 0) if isinstance(report, dict) else 0)
     )
-    reused_prompt_count = int(operation_metadata.get("reused_prompt_count", 0))
-    regenerated_prompt_count = int(operation_metadata.get("regenerated_prompt_count", 0))
     invalidation_reason = str(operation_metadata.get("invalidation_reason", "")).strip()
     notes = [
         ui_state_service.translate("audio_blocks.note_summary", language).format(
@@ -257,8 +250,6 @@ def build_audio_blocks_notes(
             notes.append(
                 ui_state_service.translate("audio_blocks.note_prepare_prompts", language).format(
                     prompt_count=prompt_count,
-                    reused_prompt_count=reused_prompt_count,
-                    regenerated_prompt_count=regenerated_prompt_count,
                 )
             )
         elif current_phase == audio_blocks_service._GENERATE_PHASE:  # noqa: SLF001
@@ -323,8 +314,6 @@ def _empty_state(language: str, settings_payload: dict[str, object] | None = Non
         "progress_percent": 0,
         "current_phase": None,
         "prompt_count": 0,
-        "reused_prompt_count": 0,
-        "regenerated_prompt_count": 0,
         "invalidation_reason": None,
         "stage_status": audio_blocks_service.AUDIO_BLOCKS_STAGE_NOT_STARTED,
         "can_start_or_continue": False,
@@ -422,8 +411,7 @@ def _merge_audio_block_state(
         speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
         persisted_audio_block = audio_by_id.get(speech_block_id, {})
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
-        audio_relative_path = persisted_audio_block.get("audio_relative_path")
-        audio_file_name = _resolve_persisted_audio_file_name(persisted_audio_block, audio_relative_path)
+        audio_file_name = _resolve_persisted_audio_file_name(persisted_audio_block)
         duration_seconds = _resolve_audio_duration_seconds(persisted_audio_block)
         merged_blocks.append(
             {
@@ -437,8 +425,8 @@ def _merge_audio_block_state(
                     or audio_blocks_service.normalize_speaker_name(speaker_display_name)
                 ),
                 "text": str(speech_block.get("text", "")),
-                "generated": audio_blocks_service.generated_at(persisted_audio_block),
-                "approved": audio_blocks_service.approved_at(persisted_audio_block),
+                "generated": audio_blocks_service.is_generated(persisted_audio_block),
+                "approved": audio_blocks_service.is_approved(persisted_audio_block),
                 "metadata_only": bool(persisted_audio_block.get("metadata_only", False))
                 or str(speech_block.get("content_kind", "")).strip()
                 in {
@@ -447,11 +435,9 @@ def _merge_audio_block_state(
                     speech_blocks_service.CONTENT_KIND_INDICATION,
                 },
                 "special_block_status": str(persisted_audio_block.get("special_block_status", "") or ""),
-                "audio_relative_path": audio_relative_path,
                 "audio_file_name": audio_file_name,
                 "audio_duration_seconds": duration_seconds,
                 "can_play": audio_blocks_service.audio_can_play(persisted_audio_block),
-                "runtime_result_summary": str(persisted_audio_block.get("runtime_result_summary", "")),
                 "is_current": speech_block_id == current_block_id,
             }
         )
@@ -519,23 +505,22 @@ def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object
     return ai_translation_service.translation_is_completed(project_root)
 
 
-def _resolve_persisted_audio_file_name(audio_block: dict[str, object], audio_relative_path: object) -> str:
+def _resolve_persisted_audio_file_name(audio_block: dict[str, object]) -> str:
     """
-    @brief      Resolve one display file name from persisted Audio Blocks playability state.
+    @brief      Resolve one display file name derived from the Speech Block identifier.
     @param[in]  audio_block Persisted Audio Blocks payload.
-    @param[in]  audio_relative_path Persisted project-relative audio path.
     @return     Display file name, or an empty string when no playable audio is recorded.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
     if not audio_blocks_service.audio_can_play(audio_block):
         return ""
-    normalized_relative_path = str(audio_relative_path or "").strip()
-    if not normalized_relative_path:
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
+    if not speech_block_id:
         return ""
-    return Path(normalized_relative_path).name
+    return f"{audio_blocks_artifact_service.audio_artifact_file_stem(speech_block_id)}.wav"
 
 
 def _resolve_current_block(

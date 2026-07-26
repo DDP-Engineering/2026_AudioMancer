@@ -24,7 +24,12 @@ from PySide6.QtWidgets import QMessageBox
 import pytest
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, project_workspace_service, speech_blocks_service
+from audiomancer.services import (
+    audio_blocks_service,
+    narrator_definition_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 from audiomancer.ui.controllers import narator_voice_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
@@ -333,7 +338,7 @@ def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypat
 
     narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
 
-    output_payload = json.loads((project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(encoding="utf-8"))
+    output_payload = audio_blocks_service.load_audio_blocks(project_root)
     assert create_calls[0]["cancellable"] is False
     assert any(percent == 55 for percent, _message in progress_updates)
     assert progress_updates[-1][0] == 100
@@ -344,7 +349,7 @@ def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypat
     narrator_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000001")
     alice_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000002")
     assert narrator_block["audio_relative_path"] is None
-    assert narrator_block["generated"] is None
+    assert narrator_block["generated"] is False
     assert alice_block["audio_relative_path"] is not None
     assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav").exists()
     assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000002.wav").is_file()
@@ -1201,61 +1206,34 @@ def _write_generated_audio_blocks(project_root) -> None:
             ],
         },
     )
-    (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "narrator-fixture",
+            "checkpoint": None,
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
-                    "sequence_index": 1,
-                    "chunk_id": "chunk-0001",
-                    "speaker_id": "narrator",
-                    "speaker_display_name": "Narrator",
-                    "content_kind": "Narration",
-                    "text": "Narration line.",
                     "voice_target_id": "narrator",
-                    "audio_relative_path": "audio_blocks/0001-000001.wav",
-                    "metadata_relative_path": "audio_blocks/0001-000001.json",
                     "generated": True,
                     "approved": True,
-                    "approved_at": "2026-05-11T12:00:00+00:00",
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
                 },
                 {
                     "speech_block_id": "0001-000002",
-                    "sequence_index": 2,
-                    "chunk_id": "chunk-0001",
-                    "speaker_id": "alice",
-                    "speaker_display_name": "Alice",
-                    "content_kind": "Dialogue",
-                    "text": "Hello.",
                     "voice_target_id": "character_alice",
-                    "audio_relative_path": "audio_blocks/0001-000002.wav",
-                    "metadata_relative_path": "audio_blocks/0001-000002.json",
                     "generated": True,
                     "approved": True,
-                    "approved_at": "2026-05-11T12:00:00+00:00",
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
                 },
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "status": "completed",
-                "progress_current": 2,
-                "progress_total": 2,
-                "metadata": {"voice_language": "en"},
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps({"audio_blocks_stage_status": "completed", "voice_language": "en"}, indent=2) + "\n",
-        encoding="utf-8",
+        },
     )
 
 

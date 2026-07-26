@@ -714,10 +714,7 @@ _UI_STRINGS = {
             "{approved_count}/{total_count}."
         ),
         "audio_blocks.note_in_progress": "Audio generation is in progress at {progress_current}/{progress_total}.",
-        "audio_blocks.note_prepare_prompts": (
-            "Preparing reusable voice prompts. Available: {prompt_count}, reused: {reused_prompt_count}, "
-            "created now: {regenerated_prompt_count}."
-        ),
+        "audio_blocks.note_prepare_prompts": "Preparing reusable voice prompts. Available: {prompt_count}.",
         "audio_blocks.note_generating_blocks": "Generating audio blocks from the prepared reusable voice prompts.",
         "audio_blocks.note_resume": (
             "A previous Audio Blocks run was not finalized. Press Start Audio Generation to continue from "
@@ -734,9 +731,7 @@ _UI_STRINGS = {
         "audio_blocks.status_generated": "Generated audio: {generated_count}/{total_count}",
         "audio_blocks.status_approved": "Approved audio: {approved_count}/{total_count}",
         "audio_blocks.status_voice_language": "Voice language: {language_label}",
-        "audio_blocks.status_prompts": (
-            "Reusable prompts: {prompt_count} | reused: {reused_prompt_count} | created now: {regenerated_prompt_count}"
-        ),
+        "audio_blocks.status_prompts": "Reusable prompts: {prompt_count}",
         "audio_blocks.progress_label": "Generated blocks: {progress_current}/{progress_total}",
         "audio_blocks.detail_speaker": "Speaker: {speaker_label}",
         "audio_blocks.detail_approval_status": "Status: {status_label}",
@@ -1764,8 +1759,7 @@ _UI_STRINGS = {
         ),
         "audio_blocks.note_in_progress": ("Generarea audio este in curs la {progress_current}/{progress_total}."),
         "audio_blocks.note_prepare_prompts": (
-            "Se pregatesc prompturile vocale reutilizabile. Disponibile: {prompt_count}, refolosite: "
-            "{reused_prompt_count}, create acum: {regenerated_prompt_count}."
+            "Se pregatesc prompturile vocale reutilizabile. Disponibile: {prompt_count}."
         ),
         "audio_blocks.note_generating_blocks": (
             "Se genereaza blocurile audio din prompturile vocale reutilizabile pregatite."
@@ -1789,10 +1783,7 @@ _UI_STRINGS = {
         "audio_blocks.status_generated": "Audio generat: {generated_count}/{total_count}",
         "audio_blocks.status_approved": "Audio aprobat: {approved_count}/{total_count}",
         "audio_blocks.status_voice_language": "Limba vocii: {language_label}",
-        "audio_blocks.status_prompts": (
-            "Prompturi reutilizabile: {prompt_count} | refolosite: {reused_prompt_count} | create acum: "
-            "{regenerated_prompt_count}"
-        ),
+        "audio_blocks.status_prompts": "Prompturi reutilizabile: {prompt_count}",
         "audio_blocks.progress_label": "Blocuri generate: {progress_current}/{progress_total}",
         "audio_blocks.detail_speaker": "Vorbitor: {speaker_label}",
         "audio_blocks.detail_approval_status": "Stare: {status_label}",

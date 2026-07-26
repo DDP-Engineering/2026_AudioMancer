@@ -1008,11 +1008,13 @@ def _audio_blocks_completion_evidence(project_root: Path, warnings: list[str]) -
     @date       2026-04-25
     @version    0.1.0
     """
-    state = _load_json_artifact(project_root, config.AUDIO_BLOCKS_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.AUDIO_BLOCKS_REPORT_FILE_NAME)
-    audio_blocks = _load_json_artifact(project_root, config.AUDIO_BLOCKS_OUTPUT_FILE_NAME)
+    from audiomancer.services import audio_blocks_service
+
+    state = audio_blocks_service.load_operation_state(project_root)
+    report = audio_blocks_service.load_audio_blocks_report(project_root)
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
     if not _audio_blocks_report_is_completed(report) or not _non_empty_payload_list(audio_blocks):
-        if _artifact_exists(project_root, config.AUDIO_BLOCKS_OUTPUT_FILE_NAME):
+        if _artifact_exists(project_root, config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME):
             warnings.append("Audio Blocks artifacts exist but do not prove a completed stage.")
         return None
     if not _audio_block_files_exist(project_root, audio_blocks, state):
@@ -1025,7 +1027,7 @@ def _audio_blocks_completion_evidence(project_root: Path, warnings: list[str]) -
         state,
         report,
         warnings,
-        config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
     )
 
 
@@ -1390,18 +1392,20 @@ def _audio_block_files_exist(project_root: Path, audio_blocks: object, state: ob
     @date       2026-04-25
     @version    0.1.0
     """
-    if not isinstance(audio_blocks, list):
+    from audiomancer.services import audio_blocks_artifact_service
+
+    _ = state
+    if not isinstance(audio_blocks, list) or not audio_blocks:
         return False
-    audio_paths: list[str] = []
     for block in audio_blocks:
-        if not isinstance(block, dict):
+        if not isinstance(block, dict) or bool(block.get("metadata_only", False)):
             continue
-        block_paths = [_optional_string(block.get("audio_relative_path"))]
-        generated_part_paths = block.get("generated_part_relative_paths")
-        if isinstance(generated_part_paths, list):
-            block_paths.extend(_optional_string(value) for value in generated_part_paths)
-        audio_paths.extend(path for path in block_paths if path is not None)
-    return bool(audio_paths) and all(_project_relative_path_exists(project_root, path) for path in audio_paths)
+        speech_block_id = str(block.get("speech_block_id", "")).strip()
+        if not speech_block_id:
+            return False
+        if not audio_blocks_artifact_service.audio_artifact_path(project_root, speech_block_id).is_file():
+            return False
+    return True
 
 
 def _operation_path_list(payload: object, field_name: str) -> list[str]:

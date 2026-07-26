@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-170ed96e-8f01-4d20-96b0-4fe830d5ccc2"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Audio Blocks shall persist all operation metadata and blocks in a single authoritative audio_blocks.json document with a fixed top-level field set, and shall not create audio_blocks_report.json or audio_blocks_state.json."
+rationale = "One authoritative document removes the report and state artifacts that duplicated data recomputable from the block list."
+verification = "Automated contract test: writing a document produces only audio_blocks.json with the fixed root field set, and the report/state config constants are gone."
+spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_document_round_trips_and_writes_only_one_artifact",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_removed_report_and_state_config_constants_are_gone",
+]
+
+created_on = "2026-07-25T21:09:14Z"
+last_updated = "2026-07-26T05:56:12Z"

@@ -3,21 +3,21 @@ id = "REQ-FUNC-7b2d7d89-ba46-4f8b-bd31-bc97325bb486"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Audio-block generation shall generate and regenerate scene ambience after spoken blocks, normalize legacy playability, and normalize speaker names."
-rationale = "Scene ambience and legacy data must be handled safely."
+requirement = "Audio-block generation shall generate and regenerate scene ambience after spoken blocks, normalize legacy playability, and normalize speaker names for display only."
+rationale = "Speaker-name normalization no longer participates in artifact naming; it remains only for operator-facing display."
 verification = "Automated: 4 linked pytest selector(s)."
-spec_ref = ""
+spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_normalize_speaker_name_handles_diacritics",
   "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_normalize_speaker_name_handles_diacritics",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_reconciles_playability_for_missing_files",
   "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_normalizes_legacy_playability_and_reconciles_missing_files",
 ]
 
 created_on = "2026-07-19T17:33:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-26T05:58:53Z"

@@ -29,7 +29,7 @@ from audiomancer.services import audio_blocks_artifact_service
 
 def test_audio_blocks_artifact_paths_are_deterministic(tmp_path) -> None:
     """
-    @brief      Verify generated Audio Blocks artifact paths keep the established naming contract.
+    @brief      Verify REQ-FUNC-df8987d1 derives artifact paths from speech_block_id alone.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -38,27 +38,15 @@ def test_audio_blocks_artifact_paths_are_deterministic(tmp_path) -> None:
     @version    0.1.0
     """
     speaker_name = audio_blocks_artifact_service.normalize_speaker_name(" Maria-Elena ÃˆËœtefan!? ")
-    audio_path, metadata_path = audio_blocks_artifact_service.audio_artifact_paths(
-        tmp_path,
-        "chunk-0007",
-        3,
-        speaker_name,
-    )
-    part_path = audio_blocks_artifact_service.audio_part_artifact_path(
-        tmp_path,
-        {
-            "chunk_id": "chunk-0007",
-            "sequence_index": 3,
-            "normalized_speaker_name": speaker_name,
-        },
-        0,
-    )
+    audio_path = audio_blocks_artifact_service.audio_artifact_path(tmp_path, "0007-000003")
+    part_path = audio_blocks_artifact_service.audio_part_artifact_path(tmp_path, "0007-000003", 0)
 
+    # Speaker normalization survives for display only; it no longer reaches artifact names.
     assert speaker_name == "maria_elena_stefan"
     generated_root = tmp_path / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
-    assert audio_path == generated_root / "0007_000003_maria_elena_stefan.wav"
-    assert metadata_path == generated_root / "0007_000003_maria_elena_stefan.json"
-    assert part_path == generated_root / "parts" / "0007_000003_maria_elena_stefan_part001.wav"
+    assert audio_path == generated_root / "0007-000003.wav"
+    assert part_path == generated_root / "parts" / "0007-000003_part001.wav"
+    assert speaker_name not in audio_path.name
 
 
 def test_audio_blocks_artifact_wav_validation_and_stitching(tmp_path) -> None:

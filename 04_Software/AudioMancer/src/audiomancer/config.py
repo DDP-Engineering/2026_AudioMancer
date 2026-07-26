@@ -560,14 +560,8 @@ DEFAULT_SPEECH_BLOCKS_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
 # @brief Maximum context-window fraction used for AI Speech Blocks source text.
 DEFAULT_SPEECH_BLOCKS_TEXT_CONTEXT_FRACTION = 0.60
 
-# @brief File name used for persisted Audio Blocks output.
-AUDIO_BLOCKS_OUTPUT_FILE_NAME = "audio_blocks.json"
-
-# @brief File name used for persisted Audio Blocks report metadata.
-AUDIO_BLOCKS_REPORT_FILE_NAME = "audio_blocks_report.json"
-
-# @brief File name used for persisted Audio Blocks runtime state.
-AUDIO_BLOCKS_STATE_FILE_NAME = "audio_blocks_state.json"
+# @brief File name used for the authoritative single Audio Blocks document.
+AUDIO_BLOCKS_DOCUMENT_FILE_NAME = "audio_blocks.json"
 
 # @brief File name used for persisted Audio Blocks voice-clone profile metadata.
 AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME = "voice_clone_profiles.json"

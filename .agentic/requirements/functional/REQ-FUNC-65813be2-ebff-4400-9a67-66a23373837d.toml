@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-65813be2-ebff-4400-9a67-66a23373837d"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "reset_audio_blocks shall remove the single audio_blocks.json document and any residual legacy audio_blocks_report.json and audio_blocks_state.json files so the operator can regenerate cleanly."
+rationale = "Reset must leave no pre-change artifact that a later read could mistake for current state."
+verification = "Automated contract test: reset_audio_blocks removes audio_blocks.json plus residual legacy report and state files."
+spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_reset_removes_document_and_residual_legacy_files",
+]
+
+created_on = "2026-07-25T21:09:36Z"
+last_updated = "2026-07-26T05:56:31Z"

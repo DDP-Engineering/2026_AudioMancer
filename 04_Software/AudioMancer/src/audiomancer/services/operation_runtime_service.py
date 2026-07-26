@@ -91,10 +91,11 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         "speech_blocks_state.json",
     ),
     "audio_blocks": (
-        config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        config.AUDIO_BLOCKS_REPORT_FILE_NAME,
-        config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
         config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
+        # Legacy sidecars from the pre-single-document format; kept for reset cleanup only.
+        "audio_blocks_report.json",
+        "audio_blocks_state.json",
     ),
     "audio_assembly": (
         config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
@@ -113,10 +114,10 @@ _OPERATION_AI_LOG_TOKENS = {
 }
 
 # @brief Optional operation-state file names that may be initialized on first page open.
-# @details Speech Blocks has no separate state file; its single document is created by the
-#          operation itself and a missing document reads as not-started.
+# @details Speech Blocks and Audio Blocks have no separate state file; their single
+#          documents are created by the operation itself and a missing document
+#          reads as not-started.
 _OPERATION_STATE_FILE_NAMES = {
-    "audio_blocks": config.AUDIO_BLOCKS_STATE_FILE_NAME,
     "audio_assembly": config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
 }
 
@@ -285,16 +286,6 @@ def _default_operation_metadata(operation_kind: str) -> dict[str, object]:
     @date       2026-04-26
     @version    0.4.0
     """
-    if operation_kind == "audio_blocks":
-        return {
-            "voice_language": "",
-            "input_fingerprint": "",
-            "prompt_count": 0,
-            "reused_prompt_count": 0,
-            "regenerated_prompt_count": 0,
-            "current_phase": "",
-            "current_block_id": "",
-        }
     return {}
 
 

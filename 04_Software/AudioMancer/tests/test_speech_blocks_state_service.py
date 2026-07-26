@@ -127,27 +127,26 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
         },
     )
     (speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME).mkdir(parents=True, exist_ok=True)
-    (speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").write_bytes(
-        b"RIFF"
-    )
-    (speech_blocks_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    (speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav").write_bytes(b"RIFF")
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "speech-state-fixture",
+            "checkpoint": None,
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
-                    "sequence_index": 1,
-                    "chunk_id": "chunk-0001",
-                    "speaker_id": "narrator",
-                    "speaker_display_name": "Narrator",
-                    "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
+                    "voice_target_id": "narrator",
                     "generated": True,
                     "approved": False,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
                 }
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+        },
     )
 
     state = speech_blocks_state_service.build_speech_blocks_state(
@@ -233,27 +232,26 @@ def test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generati
     )
     audio_root = speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir(parents=True, exist_ok=True)
-    (audio_root / "0001_000001_scene_ambience.wav").write_bytes(b"RIFF")
-    (speech_blocks_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    (audio_root / "0001-000001.wav").write_bytes(b"RIFF")
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "speech-state-ambience-fixture",
+            "checkpoint": None,
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
-                    "sequence_index": 1,
-                    "chunk_id": "chunk-0001",
-                    "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
-                    "speaker_display_name": "Scene Ambience",
-                    "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
-                    "metadata_only": True,
-                    "audio_relative_path": "audio_blocks/0001_000001_scene_ambience.wav",
+                    "voice_target_id": "narrator",
                     "generated": True,
                     "approved": False,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
                 }
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+        },
     )
 
     state = speech_blocks_state_service.build_speech_blocks_state(

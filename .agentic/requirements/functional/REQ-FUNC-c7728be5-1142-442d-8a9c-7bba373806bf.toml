@@ -3,10 +3,10 @@ id = "REQ-FUNC-c7728be5-1142-442d-8a9c-7bba373806bf"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Workflow impact shall delete only exact affected in-project audio artifacts, skipping unsafe paths."
-rationale = "Deletion must target exact affected artifacts inside the project only."
+requirement = "Workflow impact shall delete only exact affected in-project audio artifacts resolved from speech_block_id, skipping unsafe paths."
+rationale = "The persisted audio path fields the impact scan previously read no longer exist, so it resolves artifacts by derivation."
 verification = "Automated: 3 linked pytest selector(s)."
-spec_ref = ""
+spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
@@ -14,9 +14,9 @@ affected_paths = [
 
 linked_tests = [
   "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_deletes_audio_artifacts_for_affected_speech_block_only",
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_skips_unsafe_audio_artifact_paths",
   "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_requires_exact_ids_for_audio_artifact_deletion",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_skips_unsafe_audio_artifact_paths",
 ]
 
 created_on = "2026-07-19T17:10:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-25T21:10:43Z"
