@@ -49,7 +49,11 @@ _RUNTIME_LIMIT_LABEL_MIN_WIDTH_PX = 200
 _RUNTIME_LIMIT_FORM_FIELD_SPACING_PX = 16
 _RUNTIME_LIMIT_COLUMN_SPACING_PX = 44
 _AMBIENCE_LIMITS_LEFT_MARGIN_PX = 12
-_RUNTIME_LIMIT_CONTROL_MAX_WIDTH_PX = 104
+# @brief Compact width for runtime limit controls.
+# @details Wide enough for the word-valued controls ("Random", "Auto") to render with their
+#          arrow box instead of eliding, while still not stretching across the dialog.
+_RUNTIME_LIMIT_CONTROL_MAX_WIDTH_PX = 120
+_RUNTIME_LIMIT_CONTROL_MIN_WIDTH_PX = 96
 _SCENE_AMBIENCE_PLACEMENT_MAX_WIDTH_PX = 420
 
 
@@ -165,6 +169,22 @@ class TtsSettingsPage(QWidget):
         self._preview_text_limit_spin.setValue(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT)
         self._configure_limit_spinbox(self._preview_text_limit_spin)
         numeric_limits_form.addRow(self._preview_text_limit_label, self._preview_text_limit_spin)
+        self._speech_block_target_label = QLabel("Narration Block Target (s)", self)
+        self._configure_runtime_limit_label(self._speech_block_target_label)
+        self._speech_block_target_spin = QDoubleSpinBox(self)
+        self._speech_block_target_spin.setRange(0.0, config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM)
+        self._speech_block_target_spin.setSingleStep(5.0)
+        self._speech_block_target_spin.setDecimals(0)
+        # The minimum doubles as "no operator preference", so the model budget decides.
+        # Kept short because this column is narrow; the tooltip carries the explanation.
+        self._speech_block_target_spin.setSpecialValueText("Auto")
+        self._speech_block_target_spin.setValue(config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS)
+        self._speech_block_target_spin.setToolTip(
+            "Preferred spoken length of one same-narrator block. "
+            "The TTS model budget always stays the hard limit, so this can only shorten blocks."
+        )
+        self._configure_limit_spinbox(self._speech_block_target_spin)
+        numeric_limits_form.addRow(self._speech_block_target_label, self._speech_block_target_spin)
         self._scene_ambience_placement_label = QLabel("Scene Ambience Placement", self)
         self._scene_ambience_placement_combo = QComboBox(self)
         self._scene_ambience_placement_combo.setMinimumWidth(140)
@@ -275,6 +295,15 @@ class TtsSettingsPage(QWidget):
                     "tts_preview_text_character_limit",
                     config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
                 )
+            )
+        )
+        self._speech_block_target_spin.setValue(
+            float(
+                settings_payload.get(
+                    "speech_block_target_audio_seconds",
+                    config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS,
+                )
+                or 0.0
             )
         )
         scene_ambience_placement = str(
@@ -390,6 +419,12 @@ class TtsSettingsPage(QWidget):
         merged_settings["tts_audio_preview_timeout_seconds"] = self._preview_timeout_spin.value()
         merged_settings["tts_audio_generation_timeout_seconds"] = self._generation_timeout_spin.value()
         merged_settings["tts_preview_text_character_limit"] = self._preview_text_limit_spin.value()
+        speech_block_target = float(self._speech_block_target_spin.value())
+        merged_settings["speech_block_target_audio_seconds"] = (
+            0.0
+            if speech_block_target <= 0.0
+            else max(speech_block_target, float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM))
+        )
         merged_settings.pop("scene_ambience_generation_enabled", None)
         merged_settings.pop("scene_ambience_audio_generation_enabled", None)
         merged_settings["scene_ambience_placement"] = str(
@@ -486,7 +521,7 @@ class TtsSettingsPage(QWidget):
         @date       2026-05-23
         @version    0.2.1
         """
-        spinbox.setMinimumWidth(88)
+        spinbox.setMinimumWidth(_RUNTIME_LIMIT_CONTROL_MIN_WIDTH_PX)
         spinbox.setMaximumWidth(_RUNTIME_LIMIT_CONTROL_MAX_WIDTH_PX)
         spinbox.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         spinbox.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)

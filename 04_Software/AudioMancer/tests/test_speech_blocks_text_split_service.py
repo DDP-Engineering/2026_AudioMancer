@@ -18,7 +18,7 @@
 
 # IMPORTS
 
-from audiomancer.services import speech_blocks_text_split_service
+from audiomancer.services import speech_blocks_text_split_service, tts_budget_service
 
 
 def test_build_source_spans_preserves_exact_text_and_paragraph_boundaries() -> None:
@@ -162,18 +162,18 @@ def test_split_text_for_ai_context_budget_preserves_ordered_segments() -> None:
     assert len(split_parts) > 1
 
 
-def test_tts_budget_unit_count_handles_words_and_compact_scripts() -> None:
+def test_estimate_budget_units_handles_words_and_compact_scripts() -> None:
     """
     @brief      Verify TTS budget units work for spaced and compact text.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    assert speech_blocks_text_split_service.tts_budget_unit_count("") == 0
-    assert speech_blocks_text_split_service.tts_budget_unit_count("one two three") == 3
-    assert speech_blocks_text_split_service.tts_budget_unit_count("abcdefghijklmno") >= 3
+    assert tts_budget_service.estimate_budget_units("") == 0
+    assert tts_budget_service.estimate_budget_units("one two three") == 3
+    assert tts_budget_service.estimate_budget_units("abcdefghijklmno") >= 3
 
 
 def _assert_source_spans_reconstruct_text(source_text: str, source_spans: list[dict[str, object]]) -> None:

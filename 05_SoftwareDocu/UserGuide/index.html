@@ -94,7 +94,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li><strong>AudioMancer:</strong> the desktop application and this offline help bundle.</li>
                     <li><strong>VoiceWeaver:</strong> required for audio generation. Install it on the same computer or on another computer reachable on the same local network.</li>
-                    <li><strong>AI text model:</strong> optional for deterministic-only cleanup/chunking, but required for AI cleanup, AI chunking, translation, character discovery, and Speech Blocks.</li>
+                    <li><strong>AI text model:</strong> optional for deterministic-only cleanup/chunking, but required for AI cleanup, AI chunking, translation, character discovery, and narrator-plus-character Speech Blocks. Same-narrator Speech Blocks needs no AI model unless Scene Ambience is enabled.</li>
                     <li><strong>Project storage:</strong> enough disk space for source files, intermediate WAV files, and final audiobook outputs.</li>
                 </ul>
                 <p>
@@ -225,7 +225,6 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><td>AI Translation</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td></tr>
                         <tr><td>Character Discovery</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td></tr>
                         <tr><td>Speech Blocks</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td></tr>
-                        <tr><td>Speech Blocks local span selection</td><td><code>qwen/qwen3.6-27b</code></td><td><code>qwen/qwen3.6-35b-a3b</code>, <code>google/gemma-4-31b</code>, or <code>openai/gpt-oss-20b</code></td><td>0.1-0.2</td><td>65535</td></tr>
                     </tbody>
                 </table>
                 <div class="note">
@@ -254,6 +253,13 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Enter the VoiceWeaver runtime base URL.</li>
                     <li>Use <strong>Test Connection</strong> so AudioMancer can discover available models and limits.</li>
                     <li>Adjust preview and generation timeouts if your runtime is slow.</li>
+                    <li>
+                        Set <strong>Narration Block Target (s)</strong> if you want shorter same-narrator blocks than
+                        the model allows. Leave it at <strong>Automatic (model limit)</strong> to use the widest safe
+                        block the discovered TTS model supports. This setting can only shorten blocks: the model token
+                        budget always remains the hard limit, because asking for more audio than the model can generate
+                        produces truncated or silent output.
+                    </li>
                     <li>Set <strong>Scene Ambience Placement</strong> to <strong>None</strong>, <strong>Openers and closers</strong>, or <strong>Openers, closers, and scene changes</strong>.</li>
                     <li>Set the Scene Ambience block duration and maximum blocks per sequence. The LLM may use fewer blocks when fewer distinct sound sources are useful.</li>
                     <li>Adjust Scene Ambience guidance, inference steps, and seed for the sound-prompt model. Use <strong>Random</strong> seed when repeatability is not required.</li>
@@ -486,8 +492,16 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Speech Blocks split text chunks into audiobook instructions: narration, dialogue, pause,
                     indication, and optional Scene Ambience sound cues. Narrator-plus-character projects use
-                    speaker-aware AI splitting. Same-narrator projects use a narrator-only AI splitter designed to keep
-                    text within the VoiceWeaver TTS budget.
+                    speaker-aware AI splitting, because deciding who is speaking needs a model.
+                </p>
+                <p>
+                    Same-narrator projects do not call a model at all. Every block gets the narrator voice, so the only
+                    remaining decision is where the block boundaries go, and that is decided from the text structure
+                    itself: whole sentences are packed into evenly sized blocks, a sentence is never cut in half, and a
+                    quotation spanning several sentences is kept together. Generation is therefore instant, repeatable,
+                    and costs no AI tokens; an AI profile is only needed if Scene Ambience is switched on. Use
+                    <strong>TTS Settings &rarr; Narration Block Target</strong> to ask for shorter blocks than the TTS
+                    model budget allows.
                 </p>
                 <p>
                     Review each block. Use edit, insert, delete, re-split, approve, approve-all, character-count,

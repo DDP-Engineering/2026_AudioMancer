@@ -3,18 +3,20 @@ id = "REQ-FUNC-cca67af1-e94c-4791-8bcd-3ea47a9f58ed"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "TTS-budget unit counting shall handle words and compact scripts."
+requirement = "TTS-budget unit counting shall handle spaced words and space-free scripts using a per-script character rate."
 rationale = "Budget-safe pieces require correct unit counts for all scripts."
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Automated: 3 linked pytest selector(s)."
 spec_ref = ""
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_tts_budget_unit_count_handles_words_and_compact_scripts",
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_estimate_budget_units_handles_words_and_compact_scripts",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_stay_word_paced_for_latin_script",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_use_characters_for_space_free_scripts",
 ]
 
 created_on = "2026-07-19T17:30:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-26T15:36:42Z"

@@ -52,6 +52,7 @@ _LLM_PROFILE_DEFAULTS = {
     "supports_structured_output": False,
     "enabled": True,
     "discovered_model_name": "",
+    "discovered_model_names": [],
     "discovered_context_window": None,
     "discovery_succeeded": False,
     "discovery_message": "",
@@ -252,6 +253,20 @@ def _validate_llm_profile(
                 repair_tracker=repair_tracker,
             )
             normalized_profile[field_name] = default_profile[field_name]
+
+    discovered_model_names = normalized_profile.get("discovered_model_names")
+    if not isinstance(discovered_model_names, list):
+        _log_settings_repair(
+            f"Repaired llm_profiles[{profile_index}].discovered_model_names using the default value.",
+            f"llm_profiles[{profile_index}].discovered_model_names",
+            func_name="_validate_llm_profile",
+            repair_tracker=repair_tracker,
+        )
+        normalized_profile["discovered_model_names"] = []
+    else:
+        normalized_profile["discovered_model_names"] = [
+            str(model_name).strip() for model_name in discovered_model_names if str(model_name).strip()
+        ]
 
     if normalized_profile["backend_kind"] not in config.LLM_BACKEND_OPTIONS:
         _log_settings_repair(
@@ -525,6 +540,23 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             )
             normalized_settings[field_name] = defaults[field_name]
 
+    speech_block_target = normalized_settings["speech_block_target_audio_seconds"]
+    if not isinstance(speech_block_target, int | float) or isinstance(speech_block_target, bool):
+        _log_settings_repair(
+            "Repaired invalid 'speech_block_target_audio_seconds' using the default value.",
+            "speech_block_target_audio_seconds",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["speech_block_target_audio_seconds"] = defaults["speech_block_target_audio_seconds"]
+    elif float(speech_block_target) <= 0.0:
+        # Zero and any negative value both mean "follow the TTS model budget".
+        normalized_settings["speech_block_target_audio_seconds"] = 0.0
+    else:
+        normalized_settings["speech_block_target_audio_seconds"] = min(
+            max(float(speech_block_target), float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM)),
+            float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM),
+        )
+
     if (
         not isinstance(normalized_settings["scene_ambience_guidance_scale"], int | float)
         or float(normalized_settings["scene_ambience_guidance_scale"]) <= 0
@@ -771,6 +803,7 @@ def build_default_settings() -> dict[str, Any]:
         "tts_audio_preview_timeout_seconds": config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
         "tts_audio_generation_timeout_seconds": config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
         "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+        "speech_block_target_audio_seconds": config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS,
         "scene_ambience_placement": config.DEFAULT_SCENE_AMBIENCE_PLACEMENT,
         "scene_ambience_duration_seconds": config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
         "scene_ambience_max_blocks_per_sequence": config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE,

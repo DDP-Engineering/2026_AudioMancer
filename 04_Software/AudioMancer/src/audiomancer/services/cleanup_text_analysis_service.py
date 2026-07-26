@@ -43,7 +43,13 @@ _CHAPTER_PATTERNS = (
     re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
 )
 # @brief Sentence-ending punctuation accepted across supported language scripts.
-_SENTENCE_TERMINAL_CHARACTERS = frozenset(".!?\u2026。！？｡．")
+_SENTENCE_TERMINAL_CHARACTERS = frozenset(".!?\u2026。！？｡．؟")
+# @brief Clause-level marks treated as boundaries only when finer spans are requested.
+_CLAUSE_TERMINAL_CHARACTERS = frozenset(";:；：؛")
+# @brief Terminals that end a sentence without requiring any following whitespace.
+# @details CJK punctuation is written flush against the next sentence, so demanding a
+#          trailing space would collapse a whole CJK paragraph into a single span.
+_WIDE_SENTENCE_TERMINAL_CHARACTERS = frozenset("。！？｡．；：")
 # @brief Closing marks ignored while checking whether a line ends a sentence.
 _CLOSING_SENTENCE_MARKS = frozenset("\"'»”’)]}）】》」』〉")
 # @brief Dialogue formatter rule that inserts breaks before spoken text after punctuation.
@@ -149,6 +155,60 @@ def has_sentence_terminal(text: str) -> bool:
     if not normalized:
         return False
     return normalized[-1] in _SENTENCE_TERMINAL_CHARACTERS or normalized.endswith("...")
+
+
+def sentence_spans(text: str, include_clause_marks: bool = False) -> list[str]:
+    """
+    @brief      Split text into ordered, source-preserving sentence spans.
+    @details    Concatenating the returned spans reproduces the input exactly, so callers can
+                slice the source without losing characters. Latin-script terminals require
+                following whitespace, which keeps decimals such as `3.14` intact, while CJK
+                terminals end a span immediately because they carry no trailing space.
+    @param[in]  text Source text fragment.
+    @param[in]  include_clause_marks True to also break on clause marks such as `;` and `:`.
+    @return     Ordered spans whose concatenation equals the input.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    source_text = str(text)
+    if not source_text:
+        return []
+    terminal_characters = _SENTENCE_TERMINAL_CHARACTERS
+    if include_clause_marks:
+        terminal_characters = terminal_characters | _CLAUSE_TERMINAL_CHARACTERS
+
+    spans: list[str] = []
+    span_start = 0
+    index = 0
+    text_length = len(source_text)
+    while index < text_length:
+        if source_text[index] not in terminal_characters:
+            index += 1
+            continue
+        run_end = index
+        while run_end < text_length and source_text[run_end] in terminal_characters:
+            run_end += 1
+        ends_without_space = any(
+            character in _WIDE_SENTENCE_TERMINAL_CHARACTERS for character in source_text[index:run_end]
+        )
+        cursor = run_end
+        while cursor < text_length and source_text[cursor] in _CLOSING_SENTENCE_MARKS:
+            cursor += 1
+        whitespace_end = cursor
+        while whitespace_end < text_length and source_text[whitespace_end].isspace():
+            whitespace_end += 1
+        if not (ends_without_space or whitespace_end > cursor or cursor >= text_length):
+            index = cursor
+            continue
+        boundary = whitespace_end
+        spans.append(source_text[span_start:boundary])
+        span_start = boundary
+        index = boundary
+    if span_start < text_length:
+        spans.append(source_text[span_start:])
+    return [span for span in spans if span]
 
 
 def count_detected_chapters(paragraph_texts: list[str]) -> int:

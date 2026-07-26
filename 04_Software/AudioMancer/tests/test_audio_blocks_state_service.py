@@ -35,6 +35,47 @@ from audiomancer.services import (
 from chunking_test_support import build_chunking_document
 
 
+def test_scene_ambience_audio_selector_follows_the_placement_setting(tmp_path) -> None:
+    """
+    @brief      Verify the Audio Blocks ambience selector defaults from Scene Ambience Placement.
+    @details    Placement owns ambience enablement for the whole pipeline. The selector used to
+                read a settings key that had been deprecated and is now stripped on save, so it
+                was permanently off no matter what TTS Settings asked for.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksAmbienceSelector")
+
+    def _selector_state(placement: str | None) -> bool:
+        """
+        @brief      Build page state for one placement value and read the ambience selector.
+        @param[in]  placement Scene Ambience placement value, or None to omit the key entirely.
+        @return     Resolved selector state.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-26
+        @version    0.1.0
+        """
+        settings_payload = {} if placement is None else {"scene_ambience_placement": placement}
+        state = audio_blocks_state_service.build_audio_blocks_state(
+            project_root,
+            manifest,
+            "en",
+            settings_payload,
+        )
+        return bool(state["scene_ambience_audio_enabled"])
+
+    assert _selector_state("openers_and_closers") is True
+    assert _selector_state("openers_closers_and_scene_changes") is True
+    assert _selector_state("none") is False
+    assert _selector_state(None) is False, "an absent placement means the configured default, which is none"
+    assert _selector_state("not-a-placement") is False, "an invalid placement must not enable generation"
+
+
 def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_source_text(tmp_path) -> None:
     """
     @brief      Verify Audio Blocks page state exposes reconstructed source text, current block details, and progress.

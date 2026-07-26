@@ -22,7 +22,7 @@
 import copy
 from uuid import uuid4
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -45,6 +45,14 @@ from audiomancer.services import ui_state_service
 
 # CONSTANTS
 
+# @brief Characters the model selector reserves room for before it starts eliding.
+_MODEL_COMBO_MINIMUM_CONTENTS_LENGTH = 28
+
+# @brief Hard width ceiling for the model selector, so one long model id cannot widen the dialog.
+# @details Kept above the width the reserved character count implies, so the ceiling never
+#          contradicts the control's own minimum size hint.
+_MODEL_COMBO_MAX_WIDTH_PX = 420
+
 # @brief Default LLM profile scaffold used when the operator creates a new AI profile.
 _DEFAULT_PROFILE_TEMPLATE = {
     "id": "",
@@ -60,6 +68,7 @@ _DEFAULT_PROFILE_TEMPLATE = {
     "supports_structured_output": False,
     "enabled": True,
     "discovered_model_name": "",
+    "discovered_model_names": [],
     "discovered_context_window": None,
     "discovery_succeeded": False,
     "discovery_message": "",
@@ -154,6 +163,15 @@ class AiSettingsPage(QWidget):
 
         self._model_combo = QComboBox(self)
         self._model_combo.setEditable(True)
+        # Model identifiers can be very long. Left at the default policy the combo demands room
+        # for its longest entry, which stretches the whole settings form on the X axis depending
+        # on what the endpoint happens to serve. The popup list still shows full names.
+        self._model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self._model_combo.setMinimumContentsLength(_MODEL_COMBO_MINIMUM_CONTENTS_LENGTH)
+        self._model_combo.setMaximumWidth(_MODEL_COMBO_MAX_WIDTH_PX)
+        # An editable combo only opens its list from the small arrow, so clicking the field
+        # looks like the discovered models are missing. Clicking the text opens the list too.
+        self._model_combo.lineEdit().installEventFilter(self)
         self._model_combo.addItems(
             (
                 "qwen3-8b",
@@ -424,6 +442,9 @@ class AiSettingsPage(QWidget):
             if isinstance(model, dict) and str(model.get("id", "")).strip()
         ]
         self._discovered_model_options[str(current_profile["id"])] = model_options
+        # Persist the discovered ids so the selector still offers real models on the next launch
+        # instead of falling back to placeholder names the endpoint may not serve at all.
+        current_profile["discovered_model_names"] = [model_id for model_id, _label in model_options]
 
         if model_options:
             selected_model_name = str(current_profile.get("model_name", "")).strip()
@@ -480,18 +501,25 @@ class AiSettingsPage(QWidget):
     def _load_model_options_for_profile(self, profile: dict[str, object]) -> None:
         """
         @brief      Reload the model selector choices for one profile.
+        @details    Prefers models discovered in this session, then the ones persisted by the
+                    last successful probe. The built-in names are only a last resort for a
+                    profile that has never been probed, because they are guesses that a given
+                    endpoint may not serve.
         @param[in]  profile Target profile payload.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
+        @date       2026-07-26
+        @version    0.2.0
         """
         selected_model_name = str(profile.get("model_name", "")).strip()
-        discovered_options = self._discovered_model_options.get(
-            str(profile["id"]),
-            [],
-        )
+        discovered_options = self._discovered_model_options.get(str(profile["id"]), [])
+        if not discovered_options:
+            discovered_options = [
+                (str(model_name).strip(), str(model_name).strip())
+                for model_name in profile.get("discovered_model_names", [])
+                if str(model_name).strip()
+            ]
         self._suspend_override_tracking = True
         self._model_combo.blockSignals(True)
         self._model_combo.clear()
@@ -800,6 +828,46 @@ class AiSettingsPage(QWidget):
         self._reload_profile_list()
         self._reload_default_profile_combos()
         self._profile_list.setCurrentRow(max(0, row - 1))
+
+    def eventFilter(self, watched: object, event: object) -> bool:
+        """
+        @brief      Open the model list when the operator clicks the editable model field.
+        @details    An editable combo box normally only drops down from its arrow, so clicking
+                    the field reads as "the discovered models are not there". The field stays
+                    editable, so a model name that was never advertised can still be typed.
+                    The popup opens on button release, and only once the current event has been
+                    delivered: opening it during the press makes the popup grab the mouse, and
+                    the release that follows immediately dismisses it again.
+        @param[in]  watched Object receiving the event.
+        @param[in]  event Event delivered to the object.
+        @return     True when the event was handled locally.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-26
+        @version    0.2.0
+        """
+        if (
+            watched is self._model_combo.lineEdit()
+            and event.type() == QEvent.Type.MouseButtonRelease
+            and event.button() == Qt.MouseButton.LeftButton
+            and self._model_combo.isEnabled()
+            and self._model_combo.count() > 0
+            and not self._model_combo.view().isVisible()
+        ):
+            QTimer.singleShot(0, self._show_model_popup)
+        return super().eventFilter(watched, event)
+
+    def _show_model_popup(self) -> None:
+        """
+        @brief      Drop down the model list unless it is already open.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-26
+        @version    0.1.0
+        """
+        if self._model_combo.isEnabled() and not self._model_combo.view().isVisible():
+            self._model_combo.showPopup()
 
     def apply_language(self, language: str) -> None:
         """

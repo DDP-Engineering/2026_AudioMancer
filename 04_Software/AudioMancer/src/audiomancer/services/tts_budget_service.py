@@ -18,7 +18,11 @@
 
 # IMPORTS
 
+import math
+import re
+
 from audiomancer import config
+from audiomancer.services import cleanup_text_analysis_service
 
 # PUBLIC API
 
@@ -46,6 +50,64 @@ def resolve_cached_tts_budget(discovered_models: list[dict[str, object]] | None)
     return _budget_payload(config.DEFAULT_TTS_NARRATOR_ONLY_TOKEN_BUDGET, "config_default")
 
 
+def resolve_block_target_audio_seconds(settings_payload: dict[str, object] | None) -> float:
+    """
+    @brief      Resolve the operator's preferred narration block duration.
+    @param[in]  settings_payload Optional application settings payload.
+    @return     Target duration in generated audio seconds, or zero to follow the model budget.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return float(config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS)
+    try:
+        target_seconds = float(
+            settings_payload.get(
+                "speech_block_target_audio_seconds",
+                config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS,
+            )
+        )
+    except (TypeError, ValueError):
+        return float(config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS)
+    if target_seconds <= 0.0:
+        return 0.0
+    return min(
+        max(target_seconds, float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM)),
+        float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM),
+    )
+
+
+def apply_block_target_audio_seconds(
+    budget_payload: dict[str, object],
+    settings_payload: dict[str, object] | None,
+) -> dict[str, object]:
+    """
+    @brief      Narrow one TTS budget to the operator's preferred narration block duration.
+    @details    The operator can only ask for shorter blocks. The model budget stays the hard
+                cap, so a preference can never plan more audio than the runtime can generate.
+    @param[in]  budget_payload Resolved model TTS budget payload.
+    @param[in]  settings_payload Optional application settings payload.
+    @return     Budget payload narrowed to the effective block duration.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    target_seconds = resolve_block_target_audio_seconds(settings_payload)
+    model_seconds = float(budget_payload.get("split_audio_seconds_budget", 0.0) or 0.0)
+    effective_seconds = min(target_seconds, model_seconds) if target_seconds > 0.0 else model_seconds
+    narrowed_payload = dict(budget_payload)
+    narrowed_payload["block_target_audio_seconds"] = target_seconds
+    narrowed_payload["effective_block_audio_seconds"] = effective_seconds
+    if effective_seconds <= 0.0 or effective_seconds >= model_seconds:
+        return narrowed_payload
+    narrowed_payload["split_audio_seconds_budget"] = effective_seconds
+    narrowed_payload["safe_word_count"] = max(1, int(effective_seconds * _words_per_audio_second()))
+    return narrowed_payload
+
+
 def estimated_safe_word_count(budget_payload: dict[str, object]) -> int:
     """
     @brief      Return the safe narrator-only word count from one budget payload.
@@ -70,6 +132,37 @@ def estimated_word_count(text: str) -> int:
     @version    0.1.0
     """
     return len([word for word in str(text).split() if word.strip()])
+
+
+def estimate_budget_units(text: str, script_name: str | None = None) -> int:
+    """
+    @brief      Estimate spoken budget units for one text span, in word-equivalents.
+    @details    Word counting is meaningless for scripts written without spaces, so the
+                estimate also derives units from a per-script character rate and keeps the
+                larger of the two. One unit is the text a narrator speaks in
+                `1 / DEFAULT_TTS_WORDS_PER_AUDIO_SECOND` seconds.
+    @param[in]  text Candidate text span.
+    @param[in]  script_name Optional pre-classified dominant writing script.
+    @return     Conservative budget-unit count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    normalized_text = str(text).strip()
+    if not normalized_text:
+        return 0
+    resolved_script = script_name or cleanup_text_analysis_service.classify_text_script(normalized_text)
+    characters_per_second = float(
+        config.DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_BY_SCRIPT.get(
+            resolved_script,
+            config.DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_FALLBACK,
+        )
+    )
+    word_like_count = len(re.findall(r"[^\W_]+(?:['’][^\W_]+)?", normalized_text, flags=re.UNICODE))
+    compact_length = len(re.sub(r"\s+", "", normalized_text))
+    character_units = math.ceil(compact_length * _words_per_audio_second() / characters_per_second)
+    return max(1, word_like_count, character_units)
 
 
 # LOCAL HELPERS

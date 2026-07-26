@@ -66,9 +66,9 @@ _PROFILE_PHASE = "prepare_prompts"
 _GENERATE_PHASE = "generate_blocks"
 _MODE = "tts_generation"
 _PREFERRED_QWEN_CLONE_MODEL_ID = "Qwen3-TTS-12Hz-1.7B-Base"
-_DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN = 0.08
-_SPLIT_SAFETY_FACTOR = 0.85
-_WORDS_PER_AUDIO_SECOND = 2.5
+_DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN = config.DEFAULT_TTS_APPROX_AUDIO_SECONDS_PER_TOKEN
+_SPLIT_SAFETY_FACTOR = config.DEFAULT_TTS_SPLIT_SAFETY_FACTOR
+_WORDS_PER_AUDIO_SECOND = config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND
 _AUDIO_BLOCK_FINGERPRINT_VERSION = 2
 _SPECIAL_BLOCK_STATUS_IMPLEMENTED = "implemented"
 _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED = "not_implemented"
@@ -772,8 +772,6 @@ def start_or_continue_generation(
                 active_block_index,
                 next_split_part_index,
                 started_at,
-                reused_prompt_count,
-                regenerated_prompt_count,
                 next_generation_order_index=active_order_index,
             )
 
