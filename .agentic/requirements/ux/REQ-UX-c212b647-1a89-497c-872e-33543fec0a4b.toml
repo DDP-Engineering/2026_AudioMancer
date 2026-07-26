@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-UX-c212b647-1a89-497c-872e-33543fec0a4b"
+category = "ux"
+status = "Active"
+priority = "Could"
+requirement = "The built-in UI theme catalog shall include an 'Ink and Paper' theme (theme_id 'ink_and_paper', built_in) whose color roles are window_background #EFEFEC, panel_background #FFFFFF, text_primary #1A1A18, text_muted #5C5C57, accent #33475B, border #DCDCD6, warning #8A6100, success #2C6E49, danger #9B2C2C, and disabled #A8A8A2."
+rationale = "Both light themes carry strong colour (system blue, brand gold); Ink and Paper is the restrained typographic surface where colour appears only where it encodes status."
+verification = "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_ink_and_paper_theme_has_expected_roles (passed)"
+spec_ref = ".agentic/specs/ui_theme_catalog.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_ink_and_paper_theme_has_expected_roles",
+]
+
+created_on = "2026-07-26T21:17:38Z"
+last_updated = "2026-07-26T21:28:12Z"

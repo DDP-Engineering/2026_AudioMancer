@@ -13,7 +13,7 @@
          normalization, and resilient collection handling.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-13
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -34,7 +34,7 @@ def test_built_in_themes_validate_and_are_deep_copied() -> None:
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.2.0
+    @version    0.3.0
     """
     built_in_themes = ui_theme_service.built_in_themes()
 
@@ -46,6 +46,10 @@ def test_built_in_themes_validate_and_are_deep_copied() -> None:
         "dark_contrast",
         "audiomancer_dark",
         "audiomancer_parchment",
+        "midnight_studio",
+        "ember_night",
+        "nordic_slate",
+        "ink_and_paper",
     ]
     for theme_payload in built_in_themes:
         validated_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
@@ -349,6 +353,152 @@ def test_default_theme_id_is_audiomancer_dark() -> None:
     resolved_theme = ui_theme_service.theme_by_id("missing_theme", [])
     assert resolved_theme["theme_id"] == "audiomancer_dark"
     assert resolved_theme["built_in"] is True
+
+
+# @brief Expected color roles for the Midnight Studio theme (REQ-UX-4753a4bf, SPEC-THEME-CATALOG-EXT).
+_MIDNIGHT_STUDIO_COLORS = {
+    "window_background": "#12141C",
+    "panel_background": "#1B1F2B",
+    "text_primary": "#E6E9F2",
+    "text_muted": "#A0A7BC",
+    "accent": "#7C6CFF",
+    "border": "#303648",
+    "warning": "#E3B341",
+    "success": "#4CC38A",
+    "danger": "#E5646E",
+    "disabled": "#6A7185",
+}
+
+# @brief Expected color roles for the Ember Night theme (REQ-UX-8150637a, SPEC-THEME-CATALOG-EXT).
+_EMBER_NIGHT_COLORS = {
+    "window_background": "#1A1512",
+    "panel_background": "#241D18",
+    "text_primary": "#F2E7DA",
+    "text_muted": "#B7A392",
+    "accent": "#FF9F45",
+    "border": "#40342B",
+    "warning": "#E8B14A",
+    "success": "#8FB25A",
+    "danger": "#E0685A",
+    "disabled": "#7A6A5C",
+}
+
+# @brief Expected color roles for the Nordic Slate theme (REQ-UX-16b773d7, SPEC-THEME-CATALOG-EXT).
+_NORDIC_SLATE_COLORS = {
+    "window_background": "#2E3440",
+    "panel_background": "#3B4252",
+    "text_primary": "#ECEFF4",
+    "text_muted": "#B4BCCA",
+    "accent": "#88C0D0",
+    "border": "#4C566A",
+    "warning": "#EBCB8B",
+    "success": "#A3BE8C",
+    "danger": "#D4838C",
+    "disabled": "#7B8494",
+}
+
+# @brief Expected color roles for the Ink and Paper theme (REQ-UX-c212b647, SPEC-THEME-CATALOG-EXT).
+_INK_AND_PAPER_COLORS = {
+    "window_background": "#EFEFEC",
+    "panel_background": "#FFFFFF",
+    "text_primary": "#1A1A18",
+    "text_muted": "#5C5C57",
+    "accent": "#33475B",
+    "border": "#DCDCD6",
+    "warning": "#8A6100",
+    "success": "#2C6E49",
+    "danger": "#9B2C2C",
+    "disabled": "#A8A8A2",
+}
+
+
+def test_midnight_studio_theme_has_expected_roles() -> None:
+    """
+    @brief      Verify the Midnight Studio built-in theme exposes its documented color roles.
+    @details    Covers REQ-UX-4753a4bf-c1bd-4f0d-bbb6-6d37c211be11 / SPEC-THEME-CATALOG-EXT.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    midnight_theme = _theme_with_id("midnight_studio")
+
+    assert midnight_theme["built_in"] is True
+    assert midnight_theme["display_name"] == "Midnight Studio"
+    assert midnight_theme["colors"] == _MIDNIGHT_STUDIO_COLORS
+
+
+def test_ember_night_theme_has_expected_roles() -> None:
+    """
+    @brief      Verify the Ember Night built-in theme exposes its documented color roles.
+    @details    Covers REQ-UX-8150637a-c287-48d5-ab3d-86f1dc1c0718 / SPEC-THEME-CATALOG-EXT.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    ember_theme = _theme_with_id("ember_night")
+
+    assert ember_theme["built_in"] is True
+    assert ember_theme["display_name"] == "Ember Night"
+    assert ember_theme["colors"] == _EMBER_NIGHT_COLORS
+
+
+def test_nordic_slate_theme_has_expected_roles() -> None:
+    """
+    @brief      Verify the Nordic Slate built-in theme exposes its documented color roles.
+    @details    Covers REQ-UX-16b773d7-03d3-4e4e-8dc3-38bf765876f9 / SPEC-THEME-CATALOG-EXT. The
+                danger role is the lightened #D4838C rather than Nord's #BF616A, which reaches only
+                2.46:1 against this panel background.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    nordic_theme = _theme_with_id("nordic_slate")
+
+    assert nordic_theme["built_in"] is True
+    assert nordic_theme["display_name"] == "Nordic Slate"
+    assert nordic_theme["colors"] == _NORDIC_SLATE_COLORS
+
+
+def test_ink_and_paper_theme_has_expected_roles() -> None:
+    """
+    @brief      Verify the Ink and Paper built-in theme exposes its documented color roles.
+    @details    Covers REQ-UX-c212b647-1a89-497c-872e-33543fec0a4b / SPEC-THEME-CATALOG-EXT.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    ink_theme = _theme_with_id("ink_and_paper")
+
+    assert ink_theme["built_in"] is True
+    assert ink_theme["display_name"] == "Ink and Paper"
+    assert ink_theme["colors"] == _INK_AND_PAPER_COLORS
+
+
+def test_new_catalog_themes_use_the_default_font_payload() -> None:
+    """
+    @brief      Verify the four added built-in themes keep the default UI and text font payloads.
+    @details    Covers SPEC-THEME-CATALOG-EXT: operator font-size and scale preferences must behave
+                for the added themes exactly as they do for every existing built-in theme.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    default_font = {"family": "", "point_size": None, "scale": "normal"}
+
+    for theme_id in ("midnight_studio", "ember_night", "nordic_slate", "ink_and_paper"):
+        added_theme = _theme_with_id(theme_id)
+        assert added_theme["font"] == default_font
+        assert added_theme["text_font"] == default_font
 
 
 # END OF FILE

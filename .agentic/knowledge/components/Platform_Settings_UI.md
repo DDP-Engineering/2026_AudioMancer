@@ -85,6 +85,16 @@ instructions from the Chunking document.
 - Theme payloads have normalized IDs, display names, font and color fields;
   settings validation normalizes AI profile/default IDs and cached TTS runtime
   discovery data before they are consumed.
+- `_BUILT_IN_THEMES` order is a contract, not presentation trivia: it is the
+  Settings-page theme-combo order, and index 0 is the `classic_light` payload
+  that supplies fallback values for colour roles a custom theme omits. New
+  built-in themes are appended; existing entries are never reordered. The
+  catalog covers brand (`audiomancer_dark`, the default, and
+  `audiomancer_parchment`), system baselines (`classic_light`, `default_dark`),
+  accessibility (`high_contrast`, `dark_contrast`) and reading-comfort
+  registers (`warm_reading`, `midnight_studio`, `ember_night`, `nordic_slate`,
+  `ink_and_paper`). Colour-role values and their contrast basis are recorded in
+  `.agentic/specs/ui_theme_catalog.spec.md`.
 - `translate`, `apply_theme`, `apply_ui_settings`, `load_settings`, and
   `save_settings` are the shared public runtime entry points.
 - `play_completion_beep` is the persisted operator preference for an audible

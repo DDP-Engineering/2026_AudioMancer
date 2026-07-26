@@ -14,7 +14,7 @@
          dependencies.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-13
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -69,7 +69,9 @@ _DEFAULT_FONT: Final[dict[str, object]] = {
     "scale": config.DEFAULT_UI_TEXT_SCALE,
 }
 
-# @brief Built-in theme payloads. Callers receive deep copies through public helpers.
+# @brief Built-in theme payloads in Settings-page order; index 0 is the classic-light fallback.
+#        Callers receive deep copies through public helpers. Append new themes rather than
+#        reordering, so persisted operator selections keep their position in the theme combo.
 _BUILT_IN_THEMES: Final[tuple[dict[str, object], ...]] = (
     {
         "schema_version": THEME_SCHEMA_VERSION,
@@ -209,6 +211,88 @@ _BUILT_IN_THEMES: Final[tuple[dict[str, object], ...]] = (
             "success": "#2F7A4E",
             "danger": "#A93C36",
             "disabled": "#A99F8B",
+        },
+    },
+    {
+        "schema_version": THEME_SCHEMA_VERSION,
+        "theme_id": "midnight_studio",
+        "display_name": "Midnight Studio",
+        "built_in": True,
+        "font": copy.deepcopy(_DEFAULT_FONT),
+        "text_font": copy.deepcopy(_DEFAULT_FONT),
+        "colors": {
+            "window_background": "#12141C",
+            "panel_background": "#1B1F2B",
+            "text_primary": "#E6E9F2",
+            "text_muted": "#A0A7BC",
+            "accent": "#7C6CFF",
+            "border": "#303648",
+            "warning": "#E3B341",
+            "success": "#4CC38A",
+            "danger": "#E5646E",
+            "disabled": "#6A7185",
+        },
+    },
+    {
+        "schema_version": THEME_SCHEMA_VERSION,
+        "theme_id": "ember_night",
+        "display_name": "Ember Night",
+        "built_in": True,
+        "font": copy.deepcopy(_DEFAULT_FONT),
+        "text_font": copy.deepcopy(_DEFAULT_FONT),
+        "colors": {
+            "window_background": "#1A1512",
+            "panel_background": "#241D18",
+            "text_primary": "#F2E7DA",
+            "text_muted": "#B7A392",
+            "accent": "#FF9F45",
+            "border": "#40342B",
+            "warning": "#E8B14A",
+            # Olive rather than a cool green, so the status row stays inside the warm palette.
+            "success": "#8FB25A",
+            "danger": "#E0685A",
+            "disabled": "#7A6A5C",
+        },
+    },
+    {
+        "schema_version": THEME_SCHEMA_VERSION,
+        "theme_id": "nordic_slate",
+        "display_name": "Nordic Slate",
+        "built_in": True,
+        "font": copy.deepcopy(_DEFAULT_FONT),
+        "text_font": copy.deepcopy(_DEFAULT_FONT),
+        "colors": {
+            "window_background": "#2E3440",
+            "panel_background": "#3B4252",
+            "text_primary": "#ECEFF4",
+            "text_muted": "#B4BCCA",
+            "accent": "#88C0D0",
+            "border": "#4C566A",
+            "warning": "#EBCB8B",
+            "success": "#A3BE8C",
+            # Lightened from the Nord aurora red #BF616A, which reaches only 2.46:1 on this panel.
+            "danger": "#D4838C",
+            "disabled": "#7B8494",
+        },
+    },
+    {
+        "schema_version": THEME_SCHEMA_VERSION,
+        "theme_id": "ink_and_paper",
+        "display_name": "Ink and Paper",
+        "built_in": True,
+        "font": copy.deepcopy(_DEFAULT_FONT),
+        "text_font": copy.deepcopy(_DEFAULT_FONT),
+        "colors": {
+            "window_background": "#EFEFEC",
+            "panel_background": "#FFFFFF",
+            "text_primary": "#1A1A18",
+            "text_muted": "#5C5C57",
+            "accent": "#33475B",
+            "border": "#DCDCD6",
+            "warning": "#8A6100",
+            "success": "#2C6E49",
+            "danger": "#9B2C2C",
+            "disabled": "#A8A8A2",
         },
     },
 )

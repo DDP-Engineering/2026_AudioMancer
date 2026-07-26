@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-UX-4753a4bf-c1bd-4f0d-bbb6-6d37c211be11"
+category = "ux"
+status = "Active"
+priority = "Could"
+requirement = "The built-in UI theme catalog shall include a 'Midnight Studio' theme (theme_id 'midnight_studio', built_in) whose color roles are window_background #12141C, panel_background #1B1F2B, text_primary #E6E9F2, text_muted #A0A7BC, accent #7C6CFF, border #303648, warning #E3B341, success #4CC38A, danger #E5646E, and disabled #6A7185."
+rationale = "Operators who want a dark UI without AudioMancer brand identity had only the generic Default Dark; Midnight Studio provides a cool navy-indigo workstation register with a violet accent."
+verification = "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_midnight_studio_theme_has_expected_roles (passed)"
+spec_ref = ".agentic/specs/ui_theme_catalog.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_midnight_studio_theme_has_expected_roles",
+]
+
+created_on = "2026-07-26T21:17:37Z"
+last_updated = "2026-07-26T21:28:11Z"

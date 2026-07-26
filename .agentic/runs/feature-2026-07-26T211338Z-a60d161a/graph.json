@@ -1,0 +1,218 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "built_in_themes() returns the seven existing themes followed by midnight_studio, ember_night, nordic_slate, ink_and_paper, all with built_in True and schema-valid color roles",
+      "Each new theme has one focused test asserting its exact ten color roles and display name, linked to a new Active UX requirement snapshot",
+      "default_theme_id() still returns audiomancer_dark and existing theme tests stay green",
+      "gates pass: uv run --directory 04_Software/AudioMancer pytest -q and uv run --directory 04_Software/AudioMancer ruff check ."
+    ],
+    "assumptions": [
+      "All four proposed themes are implemented, not a subset.",
+      "New themes are appended after audiomancer_parchment so existing catalog order and combo-box indices for current themes are unchanged.",
+      "The default theme stays audiomancer_dark; no settings migration is needed because an unknown selected_theme_id already self-heals to the default.",
+      "settings_page builds the theme combo by iterating built_in_themes(), so no UI code change is required."
+    ],
+    "created_at": "2026-07-26T21:15:04+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+      "04_Software/AudioMancer/tests/test_ui_theme_service.py"
+    ],
+    "reason": "Purely additive presentation data behind an already-validated schema, no persisted-format or default-behavior change, and the Settings UI enumerates the catalog dynamically.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py, 04_Software/AudioMancer/tests/test_ui_theme_service.py, .agentic/requirements/ux/, .agentic/knowledge/components/Platform_Settings_UI.md"
+    ],
+    "source": "Chat 2026-07-27: user reviewed four proposed themes and asked to start a run and implement them",
+    "understanding": "Append four new built-in UI themes to the AudioMancer theme catalog - Midnight Studio (cool dark), Ember Night (warm low-blue-light dark), Nordic Slate (desaturated dark), and Ink and Paper (near-monochrome light) - as pure data entries in _BUILT_IN_THEMES, with no schema, default-theme, or Settings-page changes."
+  },
+  "change_units": [],
+  "checks": [
+    {
+      "cites_requirement": [],
+      "cites_spec": [
+        "SPEC-THEME-CATALOG-EXT"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_built_in_themes_validate_and_are_deep_copied",
+      "green_evidence": null,
+      "id": "CHK-THEME-CATALOG-ORDER",
+      "level": "unit",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": null,
+      "state": "red"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-4753a4bf-c1bd-4f0d-bbb6-6d37c211be11"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-CATALOG-EXT"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_midnight_studio_theme_has_expected_roles",
+      "green_evidence": null,
+      "id": "CHK-THEME-MIDNIGHT-STUDIO",
+      "level": "unit",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": null,
+      "state": "red"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-8150637a-c287-48d5-ab3d-86f1dc1c0718"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-CATALOG-EXT"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_ember_night_theme_has_expected_roles",
+      "green_evidence": null,
+      "id": "CHK-THEME-EMBER-NIGHT",
+      "level": "unit",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": null,
+      "state": "red"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-16b773d7-03d3-4e4e-8dc3-38bf765876f9"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-CATALOG-EXT"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_nordic_slate_theme_has_expected_roles",
+      "green_evidence": null,
+      "id": "CHK-THEME-NORDIC-SLATE",
+      "level": "unit",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": null,
+      "state": "red"
+    },
+    {
+      "cites_requirement": [
+        "REQ-UX-c212b647-1a89-497c-872e-33543fec0a4b"
+      ],
+      "cites_spec": [
+        "SPEC-THEME-CATALOG-EXT"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_ink_and_paper_theme_has_expected_roles",
+      "green_evidence": null,
+      "id": "CHK-THEME-INK-AND-PAPER",
+      "level": "unit",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": null,
+      "state": "red"
+    },
+    {
+      "cites_requirement": [],
+      "cites_spec": [
+        "SPEC-THEME-CATALOG-EXT"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_new_catalog_themes_use_the_default_font_payload",
+      "green_evidence": null,
+      "id": "CHK-THEME-CATALOG-FONTS",
+      "level": "unit",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "red_evidence": null,
+      "state": "red"
+    }
+  ],
+  "decisions": [],
+  "evidence": [
+    {
+      "command": null,
+      "created_at": "2026-07-26T21:17:53+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "decision",
+      "path": ".agentic/specs/ui_theme_catalog.spec.md",
+      "result": "info",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Palettes contrast-checked with the WCAG 2.1 relative-luminance formula. All four pass 4.5:1 for text_primary and text_muted on their surfaces and for window_background as label text on an accent fill, and 3.0:1 for accent/warning/success/danger on panel_background. Nord's canonical aurora red #BF616A reached only 2.46:1 on #3B4252, so Nordic Slate uses the lightened #D4838C (3.56:1).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py",
+      "created_at": "2026-07-26T21:19:09+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Check stage red baseline: 6 failed, 12 passed. The four new theme tests and the font-payload test raise StopIteration because no built-in theme carries the new ids, and the catalog-order assertion reports the four ids as missing.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py",
+      "created_at": "2026-07-26T21:28:10+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_ui_theme_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused theme module green after implementation: 18 passed. Covers the catalog-order check, the four new per-theme colour-role checks, and the shared font-payload check.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check src/audiomancer/services/ui_theme_service.py tests/test_ui_theme_service.py",
+      "created_at": "2026-07-26T21:28:11+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "ruff check clean on both changed Python files.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-26T21:28:11+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "note",
+      "path": null,
+      "result": "info",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Full-suite gate (uv run --directory 04_Software/AudioMancer pytest -q) was interrupted by the operator at roughly 36 percent, all green up to that point, so the run is not yet cleared for delivery. Operator is verifying the new themes manually in the application.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-26T21:13:38+00:00",
+    "id": "I-0001",
+    "kind": "feature",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py"
+    ],
+    "statement": "Add four new built-in UI themes (Midnight Studio, Ember Night, Nordic Slate, Ink and Paper) to the AudioMancer theme catalog",
+    "status": "draft"
+  },
+  "run_id": "feature-2026-07-26T211338Z-a60d161a",
+  "spec_items": [
+    {
+      "examples": [
+        "theme_by_id('nordic_slate', []) returns the Nordic Slate payload with built_in True; theme_by_id('missing_theme', []) still returns audiomancer_dark."
+      ],
+      "id": "SPEC-THEME-CATALOG-EXT",
+      "statement": "built_in_themes() returns the seven pre-existing themes in their original order followed by midnight_studio, ember_night, nordic_slate and ink_and_paper, each built_in with the exact ten color roles recorded in .agentic/specs/ui_theme_catalog.spec.md, while default_theme_id() still resolves audiomancer_dark.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "implementation"
+}
