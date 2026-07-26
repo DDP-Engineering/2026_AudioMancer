@@ -717,16 +717,44 @@ DEFAULT_TTS_VOICE_ASSIGNMENT_MODE = "narrator_and_characters"
 TTS_VOICE_ASSIGNMENT_MODE_OPTIONS = ("same_narrator", "narrator_and_characters")
 
 # @brief Conservative fallback max_new_tokens budget used before the TTS model reports one.
-DEFAULT_TTS_NARRATOR_ONLY_TOKEN_BUDGET = 2048
+# @details Matches the VoiceWeaver clone-model cap, so an unprobed runtime is never planned
+#          for more audio than a clone model can actually generate.
+DEFAULT_TTS_NARRATOR_ONLY_TOKEN_BUDGET = 512
 
 # @brief Approximate generated-audio seconds represented by one VoiceWeaver max_new_tokens unit.
 DEFAULT_TTS_APPROX_AUDIO_SECONDS_PER_TOKEN = 0.08
 
-# @brief Safety factor applied when asking AI to split narrator-only Speech Blocks.
-DEFAULT_TTS_SPLIT_SAFETY_FACTOR = 0.85
+# @brief Safety factor applied when splitting narrator-only Speech Blocks.
+# @details Kept below the VoiceWeaver clone duration warning ratio so a fully packed block
+#          does not land on the runtime warning threshold.
+DEFAULT_TTS_SPLIT_SAFETY_FACTOR = 0.80
 
 # @brief Approximate spoken-word rate used to convert audio token budget into text guidance.
 DEFAULT_TTS_WORDS_PER_AUDIO_SECOND = 2.5
+
+# @brief Approximate spoken characters per audio second, per dominant writing script.
+# @details Space-separated scripts are word-paced; CJK and Hangul are character-paced, so a
+#          word count is meaningless there and the character rate decides the budget.
+DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_BY_SCRIPT = {
+    "latin": 14.0,
+    "cyrillic": 14.0,
+    "cjk": 6.0,
+    "hangul": 7.0,
+}
+
+# @brief Character rate used when the dominant writing script cannot be classified.
+DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_FALLBACK = 14.0
+
+# @brief Operator target for one narration block, in generated audio seconds.
+# @details Zero means "follow the TTS model budget", which produces the widest safe blocks.
+#          Any positive value only ever shortens blocks; the model budget stays the hard cap.
+DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS = 0.0
+
+# @brief Shortest operator-selectable narration block duration, in generated audio seconds.
+SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM = 5.0
+
+# @brief Longest operator-selectable narration block duration, in generated audio seconds.
+SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM = 300.0
 
 # @brief Default Scene Ambience Speech Blocks generation enablement.
 DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED = False
@@ -755,9 +783,6 @@ DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS = 100
 
 # @brief Default Stable Audio seed for Scene Ambience sound generation; None lets the runtime randomize.
 DEFAULT_SCENE_AMBIENCE_SEED = None
-
-# @brief Default Audio Blocks sound-generation enablement for Scene Ambience blocks.
-DEFAULT_SCENE_AMBIENCE_AUDIO_GENERATION_ENABLED = False
 
 # AI Workflow Defaults
 # @brief Default maximum cleanup-unit count sent in one AI cleanup request window.

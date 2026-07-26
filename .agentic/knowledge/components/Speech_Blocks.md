@@ -16,6 +16,14 @@ Converts approved text and voice context into an ordered, operator-reviewable sp
 
 The orchestration service resolves source chunks and voice assignments, assembles one authoritative `speech_blocks.json` document (source identity, AI/budget metadata, resume checkpoint, and blocks), and coordinates reset/approval transitions. Normalization and text-split services provide deterministic content/speaker/identifier handling and size-aware splits. The legacy report and operation-state shapes are compatibility projections recomputed from that single document, so `load_speech_blocks_report()` and `load_operation_state()` keep their signatures. The controller and page route operations, guarded edits, selection, warnings, and review actions through the shared runner.
 
+The two narration modes take different paths. `narrator_and_characters` sends
+budgeted source segments to the model under the `direct_blocks` contract and
+realigns the returned text to the source, so uncovered spans become narrator
+review rows. `same_narrator` calls no model at all: because every block gets the
+narrator voice, the only remaining decision is structural, and
+`speech_blocks_narrator_split_service` makes it by packing whole sentences into
+evenly sized blocks under the `deterministic_narrator_blocks` contract.
+
 ## 4. Dependencies
 
 - Internal: canonical/translated chunk artifacts, Character Discovery/Voice Profiles, TTS budget service, operation/workflow-impact runtime, persistence/logging services, and Qt/shared operation runner.
@@ -43,6 +51,21 @@ otherwise it uses the original Chunking document text through its shared reader.
   chunk without removing that source chunk. Generated output remains
   `review_pending` until every persisted block is approved, and resumptions
   require a compatible source snapshot and response-contract marker.
+- `same_narrator` segmentation is deterministic and total: concatenating the
+  `source_text` of a chunk's blocks reproduces that chunk character for
+  character, and the service raises rather than persisting a lossy plan. A
+  sentence is never cut, and a boundary is never placed while a quotation is
+  open, so a multi-sentence quotation stays in one block. A single sentence that
+  alone exceeds the TTS budget is kept whole and flagged `tts_budget_exceeded`,
+  because TTS Audio Blocks splits it again at generation time against the real
+  loaded-model budget.
+- Chunking records how confident Text Cleanup was about a paragraph rebuilt
+  across a page break. Speech Blocks carries that verdict through, so a chunk
+  with a non-`strong` `cleanup_boundary_confidence` marks its blocks
+  `weak_source_boundary` and `needs_review` instead of hiding the uncertainty.
+- The retired `narrator_boundary_ids` contract still reads, so an old document
+  is not lost, but it is not resumable: continuing it would leave one document
+  holding two different segmentations.
 
 ## 7. Workflow Integration
 
@@ -57,6 +80,7 @@ Open Speech Blocks after selecting voices, generate or resume the block plan, in
 Primary automated coverage:
 
 - `tests/test_speech_blocks_service.py`
+- `tests/test_speech_blocks_narrator_split_service.py`
 - `tests/test_speech_blocks_normalization_service.py`
 - `tests/test_speech_blocks_text_split_service.py`
 - `tests/test_speech_blocks_report_state_service.py`

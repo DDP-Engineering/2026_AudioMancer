@@ -22,7 +22,7 @@ from dataclasses import dataclass
 import re
 
 from audiomancer import config
-from audiomancer.services import tts_budget_service
+from audiomancer.services import cleanup_text_analysis_service, tts_budget_service
 from audiomancer.services.logging_service import get_component_logger
 
 # CONSTANTS
@@ -103,6 +103,9 @@ def speech_block_warning_reason(warning_flag: str) -> str:
         ),
         "atomic_unit_selection_invalid": ("Model atomic unit selection was invalid and fell back to narrator."),
         "needs_review": "Speech Block needs operator review.",
+        "weak_source_boundary": (
+            "Source paragraph was repaired across a page break during cleanup, so its boundaries are uncertain."
+        ),
         "source_gap": "Source text was not covered by the model response and was preserved for review.",
         "unknown_speaker": "Model returned a speaker that is not in the allowed speaker catalog.",
         "unmatched_model_text": "Model text could not be aligned to the source and was not trusted.",
@@ -1101,12 +1104,14 @@ def warning_entries_from_ai_blocks(
 def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> dict[str, object]:
     """
     @brief      Resolve TTS budget metadata for narrator-only splitting.
+    @details    The model budget is the hard cap; the operator's preferred block duration can
+                only narrow it further.
     @param[in]  settings_payload Optional application settings payload.
     @return     TTS budget payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
     discovered_models = []
     if isinstance(settings_payload, dict):
@@ -1115,7 +1120,10 @@ def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> 
             for model in settings_payload.get("tts_runtime_discovered_models", [])
             if isinstance(model, dict)
         ]
-    return tts_budget_service.resolve_cached_tts_budget(discovered_models)
+    return tts_budget_service.apply_block_target_audio_seconds(
+        tts_budget_service.resolve_cached_tts_budget(discovered_models),
+        settings_payload,
+    )
 
 
 def normalize_direct_block_chunk_blocks(
@@ -1659,17 +1667,11 @@ def split_sentence_spans(text: str) -> list[str]:
     @version    0.1.0
     """
     normalized_text = str(text).strip()
-    sentence_end_pattern = r"[.!?;:。！？；：؟؛…]+[\"'”’»)\]]*(?=\s+|$)"
-    sentence_parts: list[str] = []
-    cursor = 0
-    for match in re.finditer(sentence_end_pattern, normalized_text):
-        sentence_part = normalized_text[cursor : match.end()].strip()
-        if sentence_part:
-            sentence_parts.append(sentence_part)
-        cursor = match.end()
-    tail_part = normalized_text[cursor:].strip()
-    if tail_part:
-        sentence_parts.append(tail_part)
+    sentence_parts = [
+        span.strip()
+        for span in cleanup_text_analysis_service.sentence_spans(normalized_text, include_clause_marks=True)
+        if span.strip()
+    ]
     return sentence_parts if len(sentence_parts) > 1 else [normalized_text]
 
 
@@ -1788,12 +1790,7 @@ def tts_budget_unit_count(text: str) -> int:
     @date       2026-04-29
     @version    0.1.0
     """
-    normalized_text = str(text).strip()
-    if not normalized_text:
-        return 0
-    word_like_count = len(re.findall(r"[^\W_]+(?:['’][^\W_]+)?", normalized_text, flags=re.UNICODE))
-    compact_length_units = (len(re.sub(r"\s+", "", normalized_text)) + 5) // 6
-    return max(1, word_like_count, compact_length_units)
+    return tts_budget_service.estimate_budget_units(text)
 
 
 def resolve_speaker_entry(

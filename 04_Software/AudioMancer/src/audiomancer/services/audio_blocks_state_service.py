@@ -183,21 +183,24 @@ def _can_start_or_continue_generation(
 def _scene_ambience_audio_enabled(settings_payload: dict[str, object] | None) -> bool:
     """
     @brief      Resolve the default Audio Blocks scene-ambience audio selector state.
+    @details    Scene Ambience placement owns enablement for the whole pipeline, so the Audio
+                Blocks selector starts on whenever TTS Settings asks for ambience blocks at all.
+                The operator can still switch it off for one run without changing settings.
     @param[in]  settings_payload Persisted application settings payload.
     @return     True when Scene Ambience audio generation is enabled by default.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
     if not isinstance(settings_payload, dict):
-        return config.DEFAULT_SCENE_AMBIENCE_AUDIO_GENERATION_ENABLED
-    return bool(
-        settings_payload.get(
-            "scene_ambience_audio_generation_enabled",
-            config.DEFAULT_SCENE_AMBIENCE_AUDIO_GENERATION_ENABLED,
-        )
-    )
+        return False
+    placement = str(
+        settings_payload.get("scene_ambience_placement", config.DEFAULT_SCENE_AMBIENCE_PLACEMENT)
+    ).strip()
+    if placement not in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
+        placement = config.DEFAULT_SCENE_AMBIENCE_PLACEMENT
+    return placement != "none"
 
 
 def build_audio_blocks_notes(

@@ -13,15 +13,15 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_continues_from_unfinished_direct_segment",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_same_narrator_resume_depends_on_the_recorded_response_contract",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_accepts_changed_scene_ambience_settings",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_continues_from_unfinished_direct_segment",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_ignores_source_chunk_count_without_processed_count",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_restarts_previous_full_cast_state",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_preserves_same_narrator_boundary_state",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_resumes_with_current_selected_profile",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_resumes_after_partial_review_approval",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_resumes_with_current_selected_profile",
 ]
 
 created_on = "2026-07-19T16:32:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-26T15:36:42Z"

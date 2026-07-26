@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- New **Narration Block Target (s)** setting under TTS Settings → Runtime Audio
+  Limits. It sets the preferred spoken length of one same-narrator block. The
+  TTS model budget stays the hard limit, so the setting can only make blocks
+  shorter, never longer than the runtime can generate. Leave it at
+  *Automatic (model limit)* to keep the previous behaviour.
+
 - The **Play completion beep** setting now does something. It was persisted and
   editable in Settings but had no runtime consumer, so the checkbox was inert.
   A long operation that ends on its own now plays one beep, whether it succeeded
@@ -23,6 +29,27 @@ All notable changes to this project will be documented in this file.
   standard library, with no third-party dependency.
 
 ### Changed
+
+- **Speech Blocks in same-narrator mode is now split deterministically and no
+  longer calls the AI model.** Because every block gets the narrator voice, the
+  only decision left was where to put the boundaries — a structural question the
+  model was being paid to guess at, and often got wrong by cutting mid-sentence.
+  Blocks are now packed from whole sentences, sized evenly rather than filled to
+  the ceiling, and a quotation spanning several sentences is kept in one block.
+  The result is reproducible, instant, and costs no tokens. A sentence too long
+  for the TTS budget is kept whole and flagged; TTS Audio Blocks already splits
+  it at generation time against the real model budget.
+  *Projects mid-run in same-narrator mode restart their Speech Blocks from the
+  first chunk, because mixing two segmentations in one document is not safe.
+  Existing WAVs are not deleted, but blocks are renumbered, so previously
+  generated audio for that project is regenerated.*
+- Speech Blocks now carries the Text Cleanup boundary verdict through to the
+  operator. A paragraph that cleanup rebuilt across a page break produces blocks
+  flagged `weak_source_boundary` / `needs_review` instead of silently discarding
+  that uncertainty, which is the case where a sentence split by a page separator
+  can still be wrong.
+- Same-narrator generation no longer requires an enabled AI profile unless Scene
+  Ambience is switched on.
 
 - Audio Assembly no longer accepts 8-bit PCM WAV sources; supported sample
   widths are now 2, 3 and 4 bytes. 8-bit was listed as supported while every
@@ -50,6 +77,59 @@ All notable changes to this project will be documented in this file.
   shared runner does not.
 
 ### Fixed
+
+- The **Scene Ambience Audio** selector on the Audio Blocks page now follows the
+  Scene Ambience Placement setting: it starts **on** whenever TTS Settings asks
+  for ambience blocks, and off when placement is *None*. It was reading a
+  settings key that had been deprecated and is stripped on every save, so it was
+  permanently off no matter what TTS Settings said. It stays a per-run override,
+  so it can still be switched off without changing settings.
+- Clicking the **Model Name** field in AI Settings now drops down the discovered
+  models. The field is editable, and an editable combo box only opens from its
+  small arrow, so clicking the text looked like the models found at the endpoint
+  were simply not there. Typing a model name the endpoint does not advertise
+  still works.
+- **AI Settings** now remembers the models discovered at the endpoint. The list
+  lived only in memory, so after a restart the Model Name selector offered three
+  built-in placeholder names — which a given endpoint may not serve at all —
+  while hiding the models that were actually available. A profile that has never
+  been probed still shows the built-in suggestions.
+- The AI Settings form no longer stretches sideways when an endpoint reports a
+  long model identifier. The selector demanded room for its longest entry, so
+  the dialog width depended on which models happened to be discovered; the full
+  names are still shown in the dropdown list.
+- The narration block target and Scene Ambience seed controls in TTS Settings no
+  longer clip their text.
+
+- Audio generation no longer crashes with `_persist_split_checkpoint() got
+  multiple values for argument 'next_generation_order_index'` partway through a
+  run. A block too long for the loaded TTS model is generated in parts, and the
+  call that saves progress after each part still passed two arguments that the
+  single-document refactor had removed from it. Only long blocks reach that
+  path, which is why short-block runs finished normally.
+
+- The sentence-boundary detector used for Speech Blocks segmentation had been
+  saved through a double character-encoding at some point, so its punctuation
+  set was garbage. `…` had stopped ending a sentence, the CJK and Arabic marks it
+  was supposed to contain were gone entirely, and stray letters including the
+  Romanian `â` had become sentence terminators. Sentence-aware splitting works
+  correctly again in every supported language.
+- Sentences in Chinese and Japanese are now detected at all. `。` is written
+  flush against the next sentence, and the detector required a following space,
+  so an entire CJK paragraph was treated as one sentence.
+- The fallback TTS budget used before the VoiceWeaver runtime has been probed was
+  2048 codec tokens, but VoiceWeaver caps voice-clone models at 512. AudioMancer
+  was planning roughly 139 seconds of speech per block for a model that can
+  generate about 42, so blocks were silently truncated. The fallback now matches
+  the clone cap, and the split safety factor sits below VoiceWeaver's own
+  warning threshold instead of exactly on it.
+- Audio Blocks kept its own hardcoded copies of the split safety factor and
+  speech-rate constants, so it did not follow the configured values and could
+  disagree with the budget Speech Blocks had planned against.
+- Text budgeting no longer assumes every language separates words with spaces.
+  Chinese, Japanese and Korean are now sized by a per-script character rate;
+  previously their blocks were estimated as a handful of "words" and came out
+  several times too long.
 
 - Opening a finished project no longer offers **Repair Project** on every open.
   Persisting an operation summary could move `current_stage` backwards while the

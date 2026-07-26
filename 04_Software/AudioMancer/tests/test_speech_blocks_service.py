@@ -29,6 +29,7 @@ from audiomancer import config
 from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
+    chunking_document_service,
     project_workspace_service,
     prompt_template_service,
     speech_blocks_service,
@@ -1117,16 +1118,30 @@ def test_speech_blocks_resume_restarts_previous_full_cast_state(tmp_path) -> Non
     assert restored == ([], [], 0)
 
 
-def test_speech_blocks_resume_preserves_same_narrator_boundary_state(tmp_path) -> None:
+@pytest.mark.parametrize(
+    ("response_contract", "expected_next_chunk_index"),
+    [
+        ("deterministic_narrator_blocks", 1),
+        ("narrator_boundary_ids", 0),
+    ],
+)
+def test_same_narrator_resume_depends_on_the_recorded_response_contract(
+    tmp_path,
+    response_contract: str,
+    expected_next_chunk_index: int,
+) -> None:
     """
-    @brief      Verify same-narrator boundary-ID partial state remains resumable.
-    @details    Covers SBCON-004 and REQ-FUNC-041.
+    @brief      Verify only current-contract same-narrator state resumes, retired state restarts.
+    @details    Covers SBCON-004 and REQ-FUNC-041. Resuming a retired narrator-boundary run
+                would leave one document holding two different segmentations.
     @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  response_contract Persisted response contract under test.
+    @param[in]  expected_next_chunk_index Chunk index generation must continue from.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSameNarratorResume")
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
@@ -1141,13 +1156,13 @@ def test_speech_blocks_resume_preserves_same_narrator_boundary_state(tmp_path) -
                 "source_snapshot_fingerprint": input_fingerprint,
                 "source_language": "en",
                 "voice_assignment_mode": "same_narrator",
-                "speech_blocks_response_contract": "narrator_boundary_ids",
+                "speech_blocks_response_contract": response_contract,
             },
             "resume_checkpoint": {
                 "next_chunk_index": 1,
                 "source_snapshot_fingerprint": input_fingerprint,
                 "source_language": "en",
-                "speech_blocks_response_contract": "narrator_boundary_ids",
+                "speech_blocks_response_contract": response_contract,
             },
         },
         None,
@@ -1157,7 +1172,37 @@ def test_speech_blocks_resume_preserves_same_narrator_boundary_state(tmp_path) -
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], [], 1)
+    assert restored == ([], [], expected_next_chunk_index)
+
+
+def test_legacy_narrator_boundary_project_regenerates_without_error(tmp_path) -> None:
+    """
+    @brief      Verify a project left on the retired contract regenerates cleanly after upgrade.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksLegacyContract")
+    manifest["original_language"] = "en"
+    manifest["voice_assignment_mode"] = "same_narrator"
+    manifest["project_options_locked"] = True
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
+
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    document["response_contract"] = "narrator_boundary_ids"
+    document["status"] = "running"
+    speech_blocks_service.write_speech_blocks_document(project_root, document)
+
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
+
+    assert report["total_block_count"] > 0
+    reloaded = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert reloaded["response_contract"] == "deterministic_narrator_blocks"
 
 
 def test_insert_speech_block_appends_after_selected_block(tmp_path) -> None:
@@ -2539,16 +2584,18 @@ def test_start_generation_preserves_french_dash_and_guillemet_source_spans(monke
     assert report["total_block_count"] == 5
 
 
-def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatch, tmp_path) -> None:
+def test_start_generation_splits_same_narrator_without_calling_a_model(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify same-narrator projects use the narrator-only prompt pair and force narrator blocks.
+    @brief      Verify same-narrator projects segment deterministically and never reach a model.
+    @details    Covers the deterministic narrator contract: no prompt is rendered, no provider
+                request is issued, every block is narrator narration, and no tokens are spent.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
+    @date       2026-07-26
+    @version    0.3.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorOnly")
     manifest["original_language"] = "en"
@@ -2558,57 +2605,112 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
     manifest["project_options_locked"] = True
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    validated_prompt_names = []
-    rendered_prompts = []
-    monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda names: validated_prompt_names.extend(names),
-    )
 
-    def _render_prompt(name, variables):
+    def _fail_on_model_call(*_args, **_kwargs):
         """
-        @brief      Provide the render prompt test helper.
+        @brief      Fail the test if same-narrator generation contacts a model.
         @return     None.
-        @exception  None
+        @exception  AssertionError Always raised.
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
+        @date       2026-07-26
         @version    0.1.0
         """
-        rendered_prompts.append((name, dict(variables)))
-        return f"prompt {name}"
+        raise AssertionError("same-narrator generation must not call the model")
 
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "render_prompt", _render_prompt)
-    responses = [
-        {
-            "payload": {
-                "boundary_ids": ["b0002"],
-            },
-            "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10, "usage_available": True},
-        },
-        {
-            "payload": {
-                "boundary_ids": ["b0002"],
-            },
-            "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10, "usage_available": True},
-        },
-    ]
-    monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: responses.pop(0),
-    )
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fail_on_model_call)
 
-    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
-    assert validated_prompt_names == ["speech_blocks_narrator_only_system", "speech_blocks_narrator_only_user"]
-    assert rendered_prompts[1][0] == "speech_blocks_narrator_only_user"
-    assert rendered_prompts[1][1]["split_boundary_candidates_json"]
-    assert rendered_prompts[1][1]["max_tts_tokens"]
     assert {block["speaker_id"] for block in speech_blocks} == {"narrator"}
     assert {block["content_kind"] for block in speech_blocks} == {speech_blocks_service.CONTENT_KIND_NARRATION}
     assert speech_blocks[0]["text"] == 'Narration. "Hello there."'
+    assert report["token_usage"]["usage_available"] is False
+    assert not report["token_usage"]["total_tokens"]
+
+
+def test_start_generation_allows_same_narrator_without_an_ai_profile(tmp_path) -> None:
+    """
+    @brief      Verify deterministic segmentation runs with no AI profile when ambience is off.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorNoProfile")
+    manifest["original_language"] = "en"
+    manifest["voice_assignment_mode"] = "same_narrator"
+    manifest["project_options_locked"] = True
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
+
+    assert report["total_block_count"] > 0
+    assert speech_blocks_service.load_speech_blocks(project_root)
+
+
+def test_same_narrator_blocks_inherit_uncertain_cleanup_boundaries(tmp_path) -> None:
+    """
+    @brief      Verify a paragraph repaired across a page break marks its blocks for review.
+    @details    Cleanup already decides whether a paragraph was stitched back together across a
+                page break; that verdict must reach the operator instead of being discarded.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksWeakBoundary")
+    manifest["original_language"] = "en"
+    manifest["voice_assignment_mode"] = "same_narrator"
+    manifest["project_options_locked"] = True
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    chunking_document = chunking_document_service.load_chunking_document(project_root)
+    chunking_document["chunks"][0]["cleanup_boundary_confidence"] = "repaired"
+    chunking_document["chunks"][0]["cleanup_joined_across_page_break"] = True
+    chunking_document_service.write_chunking_document(project_root, chunking_document)
+
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    repaired_blocks = [block for block in speech_blocks if str(block["chunk_id"]) == "chunk-0001"]
+    strong_blocks = [block for block in speech_blocks if str(block["chunk_id"]) == "chunk-0002"]
+    assert repaired_blocks
+    assert strong_blocks
+    assert all("weak_source_boundary" in block["warning_flags"] for block in repaired_blocks)
+    assert all("needs_review" in block["warning_flags"] for block in repaired_blocks)
+    assert all("weak_source_boundary" not in block["warning_flags"] for block in strong_blocks)
+
+
+def test_same_narrator_blocks_reproduce_every_source_chunk(tmp_path) -> None:
+    """
+    @brief      Verify deterministic segmentation never drops or alters source chunk text.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorCoverage")
+    manifest["original_language"] = "en"
+    manifest["voice_assignment_mode"] = "same_narrator"
+    manifest["project_options_locked"] = True
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    for source_chunk in speech_blocks_service.load_input_source_chunks(project_root):
+        chunk_id = str(source_chunk["chunk_id"])
+        rebuilt = "".join(str(block["source_text"]) for block in speech_blocks if str(block["chunk_id"]) == chunk_id)
+        assert rebuilt == str(source_chunk["text"]), chunk_id
 
 
 @pytest.mark.parametrize(
@@ -2625,13 +2727,6 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
                 '"aliases": [',
                 "Non-selectable attribution context:",
             ),
-        ),
-        (
-            "same_narrator",
-            "speech_blocks_narrator_only_system",
-            "speech_blocks_narrator_only_user",
-            False,
-            ("Narration mode: same_narrator", '"boundary_id"'),
         ),
     ],
 )
@@ -3184,137 +3279,6 @@ def test_budgeted_source_chunk_segments_attach_source_spans() -> None:
         "mixed_candidate",
         "dialogue_candidate",
     }
-
-
-def test_normalize_narrator_boundary_blocks_builds_exact_source_spans() -> None:
-    """
-    @brief      Verify narrator-only boundary IDs are converted into exact deterministic source spans.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    source_chunk = {"chunk_id": "chunk-0001", "text": "First sentence. Second sentence."}
-
-    blocks, warnings = speech_blocks_service._normalize_narrator_boundary_blocks(  # noqa: SLF001
-        source_chunk,
-        {"boundary_ids": ["b0001"]},
-        "en",
-        {"safe_word_count": 20},
-    )
-
-    assert [block["source_text"] for block in blocks] == ["First sentence. ", "Second sentence."]
-    assert "".join(str(block["source_text"]) for block in blocks) == source_chunk["text"]
-    assert [block["text"] for block in blocks] == ["First sentence.", "Second sentence."]
-    assert {block["speaker_id"] for block in blocks} == {"narrator"}
-    assert {block["content_kind"] for block in blocks} == {speech_blocks_service.CONTENT_KIND_NARRATION}
-    assert warnings == []
-
-
-def test_narrator_boundary_candidates_skip_open_quote_sentence_boundary() -> None:
-    """
-    @brief      Verify same-narrator boundary candidates do not split inside an open quote.
-    @details    Covers SB-NARRATOR-QUOTE-001 and REQ-FUNC-055.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
-    """
-    source_text = (
-        "He had been working on it for years.\n"
-        '"As in, the credit is not coming together. See what I am saying?"\n'
-        "Drenthe sighed."
-    )
-    unsafe_offset = source_text.index(" See what") + 1
-    safe_quote_end_offset = source_text.index('"\n') + 1
-
-    candidates = speech_blocks_service._narrator_split_boundary_candidates(  # noqa: SLF001
-        source_text,
-        safe_word_count=200,
-    )
-
-    candidate_offsets = {int(candidate["offset"]) for candidate in candidates}
-    assert unsafe_offset not in candidate_offsets
-    assert safe_quote_end_offset in candidate_offsets
-
-
-def test_normalize_narrator_boundary_blocks_rejects_open_quote_split() -> None:
-    """
-    @brief      Verify same-narrator boundary normalization rejects in-quote selected boundaries.
-    @details    Covers SB-NARRATOR-QUOTE-001 and REQ-FUNC-055.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
-    """
-    source_text = (
-        "He had been working on it for years.\n"
-        '"As in, the credit is not coming together. See what I am saying?"\n'
-        "Drenthe sighed."
-    )
-    unsafe_offset = source_text.index(" See what") + 1
-    source_chunk = {
-        "chunk_id": "chunk-0001",
-        "text": source_text,
-        "narrator_boundary_candidates": [
-            {
-                "boundary_id": "b0001",
-                "offset": unsafe_offset,
-                "approx_words_since_previous": 8,
-                "is_final": False,
-                "context": "credit is not coming together. See what I am saying?",
-            },
-            {
-                "boundary_id": "b0002",
-                "offset": len(source_text),
-                "approx_words_since_previous": 10,
-                "is_final": True,
-                "context": "See what I am saying? Drenthe sighed.",
-            },
-        ],
-    }
-
-    blocks, warnings = speech_blocks_service._normalize_narrator_boundary_blocks(  # noqa: SLF001
-        source_chunk,
-        {"boundary_ids": ["b0001"]},
-        "en",
-        {"safe_word_count": 200},
-    )
-
-    assert len(blocks) == 1
-    assert blocks[0]["source_text"] == source_text
-    assert "boundary_selection_fallback" in blocks[0]["warning_flags"]
-    assert warnings[0]["reason"] == speech_blocks_service._speech_block_warning_reason(  # noqa: SLF001
-        "boundary_selection_fallback"
-    )
-
-
-def test_normalize_narrator_boundary_blocks_falls_back_on_unusable_ids() -> None:
-    """
-    @brief      Verify narrator-only boundary failures become deterministic review warnings.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    source_chunk = {"chunk_id": "chunk-0001", "text": "First sentence. Second sentence."}
-
-    blocks, warnings = speech_blocks_service._normalize_narrator_boundary_blocks(  # noqa: SLF001
-        source_chunk,
-        {"boundary_ids": ["unknown-boundary"]},
-        "en",
-        {"safe_word_count": 20},
-    )
-
-    assert "".join(str(block["source_text"]) for block in blocks) == source_chunk["text"]
-    assert "boundary_selection_fallback" in blocks[0]["warning_flags"]
-    assert warnings[0]["reason"] == speech_blocks_service._speech_block_warning_reason(  # noqa: SLF001
-        "boundary_selection_fallback"
-    )
 
 
 def test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries() -> None:

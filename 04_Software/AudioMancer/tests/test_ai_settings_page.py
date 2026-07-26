@@ -18,9 +18,12 @@
 
 # IMPORTS
 
-from PySide6.QtWidgets import QFormLayout, QGridLayout
+from PySide6.QtCore import QEvent, QPointF, Qt
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QApplication, QFormLayout, QGridLayout
 
 from audiomancer import config
+from audiomancer.services import settings_service
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 
 
@@ -406,3 +409,232 @@ def test_ai_settings_page_marks_manual_overrides(qtbot) -> None:
 
 
 # END OF FILE
+
+
+def test_model_selector_keeps_discovered_models_across_a_settings_round_trip(qtbot) -> None:
+    """
+    @brief      Verify probed endpoint models are still offered after settings are saved and reloaded.
+    @details    The discovered list used to live only in memory, so a relaunched app showed three
+                built-in placeholder names the endpoint may not serve while hiding the real ones.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+    page.load_settings(
+        {
+            "llm_profiles": [
+                {
+                    "id": "profile-1",
+                    "label": "Local",
+                    "backend_kind": "openai_compatible",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                    "model_name": "qwen3-8b",
+                }
+            ]
+        }
+    )
+    discovered_ids = ["qwen/qwen3-30b-a3b-2507", "google/gemma-3-27b"]
+
+    page.apply_probe_result(
+        {
+            "success": True,
+            "message": "Connection successful.",
+            "discovered_models": [{"id": model_id, "label": model_id} for model_id in discovered_ids],
+            "selected_model_valid": False,
+            "discovered_context_window": 65536,
+        }
+    )
+    saved_settings = settings_service.validate_settings(page.build_settings({}))
+
+    reloaded_page = AiSettingsPage()
+    qtbot.addWidget(reloaded_page)
+    reloaded_page.load_settings(saved_settings)
+
+    combo = reloaded_page._model_combo
+    assert [combo.itemText(index) for index in range(combo.count())] == discovered_ids
+    assert combo.currentText() == discovered_ids[0]
+
+
+def test_model_selector_falls_back_to_built_in_names_when_never_probed(qtbot) -> None:
+    """
+    @brief      Verify a profile that has never been probed still offers starting suggestions.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    page.load_settings(
+        {"llm_profiles": [{"id": "profile-1", "label": "New", "backend_kind": "openai_compatible"}]}
+    )
+
+    assert page._model_combo.count() > 0
+
+
+def test_long_model_identifiers_do_not_widen_the_settings_form(qtbot) -> None:
+    """
+    @brief      Verify one long model id cannot stretch the AI settings form on the X axis.
+    @details    The selector used the default size-adjust policy, so it demanded room for its
+                longest entry and the whole form grew depending on what the endpoint served.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+
+    def _form_width(model_ids: list[str]) -> int:
+        """
+        @brief      Build one page for the given discovered models and return its width hint.
+        @param[in]  model_ids Discovered model identifiers.
+        @return     Preferred page width in pixels.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-26
+        @version    0.1.0
+        """
+        page = AiSettingsPage()
+        qtbot.addWidget(page)
+        page.load_settings(
+            {
+                "llm_profiles": [
+                    {
+                        "id": "profile-1",
+                        "label": "Local",
+                        "backend_kind": "openai_compatible",
+                        "model_name": model_ids[0],
+                    }
+                ]
+            }
+        )
+        page.apply_probe_result(
+            {
+                "success": True,
+                "message": "Connection successful.",
+                "discovered_models": [{"id": model_id, "label": model_id} for model_id in model_ids],
+                "selected_model_valid": True,
+                "discovered_context_window": 65536,
+            }
+        )
+        return page.sizeHint().width()
+
+    short_width = _form_width(["qwen3-8b"])
+    long_width = _form_width(
+        ["publisher/some-extremely-long-model-identifier-with-many-qualifiers-v3.1-instruct-gguf-q8"]
+    )
+
+    assert long_width == short_width
+
+
+def test_clicking_the_model_field_opens_the_discovered_model_list(qtbot) -> None:
+    """
+    @brief      Verify clicking the editable model field drops down the discovered models.
+    @details    An editable combo only opens from its arrow, so operators clicking the text
+                concluded the models discovered at the endpoint were missing. The list must
+                also survive the button release: opening the popup during the press makes it
+                grab the mouse, and the release then dismisses it immediately. The offscreen
+                test platform does not emulate that grab, so the press is asserted separately
+                to pin down which event is allowed to open the list.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.2.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+    page.load_settings(
+        {
+            "llm_profiles": [
+                {
+                    "id": "profile-1",
+                    "label": "Local",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                    "model_name": "vendor/model-1",
+                }
+            ]
+        }
+    )
+    page.apply_probe_result(
+        {
+            "success": True,
+            "message": "Connection successful.",
+            "discovered_models": [
+                {"id": f"vendor/model-{index}", "label": f"vendor/model-{index}"} for index in (1, 2)
+            ],
+            "selected_model_valid": True,
+            "discovered_context_window": None,
+        }
+    )
+    page.show()
+    combo = page._model_combo
+    line_edit = combo.lineEdit()
+    position = QPointF(10, 8)
+
+    def _send(event_type: QEvent.Type) -> None:
+        """
+        @brief      Deliver one left-button mouse event to the model field.
+        @param[in]  event_type Mouse event type to deliver.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-26
+        @version    0.1.0
+        """
+        QApplication.sendEvent(
+            line_edit,
+            QMouseEvent(
+                event_type,
+                position,
+                position,
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.LeftButton,
+                Qt.KeyboardModifier.NoModifier,
+            ),
+        )
+
+    assert combo.view().isVisible() is False
+
+    _send(QEvent.Type.MouseButtonPress)
+    QApplication.processEvents()
+    assert combo.view().isVisible() is False, "the press must not open the popup, or the release closes it again"
+
+    _send(QEvent.Type.MouseButtonRelease)
+    QApplication.processEvents()
+    QApplication.processEvents()
+
+    assert combo.view().isVisible() is True
+    assert combo.count() == 2
+
+
+def test_model_field_still_accepts_a_hand_typed_model_name(qtbot) -> None:
+    """
+    @brief      Verify the model field stays editable for endpoints that do not advertise models.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+    page.load_settings(
+        {"llm_profiles": [{"id": "profile-1", "label": "Local", "backend_kind": "lmstudio"}]}
+    )
+
+    page._model_combo.lineEdit().setText("custom/not-advertised-model")
+
+    assert page.build_current_profile_payload()["model_name"] == "custom/not-advertised-model"

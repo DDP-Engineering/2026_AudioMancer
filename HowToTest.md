@@ -41,8 +41,9 @@ Full regression baseline:
 uv run pytest -q
 ```
 
-Current expected result after the focused test-suite cleanup is `586 passed,
-1 skipped`.
+Current expected result is `1096 passed, 62 skipped, 1 deselected`, in roughly
+21 minutes. The previously documented `586 passed, 1 skipped` had been stale for
+some time; the count above was measured directly.
 
 ## Regression Matrix
 

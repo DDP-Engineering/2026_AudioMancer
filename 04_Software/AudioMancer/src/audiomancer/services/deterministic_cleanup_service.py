@@ -76,14 +76,6 @@ _PAGE_NUMBER_PATTERNS = (
 _ROMAN_PAGE_NUMBER_PATTERN = re.compile(r"^[ivxlcdm]{1,8}\.?$", re.IGNORECASE)
 # @brief Decorative-separator matcher used to remove non-story break lines.
 _SEPARATOR_LINE_PATTERN = re.compile(r"^[*#=_~.\-]{3,}$|^(?:[*#=_~.\-]\s+){2,}[*#=_~.\-]?$")
-# @brief Dialogue formatter rule that inserts line breaks before continued spoken text.
-_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(
-    r'([:;.!?\u2026]["Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â\']?)\s+-\s+(?=[A-ZÃƒâ€žÃ¢â‚¬Å¡ÃƒÆ’Ã¢â‚¬Å¡ÃƒÆ’Ã…Â½ÃƒË†Ã‹Å“ÃƒË†Ã…Â¡])'
-)  # noqa: E501
-# @brief Dialogue formatter rule that inserts line breaks after attributions and pauses.
-_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(
-    r"([,:])\s+-\s+(?=[A-ZÃƒâ€žÃ¢â‚¬Å¡ÃƒÆ’Ã¢â‚¬Å¡ÃƒÆ’Ã…Â½ÃƒË†Ã‹Å“ÃƒË†Ã…Â¡])"
-)  # noqa: E501
 
 
 # PUBLIC API

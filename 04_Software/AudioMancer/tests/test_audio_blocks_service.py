@@ -666,6 +666,79 @@ def test_audio_blocks_service_rejects_invalid_generated_wav_bytes() -> None:
         audio_blocks_service._validate_wav_bytes(b"not-a-wav")  # noqa: SLF001
 
 
+def test_audio_blocks_generation_checkpoints_a_split_block_without_error(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify generating an over-budget block persists its per-part checkpoint and completes.
+    @details    Regression guard: the split checkpoint callback is only reached when a block does
+                not fit the loaded model budget, so a broken call there survived every test that
+                generated short blocks.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSplitCheckpointRun")
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    long_narration = " ".join(f"Sentence number {index} of the long narration block." for index in range(1, 21))
+    speech_blocks[0]["text"] = long_narration
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
+
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": None, "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    active_model = {
+        "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+        "status": "ready",
+        "supported_generation_modes": ["clone"],
+        "default_model_parameters": {"max_new_tokens": 512},
+    }
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: {
+            "active_model": dict(active_model),
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+            },
+            "result": {"available": True, "summary": "ready"},
+        },
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: _wav_bytes("part"),
+    )
+
+    report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
+
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    split_block = next(block for block in audio_blocks if str(block["speech_block_id"]) == "0001-000001")
+    assert int(split_block["split_part_count"]) > 1, "the long block must actually exercise the split path"
+    assert split_block["generated"] is True
+    assert report["generated_block_count"] == len(audio_blocks)
+
+
 def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(tmp_path) -> None:
     """
     @brief      Verify split resume ignores corrupt or mismatched persisted part checkpoints.

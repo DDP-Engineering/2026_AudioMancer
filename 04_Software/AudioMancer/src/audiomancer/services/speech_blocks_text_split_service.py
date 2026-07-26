@@ -21,7 +21,7 @@
 
 import re
 
-from audiomancer.services import ai_budget_service
+from audiomancer.services import ai_budget_service, cleanup_text_analysis_service
 
 # CONSTANTS
 
@@ -296,23 +296,16 @@ def ai_paragraph_spans(text: str) -> list[str]:
 def ai_sentence_spans(text: str) -> list[str]:
     """
     @brief      Split text into sentence spans while preserving trailing whitespace.
+    @details    Delegates to the shared script-aware primitive; clause marks stay in scope
+                because context-budget splitting benefits from finer spans.
     @param[in]  text Source text span.
     @return     Ordered sentence spans.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    source_text = str(text)
-    sentence_end_pattern = r"[.!?;:ã€‚ï¼ï¼Ÿï¼›ï¼šØŸØ›â€¦]+[\"'â€â€™Â»)\]]*(?:\s+|$)"
-    spans: list[str] = []
-    cursor = 0
-    for match in re.finditer(sentence_end_pattern, source_text):
-        spans.append(source_text[cursor : match.end()])
-        cursor = match.end()
-    if cursor < len(source_text):
-        spans.append(source_text[cursor:])
-    return [span for span in spans if span]
+    return cleanup_text_analysis_service.sentence_spans(text, include_clause_marks=True)
 
 
 def ai_word_spans(text: str) -> list[str]:
@@ -341,27 +334,6 @@ def hard_split_text_for_ai_context_budget(text: str, text_budget_tokens: int) ->
     """
     max_characters = max(1, int(text_budget_tokens) * 4)
     return [str(text)[index : index + max_characters] for index in range(0, len(str(text)), max_characters)]
-
-
-def tts_budget_unit_count(text: str) -> int:
-    """
-    @brief      Estimate spoken budget units with fallbacks for punctuation-heavy and no-space scripts.
-    @param[in]  text Candidate text span.
-    @return     Conservative budget-unit count.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
-    """
-    normalized_text = str(text).strip()
-    if not normalized_text:
-        return 0
-    word_like_count = len(re.findall(r"[^\W_]+(?:['â€™][^\W_]+)?", normalized_text, flags=re.UNICODE))
-    compact_length_units = (len(re.sub(r"\s+", "", normalized_text)) + 5) // 6
-    return max(1, word_like_count, compact_length_units)
-
-
-# INTERNAL HELPERS
 
 
 def _paragraph_ranges(text: str) -> list[tuple[int, int]]:

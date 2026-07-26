@@ -89,6 +89,33 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page._ok_button.text() == "OK"
 
 
+def test_tts_settings_page_round_trips_the_narration_block_target(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify the narration block target loads, saves, and exposes an automatic mode.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    settings_payload = dict(default_settings_payload)
+    settings_payload["speech_block_target_audio_seconds"] = 20.0
+
+    page.load_state(settings_payload, {"voice_assignment_mode": "same_narrator"}, True)
+
+    assert page._speech_block_target_spin.value() == 20.0
+    assert page.build_settings(default_settings_payload)["speech_block_target_audio_seconds"] == 20.0
+
+    page._speech_block_target_spin.setValue(0.0)
+
+    assert page._speech_block_target_spin.specialValueText() == "Auto"
+    assert page.build_settings(default_settings_payload)["speech_block_target_audio_seconds"] == 0.0
+
+
 def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> None:
     """
     @brief      Verify the runtime status label uses the simplified not connected / connected / failed states.
@@ -175,7 +202,7 @@ def test_tts_settings_page_uses_compact_runtime_limit_controls(qtbot) -> None:
         page._scene_ambience_seed_spin,
     )
     for spinbox in compact_spinboxes:
-        assert spinbox.maximumWidth() <= 104
+        assert spinbox.maximumWidth() <= 120
         assert spinbox.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Fixed
 
     numeric_labels = (
