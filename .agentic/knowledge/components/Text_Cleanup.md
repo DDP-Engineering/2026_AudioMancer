@@ -69,7 +69,10 @@ duplicating canonical paragraph text. `text_cleanup_state_service` composes
 previews, notes, manifest transitions, edit/spacing operations, and reset
 effects. `TextCleanupUiController` connects those services to
 `TextCleanupPage`, while the page owns Qt signals, controls, previews, find
-behavior, edit state, and localized presentation.
+behavior, edit state, and localized presentation. The controller delegates
+operation progress and terminal success/failure outcomes to the shared operation
+runner and owns only the cancellation handler, which syncs the manifest and
+refreshes project state.
 
 Opening Text Cleanup does not initialize extraction metadata: absence means
 `not_started`. Cleanup state is an execution artifact: deterministic cleanup

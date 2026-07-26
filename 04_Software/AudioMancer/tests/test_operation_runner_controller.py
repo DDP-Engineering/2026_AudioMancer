@@ -9,11 +9,12 @@
 """
 @file test_operation_runner_controller.py
 @brief Tests for the shared threaded modal-operation runner.
-@details Verifies success, failure, cancellation, progress delivery, and active
-         operation cleanup without showing real modal progress dialogs.
+@details Verifies success, failure, cancellation, progress delivery, completion
+         beeps, and active operation cleanup without showing real modal progress
+         dialogs or producing audible output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -284,6 +285,185 @@ def test_threaded_operation_does_not_start_when_operation_is_active(monkeypatch,
 
     assert calls == []
     assert window._active_operation_kind == "busy"
+
+
+def test_threaded_operation_success_and_failure_play_completion_beep_when_enabled(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify enabled completion beeps fire once on success and once on failure.
+    @details    Covers REQ-FUNC-bdee3fe2-4f27-4e2e-a702-cb6abafbdd46 / S-BEEP-TERMINAL.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Temporary project root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    window = _build_runner_window(qtbot, tmp_path)
+    window._settings_payload = {"play_completion_beep": True}  # noqa: SLF001
+    _patch_progress_dialog(monkeypatch)
+    beeps = _record_beeps(monkeypatch)
+
+    _run_worker_to_completion(qtbot, window, _succeeding_worker)
+    assert len(beeps) == 1
+
+    _run_worker_to_completion(qtbot, window, _failing_worker)
+    assert len(beeps) == 2
+
+
+def test_threaded_operation_stays_silent_when_completion_beep_is_disabled(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify a disabled completion-beep preference keeps terminal outcomes silent.
+    @details    Covers REQ-FUNC-337ba16d-5990-4f3c-be79-18964d53036f / S-BEEP-TERMINAL.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Temporary project root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    window = _build_runner_window(qtbot, tmp_path)
+    window._settings_payload = {"play_completion_beep": False}  # noqa: SLF001
+    _patch_progress_dialog(monkeypatch)
+    beeps = _record_beeps(monkeypatch)
+
+    _run_worker_to_completion(qtbot, window, _succeeding_worker)
+    _run_worker_to_completion(qtbot, window, _failing_worker)
+
+    assert beeps == []
+
+
+def test_threaded_operation_cancel_does_not_play_completion_beep(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify operator-requested cancellation never plays the completion beep.
+    @details    Covers REQ-FUNC-337ba16d-5990-4f3c-be79-18964d53036f / S-BEEP-TERMINAL.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Temporary project root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    window = _build_runner_window(qtbot, tmp_path)
+    window._settings_payload = {"play_completion_beep": True}  # noqa: SLF001
+    _patch_progress_dialog(monkeypatch)
+    beeps = _record_beeps(monkeypatch)
+    worker_started = Event()
+
+    def worker(project_root, manifest, progress_callback=None, cancel_requested=None):
+        """
+        @brief      Provide the cancellable worker test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-25
+        @version    0.1.0
+        """
+        _ = project_root
+        _ = manifest
+        _ = progress_callback
+        worker_started.set()
+        for _index in range(200):
+            if cancel_requested():
+                raise operation_runtime_service.OperationCancelledError("cancelled")
+            sleep(0.005)
+        raise AssertionError("worker did not observe cancellation")
+
+    operation_runner_controller.start_threaded_operation(
+        window,
+        "kind",
+        "Name",
+        "starting",
+        worker,
+        set_busy=lambda is_busy: None,
+        success_handler=lambda result: None,
+        failure_handler=lambda error: None,
+        cancel_handler=lambda message: None,
+    )
+    qtbot.waitUntil(worker_started.is_set, timeout=3000)
+    operation_runner_controller.request_operation_cancel(window)
+    qtbot.waitUntil(lambda: window._active_operation_kind is None, timeout=3000)
+
+    assert beeps == []
+
+
+def _succeeding_worker(project_root, manifest, progress_callback=None, cancel_requested=None):
+    """
+    @brief      Provide a worker test helper that completes successfully.
+    @return     Minimal worker result payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    _ = (project_root, manifest, progress_callback, cancel_requested)
+    return {"ok": True}
+
+
+def _failing_worker(project_root, manifest, progress_callback=None, cancel_requested=None):
+    """
+    @brief      Provide a worker test helper that raises a runtime failure.
+    @return     None.
+    @exception  RuntimeError Always raised to exercise the failure path.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    _ = (project_root, manifest, progress_callback, cancel_requested)
+    raise RuntimeError("boom")
+
+
+def _run_worker_to_completion(qtbot, window: QWidget, worker) -> None:
+    """
+    @brief      Start one threaded operation and wait for the runner to clear it.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  window Window-like QWidget test double.
+    @param[in]  worker Callable executed on the worker thread.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    operation_runner_controller.start_threaded_operation(
+        window,
+        "kind",
+        "Name",
+        "starting",
+        worker,
+        set_busy=lambda is_busy: None,
+        success_handler=lambda result: None,
+        failure_handler=lambda error: None,
+        cancel_handler=lambda message: None,
+    )
+    qtbot.waitUntil(lambda: window._active_operation_kind is None, timeout=3000)
+
+
+def _record_beeps(monkeypatch) -> list[bool]:
+    """
+    @brief      Replace the Qt beep call with a silent recorder.
+    @details    Patches the audible call rather than the shared helper so the runner
+                checks observe the end-to-end outcome, including the silent paths
+                the helper itself is responsible for.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     Recorded audible completion beeps.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.2.0
+    """
+    beeps: list[bool] = []
+    monkeypatch.setattr(
+        operation_runner_controller.misc_ui_controller.QApplication,
+        "beep",
+        lambda: beeps.append(True),
+    )
+    return beeps
 
 
 def _build_runner_window(qtbot, project_root) -> QWidget:

@@ -9,11 +9,12 @@
 """
 @file test_ui_state_service.py
 @brief Focused tests for the runtime UI-state service.
-@details Verifies translated string lookup and application-wide text-scale
-         changes used by the settings-backed runtime UI behavior.
+@details Verifies translated string lookup, application-wide text-scale changes,
+         and settings-backed runtime preference resolution used by the
+         settings-backed runtime UI behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-09
-@version 0.7.1
+@version 0.8.0
 """
 
 # IMPORTS
@@ -641,6 +642,26 @@ def test_apply_ui_settings_scales_ui_and_text_fonts_independently(qtbot) -> None
     stylesheet = application.styleSheet()
     assert f"font-size: {ui_point:.1f}pt;" in stylesheet
     assert f"font-size: {text_point:.1f}pt;" in stylesheet
+
+
+def test_completion_beep_enabled_from_settings_resolves_persisted_flag() -> None:
+    """
+    @brief      Verify the completion-beep preference resolves from a settings payload.
+    @details    Covers REQ-FUNC-bdee3fe2-4f27-4e2e-a702-cb6abafbdd46 / S-BEEP-RESOLVE and
+                REQ-FUNC-337ba16d-5990-4f3c-be79-18964d53036f / S-BEEP-RESOLVE.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    assert ui_state_service.completion_beep_enabled_from_settings({"play_completion_beep": True}) is True
+    assert ui_state_service.completion_beep_enabled_from_settings({"play_completion_beep": False}) is False
+    assert (
+        ui_state_service.completion_beep_enabled_from_settings({})
+        is config.DEFAULT_PLAY_COMPLETION_BEEP
+    )
+    assert ui_state_service.completion_beep_enabled_from_settings(None) is False
 
 
 # END OF FILE

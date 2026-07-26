@@ -30,8 +30,10 @@ checkpoints each completed unit into that document, and falls back to a complete
 window chunk when no valid internal boundary is returned.
 `text_chunking_state_service` derives page state and persists operator changes
 while using workflow-impact rules. The UI controller routes
-page signals via shared operation orchestration; `TextChunkingPage` renders
-profiles, strategy, previews, edits, and search.
+page signals via shared operation orchestration, owning only the cancellation
+handler, which syncs the manifest and refreshes project state; progress and
+terminal success/failure outcomes belong to the shared runner. `TextChunkingPage`
+renders profiles, strategy, previews, edits, and search.
 
 ## 4. Dependencies
 

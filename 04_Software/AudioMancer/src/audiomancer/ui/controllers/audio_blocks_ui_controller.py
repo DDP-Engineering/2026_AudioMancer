@@ -29,6 +29,7 @@ from PySide6.QtWidgets import QMessageBox
 from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
+    audio_blocks_artifact_service,
     audio_blocks_service,
     audio_blocks_state_service,
     project_workspace_service,
@@ -1256,7 +1257,6 @@ def _preview_pause_block_from_speech_block(speech_block: dict[str, object]) -> d
     pause_duration_ms = speech_blocks_service.pause_duration_ms(speech_block.get("text", ""))
     if pause_duration_ms <= 0:
         pause_duration_ms = config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
-    timestamp = str(speech_block.get("approved_at", "")).strip() or "1970-01-01T00:00:00+00:00"
     speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
     return {
         "speech_block_id": str(speech_block.get("speech_block_id", "")).strip(),
@@ -1273,15 +1273,10 @@ def _preview_pause_block_from_speech_block(speech_block: dict[str, object]) -> d
         "text": str(speech_block.get("text", "")),
         "voice_target_id": "",
         "voice_source_kind": "",
-        "audio_relative_path": None,
-        "metadata_relative_path": None,
         "audio_duration_seconds": pause_duration_ms / 1000.0,
-        "generated": timestamp,
-        "approved": timestamp,
-        "generated_at": None,
-        "approved_at": None,
+        "generated": True,
+        "approved": True,
         "runtime_result_summary": "Metadata-only pause block; silence is added during Audio Blocks playback.",
-        "warning_flags": [],
     }
 
 
@@ -1335,10 +1330,13 @@ def _audio_path_for_block(window: "MainWindow", audio_block: dict[str, object] |
         return None
     if not audio_blocks_service.is_generated(audio_block):
         return None
-    relative_path = str(audio_block.get("audio_relative_path", "")).strip()
-    if not relative_path:
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
+    if not speech_block_id:
         return None
-    audio_path = window._current_project_root / relative_path
+    audio_path = audio_blocks_artifact_service.audio_artifact_path(
+        window._current_project_root,
+        speech_block_id,
+    )
     return audio_path if audio_path.is_file() else None
 
 

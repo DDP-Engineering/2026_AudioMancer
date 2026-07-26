@@ -1,0 +1,82 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "The two orphaned '# @brief File name' comments for chunking metadata and chunking runtime state are gone from config.py.",
+      "No constant definition is added or removed and the existing config-contract and chunking-contract tests still pass."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-25T19:50:04+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [],
+    "reason": "Comment-only deletion of documentation for constants that were already removed, with existing tests asserting those constants stay absent. No behavior surface, so no new requirement snapshot is warranted.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "IN: deleting the two orphaned comment lines and the blank line they leave. OUT: any constant, any behavior, any new requirement snapshot, since the durable requirement set describes behavior and this change has none; existing config-contract tests already enforce the constants' absence."
+    ],
+    "source": "User ticket 8: comentarii orfane in config, config.py:327-330, doua '# @brief File name...' pentru constante de chunking metadata/state care nu mai exista.",
+    "understanding": "The two comment lines sit between CHUNK_ARTIFACT_FILE_NAME and TRANSLATED_CHUNKS_FILE_NAME and document constants that no longer exist. Verified independently: no source, test or tool references a chunking metadata or chunking state constant, and two existing tests assert config has no CHUNKING_STATE_FILE_NAME attribute, so the removal was deliberate and is already guarded. Deleting the comments is a comment-only change with no behavior, no API and no data effect. Reported line numbers 327-330 are stale; the comments are at 533-536 in the current file."
+  },
+  "change_units": [],
+  "checks": [],
+  "decisions": [],
+  "evidence": [
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q tests/test_config_contract.py tests/test_chunking_single_document_contract.py tests/test_text_chunking_state_service.py tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-25T19:50:40+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Comment-only deletion verified: 46 passed across config contract, chunking single-document contract, chunking state service and deterministic chunking service. The config-contract tests that assert config has no CHUNKING_STATE_FILE_NAME attribute still pass, confirming nothing but comments changed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-25T19:50:40+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Lint clean after the comment deletion: ruff check . reports 'All checks passed!'.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-25T19:50:40+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "No requirement snapshot or spec/check was created for this run. The change deletes two orphaned comments and has no behavior, API or data surface, so a durable requirement would describe nothing; the constants' absence is already enforced by test_config_contract.py and test_chunking_single_document_contract.py. Recorded here so the empty spec and check sets are a deliberate decision rather than an omission.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-25T19:50:03+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/config.py"
+    ],
+    "statement": "config.py carries two orphaned '# @brief File name...' comments for chunking metadata and chunking runtime-state constants that were deliberately removed. Their absence is already asserted by test_config_contract and test_chunking_single_document_contract; only the comments remain.",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-25T195003Z-5b49731a",
+  "spec_items": [],
+  "stage": "validation"
+}

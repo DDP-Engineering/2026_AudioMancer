@@ -24,7 +24,12 @@ import wave
 import pytest
 
 from audiomancer import config
-from audiomancer.services import audio_assembly_service, project_workspace_service
+from audiomancer.services import (
+    audio_assembly_service,
+    audio_blocks_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 
 
 def test_audio_assembly_service_composes_per_chunk_outputs(tmp_path) -> None:
@@ -66,40 +71,10 @@ def test_audio_assembly_service_writes_pause_blocks_as_silence(tmp_path) -> None
     @version    0.2.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    payload[1]["sequence_index"] = 3
-    payload.insert(
-        1,
-        {
-            "speech_block_id": "0001-000002-pause",
-            "sequence_index": 2,
-            "chunk_id": "chunk-0001",
-            "speaker_id": "narrator",
-            "speaker_display_name": "Narrator",
-            "normalized_speaker_name": "narrator",
-            "content_kind": "pause",
-            "metadata_only": True,
-            "pause_duration_ms": 500,
-            "text": "Pause 500 ms.",
-            "voice_target_id": "narrator",
-            "voice_source_kind": "metadata",
-            "audio_relative_path": None,
-            "metadata_relative_path": None,
-            "generated": True,
-            "approved": True,
-            "approved_at": "2026-04-25T00:00:00+00:00",
-            "generated_at": None,
-            "runtime_result_summary": "Metadata-only block; no speech audio generated.",
-            "split_part_count": 1,
-            "split_strategy": "single",
-            "model_token_budget": None,
-            "model_audio_seconds_budget": None,
-            "generated_part_relative_paths": [],
-            "warning_flags": [],
-        },
-    )
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    blocks = _load_block_fixtures(project_root)
+    blocks[1]["sequence_index"] = 3
+    blocks.insert(1, _pause_block_fixture("Pause 500 ms."))
+    _persist_block_fixtures(project_root, blocks)
     manifest["audio_assembly_settings"] = {
         **audio_assembly_service.default_audio_assembly_settings(),
         "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
@@ -126,14 +101,15 @@ def test_audio_assembly_service_can_skip_scene_ambience_blocks(tmp_path) -> None
     @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    ambience_audio_path = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000002_ambience.wav"
-    _write_wav(ambience_audio_path, 2400)
-    payload.insert(
+    blocks = _load_block_fixtures(project_root)
+    _write_wav(
+        project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000002-ambience.wav",
+        2400,
+    )
+    blocks.insert(
         1,
         {
-            **payload[0],
+            **blocks[0],
             "speech_block_id": "0001-000002-ambience",
             "sequence_index": 2,
             "speaker_id": "scene_ambience",
@@ -141,11 +117,10 @@ def test_audio_assembly_service_can_skip_scene_ambience_blocks(tmp_path) -> None
             "normalized_speaker_name": "scene_ambience",
             "content_kind": "scene_ambience",
             "text": "Rain in distant trenches.",
-            "audio_relative_path": ambience_audio_path.relative_to(project_root).as_posix(),
         },
     )
-    payload[2]["sequence_index"] = 3
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    blocks[2]["sequence_index"] = 3
+    _persist_block_fixtures(project_root, blocks)
     manifest["audio_assembly_settings"] = {
         **audio_assembly_service.default_audio_assembly_settings(),
         "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
@@ -308,12 +283,11 @@ def test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_
         wav_frame_rate=44_100,
         wav_frame_count=4410,
     )
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    for block in payload:
+    blocks = _load_block_fixtures(project_root)
+    for block in blocks:
         if block["speaker_id"] == "scene_ambience":
             block["sequence_index"] = 0
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    _persist_block_fixtures(project_root, blocks)
     manifest["audio_assembly_settings"] = {
         **audio_assembly_service.default_audio_assembly_settings(),
         "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
@@ -343,40 +317,10 @@ def test_audio_assembly_service_missing_pause_duration_uses_default(tmp_path) ->
     @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    payload[1]["sequence_index"] = 3
-    payload.insert(
-        1,
-        {
-            "speech_block_id": "0001-000002-pause",
-            "sequence_index": 2,
-            "chunk_id": "chunk-0001",
-            "speaker_id": "narrator",
-            "speaker_display_name": "Narrator",
-            "normalized_speaker_name": "narrator",
-            "content_kind": "pause",
-            "metadata_only": True,
-            "pause_duration_ms": None,
-            "text": "Pause 500 ms.",
-            "voice_target_id": "narrator",
-            "voice_source_kind": "metadata",
-            "audio_relative_path": None,
-            "metadata_relative_path": None,
-            "generated": True,
-            "approved": True,
-            "approved_at": "2026-04-25T00:00:00+00:00",
-            "generated_at": None,
-            "runtime_result_summary": "Metadata-only block; no speech audio generated.",
-            "split_part_count": 1,
-            "split_strategy": "single",
-            "model_token_budget": None,
-            "model_audio_seconds_budget": None,
-            "generated_part_relative_paths": [],
-            "warning_flags": [],
-        },
-    )
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    blocks = _load_block_fixtures(project_root)
+    blocks[1]["sequence_index"] = 3
+    blocks.insert(1, _pause_block_fixture("Pause for a while."))
+    _persist_block_fixtures(project_root, blocks)
     manifest["audio_assembly_settings"] = {
         **audio_assembly_service.default_audio_assembly_settings(),
         "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
@@ -479,34 +423,37 @@ def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> Non
     @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    payload[0]["approved"] = False
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    blocks = _load_block_fixtures(project_root)
+    blocks[0]["approved"] = False
+    _persist_block_fixtures(project_root, blocks)
 
     with pytest.raises(ValueError, match="Approve every generated Audio Block"):
         audio_assembly_service.start_or_continue_composition(project_root, manifest)
 
 
 @pytest.mark.parametrize("path_kind", ["parent_traversal", "absolute", "unc_like"])
-def test_audio_assembly_service_rejects_escaping_audio_block_path(tmp_path, path_kind: str) -> None:
+def test_audio_assembly_service_rejects_escaping_audio_block_path(tmp_path, monkeypatch, path_kind: str) -> None:
     """
-    @brief      Verify persisted Audio Block paths cannot make composition read outside the project root.
+    @brief      Verify composition refuses Audio Block paths resolving outside the project root.
+    @details    The persisted document no longer stores a path, so the escaping
+                path is injected at the load seam to keep the composition-level
+                containment guard covered.
     @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  path_kind Escaping path form under test.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     outside_path = tmp_path / "outside.wav"
     _write_wav(outside_path, 2400)
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    payload[0]["audio_relative_path"] = _escaping_artifact_path(path_kind, "outside.wav", outside_path)
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    escaping_path = _escaping_artifact_path(path_kind, "outside.wav", outside_path)
+    loaded_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    loaded_blocks[0]["audio_relative_path"] = escaping_path
+    monkeypatch.setattr(audio_blocks_service, "load_audio_blocks", lambda _project_root: loaded_blocks)
 
     with pytest.raises(ValueError, match="Every approved Audio Block"):
         audio_assembly_service.start_or_continue_composition(project_root, manifest)
@@ -734,7 +681,7 @@ def _create_project_with_audio_blocks(tmp_path, frame_count: int = 2400):
         ("chunk-0002", 1, "0002-000001", "narrator"),
     )
     for index, (chunk_id, sequence_index, speech_block_id, speaker) in enumerate(block_specs, start=1):
-        audio_path = audio_root / f"{speech_block_id.replace('-', '_')}_{speaker}.wav"
+        audio_path = audio_root / f"{speech_block_id}.wav"
         _write_wav(audio_path, frame_count)
         blocks.append(
             {
@@ -764,10 +711,7 @@ def _create_project_with_audio_blocks(tmp_path, frame_count: int = 2400):
                 "warning_flags": [],
             }
         )
-    (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(blocks, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    _persist_block_fixtures(project_root, blocks)
     return project_root, project_workspace_service.load_manifest(project_root)
 
 
@@ -793,18 +737,22 @@ def _insert_scene_ambience_blocks(
     @date       2026-05-25
     @version    0.1.0
     """
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    blocks = _load_block_fixtures(project_root)
     ambience_audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     ambience_blocks = []
     for offset, prompt in enumerate(("quiet library room tone", "intermittent page turns"), start=1):
-        audio_path = ambience_audio_root / f"0001_00000{offset + 1}_scene_ambience_{offset}.wav"
+        speech_block_id = f"0001-00000{offset + 1}-ambience"
         if with_audio:
-            _write_wav(audio_path, wav_frame_count, channels=wav_channels, frame_rate=wav_frame_rate)
+            _write_wav(
+                ambience_audio_root / f"{speech_block_id}.wav",
+                wav_frame_count,
+                channels=wav_channels,
+                frame_rate=wav_frame_rate,
+            )
         ambience_blocks.append(
             {
-                **payload[0],
-                "speech_block_id": f"0001-00000{offset + 1}-ambience",
+                **blocks[0],
+                "speech_block_id": speech_block_id,
                 "sequence_index": offset + 1,
                 "speaker_id": "scene_ambience",
                 "speaker_display_name": "Scene Ambience",
@@ -816,18 +764,15 @@ def _insert_scene_ambience_blocks(
                 "duration_seconds": 0.1,
                 "ambience_position": "opener",
                 "after_speech_block_id": "",
-                "audio_relative_path": audio_path.relative_to(project_root).as_posix() if with_audio else None,
                 "audio_duration_seconds": 0.1 if with_audio else None,
-                "approved": "2026-04-25T00:00:00+00:00" if approved else None,
-                "approved_at": "2026-04-25T00:00:00+00:00" if approved else None,
-                "generated": "2026-04-25T00:00:00+00:00" if with_audio else None,
-                "generated_at": "2026-04-25T00:00:00+00:00" if with_audio else None,
+                "approved": approved,
+                "generated": with_audio,
             }
         )
-    payload[1]["sequence_index"] = 4
-    payload[2]["sequence_index"] = 1
-    payload[1:1] = ambience_blocks
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    blocks[1]["sequence_index"] = 4
+    blocks[2]["sequence_index"] = 1
+    blocks[1:1] = ambience_blocks
+    _persist_block_fixtures(project_root, blocks)
 
 
 def _write_wav(path, frame_count: int, channels: int = 1, frame_rate: int = 24_000) -> None:
@@ -849,5 +794,138 @@ def _write_wav(path, frame_count: int, channels: int = 1, frame_rate: int = 24_0
         wav_file.setframerate(frame_rate)
         wav_file.writeframes(b"\x00\x00" * frame_count * channels)
 
+
+
+def _pause_block_fixture(text: str) -> dict:
+    """
+    @brief      Build one metadata-only pause fixture block.
+    @details    The pause duration is not persisted; it is parsed back from the
+                Speech Blocks text on every load, so `text` is what drives it.
+    @param[in]  text Pause Speech Block text carrying the duration.
+    @return     Rich fixture block payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    return {
+        "speech_block_id": "0001-000002-pause",
+        "sequence_index": 2,
+        "chunk_id": "chunk-0001",
+        "speaker_id": "narrator",
+        "speaker_display_name": "Narrator",
+        "normalized_speaker_name": "narrator",
+        "content_kind": "pause",
+        "metadata_only": True,
+        "text": text,
+        "voice_target_id": "narrator",
+        "generated": True,
+        "approved": True,
+    }
+
+
+def _load_block_fixtures(project_root) -> list[dict]:
+    """
+    @brief      Rebuild the rich fixture block list from the two persisted documents.
+    @details    Inverse of `_persist_block_fixtures`: Audio Blocks contract fields
+                are merged back over the Speech Blocks entry so a test can mutate
+                one flat list and persist it again.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered rich fixture block payloads.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    document = audio_blocks_service.load_audio_blocks_document(project_root) or {"blocks": []}
+    audio_blocks_by_id = {
+        str(block.get("speech_block_id", "")).strip(): dict(block) for block in document.get("blocks", [])
+    }
+    blocks: list[dict] = []
+    for speech_block in speech_blocks_service.load_speech_blocks(project_root):
+        speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
+        blocks.append({**dict(speech_block), **audio_blocks_by_id.get(speech_block_id, {})})
+    return blocks
+
+
+def _persist_block_fixtures(project_root, blocks) -> None:
+    """
+    @brief      Persist rich fixture blocks as a Speech Blocks document plus an Audio Blocks document.
+    @details    Audio Blocks now stores only its own contract fields and reads
+                identity, text and prompts back from the Speech Blocks document,
+                so fixtures must write both.
+    @param[in]  project_root Active project root folder.
+    @param[in]  blocks Ordered rich fixture block payloads.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    audio_only_fields = {
+        "audio_relative_path",
+        "metadata_relative_path",
+        "generated",
+        "generated_at",
+        "runtime_result_summary",
+        "split_part_count",
+        "split_strategy",
+        "model_token_budget",
+        "model_audio_seconds_budget",
+        "generated_part_relative_paths",
+        "voice_source_kind",
+        "audio_can_play",
+        "audio_duration_seconds",
+        "generation_fingerprint",
+    }
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "source": {"kind": "original", "language": "en", "fingerprint": "assembly-fixture"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": True},
+            "response_contract": "direct_blocks",
+            "token_usage": {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+                "usage_available": False,
+            },
+            "budget_metadata": {},
+            "checkpoint": None,
+            "failure": None,
+            "blocks": [
+                {key: value for key, value in block.items() if key not in audio_only_fields} for block in blocks
+            ],
+        },
+    )
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "assembly-fixture",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": str(block["speech_block_id"]),
+                    "voice_target_id": str(block.get("voice_target_id", "") or ""),
+                    "generated": bool(block.get("generated", True)),
+                    "approved": bool(block.get("approved", False)),
+                    "audio_can_play": bool(
+                        block.get(
+                            "audio_can_play",
+                            bool(block.get("generated", True)) and not bool(block.get("metadata_only", False)),
+                        )
+                    ),
+                    "audio_duration_seconds": block.get("audio_duration_seconds"),
+                    "generation_fingerprint": None,
+                }
+                for block in blocks
+            ],
+        },
+    )
 
 # END OF FILE

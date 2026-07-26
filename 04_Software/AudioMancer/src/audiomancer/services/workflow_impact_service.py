@@ -42,8 +42,8 @@ OPERATION_STAGE_BY_KIND = config.OPERATION_STAGE_BY_KIND
 # @brief Stable identity fields that must survive local v2 edit operations.
 STABLE_IDENTITY_FIELDS = frozenset(("chunk_id", "speech_block_id", "voice_target_id"))
 
-# @brief Ordered fields checked for generated Audio Blocks artifacts.
-_AUDIO_ARTIFACT_FIELD_NAMES = ("audio_relative_path", "metadata_relative_path")
+# @brief Generated-audio folder holding artifacts derived from speech_block_id.
+_GENERATED_AUDIO_FOLDER_NAME = config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
 
 
 # DATA MODELS / TYPEDEFINITIONS
@@ -587,11 +587,20 @@ def _iter_audio_block_artifact_paths(audio_block: Mapping[str, object]) -> tuple
     @date       2026-05-04
     @version    0.1.0
     """
-    paths: list[object] = [audio_block.get(field_name) for field_name in _AUDIO_ARTIFACT_FIELD_NAMES]
-    part_paths = audio_block.get("generated_part_relative_paths")
-    if isinstance(part_paths, list):
-        paths.extend(part_paths)
-    return tuple(path for path in paths if str(path or "").strip())
+    from audiomancer.services import audio_blocks_artifact_service
+
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
+    if not speech_block_id:
+        return ()
+    file_stem = audio_blocks_artifact_service.audio_artifact_file_stem(speech_block_id)
+    paths: list[object] = [f"{_GENERATED_AUDIO_FOLDER_NAME}/{file_stem}.wav"]
+    split_part_count = audio_block.get("split_part_count")
+    if isinstance(split_part_count, int) and split_part_count > 1:
+        paths.extend(
+            f"{_GENERATED_AUDIO_FOLDER_NAME}/parts/{file_stem}_part{part_index + 1:03d}.wav"
+            for part_index in range(split_part_count)
+        )
+    return tuple(paths)
 
 
 def _collect_or_delete_artifact_path(

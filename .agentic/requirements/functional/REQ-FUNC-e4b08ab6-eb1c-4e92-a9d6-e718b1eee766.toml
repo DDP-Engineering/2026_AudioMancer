@@ -3,20 +3,20 @@ id = "REQ-FUNC-e4b08ab6-eb1c-4e92-a9d6-e718b1eee766"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "The operation runtime shall ensure default not-started state, including compact character-discovery and zero audio-blocks metadata."
-rationale = "Default state must be created in the compact contract shape."
+requirement = "The operation runtime shall ensure default not-started state for operations that still own a separate state artifact, and shall not create one for Audio Blocks or Speech Blocks."
+rationale = "Audio Blocks joins Speech Blocks in deriving its state from a single document, so a missing document is the not-started signal."
 verification = "Automated: 3 linked pytest selector(s)."
-spec_ref = ""
+spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_not_started_state_only",
   "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_compact_character_discovery_state",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_zero_audio_blocks_metadata",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_not_started_state_only",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_skips_audio_blocks",
 ]
 
 created_on = "2026-07-19T16:32:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-26T05:59:15Z"

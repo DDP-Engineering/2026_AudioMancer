@@ -12,12 +12,26 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- The **Play completion beep** setting now does something. It was persisted and
+  editable in Settings but had no runtime consumer, so the checkbox was inert.
+  A long operation that ends on its own now plays one beep, whether it succeeded
+  or failed, so an operator who stepped away is told the run is over. An
+  operation the operator cancels stays silent.
 - New internal **PCM Codec** component providing the linear PCM conversions
   Audio Assembly and Scene Mix need — sample-width, mono/stereo, and stateful
   sample-rate conversion for 1/2/3/4-byte samples — using only the Python
   standard library, with no third-party dependency.
 
 ### Changed
+
+- Audio Assembly no longer accepts 8-bit PCM WAV sources; supported sample
+  widths are now 2, 3 and 4 bytes. 8-bit was listed as supported while every
+  code path treated it as signed, so gaps and pauses in an 8-bit render would
+  have been written as a DC offset rather than silence. The TTS pipeline emits
+  16-bit, so no produced audio changes.
+- Each run's log file name now includes the process id. Two instances started
+  within the same second previously resolved to the same path and, because the
+  handler opens with `mode="w"`, the second truncated the first run's log.
 
 - Audio Assembly and Scene Mix no longer depend on the `audioop` standard-library
   module, which was **removed in Python 3.13**. PCM conversion now runs through
@@ -30,9 +44,19 @@ All notable changes to this project will be documented in this file.
   The full suite passes on both 3.12 (1076 passed) and 3.13 (1015 passed, with
   the 61 `audioop` comparison tests skipped). Python 3.14 stays excluded pending
   its own validation.
+- Removed dead duplicates of the shared operation handlers from the Text
+  Chunking and Text Cleanup controllers. Nine unreferenced functions went; each
+  controller keeps only its cancellation handler, which does manifest work the
+  shared runner does not.
 
 ### Fixed
 
+- Opening a finished project no longer offers **Repair Project** on every open.
+  Persisting an operation summary could move `current_stage` backwards while the
+  downstream operations stayed `completed`, leaving `project.json` contradicting
+  itself; the stage is the highest milestone a project has reached, so it is now
+  only ever promoted. A project already carrying the inconsistency needs the
+  repair accepted once, after which it stops recurring.
 - AudioMancer no longer fails to start when installed into a directory the
   running user cannot write to, such as `C:\Program Files\AudioMancer` on Windows
   or a system-wide prefix on Linux. `settings.json` and the `Logs/` directory

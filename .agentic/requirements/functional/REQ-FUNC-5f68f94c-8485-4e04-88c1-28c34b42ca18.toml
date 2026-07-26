@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-5f68f94c-8485-4e04-88c1-28c34b42ca18"
+category = "functional"
+status = "Active"
+priority = "Should"
+requirement = "Audio Assembly shall reject 8-bit PCM WAV sources instead of rendering them, because it treats all sample widths as signed and unsigned 8-bit silence would be written as a DC offset."
+rationale = "8-bit was listed as a supported width while _write_silence emitted 0x00 and pcm_codec read one-byte samples as signed, so gaps and pauses in an 8-bit render would be an audible DC click rather than silence. The TTS pipeline emits 16-bit, so the width was a false capability claim rather than a used path."
+verification = "Automated: pytest selectors asserting an 8-bit source is rejected with the unsupported-PCM error, that 16-bit still passes validation, and that gap silence stays zero-filled and frame-exact."
+spec_ref = ""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_eight_bit_source_is_rejected_by_input_validation",
+  "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_silence_at_retained_widths_is_zero_filled_and_frame_exact",
+  "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_sixteen_bit_source_stays_accepted",
+]
+
+created_on = "2026-07-25T19:44:00Z"
+last_updated = "2026-07-25T20:43:27Z"

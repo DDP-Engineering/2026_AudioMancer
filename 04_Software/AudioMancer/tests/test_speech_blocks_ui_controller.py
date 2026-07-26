@@ -745,7 +745,7 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     project_workspace_service.save_manifest(manifest, project_root)
     stale_artifacts = [
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
     ]
     stale_artifacts[0].write_text("[]\n", encoding="utf-8")

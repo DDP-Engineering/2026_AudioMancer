@@ -10,10 +10,11 @@
 @file misc_ui_controller.py
 @brief Shared shell UI helpers for AudioMancer.
 @details Hosts cross-window UI helpers such as status messages, help/about
-         dialogs, the common modal progress popup, and title-bar helpers.
+         dialogs, the common modal progress popup, the operator completion
+         beep, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.8.3
+@version 0.9.0
 """
 
 # IMPORTS
@@ -85,6 +86,23 @@ def show_message(
     _ = window
     _ = message
     _ = timeout_ms
+
+
+def play_completion_beep(window: "MainWindow") -> None:
+    """
+    @brief      Play the operator completion beep when the active settings enable it.
+    @details    Called from operation terminal outcomes the operator did not request,
+                so an operator who left the machine hears that the run is over.
+    @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    settings_payload = getattr(window, "_settings_payload", None)
+    if ui_state_service.completion_beep_enabled_from_settings(settings_payload):
+        QApplication.beep()
 
 
 def show_help(window: "MainWindow") -> None:

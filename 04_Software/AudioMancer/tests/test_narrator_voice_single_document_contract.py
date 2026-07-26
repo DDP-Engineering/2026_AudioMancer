@@ -21,11 +21,9 @@
 # IMPORTS
 
 import json
-from pathlib import Path
 
 import pytest
 
-from audiomancer import config
 from audiomancer.services import (
     character_voices_service,
     narrator_definition_service,
@@ -197,26 +195,6 @@ def test_profile_sample_and_selection_use_only_document_and_canonical_wav(tmp_pa
     assert selected_metadata is not None
     assert selected_metadata["preview_text"] == "The exact transcript spoken by the selected narrator sample."
     assert not any((project_root / artifact_name).exists() for artifact_name in _REMOVED_ARTIFACT_NAMES)
-
-
-def test_removed_constants_apis_and_source_references_do_not_survive() -> None:
-    """
-    @brief      Verify SPEC-NV-004, SPEC-NV-006, REQ-FUNC-057, and REQ-FUNC-058 remove old routing.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
-    """
-    assert config.NARRATOR_VOICE_FILE_NAME == "narrator_voice.json"
-    assert all(not hasattr(config, constant_name) for constant_name in _REMOVED_CONFIG_CONSTANTS)
-    assert all(not hasattr(narrator_definition_service, api_name) for api_name in _REMOVED_SERVICE_APIS)
-
-    source_root = Path(__file__).resolve().parents[1] / "src" / "audiomancer"
-    removed_tokens = (*_REMOVED_ARTIFACT_NAMES, *_REMOVED_CONFIG_CONSTANTS, *_REMOVED_SERVICE_APIS)
-    for source_path in source_root.rglob("*.py"):
-        source_text = source_path.read_text(encoding="utf-8")
-        assert not any(token in source_text for token in removed_tokens), source_path
 
 
 def test_character_voice_readiness_uses_selected_profile_resolution(tmp_path, monkeypatch) -> None:

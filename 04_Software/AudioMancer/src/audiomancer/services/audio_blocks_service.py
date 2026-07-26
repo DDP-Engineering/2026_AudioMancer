@@ -40,7 +40,6 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_state_payload,
-    load_operation_state_payload,
     load_optional_json_artifact,
     raise_if_cancelled,
     relative_to_project,
@@ -52,9 +51,6 @@ from audiomancer.services.operation_runtime_service import (
 )
 from audiomancer.services.operation_runtime_service import (
     optional_string as _optional_string,
-)
-from audiomancer.services.operation_runtime_service import (
-    try_resolve_project_relative_path as _safe_project_artifact_path,
 )
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
@@ -73,11 +69,54 @@ _PREFERRED_QWEN_CLONE_MODEL_ID = "Qwen3-TTS-12Hz-1.7B-Base"
 _DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN = 0.08
 _SPLIT_SAFETY_FACTOR = 0.85
 _WORDS_PER_AUDIO_SECOND = 2.5
-_AUDIO_BLOCK_FINGERPRINT_VERSION = 1
+_AUDIO_BLOCK_FINGERPRINT_VERSION = 2
 _SPECIAL_BLOCK_STATUS_IMPLEMENTED = "implemented"
 _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED = "not_implemented"
+
+# @brief Fixed root field set of the authoritative single Audio Blocks document.
+_DOCUMENT_FIELDS = frozenset(
+    (
+        "status",
+        "voice_language",
+        "input_fingerprint",
+        "checkpoint",
+        "blocks",
+    )
+)
+
+# @brief Persisted status tokens accepted by the single Audio Blocks document.
+_DOCUMENT_STATUSES = frozenset(
+    (
+        AUDIO_BLOCKS_STAGE_NOT_STARTED,
+        "running",
+        AUDIO_BLOCKS_STAGE_IN_PROGRESS,
+        "cancelled",
+        "failed",
+        AUDIO_BLOCKS_STAGE_COMPLETED,
+    )
+)
+
+# @brief Required per-block field set inside the single Audio Blocks document.
+_BLOCK_FIELDS = frozenset(
+    (
+        "speech_block_id",
+        "voice_target_id",
+        "generated",
+        "approved",
+        "audio_can_play",
+        "audio_duration_seconds",
+        "generation_fingerprint",
+    )
+)
+
+# @brief Per-block fields persisted only when the block was actually split.
+_SPLIT_BLOCK_FIELDS = frozenset(("split_part_count", "split_plan_fingerprint"))
+
+# @brief Legacy Audio Blocks sidecars removed by the single-document consolidation.
+_LEGACY_ARTIFACT_FILE_NAMES = ("audio_blocks_report.json", "audio_blocks_state.json")
+
 _audio_artifact_file_stem = audio_blocks_artifact_service.audio_artifact_file_stem
-_audio_artifact_paths = audio_blocks_artifact_service.audio_artifact_paths
+_audio_artifact_path = audio_blocks_artifact_service.audio_artifact_path
 _audio_part_artifact_path = audio_blocks_artifact_service.audio_part_artifact_path
 _generated_audio_root = audio_blocks_artifact_service.generated_audio_root
 _is_valid_wav_path = audio_blocks_artifact_service.is_valid_wav_path
@@ -88,63 +127,164 @@ normalize_speaker_name = audio_blocks_artifact_service.normalize_speaker_name
 
 AudioBlockPayload = dict[str, object]
 AudioBlocksReportPayload = dict[str, object]
+AudioBlocksDocumentPayload = dict[str, object]
 OperationStatePayload = dict[str, object]
 VoiceCloneProfilePayload = dict[str, object]
+
+
+# DATA MODELS / TYPEDEFINITIONS
+
+
+class AudioBlocksDocumentError(ValueError):
+    """
+    @brief      Raised when the authoritative single Audio Blocks document is invalid.
+    @version    0.1.0
+    """
+
+
+def _validate_audio_blocks_document(payload: object) -> None:
+    """
+    @brief      Validate the strict, hard-break single Audio Blocks document contract.
+    @param[in]  payload Candidate document payload.
+    @return     None.
+    @exception  AudioBlocksDocumentError Raised when the payload violates the contract.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    if not isinstance(payload, dict) or set(payload) != set(_DOCUMENT_FIELDS):
+        raise AudioBlocksDocumentError("Audio Blocks data has an incompatible root contract.")
+    if str(payload.get("status", "")) not in _DOCUMENT_STATUSES:
+        raise AudioBlocksDocumentError("Audio Blocks data has an invalid status.")
+    if not isinstance(payload.get("voice_language"), str):
+        raise AudioBlocksDocumentError("Audio Blocks voice_language must be a string.")
+    if not isinstance(payload.get("input_fingerprint"), str):
+        raise AudioBlocksDocumentError("Audio Blocks input_fingerprint must be a string.")
+    checkpoint = payload.get("checkpoint")
+    if checkpoint is not None and not isinstance(checkpoint, dict):
+        raise AudioBlocksDocumentError("Audio Blocks checkpoint must be null or an object.")
+    blocks = payload.get("blocks")
+    if not isinstance(blocks, list):
+        raise AudioBlocksDocumentError("Audio Blocks blocks must be an array.")
+    for block in blocks:
+        if not isinstance(block, dict):
+            raise AudioBlocksDocumentError("Every Audio Blocks entry must be an object.")
+        block_fields = set(block)
+        if not set(_BLOCK_FIELDS).issubset(block_fields):
+            raise AudioBlocksDocumentError("An Audio Blocks entry is missing contracted fields.")
+        if not block_fields.issubset(set(_BLOCK_FIELDS) | set(_SPLIT_BLOCK_FIELDS)):
+            raise AudioBlocksDocumentError("An Audio Blocks entry carries fields outside the contract.")
 
 
 # PUBLIC API
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
-def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
+def load_audio_blocks_document(project_root: str | Path) -> AudioBlocksDocumentPayload | None:
     """
-    @brief      Load one optional Audio Blocks operation-state payload.
+    @brief      Load and leniently validate the authoritative single Audio Blocks document.
+    @details    A missing file, unreadable JSON, a legacy list payload, or any
+                contract violation all read as not-started. No legacy report or
+                state artifact is consulted.
     @param[in]  project_root Active project root folder.
-    @return     Persisted operation-state payload or `None`.
+    @return     Document payload, or `None` when missing or incompatible.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
+    @date       2026-07-26
+    @version    0.1.0
     """
-    return load_operation_state_payload(project_root, "audio_blocks", config.AUDIO_BLOCKS_STATE_FILE_NAME)
+    document_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME)
+    try:
+        payload = load_optional_json_artifact(document_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    try:
+        _validate_audio_blocks_document(payload)
+    except AudioBlocksDocumentError:
+        return None
+    return dict(payload)
+
+
+def write_audio_blocks_document(
+    project_root: str | Path,
+    document: AudioBlocksDocumentPayload,
+) -> Path:
+    """
+    @brief      Strictly validate and atomically persist the single Audio Blocks document.
+    @param[in]  project_root Active project root folder.
+    @param[in]  document Complete Audio Blocks document payload.
+    @return     Absolute project-local document path.
+    @exception  AudioBlocksDocumentError Raised when the document violates the contract.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    _validate_audio_blocks_document(document)
+    write_operation_json_artifact(
+        project_root,
+        "audio_blocks",
+        config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
+        document,
+    )
+    return resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME)
+
+
+@trace_function(_AUDIO_BLOCKS_LOGGER)
+def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
+    """
+    @brief      Project the Audio Blocks operation state from the single document.
+    @param[in]  project_root Active project root folder.
+    @return     Projected operation-state payload or `None` when not started.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.3.0
+    """
+    document = load_audio_blocks_document(project_root)
+    if document is None:
+        return None
+    return _project_operation_state(project_root, document)
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
 def load_audio_blocks_report(project_root: str | Path) -> AudioBlocksReportPayload | None:
     """
-    @brief      Load one optional Audio Blocks report payload.
+    @brief      Project the Audio Blocks report from the single document.
     @param[in]  project_root Active project root folder.
-    @return     Persisted report payload or `None`.
+    @return     Projected report payload or `None` when not started.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
+    @date       2026-07-26
+    @version    0.3.0
     """
-    report_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_REPORT_FILE_NAME)
-    payload = load_optional_json_artifact(report_path)
-    if payload is None:
+    document = load_audio_blocks_document(project_root)
+    if document is None:
         return None
-    return dict(payload)
+    return _project_audio_blocks_report(project_root, document)
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
 def load_audio_blocks(project_root: str | Path) -> list[AudioBlockPayload]:
     """
-    @brief      Load one optional persisted Audio Blocks output payload.
+    @brief      Load the persisted Audio Blocks entries from the single document.
     @param[in]  project_root Active project root folder.
     @return     Ordered Audio Blocks payload list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.4.0
+    @date       2026-07-26
+    @version    0.5.0
     """
-    output_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME)
-    payload = load_optional_json_artifact(output_path)
-    if not isinstance(payload, list):
+    document = load_audio_blocks_document(project_root)
+    if document is None:
         return []
-    audio_blocks = [_normalize_persisted_audio_block(item) for item in payload if isinstance(item, dict)]
+    audio_blocks = [
+        _normalize_persisted_audio_block(item) for item in document.get("blocks", []) if isinstance(item, dict)
+    ]
+    enriched_blocks = _attach_current_speech_block_fields(Path(project_root), audio_blocks)
     return speech_blocks_service.sort_speech_blocks(
-        _attach_current_speech_block_fields(Path(project_root), audio_blocks)
+        [_attach_derived_audio_path(Path(project_root), block) for block in enriched_blocks]
     )
 
 
@@ -182,13 +322,13 @@ def is_generated(audio_block: dict[str, object]) -> bool:
     """
     @brief      Return whether one Audio Blocks entry has generated output.
     @param[in]  audio_block Audio Blocks payload.
-    @return     True when `generated` contains a non-empty timestamp.
+    @return     True when the entry is flagged generated.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.2.0
+    @date       2026-07-26
+    @version    0.3.0
     """
-    return generated_at(audio_block) is not None
+    return bool(audio_block.get("generated", False))
 
 
 def audio_can_play(audio_block: dict[str, object]) -> bool:
@@ -208,39 +348,13 @@ def is_approved(audio_block: dict[str, object]) -> bool:
     """
     @brief      Return whether one Audio Blocks entry is approved.
     @param[in]  audio_block Audio Blocks payload.
-    @return     True when `approved` contains a non-empty timestamp.
+    @return     True when the entry is flagged approved.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.1
+    @date       2026-07-26
+    @version    0.3.0
     """
-    return approved_at(audio_block) is not None
-
-
-def generated_at(audio_block: dict[str, object]) -> str | None:
-    """
-    @brief      Resolve the normalized generated timestamp for one Audio Blocks entry.
-    @param[in]  audio_block Audio Blocks payload.
-    @return     Generated ISO timestamp or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.1
-    """
-    return _status_timestamp(audio_block.get("generated"), audio_block.get("generated_at"))
-
-
-def approved_at(audio_block: dict[str, object]) -> str | None:
-    """
-    @brief      Resolve the normalized approved timestamp for one Audio Blocks entry.
-    @param[in]  audio_block Audio Blocks payload.
-    @return     Approved ISO timestamp or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.1
-    """
-    return _status_timestamp(audio_block.get("approved"), audio_block.get("approved_at"))
+    return bool(audio_block.get("approved", False))
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
@@ -319,9 +433,7 @@ def has_persisted_audio_for_speech_block(project_root: str | Path, speech_block_
             (
                 is_generated(block),
                 is_approved(block),
-                bool(_optional_string(block.get("audio_relative_path"))),
-                bool(_optional_string(block.get("metadata_relative_path"))),
-                bool(block.get("generated_part_relative_paths")),
+                _audio_artifact_path(project_root, normalized_speech_block_id).is_file(),
             )
         ):
             return True
@@ -375,41 +487,18 @@ def start_or_continue_generation(
         str(generation_context.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)),
     )
 
-    report = _rebuild_report(
-        existing_blocks,
-        generation_context["voice_language"],
-        generation_context["speech_blocks"],
-        warning_records=[],
-        prompt_count=len(existing_clone_profiles),
-        reused_prompt_count=reused_prompt_count,
-        regenerated_prompt_count=regenerated_prompt_count,
-        current_phase=(_PROFILE_PHASE if profile_index < len(generation_context["voice_targets"]) else _GENERATE_PHASE),
-    )
-    _persist_state(
+    report = _persist_document(
         resolved_project_root,
-        generation_context["speech_blocks"],
         existing_blocks,
         existing_clone_profiles,
-        report,
-        _build_operation_state(
-            resolved_project_root,
-            generation_context["speech_blocks"],
-            existing_blocks,
-            existing_clone_profiles,
-            status="running",
-            started_at=started_at,
-            completed_at=None,
-            voice_language=generation_context["voice_language"],
-            input_fingerprint=generation_context["input_fingerprint"],
-            current_phase=(
-                _PROFILE_PHASE if profile_index < len(generation_context["voice_targets"]) else _GENERATE_PHASE
-            ),
-            current_block_id=None,
-            next_profile_index=profile_index,
-            next_speech_block_index=block_index,
-            reused_prompt_count=reused_prompt_count,
-            regenerated_prompt_count=regenerated_prompt_count,
-        ),
+        status="running",
+        voice_language=str(generation_context["voice_language"]),
+        input_fingerprint=str(generation_context["input_fingerprint"]),
+        run_token=started_at,
+        current_phase=(_PROFILE_PHASE if profile_index < len(generation_context["voice_targets"]) else _GENERATE_PHASE),
+        current_block_id=None,
+        next_speech_block_index=block_index,
+        total_block_count=len(generation_context["speech_blocks"]),
     )
     _emit_progress(
         progress_callback,
@@ -437,10 +526,7 @@ def start_or_continue_generation(
             started_at,
             _PROFILE_PHASE if profile_index < len(generation_context["voice_targets"]) else _GENERATE_PHASE,
             None,
-            profile_index,
             block_index,
-            reused_prompt_count,
-            regenerated_prompt_count,
         )
         raise
     generation_context.update(loaded_model_budget)
@@ -510,10 +596,7 @@ def start_or_continue_generation(
                 started_at,
                 _PROFILE_PHASE,
                 None,
-                current_profile_index,
                 block_index,
-                reused_prompt_count,
-                regenerated_prompt_count,
             )
             raise
         voice_target = generation_context["voice_targets"][current_profile_index]
@@ -534,10 +617,7 @@ def start_or_continue_generation(
                 started_at,
                 _PROFILE_PHASE,
                 None,
-                current_profile_index,
                 block_index,
-                reused_prompt_count,
-                regenerated_prompt_count,
             )
             raise
         if prompt_reused:
@@ -546,39 +626,18 @@ def start_or_continue_generation(
         else:
             regenerated_prompt_count += 1
             progress_message = f"Prepared clone prompt for {voice_target['display_name']}."
-        report = _rebuild_report(
-            existing_blocks,
-            generation_context["voice_language"],
-            generation_context["speech_blocks"],
-            warning_records=[],
-            prompt_count=len(existing_clone_profiles),
-            reused_prompt_count=reused_prompt_count,
-            regenerated_prompt_count=regenerated_prompt_count,
-            current_phase=_PROFILE_PHASE,
-        )
-        _persist_state(
+        report = _persist_document(
             resolved_project_root,
-            generation_context["speech_blocks"],
             existing_blocks,
             existing_clone_profiles,
-            report,
-            _build_operation_state(
-                resolved_project_root,
-                generation_context["speech_blocks"],
-                existing_blocks,
-                existing_clone_profiles,
-                status="running",
-                started_at=started_at,
-                completed_at=None,
-                voice_language=generation_context["voice_language"],
-                input_fingerprint=generation_context["input_fingerprint"],
-                current_phase=_PROFILE_PHASE,
-                current_block_id=None,
-                next_profile_index=current_profile_index + 1,
-                next_speech_block_index=block_index,
-                reused_prompt_count=reused_prompt_count,
-                regenerated_prompt_count=regenerated_prompt_count,
-            ),
+            status="running",
+            voice_language=str(generation_context["voice_language"]),
+            input_fingerprint=str(generation_context["input_fingerprint"]),
+            run_token=started_at,
+            current_phase=_PROFILE_PHASE,
+            current_block_id=None,
+            next_speech_block_index=block_index,
+            total_block_count=len(generation_context["speech_blocks"]),
         )
         _emit_progress(
             progress_callback,
@@ -608,10 +667,7 @@ def start_or_continue_generation(
                 started_at,
                 _GENERATE_PHASE,
                 None,
-                len(generation_context["voice_targets"]),
                 current_order_index,
-                reused_prompt_count,
-                regenerated_prompt_count,
             )
             raise
         current_block = dict(existing_blocks[current_block_index])
@@ -649,46 +705,22 @@ def start_or_continue_generation(
                     started_at,
                     _GENERATE_PHASE,
                     current_block_id,
-                    len(generation_context["voice_targets"]),
                     current_order_index,
-                    reused_prompt_count,
-                    regenerated_prompt_count,
                 )
                 raise
             existing_blocks[current_block_index] = generated_block
-            report = _rebuild_report(
-                existing_blocks,
-                generation_context["voice_language"],
-                generation_context["speech_blocks"],
-                warning_records=[],
-                prompt_count=len(existing_clone_profiles),
-                reused_prompt_count=reused_prompt_count,
-                regenerated_prompt_count=regenerated_prompt_count,
-                current_phase=_GENERATE_PHASE,
-            )
-            _persist_state(
+            report = _persist_document(
                 resolved_project_root,
-                generation_context["speech_blocks"],
                 existing_blocks,
                 existing_clone_profiles,
-                report,
-                _build_operation_state(
-                    resolved_project_root,
-                    generation_context["speech_blocks"],
-                    existing_blocks,
-                    existing_clone_profiles,
-                    status="running",
-                    started_at=started_at,
-                    completed_at=None,
-                    voice_language=generation_context["voice_language"],
-                    input_fingerprint=generation_context["input_fingerprint"],
-                    current_phase=_GENERATE_PHASE,
-                    current_block_id=current_block_id,
-                    next_profile_index=len(generation_context["voice_targets"]),
-                    next_speech_block_index=current_order_index + 1,
-                    reused_prompt_count=reused_prompt_count,
-                    regenerated_prompt_count=regenerated_prompt_count,
-                ),
+                status="running",
+                voice_language=str(generation_context["voice_language"]),
+                input_fingerprint=str(generation_context["input_fingerprint"]),
+                run_token=started_at,
+                current_phase=_GENERATE_PHASE,
+                current_block_id=current_block_id,
+                next_speech_block_index=current_order_index + 1,
+                total_block_count=len(generation_context["speech_blocks"]),
             )
             _emit_progress(
                 progress_callback,
@@ -769,47 +801,23 @@ def start_or_continue_generation(
                 started_at,
                 _GENERATE_PHASE,
                 current_block_id,
-                len(generation_context["voice_targets"]),
                 current_order_index,
-                reused_prompt_count,
-                regenerated_prompt_count,
                 _resume_checkpoint_field(latest_state, "next_split_part_index", 0),
             )
             raise
         existing_blocks[current_block_index] = generated_block
-        report = _rebuild_report(
-            existing_blocks,
-            generation_context["voice_language"],
-            generation_context["speech_blocks"],
-            warning_records=[],
-            prompt_count=len(existing_clone_profiles),
-            reused_prompt_count=reused_prompt_count,
-            regenerated_prompt_count=regenerated_prompt_count,
-            current_phase=_GENERATE_PHASE,
-        )
-        _persist_state(
+        report = _persist_document(
             resolved_project_root,
-            generation_context["speech_blocks"],
             existing_blocks,
             existing_clone_profiles,
-            report,
-            _build_operation_state(
-                resolved_project_root,
-                generation_context["speech_blocks"],
-                existing_blocks,
-                existing_clone_profiles,
-                status="running",
-                started_at=started_at,
-                completed_at=None,
-                voice_language=generation_context["voice_language"],
-                input_fingerprint=generation_context["input_fingerprint"],
-                current_phase=_GENERATE_PHASE,
-                current_block_id=current_block_id,
-                next_profile_index=len(generation_context["voice_targets"]),
-                next_speech_block_index=current_order_index + 1,
-                reused_prompt_count=reused_prompt_count,
-                regenerated_prompt_count=regenerated_prompt_count,
-            ),
+            status="running",
+            voice_language=str(generation_context["voice_language"]),
+            input_fingerprint=str(generation_context["input_fingerprint"]),
+            run_token=started_at,
+            current_phase=_GENERATE_PHASE,
+            current_block_id=current_block_id,
+            next_speech_block_index=current_order_index + 1,
+            total_block_count=len(generation_context["speech_blocks"]),
         )
         _emit_progress(
             progress_callback,
@@ -818,47 +826,23 @@ def start_or_continue_generation(
             f"Generated audio for {generated_block['speaker_display_name']}.",
         )
 
-    completed_at = _utc_now_iso()
-    report = _rebuild_report(
-        existing_blocks,
-        generation_context["voice_language"],
-        generation_context["speech_blocks"],
-        warning_records=[],
-        updated_at=completed_at,
-        prompt_count=len(existing_clone_profiles),
-        reused_prompt_count=reused_prompt_count,
-        regenerated_prompt_count=regenerated_prompt_count,
-        current_phase=_GENERATE_PHASE,
-    )
-    final_status = (
-        "completed"
-        if str(report.get("audio_blocks_stage_status", "")).strip() == AUDIO_BLOCKS_STAGE_COMPLETED
-        else "in_progress"
-    )
-    final_completed_at = completed_at if final_status == "completed" else None
-    _persist_state(
+    final_status = _derived_stage_status(len(generation_context["speech_blocks"]), existing_blocks)
+    report = _persist_document(
         resolved_project_root,
-        generation_context["speech_blocks"],
         existing_blocks,
         existing_clone_profiles,
-        report,
-        _build_operation_state(
-            resolved_project_root,
-            generation_context["speech_blocks"],
-            existing_blocks,
-            existing_clone_profiles,
-            status=final_status,
-            started_at=started_at,
-            completed_at=final_completed_at,
-            voice_language=generation_context["voice_language"],
-            input_fingerprint=generation_context["input_fingerprint"],
-            current_phase=_GENERATE_PHASE,
-            current_block_id=None,
-            next_profile_index=len(generation_context["voice_targets"]),
-            next_speech_block_index=len(existing_blocks),
-            reused_prompt_count=reused_prompt_count,
-            regenerated_prompt_count=regenerated_prompt_count,
+        status=(
+            AUDIO_BLOCKS_STAGE_COMPLETED
+            if final_status == AUDIO_BLOCKS_STAGE_COMPLETED
+            else AUDIO_BLOCKS_STAGE_IN_PROGRESS
         ),
+        voice_language=str(generation_context["voice_language"]),
+        input_fingerprint=str(generation_context["input_fingerprint"]),
+        run_token=started_at,
+        current_phase=_GENERATE_PHASE,
+        current_block_id=None,
+        next_speech_block_index=len(existing_blocks),
+        total_block_count=len(generation_context["speech_blocks"]),
     )
     _emit_progress(
         progress_callback,
@@ -1018,28 +1002,17 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
         if old_block is None:
             reconciled_blocks.append(new_block)
             continue
-        old_block = _remap_audio_block_artifacts(resolved_project_root, old_block, new_block)
         new_block.update(
             {
-                "audio_relative_path": old_block.get("audio_relative_path"),
-                "metadata_relative_path": old_block.get("metadata_relative_path"),
+                "audio_can_play": _persisted_audio_can_play(old_block),
                 "audio_duration_seconds": old_block.get("audio_duration_seconds"),
                 "special_block_status": old_block.get("special_block_status") or new_block.get("special_block_status"),
-                "generated": generated_at(old_block),
-                "approved": approved_at(old_block),
-                "approved_at": None,
-                "generated_at": None,
+                "generated": is_generated(old_block),
+                "approved": is_approved(old_block),
                 "runtime_result_summary": str(old_block.get("runtime_result_summary", "")),
                 "split_part_count": int(old_block.get("split_part_count", 1)),
-                "split_strategy": str(old_block.get("split_strategy", "single")).strip() or "single",
-                "model_token_budget": old_block.get("model_token_budget"),
-                "model_audio_seconds_budget": old_block.get("model_audio_seconds_budget"),
-                "generated_part_relative_paths": list(old_block.get("generated_part_relative_paths", []))
-                if isinstance(old_block.get("generated_part_relative_paths"), list)
-                else [],
                 "generation_fingerprint": old_block.get("generation_fingerprint"),
                 "split_plan_fingerprint": old_block.get("split_plan_fingerprint"),
-                "warning_flags": _normalize_warning_flags(old_block.get("warning_flags")),
             }
         )
         reconciled_blocks.append(new_block)
@@ -2004,11 +1977,9 @@ def _generate_audio_block(
     if voice_clone_prompt in (None, ""):
         raise RuntimeError("Audio Blocks could not resolve the required reusable clone prompt for generation.")
     split_plan = _plan_audio_block_splits(str(audio_block.get("text", "")), generation_context)
-    audio_path, _metadata_path = _audio_artifact_paths(
+    audio_path = _audio_artifact_path(
         project_root,
-        str(audio_block.get("chunk_id", "")).strip(),
-        int(audio_block.get("sequence_index", 0)),
-        str(audio_block.get("normalized_speaker_name", "")),
+        str(audio_block.get("speech_block_id", "")).strip(),
     )
     audio_path.parent.mkdir(parents=True, exist_ok=True)
     part_paths = _existing_part_paths(project_root, audio_block, split_plan, force_restart)
@@ -2065,7 +2036,11 @@ def _generate_audio_block(
         if len(split_plan["parts"]) == 1:
             audio_path.write_bytes(audio_bytes)
         else:
-            part_path = _audio_part_artifact_path(project_root, audio_block, part_index)
+            part_path = _audio_part_artifact_path(
+                project_root,
+                str(audio_block.get("speech_block_id", "")).strip(),
+                part_index,
+            )
             part_path.parent.mkdir(parents=True, exist_ok=True)
             part_path.write_bytes(audio_bytes)
             part_paths.append(part_path)
@@ -2074,14 +2049,11 @@ def _generate_audio_block(
             checkpoint_callback(
                 {
                     **dict(audio_block),
-                    "audio_relative_path": relative_to_project(project_root, audio_path),
-                    "metadata_relative_path": None,
                     "split_part_count": len(split_plan["parts"]),
-                    "split_strategy": split_plan["strategy"],
-                    "model_token_budget": int(generation_context.get("model_token_budget", 0)),
-                    "model_audio_seconds_budget": float(generation_context.get("model_audio_seconds_budget", 0.0)),
-                    "generated_part_relative_paths": [relative_to_project(project_root, path) for path in part_paths],
-                    "generation_fingerprint": _build_audio_block_fingerprint(audio_block, generation_context),
+                    "generation_fingerprint": _build_audio_block_fingerprint(
+                        audio_block,
+                        generation_context,
+                    ),
                     "split_plan_fingerprint": _split_plan_fingerprint(split_plan),
                     "runtime_result_summary": runtime_result_summary,
                 },
@@ -2099,17 +2071,13 @@ def _generate_audio_block(
     )
     return {
         **dict(audio_block),
-        "audio_relative_path": relative_to_project(project_root, audio_path),
         "audio_can_play": True,
-        "metadata_relative_path": None,
         "audio_duration_seconds": audio_duration_seconds,
         "voice_language": str(generation_context.get("voice_language", "")).strip(),
         "prompt_format": _optional_string(clone_profile.get("prompt_format")),
         "split_part_count": len(split_plan["parts"]),
-        "split_strategy": split_plan["strategy"],
         "model_token_budget": int(generation_context.get("model_token_budget", 0)),
         "model_audio_seconds_budget": float(generation_context.get("model_audio_seconds_budget", 0.0)),
-        "generated_part_relative_paths": [relative_to_project(project_root, path) for path in part_paths],
         "generation_fingerprint": _build_audio_block_fingerprint(audio_block, generation_context),
         "split_plan_fingerprint": _split_plan_fingerprint(split_plan),
         "generated": generated_at,
@@ -2117,7 +2085,6 @@ def _generate_audio_block(
         "approved_at": None,
         "generated_at": generated_at,
         "runtime_result_summary": runtime_result_summary,
-        "warning_flags": _normalize_warning_flags(audio_block.get("warning_flags")),
     }
 
 
@@ -2158,11 +2125,9 @@ def _generate_scene_ambience_audio_block(
         guidance_scale = config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE
     seed_value = runtime_settings.get("scene_ambience_seed")
     seed = None if seed_value is None else _optional_int(seed_value, config.DEFAULT_SCENE_AMBIENCE_SEED)
-    audio_path, _metadata_path = _audio_artifact_paths(
+    audio_path = _audio_artifact_path(
         project_root,
-        str(audio_block.get("chunk_id", "")).strip(),
-        int(audio_block.get("sequence_index", 0)),
-        str(audio_block.get("normalized_speaker_name", "")),
+        str(audio_block.get("speech_block_id", "")).strip(),
     )
     audio_path.parent.mkdir(parents=True, exist_ok=True)
     _delete_audio_block_artifacts(project_root, audio_block)
@@ -2218,17 +2183,13 @@ def _generate_scene_ambience_audio_block(
         "duration_seconds": duration_seconds,
         "metadata_only": False,
         "special_block_status": None,
-        "audio_relative_path": relative_to_project(project_root, audio_path),
         "audio_can_play": True,
-        "metadata_relative_path": None,
         "audio_duration_seconds": _wav_duration_seconds(audio_path),
         "voice_language": None,
         "prompt_format": "sound_prompt",
         "split_part_count": 1,
-        "split_strategy": "single",
         "model_token_budget": None,
         "model_audio_seconds_budget": None,
-        "generated_part_relative_paths": [],
         "generation_fingerprint": _build_audio_block_fingerprint(audio_block, generation_context),
         "split_plan_fingerprint": None,
         "generated": generated_at,
@@ -2236,7 +2197,6 @@ def _generate_scene_ambience_audio_block(
         "approved_at": None,
         "generated_at": generated_at,
         "runtime_result_summary": str(final_result.get("summary", "")).strip(),
-        "warning_flags": _normalize_warning_flags(audio_block.get("warning_flags")),
     }
 
 
@@ -2360,20 +2320,16 @@ def _existing_part_paths(
     persisted_split_fingerprint = str(audio_block.get("split_plan_fingerprint", "") or "").strip()
     if persisted_split_fingerprint != _split_plan_fingerprint(split_plan):
         return []
-    existing_relative_paths = audio_block.get("generated_part_relative_paths")
-    if not isinstance(existing_relative_paths, list):
+    persisted_part_count = _optional_int(audio_block.get("split_part_count"), 0) or 0
+    if persisted_part_count <= 1 or persisted_part_count > len(split_plan["parts"]):
         return []
-    if len(existing_relative_paths) > len(split_plan["parts"]):
-        return []
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
     existing_paths: list[Path] = []
-    for part_index, relative_path in enumerate(existing_relative_paths):
-        expected_path = _audio_part_artifact_path(project_root, audio_block, part_index)
-        resolved_path = _safe_project_artifact_path(project_root, relative_path)
-        if resolved_path is None:
+    for part_index in range(persisted_part_count):
+        expected_path = _audio_part_artifact_path(project_root, speech_block_id, part_index)
+        if not expected_path.is_file() or not _is_valid_wav_path(expected_path):
             return []
-        if resolved_path != expected_path or not resolved_path.is_file() or not _is_valid_wav_path(resolved_path):
-            return []
-        existing_paths.append(resolved_path)
+        existing_paths.append(expected_path)
     return existing_paths
 
 
@@ -2410,20 +2366,16 @@ def _delete_audio_block_artifacts(project_root: Path, audio_block: AudioBlockPay
     @date       2026-04-24
     @version    0.1.1
     """
-    for field_name in ("audio_relative_path", "metadata_relative_path"):
-        artifact_path = _safe_project_artifact_path(project_root, audio_block.get(field_name))
-        if artifact_path is None:
-            continue
-        if artifact_path.is_file():
-            artifact_path.unlink()
-    part_paths = audio_block.get("generated_part_relative_paths")
-    if isinstance(part_paths, list):
-        for relative_path in part_paths:
-            artifact_path = _safe_project_artifact_path(project_root, relative_path)
-            if artifact_path is None:
-                continue
-            if artifact_path.is_file():
-                artifact_path.unlink()
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
+    if not speech_block_id:
+        return
+    audio_path = _audio_artifact_path(project_root, speech_block_id)
+    if audio_path.is_file():
+        audio_path.unlink()
+    for part_index in range(max(_optional_int(audio_block.get("split_part_count"), 1) or 1, 1)):
+        part_path = _audio_part_artifact_path(project_root, speech_block_id, part_index)
+        if part_path.is_file():
+            part_path.unlink()
 
 
 def _audio_block_matches_invalidation(
@@ -2458,78 +2410,15 @@ def _cleared_audio_fields() -> dict[str, object]:
     @version    0.2.1
     """
     return {
-        "audio_relative_path": None,
         "audio_can_play": False,
-        "metadata_relative_path": None,
         "audio_duration_seconds": None,
-        "generated": None,
-        "approved": None,
-        "approved_at": None,
-        "generated_at": None,
+        "generated": False,
+        "approved": False,
         "runtime_result_summary": "",
         "split_part_count": 1,
-        "split_strategy": "single",
-        "generated_part_relative_paths": [],
         "generation_fingerprint": None,
         "split_plan_fingerprint": None,
-        "warning_flags": [],
     }
-
-
-def _remap_audio_block_artifacts(
-    project_root: Path,
-    old_block: AudioBlockPayload,
-    new_block: AudioBlockPayload,
-) -> AudioBlockPayload:
-    """
-    @brief      Move generated artifacts when a preserved Audio Block sequence changes.
-    @param[in]  project_root Active project root folder.
-    @param[in]  old_block Existing generated Audio Block payload.
-    @param[in]  new_block New Speech Block-aligned Audio Block payload.
-    @return     Existing block updated with new identifiers and artifact paths.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
-    """
-    remapped_block = dict(old_block)
-    remapped_block.update(
-        {
-            "speech_block_id": str(new_block.get("speech_block_id", "")).strip(),
-            "sequence_index": int(new_block.get("sequence_index", 0)),
-            "chunk_id": str(new_block.get("chunk_id", "")).strip(),
-            "speaker_id": str(new_block.get("speaker_id", "")).strip(),
-            "speaker_display_name": str(new_block.get("speaker_display_name", "")).strip(),
-            "normalized_speaker_name": str(new_block.get("normalized_speaker_name", "")).strip(),
-            "content_kind": str(new_block.get("content_kind", "")).strip(),
-            "metadata_only": bool(new_block.get("metadata_only", False)),
-            "special_block_status": new_block.get("special_block_status"),
-            "text": str(new_block.get("text", "")),
-            "voice_target_id": str(new_block.get("voice_target_id", "")).strip(),
-            "voice_source_kind": str(new_block.get("voice_source_kind", "")).strip(),
-        }
-    )
-    if not is_generated(remapped_block) or bool(remapped_block.get("metadata_only", False)):
-        remapped_block["audio_can_play"] = _persisted_audio_can_play(remapped_block)
-        return remapped_block
-    old_audio_relative_path = _optional_string(old_block.get("audio_relative_path"))
-    new_audio_path, _metadata_path = _audio_artifact_paths(
-        project_root,
-        str(new_block.get("chunk_id", "")).strip(),
-        int(new_block.get("sequence_index", 0)),
-        str(new_block.get("normalized_speaker_name", "")),
-    )
-    if old_audio_relative_path:
-        old_audio_path = _safe_project_artifact_path(project_root, old_audio_relative_path)
-        if old_audio_path is not None and old_audio_path.is_file() and old_audio_path != new_audio_path:
-            new_audio_path.parent.mkdir(parents=True, exist_ok=True)
-            if new_audio_path.is_file():
-                new_audio_path.unlink()
-            old_audio_path.rename(new_audio_path)
-            remapped_block["audio_relative_path"] = relative_to_project(project_root, new_audio_path)
-    remapped_block["metadata_relative_path"] = None
-    remapped_block["audio_can_play"] = _persisted_audio_can_play(remapped_block)
-    return remapped_block
 
 
 def _build_audio_block_fingerprint(
@@ -2567,7 +2456,6 @@ def _build_audio_block_fingerprint(
         "speaker_display_name": str(audio_block.get("speaker_display_name", "")).strip(),
         "content_kind": str(audio_block.get("content_kind", "")).strip(),
         "metadata_only": bool(audio_block.get("metadata_only", False)),
-        "special_block_status": str(audio_block.get("special_block_status", "") or "").strip(),
         "pause_duration_ms": _optional_int(audio_block.get("pause_duration_ms"), None),
         "text": str(audio_block.get("text", "")),
         "sound_prompt": str(audio_block.get("sound_prompt", "")),
@@ -2575,7 +2463,6 @@ def _build_audio_block_fingerprint(
         "duration_seconds": _optional_float(audio_block.get("duration_seconds")),
         "ambience_position": str(audio_block.get("ambience_position", "")).strip(),
         "voice_target_id": voice_target_id,
-        "voice_source_kind": str(audio_block.get("voice_source_kind", "")).strip(),
         "voice_assignment_mode": str(generation_context.get("voice_assignment_mode", "")).strip(),
         "original_language": str(generation_context.get("original_language", "")).strip(),
         "voice_language": str(generation_context.get("voice_language", "")).strip(),
@@ -2689,8 +2576,6 @@ def _initialize_audio_blocks(
                 "ambience_position": str(speech_block.get("ambience_position", "")).strip(),
                 "voice_target_id": _voice_target_id_for_block(speech_block, voice_assignment_mode),
                 "voice_source_kind": _voice_source_kind_for_block(speech_block, voice_assignment_mode),
-                "audio_relative_path": None,
-                "metadata_relative_path": None,
                 "audio_duration_seconds": audio_duration_seconds,
                 "generated": metadata_only_timestamp,
                 "approved": metadata_only_timestamp,
@@ -2698,13 +2583,10 @@ def _initialize_audio_blocks(
                 "generated_at": None,
                 "runtime_result_summary": _metadata_only_summary(special_block_status),
                 "split_part_count": 1,
-                "split_strategy": "single",
                 "model_token_budget": None,
                 "model_audio_seconds_budget": None,
-                "generated_part_relative_paths": [],
                 "generation_fingerprint": None,
                 "split_plan_fingerprint": None,
-                "warning_flags": [],
             }
         )
     return audio_blocks
@@ -2747,17 +2629,16 @@ def _merge_existing_audio_blocks(
                 if project_root is not None:
                     _delete_audio_block_artifacts(project_root, existing_block)
                 continue
-        existing_generated_at = generated_at(existing_block)
-        existing_approved_at = approved_at(existing_block)
+        existing_generated_at = is_generated(existing_block)
+        existing_approved_at = is_approved(existing_block)
         if str(block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_PAUSE and bool(
             block.get("metadata_only", False)
         ):
-            existing_generated_at = existing_generated_at or generated_at(block)
-            existing_approved_at = existing_approved_at or approved_at(block)
+            existing_generated_at = existing_generated_at or is_generated(block)
+            existing_approved_at = existing_approved_at or is_approved(block)
         block.update(
             {
-                "audio_relative_path": existing_block.get("audio_relative_path"),
-                "metadata_relative_path": existing_block.get("metadata_relative_path"),
+                "audio_can_play": _persisted_audio_can_play(existing_block),
                 "audio_duration_seconds": existing_block.get("audio_duration_seconds")
                 if existing_block.get("audio_duration_seconds") is not None
                 else block.get("audio_duration_seconds"),
@@ -2775,15 +2656,10 @@ def _merge_existing_audio_blocks(
                 else block.get("duration_seconds"),
                 "ambience_position": existing_block.get("ambience_position") or block.get("ambience_position"),
                 "split_part_count": int(existing_block.get("split_part_count", 1)),
-                "split_strategy": str(existing_block.get("split_strategy", "single")).strip() or "single",
                 "model_token_budget": existing_block.get("model_token_budget"),
                 "model_audio_seconds_budget": existing_block.get("model_audio_seconds_budget"),
-                "generated_part_relative_paths": list(existing_block.get("generated_part_relative_paths", []))
-                if isinstance(existing_block.get("generated_part_relative_paths"), list)
-                else [],
                 "generation_fingerprint": current_fingerprint or existing_block.get("generation_fingerprint"),
                 "split_plan_fingerprint": existing_block.get("split_plan_fingerprint"),
-                "warning_flags": _normalize_warning_flags(existing_block.get("warning_flags")),
             }
         )
     return _apply_scene_ambience_audio_policy(merged_blocks, generation_context)
@@ -2820,7 +2696,7 @@ def _apply_scene_ambience_audio_policy(
         if generate_scene_ambience_audio:
             block["metadata_only"] = False
             block["special_block_status"] = None
-            if not _optional_string(block.get("audio_relative_path")):
+            if not is_generated(block):
                 block["generated"] = None
                 block["approved"] = None
                 block["generated_at"] = None
@@ -2851,13 +2727,12 @@ def _audio_block_has_reusable_audio(audio_block: AudioBlockPayload, project_root
         return False
     if bool(audio_block.get("metadata_only", False)):
         return True
-    audio_relative_path = _optional_string(audio_block.get("audio_relative_path"))
-    if not audio_relative_path:
-        return project_root is None
     if project_root is None:
         return True
-    audio_path = _safe_project_artifact_path(project_root, audio_relative_path)
-    return audio_path is not None and _is_valid_wav_path(audio_path)
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
+    if not speech_block_id:
+        return False
+    return _is_valid_wav_path(_audio_artifact_path(project_root, speech_block_id))
 
 
 def _apply_model_budget_to_block(
@@ -2888,75 +2763,44 @@ def _persist_report_update(
     clone_profiles: list[VoiceCloneProfilePayload] | None = None,
 ) -> AudioBlocksReportPayload:
     """
-    @brief      Persist one report-only Audio Blocks update after approvals or single-block regeneration.
+    @brief      Persist one document update after approvals or single-block regeneration.
     @param[in]  project_root Active project root folder.
     @param[in]  audio_blocks Updated Audio Blocks payload list.
     @param[in]  clone_profiles Optional updated direct-clone source profile list.
-    @return     Updated report payload.
+    @return     Updated projected report payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.1
+    @date       2026-07-26
+    @version    0.3.0
     """
-    existing_state = load_operation_state(project_root) or {}
-    metadata = existing_state.get("metadata", {})
-    metadata = metadata if isinstance(metadata, dict) else {}
-    voice_language = str(metadata.get("voice_language", "")).strip()
-    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    document = load_audio_blocks_document(project_root) or _empty_audio_blocks_document()
+    checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else {}
     current_clone_profiles = load_voice_clone_profiles(project_root) if clone_profiles is None else clone_profiles
-    report = _rebuild_report(
-        audio_blocks,
-        voice_language,
-        speech_blocks,
-        warning_records=[],
-        prompt_count=len(current_clone_profiles),
-        reused_prompt_count=_metadata_int(existing_state, "reused_prompt_count", 0),
-        regenerated_prompt_count=_metadata_int(existing_state, "regenerated_prompt_count", 0),
-        current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
-    )
-    final_status = (
-        AUDIO_BLOCKS_STAGE_COMPLETED
-        if str(report.get("audio_blocks_stage_status", "")).strip() == AUDIO_BLOCKS_STAGE_COMPLETED
-        else AUDIO_BLOCKS_STAGE_IN_PROGRESS
-    )
-    persisted_state = _build_operation_state(
+    total_block_count = len(speech_blocks_service.load_speech_blocks(project_root)) or len(audio_blocks)
+    stage_status = _derived_stage_status(total_block_count, audio_blocks)
+    return _persist_document(
         project_root,
-        speech_blocks,
         audio_blocks,
         current_clone_profiles,
-        status=final_status,
-        started_at=_resolve_started_at(existing_state),
-        completed_at=None,
-        voice_language=voice_language,
-        input_fingerprint=_operation_optional_string(metadata.get("input_fingerprint")) or "",
-        current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
-        current_block_id=_operation_optional_string(metadata.get("current_block_id")),
-        next_profile_index=int(_resume_checkpoint_field(existing_state, "next_profile_index", 0)),
-        next_speech_block_index=int(
-            _resume_checkpoint_field(
-                existing_state,
-                "next_speech_block_index",
-                len(audio_blocks),
-            )
+        status=(
+            AUDIO_BLOCKS_STAGE_COMPLETED
+            if stage_status == AUDIO_BLOCKS_STAGE_COMPLETED
+            else AUDIO_BLOCKS_STAGE_IN_PROGRESS
         ),
-        reused_prompt_count=_metadata_int(existing_state, "reused_prompt_count", 0),
-        regenerated_prompt_count=_metadata_int(existing_state, "regenerated_prompt_count", 0),
+        voice_language=str(document.get("voice_language", "")),
+        input_fingerprint=str(document.get("input_fingerprint", "")),
+        run_token=str(checkpoint.get("run_token", "")),
+        current_phase=str(checkpoint.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
+        current_block_id=_operation_optional_string(checkpoint.get("current_block_id")),
+        next_speech_block_index=_checkpoint_int(checkpoint, "next_speech_block_index", len(audio_blocks)),
+        total_block_count=total_block_count,
     )
-    _persist_state(
-        project_root,
-        speech_blocks,
-        audio_blocks,
-        current_clone_profiles,
-        report,
-        persisted_state,
-    )
-    return report
 
 
 def _operation_optional_string(value: object) -> str | None:
     """
-    @brief      Normalize one optional operation-state string and reject null-like persisted text.
-    @param[in]  value Candidate persisted operation-state value.
+    @brief      Normalize one optional operation string and reject null-like persisted text.
+    @param[in]  value Candidate persisted value.
     @return     Normalized string or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -2978,8 +2822,6 @@ def _persist_split_checkpoint(
     active_block_index: int,
     next_split_part_index: int,
     started_at: str,
-    reused_prompt_count: int,
-    regenerated_prompt_count: int,
     next_generation_order_index: int | None = None,
 ) -> None:
     """
@@ -2992,52 +2834,30 @@ def _persist_split_checkpoint(
     @param[in]  active_block_index Zero-based active speech-block index.
     @param[in]  next_split_part_index Next split part to generate.
     @param[in]  started_at Operation start timestamp.
-    @param[in]  reused_prompt_count Count of reused clone prompts.
-    @param[in]  regenerated_prompt_count Count of regenerated clone prompts.
+    @param[in]  next_generation_order_index Optional next generation-order index.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
+    @date       2026-07-26
+    @version    0.4.0
     """
     checkpoint_blocks = list(audio_blocks)
     checkpoint_blocks[active_block_index] = _normalize_persisted_audio_block(dict(checkpoint_block))
-    report = _rebuild_report(
-        checkpoint_blocks,
-        str(generation_context["voice_language"]),
-        list(generation_context["speech_blocks"]),
-        warning_records=[],
-        prompt_count=len(clone_profiles),
-        reused_prompt_count=reused_prompt_count,
-        regenerated_prompt_count=regenerated_prompt_count,
-        current_phase=_GENERATE_PHASE,
-    )
-    _persist_state(
+    _persist_document(
         project_root,
-        list(generation_context["speech_blocks"]),
         checkpoint_blocks,
         clone_profiles,
-        report,
-        _build_operation_state(
-            project_root,
-            list(generation_context["speech_blocks"]),
-            checkpoint_blocks,
-            clone_profiles,
-            status="running",
-            started_at=started_at,
-            completed_at=None,
-            voice_language=str(generation_context["voice_language"]),
-            input_fingerprint=str(generation_context["input_fingerprint"]),
-            current_phase=_GENERATE_PHASE,
-            current_block_id=str(checkpoint_block.get("speech_block_id", "")).strip(),
-            next_profile_index=len(generation_context["voice_targets"]),
-            next_speech_block_index=active_block_index
-            if next_generation_order_index is None
-            else next_generation_order_index,
-            reused_prompt_count=reused_prompt_count,
-            regenerated_prompt_count=regenerated_prompt_count,
-            next_split_part_index=next_split_part_index,
+        status="running",
+        voice_language=str(generation_context["voice_language"]),
+        input_fingerprint=str(generation_context["input_fingerprint"]),
+        run_token=started_at,
+        current_phase=_GENERATE_PHASE,
+        current_block_id=str(checkpoint_block.get("speech_block_id", "")).strip(),
+        next_speech_block_index=(
+            active_block_index if next_generation_order_index is None else next_generation_order_index
         ),
+        next_split_part_index=next_split_part_index,
+        total_block_count=len(generation_context["speech_blocks"]),
     )
 
 
@@ -3049,10 +2869,7 @@ def _persist_cancelled_state(
     started_at: str,
     current_phase: str,
     current_block_id: str | None,
-    next_profile_index: int,
     next_speech_block_index: int,
-    reused_prompt_count: int,
-    regenerated_prompt_count: int,
     next_split_part_index: int = 0,
 ) -> None:
     """
@@ -3064,228 +2881,281 @@ def _persist_cancelled_state(
     @param[in]  started_at Operation start timestamp.
     @param[in]  current_phase Current resumable phase token.
     @param[in]  current_block_id Current block id or `None`.
-    @param[in]  next_profile_index Next voice-target profile index.
     @param[in]  next_speech_block_index Next speech-block index.
-    @param[in]  reused_prompt_count Count of reused prompts.
-    @param[in]  regenerated_prompt_count Count of regenerated prompts.
     @param[in]  next_split_part_index Next split-part index inside the current block.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    report = _rebuild_report(
-        audio_blocks,
-        str(generation_context["voice_language"]),
-        list(generation_context["speech_blocks"]),
-        warning_records=[],
-        prompt_count=len(clone_profiles),
-        reused_prompt_count=reused_prompt_count,
-        regenerated_prompt_count=regenerated_prompt_count,
-        current_phase=current_phase,
-    )
-    _persist_state(
+    _persist_document(
         project_root,
-        list(generation_context["speech_blocks"]),
         audio_blocks,
         clone_profiles,
-        report,
-        _build_operation_state(
-            project_root,
-            list(generation_context["speech_blocks"]),
-            audio_blocks,
-            clone_profiles,
-            status="cancelled",
-            started_at=started_at,
-            completed_at=None,
-            voice_language=str(generation_context["voice_language"]),
-            input_fingerprint=str(generation_context["input_fingerprint"]),
-            current_phase=current_phase,
-            current_block_id=current_block_id,
-            next_profile_index=next_profile_index,
-            next_speech_block_index=next_speech_block_index,
-            reused_prompt_count=reused_prompt_count,
-            regenerated_prompt_count=regenerated_prompt_count,
-            next_split_part_index=next_split_part_index,
-        ),
+        status="cancelled",
+        voice_language=str(generation_context["voice_language"]),
+        input_fingerprint=str(generation_context["input_fingerprint"]),
+        run_token=started_at,
+        current_phase=current_phase,
+        current_block_id=current_block_id,
+        next_speech_block_index=next_speech_block_index,
+        next_split_part_index=next_split_part_index,
+        total_block_count=len(generation_context["speech_blocks"]),
     )
 
 
-def _rebuild_report(
-    audio_blocks: list[AudioBlockPayload],
-    voice_language: str,
-    speech_blocks: list[dict[str, object]],
-    warning_records: list[dict[str, object]],
-    updated_at: str | None = None,
-    prompt_count: int = 0,
-    reused_prompt_count: int = 0,
-    regenerated_prompt_count: int = 0,
-    current_phase: str | None = None,
-) -> AudioBlocksReportPayload:
+def _empty_audio_blocks_document() -> AudioBlocksDocumentPayload:
     """
-    @brief      Recompute the Audio Blocks report from the current persisted state.
-    @param[in]  audio_blocks Current Audio Blocks payload list.
-    @param[in]  voice_language Selected character-voices voice language.
-    @param[in]  speech_blocks Current Speech Blocks payload list.
-    @param[in]  warning_records Current warning entry list.
-    @param[in]  updated_at Ignored legacy report timestamp override.
-    @param[in]  prompt_count Current persisted prompt count.
-    @param[in]  reused_prompt_count Count of reusable prompts reused from persisted project data.
-    @param[in]  regenerated_prompt_count Count of reusable prompts freshly created in the current run.
-    @param[in]  current_phase Optional resumable current-phase token.
-    @return     Rebuilt Audio Blocks report payload.
+    @brief      Build one empty not-started Audio Blocks document.
+    @return     Empty document payload matching the root contract.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
+    @date       2026-07-26
+    @version    0.1.0
     """
-    _ = updated_at
-    total_block_count = len(speech_blocks)
-    generated_block_count = _generated_count(audio_blocks)
-    approved_block_count = _approved_count(audio_blocks)
-    if total_block_count <= 0:
-        stage_status = AUDIO_BLOCKS_STAGE_NOT_STARTED
-    elif approved_block_count >= total_block_count and generated_block_count >= total_block_count:
-        stage_status = AUDIO_BLOCKS_STAGE_COMPLETED
-    elif generated_block_count > 0 or approved_block_count > 0:
-        stage_status = AUDIO_BLOCKS_STAGE_IN_PROGRESS
-    else:
-        stage_status = AUDIO_BLOCKS_STAGE_NOT_STARTED
     return {
-        "voice_language": voice_language,
-        "audio_blocks_stage_status": stage_status,
-        "generated_block_count": generated_block_count,
-        "approved_block_count": approved_block_count,
-        "total_block_count": total_block_count,
-        "prompt_count": max(int(prompt_count), 0),
-        "reused_prompt_count": max(int(reused_prompt_count), 0),
-        "regenerated_prompt_count": max(int(regenerated_prompt_count), 0),
-        "current_phase": str(current_phase).strip() if current_phase else None,
-        "warning_count": len(warning_records),
-        "warnings": list(warning_records),
+        "status": AUDIO_BLOCKS_STAGE_NOT_STARTED,
+        "voice_language": "",
+        "input_fingerprint": "",
+        "checkpoint": None,
+        "blocks": [],
     }
 
 
-def _build_operation_state(
+def _persist_document(
     project_root: Path,
-    speech_blocks: list[dict[str, object]],
     audio_blocks: list[AudioBlockPayload],
     clone_profiles: list[VoiceCloneProfilePayload],
     status: str,
-    started_at: str,
-    completed_at: str | None,
     voice_language: str,
     input_fingerprint: str,
+    run_token: str,
     current_phase: str,
     current_block_id: str | None,
-    next_profile_index: int,
     next_speech_block_index: int,
-    reused_prompt_count: int = 0,
-    regenerated_prompt_count: int = 0,
     next_split_part_index: int = 0,
-) -> OperationStatePayload:
+    total_block_count: int | None = None,
+) -> AudioBlocksReportPayload:
     """
-    @brief      Build one persisted Audio Blocks operation-state payload.
+    @brief      Persist the authoritative Audio Blocks document and the clone-profile cache.
     @param[in]  project_root Active project root folder.
-    @param[in]  speech_blocks Current Speech Blocks payload list.
     @param[in]  audio_blocks Current Audio Blocks payload list.
     @param[in]  clone_profiles Current persisted direct-clone source profile list.
     @param[in]  status Persisted operation status token.
-    @param[in]  started_at Runtime token preserved only inside the resume checkpoint.
-    @param[in]  completed_at Ignored legacy completion timestamp.
     @param[in]  voice_language Selected character-voices voice language.
     @param[in]  input_fingerprint Stable validated input fingerprint.
+    @param[in]  run_token Operation start timestamp preserved in the checkpoint.
     @param[in]  current_phase Current resumable phase token.
     @param[in]  current_block_id Current generating speech-block id or `None`.
-    @param[in]  next_profile_index Next voice-target profile index.
     @param[in]  next_speech_block_index Next speech-block index.
-    @param[in]  reused_prompt_count Count of reusable prompts reused from persisted project data.
-    @param[in]  regenerated_prompt_count Count of reusable prompts freshly created in the current run.
     @param[in]  next_split_part_index Next split part index for the current block.
-    @return     Persisted operation-state payload.
+    @param[in]  total_block_count Optional known Speech Blocks count for projections.
+    @return     Projected report payload for the persisted document.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.5.0
+    @date       2026-07-26
+    @version    0.1.0
     """
-    _ = project_root
-    _ = completed_at
-    return build_operation_state_payload(
-        status=status,
-        progress_current=_generated_count(audio_blocks),
-        progress_total=len(speech_blocks),
-        mode=_MODE,
-        warning_count=0,
-        metadata={
-            "voice_language": voice_language,
-            "input_fingerprint": input_fingerprint,
-            "prompt_count": len(clone_profiles),
-            "reused_prompt_count": max(int(reused_prompt_count), 0),
-            "regenerated_prompt_count": max(int(regenerated_prompt_count), 0),
-            "current_phase": current_phase,
+    document: AudioBlocksDocumentPayload = {
+        "status": str(status),
+        "voice_language": str(voice_language or ""),
+        "input_fingerprint": str(input_fingerprint or ""),
+        "checkpoint": {
+            "run_token": str(run_token or ""),
+            "current_phase": str(current_phase or _GENERATE_PHASE),
             "current_block_id": current_block_id,
+            "next_speech_block_index": max(int(next_speech_block_index), 0),
+            "next_split_part_index": max(int(next_split_part_index), 0),
         },
-        resume_checkpoint={
-            "run_token": started_at,
-            "next_profile_index": max(next_profile_index, 0),
-            "next_speech_block_index": max(next_speech_block_index, 0),
-            "next_split_part_index": max(next_split_part_index, 0),
-        },
-    )
-
-
-def _persist_state(
-    project_root: Path,
-    speech_blocks: list[dict[str, object]],
-    audio_blocks: list[AudioBlockPayload],
-    clone_profiles: list[VoiceCloneProfilePayload],
-    report: AudioBlocksReportPayload,
-    operation_state: OperationStatePayload,
-) -> None:
-    """
-    @brief      Persist the Audio Blocks snapshot, output, clone profiles, report, and state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  speech_blocks Current Speech Blocks payload list.
-    @param[in]  audio_blocks Current Audio Blocks payload list.
-    @param[in]  clone_profiles Current persisted direct-clone source profile list.
-    @param[in]  report Current Audio Blocks report payload.
-    @param[in]  operation_state Current Audio Blocks operation-state payload.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.4.0
-    """
-    _ = speech_blocks
-    write_operation_json_artifact(
-        project_root,
-        "audio_blocks",
-        config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        [_compact_audio_block_payload(block) for block in audio_blocks],
-    )
+        "blocks": [_compact_audio_block_payload(block) for block in audio_blocks],
+    }
+    write_audio_blocks_document(project_root, document)
     write_operation_json_artifact(
         project_root,
         "audio_blocks",
         config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
         clone_profiles,
     )
-    write_operation_json_artifact(project_root, "audio_blocks", config.AUDIO_BLOCKS_REPORT_FILE_NAME, report)
-    write_operation_json_artifact(
-        project_root,
-        "audio_blocks",
-        config.AUDIO_BLOCKS_STATE_FILE_NAME,
-        operation_state,
-    )
-    operation_status = str(operation_state.get("status", "")).strip()
     project_workspace_service.sync_manifest_operation_summary(
         project_root,
         "audio_blocks",
-        operation_state,
-        current_stage="audio_blocks_ready"
-        if operation_status == AUDIO_BLOCKS_STAGE_COMPLETED
-        else "speech_blocks_ready",
+        _project_operation_state(
+            project_root,
+            document,
+            total_block_count=total_block_count,
+            prompt_count=len(clone_profiles),
+        ),
+        current_stage="audio_blocks_ready" if str(status) == AUDIO_BLOCKS_STAGE_COMPLETED else "speech_blocks_ready",
     )
+    return _project_audio_blocks_report(
+        project_root,
+        document,
+        total_block_count=total_block_count,
+        prompt_count=len(clone_profiles),
+    )
+
+
+def _derived_stage_status(total_block_count: int, audio_blocks: list[AudioBlockPayload]) -> str:
+    """
+    @brief      Derive the Audio Blocks stage token from current counts.
+    @param[in]  total_block_count Current Speech Blocks count.
+    @param[in]  audio_blocks Current Audio Blocks payload list.
+    @return     Derived Audio Blocks stage token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    generated_block_count = _generated_count(audio_blocks)
+    approved_block_count = _approved_count(audio_blocks)
+    if total_block_count <= 0:
+        return AUDIO_BLOCKS_STAGE_NOT_STARTED
+    if approved_block_count >= total_block_count and generated_block_count >= total_block_count:
+        return AUDIO_BLOCKS_STAGE_COMPLETED
+    if generated_block_count > 0 or approved_block_count > 0:
+        return AUDIO_BLOCKS_STAGE_IN_PROGRESS
+    return AUDIO_BLOCKS_STAGE_NOT_STARTED
+
+
+def _projection_counts(
+    project_root: str | Path,
+    document: AudioBlocksDocumentPayload,
+    total_block_count: int | None,
+    prompt_count: int | None,
+) -> tuple[list[AudioBlockPayload], int, int]:
+    """
+    @brief      Resolve the shared inputs both Audio Blocks projections need.
+    @param[in]  project_root Active project root folder.
+    @param[in]  document Authoritative Audio Blocks document payload.
+    @param[in]  total_block_count Optional known Speech Blocks count.
+    @param[in]  prompt_count Optional known clone-profile count.
+    @return     Tuple of document blocks, total block count, and prompt count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    blocks = [dict(block) for block in document.get("blocks", []) if isinstance(block, dict)]
+    resolved_total = (
+        int(total_block_count)
+        if total_block_count is not None
+        else (len(speech_blocks_service.load_speech_blocks(project_root)) or len(blocks))
+    )
+    resolved_prompts = int(prompt_count) if prompt_count is not None else len(load_voice_clone_profiles(project_root))
+    return blocks, resolved_total, resolved_prompts
+
+
+def _project_audio_blocks_report(
+    project_root: str | Path,
+    document: AudioBlocksDocumentPayload,
+    total_block_count: int | None = None,
+    prompt_count: int | None = None,
+) -> AudioBlocksReportPayload:
+    """
+    @brief      Project the report shape from the single Audio Blocks document.
+    @param[in]  project_root Active project root folder.
+    @param[in]  document Authoritative Audio Blocks document payload.
+    @param[in]  total_block_count Optional known Speech Blocks count.
+    @param[in]  prompt_count Optional known clone-profile count.
+    @return     Projected Audio Blocks report payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    blocks, resolved_total, resolved_prompts = _projection_counts(
+        project_root,
+        document,
+        total_block_count,
+        prompt_count,
+    )
+    checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else {}
+    persisted_status = str(document.get("status", "")).strip()
+    stage_status = (
+        persisted_status
+        if persisted_status in {"running", "failed", "cancelled"}
+        else _derived_stage_status(resolved_total, blocks)
+    )
+    return {
+        "voice_language": str(document.get("voice_language", "")),
+        "audio_blocks_stage_status": stage_status,
+        "generated_block_count": _generated_count(blocks),
+        "approved_block_count": _approved_count(blocks),
+        "total_block_count": resolved_total,
+        "prompt_count": max(resolved_prompts, 0),
+        "current_phase": str(checkpoint.get("current_phase", "")).strip() or None,
+    }
+
+
+def _project_operation_state(
+    project_root: str | Path,
+    document: AudioBlocksDocumentPayload,
+    total_block_count: int | None = None,
+    prompt_count: int | None = None,
+) -> OperationStatePayload:
+    """
+    @brief      Project the operation-state shape from the single Audio Blocks document.
+    @param[in]  project_root Active project root folder.
+    @param[in]  document Authoritative Audio Blocks document payload.
+    @param[in]  total_block_count Optional known Speech Blocks count.
+    @param[in]  prompt_count Optional known clone-profile count.
+    @return     Projected Audio Blocks operation-state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    blocks, resolved_total, resolved_prompts = _projection_counts(
+        project_root,
+        document,
+        total_block_count,
+        prompt_count,
+    )
+    checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else None
+    return build_operation_state_payload(
+        status=str(document.get("status", AUDIO_BLOCKS_STAGE_NOT_STARTED)),
+        progress_current=_generated_count(blocks),
+        progress_total=resolved_total,
+        mode=_MODE,
+        warning_count=0,
+        metadata={
+            "voice_language": str(document.get("voice_language", "")),
+            "input_fingerprint": str(document.get("input_fingerprint", "")),
+            "prompt_count": max(resolved_prompts, 0),
+            "current_phase": str(checkpoint.get("current_phase", "")) if checkpoint else "",
+            "current_block_id": checkpoint.get("current_block_id") if checkpoint else None,
+        },
+        resume_checkpoint=(
+            {
+                "run_token": str(checkpoint.get("run_token", "")),
+                "next_speech_block_index": _checkpoint_int(checkpoint, "next_speech_block_index", 0),
+                "next_split_part_index": _checkpoint_int(checkpoint, "next_split_part_index", 0),
+            }
+            if checkpoint
+            else None
+        ),
+    )
+
+
+def _checkpoint_int(checkpoint: object, field_name: str, fallback: int) -> int:
+    """
+    @brief      Read one non-negative integer from a persisted checkpoint mapping.
+    @param[in]  checkpoint Candidate checkpoint mapping.
+    @param[in]  field_name Checkpoint field name.
+    @param[in]  fallback Fallback value used when the field is absent or invalid.
+    @return     Non-negative integer checkpoint value.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    if not isinstance(checkpoint, dict):
+        return max(int(fallback), 0)
+    try:
+        return max(int(checkpoint.get(field_name, fallback)), 0)
+    except (TypeError, ValueError):
+        return max(int(fallback), 0)
 
 
 def _speech_blocks_snapshot_path(project_root: Path) -> Path:
@@ -3491,52 +3361,30 @@ def _approved_count(audio_blocks: list[AudioBlockPayload]) -> int:
 
 def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPayload:
     """
-    @brief      Build one persisted Audio Blocks payload with canonical generation metadata.
+    @brief      Build one persisted Audio Blocks entry limited to the document contract.
+    @details    Identity, text, prompts, and per-run budgets are deliberately not
+                persisted: they belong to the Speech Blocks document or are
+                recomputed from settings on the next run.
     @param[in]  audio_block Rich in-memory Audio Blocks payload.
-    @return     Persisted Audio Blocks payload.
+    @return     Persisted Audio Blocks entry.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.3.1
+    @date       2026-07-26
+    @version    0.4.0
     """
     payload: AudioBlockPayload = {
         "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
-        "chunk_id": str(audio_block.get("chunk_id", "")).strip(),
-        "speaker_id": str(audio_block.get("speaker_id", "")).strip(),
         "voice_target_id": str(audio_block.get("voice_target_id", "")).strip(),
-        "audio_relative_path": _optional_string(audio_block.get("audio_relative_path")),
+        "generated": is_generated(audio_block),
+        "approved": is_approved(audio_block),
         "audio_can_play": _persisted_audio_can_play(audio_block),
-        "metadata_relative_path": _optional_string(audio_block.get("metadata_relative_path")),
         "audio_duration_seconds": _optional_float(audio_block.get("audio_duration_seconds")),
-        "generated": generated_at(audio_block),
-        "approved": approved_at(audio_block),
-        "voice_language": _optional_string(audio_block.get("voice_language")),
-        "prompt_format": _optional_string(audio_block.get("prompt_format")),
-        "runtime_result_summary": str(audio_block.get("runtime_result_summary", "")).strip(),
-        "split_part_count": _optional_int(audio_block.get("split_part_count"), 1),
-        "split_strategy": str(audio_block.get("split_strategy", "single")).strip() or "single",
-        "model_token_budget": audio_block.get("model_token_budget"),
-        "model_audio_seconds_budget": audio_block.get("model_audio_seconds_budget"),
-        "generated_part_relative_paths": list(audio_block.get("generated_part_relative_paths", []))
-        if isinstance(audio_block.get("generated_part_relative_paths"), list)
-        else [],
         "generation_fingerprint": _optional_string(audio_block.get("generation_fingerprint")),
-        "split_plan_fingerprint": _optional_string(audio_block.get("split_plan_fingerprint")),
     }
-    warning_flags = _normalize_warning_flags(audio_block.get("warning_flags"))
-    if warning_flags:
-        payload["warning_flags"] = warning_flags
-    if bool(audio_block.get("metadata_only", False)):
-        content_kind = str(audio_block.get("content_kind", "")).strip()
-        payload["content_kind"] = content_kind
-        if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE:
-            payload["pause_duration_ms"] = _optional_int(audio_block.get("pause_duration_ms"), None)
-    if str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
-        payload["content_kind"] = speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-        payload["sound_prompt"] = str(audio_block.get("sound_prompt", audio_block.get("text", ""))).strip()
-        payload["negative_prompt"] = str(audio_block.get("negative_prompt", "")).strip()
-        payload["duration_seconds"] = _optional_float(audio_block.get("duration_seconds"))
-        payload["ambience_position"] = str(audio_block.get("ambience_position", "")).strip()
+    split_part_count = _optional_int(audio_block.get("split_part_count"), 1) or 1
+    if split_part_count > 1:
+        payload["split_part_count"] = split_part_count
+        payload["split_plan_fingerprint"] = _optional_string(audio_block.get("split_plan_fingerprint"))
     return payload
 
 
@@ -3571,6 +3419,10 @@ def _attach_current_speech_block_fields(
         enriched_blocks.append(
             {
                 **audio_block,
+                "special_block_status": _special_block_status(content_kind),
+                "pause_duration_ms": speech_blocks_service.pause_duration_ms(speech_block.get("text", ""))
+                if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE
+                else None,
                 "sequence_index": int(speech_block.get("sequence_index", 0)),
                 "chunk_id": str(speech_block.get("chunk_id", audio_block.get("chunk_id", ""))).strip(),
                 "speaker_id": str(speech_block.get("speaker_id", audio_block.get("speaker_id", ""))).strip(),
@@ -3600,24 +3452,43 @@ def _attach_current_speech_block_fields(
     return enriched_blocks
 
 
-def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPayload:
+def _attach_derived_audio_path(project_root: Path, audio_block: AudioBlockPayload) -> AudioBlockPayload:
     """
-    @brief      Normalize one persisted Audio Blocks payload.
-    @param[in]  payload Raw persisted payload.
-    @return     Normalized Audio Blocks payload.
+    @brief      Attach the derived project-relative audio path to one loaded Audio Block.
+    @details    The path is never persisted; it is a pure function of
+                `speech_block_id` and is recomputed on every load so downstream
+                consumers keep a ready-to-use relative path. It stays `None` for
+                blocks that own no WAV, preserving the invariant that a set
+                `audio_relative_path` means generated audio exists.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_block Audio Blocks payload enriched from Speech Blocks.
+    @return     Audio Blocks payload carrying `audio_relative_path`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.7.1
+    @date       2026-07-26
+    @version    0.2.0
     """
-    generated_timestamp = _status_timestamp(payload.get("generated"), payload.get("generated_at"))
-    approved_timestamp = _status_timestamp(payload.get("approved"), payload.get("approved_at"))
-    content_kind = str(payload.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION)).strip()
-    metadata_only = bool(payload.get("metadata_only", False)) or content_kind in {
-        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
+    owns_audio = is_generated(audio_block) and str(audio_block.get("content_kind", "")).strip() not in {
         speech_blocks_service.CONTENT_KIND_PAUSE,
         speech_blocks_service.CONTENT_KIND_INDICATION,
     }
+    if not speech_block_id or not owns_audio:
+        return {**audio_block, "audio_relative_path": None}
+    audio_path = _audio_artifact_path(project_root, speech_block_id)
+    return {**audio_block, "audio_relative_path": relative_to_project(project_root, audio_path)}
+
+
+def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPayload:
+    """
+    @brief      Normalize one persisted Audio Blocks entry into the in-memory payload.
+    @param[in]  payload Raw persisted document entry.
+    @return     Normalized Audio Blocks payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.8.0
+    """
     return {
         "speech_block_id": str(payload.get("speech_block_id", "")).strip(),
         "sequence_index": int(payload.get("sequence_index", 0)),
@@ -3625,39 +3496,26 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
         "speaker_id": str(payload.get("speaker_id", "")).strip(),
         "speaker_display_name": str(payload.get("speaker_display_name", "")).strip(),
         "normalized_speaker_name": str(payload.get("normalized_speaker_name", "")).strip() or "speaker",
-        "content_kind": content_kind,
-        "metadata_only": metadata_only,
+        "content_kind": str(payload.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION)).strip(),
+        "metadata_only": bool(payload.get("metadata_only", False)),
         "special_block_status": _optional_string(payload.get("special_block_status")),
         "pause_duration_ms": _optional_int(payload.get("pause_duration_ms"), None),
         "speech_block_approved": bool(payload.get("speech_block_approved", True)),
         "text": str(payload.get("text", "")),
-        "sound_prompt": str(payload.get("sound_prompt", payload.get("text", ""))).strip(),
+        "sound_prompt": str(payload.get("sound_prompt", "")).strip(),
         "negative_prompt": str(payload.get("negative_prompt", "")).strip(),
         "duration_seconds": _optional_float(payload.get("duration_seconds")),
         "ambience_position": str(payload.get("ambience_position", "")).strip(),
         "voice_target_id": str(payload.get("voice_target_id", "")).strip(),
         "voice_source_kind": str(payload.get("voice_source_kind", "")).strip(),
-        "audio_relative_path": _optional_string(payload.get("audio_relative_path")),
         "audio_can_play": _persisted_audio_can_play(payload),
-        "metadata_relative_path": _optional_string(payload.get("metadata_relative_path")),
         "audio_duration_seconds": _optional_float(payload.get("audio_duration_seconds")),
-        "generated": generated_timestamp,
-        "approved": approved_timestamp,
-        "approved_at": None,
-        "generated_at": generated_timestamp,
-        "voice_language": _optional_string(payload.get("voice_language")),
-        "prompt_format": _optional_string(payload.get("prompt_format")),
+        "generated": bool(payload.get("generated", False)),
+        "approved": bool(payload.get("approved", False)),
         "runtime_result_summary": str(payload.get("runtime_result_summary", "")).strip(),
         "split_part_count": _optional_int(payload.get("split_part_count"), 1),
-        "split_strategy": str(payload.get("split_strategy", "single")).strip() or "single",
-        "model_token_budget": payload.get("model_token_budget"),
-        "model_audio_seconds_budget": payload.get("model_audio_seconds_budget"),
-        "generated_part_relative_paths": list(payload.get("generated_part_relative_paths", []))
-        if isinstance(payload.get("generated_part_relative_paths"), list)
-        else [],
         "generation_fingerprint": _optional_string(payload.get("generation_fingerprint")),
         "split_plan_fingerprint": _optional_string(payload.get("split_plan_fingerprint")),
-        "warning_flags": _normalize_warning_flags(payload.get("warning_flags")),
     }
 
 
@@ -3673,11 +3531,9 @@ def _persisted_audio_can_play(audio_block: dict[str, object]) -> bool:
     """
     if "audio_can_play" in audio_block:
         return bool(audio_block.get("audio_can_play", False))
-    if not generated_at(audio_block):
+    if not is_generated(audio_block):
         return False
-    if bool(audio_block.get("metadata_only", False)):
-        return True
-    return _optional_string(audio_block.get("audio_relative_path")) is not None
+    return bool(audio_block.get("metadata_only", False))
 
 
 def _filesystem_audio_can_play(project_root: Path, audio_block: dict[str, object]) -> bool:
@@ -3695,11 +3551,10 @@ def _filesystem_audio_can_play(project_root: Path, audio_block: dict[str, object
         return False
     if bool(audio_block.get("metadata_only", False)):
         return True
-    audio_relative_path = _optional_string(audio_block.get("audio_relative_path"))
-    if not audio_relative_path:
+    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
+    if not speech_block_id:
         return False
-    audio_path = _safe_project_artifact_path(project_root, audio_relative_path)
-    return audio_path is not None and _is_valid_wav_path(audio_path)
+    return _is_valid_wav_path(_audio_artifact_path(project_root, speech_block_id))
 
 
 def _normalize_voice_clone_profile(payload: dict[str, object]) -> VoiceCloneProfilePayload:

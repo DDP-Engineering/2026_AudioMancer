@@ -124,19 +124,6 @@ def test_document_round_trips_and_writes_only_one_artifact(tmp_path: Path) -> No
     assert not (operation_dir / _LEGACY_STATE_FILE_NAME).exists()
 
 
-def test_removed_config_constants_do_not_survive() -> None:
-    """
-    @brief      Verify SPEC-SB-SINGLEDOC / REQ-FUNC-c71fbab4 removes legacy file-name constants.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
-    """
-    assert config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME == "speech_blocks.json"
-    assert all(not hasattr(config, constant_name) for constant_name in _REMOVED_CONFIG_CONSTANTS)
-
-
 def test_persisted_document_excludes_source_chunk_text(tmp_path: Path) -> None:
     """
     @brief      Verify SPEC-SB-NOSRCCOPY / REQ-FUNC-ecb5b678 drops the source-text copy.

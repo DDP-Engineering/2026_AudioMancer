@@ -25,11 +25,36 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_blocks_service,
     narrator_definition_service,
     project_export_service,
     project_workspace_service,
     speech_blocks_service,
 )
+
+
+def _write_audio_blocks_document_fixture(project_root, *, status="completed", speech_block_id="sb-1"):
+    """Persist a single-block Audio Blocks document owning a derived generated WAV."""
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": status,
+            "voice_language": "en",
+            "input_fingerprint": "ws-fixture-fingerprint",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": speech_block_id,
+                    "voice_target_id": "narrator",
+                    "generated": True,
+                    "approved": True,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
+                }
+            ],
+        },
+    )
 
 
 def _write_speech_blocks_document(project_root, blocks, *, status="completed", kind="original", language="en"):
@@ -674,38 +699,8 @@ def test_open_project_heals_audio_blocks_manifest_from_completed_report_with_sta
     project_root, manifest = project_workspace_service.create_project("AudioHeal", tmp_path)
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir()
-    audio_path = audio_root / "sb-1.wav"
-    audio_path.write_bytes(b"RIFF")
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
-        {
-            **_operation_state("in_progress", 1, 1),
-            "output_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
-            "artifact_paths": [str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav")],
-        },
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
-        {
-            "audio_blocks_stage_status": "completed",
-            "generated_block_count": 1,
-            "approved_block_count": 1,
-            "total_block_count": 1,
-            "warning_count": 0,
-            "updated_at": "2026-04-25T12:00:00+00:00",
-        },
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        [
-            {
-                "speech_block_id": "sb-1",
-                "audio_relative_path": str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav"),
-                "generated": True,
-                "approved": True,
-            }
-        ],
-    )
+    (audio_root / "sb-1.wav").write_bytes(b"RIFF")
+    _write_audio_blocks_document_fixture(project_root, status="in_progress")
     manifest["current_stage"] = "audio_blocks_ready"
     manifest["operations"]["audio_blocks"]["status"] = "in_progress"
     project_workspace_service.save_manifest(manifest, project_root)
@@ -714,7 +709,7 @@ def test_open_project_heals_audio_blocks_manifest_from_completed_report_with_sta
 
     assert open_result["status"] == "repair_required"
     assert "audio_blocks: in_progress -> completed" in open_result["changes"]
-    assert any(config.AUDIO_BLOCKS_STATE_FILE_NAME in warning for warning in open_result["warnings"])
+    assert any(config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME in warning for warning in open_result["warnings"])
     assert open_result["normalized_manifest"]["operations"]["audio_blocks"]["status"] == "completed"
 
 
@@ -732,36 +727,7 @@ def test_open_project_does_not_require_repair_when_only_stale_state_warning_rema
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir()
     (audio_root / "sb-1.wav").write_bytes(b"RIFF")
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
-        {
-            **_operation_state("in_progress", 1, 1),
-            "output_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
-            "artifact_paths": [str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav")],
-        },
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
-        {
-            "audio_blocks_stage_status": "completed",
-            "generated_block_count": 1,
-            "approved_block_count": 1,
-            "total_block_count": 1,
-            "warning_count": 0,
-            "updated_at": "2026-04-25T12:00:00+00:00",
-        },
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        [
-            {
-                "speech_block_id": "sb-1",
-                "audio_relative_path": str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav"),
-                "generated": True,
-                "approved": True,
-            }
-        ],
-    )
+    _write_audio_blocks_document_fixture(project_root, status="in_progress")
     manifest["current_stage"] = "audio_blocks_ready"
     manifest["operations"]["audio_blocks"]["status"] = "in_progress"
     project_workspace_service.save_manifest(manifest, project_root)
@@ -801,7 +767,7 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
         status="review_pending",
     )
     _write_json(
-        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
         [{"speech_block_id": "sb-1", "generated": False}],
     )
     manifest["current_stage"] = "narrator_definition_ready"
@@ -908,52 +874,24 @@ def test_open_project_heals_completed_character_voices_manifest_summary(tmp_path
     assert "updated_at" not in operation_summary
 
 
-def test_open_project_does_not_heal_audio_blocks_with_traversal_audio_path(tmp_path) -> None:
+def test_open_project_does_not_heal_audio_blocks_with_missing_derived_audio(tmp_path) -> None:
     """
-    @brief      Verify traversal audio paths cannot prove Audio Blocks completion.
+    @brief      Verify a missing derived WAV cannot prove Audio Blocks completion.
+    @details    Generated audio paths are derived from `speech_block_id`, so a
+                traversal path is no longer expressible; the remaining failure
+                mode is a document claiming audio that is not on disk.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    project_root, manifest = project_workspace_service.create_project("AudioTraversal", tmp_path)
-    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
-    audio_root.mkdir()
+    project_root, manifest = project_workspace_service.create_project("AudioMissingDerived", tmp_path)
+    (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME).mkdir()
     outside_audio_path = tmp_path / "outside.wav"
     outside_audio_path.write_bytes(b"RIFF")
-    traversal_audio_path = str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / ".." / ".." / "outside.wav")
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
-        {
-            **_operation_state("in_progress", 1, 1),
-            "output_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
-            "artifact_paths": [traversal_audio_path],
-        },
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
-        {
-            "audio_blocks_stage_status": "completed",
-            "generated_block_count": 1,
-            "approved_block_count": 1,
-            "total_block_count": 1,
-            "warning_count": 0,
-            "updated_at": "2026-04-29T12:00:00+00:00",
-        },
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        [
-            {
-                "speech_block_id": "sb-1",
-                "audio_relative_path": traversal_audio_path,
-                "generated": True,
-                "approved": True,
-            }
-        ],
-    )
+    _write_audio_blocks_document_fixture(project_root, status="in_progress")
     manifest["operations"]["audio_blocks"]["status"] = "in_progress"
     project_workspace_service.save_manifest(manifest, project_root)
 
@@ -961,6 +899,7 @@ def test_open_project_does_not_heal_audio_blocks_with_traversal_audio_path(tmp_p
 
     assert open_result["status"] == "ok"
     assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "in_progress"
+    assert outside_audio_path.is_file()
 
 
 def test_open_project_advances_current_stage_from_contiguous_completed_artifacts(tmp_path) -> None:

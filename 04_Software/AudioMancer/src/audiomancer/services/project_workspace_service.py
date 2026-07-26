@@ -475,13 +475,19 @@ def sync_manifest_operation_summary(
     @param[in]  project_root Active project root folder.
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  operation_payload Candidate operation-state payload.
-    @param[in]  current_stage Optional workflow stage to persist with the summary.
+    @param[in]  current_stage Optional workflow stage milestone reached by this summary.
     @param[in]  extra_fields Optional additional manifest fields to merge.
     @return     Reloaded project manifest payload.
     @exception  ValueError Raised when the operation kind or stage is unsupported.
+    @note       `current_stage` only ever promotes the stage; a lower value is ignored.
+                The stage is the highest milestone the project has reached, so lowering
+                it here would leave completed downstream summaries stranded above it, and
+                that contradiction is what makes a finished project offer a repair on
+                every later open. Invalidating downstream work belongs to the explicit
+                reset path, which clears artifacts and summaries together.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-10
-    @version    0.2.0
+    @version    0.3.0
     """
     manifest = load_manifest(project_root)
     operations = _normalize_operations(manifest.get("operations"))
@@ -493,7 +499,9 @@ def sync_manifest_operation_summary(
         normalized_stage = str(current_stage).strip()
         if normalized_stage not in config.PROJECT_WORKFLOW_STAGES:
             raise ValueError(f"Unsupported workflow stage: {current_stage}")
-        manifest["current_stage"] = normalized_stage
+        stored_stage = str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
+        if _stage_rank(normalized_stage) > _stage_rank(stored_stage):
+            manifest["current_stage"] = normalized_stage
     if isinstance(extra_fields, dict):
         for field_name, field_value in extra_fields.items():
             manifest[str(field_name)] = field_value
@@ -1000,11 +1008,13 @@ def _audio_blocks_completion_evidence(project_root: Path, warnings: list[str]) -
     @date       2026-04-25
     @version    0.1.0
     """
-    state = _load_json_artifact(project_root, config.AUDIO_BLOCKS_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.AUDIO_BLOCKS_REPORT_FILE_NAME)
-    audio_blocks = _load_json_artifact(project_root, config.AUDIO_BLOCKS_OUTPUT_FILE_NAME)
+    from audiomancer.services import audio_blocks_service
+
+    state = audio_blocks_service.load_operation_state(project_root)
+    report = audio_blocks_service.load_audio_blocks_report(project_root)
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
     if not _audio_blocks_report_is_completed(report) or not _non_empty_payload_list(audio_blocks):
-        if _artifact_exists(project_root, config.AUDIO_BLOCKS_OUTPUT_FILE_NAME):
+        if _artifact_exists(project_root, config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME):
             warnings.append("Audio Blocks artifacts exist but do not prove a completed stage.")
         return None
     if not _audio_block_files_exist(project_root, audio_blocks, state):
@@ -1017,7 +1027,7 @@ def _audio_blocks_completion_evidence(project_root: Path, warnings: list[str]) -
         state,
         report,
         warnings,
-        config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
     )
 
 
@@ -1382,18 +1392,20 @@ def _audio_block_files_exist(project_root: Path, audio_blocks: object, state: ob
     @date       2026-04-25
     @version    0.1.0
     """
-    if not isinstance(audio_blocks, list):
+    from audiomancer.services import audio_blocks_artifact_service
+
+    _ = state
+    if not isinstance(audio_blocks, list) or not audio_blocks:
         return False
-    audio_paths: list[str] = []
     for block in audio_blocks:
-        if not isinstance(block, dict):
+        if not isinstance(block, dict) or bool(block.get("metadata_only", False)):
             continue
-        block_paths = [_optional_string(block.get("audio_relative_path"))]
-        generated_part_paths = block.get("generated_part_relative_paths")
-        if isinstance(generated_part_paths, list):
-            block_paths.extend(_optional_string(value) for value in generated_part_paths)
-        audio_paths.extend(path for path in block_paths if path is not None)
-    return bool(audio_paths) and all(_project_relative_path_exists(project_root, path) for path in audio_paths)
+        speech_block_id = str(block.get("speech_block_id", "")).strip()
+        if not speech_block_id:
+            return False
+        if not audio_blocks_artifact_service.audio_artifact_path(project_root, speech_block_id).is_file():
+            return False
+    return True
 
 
 def _operation_path_list(payload: object, field_name: str) -> list[str]:

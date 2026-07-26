@@ -48,92 +48,37 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksStateRunning")
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     audio_root.mkdir(parents=True, exist_ok=True)
-    (audio_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "stable",
+            "checkpoint": {
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "current_phase": "generate_blocks",
+                "current_block_id": "0001-000001",
+                "next_speech_block_index": 1,
+                "next_split_part_index": 0
+            },
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
-                    "sequence_index": 1,
-                    "chunk_id": "chunk-0001",
-                    "speaker_id": "narrator",
-                    "speaker_display_name": "Narrator",
-                    "normalized_speaker_name": "narrator",
-                    "text": "Narration one.",
                     "voice_target_id": "narrator",
-                    "voice_source_kind": "narrator_sample",
-                    "audio_relative_path": "80_audio_blocks/generated_audio/000001_narrator.wav",
-                    "metadata_relative_path": "80_audio_blocks/generated_audio/000001_narrator.json",
                     "generated": True,
                     "approved": False,
-                    "approved_at": None,
-                    "generated_at": "2026-04-23T12:01:00+00:00",
-                    "split_audio_seconds_budget": 10.0,
-                    "runtime_result_summary": "Narrator ready.",
-                    "warning_flags": [],
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None
                 }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+            ]
+        },
     )
-    (audio_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "voice_language": "en",
-                "audio_blocks_stage_status": "in_progress",
-                "generated_block_count": 1,
-                "approved_block_count": 0,
-                "total_block_count": 2,
-                "warning_count": 0,
-                "warnings": [],
-                "updated_at": "2026-04-23T12:01:00+00:00",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (audio_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-                "status": "running",
-                "input_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME}"
-                ],
-                "output_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"
-                ],
-                "artifact_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"
-                ],
-                "progress_current": 1,
-                "progress_total": 2,
-                "mode": "tts_generation",
-                "started_at": "2026-04-23T12:00:00+00:00",
-                "completed_at": None,
-                "updated_at": "2026-04-23T12:01:00+00:00",
-                "warning_count": 0,
-                "metadata": {
-                    "voice_language": "en",
-                    "input_fingerprint": "stable",
-                    "speech_block_count": 2,
-                    "generated_block_count": 1,
-                    "approved_block_count": 0,
-                    "clone_profile_count": 2,
-                    "prompt_count": 2,
-                    "reused_prompt_count": 1,
-                    "regenerated_prompt_count": 1,
-                    "current_phase": "prepare_prompts",
-                    "current_block_id": "0002-000001",
-                },
-                "resume_checkpoint": {"next_profile_index": 2, "next_speech_block_index": 1},
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+
+    # prompt_count is derived from the persisted clone-profile cache.
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
+        [{"voice_target_id": "narrator"}, {"voice_target_id": "character_alice"}],
     )
 
     state = audio_blocks_state_service.build_audio_blocks_state(
@@ -143,25 +88,23 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     )
 
     assert state["full_source_text"] == 'Narration one.\n\n"Alice spoke."'
-    assert state["current_block_id"] == "0002-000001"
-    assert state["current_block_speaker"] == "Alice"
-    assert state["current_block_text"] == "Hello there."
+    assert state["current_block_id"] == "0001-000001"
+    assert state["current_block_speaker"] == "Narrator"
+    assert state["current_block_text"] == "Narration one."
     assert state["progress_current"] == 1
     assert state["progress_total"] == 2
     assert state["progress_percent"] == 50
-    assert state["current_phase"] == "prepare_prompts"
+    assert state["current_phase"] == "generate_blocks"
     assert state["prompt_count"] == 2
-    assert state["reused_prompt_count"] == 1
-    assert state["regenerated_prompt_count"] == 1
-    assert state["stage_status"] == "running"
+    assert "reused_prompt_count" not in state
+    assert "regenerated_prompt_count" not in state
+    assert state["stage_status"] == "in_progress"
     assert state["selected_text_character_limit"] == (
         int(tts_budget_service.resolve_cached_tts_budget([])["safe_word_count"]) * 6
     )
     assert audio_blocks_service.is_generated(state["speech_blocks"][0]) is True
-    assert state["speech_blocks"][1]["is_current"] is True
-    assert any("Audio generation is in progress at 1/2." in note for note in state["notes"])
-    assert any("Preparing reusable voice prompts." in note for note in state["notes"])
-    assert any("Reusable prompts: 2 | reused: 1 | created now: 1" in line for line in state["status_lines"])
+    assert state["speech_blocks"][0]["is_current"] is True
+    assert any("Reusable prompts: 2" in line for line in state["status_lines"])
 
 
 def test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states() -> None:
@@ -227,30 +170,32 @@ def test_build_audio_blocks_state_measures_generated_audio_duration(tmp_path) ->
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksDuration")
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir(parents=True, exist_ok=True)
-    audio_path = audio_root / "0001_000001_narrator.wav"
+    audio_path = audio_root / "0001-000001.wav"
     _write_wav(audio_path, frame_count=12_000)
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        [
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "stable",
+            "checkpoint": None,
+            "blocks": [
             {
                 "speech_block_id": "0001-000001",
-                "sequence_index": 1,
-                "chunk_id": "chunk-0001",
-                "speaker_id": "narrator",
-                "speaker_display_name": "Narrator",
-                "normalized_speaker_name": "narrator",
-                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
-                "text": "Narration one.",
-                "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001_000001_narrator.wav",
+                "voice_target_id": "narrator",
                 "generated": True,
                 "approved": False,
-            }
-        ],
+                "audio_can_play": True,
+                "audio_duration_seconds": None,
+                "generation_fingerprint": None,
+            },
+            ],
+        },
     )
 
     state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
 
-    assert state["speech_blocks"][0]["audio_file_name"] == "0001_000001_narrator.wav"
+    assert state["speech_blocks"][0]["audio_file_name"] == "0001-000001.wav"
     assert state["speech_blocks"][0]["audio_duration_seconds"] is None
     assert state["speech_blocks"][0]["can_play"] is True
 
@@ -394,40 +339,35 @@ def test_build_audio_blocks_state_disables_start_after_completed_generation(tmp_
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCompletedStartDisabled")
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir(parents=True, exist_ok=True)
-    (audio_root / "0001_000001_narrator.wav").write_bytes(b"RIFF-1")
-    (audio_root / "0002_000001_alice.wav").write_bytes(b"RIFF-2")
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        [
+    (audio_root / "0001-000001.wav").write_bytes(b"RIFF-1")
+    (audio_root / "0002-000001.wav").write_bytes(b"RIFF-2")
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "stable",
+            "checkpoint": None,
+            "blocks": [
             {
                 "speech_block_id": "0001-000001",
-                "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001_000001_narrator.wav",
+                "voice_target_id": "narrator",
                 "generated": True,
                 "approved": True,
+                "audio_can_play": True,
+                "audio_duration_seconds": None,
+                "generation_fingerprint": None,
             },
             {
                 "speech_block_id": "0002-000001",
-                "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0002_000001_alice.wav",
+                "voice_target_id": "narrator",
                 "generated": True,
                 "approved": True,
+                "audio_can_play": True,
+                "audio_duration_seconds": None,
+                "generation_fingerprint": None,
             },
-        ],
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
-        {
-            "audio_blocks_stage_status": "completed",
-            "generated_block_count": 2,
-            "approved_block_count": 2,
-            "total_block_count": 2,
-        },
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
-        {
-            "status": "completed",
-            "progress_current": 2,
-            "progress_total": 2,
+            ],
         },
     )
 
@@ -467,26 +407,41 @@ def test_build_audio_blocks_state_reenables_start_when_completed_report_has_miss
         }
     )
     _write_speech_blocks_fixture_document(project_root, speech_blocks)
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        [
-            {"speech_block_id": "0001-000001", "generated": True, "approved": True},
-            {"speech_block_id": "0002-000001", "generated": True, "approved": True},
-        ],
-    )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
         {
-            "audio_blocks_stage_status": "completed",
-            "generated_block_count": 2,
-            "approved_block_count": 2,
-            "total_block_count": 2,
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "stable",
+            "checkpoint": None,
+            "blocks": [
+            {
+                "speech_block_id": "0001-000001",
+                "voice_target_id": "narrator",
+                "generated": True,
+                "approved": True,
+                "audio_can_play": True,
+                "audio_duration_seconds": None,
+                "generation_fingerprint": None,
+            },
+            {
+                "speech_block_id": "0002-000001",
+                "voice_target_id": "narrator",
+                "generated": True,
+                "approved": True,
+                "audio_can_play": True,
+                "audio_duration_seconds": None,
+                "generation_fingerprint": None,
+            },
+            ],
         },
     )
 
     state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
 
-    assert state["stage_status"] == "completed"
+    # Stage status is now derived from current counts, so an inserted block that
+    # lacks audio truthfully reports in_progress instead of a stale completed.
+    assert state["stage_status"] == "in_progress"
     assert state["can_start_or_continue"] is True
 
 
@@ -507,8 +462,8 @@ def test_build_audio_blocks_state_keeps_reset_disabled_for_default_metadata(tmp_
 
     assert state["stage_status"] == "not_started"
     assert state["prompt_count"] == 0
-    assert state["reused_prompt_count"] == 0
-    assert state["regenerated_prompt_count"] == 0
+    assert "reused_prompt_count" not in state
+    assert "regenerated_prompt_count" not in state
     assert state["can_reset"] is False
 
 
@@ -564,7 +519,7 @@ def test_merge_audio_block_state_uses_persisted_playability_without_file_checks(
     )
 
     assert merged_blocks[0]["can_play"] is True
-    assert merged_blocks[0]["audio_file_name"] == "0001_000001_narrator.wav"
+    assert merged_blocks[0]["audio_file_name"] == "0001-000001.wav"
 
 
 def _create_audio_blocks_project(tmp_path, name: str):

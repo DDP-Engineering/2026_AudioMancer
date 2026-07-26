@@ -127,6 +127,14 @@ audio-assembly settings, and notes. `source_document` contains
 `mode`, and `warning_count`; detailed checkpoints and outputs remain in their
 domain artifacts.
 
+`current_stage` is the highest workflow milestone the project has reached, not a
+cursor for where the operator currently is. `sync_manifest_operation_summary`
+therefore only promotes it: a lower `current_stage` argument is ignored. Lowering
+it there would strand completed downstream summaries above the stage, and that
+contradiction is what makes a finished project offer a metadata repair on every
+later open. Invalidating downstream work is the job of the explicit reset path,
+which clears domain artifacts and operation summaries together.
+
 Project-relative paths must be relative, contain no parent traversal, and
 resolve inside the active project even when symlinks are present. New projects
 use a flat root, with generated audio permitted under `audio_blocks/` and final

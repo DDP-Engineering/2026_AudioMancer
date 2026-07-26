@@ -156,7 +156,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     assert [audio_blocks_service.is_generated(block) for block in audio_blocks] == [True, True]
     assert [audio_blocks_service.is_approved(block) for block in audio_blocks] == [False, False]
     assert [audio_blocks_service.audio_can_play(block) for block in audio_blocks] == [True, True]
-    assert all(isinstance(block["generated"], str) for block in audio_blocks)
+    assert all(block["generated"] is True for block in audio_blocks)
     assert observed_prompt_requests == [
         ("selected-narrator", "Narrator preview line.", "en"),
         ("alice-sample", "Character preview line.", "en"),
@@ -169,8 +169,8 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     assert observed_manifest_progress[-1] == (2, 2, "in_progress")
     first_audio_path = project_root / str(audio_blocks[0]["audio_relative_path"])
     second_audio_path = project_root / str(audio_blocks[1]["audio_relative_path"])
-    assert first_audio_path.name == "0001_000001_narrator.wav"
-    assert second_audio_path.name == "0001_000002_alice.wav"
+    assert first_audio_path.name == "0001-000001.wav"
+    assert second_audio_path.name == "0001-000002.wav"
     assert first_audio_path.read_bytes() == _wav_bytes("narrator")
     assert second_audio_path.read_bytes() == _wav_bytes("alice")
 
@@ -622,17 +622,18 @@ def test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_ch
         _runtime_settings(),
     )
     existing_block = audio_blocks_service._initialize_audio_blocks(speech_blocks)[0]  # noqa: SLF001
-    audio_path = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "stale.wav"
-    metadata_path = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "stale.json"
+    audio_path = audio_blocks_service._audio_artifact_path(  # noqa: SLF001
+        project_root,
+        str(existing_block["speech_block_id"]),
+    )
     audio_path.parent.mkdir(parents=True, exist_ok=True)
     audio_path.write_bytes(_wav_bytes("stale"))
-    metadata_path.write_text("{}\n", encoding="utf-8")
     existing_block.update(
         {
             "audio_relative_path": audio_path.relative_to(project_root).as_posix(),
-            "metadata_relative_path": metadata_path.relative_to(project_root).as_posix(),
             "generated": True,
             "approved": True,
+            "audio_can_play": True,
             "generation_fingerprint": "stale-fingerprint",
         }
     )
@@ -647,10 +648,9 @@ def test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_ch
     assert audio_blocks_service.is_generated(merged_blocks[0]) is True
     assert audio_blocks_service.is_approved(merged_blocks[0]) is True
     assert audio_blocks_service.audio_can_play(merged_blocks[0]) is True
-    assert merged_blocks[0]["audio_relative_path"] == audio_path.relative_to(project_root).as_posix()
     assert merged_blocks[0]["generation_fingerprint"] != "stale-fingerprint"
     assert audio_path.exists()
-    assert metadata_path.exists()
+    assert audio_path.read_bytes() == _wav_bytes("stale")
 
 
 def test_audio_blocks_service_rejects_invalid_generated_wav_bytes() -> None:
@@ -681,7 +681,11 @@ def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(tmp_p
         speech_blocks_service.load_speech_blocks(project_root)
     )[0]
     split_plan = {"parts": ["Part one.", "Part two."], "strategy": "sentence"}
-    part_path = audio_blocks_service._audio_part_artifact_path(project_root, audio_block, 0)  # noqa: SLF001
+    part_path = audio_blocks_service._audio_part_artifact_path(  # noqa: SLF001
+        project_root,
+        str(audio_block["speech_block_id"]),
+        0,
+    )
     part_path.parent.mkdir(parents=True, exist_ok=True)
     part_path.write_bytes(b"not-a-wav")
     audio_block["generated_part_relative_paths"] = [part_path.relative_to(project_root).as_posix()]
@@ -762,42 +766,6 @@ def test_audio_blocks_service_deletes_only_project_relative_artifacts(tmp_path) 
     assert outside_audio_path.is_file()
     assert outside_metadata_path.is_file()
     assert outside_part_path.is_file()
-
-
-def test_audio_blocks_service_remap_ignores_escaping_old_artifacts(tmp_path) -> None:
-    """
-    @brief      Verify remapping cannot rename or read artifacts outside the project root.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
-    """
-    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksEscapingRemap")
-    outside_audio_path = tmp_path / "outside_remap.wav"
-    outside_metadata_path = tmp_path / "outside_remap.json"
-    outside_audio_path.write_bytes(_wav_bytes("outside-remap"))
-    outside_metadata_path.write_text('{"speech_block_id": "old"}\n', encoding="utf-8")
-    old_block = audio_blocks_service._initialize_audio_blocks(  # noqa: SLF001
-        speech_blocks_service.load_speech_blocks(project_root)
-    )[0]
-    new_block = dict(old_block)
-    new_block["sequence_index"] = 2
-    old_block.update(
-        {
-            "audio_relative_path": "../outside_remap.wav",
-            "metadata_relative_path": str(outside_metadata_path.resolve()),
-            "generated": True,
-            "metadata_only": False,
-        }
-    )
-
-    remapped_block = audio_blocks_service._remap_audio_block_artifacts(project_root, old_block, new_block)  # noqa: SLF001
-
-    assert outside_audio_path.is_file()
-    assert outside_metadata_path.is_file()
-    assert remapped_block["audio_relative_path"] == "../outside_remap.wav"
 
 
 def _escaping_artifact_path(path_kind: str, traversal_file_name: str, absolute_path) -> str:
@@ -895,7 +863,7 @@ def test_audio_blocks_service_removes_audio_and_clone_profiles_for_voice_target(
     assert [profile["voice_target_id"] for profile in preserved_profiles] == ["narrator"]
     assert report is not None
     assert report["generated_block_count"] == 1
-    assert deletion_summary.deleted_count >= 2
+    assert deletion_summary.deleted_count >= 1
     assert not character_audio_path.exists()
     assert narrator_audio_path.exists()
 
@@ -958,8 +926,6 @@ def test_audio_blocks_service_preserves_invalidated_voice_target_rows(tmp_path) 
     assert audio_blocks_service.is_approved(updated_character_block) is False
     assert updated_character_block["audio_relative_path"] is None
     assert updated_character_block["audio_can_play"] is False
-    assert updated_character_block["metadata_relative_path"] is None
-    assert updated_character_block["generated_part_relative_paths"] == []
     assert updated_character_block["generation_fingerprint"] is None
     assert updated_character_block["split_plan_fingerprint"] is None
     assert updated_narrator_block["audio_relative_path"] == narrator_block["audio_relative_path"]
@@ -967,7 +933,7 @@ def test_audio_blocks_service_preserves_invalidated_voice_target_rows(tmp_path) 
     assert [profile["voice_target_id"] for profile in preserved_profiles] == ["narrator"]
     assert report is not None
     assert report["generated_block_count"] == 1
-    assert deletion_summary.deleted_count >= 2
+    assert deletion_summary.deleted_count >= 1
     assert not character_audio_path.exists()
     assert narrator_audio_path.exists()
 
@@ -988,10 +954,7 @@ def test_audio_blocks_service_regenerates_invalidated_voice_target_row_with_stal
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksInvalidatedVoiceTargetRegenerate")
     _seed_generated_audio_blocks(project_root)
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME
-    operation_state = json.loads(state_path.read_text(encoding="utf-8"))
-    operation_state["metadata"]["input_fingerprint"] = "stale-before-character-sample-change"
-    state_path.write_text(json.dumps(operation_state, indent=2) + "\n", encoding="utf-8")
+    _update_audio_blocks_document(project_root, input_fingerprint="stale-before-character-sample-change")
 
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
     character_block = next(block for block in audio_blocks if str(block["speaker_id"]) == "alice")
@@ -1067,7 +1030,6 @@ def test_audio_blocks_service_regenerates_invalidated_voice_target_row_with_stal
     assert observed_generate_requests == ["Hello there."]
     assert audio_blocks_service.is_generated(regenerated_character_block) is True
     assert audio_blocks_service.is_approved(regenerated_character_block) is False
-    assert regenerated_character_block["runtime_result_summary"] == "Alice regenerated."
     assert (project_root / str(regenerated_character_block["audio_relative_path"])).read_bytes() == _wav_bytes(
         "alice-regenerated"
     )
@@ -1119,7 +1081,7 @@ def test_audio_blocks_service_removes_audio_for_exact_speech_block_only(tmp_path
     assert [block["speech_block_id"] for block in preserved_blocks] == [second_block["speech_block_id"]]
     assert report is not None
     assert report["generated_block_count"] == 1
-    assert deletion_summary.deleted_count >= 2
+    assert deletion_summary.deleted_count >= 1
     assert not first_audio_path.exists()
     assert second_audio_path.exists()
 
@@ -1150,7 +1112,7 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     unapproved_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert unapprove_report["approved_block_count"] == 0
     assert audio_blocks_service.is_approved(unapproved_blocks[0]) is False
-    assert unapproved_blocks[0]["approved"] is None
+    assert unapproved_blocks[0]["approved"] is False
     assert approved_audio_path.read_bytes() == approved_audio_bytes
 
     wait_payloads = [
@@ -1210,20 +1172,20 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     regenerated_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert regen_report["generated_block_count"] == 2
     assert audio_blocks_service.is_approved(regenerated_blocks[0]) is False
-    assert regenerated_blocks[0]["metadata_relative_path"] is None
-    assert regenerated_blocks[0]["runtime_result_summary"] == "Narrator regenerated."
     assert (project_root / str(regenerated_blocks[0]["audio_relative_path"])).read_bytes() == _wav_bytes("regenerated")
 
 
-def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_remaps_later_audio(tmp_path) -> None:
+def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_keeps_later_audio(tmp_path) -> None:
     """
-    @brief      Verify Speech Block re-split reconciliation deletes changed-chunk audio and remaps later artifacts.
+    @brief      Verify Speech Block re-split reconciliation deletes changed-chunk audio and keeps later artifacts.
+    @details    Generated audio is named from `speech_block_id`, so a surviving
+                block keeps its file without any rename pass.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
+    @date       2026-07-26
+    @version    0.3.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceResplitReconcile")
     _write_speech_blocks_fixture_document(
@@ -1258,70 +1220,43 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
-    changed_audio_path = generated_root / "000001_narrator.wav"
-    changed_metadata_path = generated_root / "000001_narrator.json"
-    later_audio_path = generated_root / "0002_000001_alice.wav"
-    later_metadata_path = generated_root / "0002_000001_alice.json"
+    changed_audio_path = generated_root / "0001-000001.wav"
+    later_audio_path = generated_root / "0002-000001.wav"
     changed_audio_path.write_bytes(_wav_bytes("old-changed"))
-    changed_metadata_path.write_text("{}\n", encoding="utf-8")
     later_audio_path.write_bytes(_wav_bytes("later"))
-    later_metadata_path.write_text(
-        json.dumps({"speech_block_id": "0002-000001", "chunk_id": "chunk-0002", "sequence_index": 1}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (audio_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(
-            [
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "resplit-fixture",
+            "checkpoint": None,
+            "blocks": [
                 {
                     "speech_block_id": "0001-000001",
-                    "sequence_index": 1,
-                    "chunk_id": "chunk-0001",
-                    "speaker_id": "narrator",
-                    "speaker_display_name": "Narrator",
-                    "normalized_speaker_name": "narrator",
-                    "text": "Old changed narration.",
                     "voice_target_id": "narrator",
-                    "voice_source_kind": "narrator_sample",
-                    "audio_relative_path": changed_audio_path.relative_to(project_root).as_posix(),
-                    "metadata_relative_path": changed_metadata_path.relative_to(project_root).as_posix(),
                     "generated": True,
                     "approved": True,
-                    "approved_at": "2026-04-23T12:10:00+00:00",
-                    "generated_at": "2026-04-23T12:09:00+00:00",
-                    "runtime_result_summary": "Old changed ready.",
-                    "warning_flags": [],
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
                 },
                 {
                     "speech_block_id": "0002-000001",
-                    "sequence_index": 1,
-                    "chunk_id": "chunk-0002",
-                    "speaker_id": "alice",
-                    "speaker_display_name": "Alice",
-                    "normalized_speaker_name": "alice",
-                    "text": "Hello there.",
                     "voice_target_id": "character_alice",
-                    "voice_source_kind": "character_sample",
-                    "audio_relative_path": later_audio_path.relative_to(project_root).as_posix(),
-                    "metadata_relative_path": later_metadata_path.relative_to(project_root).as_posix(),
                     "generated": True,
                     "approved": True,
-                    "approved_at": "2026-04-23T12:10:00+00:00",
-                    "generated_at": "2026-04-23T12:09:00+00:00",
-                    "runtime_result_summary": "Later ready.",
-                    "warning_flags": [],
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
                 },
             ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+        },
     )
 
     report = audio_blocks_service.reset_audio_for_speech_chunk(project_root, "chunk-0001")
 
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
-    remapped_audio_path = generated_root / "0002_000001_alice.wav"
-    remapped_metadata_path = generated_root / "0002_000001_alice.json"
     assert report["generated_block_count"] == 1
     assert audio_blocks[0]["speech_block_id"] == "0001-000001"
     assert audio_blocks_service.is_generated(audio_blocks[0]) is False
@@ -1329,9 +1264,8 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     assert audio_blocks[1]["sequence_index"] == 1
     assert audio_blocks_service.is_generated(audio_blocks[1]) is True
     assert not changed_audio_path.exists()
-    assert later_audio_path.exists()
-    assert remapped_audio_path.read_bytes() == _wav_bytes("later")
-    assert json.loads(remapped_metadata_path.read_text(encoding="utf-8"))["speech_block_id"] == "0002-000001"
+    assert later_audio_path.read_bytes() == _wav_bytes("later")
+    assert audio_blocks[1]["audio_relative_path"] == later_audio_path.relative_to(project_root).as_posix()
 
 
 def test_audio_blocks_service_normalize_speaker_name_handles_diacritics() -> None:
@@ -1467,8 +1401,10 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
         ("qwen_voice_clone_prompt_v1", "alice", "Hello there."),
     ]
     assert [audio_blocks_service.is_generated(block) for block in resumed_blocks] == [True, True]
-    assert [block["metadata_relative_path"] for block in resumed_blocks] == [None, None]
-    assert [block["runtime_result_summary"] for block in resumed_blocks] == ["Narrator ready.", "Alice ready."]
+    assert [block["audio_relative_path"] for block in resumed_blocks] == [
+        "audio_blocks/0001-000001.wav",
+        "audio_blocks/0001-000002.wav",
+    ]
 
 
 def test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert(monkeypatch, tmp_path) -> None:
@@ -1593,10 +1529,7 @@ def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkey
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceFingerprint")
     _seed_generated_audio_blocks(project_root)
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME
-    operation_state = json.loads(state_path.read_text(encoding="utf-8"))
-    operation_state["metadata"]["input_fingerprint"] = "stale-fingerprint"
-    state_path.write_text(json.dumps(operation_state, indent=2) + "\n", encoding="utf-8")
+    _update_audio_blocks_document(project_root, input_fingerprint="stale-fingerprint")
     wait_payloads = [
         {
             "operation": {
@@ -1659,8 +1592,8 @@ def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkey
     )
 
     assert report["generated_block_count"] == 2
-    refreshed_state = json.loads(state_path.read_text(encoding="utf-8"))
-    assert refreshed_state["metadata"]["input_fingerprint"] != "stale-fingerprint"
+    refreshed_document = audio_blocks_service.load_audio_blocks_document(project_root)
+    assert refreshed_document["input_fingerprint"] != "stale-fingerprint"
 
 
 def test_audio_blocks_service_prefers_qwen_1_7b_base_model(monkeypatch, tmp_path) -> None:
@@ -1755,14 +1688,11 @@ def test_audio_blocks_service_approve_all_marks_only_generated_blocks(tmp_path) 
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApproveAll")
     _seed_generated_audio_blocks(project_root)
-    output_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    persisted_blocks = json.loads(output_path.read_text(encoding="utf-8"))
+    document = audio_blocks_service.load_audio_blocks_document(project_root)
+    persisted_blocks = [dict(block) for block in document["blocks"]]
     persisted_blocks[1]["generated"] = False
-    persisted_blocks[1]["audio_relative_path"] = None
-    persisted_blocks[1]["metadata_relative_path"] = None
-    persisted_blocks[1]["generated_at"] = None
-    persisted_blocks[1]["runtime_result_summary"] = ""
-    output_path.write_text(json.dumps(persisted_blocks, indent=2) + "\n", encoding="utf-8")
+    persisted_blocks[1]["audio_can_play"] = False
+    _update_audio_blocks_document(project_root, blocks=persisted_blocks)
 
     report = audio_blocks_service.approve_all_audio_blocks(project_root)
 
@@ -1784,12 +1714,7 @@ def test_audio_blocks_service_approve_all_promotes_stale_in_progress_state(tmp_p
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApproveAllStaleState")
     _seed_generated_audio_blocks(project_root)
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME
-    stale_state = json.loads(state_path.read_text(encoding="utf-8"))
-    stale_state["status"] = "in_progress"
-    stale_state["completed_at"] = "None"
-    stale_state["metadata"]["current_block_id"] = "None"
-    state_path.write_text(json.dumps(stale_state, indent=2) + "\n", encoding="utf-8")
+    _update_audio_blocks_document(project_root, status="in_progress")
 
     report = audio_blocks_service.approve_all_audio_blocks(project_root)
 
@@ -1829,37 +1754,22 @@ def test_audio_blocks_split_planner_prefers_sentences_then_word_groups() -> None
     assert " ".join(word_plan["parts"]) == "One two three four five six."
 
 
-def test_audio_blocks_part_artifact_paths_include_chunk_order(tmp_path) -> None:
+def test_audio_blocks_part_artifact_paths_are_keyed_by_speech_block_id(tmp_path) -> None:
     """
-    @brief      Verify split-part artifact names include chunk order and local sequence.
+    @brief      Verify split-part artifact names derive from `speech_block_id` alone.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    first_chunk_part = audio_blocks_service._audio_part_artifact_path(  # noqa: SLF001
-        tmp_path,
-        {
-            "chunk_id": "chunk-0001",
-            "sequence_index": 1,
-            "normalized_speaker_name": "narrator",
-        },
-        0,
-    )
-    second_chunk_part = audio_blocks_service._audio_part_artifact_path(  # noqa: SLF001
-        tmp_path,
-        {
-            "chunk_id": "chunk-0002",
-            "sequence_index": 1,
-            "normalized_speaker_name": "narrator",
-        },
-        0,
-    )
+    first_chunk_part = audio_blocks_service._audio_part_artifact_path(tmp_path, "0001-000001", 0)  # noqa: SLF001
+    second_chunk_part = audio_blocks_service._audio_part_artifact_path(tmp_path, "0002-000001", 0)  # noqa: SLF001
 
-    assert first_chunk_part.name == "0001_000001_narrator_part001.wav"
-    assert second_chunk_part.name == "0002_000001_narrator_part001.wav"
+    assert first_chunk_part.name == "0001-000001_part001.wav"
+    assert second_chunk_part.name == "0002-000001_part001.wav"
+    assert "narrator" not in first_chunk_part.name
     assert first_chunk_part != second_chunk_part
 
 
@@ -2010,7 +1920,6 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
     ambience_block = generated_blocks[-1]
     assert generation_order == ["tts", "tts", "load:StableAudioOpen", "sound"]
     assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-    assert ambience_block["prompt_format"] == "sound_prompt"
     assert ambience_block["audio_relative_path"]
 
 
@@ -2048,25 +1957,35 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
         }
     )
     _write_speech_blocks_fixture_document(project_root, speech_blocks)
-    stale_state = {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": "completed",
-        "input_paths": [],
-        "output_paths": [],
-        "artifact_paths": [],
-        "progress_current": 2,
-        "progress_total": 2,
-        "mode": "tts_generation",
-        "started_at": "2026-04-23T12:00:00+00:00",
-        "completed_at": "2026-04-23T12:10:00+00:00",
-        "updated_at": "2026-04-23T12:10:00+00:00",
-        "warning_count": 0,
-        "metadata": {"voice_language": "en", "input_fingerprint": "stale-tts-fingerprint"},
-        "resume_checkpoint": {"next_profile_index": 0, "next_speech_block_index": 2},
-    }
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(stale_state, indent=2) + "\n",
-        encoding="utf-8",
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "stale-tts-fingerprint",
+            "checkpoint": {
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "current_phase": "generate_blocks",
+                "current_block_id": None,
+                "next_speech_block_index": 2,
+                "next_split_part_index": 0,
+            },
+            "blocks": [
+                {
+                    "speech_block_id": speech_block_id,
+                    "voice_target_id": voice_target_id,
+                    "generated": True,
+                    "approved": False,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": 1.0,
+                    "generation_fingerprint": None,
+                }
+                for speech_block_id, voice_target_id in (
+                    ("0001-000001", "narrator"),
+                    ("0001-000002", "character_alice"),
+                )
+            ],
+        },
     )
     runtime_settings = _runtime_settings()
     runtime_settings["scene_ambience_guidance_scale"] = 8.5
@@ -2129,36 +2048,27 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     assert sound_requests[0][1]["num_inference_steps"] == 75
     assert sound_requests[0][1]["seed"] == 321
     assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-    assert ambience_block["duration_seconds"] == 11.0
-    assert ambience_block["prompt_format"] == "sound_prompt"
-    assert ambience_block["runtime_result_summary"] == "Scene ambience ready."
     assert (project_root / str(ambience_block["audio_relative_path"])).read_bytes() == _wav_bytes("ambience")
 
 
-def test_audio_blocks_service_normalizes_legacy_playability_and_reconciles_missing_files(tmp_path) -> None:
+def test_audio_blocks_service_reconciles_playability_for_missing_files(tmp_path) -> None:
     """
-    @brief      Verify legacy generated rows gain playability flags and reconciliation heals stale flags.
+    @brief      Verify reconciliation heals a stale playability flag whose WAV is gone.
+    @details    The document contract always carries `audio_can_play`, so the
+                only remaining drift is a persisted `True` for a deleted WAV.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
-    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksLegacyPlayability")
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksPlayabilityReconcile")
     _seed_generated_audio_blocks(project_root)
-    audio_blocks_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    seeded_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert [audio_blocks_service.audio_can_play(block) for block in seeded_blocks] == [True, True]
 
-    legacy_blocks = audio_blocks_service.load_audio_blocks(project_root)
-
-    assert "audio_can_play" not in json.loads(audio_blocks_path.read_text(encoding="utf-8"))[0]
-    assert [audio_blocks_service.audio_can_play(block) for block in legacy_blocks] == [True, True]
-
-    stale_blocks = [dict(block) for block in legacy_blocks]
-    first_audio_path = project_root / str(stale_blocks[0]["audio_relative_path"])
-    first_audio_path.unlink()
-    stale_blocks[0]["audio_can_play"] = True
-    audio_blocks_path.write_text(json.dumps(stale_blocks, indent=2) + "\n", encoding="utf-8")
+    (project_root / str(seeded_blocks[0]["audio_relative_path"])).unlink()
 
     assert audio_blocks_service.reconcile_audio_playability(project_root) is True
     reconciled_blocks = audio_blocks_service.load_audio_blocks(project_root)
@@ -2266,13 +2176,13 @@ def _create_audio_blocks_project(tmp_path, name: str):
 
 def _seed_generated_audio_blocks(project_root) -> None:
     """
-    @brief      Write generated Audio Blocks output, report, profiles, and operation state.
+    @brief      Write one generated Audio Blocks document plus its clone-profile cache.
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
+    @date       2026-07-26
+    @version    0.3.0
     """
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
@@ -2284,59 +2194,51 @@ def _seed_generated_audio_blocks(project_root) -> None:
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     )
     audio_root.mkdir(parents=True, exist_ok=True)
-    audio_blocks_payload = []
+    document_blocks = []
     for speech_block in speech_blocks:
-        sequence_index = int(speech_block["sequence_index"])
-        speaker_name = audio_blocks_service.normalize_speaker_name(str(speech_block["speaker_display_name"]))
-        stem = str(speech_block["speech_block_id"]).replace("-", "_")
-        audio_path = audio_root / f"{stem}_{speaker_name}.wav"
-        metadata_path = audio_root / f"{stem}_{speaker_name}.json"
-        audio_path.write_bytes(_wav_bytes(str(sequence_index)))
-        metadata_path.write_text("{}\n", encoding="utf-8")
-        audio_block = {
-            "speech_block_id": speech_block["speech_block_id"],
-            "sequence_index": sequence_index,
-            "chunk_id": speech_block["chunk_id"],
-            "speaker_id": speech_block["speaker_id"],
-            "speaker_display_name": speech_block["speaker_display_name"],
-            "normalized_speaker_name": speaker_name,
-            "content_kind": speech_block.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION),
-            "metadata_only": False,
-            "special_block_status": None,
-            "text": speech_block["text"],
+        speech_block_id = str(speech_block["speech_block_id"])
+        audio_path = audio_root / f"{speech_block_id}.wav"
+        audio_path.write_bytes(_wav_bytes(str(speech_block["sequence_index"])))
+        fingerprint_block = {
+            **speech_block,
+            "normalized_speaker_name": audio_blocks_service.normalize_speaker_name(
+                str(speech_block["speaker_display_name"])
+            ),
             "voice_target_id": (
                 "narrator"
                 if speech_block["speaker_id"] == "narrator"
                 else character_voices_service.character_target_id(speech_block["speaker_id"])
             ),
-            "voice_source_kind": (
-                "narrator_sample" if speech_block["speaker_id"] == "narrator" else "character_sample"
-            ),
-            "audio_relative_path": audio_path.relative_to(project_root).as_posix(),
-            "metadata_relative_path": metadata_path.relative_to(project_root).as_posix(),
-            "speech_block_approved": bool(speech_block.get("approved", False)),
-            "generated": True,
-            "approved": False,
-            "approved_at": None,
-            "generated_at": "2026-04-23T12:10:00+00:00",
-            "runtime_result_summary": "Generated.",
-            "split_part_count": 1,
-            "split_strategy": "single",
-            "model_token_budget": 512,
-            "model_audio_seconds_budget": 40.96,
-            "generated_part_relative_paths": [],
-            "split_plan_fingerprint": None,
-            "warning_flags": [],
         }
-        audio_block["generation_fingerprint"] = audio_blocks_service._build_audio_block_fingerprint(  # noqa: SLF001
-            audio_block,
-            generation_context,
+        document_blocks.append(
+            {
+                "speech_block_id": speech_block_id,
+                "voice_target_id": fingerprint_block["voice_target_id"],
+                "generated": True,
+                "approved": False,
+                "audio_can_play": True,
+                "audio_duration_seconds": 1.0,
+                "generation_fingerprint": audio_blocks_service._build_audio_block_fingerprint(  # noqa: SLF001
+                    fingerprint_block,
+                    generation_context,
+                ),
+            }
         )
-        audio_blocks_payload.append(audio_block)
-    audio_root.parent.mkdir(parents=True, exist_ok=True)
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(audio_blocks_payload, indent=2) + "\n",
-        encoding="utf-8",
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "",
+            "checkpoint": {
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "current_phase": "generate_blocks",
+                "current_block_id": None,
+                "next_speech_block_index": len(document_blocks),
+                "next_split_part_index": 0,
+            },
+            "blocks": document_blocks,
+        },
     )
     (
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME
@@ -2364,52 +2266,6 @@ def _seed_generated_audio_blocks(project_root) -> None:
             indent=2,
         )
         + "\n",
-        encoding="utf-8",
-    )
-    report_payload = {
-        "voice_language": "en",
-        "audio_blocks_stage_status": "in_progress",
-        "generated_block_count": 2,
-        "approved_block_count": 0,
-        "total_block_count": 2,
-        "warning_count": 0,
-        "warnings": [],
-        "updated_at": "2026-04-23T12:10:00+00:00",
-    }
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(report_payload, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    operation_state = {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": "completed",
-        "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME}"],
-        "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"],
-        "artifact_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
-        "progress_current": 2,
-        "progress_total": 2,
-        "mode": "tts_generation",
-        "started_at": "2026-04-23T12:00:00+00:00",
-        "completed_at": "2026-04-23T12:10:00+00:00",
-        "updated_at": "2026-04-23T12:10:00+00:00",
-        "warning_count": 0,
-        "metadata": {
-            "voice_language": "en",
-            "input_fingerprint": "",
-            "speech_block_count": 2,
-            "generated_block_count": 2,
-            "approved_block_count": 0,
-            "clone_profile_count": 1,
-            "prompt_count": 1,
-            "reused_prompt_count": 0,
-            "regenerated_prompt_count": 1,
-            "current_phase": "generate_blocks",
-            "current_block_id": None,
-        },
-        "resume_checkpoint": {"next_profile_index": 0, "next_speech_block_index": 2},
-    }
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(operation_state, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -2466,6 +2322,13 @@ def _runtime_settings() -> dict[str, object]:
         ],
     }
 
+
+
+def _update_audio_blocks_document(project_root, **fields):
+    """Rewrite selected root fields of the persisted Audio Blocks document."""
+    document = audio_blocks_service.load_audio_blocks_document(project_root)
+    assert document is not None
+    audio_blocks_service.write_audio_blocks_document(project_root, {**document, **fields})
 
 
 def _write_speech_blocks_fixture_document(project_root, blocks, *, status: str = "completed"):

@@ -24,7 +24,12 @@ import json
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
-from audiomancer.services import character_voices_service, project_workspace_service, speech_blocks_service
+from audiomancer.services import (
+    audio_blocks_service,
+    character_voices_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 from audiomancer.ui.controllers import audio_blocks_ui_controller
 from audiomancer.ui.main_window import MainWindow
 from chunking_test_support import build_chunking_document
@@ -120,9 +125,8 @@ def test_audio_blocks_ui_controller_ignores_completed_start_request(
     assert window._current_manifest["current_stage"] == "audio_assembly_ready"
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "completed"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "completed"
-    assert (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()
-    assert (project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).exists()
-    assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").exists()
+    assert (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).exists()
+    assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav").exists()
 
 
 def test_audio_blocks_ui_controller_allows_completed_start_when_current_speech_block_is_missing_audio(
@@ -210,16 +214,8 @@ def test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_app
     audio_blocks_ui_controller.handle_approve_all_requested(window)
 
     updated_manifest = project_workspace_service.load_manifest(project_root)
-    report = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_REPORT_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
-    output_payload = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
+    report = audio_blocks_service.load_audio_blocks_report(project_root)
+    output_payload = audio_blocks_service.load_audio_blocks_document(project_root)["blocks"]
     assert updated_manifest["current_stage"] == "audio_blocks_ready"
     assert updated_manifest["operations"]["audio_blocks"]["status"] == "completed"
     assert report["audio_blocks_stage_status"] == "completed"
@@ -261,17 +257,11 @@ def test_audio_blocks_ui_controller_approval_resets_only_audio_assembly(
     audio_blocks_ui_controller.handle_approve_selected_requested(window, "0001-000001")
 
     updated_manifest = project_workspace_service.load_manifest(project_root)
-    output_payload = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
-    narrator_audio_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000001_narrator.wav"
-    )
-    alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
-    assert isinstance(output_payload[0]["approved"], str)
-    assert output_payload[1]["approved"] is None
+    output_payload = audio_blocks_service.load_audio_blocks(project_root)
+    narrator_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001-000001.wav"
+    alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001-000002.wav"
+    assert output_payload[0]["approved"] is True
+    assert output_payload[1]["approved"] is False
     assert window._audio_blocks_page.selected_block_id() == "0001-000002"
     assert narrator_audio_path.exists()
     assert alice_audio_path.exists()
@@ -309,19 +299,13 @@ def test_audio_blocks_ui_controller_approval_toggle_unapproves_without_advancing
 
     audio_blocks_ui_controller.handle_approve_selected_requested(window, "0001-000002")
 
-    output_payload = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
+    output_payload = audio_blocks_service.load_audio_blocks(project_root)
     updated_manifest = project_workspace_service.load_manifest(project_root)
-    narrator_audio_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000001_narrator.wav"
-    )
-    alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
+    narrator_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001-000001.wav"
+    alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001-000002.wav"
     assert [block["speech_block_id"] for block in output_payload] == ["0001-000001", "0001-000002"]
-    assert isinstance(output_payload[0]["approved"], str)
-    assert output_payload[1]["approved"] is None
+    assert output_payload[0]["approved"] is True
+    assert output_payload[1]["approved"] is False
     assert narrator_audio_path.exists()
     assert alice_audio_path.exists()
     assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav").exists()
@@ -607,26 +591,21 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelate
 
     audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, ("character_alice",))
 
-    output_payload = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
+    output_payload = audio_blocks_service.load_audio_blocks(project_root)
     updated_manifest = project_workspace_service.load_manifest(project_root)
     assert [block["speech_block_id"] for block in output_payload] == ["0001-000001", "0001-000002"]
     narrator_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000001")
     alice_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000002")
     assert narrator_block["audio_relative_path"] is not None
     assert alice_block["audio_relative_path"] is None
-    assert alice_block["metadata_relative_path"] is None
-    assert alice_block["generated"] is None
-    assert alice_block["approved"] is None
+    assert alice_block["generated"] is False
+    assert alice_block["approved"] is False
     assert alice_block["generation_fingerprint"] is None
     assert (
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
     ).exists()
-    assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").exists()
-    assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000002_alice.wav").exists()
+    assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav").exists()
+    assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000002.wav").exists()
     assert not assembly_report_path.exists()
     assert updated_manifest["current_stage"] == "speech_blocks_ready"
     assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
@@ -796,109 +775,37 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
-    output_payload = [
-        {
-            "speech_block_id": "0001-000001",
-            "sequence_index": 1,
-            "chunk_id": "chunk-0001",
-            "speaker_id": "narrator",
-            "speaker_display_name": "Narrator",
-            "normalized_speaker_name": "narrator",
-            "text": "Narration one.",
-            "voice_target_id": "narrator",
-            "voice_source_kind": "narrator_sample",
-            "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
-            "metadata_relative_path": "audio_blocks/0001_000001_narrator.json",
-            "generated": True,
-            "approved": approved,
-            "approved_at": "2026-04-23T12:10:00+00:00" if approved else None,
-            "generated_at": "2026-04-23T12:09:00+00:00",
-            "runtime_result_summary": "Narrator ready.",
-            "warning_flags": [],
-        },
-        {
-            "speech_block_id": "0001-000002",
-            "sequence_index": 2,
-            "chunk_id": "chunk-0001",
-            "speaker_id": "alice",
-            "speaker_display_name": "Alice",
-            "normalized_speaker_name": "alice",
-            "text": "Hello there.",
-            "voice_target_id": "character_alice",
-            "voice_source_kind": "character_sample",
-            "audio_relative_path": "audio_blocks/0001_000002_alice.wav",
-            "metadata_relative_path": "audio_blocks/0001_000002_alice.json",
-            "generated": True,
-            "approved": approved,
-            "approved_at": "2026-04-23T12:10:00+00:00" if approved else None,
-            "generated_at": "2026-04-23T12:09:00+00:00",
-            "runtime_result_summary": "Alice ready.",
-            "warning_flags": [],
-        },
-    ]
     (audio_root / "artifact.txt").write_text("stale", encoding="utf-8")
-    (generated_root / "0001_000001_narrator.wav").write_bytes(b"RIFF-1")
-    (generated_root / "0001_000001_narrator.json").write_text("{}\n", encoding="utf-8")
-    (generated_root / "0001_000002_alice.wav").write_bytes(b"RIFF-2")
-    (generated_root / "0001_000002_alice.json").write_text("{}\n", encoding="utf-8")
-    (audio_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(output_payload, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (audio_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "voice_language": "en",
-                "audio_blocks_stage_status": "completed" if approved else "in_progress",
-                "generated_block_count": 2,
-                "approved_block_count": 2 if approved else 0,
-                "total_block_count": 2,
-                "warning_count": 0,
-                "warnings": [],
-                "updated_at": "2026-04-23T12:10:00+00:00",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (audio_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-                "status": "completed",
-                "input_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME}"
-                ],
-                "output_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"
-                ],
-                "artifact_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"
-                ],
-                "progress_current": 2,
-                "progress_total": 2,
-                "mode": "tts_generation",
-                "started_at": "2026-04-23T12:00:00+00:00",
-                "completed_at": "2026-04-23T12:10:00+00:00",
-                "updated_at": "2026-04-23T12:10:00+00:00",
-                "warning_count": 0,
-                "metadata": {
-                    "voice_language": "en",
-                    "input_fingerprint": "stable",
-                    "speech_block_count": 2,
-                    "generated_block_count": 2,
-                    "approved_block_count": 2 if approved else 0,
-                    "clone_profile_count": 2,
-                    "current_phase": "generate_blocks",
-                    "current_block_id": None,
+    (generated_root / "0001-000001.wav").write_bytes(b"RIFF-1")
+    (generated_root / "0001-000002.wav").write_bytes(b"RIFF-2")
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed" if approved else "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "ui-controller-fixture",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": "0001-000001",
+                    "voice_target_id": "narrator",
+                    "generated": True,
+                    "approved": approved,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
                 },
-                "resume_checkpoint": {"next_profile_index": 2, "next_speech_block_index": 2},
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+                {
+                    "speech_block_id": "0001-000002",
+                    "voice_target_id": "character_alice",
+                    "generated": True,
+                    "approved": approved,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
+                },
+            ],
+        },
     )
 
 

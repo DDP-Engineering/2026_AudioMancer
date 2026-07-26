@@ -397,7 +397,6 @@ def test_character_ui_controller_edit_preserves_speech_approval_for_voice_defini
     narrator_audio_block = next(block for block in audio_blocks if block["speech_block_id"] == "0001-000002")
     assert audio_blocks_service.is_generated(alice_audio_block) is False
     assert alice_audio_block["audio_relative_path"] is None
-    assert alice_audio_block["metadata_relative_path"] is None
     assert alice_audio_block["generation_fingerprint"] is None
     assert audio_blocks_service.is_generated(narrator_audio_block) is True
     voice_target = character_voices_service.voice_target_by_id(
@@ -765,52 +764,36 @@ def _write_downstream_artifacts(project_root, window: MainWindow) -> None:
     generated_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
     (generated_root / "0001-000001.wav").write_bytes(b"RIFFalice-block")
-    (generated_root / "0001-000001.json").write_text("{}\n", encoding="utf-8")
     (generated_root / "0001-000002.wav").write_bytes(b"RIFFnarrator-block")
-    (generated_root / "0001-000002.json").write_text("{}\n", encoding="utf-8")
-    audio_blocks = [
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
         {
-            "speech_block_id": "0001-000001",
-            "sequence_index": 1,
-            "chunk_id": "chunk-0001",
-            "speaker_id": "alice",
-            "speaker_display_name": "Alice",
-            "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
-            "text": "Hello there.",
-            "voice_target_id": character_voices_service.character_target_id("alice"),
-            "voice_source_kind": "character",
-            "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001-000001.wav",
-            "metadata_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001-000001.json",
-            "generated": True,
-            "approved": True,
-            "approved_at": "2026-04-08T12:04:00+00:00",
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "characters-fixture",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": "0001-000001",
+                    "voice_target_id": character_voices_service.character_target_id("alice"),
+                    "generated": True,
+                    "approved": True,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
+                },
+                {
+                    "speech_block_id": "0001-000002",
+                    "voice_target_id": character_voices_service.TARGET_ID_NARRATOR,
+                    "generated": True,
+                    "approved": True,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
+                },
+            ],
         },
-        {
-            "speech_block_id": "0001-000002",
-            "sequence_index": 2,
-            "chunk_id": "chunk-0001",
-            "speaker_id": "narrator",
-            "speaker_display_name": "Narrator",
-            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
-            "text": "Narration line.",
-            "voice_target_id": character_voices_service.TARGET_ID_NARRATOR,
-            "voice_source_kind": "narrator",
-            "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001-000002.wav",
-            "metadata_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001-000002.json",
-            "generated": True,
-            "approved": True,
-            "approved_at": "2026-04-08T12:04:00+00:00",
-        },
-    ]
-    (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(audio_blocks, indent=2) + "\n",
-        encoding="utf-8",
     )
-    (project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps({"audio_block_count": 2, "approved_block_count": 2, "voice_language": "en"}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    _write_operation_state(project_root, config.AUDIO_BLOCKS_STATE_FILE_NAME, "completed", "audio_blocks")
     audiobook_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     audiobook_root.mkdir(parents=True, exist_ok=True)
     (audiobook_root / "book.wav").write_bytes(b"RIFFassembled")

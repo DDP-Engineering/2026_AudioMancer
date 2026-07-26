@@ -11,10 +11,11 @@
 @brief Runtime UI-state helpers for AudioMancer.
 @details Applies runtime UI language and text-size settings to the running Qt
          application through one centralized string catalog, scale mapping, and
-         theme runtime adapter.
+         theme runtime adapter, and resolves settings-backed runtime preferences
+         such as the operator completion beep.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.58.0
+@version 0.59.0
 """
 
 # ruff: noqa: E501
@@ -713,10 +714,7 @@ _UI_STRINGS = {
             "{approved_count}/{total_count}."
         ),
         "audio_blocks.note_in_progress": "Audio generation is in progress at {progress_current}/{progress_total}.",
-        "audio_blocks.note_prepare_prompts": (
-            "Preparing reusable voice prompts. Available: {prompt_count}, reused: {reused_prompt_count}, "
-            "created now: {regenerated_prompt_count}."
-        ),
+        "audio_blocks.note_prepare_prompts": "Preparing reusable voice prompts. Available: {prompt_count}.",
         "audio_blocks.note_generating_blocks": "Generating audio blocks from the prepared reusable voice prompts.",
         "audio_blocks.note_resume": (
             "A previous Audio Blocks run was not finalized. Press Start Audio Generation to continue from "
@@ -733,9 +731,7 @@ _UI_STRINGS = {
         "audio_blocks.status_generated": "Generated audio: {generated_count}/{total_count}",
         "audio_blocks.status_approved": "Approved audio: {approved_count}/{total_count}",
         "audio_blocks.status_voice_language": "Voice language: {language_label}",
-        "audio_blocks.status_prompts": (
-            "Reusable prompts: {prompt_count} | reused: {reused_prompt_count} | created now: {regenerated_prompt_count}"
-        ),
+        "audio_blocks.status_prompts": "Reusable prompts: {prompt_count}",
         "audio_blocks.progress_label": "Generated blocks: {progress_current}/{progress_total}",
         "audio_blocks.detail_speaker": "Speaker: {speaker_label}",
         "audio_blocks.detail_approval_status": "Status: {status_label}",
@@ -1763,8 +1759,7 @@ _UI_STRINGS = {
         ),
         "audio_blocks.note_in_progress": ("Generarea audio este in curs la {progress_current}/{progress_total}."),
         "audio_blocks.note_prepare_prompts": (
-            "Se pregatesc prompturile vocale reutilizabile. Disponibile: {prompt_count}, refolosite: "
-            "{reused_prompt_count}, create acum: {regenerated_prompt_count}."
+            "Se pregatesc prompturile vocale reutilizabile. Disponibile: {prompt_count}."
         ),
         "audio_blocks.note_generating_blocks": (
             "Se genereaza blocurile audio din prompturile vocale reutilizabile pregatite."
@@ -1788,10 +1783,7 @@ _UI_STRINGS = {
         "audio_blocks.status_generated": "Audio generat: {generated_count}/{total_count}",
         "audio_blocks.status_approved": "Audio aprobat: {approved_count}/{total_count}",
         "audio_blocks.status_voice_language": "Limba vocii: {language_label}",
-        "audio_blocks.status_prompts": (
-            "Prompturi reutilizabile: {prompt_count} | refolosite: {reused_prompt_count} | create acum: "
-            "{regenerated_prompt_count}"
-        ),
+        "audio_blocks.status_prompts": "Prompturi reutilizabile: {prompt_count}",
         "audio_blocks.progress_label": "Blocuri generate: {progress_current}/{progress_total}",
         "audio_blocks.detail_speaker": "Vorbitor: {speaker_label}",
         "audio_blocks.detail_approval_status": "Stare: {status_label}",
@@ -2225,6 +2217,23 @@ def current_language_from_settings(
     if not isinstance(settings_payload, dict):
         return _DEFAULT_LANGUAGE
     return str(settings_payload.get("language", _DEFAULT_LANGUAGE))
+
+
+def completion_beep_enabled_from_settings(
+    settings_payload: dict[str, object] | None,
+) -> bool:
+    """
+    @brief      Resolve the operator completion-beep preference from one settings payload.
+    @param[in]  settings_payload Optional persisted settings mapping.
+    @return     True when a finished operation should produce an audible beep.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-25
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return False
+    return bool(settings_payload.get("play_completion_beep", config.DEFAULT_PLAY_COMPLETION_BEEP))
 
 
 def operator_status_pane_height(reference_widget: QWidget, line_count: int = 3) -> int:

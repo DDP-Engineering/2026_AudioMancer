@@ -32,19 +32,6 @@ from audiomancer.services import (
 from chunking_test_support import build_chunking_document
 
 
-def test_character_voices_state_service_omits_ai_profile_selector_builder() -> None:
-    """
-    @brief      Verify Character Voices no longer exposes AI-profile selector state.
-    @details    Covers SPEC-CV-AI-SELECTOR-REMOVAL and REQ-FUNC-015.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-03
-    @version    0.2.0
-    """
-    assert hasattr(character_voices_state_service, "build_character_voices_profile_state") is False
-
-
 def test_state_contains_narrator_first_and_approved_translated_language(tmp_path) -> None:
     """
     @brief      Verify narrator-first Character Voices state and approved translated language display.

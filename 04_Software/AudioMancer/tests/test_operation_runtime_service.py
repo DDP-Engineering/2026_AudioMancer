@@ -406,7 +406,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
-    (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
 
     operation_runtime_service.reset_operation_data(
         project_root,
@@ -419,7 +419,7 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
     assert not (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).exists()
-    assert not (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert not (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).exists()
 
 
 def test_resolve_operation_path_uses_project_root_without_creating_folders(tmp_path) -> None:
@@ -489,34 +489,23 @@ def test_ensure_default_operation_state_creates_compact_character_discovery_stat
     assert not (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).exists()
 
 
-def test_ensure_default_operation_state_creates_zero_audio_blocks_metadata(tmp_path) -> None:
+def test_ensure_default_operation_state_skips_audio_blocks(tmp_path) -> None:
     """
-    @brief      Verify first Audio Blocks page access creates compact resume metadata.
+    @brief      Verify REQ-FUNC-e4b08ab6 creates no Audio Blocks state artifact.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
+    @date       2026-07-26
+    @version    0.3.0
     """
     project_root, _manifest = project_workspace_service.create_project("DefaultAudioBlocksStateRuntime", tmp_path)
 
     state_path = operation_runtime_service.ensure_default_operation_state(project_root, "audio_blocks")
 
-    assert state_path == project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME
-    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
-    assert state_payload["status"] == "not_started"
-    assert state_payload["progress_current"] == 0
-    assert state_payload["progress_total"] == 0
-    assert "output_paths" not in state_payload
-    assert "artifact_paths" not in state_payload
-    assert state_payload["metadata"]["voice_language"] == ""
-    assert state_payload["metadata"]["prompt_count"] == 0
-    assert state_payload["metadata"]["reused_prompt_count"] == 0
-    assert state_payload["metadata"]["regenerated_prompt_count"] == 0
-    assert state_payload["metadata"]["current_phase"] == ""
-    assert state_payload["metadata"]["current_block_id"] == ""
-    assert state_payload["resume_checkpoint"] is None
+    assert state_path is None
+    assert not (project_root / "audio_blocks_state.json").exists()
+    assert not (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).exists()
 
 
 # END OF FILE

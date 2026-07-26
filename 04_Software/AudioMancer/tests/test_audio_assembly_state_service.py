@@ -24,8 +24,10 @@ from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
     audio_assembly_state_service,
+    audio_blocks_service,
     operation_runtime_service,
     project_workspace_service,
+    speech_blocks_service,
 )
 
 
@@ -92,21 +94,24 @@ def test_build_audio_assembly_state_ignores_scene_ambience_when_excluded(tmp_pat
         "include_scene_ambience": False,
     }
     project_workspace_service.save_manifest(manifest, project_root)
-    _write_audio_blocks(project_root)
-    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    payload.append(
-        {
-            **payload[0],
-            "speech_block_id": "0001-000002-ambience",
-            "sequence_index": 2,
-            "speaker_id": "scene_ambience",
-            "speaker_display_name": "Scene Ambience",
-            "content_kind": "scene_ambience",
-            "approved": False,
-        }
+    _write_audio_blocks(
+        project_root,
+        extra_blocks=[
+            {
+                "speech_block_id": "0001-000002-ambience",
+                "sequence_index": 2,
+                "chunk_id": "chunk-0001",
+                "speaker_id": "scene_ambience",
+                "speaker_display_name": "Scene Ambience",
+                "normalized_speaker_name": "scene_ambience",
+                "content_kind": "scene_ambience",
+                "text": "Rain in distant trenches.",
+                "voice_target_id": "narrator",
+                "generated": True,
+                "approved": False,
+            }
+        ],
     )
-    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     state = audio_assembly_state_service.build_audio_assembly_state(project_root, manifest, "en")
 
@@ -132,15 +137,19 @@ def test_build_audio_assembly_state_returns_empty_state_without_project() -> Non
     assert state["can_play_selected"] is False
 
 
-def _write_audio_blocks(project_root) -> None:
+def _write_audio_blocks(project_root, extra_blocks=()) -> None:
     """
-    @brief      Write one approved Audio Blocks payload for state tests.
+    @brief      Write the Speech Blocks and Audio Blocks documents for state tests.
+    @details    Audio Blocks persists only its own contract fields and reads
+                identity and text back from Speech Blocks, so both documents
+                must be written together.
     @param[in]  project_root Active project root.
+    @param[in]  extra_blocks Additional rich fixture blocks appended after the narrator block.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
+    @date       2026-07-26
+    @version    0.2.0
     """
     blocks = [
         {
@@ -151,28 +160,56 @@ def _write_audio_blocks(project_root) -> None:
             "speaker_display_name": "Narrator",
             "normalized_speaker_name": "narrator",
             "content_kind": "narration",
-            "metadata_only": False,
             "text": "Line one.",
             "voice_target_id": "narrator",
-            "voice_source_kind": "sample",
-            "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
-            "metadata_relative_path": None,
             "generated": True,
             "approved": True,
-            "approved_at": "2026-04-27T00:00:00+00:00",
-            "generated_at": "2026-04-27T00:00:00+00:00",
-            "runtime_result_summary": "",
-            "split_part_count": 1,
-            "split_strategy": "single",
-            "model_token_budget": 1024,
-            "model_audio_seconds_budget": 60.0,
-            "generated_part_relative_paths": [],
-            "warning_flags": [],
-        }
+        },
+        *extra_blocks,
     ]
-    (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(blocks, indent=2) + "\n",
-        encoding="utf-8",
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "source": {"kind": "original", "language": "en", "fingerprint": "state-fixture"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": True},
+            "response_contract": "direct_blocks",
+            "token_usage": {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+                "usage_available": False,
+            },
+            "budget_metadata": {},
+            "checkpoint": None,
+            "failure": None,
+            "blocks": [
+                {key: value for key, value in block.items() if key != "generated"} for block in blocks
+            ],
+        },
+    )
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "state-fixture",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": str(block["speech_block_id"]),
+                    "voice_target_id": str(block.get("voice_target_id", "") or ""),
+                    "generated": bool(block.get("generated", True)),
+                    "approved": bool(block.get("approved", False)),
+                    "audio_can_play": bool(block.get("generated", True)),
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
+                }
+                for block in blocks
+            ],
+        },
     )
 
 

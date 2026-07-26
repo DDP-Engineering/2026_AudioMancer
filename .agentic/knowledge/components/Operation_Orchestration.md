@@ -12,7 +12,9 @@ worker lifecycle used by all long-running workflow pages.
 
 - Resolve and validate project-relative artifact paths, read optional JSON,
   persist operation state/artifacts atomically, and construct default compact
-  state envelopes.
+  state envelopes. Speech Blocks and Audio Blocks own single authoritative
+  documents instead of separate state artifacts, so no default state file is
+  initialized for them and a missing document reads as not-started.
 - Calculate bounded progress payloads and provide cooperative cancellation.
 - Define ordered full-reset and selective-invalidation impacts, preserve stable
   identities, and delete only safe, targeted audio/assembly artifacts.
@@ -20,6 +22,8 @@ worker lifecycle used by all long-running workflow pages.
   failure/cancellation back to the UI thread, and safely handle shutdown.
 - Present the modal operation-progress dialog, including localized messages,
   token usage, cancellation, and final success/failure state.
+- Request the operator completion beep when an operation ends on its own, so an
+  operator who left the machine is told the run is over.
 - Synchronize persisted operation state into the project manifest and resolve
   enabled AI profiles for page controllers.
 
@@ -43,7 +47,10 @@ summaries from completed artifacts.
 `operation_runner_controller` owns `ThreadedOperationWorker` and its UI bridge.
 It disables conflicting project switches, creates the shared dialog, routes
 signals to UI-thread handlers, clears all bookkeeping after thread completion,
-and cooperatively waits during close. `OperationProgressDialog` is the visible
+and cooperatively waits during close. Its success and failure handlers also call
+`misc_ui_controller.play_completion_beep(...)`; the cancellation handler
+deliberately does not, because the operator requested the cancellation and is
+already present. `OperationProgressDialog` is the visible
 progress/token/cancel surface. `workflow_controller_service` is the small
 controller-facing facade for starting operations, syncing a manifest from
 disk, and choosing an enabled AI profile.
@@ -112,7 +119,8 @@ Primary automated coverage:
   `test_workflow_controller_service.py`, and
   `test_main_window_operation_shutdown.py` cover success/failure/cancellation,
   active-operation suppression, profile resolution, manifest synchronization,
-  and close-time shutdown.
+  and close-time shutdown, including that a completion beep is emitted on
+  success and failure but never on cancellation or when the preference is off.
 - `test_operation_progress_dialog.py` directly verifies the visible localized
   title/cancel label, clamped progress, status replacement, and localized token
   usage rendering.
