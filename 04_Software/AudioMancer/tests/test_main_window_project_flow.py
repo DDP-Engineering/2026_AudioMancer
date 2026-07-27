@@ -307,24 +307,8 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
         "size_bytes": source_path.stat().st_size,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    extracted_text = "Story body\n"
-    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(extracted_text, encoding="utf-8")
-    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "status": "completed",
-                "progress_current": 1,
-                "progress_total": 1,
-                "warnings": [],
-                "character_count": len(extracted_text),
-                "word_count": len(extracted_text.split()),
-                "line_count": len(extracted_text.splitlines()),
-                "page_count": None,
-            }
-        ),
-        encoding="utf-8",
-    )
     project_workspace_service.save_manifest(manifest, project_root)
+    text_cleanup_ui_controller.text_extraction_service.extract_text(project_root, manifest)
 
     question_calls = []
     reset_calls = []
@@ -455,18 +439,25 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
-    monkeypatch.setattr(
-        text_cleanup_ui_controller,
-        "start_operation",
-        lambda _window, **kwargs: kwargs["success_handler"](
-            kwargs["worker_callable"](
+    def _run_synchronously(
+        _window,
+        _operation_kind,
+        _operation_name,
+        _message,
+        worker,
+        success_handler,
+        _failure_handler,
+    ):
+        success_handler(
+            worker(
                 _window._current_project_root,
                 dict(_window._current_manifest),
                 progress_callback=lambda *_args: None,
                 cancel_requested=lambda: False,
             )
-        ),
-    )
+        )
+
+    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", _run_synchronously)
 
     window._text_cleanup_page.extract_requested.emit()
 

@@ -306,7 +306,7 @@ def test_workflow_impact_resets_audio_assembly_outputs_only(tmp_path) -> None:
     assert audio_block_path.is_file()
 
 
-def test_workflow_impact_refreshes_manifest_from_completed_artifacts(tmp_path) -> None:
+def test_workflow_impact_rejects_legacy_cleanup_without_source_ledger(tmp_path) -> None:
     """
     @brief      Verify manifest refresh saves metadata healed from persisted artifacts.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -345,11 +345,8 @@ def test_workflow_impact_refreshes_manifest_from_completed_artifacts(tmp_path) -
     _write_json(project_root / config.CLEANUP_STATE_FILE_NAME, _operation_state("completed", 1, 1))
     _write_json(project_root / config.CLEANUP_REPORT_FILE_NAME, {"warning_count": 0})
 
-    refreshed_manifest = workflow_impact_service.refresh_manifest_from_artifacts(project_root)
-    saved_manifest = project_workspace_service.load_manifest(project_root)
-
-    assert refreshed_manifest["current_stage"] == "text_cleanup_ready"
-    assert saved_manifest["operations"]["cleanup"]["status"] == "completed"
+    with pytest.raises(ValueError, match="could not be refreshed"):
+        workflow_impact_service.refresh_manifest_from_artifacts(project_root)
 
 
 def test_workflow_impact_full_reset_wrapper_keeps_existing_broad_reset_behavior(tmp_path) -> None:

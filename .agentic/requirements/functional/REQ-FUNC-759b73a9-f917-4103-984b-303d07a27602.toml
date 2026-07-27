@@ -1,23 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-759b73a9-f917-4103-984b-303d07a27602"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "AI cleanup prompts shall use one canonicalized source inside resolved markers with neutral names and language, script, and neighbor context."
 rationale = "The cleanup prompt must present a single canonical source with context."
-verification = "Automated: 4 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_prompt_uses_once_canonicalized_source_inside_resolved_markers",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_window_contract_uses_one_canonical_source_without_page_indices",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_runtime_uses_only_neutral_cleanup_prompt_names",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_prompt_includes_language_script_and_neighbor_context",
-]
+linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:37Z"

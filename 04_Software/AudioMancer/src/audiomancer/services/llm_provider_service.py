@@ -82,6 +82,11 @@ def chat_json(
     structured_output: bool = True,
     response_schema: dict[str, object] | None = None,
     response_schema_name: str = "audiomancer_json_response",
+    require_response_schema: bool = False,
+    allow_unconstrained_fallback: bool = True,
+    allow_model_json_repair: bool = True,
+    retry_count_override: int | None = None,
+    max_output_tokens_override: int | None = None,
 ) -> dict[str, object]:
     """
     @brief      Run one chat-completion request and parse JSON content.
@@ -102,6 +107,10 @@ def chat_json(
     @date       2026-04-11
     @version    0.6.3
     """
+    if require_response_schema and (
+        response_schema is None or not bool(profile_payload.get("supports_structured_output", False))
+    ):
+        raise ValueError("This operation requires provider-enforced JSON Schema output.")
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
         "messages": [
@@ -110,10 +119,9 @@ def chat_json(
         ],
         "temperature": float(profile_payload.get("temperature", config.DEFAULT_LLM_TEMPERATURE)),
         "max_tokens": int(
-            profile_payload.get(
-                "max_output_tokens",
-                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-            )
+            max_output_tokens_override
+            if max_output_tokens_override is not None
+            else profile_payload.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS)
         ),
     }
     if structured_output and bool(profile_payload.get("supports_structured_output", False)):
@@ -138,7 +146,15 @@ def chat_json(
         },
     )
 
-    attempts = max(1, config.DEFAULT_LLM_REQUEST_RETRY_COUNT + 1)
+    attempts = max(
+        1,
+        (
+            config.DEFAULT_LLM_REQUEST_RETRY_COUNT
+            if retry_count_override is None
+            else int(retry_count_override)
+        )
+        + 1,
+    )
     last_error: Exception | None = None
     for attempt_index in range(1, attempts + 1):
         raw_content: str | None = None
@@ -151,7 +167,7 @@ def chat_json(
                     cancel_requested=cancel_requested,
                 )
             except _UnsupportedResponseFormatError as error_object:
-                if "response_format" not in active_request_payload:
+                if "response_format" not in active_request_payload or not allow_unconstrained_fallback:
                     raise
                 active_request_payload = _build_without_response_format_payload(active_request_payload)
                 _append_ai_log(
@@ -175,7 +191,7 @@ def chat_json(
                 parsed_payload = _parse_json_content(raw_content)
                 normalized_usage = token_usage_service.normalize_provider_usage(raw_payload)
             except ValueError as parse_error:
-                if not raw_content.strip():
+                if not raw_content.strip() or not allow_model_json_repair:
                     raise
                 (
                     parsed_payload,

@@ -1,20 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-08d4a11d-687b-46ef-8560-7c37a0b5c5ec"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "Text cleanup state shall build source and cleaned previews and notes from project artifacts."
 rationale = "The UI needs one consistent projection of cleanup state."
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_text_cleanup_state_loads_previews_and_notes",
-]
+linked_tests = []
 
 created_on = "2026-07-18T18:14:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:32Z"

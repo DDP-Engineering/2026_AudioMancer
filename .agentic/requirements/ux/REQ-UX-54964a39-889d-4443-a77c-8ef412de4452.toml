@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-UX-54964a39-889d-4443-a77c-8ef412de4452"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "The Text Cleanup V2 page shall expose one Cleanup action with an optional AI profile selector and optional Edit, Save, and Cancel controls."
+rationale = "Operators need one simple hybrid workflow and a manual correction path for acceptable imperfections."
+verification = "Full pytest gate E-0009 passed: 1025 passed, 62 skipped, 1 deselected."
+spec_ref = ""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_page_edit_save_and_cancel_are_optional",
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_page_exposes_one_cleanup_action_with_optional_ai_profile",
+]
+
+created_on = "2026-07-27T17:59:54Z"
+last_updated = "2026-07-27T18:00:12Z"

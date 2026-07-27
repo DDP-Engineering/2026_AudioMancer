@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-1eee7ebf-4f45-4fdb-8c86-1a320346b473"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Cleanup V2 analysis shall derive conservative structural operations and typed uncertainty questions from Unicode-aware source evidence."
+rationale = "Deterministic evidence should resolve safe cases while preserving ambiguous multilingual text for optional adjudication."
+verification = "Full pytest gate E-0009 passed: 1025 passed, 62 skipped, 1 deselected."
+spec_ref = ""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_cleanup_without_ai_preserves_uncertain_ascii_hyphenation",
+  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_pdf_page_artifacts_require_repetition_or_sequence_evidence",
+]
+
+created_on = "2026-07-27T17:59:05Z"
+last_updated = "2026-07-27T18:00:10Z"

@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-663fa24e-b963-4af8-9bbe-dbee3dcab956"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Cleanup AI adjudication shall expose the batch and pass phase of every primary and verifier request through its progress callback."
+rationale = "Long local-model requests must provide observable work-unit progress instead of leaving the caller without updates."
+verification = "Focused pytest passed: AI adjudication emits bounded Primary, Verifier, and Verified request progress."
+spec_ref = ""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_ai_adjudication_reports_each_primary_and_verifier_request",
+]
+
+created_on = "2026-07-27T15:46:14Z"
+last_updated = "2026-07-27T15:52:36Z"

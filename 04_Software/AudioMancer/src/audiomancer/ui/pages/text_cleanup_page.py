@@ -1,36 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
-# -----------------------------------------------------------------------------
-# Copyright (c) 2026 DDP Engineering
-# This software is licensed under the GNU Affero General Public License v3.0
-# (AGPL-3.0) with additional Non-Commercial restriction.
-# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
-# -----------------------------------------------------------------------------
 """
 @file text_cleanup_page.py
-@brief Text extraction and cleanup page for AudioMancer.
-@details Provides the operator-facing extraction and deterministic cleanup
-         state plus manual cleaned-text editing for the current
-         text-processing slice, including local preview text search and
-         retained AI Cleanup spacing selection.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.10.0
+@brief Unified Text Extraction and Cleanup V2 page.
+@details Exposes one Cleanup action with an optional AI profile, split source
+         and result previews, and optional operator Edit/Save/Cancel controls.
 """
 
-# IMPORTS
-
-from PySide6.QtCore import QPoint, Qt, Signal
-from PySide6.QtGui import QTextCursor
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
-    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QSplitter,
@@ -41,196 +23,90 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import ui_state_service
 
-# CONSTANTS
-
-_SPACING_CATEGORY_ORDER = ("heading", "separator", "noise", "header", "footer")
-_DEFAULT_SPACING_CATEGORIES = frozenset({"heading", "separator"})
-
-# PUBLIC API
-
 
 class TextCleanupPage(QWidget):
-    """
-    @brief      Display extraction and cleanup controls for the active project.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.6.0
-    """
+    """Display the single hybrid Cleanup workflow for the active project."""
 
     extract_requested = Signal()
-    clean_requested = Signal()
-    ai_clean_requested = Signal(str)
+    cleanup_requested = Signal(object)
     reset_cleanup_requested = Signal()
-    apply_spacing_requested = Signal(object)
     save_cleaned_text_requested = Signal(str)
 
     def __init__(self, parent=None) -> None:
-        """
-        @brief      Initialize the extraction-aware text cleanup page.
-        @param[in]  parent Optional parent widget.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.9.0
-        """
         super().__init__(parent)
         self._project_active = False
         self._busy = False
         self._can_extract = False
         self._can_clean = False
-        self._can_ai_clean = False
-        self._can_apply_ai_spacing = False
         self._can_reset_cleanup = False
         self._has_cleaned_text = False
         self._editing_cleaned_text = False
-        self._has_ai_profiles = False
-        self._busy_operation_name = None
         self._language = config.DEFAULT_LANGUAGE
-        self._ai_profile_entries: list[tuple[str, str | None]] = []
-        self._preview_find_text_by_editor_id: dict[int, str] = {}
 
         layout = QVBoxLayout(self)
-        header_row = QHBoxLayout()
-        self._title_label = QLabel("<h2>Text Cleanup</h2>")
-        header_row.addWidget(self._title_label)
-        header_row.addStretch(1)
-
-        self._extract_button = QPushButton("Extract Text")
+        header = QHBoxLayout()
+        self._title_label = QLabel("<h2>Text Cleanup</h2>", self)
+        header.addWidget(self._title_label)
+        header.addStretch(1)
+        self._extract_button = QPushButton("Extract Text", self)
         self._extract_button.clicked.connect(self.extract_requested.emit)
-        header_row.addWidget(self._extract_button)
-
-        self._clean_button = QPushButton("Deterministic Cleanup")
-        self._clean_button.clicked.connect(self.clean_requested.emit)
-        header_row.addWidget(self._clean_button)
-
-        self._ai_profile_label = QLabel("AI Profile")
-        self._ai_profile_label.setEnabled(False)
-        header_row.addWidget(self._ai_profile_label)
-
+        header.addWidget(self._extract_button)
+        self._ai_profile_label = QLabel("AI Profile (optional)", self)
+        header.addWidget(self._ai_profile_label)
         self._ai_profile_combo = QComboBox(self)
-        self._ai_profile_combo.addItem("(none)", None)
-        self._ai_profile_combo.setEnabled(False)
-        header_row.addWidget(self._ai_profile_combo)
-
-        self._ai_clean_button = QPushButton("AI-Assisted Cleanup")
-        self._ai_clean_button.setEnabled(False)
-        self._ai_clean_button.clicked.connect(self._emit_ai_clean_requested)
-        header_row.addWidget(self._ai_clean_button)
-
-        self._reset_cleanup_button = QPushButton("Reset Cleanup")
+        self._ai_profile_combo.addItem("No AI", None)
+        header.addWidget(self._ai_profile_combo)
+        self._cleanup_button = QPushButton("Cleanup", self)
+        self._cleanup_button.clicked.connect(self._emit_cleanup_requested)
+        header.addWidget(self._cleanup_button)
+        self._reset_cleanup_button = QPushButton("Reset Cleanup", self)
         self._reset_cleanup_button.clicked.connect(self.reset_cleanup_requested.emit)
-        header_row.addWidget(self._reset_cleanup_button)
-
-        layout.addLayout(header_row)
+        header.addWidget(self._reset_cleanup_button)
+        layout.addLayout(header)
 
         self._preview_splitter = QSplitter(self)
         self._preview_splitter.setChildrenCollapsible(False)
-
-        extracted_group = QGroupBox("Extracted Text Preview", self)
-        extracted_layout = QVBoxLayout(extracted_group)
+        self._extracted_group = QGroupBox("Extracted Text Preview", self)
+        extracted_layout = QVBoxLayout(self._extracted_group)
         self._extracted_text_edit = QPlainTextEdit(self)
         self._extracted_text_edit.setReadOnly(True)
-        self._install_preview_find_context_menu(self._extracted_text_edit)
         extracted_layout.addWidget(self._extracted_text_edit)
-
-        cleaned_group = QGroupBox("Cleaned Text Preview", self)
-        cleaned_layout = QVBoxLayout(cleaned_group)
+        self._cleaned_group = QGroupBox("Cleaned Text Preview", self)
+        cleaned_layout = QVBoxLayout(self._cleaned_group)
         self._cleaned_text_edit = QPlainTextEdit(self)
         self._cleaned_text_edit.setReadOnly(True)
-        self._install_preview_find_context_menu(self._cleaned_text_edit)
         cleaned_layout.addWidget(self._cleaned_text_edit)
-        cleaned_controls_layout = QGridLayout()
-        cleaned_controls_layout.setContentsMargins(0, 0, 0, 0)
-        cleaned_controls_layout.setColumnStretch(3, 1)
-        self._cleaned_controls_layout = cleaned_controls_layout
-        self._spacing_selector_layout = cleaned_controls_layout
-        self._spacing_label = QLabel("Insert new line for:", self)
-        cleaned_controls_layout.addWidget(self._spacing_label, 0, 0)
-        self._spacing_checkboxes: dict[str, QCheckBox] = {}
-        for category, label, row, column in (
-            ("heading", "Heading", 0, 1),
-            ("separator", "Separator", 0, 2),
-            ("noise", "Noise", 1, 1),
-            ("header", "Header", 1, 2),
-            ("footer", "Footer", 1, 3),
-        ):
-            checkbox = QCheckBox(label, self)
-            checkbox.setChecked(category in _DEFAULT_SPACING_CATEGORIES)
-            self._spacing_checkboxes[category] = checkbox
-            cleaned_controls_layout.addWidget(checkbox, row, column)
-
-        self._apply_spacing_button = QPushButton("Apply Spacing")
-        self._apply_spacing_button.clicked.connect(self._emit_apply_spacing_requested)
-        cleaned_controls_layout.addWidget(self._apply_spacing_button, 1, 0)
-        self._edit_cleaned_button = QPushButton("Edit")
+        edit_row = QHBoxLayout()
+        edit_row.addStretch(1)
+        self._edit_cleaned_button = QPushButton("Edit", self)
         self._edit_cleaned_button.clicked.connect(self._begin_cleaned_text_edit)
-        cleaned_controls_layout.addWidget(self._edit_cleaned_button, 0, 4)
-        self._save_cleaned_button = QPushButton("Save")
+        edit_row.addWidget(self._edit_cleaned_button)
+        self._save_cleaned_button = QPushButton("Save", self)
         self._save_cleaned_button.clicked.connect(self._emit_save_cleaned_text_requested)
-        cleaned_controls_layout.addWidget(self._save_cleaned_button, 1, 4)
-        cleaned_layout.addLayout(cleaned_controls_layout)
-
-        self._preview_splitter.addWidget(extracted_group)
-        self._preview_splitter.addWidget(cleaned_group)
+        edit_row.addWidget(self._save_cleaned_button)
+        self._cancel_edit_button = QPushButton("Cancel", self)
+        self._cancel_edit_button.clicked.connect(self._cancel_cleaned_text_edit)
+        edit_row.addWidget(self._cancel_edit_button)
+        cleaned_layout.addLayout(edit_row)
+        self._preview_splitter.addWidget(self._extracted_group)
+        self._preview_splitter.addWidget(self._cleaned_group)
         self._preview_splitter.setStretchFactor(0, 1)
         self._preview_splitter.setStretchFactor(1, 2)
         layout.addWidget(self._preview_splitter, 6)
 
-        status_group = QWidget(self)
-        status_layout = QVBoxLayout(status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
             ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
-        status_layout.addWidget(self._status_edit)
-        status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(status_group, 0)
-
-        self._extracted_group = extracted_group
-        self._cleaned_group = cleaned_group
-        self._status_group = status_group
-        self._apply_preview_splitter_minimums()
-
-        self.set_project_active(False)
-        self.set_processing_state(
-            extracted_text=None,
-            cleaned_text=None,
-            notes=["Import a source to begin text extraction."],
-            can_extract=False,
-            can_clean=False,
-            can_ai_clean=False,
-        )
-
-    def resizeEvent(self, event) -> None:  # noqa: N802
-        """
-        @brief      Keep text-preview splitter panes from shrinking below one third of the preview width.
-        @param[in]  event Qt resize event.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.0
-        """
-        super().resizeEvent(event)
-        self._apply_preview_splitter_minimums()
+        self._status_edit.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
+        layout.addWidget(self._status_edit)
+        self._saved_cleaned_text = ""
+        self.set_processing_state(None, None, ["Import a source to begin text extraction."], False, False)
 
     def set_project_active(self, is_active: bool) -> None:
-        """
-        @brief      Enable or disable extraction controls based on project availability.
-        @param[in]  is_active True when a project is open.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.1
-        """
-        self._project_active = is_active
+        self._project_active = bool(is_active)
         self._apply_button_state()
 
     def set_processing_state(
@@ -240,60 +116,58 @@ class TextCleanupPage(QWidget):
         notes: list[str],
         can_extract: bool,
         can_clean: bool,
-        can_ai_clean: bool,
-        can_apply_ai_spacing: bool = False,
         can_reset_cleanup: bool = False,
-        cleanup_mode: str | None = None,
-        cleanup_status: str = "not_started",
-        selected_spacing_categories: list[str] | None = None,
+        validation_state: str = "not_started",
+        uncertainty_count: int = 0,
     ) -> None:
-        """
-        @brief      Refresh the page from extraction-state inputs.
-        @param[in]  extracted_text Extracted text preview or `None`.
-        @param[in]  cleaned_text Cleaned text preview or `None`.
-        @param[in]  notes Operator-facing cleanup/extraction notes.
-        @param[in]  can_extract True when extraction may run.
-        @param[in]  can_clean True when deterministic cleanup may run.
-        @param[in]  can_ai_clean True when AI-assisted cleanup may run.
-        @param[in]  can_apply_ai_spacing True when retained AI decisions can be reapplied.
-        @param[in]  selected_spacing_categories Persisted complete non-story spacing selection.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
-        """
-        self._can_extract = can_extract
-        self._can_clean = can_clean
-        self._can_ai_clean = can_ai_clean
-        self._can_apply_ai_spacing = can_apply_ai_spacing
-        self._can_reset_cleanup = can_reset_cleanup
-        _ = cleanup_mode
-        _ = cleanup_status
+        """Refresh previews and terminal Cleanup status."""
+        self._can_extract = bool(can_extract)
+        self._can_clean = bool(can_clean)
+        self._can_reset_cleanup = bool(can_reset_cleanup)
         self._has_cleaned_text = bool((cleaned_text or "").strip())
         self._editing_cleaned_text = False
+        self._saved_cleaned_text = cleaned_text or ""
         self._extracted_text_edit.setPlainText(extracted_text or "")
         self._cleaned_text_edit.setPlainText(cleaned_text or "")
         self._cleaned_text_edit.setReadOnly(True)
-        selected_categories = (
-            _DEFAULT_SPACING_CATEGORIES
-            if selected_spacing_categories is None
-            else {str(category) for category in selected_spacing_categories}
-        )
-        for category, checkbox in self._spacing_checkboxes.items():
-            checkbox.setChecked(category in selected_categories)
-        self._status_edit.setPlainText("\n".join(notes))
+        status_notes = list(notes)
+        if validation_state in {"passed", "passed_with_warnings"}:
+            status_notes.append(
+                f"Validation: {validation_state}; uncertain decisions preserved: {int(uncertainty_count)}."
+            )
+        self._status_edit.setPlainText("\n".join(status_notes))
         self._apply_button_state()
 
+    def set_ai_profiles(
+        self,
+        entries: list[tuple[str, str | None]],
+        selected_profile_id: str | None,
+    ) -> None:
+        """Populate an optional selector; deterministic Cleanup remains available."""
+        self._ai_profile_combo.blockSignals(True)
+        self._ai_profile_combo.clear()
+        self._ai_profile_combo.addItem(
+            ui_state_service.translate("ai_settings.none", self._language),
+            None,
+        )
+        for label, profile_id in entries:
+            self._ai_profile_combo.addItem(label, profile_id)
+        selected_index = next(
+            (
+                index
+                for index in range(self._ai_profile_combo.count())
+                if self._ai_profile_combo.itemData(index) == selected_profile_id
+            ),
+            0,
+        )
+        self._ai_profile_combo.setCurrentIndex(selected_index)
+        self._ai_profile_combo.blockSignals(False)
+
+    def current_ai_profile_id(self) -> str | None:
+        value = self._ai_profile_combo.currentData()
+        return None if value in (None, "") else str(value)
+
     def preview_scroll_state(self) -> dict[str, tuple[int, int]]:
-        """
-        @brief      Return current preview editor scrollbar positions.
-        @return     Mapping of preview names to vertical and horizontal scrollbar positions.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
         return {
             "extracted": (
                 self._extracted_text_edit.verticalScrollBar().value(),
@@ -305,391 +179,61 @@ class TextCleanupPage(QWidget):
             ),
         }
 
-    def restore_preview_scroll_state(self, scroll_state: dict[str, tuple[int, int]]) -> None:
-        """
-        @brief      Restore preview editor scrollbar positions after a project-state refresh.
-        @param[in]  scroll_state Preview scrollbar positions returned by `preview_scroll_state`.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        extracted_position = scroll_state.get("extracted")
-        if extracted_position is not None:
-            self._extracted_text_edit.verticalScrollBar().setValue(extracted_position[0])
-            self._extracted_text_edit.horizontalScrollBar().setValue(extracted_position[1])
-        cleaned_position = scroll_state.get("cleaned")
-        if cleaned_position is not None:
-            self._cleaned_text_edit.verticalScrollBar().setValue(cleaned_position[0])
-            self._cleaned_text_edit.horizontalScrollBar().setValue(cleaned_position[1])
-
-    def set_ai_profiles(
-        self,
-        entries: list[tuple[str, str | None]],
-        selected_profile_id: str | None,
-    ) -> None:
-        """
-        @brief      Populate the AI cleanup profile selector.
-        @param[in]  entries Ordered profile label/id entries for the selector.
-        @param[in]  selected_profile_id Profile id that should be selected.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.1
-        """
-        self._ai_profile_entries = list(entries)
-        self._has_ai_profiles = bool(entries)
-        self._ai_profile_combo.blockSignals(True)
-        self._ai_profile_combo.clear()
-        if entries:
-            for label, profile_id in entries:
-                self._ai_profile_combo.addItem(label, profile_id)
-            selected_index = next(
-                (index for index, (_label, profile_id) in enumerate(entries) if profile_id == selected_profile_id),
-                0,
-            )
-            self._ai_profile_combo.setCurrentIndex(selected_index)
-        else:
-            self._ai_profile_combo.addItem("(none)", None)
-            self._ai_profile_combo.setCurrentIndex(0)
-        self._ai_profile_combo.blockSignals(False)
-        self._apply_button_state()
-
-    def current_ai_profile_id(self) -> str | None:
-        """
-        @brief      Return the currently selected AI cleanup profile id.
-        @return     Selected AI profile id or None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.0
-        """
-        current_value = self._ai_profile_combo.currentData()
-        return None if current_value in (None, "") else str(current_value)
-
-    def current_spacing_categories(self) -> list[str]:
-        """
-        @brief      Return the complete selected non-story AI spacing category list.
-        @return     Selected category names in stable display order.
-        @exception  None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-15
-        @version    0.1.0
-        """
-        return [category for category in _SPACING_CATEGORY_ORDER if self._spacing_checkboxes[category].isChecked()]
+    def restore_preview_scroll_state(self, state: dict[str, tuple[int, int]]) -> None:
+        for name, editor in (
+            ("extracted", self._extracted_text_edit),
+            ("cleaned", self._cleaned_text_edit),
+        ):
+            position = state.get(name)
+            if position is not None:
+                editor.verticalScrollBar().setValue(position[0])
+                editor.horizontalScrollBar().setValue(position[1])
 
     def set_busy(self, is_busy: bool, operation_name: str | None = None) -> None:
-        """
-        @brief      Disable page actions while one long-running operation is active.
-        @param[in]  is_busy True while the page operation is running.
-        @param[in]  operation_name Optional operator-facing busy operation label.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.2.0
-        """
-        self._busy = is_busy
-        self._busy_operation_name = operation_name if is_busy else None
+        self._busy = bool(is_busy)
+        _ = operation_name
         self._apply_button_state()
 
-    def _apply_button_state(self) -> None:
-        """
-        @brief      Apply the current page button states.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
-        """
-        self._extract_button.setEnabled(self._project_active and self._can_extract and not self._busy)
-        self._clean_button.setEnabled(self._project_active and self._can_clean and not self._busy)
-        ai_selector_enabled = self._project_active and self._has_ai_profiles and not self._busy
-        self._ai_profile_label.setEnabled(ai_selector_enabled)
-        self._ai_profile_combo.setEnabled(ai_selector_enabled)
-        self._ai_clean_button.setEnabled(
-            self._project_active
-            and self._can_ai_clean
-            and self._has_ai_profiles
-            and self.current_ai_profile_id() is not None
-            and not self._busy
-        )
-        self._reset_cleanup_button.setEnabled(self._project_active and self._can_reset_cleanup and not self._busy)
-        self._edit_cleaned_button.setEnabled(
-            self._project_active and self._has_cleaned_text and not self._busy and not self._editing_cleaned_text
-        )
-        self._save_cleaned_button.setEnabled(
-            self._project_active and self._has_cleaned_text and not self._busy and self._editing_cleaned_text
-        )
-        spacing_enabled = (
-            self._project_active
-            and self._has_cleaned_text
-            and self._can_apply_ai_spacing
-            and not self._busy
-            and not self._editing_cleaned_text
-        )
-        self._spacing_label.setEnabled(spacing_enabled)
-        self._apply_spacing_button.setEnabled(spacing_enabled)
-        for checkbox in self._spacing_checkboxes.values():
-            checkbox.setEnabled(spacing_enabled)
-
-    def _apply_preview_splitter_minimums(self) -> None:
-        """
-        @brief      Set each cleanup preview pane minimum width to one third of the preview splitter width.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.0
-        """
-        required_attributes = ("_preview_splitter", "_extracted_group", "_cleaned_group")
-        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
-            return
-        splitter_width = self._preview_splitter.width()
-        if splitter_width <= 0:
-            return
-        minimum_preview_width = splitter_width // 3
-        self._extracted_group.setMinimumWidth(minimum_preview_width)
-        self._cleaned_group.setMinimumWidth(minimum_preview_width)
-
     def apply_language(self, language: str) -> None:
-        """
-        @brief      Apply one translated UI language to the page widgets.
-        @param[in]  language Runtime UI language code.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.6.0
-        """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>")
         self._extract_button.setText(ui_state_service.translate("text_cleanup.extract", language))
-        self._clean_button.setText(ui_state_service.translate("text_cleanup.clean", language))
+        self._cleanup_button.setText(ui_state_service.translate("text_cleanup.clean", language))
         self._ai_profile_label.setText(ui_state_service.translate("text_cleanup.ai_profile", language))
-        self._ai_clean_button.setText(ui_state_service.translate("text_cleanup.ai_clean", language))
         self._reset_cleanup_button.setText(ui_state_service.translate("text_cleanup.reset", language))
         self._edit_cleaned_button.setText(ui_state_service.translate("text_cleanup.edit_cleaned", language))
         self._save_cleaned_button.setText(ui_state_service.translate("text_cleanup.save_cleaned", language))
-        self._spacing_label.setText(ui_state_service.translate("text_cleanup.spacing_label", language))
-        self._apply_spacing_button.setText(ui_state_service.translate("text_cleanup.apply_spacing", language))
-        for category, checkbox in self._spacing_checkboxes.items():
-            checkbox.setText(ui_state_service.translate(f"text_cleanup.spacing_{category}", language))
+        self._cancel_edit_button.setText(ui_state_service.translate("text_cleanup.cancel_edit", language))
         self._extracted_group.setTitle(ui_state_service.translate("text_cleanup.extracted_group", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_cleanup.cleaned_group", language))
-        if not self._has_ai_profiles:
-            self._ai_profile_combo.setItemText(
-                0,
-                ui_state_service.translate("ai_settings.none", language),
-            )
+        self._ai_profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
 
-    def _emit_ai_clean_requested(self) -> None:
-        """
-        @brief      Emit one AI-cleanup request with the selected profile id.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.0
-        """
-        profile_id = self.current_ai_profile_id()
-        if profile_id is not None:
-            self.ai_clean_requested.emit(profile_id)
-
-    def _emit_apply_spacing_requested(self) -> None:
-        """
-        @brief      Emit one retained AI Cleanup spacing reapplication request.
-        @return     None.
-        @exception  None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-15
-        @version    0.1.0
-        """
-        if self._can_apply_ai_spacing and not self._busy and not self._editing_cleaned_text:
-            self.apply_spacing_requested.emit(self.current_spacing_categories())
-
-    def _install_preview_find_context_menu(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Install one right-click Find action on a preview editor.
-        @param[in]  editor Preview editor receiving the custom context menu.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        editor.customContextMenuRequested.connect(
-            lambda position, target_editor=editor: self._show_preview_menu(target_editor, position)
-        )
-
-    def _show_preview_menu(self, editor: QPlainTextEdit, position: QPoint) -> None:
-        """
-        @brief      Show one preview editor context menu with Find commands.
-        @param[in]  editor Preview editor that opened the menu.
-        @param[in]  position Local menu position inside the editor.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
-        """
-        menu = editor.createStandardContextMenu()
-        menu.addSeparator()
-        find_action = menu.addAction(ui_state_service.translate("text_cleanup.find", self._current_language()))
-        find_action.triggered.connect(
-            lambda _checked=False, target_editor=editor: self._prompt_preview_find(target_editor)
-        )
-        find_next_action = menu.addAction(
-            ui_state_service.translate("text_cleanup.find_next", self._current_language())
-        )
-        find_next_action.setEnabled(bool(self._preview_find_text_by_editor_id.get(id(editor), "")))
-        find_next_action.triggered.connect(
-            lambda _checked=False, target_editor=editor: self._find_next_preview_text(target_editor)
-        )
-        menu.exec(editor.mapToGlobal(position))
-
-    def _prompt_preview_find(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Prompt for one search string and select the next preview match.
-        @param[in]  editor Preview editor that should be searched.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
-        """
-        search_text, accepted = QInputDialog.getText(
-            self,
-            ui_state_service.translate("text_cleanup.find_title", self._current_language()),
-            ui_state_service.translate("text_cleanup.find_prompt", self._current_language()),
-        )
-        if not accepted or not search_text:
-            return
-        self._preview_find_text_by_editor_id[id(editor)] = search_text
-        if self._find_preview_text(editor, search_text):
-            return
-        self._show_find_not_found_message(search_text)
-
-    def _find_next_preview_text(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Select the next match for the current preview search text.
-        @param[in]  editor Preview editor that should be searched.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        search_text = self._preview_find_text_by_editor_id.get(id(editor), "")
-        if not search_text:
-            self._prompt_preview_find(editor)
-            return
-        if self._find_preview_text(editor, search_text):
-            return
-        self._show_find_not_found_message(search_text)
-
-    def _show_find_not_found_message(self, search_text: str) -> None:
-        """
-        @brief      Show one translated message for a missing preview search term.
-        @param[in]  search_text Text that was not found in the preview.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        QMessageBox.information(
-            self,
-            ui_state_service.translate("text_cleanup.find_title", self._current_language()),
-            ui_state_service.translate("text_cleanup.find_not_found", self._current_language()).format(
-                search_text=search_text
-            ),
-        )
-
-    def _find_preview_text(self, editor: QPlainTextEdit, search_text: str) -> bool:
-        """
-        @brief      Find the next preview match, wrapping once from the document start.
-        @param[in]  editor Preview editor to search.
-        @param[in]  search_text Text to find.
-        @return     True when one match was selected.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        if editor.find(search_text):
-            return True
-        cursor = editor.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.Start)
-        editor.setTextCursor(cursor)
-        return editor.find(search_text)
-
-    def _current_language(self) -> str:
-        """
-        @brief      Return the runtime language currently applied to the page.
-        @return     Runtime UI language code.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        return str(getattr(self, "_language", config.DEFAULT_LANGUAGE))
+    def _emit_cleanup_requested(self) -> None:
+        self.cleanup_requested.emit(self.current_ai_profile_id())
 
     def _begin_cleaned_text_edit(self) -> None:
-        """
-        @brief      Enable manual editing for the cleaned text preview.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
-        """
-        if not self._has_cleaned_text:
-            return
-        if not self._confirm_cleaned_text_edit():
-            return
+        self._saved_cleaned_text = self._cleaned_text_edit.toPlainText()
         self._editing_cleaned_text = True
         self._cleaned_text_edit.setReadOnly(False)
         self._cleaned_text_edit.setFocus()
         self._apply_button_state()
 
-    def _confirm_cleaned_text_edit(self) -> bool:
-        """
-        @brief      Confirm downstream impact before entering cleaned-text edit mode.
-        @return     True when the operator confirms the edit impact.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-05
-        @version    0.1.0
-        """
-        result = QMessageBox.question(
-            self,
-            ui_state_service.translate("dialog.confirm_cleaned_text_edit_title", self._current_language()),
-            ui_state_service.translate("project.confirm_cleaned_text_edit", self._current_language()),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        return result == QMessageBox.StandardButton.Yes
-
-    def _emit_save_cleaned_text_requested(self) -> None:
-        """
-        @brief      Emit the edited cleaned text save request.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        if not self._editing_cleaned_text:
-            return
+    def _cancel_cleaned_text_edit(self) -> None:
+        self._cleaned_text_edit.setPlainText(self._saved_cleaned_text)
         self._editing_cleaned_text = False
         self._cleaned_text_edit.setReadOnly(True)
-        self._has_cleaned_text = bool(self._cleaned_text_edit.toPlainText().strip())
-        self.save_cleaned_text_requested.emit(self._cleaned_text_edit.toPlainText())
         self._apply_button_state()
 
+    def _emit_save_cleaned_text_requested(self) -> None:
+        self.save_cleaned_text_requested.emit(self._cleaned_text_edit.toPlainText())
 
-# END OF FILE
+    def _apply_button_state(self) -> None:
+        enabled = self._project_active and not self._busy
+        self._extract_button.setEnabled(enabled and self._can_extract)
+        self._cleanup_button.setEnabled(enabled and self._can_clean)
+        self._ai_profile_label.setEnabled(enabled)
+        self._ai_profile_combo.setEnabled(enabled)
+        self._reset_cleanup_button.setEnabled(enabled and self._can_reset_cleanup)
+        self._edit_cleaned_button.setEnabled(enabled and self._has_cleaned_text and not self._editing_cleaned_text)
+        self._save_cleaned_button.setEnabled(enabled and self._has_cleaned_text and self._editing_cleaned_text)
+        self._cancel_edit_button.setEnabled(enabled and self._has_cleaned_text and self._editing_cleaned_text)

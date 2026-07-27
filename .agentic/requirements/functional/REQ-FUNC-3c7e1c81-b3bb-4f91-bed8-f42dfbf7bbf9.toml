@@ -1,22 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-3c7e1c81-b3bb-4f91-bed8-f42dfbf7bbf9"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "AI cleanup shall reject legacy metadata and label-only schemas and block a corrupt document without using legacy state."
 rationale = "Incompatible or corrupt documents must be refused."
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_document_contract_rejects_legacy_metadata_fields",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_ignores_legacy_label_only_schema",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_does_not_use_legacy_state_and_blocks_corrupt_document",
-]
+linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:34Z"

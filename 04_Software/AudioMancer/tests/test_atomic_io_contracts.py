@@ -27,6 +27,7 @@ from audiomancer.services import (
     operation_runtime_service,
     project_workspace_service,
     settings_service,
+    text_cleanup_service,
     text_cleanup_state_service,
     text_extraction_service,
 )
@@ -203,8 +204,19 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
     @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AtomicManualCleanup", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("Old text.", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": source_path.name,
+        "stored_relative_path": source_path.name,
+        "file_type": "txt",
+        "imported_at": "2026-07-27T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+    text_extraction_service.extract_text(project_root, manifest)
+    text_cleanup_service.clean_text(project_root, manifest)
     cleaned_path = project_root / config.CLEANED_TEXT_FILE_NAME
-    cleaned_path.write_text("Old text.\n", encoding="utf-8")
     text_calls: list[tuple[Path, str]] = []
     json_calls: list[tuple[Path, object]] = []
 
@@ -237,7 +249,8 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
         json_calls.append((Path(target_path), payload))
         operation_runtime_service.write_json_atomic(target_path, payload)
 
-    monkeypatch.setattr(text_cleanup_state_service, "write_text_atomic", _capture_text_write)
+    monkeypatch.setattr(text_cleanup_service, "write_text_atomic", _capture_text_write)
+    monkeypatch.setattr(text_cleanup_service, "write_json_atomic", _capture_json_write)
     monkeypatch.setattr(project_workspace_service, "write_json_atomic", _capture_json_write)
 
     text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Edited text.\n")

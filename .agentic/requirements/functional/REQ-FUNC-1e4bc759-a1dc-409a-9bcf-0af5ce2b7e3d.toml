@@ -1,22 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-1e4bc759-a1dc-409a-9bcf-0af5ce2b7e3d"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "AI cleanup shall split long input into multiple windows sized by context, applying the online direct-context fraction where configured."
 rationale = "Windowing must fit the selected profile context."
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_splits_long_input_into_multiple_windows",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_small_context_limits_unit_windows",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_online_profile_uses_direct_context_fraction_without_unit_cap",
-]
+linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:33Z"

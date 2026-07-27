@@ -829,23 +829,11 @@ class MainWindow(QMainWindow):
         self._text_cleanup_page.extract_requested.connect(
             lambda: text_cleanup_ui_controller.handle_extract_text_requested(self)
         )
-        self._text_cleanup_page.clean_requested.connect(
-            lambda: text_cleanup_ui_controller.handle_deterministic_cleanup_requested(self)
-        )
-        self._text_cleanup_page.ai_clean_requested.connect(
-            lambda profile_id: text_cleanup_ui_controller.handle_ai_cleanup_requested(
-                self,
-                profile_id,
-            )
+        self._text_cleanup_page.cleanup_requested.connect(
+            lambda profile_id: text_cleanup_ui_controller.handle_cleanup_requested(self, profile_id)
         )
         self._text_cleanup_page.reset_cleanup_requested.connect(
             lambda: text_cleanup_ui_controller.handle_reset_cleanup_requested(self)
-        )
-        self._text_cleanup_page.apply_spacing_requested.connect(
-            lambda selected_categories: text_cleanup_ui_controller.handle_apply_ai_cleanup_spacing_requested(
-                self,
-                selected_categories,
-            )
         )
         self._text_cleanup_page.save_cleaned_text_requested.connect(
             lambda cleaned_text: text_cleanup_ui_controller.handle_save_cleaned_text_requested(self, cleaned_text)

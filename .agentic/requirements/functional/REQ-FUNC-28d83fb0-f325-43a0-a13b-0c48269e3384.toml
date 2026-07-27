@@ -1,21 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-28d83fb0-f325-43a0-a13b-0c48269e3384"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "AI cleanup shall render the six artifact types deterministically."
 rationale = "Artifact rendering must be reproducible."
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_artifact_types_apply_deterministic_rendering",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_response_contract_has_six_artifact_types_without_version_or_action",
-]
+linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:33Z"

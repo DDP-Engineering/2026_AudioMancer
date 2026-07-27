@@ -944,8 +944,8 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
     open_result = project_workspace_service.open_project(project_root)
 
     assert open_result["status"] == "repair_required"
-    assert "current_stage: project_created -> text_cleanup_ready" in open_result["changes"]
-    assert open_result["normalized_manifest"]["current_stage"] == "text_cleanup_ready"
+    assert open_result["corrupted_step"] == "extraction"
+    assert open_result["changes"] == []
 
 
 def test_open_project_requires_destructive_reset_for_legacy_extraction(tmp_path) -> None:

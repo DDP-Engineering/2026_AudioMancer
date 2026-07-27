@@ -1,22 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-96d77e86-4405-4861-87bb-11f618b3b512"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "AI cleanup budgeting shall target four pages with output reservation and reject a profile that cannot return one page or has no input budget."
 rationale = "Requests must fit the profile with room for output."
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_schema_and_budget_target_four_pages_with_output_reservation",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_cleanup_budget_rejects_profile_that_cannot_return_one_page",
-  "04_Software/AudioMancer/tests/test_ai_cleanup_service.py::test_ai_cleanup_rejects_profiles_with_no_input_budget",
-]
+linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:39Z"

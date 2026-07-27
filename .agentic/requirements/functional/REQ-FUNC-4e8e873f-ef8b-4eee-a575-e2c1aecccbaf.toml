@@ -1,20 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-4e8e873f-ef8b-4eee-a575-e2c1aecccbaf"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "Workflow impact shall refresh the manifest from completed artifacts."
 rationale = "The manifest must reflect actually completed artifacts after impact."
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_refreshes_manifest_from_completed_artifacts",
-]
+linked_tests = []
 
 created_on = "2026-07-19T17:10:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:35Z"

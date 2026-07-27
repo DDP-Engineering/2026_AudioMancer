@@ -32,9 +32,9 @@ from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
     chunking_document_service,
-    deterministic_cleanup_service,
     narrator_definition_service,
     speech_blocks_service,
+    text_cleanup_service,
     token_usage_service,
 )
 from audiomancer.services.logging_service import get_component_logger
@@ -393,27 +393,16 @@ def _build_cleaned_text_document(project_root: Path, manifest: dict[str, object]
     @date       2026-04-25
     @version    0.1.0
     """
-    report = deterministic_cleanup_service.load_cleanup_report(project_root) or {}
-    state = deterministic_cleanup_service.load_operation_state(project_root) or {}
-    metadata = _metadata_from_state(state)
+    report = text_cleanup_service.load_cleanup_document(project_root) or {}
     cleaned_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8").strip()
     parameters = _compact_fields(
         [
-            ("Cleanup Mode", _first_value(report.get("cleanup_mode"), state.get("mode"), "deterministic")),
-            *_ai_parameter_fields(
-                project_root,
-                report,
-                state,
-                _first_value(report.get("ai_profile_id"), metadata.get("ai_profile_id")),
-            ),
-            ("Paragraph Count", _first_value(report.get("paragraph_count"), metadata.get("paragraph_count"))),
-            ("Removed Line Count", _first_value(report.get("removed_line_count"), _removed_line_count(metadata))),
-            (
-                "Detected Chapters",
-                _first_value(report.get("detected_chapter_count"), metadata.get("detected_chapter_count")),
-            ),
-            ("Detected Language", _first_value(report.get("detected_language"), metadata.get("detected_language"))),
-            ("Warnings Count", _first_value(len(report.get("warnings", [])), state.get("warning_count"))),
+            ("Cleanup Mode", "hybrid"),
+            ("Validation", report.get("validation_state")),
+            ("Uncertain Decisions Preserved", report.get("uncertainty_count")),
+            ("Detected Language", dict(report.get("document_profile") or {}).get("language")),
+            ("Warnings Count", len(report.get("warnings", []))),
+            *_token_usage_fields(report),
         ]
     )
     return ExportDocument(

@@ -1,21 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-ff7eb320-894f-4c91-9615-90ba7aab2368"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "The manifest after a character-discovery reset shall return translation-ready and can preserve the narrator definition."
 rationale = "A discovery reset must produce a truthful, optionally narrator-preserving manifest."
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_manifest_after_character_discovery_reset_returns_translation_ready",
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_manifest_after_character_discovery_reset_can_preserve_narrator_definition",
-]
+linked_tests = []
 
 created_on = "2026-07-24T19:52:27Z"
-last_updated = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-27T17:57:42Z"

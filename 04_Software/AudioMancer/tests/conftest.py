@@ -87,8 +87,14 @@ def mock_prompt_environment(tmp_path, monkeypatch):
     prompt_root.mkdir(exist_ok=True)
 
     # Generic stubs for tests verifying AI call generation
-    (prompt_root / "text_cleanup_system.txt").write_text("System prompt.", encoding="utf-8")
-    (prompt_root / "text_cleanup_user.txt").write_text("{units_block}", encoding="utf-8")
+    (prompt_root / "text_cleanup_adjudication_primary_system.txt").write_text(
+        "Primary classifier.",
+        encoding="utf-8",
+    )
+    (prompt_root / "text_cleanup_adjudication_verifier_system.txt").write_text(
+        "Independent verifier.",
+        encoding="utf-8",
+    )
     (prompt_root / "text_chunking_system.txt").write_text("Chunk system prompt.", encoding="utf-8")
     (prompt_root / "text_chunking_user.txt").write_text("{units_block}", encoding="utf-8")
     (prompt_root / "speech_blocks_system.txt").write_text("Speech blocks system prompt.", encoding="utf-8")

@@ -1,21 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-d902a3bc-9508-4385-beca-eabdd2175c2b"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "Narrator state shall use the original or cleanup-detected language with no default selection."
 rationale = "Narrator state must derive language truthfully and not pre-select a profile."
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_original_language_and_no_default_selection",
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_cleanup_detected_original_language_when_manifest_is_empty",
-]
+linked_tests = []
 
 created_on = "2026-07-24T19:52:27Z"
-last_updated = "2026-07-24T19:52:27Z"
+last_updated = "2026-07-27T17:57:40Z"

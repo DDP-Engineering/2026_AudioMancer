@@ -40,9 +40,6 @@ from audiomancer.services.operation_runtime_service import (
     resolve_project_relative_path,
     validate_project_relative_path,
 )
-from audiomancer.services.operation_runtime_service import (
-    project_text_artifact_has_content as _text_artifact_has_content,
-)
 from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
@@ -754,48 +751,24 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
 
 
 def _cleanup_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
-    """
-    @brief      Verify completed AI, deterministic, or manual Cleanup artifacts.
-    @param[in]  project_root Active project root folder.
-    @param[in]  warnings Ordered persisted contract warnings.
-    @return     Cleanup completion evidence, or None when cleanup is incomplete.
-    @version    0.1.0
-    """
+    """Verify the single Cleanup V2 document and cleaned-text artifact."""
     _ = warnings
-    cleanup_document_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
-    cleanup_document = _load_json_artifact(project_root, config.CLEANUP_DOCUMENT_FILE_NAME)
-    if cleanup_document_path.exists():
-        if (
-            isinstance(cleanup_document, dict)
-            and cleanup_document.get("status") == "completed"
-            and cleanup_document.get("mode") == "ai_assisted"
-            and isinstance(cleanup_document.get("warnings"), list)
-            and isinstance(cleanup_document.get("decisions"), dict)
-            and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
-        ):
-            return {"operation": cleanup_document, "report": cleanup_document}
+    from audiomancer.services import text_cleanup_service
+
+    try:
+        document = text_cleanup_service.load_cleanup_document(project_root)
+    except (OSError, ValueError):
         return None
-
-    state = _load_json_artifact(project_root, config.CLEANUP_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.CLEANUP_REPORT_FILE_NAME)
-    if (
-        _status_is_completed(state)
-        and isinstance(report, dict)
-        and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
-    ):
-        return {"operation": state, "report": report}
-
-    manifest = _load_json_artifact(project_root, config.PROJECT_MANIFEST_FILE_NAME)
-    operations = manifest.get("operations") if isinstance(manifest, dict) else None
-    cleanup_summary = operations.get("cleanup") if isinstance(operations, dict) else None
-    if (
-        isinstance(cleanup_summary, dict)
-        and cleanup_summary.get("status") == "completed"
-        and cleanup_summary.get("mode") == "manual_edit"
-        and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
-    ):
-        return {"operation": cleanup_summary, "report": {}}
-    return None
+    if document is None:
+        return None
+    operation = {
+        "status": "completed",
+        "progress_current": 1,
+        "progress_total": 1,
+        "warning_count": len(document["warnings"]),
+        "mode": "hybrid",
+    }
+    return {"operation": operation, "report": document}
 
 
 def _chunking_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:

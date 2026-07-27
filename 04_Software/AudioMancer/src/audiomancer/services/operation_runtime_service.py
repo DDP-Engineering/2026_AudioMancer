@@ -53,6 +53,7 @@ TEXT_REVISION_PRESERVED_OPERATION_KINDS = frozenset(
 _OPERATION_ARTIFACT_FILE_NAMES = {
     "extraction": (
         config.EXTRACTED_TEXT_FILE_NAME,
+        config.SOURCE_LEDGER_FILE_NAME,
         config.EXTRACTION_METADATA_FILE_NAME,
         # Reset-only legacy sidecars; Extraction never reads or writes them.
         "extraction_report.json",

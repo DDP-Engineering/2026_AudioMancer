@@ -72,7 +72,7 @@ def test_narrator_state_service_uses_original_language_and_no_default_selection(
     assert state["can_select"] is False
 
 
-def test_narrator_state_service_uses_cleanup_detected_original_language_when_manifest_is_empty(tmp_path) -> None:
+def test_narrator_state_service_ignores_legacy_cleanup_report_language(tmp_path) -> None:
     """
     @brief      Verify narrator state falls back to cleanup-detected language when manifest language is empty.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -92,8 +92,8 @@ def test_narrator_state_service_uses_cleanup_detected_original_language_when_man
 
     state = narrator_definition_state_service.build_narrator_definition_state(project_root, manifest, "en")
 
-    assert state["effective_language"] == "it"
-    assert state["selected_voice_language"] == "it"
+    assert state["effective_language"] == "en"
+    assert state["selected_voice_language"] == "en"
 
 
 def test_narrator_state_service_marks_unsampled_custom_profile_selectable(tmp_path) -> None:

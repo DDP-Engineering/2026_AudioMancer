@@ -1,20 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-75ece390-ef0b-4ac5-9af2-1795765a698a"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "AI cleanup document rendering shall join intra-paragraph line breaks into single spaces while preserving blank-line paragraph boundaries, form-feed page markers, and a trailing newline."
 rationale = "PDF extraction hard-wraps every line, and AI-assisted cleanup retains story slices byte-exact, so mid-sentence line breaks reach chunking, translation, and TTS; deterministic cleanup already unwraps them."
-verification = "Automated: pytest selector passes in the configured test gate."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py::test_render_document_unwraps_intra_paragraph_line_breaks",
-]
+linked_tests = []
 
 created_on = "2026-07-27T05:55:53Z"
-last_updated = "2026-07-27T05:58:34Z"
+last_updated = "2026-07-27T17:57:38Z"

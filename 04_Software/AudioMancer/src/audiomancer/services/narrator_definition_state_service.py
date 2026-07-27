@@ -27,7 +27,6 @@ from audiomancer.services import (
     character_voices_service,
     chunking_document_service,
     cleanup_metadata_service,
-    deterministic_cleanup_service,
     home_presenter_service,
     narrator_definition_service,
     tts_budget_service,
@@ -581,9 +580,13 @@ def _resolved_original_language_code(project_root: Path, manifest: dict[str, obj
     original_language = str(manifest.get("original_language", "") or "").strip()
     if original_language:
         return original_language
-    cleanup_report = deterministic_cleanup_service.load_cleanup_report(project_root)
-    if isinstance(cleanup_report, dict):
-        return str(cleanup_report.get("detected_language", "") or "").strip()
+    from audiomancer.services import text_cleanup_service
+
+    cleanup_document = text_cleanup_service.load_cleanup_document(project_root)
+    if isinstance(cleanup_document, dict):
+        profile = cleanup_document.get("document_profile")
+        if isinstance(profile, dict):
+            return str(profile.get("language", "") or "").strip()
     return ""
 
 

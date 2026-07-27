@@ -509,6 +509,9 @@ SUPPORTED_SOURCE_SUFFIXES = {
 # @brief File name used for persisted raw extracted text.
 EXTRACTED_TEXT_FILE_NAME = "extracted_text.txt"
 
+# @brief Canonical structural ledger paired with extracted_text.txt.
+SOURCE_LEDGER_FILE_NAME = "source_ledger.json"
+
 # @brief Authoritative deterministic text-extraction metadata file name.
 EXTRACTION_METADATA_FILE_NAME = "extraction_metadata.json"
 
@@ -783,31 +786,6 @@ DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS = 100
 
 # @brief Default Stable Audio seed for Scene Ambience sound generation; None lets the runtime randomize.
 DEFAULT_SCENE_AMBIENCE_SEED = None
-
-# AI Workflow Defaults
-# @brief Default maximum cleanup-unit count sent in one AI cleanup request window.
-DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS = 24
-
-# @brief Minimum estimated text-token budget required for one AI cleanup request.
-DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS = 512
-
-# @brief Minimum estimated token safety margin reserved in each AI cleanup request.
-DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS = 256
-
-# @brief Fraction of the context window reserved as safety margin for AI cleanup.
-DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
-# @brief Preferred count of consecutive source pages in one AI Cleanup window.
-DEFAULT_AI_CLEANUP_TARGET_PAGE_COUNT = 4
-
-# @brief Worst-case response size estimate relative to canonical source tokens.
-DEFAULT_AI_CLEANUP_RESPONSE_EXPANSION_FACTOR = 2.0
-
-# @brief Per-page JSON metadata allowance in AI Cleanup response budgeting.
-DEFAULT_AI_CLEANUP_BLOCK_OVERHEAD_TOKENS = 256
-
-
-# @brief Maximum context-window fraction used for AI cleanup unit text.
-DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION = 0.60
 
 # @brief Default semantic AI chunking strategy.
 DEFAULT_AI_CHUNKING_STRATEGY = "paragraph"

@@ -9,214 +9,171 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 ## 1. Purpose
 
-The Text Cleanup component turns a project source document into canonical
-extracted text and then into reviewable clean text. It supports deterministic
-and AI-assisted cleanup modes, persists operation state and cleanup metadata,
-and presents the operator workflow through the Text Cleanup page.
+Text Cleanup converts a supported book source into canonical extracted text and
+then into reviewable clean text. The component uses one hybrid Cleanup action:
+conservative structural rules do the certain work, an optional local AI model
+adjudicates only residual typed questions, and uncertainty preserves source.
 
 ## 2. Responsibilities
 
-- Extract and normalize `.txt`, `.md`, `.pdf`, `.rtf`, `.docx`, `.odt`, and
-  `.epub` sources into canonical project text.
-- Persist canonical extracted text plus one strict metadata document and resume
-  supported interrupted extraction work from its progress checkpoint.
-- Remove conservative page artifacts, heal page-boundary text, preserve
-  dialogue and paragraph structure, and detect language/script/chapter cues.
-- Partition canonical source windows through an AI provider, validate strict
-  forward-source coverage, and render recognized artifact types
-  deterministically.
-- Persist clean text, reports, operation state, non-duplicating paragraph
-  metadata, AI cleanup documents, and transaction logs.
-- Build Text Cleanup page state, save confirmed manual edits, reapply supported
-  AI spacing choices, and reset cleanup or downstream workflow state.
-- Coordinate page actions, confirmation dialogs, progress, cancellation,
-  previews, editing, search, profile selection, and spacing controls.
+- Extract `.txt`, `.md`, `.pdf`, `.rtf`, `.docx`, `.odt`, and `.epub`.
+- Build `extracted_text.txt` and `source_ledger.json` simultaneously.
+- Preserve native headings, lists, tables, preformatted blocks, EPUB spine
+  order, and PDF geometry where the format exposes them.
+- Identify removable page artifacts and line-boundary repairs conservatively.
+- Ask an optional AI model small classification questions without allowing the
+  model to reproduce or replace story text.
+- Verify AI changes independently, validate all operations deterministically,
+  and render solely from source-ledger slices.
+- Persist one `cleanup.json`, clean text, and derived clean-text spans.
+- Expose one Cleanup button, optional AI profile, Reset, source/result
+  previews, and optional Edit/Save/Cancel controls.
 
-The component does not own project creation or atomic writer primitives,
-threaded operation infrastructure, AI provider/profile configuration, or later
-chunking, translation, voice, TTS, and assembly behavior.
+OCR, model hosting, chunking, translation, voice generation, and audiobook
+assembly are outside this component.
 
 ## 3. Implementation Overview
 
 The production boundary is:
 
-- `04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
+- `text_extraction_adapters.py`: format-specific structural adapters.
+- `source_ledger_service.py`: canonical text/offset builder and strict loader.
+- `text_extraction_service.py`: extraction orchestration and metadata.
+- `cleanup_analysis_service.py`: deterministic evidence and residual questions.
+- `cleanup_ai_adjudication_service.py`: bounded primary/verifier classification.
+- `cleanup_renderer_service.py`: operation validation and pure rendering.
+- `text_cleanup_service.py`: the single persisted Cleanup V2 orchestration.
+- `text_cleanup_state_service.py`: read-only page state and operator edits.
+- `text_cleanup_ui_controller.py` and `text_cleanup_page.py`: UI integration.
 
-`text_extraction_service.extract_text` dispatches by source suffix, normalizes
-text, checkpoints formats that support incremental work, and writes canonical
-extraction artifacts. `deterministic_cleanup_service.clean_text` divides input
-into pages or pseudo-segments, removes conservative artifacts, repairs
-structure, checkpoints progress, finalizes paragraph metadata, and updates the
-project manifest. `cleanup_text_analysis_service` supplies reusable script,
-language, chapter, sentence-boundary, and dialogue decisions.
-
-`ai_cleanup_service.clean_text` resolves cleanup prompts and AI profile
-budgets, creates page-aware source windows, validates strict JSON block
-responses against canonical source slices, checkpoints a cleanup document, and
-reconstructs clean text using deterministic artifact rendering. Compatible
-completed AI documents can be re-rendered with different spacing choices
-without another provider call.
-
-`cleanup_metadata_service` stores paragraph spans and provenance without
-duplicating canonical paragraph text. `text_cleanup_state_service` composes
-previews, notes, manifest transitions, edit/spacing operations, and reset
-effects. `TextCleanupUiController` connects those services to
-`TextCleanupPage`, while the page owns Qt signals, controls, previews, find
-behavior, edit state, and localized presentation. The controller delegates
-operation progress and terminal success/failure outcomes to the shared operation
-runner and owns only the cancellation handler, which syncs the manifest and
-refreshes project state.
-
-Opening Text Cleanup does not initialize extraction metadata: absence means
-`not_started`. Cleanup state is an execution artifact: deterministic cleanup
-creates it when a run starts, while AI cleanup uses its cleanup document and
-manual edits retain a manifest summary without a cleanup-state file.
+Cleanup runs in four phases: deterministic analysis, optional AI adjudication,
+deterministic validation, and pure rendering. It is not an agent loop and does
+not use context compaction, tool calling, planning, or open-ended prompts.
+The orchestration maps those phases to monotonic UI progress: analysis starts
+at 0% and completes at 5%, primary/verifier AI requests occupy 5–90%,
+validation/rendering reports 92%, persistence reports 98%, and only successful
+completion reports 100%. AI progress messages identify the batch and whether
+the active request is the primary or verifier pass.
 
 ## 4. Dependencies
 
-Internal dependencies include:
+Internal dependencies include project lifecycle, operation orchestration,
+atomic persistence, the OpenAI-compatible provider adapter, token-usage
+normalization, localization, and workflow state.
 
-- `project-lifecycle` for the project manifest, project-root containment, and
-  shared atomic text/JSON persistence.
-- `operation-orchestration` for operation paths and payloads, progress,
-  cancellation, downstream resets, and threaded UI execution.
-- `ai-runtime` for profile/provider selection, prompt loading, model-context
-  budgeting, token usage, and AI transaction logging.
-- `platform-settings-ui` for artifact names, localization, logging, timestamps,
-  and shared UI state.
-
-External packages are PySide6, PyMuPDF (`fitz`), python-docx, EbookLib, odfpy,
-striprtf, and langdetect. AI cleanup also requires a separately configured
-provider endpoint. Local project files are the durable storage boundary.
+External packages are PySide6, PyMuPDF, python-docx, EbookLib, odfpy,
+striprtf, markdown-it-py, and langdetect.
 
 ## 5. Inputs And Outputs
 
-Inputs include the active project root and manifest, its registered source
-document, optional progress/cancellation callbacks, the selected cleanup mode,
-AI profile and operator instructions, and AI spacing selections.
+Inputs are the active project/manifest, its registered source, optional
+progress/cancellation callbacks, and an optional enabled AI profile.
 
-Extraction produces exactly `extracted_text.txt` and
-`extraction_metadata.json`. Cleanup produces `clean_text.txt`,
-`clean_text_metadata.json`, `cleanup_report.json`, and `cleanup_state.json`.
-AI cleanup additionally persists its cleanup document and cleanup transaction
-logs using names from `audiomancer.config`. Cleanup and later operations update
-compact manifest summaries and may remove later-stage artifacts after
-confirmed reruns, resets, or manual edits; extraction does not duplicate its
-metadata in `project.json`.
+Extraction writes:
+
+- `extracted_text.txt`
+- `source_ledger.json`
+- `extraction_metadata.json`
+
+Cleanup writes:
+
+- `cleaned_text.txt`
+- `clean_text_metadata.json`
+- `cleanup.json`
+- optional `ai_cleanup_*.log` transaction logs
+
+Old extraction and Cleanup sidecars are incompatible by design. There is no
+migration or fallback reader; the operator must rerun Extraction/Cleanup.
 
 ## 6. Data Contracts
 
-Canonical text uses normalized LF line endings and a final newline. PDF pages
-retain form-feed boundaries for page-aware cleanup; extraction does not perform
-OCR. Cleanup metadata stores paragraph identifiers, line spans, and provenance
-without duplicating paragraph text; loaders reconstruct text from
-`clean_text.txt`.
+`source_ledger.json` contains exact half-open codepoint intervals for every
+unit and boundary. The sorted intervals partition `extracted_text.txt` without
+gaps or overlaps. The ledger includes source/text hashes, adapter/encoding
+metadata, structure quality, units, boundaries, page geometry, and warnings.
 
-`extraction_metadata.json` contains exactly `status`, `progress_current`,
-`progress_total`, `warnings`, `character_count`, `word_count`, `line_count`,
-and `page_count`. Persisted statuses are `running`, `cancelled`, `failed`, and
-`completed`; its absence means `not_started`. Progress is the resume
-checkpoint. Text statistics remain `null` until completion, while
-`warning_count` is derived from `warnings`. A completed extraction requires
-equal progress values and valid non-empty canonical text. Legacy extraction
-sidecars or text without current metadata require a destructive Extraction
-reset; there is no migration or fallback reader.
+Cleanup operations are restricted to:
 
-The AI prompt contract returns one object containing `window_id` and ordered
-`text_blocks`. Each block contains only `text_block_id`, `text_block`,
-`artifact_type`, and `confidence`. Artifact types are `header`, `footer`,
-`noise`, `separator`, `heading`, and `story`. Every non-whitespace source
-character must be covered exactly once in forward order. Story is retained;
-header/footer/noise are removed; separator/heading render as two LF characters;
-confidence is review metadata only. Whitespace-only gaps are restored from
-validated source positions.
+- `drop_page_artifact`
+- `join_with_space`
+- `join_without_space`
+- `set_paragraph_break`
+- `preserve_line_break`
+- `dehyphenate`
+- `set_role`
 
-Window reconstruction restores those gaps verbatim because a window is a
-fragment of the document. Document rendering restores them and then normalizes
-newline runs once: three or more consecutive LF characters collapse to two,
-leading LF characters are dropped, and a trailing LF run reduces to one. Other
-trailing whitespace is left untouched so a retained story slice is never
-truncated. Without the restore step, two adjacent story blocks separated by a
-blank line in the source render as one run-on paragraph.
+There is no `replace_text` operation. Unknown targets, duplicate target
+actions, oversized artifact removals, empty output, and removal of every text
+unit on a page are rejected.
 
-Document rendering then unwraps hard line breaks. Because story slices are kept
-byte-exact, every line PDF extraction wrapped keeps its LF; paragraphs are
-delimited by blank lines, so each remaining single LF is a wrap and becomes one
-space. A line ending in a hyphen joins with no space so compounds such as
-`mind-numbing` stay intact; a true syllable break is not detected. Blank-line
-boundaries, form-feed page markers, and a paragraph-final LF are preserved. This
-matches deterministic cleanup, which already joins wrapped lines when composing
-paragraph text.
+Residual question types are `running_artifact`, `block_role`,
+`line_boundary`, and `hyphenation`. AI responses contain only `batch_id` and
+`question_id`/`choice` pairs. They contain no story output, confidence, or
+rationale.
 
-Resume state is fingerprinted against relevant source and operation inputs.
-Corrupt or incompatible checkpoints restart safely; compatible prefixes may be
-restored even when later AI window partitioning changes. Completed AI spacing
-reapplication must not contact the provider and repeated application is
-deterministic.
+AI is eligible only when a selected profile advertises structured output and
+at least a 16K context window. Homogeneous batches contain four questions at
+16K and eight at 32K or above. Each question appears once in a primary call
+and once in an independent verifier call. Only identical non-preserve answers
+become operations. Provider JSON-schema fallback and model-based JSON repair
+are disabled; one transient retry and 512 output tokens are allowed. Prompt,
+schema, evidence, and output reserve must stay within 70% of context using the
+conservative UTF-8-bytes/2 estimator.
+
+The AI adjudication progress callback receives completed request count, total
+request count, and an operator message. A batch contributes two request work
+units. The outer Cleanup callback preserves its existing five-argument UI
+contract and derives the displayed percentage from those work-unit counts.
+
+`cleanup.json` records hashes, profile fingerprint, prompt schema, document
+profile, operations, questions, answers, warnings, token use, output hash,
+uncertainty count, and whether the operator edited the result. Both `passed`
+and `passed_with_warnings` are terminal successes and unlock Text Chunking.
 
 ## 7. Workflow Integration
 
-Project Lifecycle registers the source before this component runs. The
-application shell opens `TextCleanupPage`; `TextCleanupUiController` dispatches
-extraction or cleanup through the shared operation runner. Extraction refreshes
-page state from its authoritative metadata after success, failure, or
-cancellation without synchronizing an extraction summary into the manifest.
+Extraction is mandatory before Cleanup. A compatible AI profile is optional;
+without one, deterministic changes are applied and uncertain cases are
+preserved with warnings. A provider failure during adjudication has the same
+safe fallback.
 
-Extraction is the prerequisite for either cleanup mode. Clean text and its
-metadata become inputs to Text Chunking and all later workflow stages. Reruns,
-resets, and manual edits use workflow-impact rules to invalidate downstream
-artifacts while preserving only explicitly compatible state. AI output remains
-operator-reviewable beside the source preview.
+Cleanup completion promotes the project to `text_chunking_ready` immediately.
+Review and manual editing are optional rather than approval gates. Saving an
+operator edit updates the output hash, marks `user_modified`, and invalidates
+Chunking and later generated text/audio artifacts.
 
 ## 8. Usage
 
 ```python
-from audiomancer.services import text_extraction_service
+from audiomancer.services import text_cleanup_service, text_extraction_service
 
-result = text_extraction_service.extract_text(project_root, manifest)
+text_extraction_service.extract_text(project_root, manifest)
+result = text_cleanup_service.clean_text(
+    project_root,
+    manifest,
+    ai_profile_payload=optional_local_profile,
+)
 ```
-
-```python
-from audiomancer.services import deterministic_cleanup_service
-
-report = deterministic_cleanup_service.clean_text(project_root)
-```
-
-AI cleanup is normally started by `TextCleanupUiController`, which resolves
-the selected profile and optional instructions before calling
-`ai_cleanup_service.clean_text`. Direct callers must supply the same operation
-runtime and provider/profile contracts.
 
 ## 9. Validation And Tests
 
-Primary automated coverage:
+Primary coverage:
 
-- `04_Software/AudioMancer/tests/test_text_extraction_service.py`
-- `04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py`
-- `04_Software/AudioMancer/tests/test_ai_cleanup_service.py`
-- `04_Software/AudioMancer/tests/test_ai_cleanup_contract.py`
-- `04_Software/AudioMancer/tests/test_cleanup_metadata_service.py`
-- `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
-- `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `tests/test_text_extraction_service.py`
+- `tests/test_cleanup_v2_service.py`
+- `tests/test_text_cleanup_state_service.py`
+- `tests/test_text_cleanup_ui_controller.py`
+- `tests/test_text_cleanup_page.py`
 
-After changes, run the focused modules above with `uv run pytest`, plus
-`uv run python -m py_compile` and `uv run ruff check` on changed files. Changes
-to extraction formats require their format-specific cases; deterministic rules
-require structure and multilingual cases; AI contract changes require the entire
-AI contract module; state or UI changes require state, controller, and page
-tests.
+Run `uv run ruff check src tests` and `uv run pytest`. Format-specific changes
+must include exact ledger/hash/role assertions. AI changes must verify the
+strict schema flags, two-call maximum per question, disagreement fallback, and
+context budget.
 
 ## 10. Limitations And Future Work
 
-- PDF extraction has no OCR fallback; image-only PDFs fail with an explanatory
-  error.
-- AI cleanup depends on an available configured provider and requires human
-  review of source versus cleaned text.
+- Image-only PDFs fail because OCR is intentionally out of scope.
+- RTF exposes text but not dependable native style/list structure.
+- Ambiguous multi-column PDF reading order is preserved with warnings.
+- Small or weak local models may leave more uncertainties unresolved; this is
+  acceptable because the source is preserved and the operator can edit.

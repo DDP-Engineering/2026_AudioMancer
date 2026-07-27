@@ -29,7 +29,11 @@ from odf.text import P
 import pytest
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service, text_extraction_service
+from audiomancer.services import (
+    project_workspace_service,
+    source_ledger_service,
+    text_extraction_service,
+)
 
 
 def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -> None:
@@ -77,7 +81,11 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     assert generated_artifact_names == {
         config.EXTRACTED_TEXT_FILE_NAME,
         config.EXTRACTION_METADATA_FILE_NAME,
+        config.SOURCE_LEDGER_FILE_NAME,
     }
+    ledger = source_ledger_service.load_source_ledger(project_root)
+    assert ledger["canonical_text"]["length_codepoints"] == 24
+    assert [unit["unit_id"] for unit in ledger["units"]] == ["u-000001", "u-000002"]
     assert (project_root / "extraction_report.json").exists() is False
     assert (project_root / "extraction_state.json").exists() is False
 
@@ -275,9 +283,9 @@ def test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension(tmp_path) -
     assert metadata["status"] == "failed"
 
 
-def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
+def test_extract_text_restarts_unfinished_docx_extraction(tmp_path) -> None:
     """
-    @brief      Verify rerunning an unfinished incremental extraction continues from saved progress.
+    @brief      Verify rerunning an unfinished extraction rebuilds canonical text and its ledger.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -316,8 +324,8 @@ def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
     assert output_path.read_text(encoding="utf-8") == "Story first\n\nStory second\n"
 
 
-def test_extract_text_persists_cancelled_progress_and_resumes(tmp_path) -> None:
-    """Verify cancellation persists one resumable strict metadata checkpoint."""
+def test_extract_text_persists_cancelled_progress_and_restarts(tmp_path) -> None:
+    """Verify cancellation persists progress while the next run rebuilds from source."""
     project_root, manifest = project_workspace_service.create_project("CancelledExtraction", tmp_path)
     source_path = project_root / "story.docx"
     _write_docx_source(source_path, paragraphs=["Story first", "Story second"])

@@ -29,8 +29,8 @@ Component documentation and implementation notes belong here. New component
 pages should follow `component_template.md` and be listed in this index when
 added.
 
-- [Text Cleanup](Text_Cleanup.md) — source extraction, deterministic and AI
-  cleanup, cleanup metadata/state, and Text Cleanup UI integration.
+- [Text Cleanup](Text_Cleanup.md) — structural extraction ledger, conservative
+  hybrid Cleanup, bounded AI adjudication, pure rendering, and UI integration.
 
 - [Project Lifecycle](Project_Lifecycle.md) — project workspaces, source
   registration, Home flow, persistence, external exports, and snapshots.

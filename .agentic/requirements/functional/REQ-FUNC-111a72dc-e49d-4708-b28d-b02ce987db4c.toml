@@ -1,22 +1,18 @@
 schema_version = 1
 id = "REQ-FUNC-111a72dc-e49d-4708-b28d-b02ce987db4c"
 category = "functional"
-status = "Active"
+status = "Retired"
 priority = "Must"
 requirement = "Deterministic cleanup shall persist failed state after a mid-run error and batch pseudo-segment checkpoints for plain text."
 rationale = "Cleanup must be resumable and crash-safe for plain and segmented input."
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
 spec_ref = ""
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py",
 ]
 
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_persists_failed_state_after_mid_run_error",
-  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_plain_text_uses_pseudo_segments_without_output_change",
-  "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_batches_pseudo_segment_checkpoints",
-]
+linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-27T17:57:32Z"
