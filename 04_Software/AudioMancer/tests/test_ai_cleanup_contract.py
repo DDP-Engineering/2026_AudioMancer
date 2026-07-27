@@ -55,6 +55,8 @@ _MODIFIED_STORY_SOURCE = (
     f"{_STORY_EDGE_END}"
 )
 _MODIFIED_STORY_AI = _MODIFIED_STORY_SOURCE.replace("lest she", "llest she")
+# @brief Document rendering unwraps the fixture's hard line wraps into one continuous paragraph.
+_MODIFIED_STORY_AI_UNWRAPPED = _MODIFIED_STORY_AI.replace("\n", " ")
 _OMITTED_SOURCE_LINE = "�To whom I have related the affair�"
 
 
@@ -161,7 +163,7 @@ def test_cleanup_validation_accepts_uniquely_bracketed_modified_story_text() -> 
 
     preserved = validated["preserved_blocks"][0]
     source_start = source.index(_MODIFIED_STORY_SOURCE)
-    assert validated["reconstructed_text"] == _MODIFIED_STORY_AI
+    assert validated["reconstructed_text"] == f"\n\n{_MODIFIED_STORY_AI}\n\n"
     assert validated["modified_story_block_count"] == 1
     assert preserved["text_block"] == _MODIFIED_STORY_AI
     assert preserved["source_text"] == _MODIFIED_STORY_SOURCE
@@ -232,7 +234,7 @@ def test_cleanup_validation_preserves_uniquely_bounded_internal_source_gap() -> 
 
     preserved_gap = validated["preserved_source_gaps"][0]
     expected_gap = f"\n\n{_OMITTED_SOURCE_LINE}\n\n"
-    assert validated["reconstructed_text"] == f"Opening story.{expected_gap}Closing story."
+    assert validated["reconstructed_text"] == f"Opening story.{expected_gap}\n\nClosing story."
     assert validated["preserved_source_gap_count"] == 1
     assert preserved_gap == {
         "source_window_start": len("Opening story."),
@@ -390,7 +392,7 @@ def test_cleanup_removal_policy_ignores_confidence() -> None:
     )
 
     assert validated["preserved_blocks"] == []
-    assert validated["reconstructed_text"] == ""
+    assert not validated["reconstructed_text"].strip()
     assert any(detail["kind"] == "entire_page_removed" for detail in validated["warning_details"])
 
 
@@ -658,7 +660,7 @@ def test_ai_cleanup_resume_uses_source_offset_after_budget_repartition(
     assert report["decisions"]["items"][-1]["end"] == len(expected_source_stream)
     assert report["token_usage"]["total_tokens"] == 30
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    assert cleaned_path.read_text(encoding="utf-8") == expected_source_stream
+    assert cleaned_path.read_text(encoding="utf-8") == expected_source_stream.replace("\n\n\n\f", "\n\n\f")
 
 
 def test_cleanup_modified_story_is_stored_only_as_output_text() -> None:
@@ -742,7 +744,7 @@ def test_ai_cleanup_integration_reconstructs_whitespace_and_artifact_separators(
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    assert cleaned_path.read_text(encoding="utf-8") == ("First paragraph.\n\n\n\nSecond paragraph.")
+    assert cleaned_path.read_text(encoding="utf-8") == ("First paragraph.\n\nSecond paragraph.\n")
     assert set(report) == {
         "status",
         "mode",
@@ -940,12 +942,12 @@ def test_response_contract_has_six_artifact_types_without_version_or_action() ->
 
 def test_whitespace_only_source_gaps_are_retained_for_spacing_rendering() -> None:
     """
-    @brief      Verify AICU-004 and REQ-FUNC-058 retained whitespace-gap rendering.
+    @brief      Verify AICU-004, S-0001, and REQ-FUNC-058 retained whitespace-gap rendering.
     @return     None.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-15
-    @version    1.1.0
+    @version    1.2.0
     """
     source = "First paragraph.\n\nSecond paragraph.\n"
     pages = ai_cleanup_service._build_source_pages(source)
@@ -959,7 +961,7 @@ def test_whitespace_only_source_gaps_are_retained_for_spacing_rendering() -> Non
 
     validated = ai_cleanup_service._validate_response(response, pages, "cleanup-window-0001")
 
-    assert validated["reconstructed_text"] == "First paragraph.Second paragraph."
+    assert validated["reconstructed_text"] == "First paragraph.\n\nSecond paragraph.\n"
     assert validated["restored_whitespace_character_count"] == 3
     assert validated["restored_whitespace_ranges"] == [
         {
@@ -975,6 +977,75 @@ def test_whitespace_only_source_gaps_are_retained_for_spacing_rendering() -> Non
             "reason": "restored_whitespace_gap",
         },
     ]
+
+
+def test_render_document_restores_whitespace_gaps_and_collapses_blank_runs() -> None:
+    """
+    @brief      Verify S-0001 whitespace-gap restoration and blank-run collapsing.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    1.0.0
+    """
+    source = "First paragraph.\n\nHEADER\n\nSecond paragraph.\n"
+    items = [
+        {"start": 0, "end": 16, "kind": "story"},
+        {"start": 16, "end": 18, "kind": "whitespace"},
+        {"start": 18, "end": 24, "kind": "header", "confidence": "high"},
+        {"start": 24, "end": 26, "kind": "whitespace"},
+        {"start": 26, "end": 43, "kind": "story"},
+        {"start": 43, "end": 44, "kind": "whitespace"},
+    ]
+
+    rendered = ai_cleanup_service._render_document(
+        source,
+        items,
+        {"heading", "separator"},
+        require_complete=True,
+    )
+
+    assert rendered == "First paragraph.\n\nSecond paragraph.\n"
+
+
+def test_render_document_unwraps_intra_paragraph_line_breaks() -> None:
+    """
+    @brief      Verify S-0001 hard-wrap unwrapping in rendered cleanup output.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    1.0.0
+    """
+    source = (
+        "The zerglings got Birch when they overran the base. Once again, the evacuation\n"
+        "dropships were late.\n"
+        "\n"
+        "It was mind-\n"
+        "numbing work.\n"
+        "\n"
+        "\f\n"
+        "\n"
+        "Second page opens here.\n"
+    )
+    items = [{"start": 0, "end": len(source), "kind": "story"}]
+
+    rendered = ai_cleanup_service._render_document(
+        source,
+        items,
+        {"heading", "separator"},
+        require_complete=True,
+    )
+
+    assert rendered == (
+        "The zerglings got Birch when they overran the base. Once again, the evacuation dropships were late.\n"
+        "\n"
+        "It was mind-numbing work.\n"
+        "\n"
+        "\f\n"
+        "\n"
+        "Second page opens here.\n"
+    )
 
 
 def test_artifact_types_apply_deterministic_rendering() -> None:
@@ -1109,12 +1180,12 @@ def test_ai_cleanup_spacing_reapplication_persists_selection_without_provider(
     first_text = cleaned_path.read_text(encoding="utf-8")
     second_report = ai_cleanup_service.apply_spacing_selection(project_root, {"noise", "header"})
 
-    assert first_text == "\n\nStory.\n\n"
+    assert first_text == "Story.\n"
     assert cleaned_path.read_text(encoding="utf-8") == first_text
     assert first_report["decisions"]["selected_spacing_categories"] == ["header", "noise"]
     assert second_report["decisions"]["selected_spacing_categories"] == ["header", "noise"]
     empty_report = ai_cleanup_service.apply_spacing_selection(project_root, set())
-    assert cleaned_path.read_text(encoding="utf-8") == "Story."
+    assert cleaned_path.read_text(encoding="utf-8") == "Story.\n"
     assert empty_report["decisions"]["selected_spacing_categories"] == []
     persisted_document = json.loads(
         (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).read_text(encoding="utf-8")
@@ -1175,7 +1246,7 @@ def test_ai_cleanup_spacing_reapplication_preserves_anchored_modified_story(
     report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
 
-    assert cleaned_path.read_text(encoding="utf-8") == _MODIFIED_STORY_AI
+    assert cleaned_path.read_text(encoding="utf-8") == f"{_MODIFIED_STORY_AI_UNWRAPPED}\n"
     modified_items = [item for item in report["decisions"]["items"] if "output_text" in item]
     assert len(modified_items) == 1
     assert modified_items[0]["output_text"] == _MODIFIED_STORY_AI
@@ -1188,7 +1259,7 @@ def test_ai_cleanup_spacing_reapplication_preserves_anchored_modified_story(
     )
     reapplied = ai_cleanup_service.apply_spacing_selection(project_root, {"header", "footer"})
 
-    assert cleaned_path.read_text(encoding="utf-8") == f"\n\n{_MODIFIED_STORY_AI}\n\n"
+    assert cleaned_path.read_text(encoding="utf-8") == f"{_MODIFIED_STORY_AI_UNWRAPPED}\n"
     assert any(item.get("output_text") == _MODIFIED_STORY_AI for item in reapplied["decisions"]["items"])
     assert provider_call_count == 1
 
@@ -1260,7 +1331,7 @@ def test_ai_cleanup_spacing_reapplication_preserves_internal_source_gap(
     )
     reapplied = ai_cleanup_service.apply_spacing_selection(project_root, {"noise"})
 
-    assert cleaned_path.read_text(encoding="utf-8") == f"Opening story.{expected_gap}\n\nClosing story."
+    assert cleaned_path.read_text(encoding="utf-8") == f"Opening story.{expected_gap}Closing story."
     assert sum(item["kind"] == "preserved_source_gap" for item in reapplied["decisions"]["items"]) == 1
     assert provider_call_count == 1
 

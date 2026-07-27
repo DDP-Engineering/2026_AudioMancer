@@ -65,6 +65,12 @@ _ARTIFACT_REPLACEMENTS = {
     "heading": "\n\n",
 }
 _CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
+# @brief Blank-line paragraph boundary, matched without crossing a form-feed page marker.
+_PARAGRAPH_BREAK_PATTERN = re.compile(r"(?:\n[ \t]*)+\n")
+# @brief Hyphen-terminated wrap joined without a space so compounds stay intact.
+_HYPHENATED_WRAP_PATTERN = re.compile(r"(?<=\w)-[ \t]*\n[ \t]*(?=\w)")
+# @brief Intra-paragraph wrap, never matching a paragraph-final line break.
+_WRAPPED_LINE_PATTERN = re.compile(r"[ \t]*\n[ \t]*(?=\S)")
 _MODIFIED_STORY_MIN_NORMALIZED_LENGTH = 32
 _MODIFIED_STORY_MAX_EDGE_ANCHOR_LENGTH = 64
 
@@ -632,11 +638,61 @@ def _render_document(
         end = int(item["end"])
         if kind == "story":
             output_fragments.append(str(item.get("output_text", canonical_source[start:end])))
-        elif kind == "preserved_source_gap":
+        elif kind in {"whitespace", "preserved_source_gap"}:
             output_fragments.append(canonical_source[start:end])
         elif kind in spacing_categories:
             output_fragments.append("\n\n")
-    return "".join(output_fragments)
+    return _unwrap_rendered_line_breaks(_collapse_rendered_blank_runs("".join(output_fragments)))
+
+
+def _collapse_rendered_blank_runs(text: str) -> str:
+    """
+    @brief      Collapse over-long blank runs left by artifact removal next to restored gaps.
+    @details    Only newline runs are normalized. Leading newlines are dropped and a
+                trailing newline run is reduced to one, because both can only come from
+                artifacts removed outside the first and last story block. Other trailing
+                whitespace is left alone so a story slice is never truncated.
+    @param[in]  text Rendered document text.
+    @return     Text with at most one blank line between paragraphs and no outer blank lines.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-26
+    @version    0.1.0
+    """
+    collapsed = re.sub(r"\n{3,}", "\n\n", text)
+    return re.sub(r"\n{2,}\Z", "\n", collapsed).lstrip("\n")
+
+
+def _unwrap_rendered_line_breaks(text: str) -> str:
+    """
+    @brief      Join the hard line wraps PDF extraction leaves inside a paragraph.
+    @details    Story slices are retained byte-exact, so every wrapped source line keeps
+                its LF. Paragraphs are delimited by blank lines, which makes each
+                remaining single LF a wrap. Blank-line boundaries and form-feed page
+                markers are rebuilt unchanged, and a paragraph-final LF is never turned
+                into a space.
+    @param[in]  text Rendered document text with normalized blank runs.
+    @return     Text whose paragraphs read as continuous lines.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    0.1.0
+    """
+    return "\n\n".join(_unwrap_paragraph(part) for part in _PARAGRAPH_BREAK_PATTERN.split(text))
+
+
+def _unwrap_paragraph(paragraph: str) -> str:
+    """
+    @brief      Join one paragraph's wrapped lines.
+    @param[in]  paragraph Single rendered paragraph.
+    @return     Paragraph joined into continuous lines.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    0.1.0
+    """
+    dehyphenated = _HYPHENATED_WRAP_PATTERN.sub("-", paragraph)
+    return _WRAPPED_LINE_PATTERN.sub(" ", dehyphenated)
 
 
 def _window_to_document_items(
@@ -1330,7 +1386,7 @@ def _render_validated_window(
             (
                 int(raw_gap["source_window_start"]),
                 int(raw_gap["source_window_end"]),
-                "",
+                str(raw_gap["text"]),
             )
         )
 

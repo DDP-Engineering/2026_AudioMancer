@@ -3,8 +3,8 @@ id = "REQ-FUNC-60e6b423-4d42-4611-a2ce-14810a30a6e8"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "AI cleanup shall store modified story only as output text, avoid duplicating preserved-gap text, and retain whitespace-only gaps for spacing rendering."
-rationale = "Stored cleanup must not duplicate source text."
+requirement = "AI cleanup shall store modified story only as output text, avoid duplicating preserved-gap text, and render whitespace-only source gaps back into cleaned text while collapsing runs of three or more newlines to exactly two."
+rationale = "Stored cleanup must not duplicate source text, and dropping restored whitespace gaps silently deletes paragraph breaks between adjacent story blocks."
 verification = "Automated: 3 linked pytest selector(s)."
 spec_ref = ""
 
@@ -19,4 +19,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-26T21:33:44Z"

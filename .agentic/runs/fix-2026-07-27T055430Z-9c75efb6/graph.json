@@ -1,0 +1,157 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "document rendering joins a single LF inside a paragraph into one space, so 'the evacuation\\ndropships were late' becomes 'the evacuation dropships were late'",
+      "blank-line paragraph boundaries and form-feed page markers survive unwrapping unchanged",
+      "a line ending in a hyphen joins with no space and keeps the hyphen, so 'mind-\\nnumbing' becomes 'mind-numbing'",
+      "a trailing LF at the end of the document is not turned into a space",
+      "gates pass: uv run --directory 04_Software/AudioMancer pytest -q and uv run --directory 04_Software/AudioMancer ruff check ."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-27T05:54:44+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [],
+    "reason": "Single deterministic post-pass over rendered document text in one service; auditable cleanup decisions in cleanup.json are untouched, the user picked this location and the hyphen policy explicitly, and backward compatibility for existing cleanup artifacts was waived.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py, 04_Software/AudioMancer/tests/test_ai_cleanup_contract.py, .agentic/requirements/functional/, .agentic/knowledge/components/Text_Cleanup.md"
+    ],
+    "source": "Chat 2026-07-27: user reported AI translation mirroring mid-sentence line breaks; root cause is AI Cleanup. User chose to unwrap only in AI Cleanup at document render, and to join hyphen-terminated wraps without a space while keeping the hyphen.",
+    "understanding": "AI-assisted cleanup retains story slices byte-exact, so single LF characters that PDF extraction inserts at every wrapped line survive into clean_text.txt, chunks_text.json, the translation prompt, and TTS. Deterministic cleanup already unwraps these through _compose_paragraph_text, so the two cleanup modes disagree. Document rendering must join intra-paragraph line breaks into single spaces while keeping blank-line paragraph boundaries and form-feed page markers intact."
+  },
+  "change_units": [],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-75ece390-ef0b-4ac5-9af2-1795765a698a"
+      ],
+      "cites_spec": [
+        "S-0001"
+      ],
+      "command": "uv run --directory 04_Software/AudioMancer pytest tests/test_ai_cleanup_contract.py -q -k 'unwraps_intra_paragraph'",
+      "green_evidence": null,
+      "id": "C-0001",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_ai_cleanup_contract.py",
+      "red_evidence": null,
+      "state": "red"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-27T05:57:24+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "The multi-line _MODIFIED_STORY_AI fixture assertion encodes pre-unwrap document output and must move to the unwrapped contract before implementation can be validated."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0003 -> E-0005",
+      "created_at": "2026-07-27T11:15:26+00:00",
+      "id": "D-0002",
+      "question": "Evidence superseded",
+      "rationale": "Not a code failure. E-0005 reran the identical gate command on the same tree with output captured: 1110 passed, 62 skipped, exit 0. E-0001 had already passed on the same code path minutes earlier, the only intervening edit being removal of a provably redundant re.sub, and no failing test could be reproduced. Root cause of the E-0003 run is undetermined; the AEGIS gate runner records only the verdict, not the pytest output, so the original failure text is unrecoverable."
+    }
+  ],
+  "evidence": [
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-27T06:19:12+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "test: uv run --directory 04_Software/AudioMancer pytest -q",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-27T06:19:12+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-27T06:35:59+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "test: uv run --directory 04_Software/AudioMancer pytest -q",
+      "supersede_reason": "Not a code failure. E-0005 reran the identical gate command on the same tree with output captured: 1110 passed, 62 skipped, exit 0. E-0001 had already passed on the same code path minutes earlier, the only intervening edit being removal of a provably redundant re.sub, and no failing test could be reproduced. Root cause of the E-0003 run is undetermined; the AEGIS gate runner records only the verdict, not the pytest output, so the original failure text is unrecoverable.",
+      "superseded_by": "E-0005"
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-27T06:35:59+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-27T11:15:16+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: uv run --directory 04_Software/AudioMancer pytest -q -> 1110 passed, 62 skipped, 1 deselected, exit 0 in 1400s (captured rerun of the E-0003 command on the identical tree)",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-27T05:54:30+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py"
+    ],
+    "statement": "AI Cleanup keeps PDF hard line wraps inside paragraphs, so cleaned text, chunks, translation, and TTS all receive mid-sentence line breaks",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-27T055430Z-9c75efb6",
+  "spec_items": [
+    {
+      "examples": [
+        "'the evacuation\\ndropships were late' becomes 'the evacuation dropships were late'; 'mind-\\nnumbing' becomes 'mind-numbing'; 'Story.\\n\\n\\f\\n\\nMore.' keeps its page marker"
+      ],
+      "id": "S-0001",
+      "statement": "After restoring gaps and collapsing blank runs, document rendering splits on blank-line boundaries and joins the remaining single line breaks inside each paragraph with one space, using no space when the line ends in a hyphen.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "validation"
+}

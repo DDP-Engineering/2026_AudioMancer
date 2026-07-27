@@ -138,6 +138,23 @@ header/footer/noise are removed; separator/heading render as two LF characters;
 confidence is review metadata only. Whitespace-only gaps are restored from
 validated source positions.
 
+Window reconstruction restores those gaps verbatim because a window is a
+fragment of the document. Document rendering restores them and then normalizes
+newline runs once: three or more consecutive LF characters collapse to two,
+leading LF characters are dropped, and a trailing LF run reduces to one. Other
+trailing whitespace is left untouched so a retained story slice is never
+truncated. Without the restore step, two adjacent story blocks separated by a
+blank line in the source render as one run-on paragraph.
+
+Document rendering then unwraps hard line breaks. Because story slices are kept
+byte-exact, every line PDF extraction wrapped keeps its LF; paragraphs are
+delimited by blank lines, so each remaining single LF is a wrap and becomes one
+space. A line ending in a hyphen joins with no space so compounds such as
+`mind-numbing` stay intact; a true syllable break is not detected. Blank-line
+boundaries, form-feed page markers, and a paragraph-final LF are preserved. This
+matches deterministic cleanup, which already joins wrapped lines when composing
+paragraph text.
+
 Resume state is fingerprinted against relevant source and operation inputs.
 Corrupt or incompatible checkpoints restart safely; compatible prefixes may be
 restored even when later AI window partitioning changes. Completed AI spacing
