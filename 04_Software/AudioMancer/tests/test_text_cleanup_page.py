@@ -1,11 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
-"""Qt tests for the unified Cleanup V2 page."""
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file test_text_cleanup_page.py
+@brief Qt tests for the unified Cleanup V2 page.
+@details Verifies the single Cleanup action, optional AI profile, and optional
+         operator edit, save, and cancel controls.
+@author Eng. Dan Dumitru Pasare
+@date 2026-07-27
+@version 0.1.0
+"""
+
+# IMPORTS
 
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 
+# PUBLIC API
+
 
 def test_page_exposes_one_cleanup_action_with_optional_ai_profile(qtbot) -> None:
+    """
+    @brief      Verify the page exposes one Cleanup action with an optional AI profile.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    0.1.0
+    """
     page = TextCleanupPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -25,6 +52,15 @@ def test_page_exposes_one_cleanup_action_with_optional_ai_profile(qtbot) -> None
 
 
 def test_page_edit_save_and_cancel_are_optional(qtbot) -> None:
+    """
+    @brief      Verify optional cleaned-text editing supports save and cancel.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    0.1.0
+    """
     page = TextCleanupPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -41,3 +77,6 @@ def test_page_edit_save_and_cancel_are_optional(qtbot) -> None:
     page._cleaned_text_edit.setPlainText("saved")
     page._save_cleaned_button.click()
     assert saved == ["saved"]
+
+
+# END OF FILE

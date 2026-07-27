@@ -81,7 +81,7 @@ def mock_prompt_environment(tmp_path, monkeypatch):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.1.0
+    @version    0.2.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir(exist_ok=True)

@@ -1,6 +1,6 @@
 # AEGIS Report: fix-2026-07-27T154435Z-c6ae8afc
 
-- Stage: `delivery`
+- Stage: `check`
 - Access mode: `standard`
 - Intent: `I-0001` fix - Text Cleanup progress dialog remains at 0 percent during AI adjudication even while local-model primary and verifier requests are running
 
@@ -38,6 +38,9 @@
 - `E-0010` gate/pass: lint: uv run --directory 04_Software/AudioMancer ruff check .
 - `E-0011` note/info: Validation scope review: focused requirements and affected paths are fully traced; global traceability/coverage still reports pre-existing Cleanup V2 migration debt outside this fix. Component documentation is current, Python style passes Ruff, git diff --check passes, and no configured secret pattern is present.
 - `E-0012` decision/info: User explicitly approved committing and pushing the complete AudioMancer V2 change set to the new Audiomancer_V2 branch while leaving master unchanged.
+- `E-0013` scan/pass: Ruff passed for all AudioMancer tests after manual code-style documentation edits.
+- `E-0014` test-run/pass: Focused code-style validation passed: 167 tests passed and 1 skipped across affected service, Cleanup UI, atomic I/O, speech-block, and changed MainWindow flow tests.
+- `E-0015` note/info: test_main_window_lifecycle.py timed out in isolated execution during UI teardown/runtime activity; its only current edit is the @version documentation value, and the changed MainWindow project-flow tests pass.
 
 ## Invariants
 - `INV-1` PASS (blocking): All accepted/realized spec items have checks.

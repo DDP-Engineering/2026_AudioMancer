@@ -57,7 +57,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-09
-    @version    0.4.5
+    @version    0.4.6
     """
     window = MainWindow(
         settings_payload={

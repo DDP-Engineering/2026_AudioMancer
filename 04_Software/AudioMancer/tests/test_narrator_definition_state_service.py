@@ -13,7 +13,7 @@
          status-line composition for the simplified narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.5.3
+@version 3.6.0
 """
 
 # IMPORTS
@@ -74,13 +74,13 @@ def test_narrator_state_service_uses_original_language_and_no_default_selection(
 
 def test_narrator_state_service_ignores_legacy_cleanup_report_language(tmp_path) -> None:
     """
-    @brief      Verify narrator state falls back to cleanup-detected language when manifest language is empty.
+    @brief      Verify narrator state ignores a legacy Cleanup report when the manifest language is empty.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.4.0
+    @version    0.5.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateCleanupLanguageProject")
     cleanup_report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_REPORT_FILE_NAME

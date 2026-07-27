@@ -1,14 +1,41 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
-"""Controller tests for the single Cleanup V2 command."""
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file test_text_cleanup_ui_controller.py
+@brief Controller tests for the single Cleanup V2 command.
+@details Verifies threaded-runner argument ownership and optional AI profile
+         forwarding from the Cleanup page controller.
+@author Eng. Dan Dumitru Pasare
+@date 2026-07-27
+@version 0.1.0
+"""
+
+# IMPORTS
 
 from types import SimpleNamespace
 
 from audiomancer.ui.controllers import text_cleanup_ui_controller
 
+# PUBLIC API
+
 
 def test_extraction_controller_leaves_project_arguments_for_threaded_runner(monkeypatch, tmp_path) -> None:
-    """The shared runner, not the controller, supplies project root and manifest."""
+    """
+    @brief      Verify the shared runner supplies Extraction project arguments.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    0.1.0
+    """
     captured: dict[str, object] = {}
     window = SimpleNamespace(
         _current_project_root=tmp_path,
@@ -18,6 +45,21 @@ def test_extraction_controller_leaves_project_arguments_for_threaded_runner(monk
     monkeypatch.setattr(text_cleanup_ui_controller, "_completed_extraction_available", lambda _root: False)
 
     def _start(_window, operation_kind, _name, _message, worker, _success, _failure):
+        """
+        @brief      Capture the Extraction operation and worker callable.
+        @param[in]  _window Window test double unused by this helper.
+        @param[in]  operation_kind Operation identifier under test.
+        @param[in]  _name Operation name unused by this helper.
+        @param[in]  _message Progress message unused by this helper.
+        @param[in]  worker Worker callable under test.
+        @param[in]  _success Success callback unused by this helper.
+        @param[in]  _failure Failure callback unused by this helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-27
+        @version    0.1.0
+        """
         captured["kind"] = operation_kind
         captured["worker"] = worker
 
@@ -32,6 +74,16 @@ def test_extraction_controller_leaves_project_arguments_for_threaded_runner(monk
 
 
 def test_cleanup_controller_passes_optional_selected_profile(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Cleanup forwards the optional selected AI profile.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    0.1.0
+    """
     captured: dict[str, object] = {}
     window = SimpleNamespace(
         _current_project_root=tmp_path,
@@ -57,6 +109,21 @@ def test_cleanup_controller_passes_optional_selected_profile(monkeypatch, tmp_pa
     )
 
     def _start(_window, operation_kind, _name, _message, worker, _success, _failure):
+        """
+        @brief      Capture the Cleanup operation and partially bound worker.
+        @param[in]  _window Window test double unused by this helper.
+        @param[in]  operation_kind Operation identifier under test.
+        @param[in]  _name Operation name unused by this helper.
+        @param[in]  _message Progress message unused by this helper.
+        @param[in]  worker Partially bound Cleanup worker under test.
+        @param[in]  _success Success callback unused by this helper.
+        @param[in]  _failure Failure callback unused by this helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-27
+        @version    0.1.0
+        """
         captured["kind"] = operation_kind
         captured["worker"] = worker
 
@@ -66,3 +133,6 @@ def test_cleanup_controller_passes_optional_selected_profile(monkeypatch, tmp_pa
     assert captured["kind"] == "cleanup"
     assert captured["worker"].func is text_cleanup_ui_controller.text_cleanup_service.clean_text
     assert captured["worker"].keywords["ai_profile_payload"]["model_name"] == "Qwen3.6-27B"
+
+
+# END OF FILE

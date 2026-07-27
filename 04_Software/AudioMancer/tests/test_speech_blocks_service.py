@@ -3168,7 +3168,7 @@ def test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context() 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-01
-    @version    0.1.0
+    @version    0.2.0
     """
     translation_prompt = (config.APP_PROMPTS_PATH / "text_translation_system.txt").read_text(encoding="utf-8")
     chunking_prompt = (config.APP_PROMPTS_PATH / "text_chunking_system.txt").read_text(encoding="utf-8")

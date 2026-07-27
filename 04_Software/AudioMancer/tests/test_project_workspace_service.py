@@ -910,7 +910,7 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("StageHeal", tmp_path)
     source_path = project_root / "story.txt"

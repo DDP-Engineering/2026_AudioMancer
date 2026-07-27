@@ -118,6 +118,14 @@
       "id": "D-0002",
       "question": "Workflow stage route",
       "rationale": "User authorized publishing the complete incompatible AudioMancer V2 branch; retire stale V1 requirement snapshots and add active test-linked V2 contracts before delivery."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-27T18:19:55+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "User approved applying the completed manual Python code-style audit. Route through check first because mechanical documentation and callable-version fixes are required in modified test files before source implementation style remediation."
     }
   ],
   "evidence": [
@@ -288,6 +296,48 @@
       "summary": "User explicitly approved committing and pushing the complete AudioMancer V2 change set to the new Audiomancer_V2 branch while leaving master unchanged.",
       "supersede_reason": null,
       "superseded_by": null
+    },
+    {
+      "command": ".\\04_Software\\AudioMancer\\.venv\\Scripts\\ruff.exe check --no-cache 04_Software\\AudioMancer\\tests",
+      "created_at": "2026-07-27T18:34:57+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "check",
+      "status": "active",
+      "summary": "Ruff passed for all AudioMancer tests after manual code-style documentation edits.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "Focused pytest batches for the 13 edited test modules; lifecycle module excluded after isolated teardown hang.",
+      "created_at": "2026-07-27T18:35:09+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused code-style validation passed: 167 tests passed and 1 skipped across affected service, Cleanup UI, atomic I/O, speech-block, and changed MainWindow flow tests.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\04_Software\\AudioMancer\\.venv\\Scripts\\pytest.exe -q tests\\test_main_window_lifecycle.py",
+      "created_at": "2026-07-27T18:35:20+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "note",
+      "path": "04_Software/AudioMancer/tests/test_main_window_lifecycle.py",
+      "result": "info",
+      "stage": "check",
+      "status": "active",
+      "summary": "test_main_window_lifecycle.py timed out in isolated execution during UI teardown/runtime activity; its only current edit is the @version documentation value, and the changed MainWindow project-flow tests pass.",
+      "supersede_reason": null,
+      "superseded_by": null
     }
   ],
   "intent": {
@@ -323,5 +373,5 @@
       "threshold": "All percentages are integers in 0..100, monotonically nondecreasing, and no pre-completion update equals 100."
     }
   ],
-  "stage": "delivery"
+  "stage": "check"
 }

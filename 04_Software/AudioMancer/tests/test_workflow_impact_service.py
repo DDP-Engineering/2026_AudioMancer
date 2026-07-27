@@ -13,7 +13,7 @@
          manifest refresh behavior, and safe generated-artifact deletion.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-04
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -308,13 +308,13 @@ def test_workflow_impact_resets_audio_assembly_outputs_only(tmp_path) -> None:
 
 def test_workflow_impact_rejects_legacy_cleanup_without_source_ledger(tmp_path) -> None:
     """
-    @brief      Verify manifest refresh saves metadata healed from persisted artifacts.
+    @brief      Verify manifest refresh rejects legacy Cleanup artifacts without a source ledger.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("RefreshManifest", tmp_path)
     source_path = project_root / "story.txt"

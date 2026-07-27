@@ -13,7 +13,7 @@
          deterministic text extraction for the supported source formats.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.2
+@version 0.2.0
 """
 
 # IMPORTS
@@ -44,7 +44,7 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -291,7 +291,7 @@ def test_extract_text_restarts_unfinished_docx_extraction(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ResumeProject",
@@ -325,7 +325,15 @@ def test_extract_text_restarts_unfinished_docx_extraction(tmp_path) -> None:
 
 
 def test_extract_text_persists_cancelled_progress_and_restarts(tmp_path) -> None:
-    """Verify cancellation persists progress while the next run rebuilds from source."""
+    """
+    @brief      Verify cancellation persists progress while the next run rebuilds from source.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-27
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project("CancelledExtraction", tmp_path)
     source_path = project_root / "story.docx"
     _write_docx_source(source_path, paragraphs=["Story first", "Story second"])

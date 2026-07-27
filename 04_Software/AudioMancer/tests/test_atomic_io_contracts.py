@@ -201,7 +201,7 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-12
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("AtomicManualCleanup", tmp_path)
     source_path = project_root / "story.txt"

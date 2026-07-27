@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.7.1
+@version 1.8.0
 """
 
 # IMPORTS
@@ -291,7 +291,7 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "RerunProject",
@@ -356,7 +356,7 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ResumeWindowProject",
@@ -448,6 +448,21 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
         success_handler,
         _failure_handler,
     ):
+        """
+        @brief      Execute the captured Extraction worker synchronously for this UI test.
+        @param[in]  _window Main-window test double supplied by the controller.
+        @param[in]  _operation_kind Operation identifier unused by this test helper.
+        @param[in]  _operation_name Operator-facing operation name unused by this helper.
+        @param[in]  _message Operator-facing progress message unused by this helper.
+        @param[in]  worker Extraction worker callable under test.
+        @param[in]  success_handler Success callback invoked with the worker result.
+        @param[in]  _failure_handler Failure callback unused by the successful test path.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-27
+        @version    0.1.0
+        """
         success_handler(
             worker(
                 _window._current_project_root,
