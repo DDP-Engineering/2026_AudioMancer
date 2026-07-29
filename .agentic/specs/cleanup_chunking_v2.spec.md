@@ -247,6 +247,12 @@ hash while retaining unambiguous roles/provenance. Lexical edits set
 `user_modified=true` and `structure_source="user_edited"`, rebuild minimal
 paragraph records, mark unavailable provenance explicitly, and invalidate all
 downstream operations.
+When paragraph records are rebuilt from user-edited text, conservative explicit
+scene-separator forms are assigned `role="scene_separator"` instead of the
+generic `body` fallback. Ambiguous punctuation and lexical content remain
+`body`. This classification does not restore source provenance that was made
+unknown by a lexical edit.
+
 
 ## Existing UI
 
@@ -274,6 +280,29 @@ Chunking accepts only completed `cleanup.json` with matching `clean_text.txt`.
 Candidate cuts are ordered by chapter/heading, scene separator, other structural
 boundary, then a sentence-complete paragraph. Heading, separator, list, verse,
 and preformatted boundaries do not require sentence-terminal punctuation.
+
+Every persisted chunk contains the required boolean field
+`starts_after_scene_separator`. The field describes the leading boundary, not
+the chunk text:
+
+```text
+{
+  "cleanup_role": "body | heading | list_item | verse | preformatted | footnote",
+  "starts_after_scene_separator": boolean
+}
+```
+
+The first narratable chunk after one or more recognized scene separators uses
+`starts_after_scene_separator=true`; all other chunks use `false`. A leading
+separator therefore marks the first narratable chunk, consecutive separators
+collapse to one leading marker, and a trailing separator with no following
+narration emits no chunk. The narratable chunk retains its content role and is
+never relabeled `scene_separator`.
+
+Manual text edits preserve the selected chunk's leading scene marker. A newly
+inserted chunk defaults to `false`. When a chunk whose marker is `true` is
+deleted, the marker transfers to the next surviving chunk when one exists so
+that deletion does not silently erase the structural boundary.
 
 Target-size balance is a soft cost. It cannot override semantic boundaries.
 A mid-sentence cut is permitted only when one sentence alone exceeds the hard
@@ -304,6 +333,8 @@ but they are non-narratable at Chunking materialization:
 - markers split a selected AI or deterministic range into narratable ranges;
 - marker text is omitted, and a marker-only range emits no chunk;
 - lexical or ambiguous punctuation such as `...`, `…`, a single dash,
+- the first narratable chunk after an omitted marker persists
+  `starts_after_scene_separator=true`;
   `### Title`, and `x x x` remains narratable unless Cleanup explicitly assigns
   the `scene_separator` role;
 - input containing only recognized separators is rejected rather than producing
@@ -322,7 +353,7 @@ but they are non-narratable at Chunking materialization:
 | resume with a different 32K model | deterministic analysis retained; all AI answers regenerated |
 | `status=paused` with an old output file | Chunking rejects the output |
 | lexical manual correction | minimal `user_edited` structure; downstream invalidated |
-| `Narrative A\n\n* * *\n\nNarrative B` | two narratable chunks; separator omitted |
+| `Narrative A\n\n* * *\n\nNarrative B` | two narratable chunks; separator omitted; second chunk has `starts_after_scene_separator=true` |
 
 ## Oracle and acceptance corpus
 

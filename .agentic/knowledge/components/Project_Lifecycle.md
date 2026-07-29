@@ -19,6 +19,9 @@ the shared atomic writer used for critical project metadata.
 
 - Create, validate, open, normalize, save, and metadata-repair project
   workspaces and manifests.
+- Recover an otherwise valid project from an incompatible Chunking document by
+  resetting Chunking and downstream derived state while preserving Source,
+  Extraction, and Cleanup.
 - Validate project names and project-relative artifact paths across supported
   platforms.
 - Import or replace one supported source document before project options are
@@ -60,6 +63,12 @@ summaries. `import_service.import_source` validates and copies the selected
 source, removes only a safely resolved previous project copy, and returns the
 manifest-ready source record. `persistence_service` provides the atomic write
 primitive used by manifest persistence.
+
+When strict Chunking loading reports incompatible persisted content,
+`project_workspace_service.open_project` invokes the operation-runtime reset,
+rewrites Chunking and downstream manifest summaries to `not_started`, retries
+validation once, and returns `recovered_operations = ["chunking"]`. Filesystem
+read failures remain fatal and do not trigger deletion.
 
 `home_presenter_service` turns manifest summaries and the active operation into
 read-only workflow rows. `HomeUiController` owns the UI orchestration and keeps
@@ -107,9 +116,13 @@ snapshot deliverables are not registered as runtime project artifacts.
 ## 6. Data Contracts
 
 Chunking completion evidence and text-chunk exports are projections of the one
-strict `chunks_text.json` document. Project open does not create a default
-Chunking state file, and obsolete report/state sidecars are ignored except when
-Reset Chunking deletes them.
+strict `chunks_text.json` document. An incompatible document is regenerable
+derived state: project open automatically removes Chunking-owned artifacts and
+all downstream results, resets their manifest summaries at
+`text_chunking_ready`, and retries validation exactly once. Source, Extraction,
+`cleanup.json`, `clean_text.txt`, project identity, and options remain
+unchanged. A wrapped `OSError` is re-raised without reset. Successful recovery
+is reported only after Home activates the project.
 
 Narrator completion evidence and exports are projections of the strict
 `narrator_voice.json` document. The selected profile's language, inline sample
@@ -158,8 +171,9 @@ assignment mode.
 
 Downstream workflow components persist detailed artifacts and compact manifest
 summaries. Project open may use trustworthy artifacts to propose a metadata-only
-summary/stage repair, but it does not rewrite domain artifacts. Home exports and
-snapshots read the current local state without mutating the active project.
+summary/stage repair. Its sole automatic domain reset is the bounded incompatible
+Chunking recovery described above. Home exports and snapshots read the current
+local state without mutating the active project.
 
 ## 8. Usage
 
@@ -213,8 +227,9 @@ as part of focused validation.
 
 - Atomic writes are last-replacement-wins and do not provide cross-process
   locking or backup rotation.
-- Project repair is metadata-only and intentionally leaves corrupt or stale
-  domain artifacts untouched.
+- Interactive project repair is metadata-only and intentionally leaves corrupt
+  or stale domain artifacts untouched; incompatible Chunking data is the
+  explicit automatic-reset exception.
 - Export formats are TXT/Markdown for readable projections and ZIP for voice or
   assembly artifacts; PDF export is not implemented.
 - Snapshots are filesystem snapshots taken at start time, not transactional

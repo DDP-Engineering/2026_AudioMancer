@@ -15,7 +15,7 @@
          such as the operator completion beep.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.59.0
+@version 0.59.1
 """
 
 # ruff: noqa: E501
@@ -100,6 +100,7 @@ _UI_STRINGS = {
         "dialog.snapshot_filter_zip": "ZIP Archives (*.zip)",
         "dialog.project_error_title": "Project Error",
         "dialog.project_repair_title": "Repair Project",
+        "dialog.project_recovery_title": "Project Data Reset",
         "dialog.confirm_extraction_rerun_title": "Confirm Extraction Rerun",
         "dialog.confirm_cleanup_rerun_title": "Confirm Cleanup Rerun",
         "dialog.confirm_cleanup_mode_switch_title": "Change Cleanup Mode",
@@ -1110,6 +1111,10 @@ _UI_STRINGS = {
         "project.repair_changes_header": "Metadata updates",
         "project.repair_warnings_header": "Warnings",
         "project.repair_confirm": "Do you want to repair the project now?",
+        "project.chunking_self_heal_message": (
+            "Incompatible Chunking data and all downstream results were reset. "
+            "Cleanup was preserved. Run Chunking again."
+        ),
     },
     "ro": {
         "window_title.main": "AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!",
@@ -1144,6 +1149,7 @@ _UI_STRINGS = {
         "dialog.snapshot_filter_zip": "Arhive ZIP (*.zip)",
         "dialog.project_error_title": "Eroare Proiect",
         "dialog.project_repair_title": "Repara Proiectul",
+        "dialog.project_recovery_title": "Date de Proiect Resetate",
         "dialog.confirm_extraction_rerun_title": "Confirma Reluarea Extragerii",
         "dialog.confirm_cleanup_rerun_title": "Confirma Reluarea Curatarii",
         "dialog.confirm_cleanup_mode_switch_title": "Schimba Modul de Curatare",
@@ -2168,6 +2174,10 @@ _UI_STRINGS = {
         "project.repair_changes_header": "Actualizari metadata",
         "project.repair_warnings_header": "Avertismente",
         "project.repair_confirm": "Vrei sa repari proiectul acum?",
+        "project.chunking_self_heal_message": (
+            "Datele Chunking incompatibile si toate rezultatele ulterioare au fost resetate. "
+            "Cleanup a fost pastrat. Ruleaza din nou Chunking."
+        ),
     },
 }
 

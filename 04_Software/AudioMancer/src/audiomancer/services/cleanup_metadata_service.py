@@ -12,8 +12,8 @@
 @details Reconstructs paragraph text from clean_text.txt offsets stored in
          cleanup.json; it does not create or read a metadata sidecar.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.3.0
+@date 2026-07-29
+@version 0.4.0
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ import json
 from pathlib import Path
 
 from audiomancer import config
+from audiomancer.services import cleanup_text_analysis_service
 from audiomancer.services.source_ledger_service import text_sha256
 
 ParagraphRecordPayload = dict[str, object]
@@ -51,15 +52,21 @@ def build_paragraph_records_from_text(
         while end > start and source[end - 1] in "\r\n":
             end -= 1
         if start < end and source[start:end].strip():
+            paragraph_text = source[start:end]
+            is_scene_separator = cleanup_text_analysis_service.is_scene_separator_artifact(
+                paragraph_text,
+            )
             records.append(
                 _runtime_record(
                     {
                         "paragraph_id": f"paragraph-{len(records) + 1:06d}",
                         "output_start": start,
                         "output_end": end,
-                        "role": "body",
+                        "role": "scene_separator" if is_scene_separator else "body",
                         "confidence": "strong",
-                        "reason_codes": ["user_edited"],
+                        "reason_codes": [
+                            "user_edited_scene_separator" if is_scene_separator else "user_edited"
+                        ],
                         "source_page_start": None,
                         "source_page_end": None,
                         "starts_after_page_transition": False,

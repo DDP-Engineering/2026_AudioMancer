@@ -12,8 +12,8 @@
 @details Covers the strict two-artifact contract, typed boundaries, protected
          roles, fusion safety, script eligibility, resume, and manual edits.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.1.0
+@date 2026-07-29
+@version 0.2.0
 """
 
 from __future__ import annotations
@@ -39,6 +39,18 @@ from cleanup_v2_test_support import (
     make_profile,
     read_cleanup_document,
 )
+
+_RETIRED_CLEANUP_CONFIG_CONSTANTS = (
+    "CLEANUP_REPORT_FILE_NAME",
+    "CLEANUP_STATE_FILE_NAME",
+    "CLEANED_TEXT_METADATA_FILE_NAME",
+)
+
+
+def test_retired_cleanup_artifact_config_constants_are_gone() -> None:
+    """Cover S-0007 and REQ-FUNC-50c48e76-aa6a-4a54-840b-ece463309faf."""
+    for constant_name in _RETIRED_CLEANUP_CONFIG_CONSTANTS:
+        assert not hasattr(config, constant_name), f"{constant_name} must be removed"
 
 
 def test_cleanup_persists_exactly_one_metadata_file_and_one_text_file(tmp_path) -> None:
@@ -525,6 +537,41 @@ def test_manual_whitespace_and_lexical_edits_keep_truthful_structure(tmp_path) -
     assert lexical["structure_source"] == "user_edited"
     assert all(item["source_unit_ids"] == [] for item in lexical["paragraphs"])
     assert all(item["provenance_available"] is False for item in lexical["paragraphs"])
+
+
+def test_user_edited_cleanup_reclassifies_only_explicit_scene_separators(tmp_path) -> None:
+    """Cover S-0015 and REQ-FUNC-ecb1e86f-7899-4734-8432-db376f8c7b99."""
+    canonical_text, ledger = build_ledger(
+        ["Opening narration.", "Closing narration."],
+        boundaries=[("\n\n", "native_paragraph")],
+    )
+    project_root, manifest = build_project(tmp_path, "EditedSceneBreak", canonical_text, ledger)
+    text_cleanup_service.clean_text(project_root, manifest)
+
+    edited = text_cleanup_service.save_user_cleaned_text(
+        project_root,
+        "Opening narration.\n\n* * *\n\n...\n\nClosing narration.\n",
+    )
+
+    assert edited["structure_source"] == "user_edited"
+    assert [item["role"] for item in edited["paragraphs"]] == [
+        "body",
+        "scene_separator",
+        "body",
+        "body",
+    ]
+    assert all(item["provenance_available"] is False for item in edited["paragraphs"])
+
+    whitespace_realign = text_cleanup_service.save_user_cleaned_text(
+        project_root,
+        "Opening narration.\n\n\n* * *\n\n...\n\nClosing narration.\n",
+    )
+    assert [item["role"] for item in whitespace_realign["paragraphs"]] == [
+        "body",
+        "scene_separator",
+        "body",
+        "body",
+    ]
 
 
 def test_online_disclosure_metrics_do_not_persist_fragments_or_secrets(

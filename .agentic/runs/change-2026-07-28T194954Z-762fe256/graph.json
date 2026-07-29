@@ -321,6 +321,54 @@
       "touched_paths": [
         ".agentic/requirements/functional/REQ-FUNC-8fd4bd61-fce8-4e48-8458-4ae296fbc00a.toml"
       ]
+    },
+    {
+      "id": "S-0015",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py"
+      ]
+    },
+    {
+      "id": "S-0015",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Cleanup.md"
+      ]
+    },
+    {
+      "id": "S-0016",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+      ]
+    },
+    {
+      "id": "S-0016",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py"
+      ]
+    },
+    {
+      "id": "S-0016",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py"
+      ]
+    },
+    {
+      "id": "S-0016",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Chunking.md"
+      ]
+    },
+    {
+      "id": "S-0017",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py"
+      ]
+    },
+    {
+      "id": "S-0015",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py"
+      ]
     }
   ],
   "checks": [
@@ -673,6 +721,51 @@
       "path": "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
       "red_evidence": "E-0059",
       "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-ecb1e86f-7899-4734-8432-db376f8c7b99"
+      ],
+      "cites_spec": [
+        "S-0015"
+      ],
+      "command": "uv run python -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
+      "green_evidence": "E-0073",
+      "id": "CHK-CLEANUP-USER-SCENE-ROLE",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "red_evidence": "E-0071",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-2048d415-09d9-44bb-94ec-ba5c822ccff5"
+      ],
+      "cites_spec": [
+        "S-0017"
+      ],
+      "command": "uv run python -m pytest -q tests/test_text_chunking_state_service.py::test_manual_chunk_mutations_preserve_leading_scene_boundary",
+      "green_evidence": "E-0069",
+      "id": "CHK-CHUNKING-MANUAL-SCENE-BOUNDARY",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_text_chunking_state_service.py",
+      "red_evidence": "E-0065",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012"
+      ],
+      "cites_spec": [
+        "S-0016"
+      ],
+      "command": "uv run python -m pytest -q tests/test_cleanup_v2_chunking_contract.py tests/test_ai_chunking_descriptor_contract.py tests/test_chunking_single_document_contract.py",
+      "green_evidence": "E-0078",
+      "id": "CHK-CHUNKING-SCENE-BOUNDARY",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "red_evidence": "E-0066",
+      "state": "green"
     }
   ],
   "decisions": [
@@ -811,6 +904,46 @@
       "id": "D-0017",
       "question": "Workflow stage route",
       "rationale": "Reconcile the existing atomic Chunking lifecycle requirement with S-0014: completion represents every narratable paragraph, while non-narratable separators advance checkpoint progress without becoming chunks."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-29T05:51:34+00:00",
+      "id": "D-0018",
+      "question": "Workflow stage route",
+      "rationale": "User requested implementation of only the scene-break information preservation correction after runtime analysis."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-29T06:06:00+00:00",
+      "id": "D-0019",
+      "question": "Workflow stage route",
+      "rationale": "Correct the strict-schema check to assert the public incompatibility exception and its precise internal cause before continuing implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-29T06:12:49+00:00",
+      "id": "D-0020",
+      "question": "Workflow stage route",
+      "rationale": "Validation diff review found misplaced callable version metadata and requires confirming the whitespace-only user-edit role preservation branch."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-29T06:13:04+00:00",
+      "id": "D-0021",
+      "question": "Workflow stage route",
+      "rationale": "Validation found the whitespace-only save branch still flattens reclassified scene-separator roles; add a regression assertion before fixing it."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0071 -> E-0072",
+      "created_at": "2026-07-29T06:14:44+00:00",
+      "id": "D-0022",
+      "question": "Evidence superseded",
+      "rationale": "The expanded whitespace-only regression failed before the implementation fix and now passes."
     }
   ],
   "evidence": [
@@ -1695,6 +1828,216 @@
       "summary": "Read-only runtime replay on 09_Others/Command Performance: 10 existing chunks contain 7 recognized separator paragraphs; separator-aware materialization projects 9 narratable chunks.",
       "supersede_reason": null,
       "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q focused scene-boundary selectors",
+      "created_at": "2026-07-29T06:04:14+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0064",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused RED: user-edited explicit scene separator remains body before implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q focused scene-boundary selectors",
+      "created_at": "2026-07-29T06:04:15+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0065",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused RED: manual chunk records cannot load or preserve the new boundary field before implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q focused scene-boundary selectors",
+      "created_at": "2026-07-29T06:04:15+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0066",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused RED: AI and deterministic chunks omit starts_after_scene_separator and strict schema rejects the new field before implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q seven focused modules",
+      "created_at": "2026-07-29T06:10:09+00:00",
+      "failure_kind": null,
+      "id": "E-0067",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "126 focused Cleanup and Chunking tests pass; user-edited explicit scene separators are reclassified without promoting ambiguous punctuation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q seven focused modules",
+      "created_at": "2026-07-29T06:10:10+00:00",
+      "failure_kind": null,
+      "id": "E-0068",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "126 focused tests pass; deterministic and AI chunks persist starts_after_scene_separator under the strict schema.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q seven focused modules",
+      "created_at": "2026-07-29T06:10:10+00:00",
+      "failure_kind": null,
+      "id": "E-0069",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "126 focused tests pass; edit preserves, insert defaults false, and delete transfers a leading scene boundary forward.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-29T06:12:01+00:00",
+      "failure_kind": null,
+      "id": "E-0070",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
+      "created_at": "2026-07-29T06:13:38+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0071",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "superseded",
+      "summary": "Expanded RED: whitespace-only save after lexical reclassification flattens scene_separator back to body.",
+      "supersede_reason": "The expanded whitespace-only regression failed before the implementation fix and now passes.",
+      "superseded_by": "E-0072"
+    },
+    {
+      "command": "uv run python -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
+      "created_at": "2026-07-29T06:14:35+00:00",
+      "failure_kind": null,
+      "id": "E-0072",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Expanded scene-role check passes for lexical rebuild and subsequent whitespace-only realignment.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m pytest -q seven focused modules",
+      "created_at": "2026-07-29T06:15:07+00:00",
+      "failure_kind": null,
+      "id": "E-0073",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Post-fix focused regression: 126 Cleanup and Chunking tests pass, including whitespace-only role retention.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-29T06:15:34+00:00",
+      "failure_kind": null,
+      "id": "E-0074",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T06:16:09+00:00",
+      "failure_kind": null,
+      "id": "E-0075",
+      "kind": "scan",
+      "path": ".agentic/knowledge/components/Text_Chunking.md",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Documentation audit passed: Text Cleanup documents conservative user-edit reclassification; Text Chunking documents the required leading-boundary flag and manual preservation. No README or index scope changed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "aegis gates run --name lint; uv run python -m py_compile changed services",
+      "created_at": "2026-07-29T06:16:10+00:00",
+      "failure_kind": null,
+      "id": "E-0076",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed Python files pass Ruff and compilation; manual codestyle review confirms local module/callable version metadata and focused formatting.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "git diff --check and scoped diff review",
+      "created_at": "2026-07-29T06:16:10+00:00",
+      "failure_kind": null,
+      "id": "E-0077",
+      "kind": "diff",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Diff review found no checkpoint change, UI change, compatibility branch, weakened assertion, secret, unrelated source edit, or extra persistence artifact; git diff --check passes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -c read-only runtime role projection",
+      "created_at": "2026-07-29T06:16:11+00:00",
+      "failure_kind": null,
+      "id": "E-0078",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Read-only Command Performance replay rebuilds 212 user-edited paragraphs, reclassifies all 7 scene separators, and identifies all 7 following scene boundaries.",
+      "supersede_reason": null,
+      "superseded_by": null
     }
   ],
   "intent": {
@@ -1845,6 +2188,36 @@
       ],
       "id": "S-0014",
       "statement": "Chunking treats recognized scene-separator artifacts as non-narratable hard boundaries, omits them from generated chunk text, and emits no separator-only chunk.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Narrative A / * * * / Narrative B marks only the Narrative B chunk true."
+      ],
+      "id": "S-0016",
+      "statement": "Every narratable chunk persists whether it starts after one or more omitted scene separators.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Deleting a marked chunk transfers its leading scene boundary to the next surviving chunk."
+      ],
+      "id": "S-0017",
+      "statement": "Manual Chunking edits and deletions preserve leading scene-separator boundary metadata.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "A paragraph containing only * * * becomes scene_separator; ... remains body."
+      ],
+      "id": "S-0015",
+      "statement": "User-edited Cleanup reconstruction classifies conservative explicit scene-separator forms without promoting ambiguous punctuation.",
       "status": "accepted",
       "tag": "behavior",
       "threshold": null

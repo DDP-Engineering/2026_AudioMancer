@@ -521,15 +521,6 @@ CLEANED_TEXT_FILE_NAME = "clean_text.txt"
 # @brief Authoritative AI-assisted cleanup document file name.
 CLEANUP_DOCUMENT_FILE_NAME = "cleanup.json"
 
-# @brief File name used for persisted cleaned-text paragraph metadata.
-CLEANED_TEXT_METADATA_FILE_NAME = "clean_text_metadata.json"
-
-# @brief File name used for cleanup metadata.
-CLEANUP_REPORT_FILE_NAME = "cleanup_report.json"
-
-# @brief File name used for persisted cleanup runtime state.
-CLEANUP_STATE_FILE_NAME = "cleanup_state.json"
-
 # @brief File name used for the persisted chunk list artifact.
 CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
 

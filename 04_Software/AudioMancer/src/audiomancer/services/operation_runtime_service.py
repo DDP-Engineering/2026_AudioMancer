@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.15.2
+@version 0.15.3
 """
 
 # IMPORTS
@@ -62,13 +62,15 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     "cleanup": (
         config.CLEANED_TEXT_FILE_NAME,
         config.CLEANUP_DOCUMENT_FILE_NAME,
-        config.CLEANED_TEXT_METADATA_FILE_NAME,
-        config.CLEANUP_REPORT_FILE_NAME,
-        config.CLEANUP_STATE_FILE_NAME,
+        # Reset-only legacy sidecars; Cleanup never reads or writes them.
+        "clean_text_metadata.json",
+        "cleanup_report.json",
+        "cleanup_state.json",
     ),
     "chunking": (
         config.CHUNK_ARTIFACT_FILE_NAME,
-        # Cleanup-only legacy sidecars; Chunking never reads or writes them.
+        # Reset-only obsolete sidecars; Chunking never reads them.
+        "chunking_checkpoint.json",
         "chunking_report.json",
         "chunking_state.json",
     ),

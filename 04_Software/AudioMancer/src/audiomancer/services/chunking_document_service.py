@@ -12,8 +12,8 @@
 @details Validates and atomically stores the one supported `chunks_text.json`
          root-object contract and exposes defensive derived views to callers.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.1.0
+@date 2026-07-29
+@version 0.2.0
 """
 
 # IMPORTS
@@ -53,6 +53,7 @@ CHUNK_FIELDS = frozenset(
         "cleanup_joined_across_page_break",
         "cleanup_warning_flags",
         "cleanup_role",
+        "starts_after_scene_separator",
     }
 )
 TOKEN_USAGE_FIELDS = frozenset({"input_tokens", "output_tokens", "total_tokens", "usage_available"})
@@ -73,7 +74,7 @@ ChunkPayload = dict[str, object]
 class IncompatibleChunkingDocumentError(ValueError):
     """
     @brief      Signal that persisted Chunking data requires Reset Chunking.
-    @version    0.1.0
+    @version    0.2.0
     """
 
 
@@ -384,6 +385,8 @@ def _validate_chunk(chunk: object, expected_index: int, seen_ids: set[str]) -> N
         "footnote",
     }:
         raise ValueError("invalid cleanup role")
+    if not isinstance(chunk["starts_after_scene_separator"], bool):
+        raise TypeError("invalid scene-separator boundary flag")
 
 
 def _chapter_count(chunks: list[ChunkPayload]) -> int:

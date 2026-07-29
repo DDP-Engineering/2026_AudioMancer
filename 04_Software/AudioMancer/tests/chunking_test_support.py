@@ -11,8 +11,8 @@
 @brief Shared strict Chunking-document fixtures for AudioMancer tests.
 @details Builds compact, exact root-object fixtures without production-service coupling.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.1.0
+@date 2026-07-29
+@version 0.2.0
 """
 
 # IMPORTS
@@ -229,6 +229,7 @@ def _normalize_chunk(item: dict[str, object], sequence_index: int) -> dict[str, 
         "cleanup_joined_across_page_break": bool(item.get("cleanup_joined_across_page_break", False)),
         "cleanup_warning_flags": list(item.get("cleanup_warning_flags", [])),
         "cleanup_role": str(item.get("cleanup_role") or "body"),
+        "starts_after_scene_separator": bool(item.get("starts_after_scene_separator", False)),
     }
 
 

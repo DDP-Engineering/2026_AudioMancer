@@ -13,8 +13,8 @@
          checkpoints, source-only rendering, publication, and manual edits
          through cleanup.json plus clean_text.txt.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.4.0
+@date 2026-07-29
+@version 0.5.0
 """
 
 from __future__ import annotations
@@ -440,18 +440,21 @@ def save_user_cleaned_text(
             for item in document["paragraphs"]
             for unit_id in item.get("source_unit_ids", [])
         ]
-        roles = [
-            str(item.get("role") or "body")
-            for item in document["paragraphs"]
-        ]
-        for record in runtime_records:
+        previous_records = list(document["paragraphs"])
+        roles = [str(item.get("role") or "body") for item in previous_records]
+        roles_align_by_index = len(runtime_records) == len(previous_records)
+        for record_index, record in enumerate(runtime_records):
             record["source_unit_ids"] = list(dict.fromkeys(source_ids))
             record["provenance_available"] = True
-            record["role"] = (
-                next((role for role in roles if role != "body"), "body")
-                if len(runtime_records) == 1
-                else "body"
-            )
+            classified_role = str(record.get("role") or "body")
+            if classified_role == "scene_separator":
+                record["role"] = classified_role
+            elif roles_align_by_index:
+                record["role"] = roles[record_index]
+            elif len(runtime_records) == 1:
+                record["role"] = next((role for role in roles if role != "body"), "body")
+            else:
+                record["role"] = "body"
             record["reason_codes"] = ["user_whitespace_realign"]
         document["paragraphs"] = (
             cleanup_metadata_service.persisted_paragraph_records(runtime_records)

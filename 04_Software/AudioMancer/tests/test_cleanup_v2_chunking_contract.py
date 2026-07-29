@@ -12,8 +12,8 @@
 @details Verifies hash/status gating, role propagation, semantic cut priority,
          and the sole permitted mid-sentence overflow fallback.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.1.0
+@date 2026-07-29
+@version 0.2.0
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ def test_chunking_rejects_clean_text_hash_mismatch(tmp_path) -> None:
 
 
 def test_chunking_slices_cleanup_paragraph_offsets_and_propagates_roles(tmp_path) -> None:
-    """Cover S-0011/S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
+    """Cover S-0011/S-0014/S-0016 and the Cleanup-Chunking requirements."""
     cleaned_text = (
         "CHAPTER ONE\n\n"
         "The opening paragraph ends here.\n\n"
@@ -103,6 +103,11 @@ def test_chunking_slices_cleanup_paragraph_offsets_and_propagates_roles(tmp_path
         "heading",
         "body",
         "verse",
+    ]
+    assert [item["starts_after_scene_separator"] for item in payload["chunks"]] == [
+        False,
+        False,
+        True,
     ]
     assert payload["chunks"][-1]["text"] == paragraphs[-1][0]
     assert "\n".join(item["text"] for item in payload["chunks"]).replace("\n\n", "\n") == (
@@ -188,6 +193,15 @@ def test_chunking_omits_scene_separator_artifacts_and_preserves_conservative_pun
         "—",
         "Closing narration.",
     ]
+    assert [item["starts_after_scene_separator"] for item in payload["chunks"]] == [
+        False,
+        True,
+        True,
+        False,
+        False,
+        False,
+        True,
+    ]
 
 
 def test_chunking_rejects_separator_only_cleanup(tmp_path) -> None:
@@ -240,6 +254,7 @@ def test_chunking_resume_counts_processed_separator_without_persisting_it(
         "Closing narration.",
     ]
     assert [item["sequence_index"] for item in payload["chunks"]] == [1, 2]
+    assert [item["starts_after_scene_separator"] for item in payload["chunks"]] == [False, True]
 
 
 @pytest.mark.parametrize(

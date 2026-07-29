@@ -23,7 +23,11 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, narrator_profile_generation_service
+from audiomancer.services import (
+    narrator_definition_service,
+    narrator_profile_generation_service,
+    source_ledger_service,
+)
 from audiomancer.services.operation_runtime_service import OperationCancelledError
 from chunking_test_support import build_chunking_document
 
@@ -784,6 +788,43 @@ def test_narrator_profile_generation_falls_back_to_clean_text(
 
     assert report_payload["source"] == narrator_profile_generation_service.SOURCE_CLEANED_TEXT
     assert len(narrator_definition_service.load_profiles(project_root)) == 2
+
+
+def test_narrator_source_resolution_names_cleanup_json_for_cleanup_metadata(tmp_path) -> None:
+    """
+    @brief      Verify REQ-FUNC-c9024a84 names cleanup.json as the Cleanup metadata backing path.
+    @param[in]  tmp_path Temporary path fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    cleaned_text = "First cleaned paragraph.\n\nSecond cleaned paragraph."
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(cleaned_text, encoding="utf-8")
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "output_hash": source_ledger_service.text_sha256(cleaned_text),
+                "paragraphs": [
+                    {"paragraph_id": "paragraph-000001", "output_start": 0, "output_end": 24},
+                    {"paragraph_id": "paragraph-000002", "output_start": 26, "output_end": len(cleaned_text)},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _units, source_token, source_path = narrator_profile_generation_service._resolve_source_units(
+        project_root,
+        "en",
+    )
+
+    assert source_token == narrator_profile_generation_service.SOURCE_CLEANED_METADATA
+    assert source_path == project_root / config.CLEANUP_DOCUMENT_FILE_NAME
 
 
 def test_narrator_profile_generation_completes_in_authoritative_document_only(

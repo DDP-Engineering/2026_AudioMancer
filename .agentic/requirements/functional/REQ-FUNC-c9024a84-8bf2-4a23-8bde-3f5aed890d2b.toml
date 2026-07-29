@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-c9024a84-8bf2-4a23-8bde-3f5aed890d2b"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Narrator profile source resolution shall return cleanup.json as the backing artifact path whenever its analysis units are resolved from Cleanup metadata."
+rationale = "The resolver must name the artifact it actually read; Cleanup V2 builds those units from cleanup.json and clean_text.txt, and the retired clean_text_metadata.json is never written. The returned path is currently unused by the caller, so this is a naming-truth contract rather than a persisted-state contract."
+verification = "Automated test: the source resolver returns the cleanup.json path and the cleaned-metadata source token for a project holding only Cleanup artifacts."
+spec_ref = ""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_source_resolution_names_cleanup_json_for_cleanup_metadata",
+]
+
+created_on = "2026-07-29T12:35:07Z"
+last_updated = "2026-07-29T12:52:46Z"

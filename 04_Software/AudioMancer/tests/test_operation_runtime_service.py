@@ -13,7 +13,7 @@
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.0
+@version 0.9.1
 """
 
 # IMPORTS
@@ -327,7 +327,7 @@ def test_project_relative_path_resolver_rejects_escapes(tmp_path) -> None:
 
 def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None:
     """
-    @brief      Verify one operation reset clears known flat artifacts without deleting unrelated root files.
+    @brief      Verify S-0003 clears known flat artifacts without deleting unrelated root files.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -339,8 +339,10 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
     (project_root / "story.txt").write_text("raw", encoding="utf-8")
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("raw", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("clean", encoding="utf-8")
-    (project_root / config.CLEANUP_REPORT_FILE_NAME).write_text("{}", encoding="utf-8")
+    (project_root / "cleanup_report.json").write_text("{}", encoding="utf-8")
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
+    chunking_checkpoint_path = project_root / "chunking_checkpoint.json"
+    chunking_checkpoint_path.write_text("{}", encoding="utf-8")
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / "notes.txt").write_text("keep", encoding="utf-8")
 
@@ -354,8 +356,9 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
     assert (project_root / "notes.txt").read_text(encoding="utf-8") == "keep"
     assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file()
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
+    assert (project_root / "cleanup_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
+    assert chunking_checkpoint_path.exists() is False
     assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
 
 

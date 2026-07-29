@@ -83,7 +83,7 @@ def test_narrator_state_service_ignores_legacy_cleanup_report_language(tmp_path)
     @version    0.5.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateCleanupLanguageProject")
-    cleanup_report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_REPORT_FILE_NAME
+    cleanup_report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "cleanup_report.json"
     cleanup_report_path.parent.mkdir(parents=True, exist_ok=True)
     cleanup_report_path.write_text(
         json.dumps({"detected_language": "it"}, indent=2) + "\n",

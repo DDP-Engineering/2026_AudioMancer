@@ -342,8 +342,8 @@ def test_workflow_impact_rejects_legacy_cleanup_without_source_ledger(tmp_path) 
             "page_count": None,
         },
     )
-    _write_json(project_root / config.CLEANUP_STATE_FILE_NAME, _operation_state("completed", 1, 1))
-    _write_json(project_root / config.CLEANUP_REPORT_FILE_NAME, {"warning_count": 0})
+    _write_json(project_root / "cleanup_state.json", _operation_state("completed", 1, 1))
+    _write_json(project_root / "cleanup_report.json", {"warning_count": 0})
 
     with pytest.raises(ValueError, match="could not be refreshed"):
         workflow_impact_service.refresh_manifest_from_artifacts(project_root)

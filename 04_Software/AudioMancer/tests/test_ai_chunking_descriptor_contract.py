@@ -13,8 +13,8 @@
          behavior, cursor advancement, final closure, reporting, and checkpoint
          resume.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-16
-@version 0.2.0
+@date 2026-07-29
+@version 0.3.0
 """
 
 # IMPORTS
@@ -452,7 +452,7 @@ def test_invalid_window_fallback_preserves_explicit_scene_separator_boundaries(
 
 
 def test_ai_chunking_omits_and_splits_around_scene_separator_artifacts() -> None:
-    """Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
+    """Cover S-0014/S-0016 and the scene-separator Chunking requirements."""
     records = _records(
         "* * *",
         "Opening narration.",
@@ -483,6 +483,7 @@ def test_ai_chunking_omits_and_splits_around_scene_separator_artifacts() -> None
         "chunk-0003",
     ]
     assert all(chunk["cleanup_role"] == "body" for chunk in chunks)
+    assert [chunk["starts_after_scene_separator"] for chunk in chunks] == [True, True, True]
 
 
 def test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage(tmp_path, monkeypatch) -> None:

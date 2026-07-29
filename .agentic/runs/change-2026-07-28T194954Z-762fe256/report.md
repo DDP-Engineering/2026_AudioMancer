@@ -31,6 +31,9 @@
 - `S-0012` [property] accepted: The deterministic oracle meets the measured benchmark and format-specific structure thresholds.
 - `S-0013` [property] accepted: The implementation passes focused and full automated gates without publication.
 - `S-0014` [behavior] accepted: Chunking treats recognized scene-separator artifacts as non-narratable hard boundaries, omits them from generated chunk text, and emits no separator-only chunk.
+- `S-0016` [behavior] accepted: Every narratable chunk persists whether it starts after one or more omitted scene separators.
+- `S-0017` [behavior] accepted: Manual Chunking edits and deletions preserve leading scene-separator boundary metadata.
+- `S-0015` [behavior] accepted: User-edited Cleanup reconstruction classifies conservative explicit scene-separator forms without promoting ambiguous punctuation.
 
 ## Checks
 - `CHK-CLEANUP-CORE` green; cites S-0001, S-0002, S-0003, S-0004, S-0005, S-0007, S-0008, S-0009, S-0013
@@ -54,6 +57,9 @@
 - `CHK-CHUNKING-STRUCTURAL-FALLBACK` green; cites S-0011
 - `CHK-CHUNKING-PUNCTUATION-ANCHOR` green; cites S-0011
 - `CHK-CHUNKING-SEPARATOR-MATERIALIZATION` green; cites S-0014
+- `CHK-CLEANUP-USER-SCENE-ROLE` green; cites S-0015
+- `CHK-CHUNKING-MANUAL-SCENE-BOUNDARY` green; cites S-0017
+- `CHK-CHUNKING-SCENE-BOUNDARY` green; cites S-0016
 
 ## Evidence
 - `E-0001` test-run/fail (expected-red): Cleanup core contract is red before implementation: 20 failed. Failures identify the old versioned root, missing typed boundaries/roles, join_without_space, absent resume checkpoints, unsupported-script acceptance, old manual-edit structure, and missing runtime quality report.
@@ -119,6 +125,21 @@
 - `E-0061` gate/pass: lint: uv run --directory 04_Software/AudioMancer ruff check .
 - `E-0062` scan/pass: Manual documentation and diff review passed: Text Cleanup/Chunking describe the centralized conservative classifier, non-narratable hard boundaries, unchanged UI/persistence, and focused validation; no broad README change is required.
 - `E-0063` test-run/pass: Read-only runtime replay on 09_Others/Command Performance: 10 existing chunks contain 7 recognized separator paragraphs; separator-aware materialization projects 9 narratable chunks.
+- `E-0064` test-run/fail (expected-red): Focused RED: user-edited explicit scene separator remains body before implementation.
+- `E-0065` test-run/fail (expected-red): Focused RED: manual chunk records cannot load or preserve the new boundary field before implementation.
+- `E-0066` test-run/fail (expected-red): Focused RED: AI and deterministic chunks omit starts_after_scene_separator and strict schema rejects the new field before implementation.
+- `E-0067` test-run/pass: 126 focused Cleanup and Chunking tests pass; user-edited explicit scene separators are reclassified without promoting ambiguous punctuation.
+- `E-0068` test-run/pass: 126 focused tests pass; deterministic and AI chunks persist starts_after_scene_separator under the strict schema.
+- `E-0069` test-run/pass: 126 focused tests pass; edit preserves, insert defaults false, and delete transfers a leading scene boundary forward.
+- `E-0070` gate/pass: lint: uv run --directory 04_Software/AudioMancer ruff check .
+- `E-0071` test-run/fail (expected-red): Expanded RED: whitespace-only save after lexical reclassification flattens scene_separator back to body.
+- `E-0072` test-run/pass: Expanded scene-role check passes for lexical rebuild and subsequent whitespace-only realignment.
+- `E-0073` test-run/pass: Post-fix focused regression: 126 Cleanup and Chunking tests pass, including whitespace-only role retention.
+- `E-0074` gate/pass: lint: uv run --directory 04_Software/AudioMancer ruff check .
+- `E-0075` scan/pass: Documentation audit passed: Text Cleanup documents conservative user-edit reclassification; Text Chunking documents the required leading-boundary flag and manual preservation. No README or index scope changed.
+- `E-0076` scan/pass: Changed Python files pass Ruff and compilation; manual codestyle review confirms local module/callable version metadata and focused formatting.
+- `E-0077` diff/pass: Diff review found no checkpoint change, UI change, compatibility branch, weakened assertion, secret, unrelated source edit, or extra persistence artifact; git diff --check passes.
+- `E-0078` test-run/pass: Read-only Command Performance replay rebuilds 212 user-edited paragraphs, reclassifies all 7 scene separators, and identifies all 7 following scene boundaries.
 
 ## Invariants
 - `INV-1` PASS (blocking): All accepted/realized spec items have checks.

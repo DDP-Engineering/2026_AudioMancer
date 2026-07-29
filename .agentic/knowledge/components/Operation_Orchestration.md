@@ -17,7 +17,8 @@ worker lifecycle used by all long-running workflow pages.
   initialized for them and a missing document reads as not-started.
 - Calculate bounded progress payloads and provide cooperative cancellation.
 - Define ordered full-reset and selective-invalidation impacts, preserve stable
-  identities, and delete only safe, targeted audio/assembly artifacts.
+  identities, and delete only operation-owned root artifacts, AI logs, and safe
+  targeted audio/assembly files.
 - Run worker callables on a dedicated `QThread`, marshal progress/success/
   failure/cancellation back to the UI thread, and safely handle shutdown.
 - Present the modal operation-progress dialog, including localized messages,
@@ -87,13 +88,21 @@ usage. Selective invalidation identifies blocks by stable identity fields, not
 display sequence numbers. Artifact collection/deletion rejects paths outside
 the active project and requires exact affected identities where appropriate.
 
+Chunking reset owns `chunks_text.json`, the obsolete
+`chunking_checkpoint.json`, `chunking_report.json`, `chunking_state.json`, and
+matching `log_ai_chunking_*.log` files. When reset begins at Chunking with
+`include_current=True`, the same allowlisted deletion proceeds through every
+configured downstream operation; Extraction and Cleanup artifacts are outside
+that scope.
+
 ## 7. Workflow Integration
 
 Text extraction/cleanup, chunking, translation, character, voice, speech, TTS,
 and assembly controllers use this component to start/cancel work and invalidate
 downstream outputs. The App Shell invokes its shutdown path. Project Lifecycle
-owns the manifest itself; this component projects individual operation state
-into it after an operation writes its artifacts.
+owns the manifest itself, invokes the scoped reset when project-open detects an
+incompatible Chunking document, and projects individual operation state into
+the manifest after an operation writes its artifacts.
 
 ## 8. Usage
 
@@ -111,7 +120,7 @@ Primary automated coverage:
 
 - `test_operation_runtime_service.py` covers progress, common state/artifact
   IO, malformed/missing data handling, path containment, default state, and
-  reset preservation.
+  reset preservation, including obsolete Chunking checkpoint deletion.
 - `test_workflow_impact_service.py` and `test_workflow_order_consistency.py`
   cover ordering, stable identity, full/selective reset, safe artifact deletion,
   assembly reset, and manifest refresh.

@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-25
-@version 0.9.7
+@version 0.10.0
 """
 
 # IMPORTS
@@ -115,7 +115,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-25
-    @version    0.3.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_folder = QFileDialog.getExistingDirectory(
@@ -147,6 +147,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
             window,
             ui_state_service.translate("status.project_repaired", current_language),
         )
+        show_project_open_recovery(window, open_result, current_language)
         return
 
     project_root = Path(str(open_result["project_root"]))
@@ -155,6 +156,31 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.project_opened", current_language),
+    )
+    show_project_open_recovery(window, open_result, current_language)
+
+
+def show_project_open_recovery(
+    window: "MainWindow",
+    open_result: dict[str, object],
+    language: str,
+) -> None:
+    """
+    @brief      Show one post-activation message for automatic project recovery.
+    @param[in]  window Active main window shell.
+    @param[in]  open_result Tagged project-open result dictionary.
+    @param[in]  language Current UI language code.
+    @return     None.
+    @exception  None
+    @version    0.1.0
+    """
+    recovered_operations = open_result.get("recovered_operations")
+    if not isinstance(recovered_operations, list) or "chunking" not in recovered_operations:
+        return
+    QMessageBox.information(
+        window,
+        ui_state_service.translate("dialog.project_recovery_title", language),
+        ui_state_service.translate("project.chunking_self_heal_message", language),
     )
 
 

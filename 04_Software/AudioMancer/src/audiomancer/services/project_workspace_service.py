@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.1.3
+@version    2.2.0
 """
 
 # IMPORTS
@@ -24,7 +24,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from audiomancer import config
-from audiomancer.services import chunking_document_service, text_extraction_service
+from audiomancer.services import (
+    chunking_document_service,
+    operation_runtime_service,
+    text_extraction_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     load_project_json_artifact as _load_json_artifact,
@@ -286,10 +290,25 @@ def open_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root = resolve_project_root(selected_path)
-    return validate_project(project_root)
+    try:
+        return validate_project(project_root)
+    except chunking_document_service.IncompatibleChunkingDocumentError as error:
+        if isinstance(error.__cause__, OSError):
+            raise error.__cause__ from error
+        _reset_incompatible_chunking_data(project_root)
+        open_result = validate_project(project_root)
+        # Validation may materialize optional downstream defaults; recovery
+        # must leave every Chunking-dependent artifact reset.
+        operation_runtime_service.reset_operation_data(
+            project_root,
+            "chunking",
+            include_current=True,
+        )
+        open_result["recovered_operations"] = ["chunking"]
+        return open_result
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -339,6 +358,36 @@ def repair_project(
 
 
 # HELPER FUNCTIONS
+
+
+def _reset_incompatible_chunking_data(project_root: Path) -> None:
+    """
+    @brief      Reset incompatible Chunking data and every downstream operation.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  OSError Raised when scoped artifacts or the manifest cannot be updated.
+    @version    0.1.0
+    """
+    manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    _validate_manifest_identity_fields(payload)
+    _validate_project_scoped_manifest_paths(payload, project_root)
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "chunking",
+        include_current=True,
+    )
+    reset_manifest = _build_repaired_manifest(payload, "text_chunking_ready")
+    reset_operations = dict(reset_manifest["operations"])
+    default_operations = _build_default_operation_states()
+    for operation_kind in operation_runtime_service.downstream_operation_kinds(
+        "chunking",
+        include_current=True,
+    ):
+        reset_operations[operation_kind] = default_operations[operation_kind]
+    reset_manifest["operations"] = reset_operations
+    save_manifest(reset_manifest, project_root)
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -510,7 +559,14 @@ def _build_extraction_reset_result(
     payload: dict[str, object],
     project_root: Path,
 ) -> ProjectOpenResult | None:
-    """Build a destructive reset request for legacy or incompatible Extraction data."""
+    """
+    @brief      Build a destructive reset request for incompatible Extraction data.
+    @param[in]  payload Parsed project manifest payload.
+    @param[in]  project_root Active project root folder.
+    @return     Tagged reset request or `None` when Extraction is compatible.
+    @exception  None
+    @version    0.1.0
+    """
     try:
         text_extraction_service.load_extraction_metadata(project_root)
     except text_extraction_service.ExtractionMetadataError as exc:
@@ -751,7 +807,14 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
 
 
 def _cleanup_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
-    """Verify the single Cleanup V2 document and cleaned-text artifact."""
+    """
+    @brief      Verify the single Cleanup V2 document and cleaned-text artifact.
+    @param[in]  project_root Active project root folder.
+    @param[out] warnings Non-destructive repair warnings accepted for parity.
+    @return     Completed operation evidence payload or `None`.
+    @exception  None
+    @version    0.1.0
+    """
     _ = warnings
     from audiomancer.services import text_cleanup_service
 

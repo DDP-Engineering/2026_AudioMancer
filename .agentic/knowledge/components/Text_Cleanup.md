@@ -109,6 +109,12 @@ The log is operational diagnostics, not Cleanup state. Cleanup has no report,
 state, clean-text metadata, schema-version, compatibility, or migration
 sidecar. The current unversioned contract is the only accepted contract.
 
+`config` therefore defines no constant for `cleanup_report.json`,
+`cleanup_state.json`, or `clean_text_metadata.json`. Reset still deletes those
+three names as bare string literals so pre-V2 project folders are cleaned, and
+`test_retired_cleanup_artifact_config_constants_are_gone` keeps the constants
+from returning.
+
 ## 6. Data Contracts
 
 `source_ledger.json` contains exact half-open codepoint intervals for every
@@ -175,7 +181,9 @@ Review and manual editing are optional rather than approval gates. Saving an
 operator edit updates the output hash, marks `user_modified`, and invalidates
 Chunking and later artifacts. A whitespace-only edit realigns typed structure
 where possible; a lexical edit publishes minimal `user_edited` paragraph
-structure without claiming source provenance.
+structure without claiming source provenance. Rebuilt user-edited paragraphs
+conservatively reclassify explicit marker-only scene separators while ambiguous
+punctuation and lexical content remain `body`.
 
 The existing Cleanup page layout and controls remain unchanged. The status pane
 projects running, paused, invalid, and completed state from `cleanup.json`;

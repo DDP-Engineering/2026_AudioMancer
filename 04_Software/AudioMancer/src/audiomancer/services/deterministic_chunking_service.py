@@ -13,8 +13,8 @@
          and atomically checkpoints resumable lifecycle and chunk data in the
          strict authoritative `chunks_text.json` document.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.6.0
+@date 2026-07-29
+@version 0.7.0
 """
 
 # IMPORTS
@@ -150,7 +150,14 @@ def chunk_text(
             raise_if_cancelled(cancel_requested)
             paragraph_record = paragraph_records[chunk_index]
             if _is_narratable_record(paragraph_record):
-                chunk = _build_chunk_payload(len(chunks) + 1, paragraph_record)
+                chunk = _build_chunk_payload(
+                    len(chunks) + 1,
+                    paragraph_record,
+                    starts_after_scene_separator=_starts_after_scene_separator(
+                        paragraph_records,
+                        chunk_index,
+                    ),
+                )
                 chunks.append(chunk)
                 chapter_count, last_chapter_label = _update_chapter_count(
                     chapter_count,
@@ -250,6 +257,16 @@ def _is_narratable_record(paragraph_record: dict[str, object]) -> bool:
     )
 
 
+def _starts_after_scene_separator(
+    paragraph_records: list[dict[str, object]],
+    paragraph_index: int,
+) -> bool:
+    """Return whether one narratable paragraph follows an omitted scene separator."""
+    return paragraph_index > 0 and not _is_narratable_record(
+        paragraph_records[paragraph_index - 1]
+    )
+
+
 def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
     """
     @brief      Build the paragraph records.
@@ -257,7 +274,7 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     if project_root is not None:
         paragraph_records = cleanup_metadata_service.load_completed_paragraph_records(
@@ -281,6 +298,8 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
 def _build_chunk_payload(
     sequence_index: int,
     paragraph_record: dict[str, object],
+    *,
+    starts_after_scene_separator: bool = False,
 ) -> ChunkPayload:
     """
     @brief      Build the chunk payload.
@@ -289,7 +308,7 @@ def _build_chunk_payload(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     return {
         "chunk_id": f"chunk-{sequence_index:04d}",
@@ -299,6 +318,7 @@ def _build_chunk_payload(
         "cleanup_joined_across_page_break": bool(paragraph_record.get("joined_across_page_break", False)),
         "cleanup_warning_flags": list(paragraph_record.get("warning_flags", [])),
         "cleanup_role": str(paragraph_record.get("role") or "body"),
+        "starts_after_scene_separator": starts_after_scene_separator,
     }
 
 

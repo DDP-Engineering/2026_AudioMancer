@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.5
+@version 1.2.0
 """
 
 # IMPORTS
@@ -26,15 +26,25 @@ import pytest
 from audiomancer import config
 from audiomancer.services import (
     audio_blocks_service,
+    chunking_document_service,
     narrator_definition_service,
     project_export_service,
     project_workspace_service,
     speech_blocks_service,
+    text_extraction_service,
 )
+from chunking_test_support import write_cleanup_input
 
 
 def _write_audio_blocks_document_fixture(project_root, *, status="completed", speech_block_id="sb-1"):
-    """Persist a single-block Audio Blocks document owning a derived generated WAV."""
+    """
+    @brief      Persist a single-block Audio Blocks document fixture.
+    @param[in]  project_root Active project root folder.
+    @param[in]  status Document lifecycle status.
+    @param[in]  speech_block_id Source Speech Blocks identifier.
+    @return     None.
+    @version    0.1.0
+    """
     audio_blocks_service.write_audio_blocks_document(
         project_root,
         {
@@ -58,7 +68,16 @@ def _write_audio_blocks_document_fixture(project_root, *, status="completed", sp
 
 
 def _write_speech_blocks_document(project_root, blocks, *, status="completed", kind="original", language="en"):
-    """Persist a valid single Speech Blocks document for workspace fixtures."""
+    """
+    @brief      Persist a valid single Speech Blocks document fixture.
+    @param[in]  project_root Active project root folder.
+    @param[in]  blocks Speech block payloads.
+    @param[in]  status Document lifecycle status.
+    @param[in]  kind Source-kind token.
+    @param[in]  language Source language code.
+    @return     None.
+    @version    0.1.0
+    """
     speech_blocks_service.write_speech_blocks_document(
         project_root,
         {
@@ -193,6 +212,126 @@ def test_open_project_resolves_flat_project_root(tmp_path) -> None:
     assert open_result["status"] == "ok"
     assert open_result["project_root"] == created_root
     assert open_result["manifest"]["display_name"] == "Book5_CAL_CAL"
+
+
+def test_open_project_self_heals_incompatible_chunking_and_downstream(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify S-0001 through S-0003 and scoped Chunking self-heal.
+    @details    Covers REQ-FUNC-03bed2a0-5150-4cd4-a5be-a1f23ff94db2 and
+                REQ-FUNC-25286e0a-41af-4f78-89ba-0920d87dc03c.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkingSelfHeal", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story source.", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-07-29T07:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    text_extraction_service.extract_text(project_root, manifest)
+    extracted_path = project_root / config.EXTRACTED_TEXT_FILE_NAME
+    extraction_metadata_path = project_root / config.EXTRACTION_METADATA_FILE_NAME
+    extracted_before = extracted_path.read_bytes()
+    extraction_metadata_before = extraction_metadata_path.read_bytes()
+    cleanup_document_path = write_cleanup_input(project_root, "Cleaned story.")
+    cleaned_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    cleanup_document_before = cleanup_document_path.read_bytes()
+    cleaned_before = cleaned_path.read_bytes()
+    manifest["current_stage"] = "audio_assembly_ready"
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["mode"] = "manual_edit"
+    for operation_kind in config.WORKFLOW_OPERATION_ORDER[2:]:
+        manifest["operations"][operation_kind]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    reset_file_names = (
+        config.CHUNK_ARTIFACT_FILE_NAME,
+        "chunking_checkpoint.json",
+        "chunking_state.json",
+        "chunking_report.json",
+        config.TRANSLATED_CHUNKS_FILE_NAME,
+        config.CHARACTERS_DOCUMENT_FILE_NAME,
+        config.NARRATOR_VOICE_FILE_NAME,
+        config.CHARACTER_VOICES_TARGETS_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
+        config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
+        config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+        config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
+    )
+    for file_name in reset_file_names:
+        (project_root / file_name).write_text("{}\n", encoding="utf-8")
+    chunking_log_path = project_root / f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}chunking_fixture.log"
+    chunking_log_path.write_text("log", encoding="utf-8")
+
+    original_validate_project = project_workspace_service.validate_project
+    validation_calls = []
+
+    def _tracked_validate_project(candidate_root):
+        """Track project-validation attempts for the bounded retry assertion."""
+        validation_calls.append(Path(candidate_root))
+        return original_validate_project(candidate_root)
+
+    monkeypatch.setattr(project_workspace_service, "validate_project", _tracked_validate_project)
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert validation_calls == [project_root, project_root]
+    assert open_result["status"] == "ok"
+    assert open_result["recovered_operations"] == ["chunking"]
+    assert open_result["manifest"]["current_stage"] == "text_chunking_ready"
+    assert open_result["manifest"]["operations"]["cleanup"]["status"] == "completed"
+    for operation_kind in config.WORKFLOW_OPERATION_ORDER[2:]:
+        assert open_result["manifest"]["operations"][operation_kind]["status"] == "not_started"
+    assert source_path.read_text(encoding="utf-8") == "Story source."
+    assert extracted_path.read_bytes() == extracted_before
+    assert extraction_metadata_path.read_bytes() == extraction_metadata_before
+    assert cleanup_document_path.read_bytes() == cleanup_document_before
+    assert cleaned_path.read_bytes() == cleaned_before
+    assert all(not (project_root / file_name).exists() for file_name in reset_file_names)
+    assert not chunking_log_path.exists()
+
+
+def test_open_project_propagates_chunking_io_error_without_reset(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify S-0004 and REQ-FUNC-810d9787-dc4d-4ed6-8b7e-e746fefdf658.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("ChunkingIoFailure", tmp_path)
+    chunking_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    chunking_path.write_text("{}\n", encoding="utf-8")
+    downstream_path = project_root / config.TRANSLATED_CHUNKS_FILE_NAME
+    downstream_path.write_text("{}\n", encoding="utf-8")
+
+    def _raise_permission_error(_project_root):
+        """
+        @brief      Raise the compatibility wrapper with an operating-system cause.
+        @version    0.1.0
+        """
+        try:
+            raise PermissionError("chunking read denied")
+        except PermissionError as error:
+            raise chunking_document_service.IncompatibleChunkingDocumentError(
+                "Chunking data is incompatible."
+            ) from error
+
+    monkeypatch.setattr(chunking_document_service, "load_chunking_document", _raise_permission_error)
+
+    with pytest.raises(PermissionError, match="chunking read denied"):
+        project_workspace_service.open_project(project_root)
+
+    assert chunking_path.is_file()
+    assert downstream_path.is_file()
 
 
 def test_open_project_fails_when_manifest_is_missing(tmp_path) -> None:
@@ -579,7 +718,7 @@ def test_validate_project_manifest_accepts_legacy_detailed_operation_payloads() 
         "status": "completed",
         "input_paths": [config.EXTRACTED_TEXT_FILE_NAME],
         "output_paths": [config.CLEANED_TEXT_FILE_NAME],
-        "artifact_paths": [config.CLEANUP_REPORT_FILE_NAME],
+        "artifact_paths": ["cleanup_report.json"],
         "progress_current": 3,
         "progress_total": 3,
         "mode": "ai_assisted",
@@ -938,8 +1077,8 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
             "page_count": None,
         },
     )
-    _write_json(project_root / config.CLEANUP_STATE_FILE_NAME, _operation_state("completed", 1, 1))
-    _write_json(project_root / config.CLEANUP_REPORT_FILE_NAME, {"warning_count": 0})
+    _write_json(project_root / "cleanup_state.json", _operation_state("completed", 1, 1))
+    _write_json(project_root / "cleanup_report.json", {"warning_count": 0})
 
     open_result = project_workspace_service.open_project(project_root)
 
@@ -949,7 +1088,12 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
 
 
 def test_open_project_requires_destructive_reset_for_legacy_extraction(tmp_path) -> None:
-    """Verify legacy Extraction sidecars are never migrated or consumed."""
+    """
+    @brief      Verify legacy Extraction sidecars are never migrated or consumed.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project("LegacyExtractionReset", tmp_path)
     source_path = project_root / "story.txt"
     source_path.write_text("Story", encoding="utf-8")

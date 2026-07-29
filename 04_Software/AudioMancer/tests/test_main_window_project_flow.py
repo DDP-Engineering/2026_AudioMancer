@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.8.0
+@version 1.8.1
 """
 
 # IMPORTS
@@ -116,6 +116,55 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     assert window._current_manifest is not None
     assert window._current_manifest["display_name"] == "Book5_CAL_CAL"
     assert window._home_page._path_label.text() == f"Path: {project_root}"
+
+
+def test_main_window_shows_message_after_chunking_self_heal(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify S-0005 and REQ-UX-c62252e7-2325-40cf-bf01-4701a429fc9d.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("RecoveredChunkingUi", tmp_path)
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root),
+    )
+    monkeypatch.setattr(
+        project_workspace_service,
+        "open_project",
+        lambda _selected_path: {
+            "status": "ok",
+            "project_root": project_root,
+            "manifest": manifest,
+            "recovered_operations": ["chunking"],
+        },
+    )
+    information_calls = []
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    def _capture_information(*args, **kwargs):
+        """Capture the post-activation recovery message."""
+        information_calls.append((window._current_project_root, args, kwargs))
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "information", _capture_information)
+
+    window._action_open_project.trigger()
+
+    assert window._current_project_root == project_root
+    assert len(information_calls) == 1
+    assert information_calls[0][0] == project_root
+    assert "Chunking" in information_calls[0][1][2]
+    assert "Cleanup" in information_calls[0][1][2]
 
 
 def test_main_window_clears_audio_players_when_switching_projects(qtbot, tmp_path, default_settings_payload) -> None:
@@ -247,7 +296,7 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
 
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
+    assert (project_root / "cleanup_state.json").exists() is False
     assert (project_root / "chunking_state.json").exists() is False
     assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
@@ -257,8 +306,8 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     window.set_current_page("text_cleanup")
 
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
+    assert (project_root / "cleanup_state.json").exists() is False
+    assert (project_root / "cleanup_report.json").exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
 
     window.set_current_page("text_chunking")

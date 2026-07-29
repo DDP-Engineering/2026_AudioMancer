@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-UX-c62252e7-2325-40cf-bf01-4701a429fc9d"
+category = "ux"
+status = "Active"
+priority = "Must"
+requirement = "After activating a project recovered from incompatible Chunking data, Home shall display a localized message stating that Chunking and downstream results were reset while Cleanup was preserved."
+rationale = "Operators must understand why derived results disappeared and what must be rerun without being blocked from opening the project."
+verification = "Home flow and English/Romanian localization parity tests passed."
+spec_ref = ""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
+  "04_Software/AudioMancer/tests/test_main_window_project_flow.py::test_main_window_shows_message_after_chunking_self_heal",
+]
+
+created_on = "2026-07-29T08:55:41Z"
+last_updated = "2026-07-29T09:10:28Z"

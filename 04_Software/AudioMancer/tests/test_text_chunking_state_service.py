@@ -12,8 +12,8 @@
 @details Verifies chunking-page notes reflect running and resumable AI chunking
          states and manual selected-chunk edits correctly.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.5.3
+@date 2026-07-29
+@version 0.6.0
 """
 
 # IMPORTS
@@ -329,8 +329,10 @@ def test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist(tmp_path) 
         "cleanup_joined_across_page_break",
         "cleanup_warning_flags",
         "cleanup_role",
+        "starts_after_scene_separator",
     }
     assert chunks[0]["cleanup_role"] == "body"
+    assert chunks[0]["starts_after_scene_separator"] is False
     assert updated_manifest["current_stage"] == "translation_ready"
 
 
@@ -363,7 +365,49 @@ def test_delete_chunk_removes_only_selected_translation_record(tmp_path) -> None
     assert translated_chunks[0]["translated_text"] == "Al doilea"
 
 
-def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
+def test_manual_chunk_mutations_preserve_leading_scene_boundary(tmp_path) -> None:
+    """Cover S-0017 and REQ-FUNC-2048d415-09d9-44bb-94ec-ba5c822ccff5."""
+    project_root, manifest = project_workspace_service.create_project("SceneBoundaryEdit", tmp_path)
+    _write_chunks(
+        project_root,
+        ("First chunk", "Second chunk", "Third chunk"),
+        starts_after_scene_separator=(False, True, False),
+    )
+
+    manifest = text_chunking_state_service.save_chunk_text_edit(
+        project_root,
+        manifest,
+        "chunk-0002",
+        "Edited second chunk",
+    )
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0002")[
+        "starts_after_scene_separator"
+    ] is True
+
+    manifest = text_chunking_state_service.insert_chunk_after_selected(
+        project_root,
+        manifest,
+        "chunk-0001",
+    )
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0004")[
+        "starts_after_scene_separator"
+    ] is False
+
+    text_chunking_state_service.delete_selected_chunk(project_root, manifest, "chunk-0002")
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0003")[
+        "starts_after_scene_separator"
+    ] is True
+
+
+def _write_chunks(
+    project_root,
+    texts: tuple[str, ...],
+    *,
+    starts_after_scene_separator: tuple[bool, ...] | None = None,
+) -> None:
     """
     @brief      Write deterministic chunk fixture records.
     @param[in]  project_root Project root folder.
@@ -374,6 +418,9 @@ def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
     @date       2026-05-04
     @version    0.1.0
     """
+    boundary_flags = starts_after_scene_separator or tuple(False for _text in texts)
+    if len(boundary_flags) != len(texts):
+        raise ValueError("Scene-boundary fixture count must match chunk text count.")
     chunks = [
         {
             "chunk_id": f"chunk-{index:04d}",
@@ -384,6 +431,7 @@ def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
             "chunking_mode": "deterministic",
             "semantic_strategy": None,
             "scene_note": None,
+            "starts_after_scene_separator": boundary_flags[index - 1],
         }
         for index, text in enumerate(texts, start=1)
     ]

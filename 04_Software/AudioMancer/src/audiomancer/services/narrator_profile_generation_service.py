@@ -557,7 +557,7 @@ def _resolve_source_units(
 
     metadata_units = _cleaned_metadata_units(project_root)
     if metadata_units:
-        return metadata_units, SOURCE_CLEANED_METADATA, project_root / config.CLEANED_TEXT_METADATA_FILE_NAME
+        return metadata_units, SOURCE_CLEANED_METADATA, project_root / config.CLEANUP_DOCUMENT_FILE_NAME
 
     cleaned_text_path = project_root / config.CLEANED_TEXT_FILE_NAME
     cleaned_text = cleaned_text_path.read_text(encoding="utf-8") if cleaned_text_path.is_file() else ""

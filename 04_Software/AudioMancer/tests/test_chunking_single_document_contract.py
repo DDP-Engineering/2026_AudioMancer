@@ -12,8 +12,8 @@
 @details Covers S-0001 through S-0007 and REQ-FUNC-048 through
          REQ-FUNC-054 plus REQ-DATA-001 before production implementation.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.1.0
+@date 2026-07-29
+@version 0.2.0
 """
 
 # IMPORTS
@@ -60,6 +60,7 @@ _CHUNK_FIELDS = {
     "cleanup_joined_across_page_break",
     "cleanup_warning_flags",
     "cleanup_role",
+    "starts_after_scene_separator",
 }
 _FORBIDDEN_PERSISTED_FIELDS = {
     "schema_version",
@@ -107,6 +108,18 @@ def test_document_api_round_trips_exact_contract_and_returns_defensive_chunks(tm
     assert service.load_chunks(tmp_path)[0]["text"] == "Chapter I\nOpening paragraph."
     assert service.load_chunking_document(tmp_path / "missing") is None
     assert service.load_chunks(tmp_path / "missing") == []
+
+
+def test_document_api_rejects_non_boolean_scene_boundary_flag(tmp_path) -> None:
+    """Cover S-0016 and REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012."""
+    service = _chunking_document_service()
+    document = _valid_document([_chunk("chunk-0001", 1, "Opening paragraph.")])
+    document["chunks"][0]["starts_after_scene_separator"] = "yes"
+
+    with pytest.raises(service.IncompatibleChunkingDocumentError) as error:
+        service.write_chunking_document(tmp_path, document)
+    assert isinstance(error.value.__cause__, TypeError)
+    assert "scene-separator boundary flag" in str(error.value.__cause__)
 
 
 @pytest.mark.parametrize(
@@ -575,6 +588,7 @@ def _chunk(chunk_id: str, sequence_index: int, text: str) -> dict[str, object]:
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
         "cleanup_role": "body",
+        "starts_after_scene_separator": False,
     }
 
 

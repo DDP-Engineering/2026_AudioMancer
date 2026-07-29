@@ -26,7 +26,8 @@ rather than rediscovering document structure from plain text.
 - Prefer heading, scene, structural, and sentence-complete cuts before applying
   size-balance costs.
 - Keep recognized scene separators as structural evidence while omitting their
-  text from generated chunks and splitting ranges on either side.
+  text from generated chunks, splitting ranges on either side, and marking the
+  following narratable chunk's leading boundary.
 - Use a mid-sentence hard-limit cut only when a single sentence is itself
   oversized, and report that fallback.
 - Project persisted chunks and readiness into page state; make controlled
@@ -76,6 +77,9 @@ profile, optional instructions/context mode, and user chunk-edit requests.
 The sole durable Chunking output is `chunks_text.json`. Operation summaries,
 progress, budget details, provider/model settings, and AI log paths are
 runtime-only projections. AI transaction logs remain separate diagnostics.
+Reset also owns the obsolete `chunking_checkpoint.json`,
+`chunking_report.json`, and `chunking_state.json` names so incompatible derived
+state cannot survive explicit or automatic recovery.
 A manual edit, insert, or delete atomically rewrites the canonical document
 and manifest, synchronizes affected translations, removes affected character
 evidence, Speech Blocks, and Audio Blocks, then resets Audio Assembly.
@@ -94,13 +98,21 @@ count, and ordered chunks. Every chunk has exactly:
 - `cleanup_joined_across_page_break`
 - `cleanup_warning_flags`
 - `cleanup_role`
+- `starts_after_scene_separator`
 
 `cleanup_role` is one of Cleanup's supported non-artifact roles. Generated
 chunks never carry `scene_separator` because separator paragraphs are
-non-narratable hard boundaries. Inserted and edited chunks retain a valid role.
+non-narratable hard boundaries. `starts_after_scene_separator` is a required
+boolean that records whether one or more omitted separators immediately precede
+the chunk. Inserted and edited chunks retain a valid role.
 Legacy root arrays and obsolete `chunking_report.json` or
-`chunking_state.json` sidecars are never migrated; an incompatible document
-requires Reset Chunking.
+`chunking_state.json` sidecars are never migrated. Strict direct loads raise
+`IncompatibleChunkingDocumentError`. During project open, Project Lifecycle
+handles a content-caused incompatibility by resetting Chunking and downstream
+derived artifacts, retrying validation once, and marking the open result for a
+post-activation operator message; it preserves Source, Extraction, and Cleanup.
+Filesystem read errors remain fatal and cause no reset.
+The explicit Reset Chunking action uses the same scoped artifact ownership.
 
 Cut candidates are ordered by semantic meaning: heading, scene separator,
 other structural role (`list_item`, `verse`, `preformatted`, or `footnote`),
@@ -127,8 +139,11 @@ unless Cleanup explicitly assigned `scene_separator`.
 
 Manual operations resequence `sequence_index` without changing surviving
 `chunk_id` values. Deletion rejects an empty resulting set; insertion creates
-an empty `chunk-####` next to its selected anchor. They preserve unrelated root
-metadata and set `manual_adjusted` without adding sidecars.
+an empty `chunk-####` next to its selected anchor with no inferred scene
+boundary. Text edits preserve the selected chunk's boundary flag. Deleting a
+marked chunk transfers the flag to the next surviving chunk when one exists.
+They preserve unrelated root metadata and set `manual_adjusted` without adding
+sidecars.
 
 ## 7. Workflow Integration
 
@@ -159,6 +174,8 @@ Primary automated coverage:
 - `tests/test_ai_chunking_service.py`
 - `tests/test_ai_chunking_descriptor_contract.py`
 - `tests/test_cleanup_v2_chunking_contract.py`
+- `tests/test_project_workspace_service.py`
+- `tests/test_operation_runtime_service.py`
 - `tests/test_text_chunking_state_service.py`
 - `tests/test_text_chunking_ui_controller.py`
 - `tests/test_text_chunking_page.py`

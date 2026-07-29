@@ -14,8 +14,8 @@
          validated descriptor prefixes in one strict `chunks_text.json`, and keeps AI
          transaction logs separate from the durable Chunking contract.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.12.0
+@date 2026-07-29
+@version 0.13.0
 """
 
 # IMPORTS
@@ -106,7 +106,7 @@ def chunk_text(
     @exception  IncompatibleChunkingDocumentError Raised when cleaned text changed; reset Chunking first.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-16
-    @version    1.1.0
+    @version    1.2.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -1170,7 +1170,7 @@ def _build_chunk_from_range(
     @exception  ValueError Raised when the selected range is empty or invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-16
-    @version    1.1.0
+    @version    1.2.0
     """
     selected_records = paragraph_records[start_index : end_index + 1]
     if not selected_records:
@@ -1193,6 +1193,10 @@ def _build_chunk_from_range(
             ),
             _effective_cleanup_role(selected_records[0]),
         ),
+        "starts_after_scene_separator": _starts_after_scene_separator(
+            paragraph_records,
+            start_index,
+        ),
     }
 
 
@@ -1202,6 +1206,14 @@ def _is_narratable_record(record: dict[str, object]) -> bool:
         str(record.get("text") or ""),
         str(record.get("role") or "body"),
     )
+
+
+def _starts_after_scene_separator(
+    paragraph_records: list[dict[str, object]],
+    start_index: int,
+) -> bool:
+    """Return whether the narratable range starts immediately after a scene separator."""
+    return start_index > 0 and not _is_narratable_record(paragraph_records[start_index - 1])
 
 
 def _narratable_subranges(

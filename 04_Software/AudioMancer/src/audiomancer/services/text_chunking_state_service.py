@@ -13,8 +13,8 @@
          selectors, selected-chunk edits, and operator notes used by the Text
          Chunking page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.9.1
+@date 2026-07-29
+@version 0.10.0
 """
 
 # IMPORTS
@@ -215,7 +215,7 @@ def insert_chunk_after_selected(
     @exception  ValueError Raised when the selected chunk is unavailable or cleaned text is unavailable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.0
+    @version    0.3.0
     """
     chunks = chunking_document_service.load_chunks(project_root)
     if not chunks and not str(selected_chunk_id).strip():
@@ -260,12 +260,22 @@ def delete_selected_chunk(
     @exception  ValueError Raised when the selected chunk is unavailable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.0
+    @version    0.3.0
     """
     chunks = chunking_document_service.load_chunks(project_root)
-    if not any(str(chunk.get("chunk_id", "")) == chunk_id for chunk in chunks):
+    selected_index = next(
+        (index for index, chunk in enumerate(chunks) if str(chunk.get("chunk_id", "")) == chunk_id),
+        -1,
+    )
+    if selected_index < 0:
         raise ValueError("The selected chunk is no longer available.")
-    updated_chunks = [dict(chunk) for chunk in chunks if str(chunk.get("chunk_id", "")) != chunk_id]
+    updated_chunks = [dict(chunk) for chunk in chunks]
+    if (
+        bool(updated_chunks[selected_index].get("starts_after_scene_separator", False))
+        and selected_index + 1 < len(updated_chunks)
+    ):
+        updated_chunks[selected_index + 1]["starts_after_scene_separator"] = True
+    del updated_chunks[selected_index]
     if not updated_chunks:
         raise ValueError("At least one chunk must remain in the project.")
     resequenced_chunks = workflow_impact_service.resequence_records(updated_chunks, start_index=1)
@@ -459,7 +469,7 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.0
+    @version    0.3.0
     """
     return {
         "chunk_id": chunk_id,
@@ -469,6 +479,7 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
         "cleanup_role": str(source_chunk.get("cleanup_role") or "body"),
+        "starts_after_scene_separator": False,
     }
 
 
@@ -480,7 +491,7 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
     @exception  ValueError Raised when cleaned text is unavailable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.2.0
     """
     cleaned_text = text_cleanup_state_service.read_optional_project_text(
         project_root,
@@ -496,6 +507,7 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
         "cleanup_role": "body",
+        "starts_after_scene_separator": False,
     }
 
 
