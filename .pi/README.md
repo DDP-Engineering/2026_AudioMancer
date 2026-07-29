@@ -74,9 +74,10 @@ Read, write, secret, and delivery rules come only from the validated
   allow. Install Python, set `AEGIS_PYTHON`, or run a packaged WAEGIS command
   to register a runtime.
 - **Project trust.** Project-local extensions and skills load only after the
-  project is trusted (`ctx.isProjectTrusted()`). This is the one behavioral
-  difference from the Codex and Claude adapters, which do not require a trust
-  step. Trust the project when Pi prompts on first start.
+  project is trusted (`ctx.isProjectTrusted()`). Codex and Qwen Code gate their
+  project-local configuration the same way, and Codex additionally requires each
+  hook to be reviewed before it runs; only Claude Code needs no trust step. Trust
+  the project when Pi prompts on first start.
 - **Launch directory.** Start Pi from the repository root, the directory holding
   `.agentic/`. Pi resolves project-local resources from the current working
   directory; started in a subdirectory it finds no `.pi/`, so the guard

@@ -103,6 +103,38 @@ this repository can configure away:
 repository root rather than continuing — the absence of guards gives no visible
 signal on its own.
 
+## Codex requires trust before hooks run
+
+Codex adds two gates in front of the guards that the other adapters do not. Both
+fail open, and neither produces an error — a session with guards disabled looks
+exactly like a session with guards active.
+
+- **Project trust.** Codex loads project-local configuration, hooks, and exec
+  policies only for a trusted project. Until the project is trusted, `.codex/`
+  is skipped entirely and no guard is registered. Skills still load, so the
+  workflow appears to be working.
+- **Per-hook review.** Even in a trusted project, a newly seen hook is
+  registered but not run until it is reviewed in the `/hooks` panel. The panel
+  reports this as `N hooks need review before they can run.`
+
+Hook trust is keyed to the **content hash of `.codex/hooks.json`**. Any change to
+that file — including an AEGIS payload upgrade — returns every hook in it to
+`Modified since last trusted - review required` and stops it running until
+re-reviewed. After `waegis upgrade`, re-open `/hooks` and trust the AEGIS hooks
+again; the command prints a reminder when the upgrade touched this file.
+
+A third failure mode is the file itself: Codex parses `.codex/hooks.json` with a
+strict deserializer accepting exactly two top-level keys, `description` and
+`hooks`. An unknown key rejects the **whole file**, which registers no hooks at
+all. `waegis doctor` reports this as the `runnability.adapter-configs` failure,
+and `tests/test_scaffold.py` blocks it at the source. This is why the annotation
+convention used in the other adapters' JSON (`_legal`, `_comment*`) must never
+appear in this one.
+
+## Confirming guards are live
+
 To confirm guards are live in a session, ask the agent to read a path covered by
 an enforced `guardrails.protected_paths` read policy: a correctly loaded
-configuration denies it.
+configuration denies it. Do this after any change to trust, to the adapter
+configuration, or to the payload — it is the only check that exercises all of
+the gates above at once.
