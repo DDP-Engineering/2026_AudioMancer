@@ -488,7 +488,7 @@ class SpeechBlocksPage(QWidget):
         if visible_row >= 0:
             item = self._speech_block_list.item(visible_row)
             if item is not None:
-                item.setText(_format_speech_block_list_item(speech_block))
+                item.setText(_format_speech_block_list_item(speech_block, self._current_language))
             if self._current_block_id == normalized_id:
                 self._show_selected_block(visible_row)
         self._apply_control_state()
@@ -512,7 +512,10 @@ class SpeechBlocksPage(QWidget):
         if str(speech_block.get("chunk_id", "")).strip() != self._current_chunk_id:
             return
         insert_row = self._visible_insertion_row(speech_block) if row is None else max(0, int(row))
-        self._speech_block_list.insertItem(insert_row, _format_speech_block_list_item(speech_block))
+        self._speech_block_list.insertItem(
+            insert_row,
+            _format_speech_block_list_item(speech_block, self._current_language),
+        )
         self._speech_block_list.setCurrentRow(insert_row)
 
     def remove_speech_block_item(self, speech_block_id: str) -> None:
@@ -900,6 +903,12 @@ class SpeechBlocksPage(QWidget):
         )
         if self._profile_combo.count() > 0 and self._profile_combo.itemData(0) in (None, ""):
             self._profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
+        for index, speech_block in enumerate(self._blocks_for_current_chunk()):
+            item = self._speech_block_list.item(index)
+            if item is not None:
+                item.setText(_format_speech_block_list_item(speech_block, language))
+        if not self._project_active:
+            self._status_edit.setPlainText(ui_state_service.translate("speech_blocks.initial_note", language))
         self._apply_chunk_action_top_margin()
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0:
@@ -1157,7 +1166,7 @@ class SpeechBlocksPage(QWidget):
             self._source_text_edit.setPlainText(selected_chunk_text)
         blocks_for_chunk = self._blocks_for_current_chunk()
         for block in blocks_for_chunk:
-            self._speech_block_list.addItem(_format_speech_block_list_item(block))
+            self._speech_block_list.addItem(_format_speech_block_list_item(block, self._current_language))
         if blocks_for_chunk:
             self._speech_block_list.setCurrentRow(0)
         self._apply_control_state()
@@ -1700,10 +1709,11 @@ def _format_chunk_list_item(source_chunk: dict[str, object], block_count_by_chun
     return f"[{block_count_by_chunk.get(chunk_id, 0)}] {chunk_id} | {preview}"
 
 
-def _format_speech_block_list_item(speech_block: dict[str, object]) -> str:
+def _format_speech_block_list_item(speech_block: dict[str, object], language: str) -> str:
     """
     @brief      Format one generated speech-block row label.
     @param[in]  speech_block Speech Blocks payload.
+    @param[in]  language Runtime UI language code.
     @return     Human-readable speech-block row label.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -1715,7 +1725,8 @@ def _format_speech_block_list_item(speech_block: dict[str, object]) -> str:
     if str(speech_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
         duration = float(speech_block.get("duration_seconds", 0.0) or 0.0)
         sound_prompt = speech_block.get("sound_prompt", speech_block.get("text", ""))
-        preview = f"Scene Ambience | {sound_prompt}"
+        scene_ambience_label = ui_state_service.translate("speech_blocks.content_scene_ambience", language)
+        preview = f"{scene_ambience_label} | {sound_prompt}"
         if duration > 0.0:
             preview = f"{preview} | {duration:.1f}s"
         if len(preview) > 70:

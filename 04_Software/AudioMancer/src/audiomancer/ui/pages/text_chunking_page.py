@@ -474,6 +474,12 @@ class TextChunkingPage(QWidget):
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>")
         self._profile_label.setText(ui_state_service.translate("text_chunking.ai_profile", language))
         self._strategy_label.setText(ui_state_service.translate("text_chunking.ai_strategy", language))
+        for index in range(self._strategy_combo.count()):
+            strategy = str(self._strategy_combo.itemData(index) or "")
+            self._strategy_combo.setItemText(
+                index,
+                ui_state_service.translate(f"chunking.strategy.{strategy}", language),
+            )
         self._chunk_button.setText(ui_state_service.translate("text_chunking.chunk", language))
         self._ai_chunk_button.setText(ui_state_service.translate("text_chunking.ai_chunk", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_chunking.cleaned_group", language))
@@ -488,6 +494,8 @@ class TextChunkingPage(QWidget):
                 0,
                 ui_state_service.translate("ai_settings.none", language),
             )
+        if not self._project_active:
+            self._status_edit.setPlainText(ui_state_service.translate("text_chunking.initial_note", language))
 
     def _install_preview_find_context_menu(self, editor: QPlainTextEdit) -> None:
         """

@@ -13,7 +13,7 @@
          runtime language and UI-theme changes to the shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-14
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -112,7 +112,7 @@ def apply_current_ui_settings(window) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
     ui_scroll_service.install_global_scroll_step_filter(
         QApplication.instance(),
@@ -128,6 +128,14 @@ def apply_current_ui_settings(window) -> None:
         window,
         window._settings_payload,
     )
+    project_root = getattr(window, "_current_project_root", None)
+    manifest = getattr(window, "_current_manifest", None)
+    if project_root is not None and manifest is not None:
+        window._refresh_current_page_state(
+            project_root,
+            manifest,
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        )
 
 
 def apply_language(window, language: str) -> None:

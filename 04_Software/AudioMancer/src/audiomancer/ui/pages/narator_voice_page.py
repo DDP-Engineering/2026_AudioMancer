@@ -642,7 +642,7 @@ class NaratorVoicePage(QWidget):
         selected_row = -1
         for profile in self._profiles:
             profile_id = str(profile.get("profile_id", "")).strip()
-            self._profile_list.addItem(_format_profile_list_item(profile))
+            self._profile_list.addItem(_format_profile_list_item(profile, self._ui_language))
             self._profile_row_ids.append(profile_id)
             if profile_id == str(selected_profile_id or "").strip():
                 selected_row = len(self._profile_row_ids) - 1
@@ -860,10 +860,11 @@ class NaratorVoicePage(QWidget):
             self.select_profile_requested.emit(self._current_profile_id)
 
 
-def _format_profile_list_item(profile: dict[str, object]) -> str:
+def _format_profile_list_item(profile: dict[str, object], language: str) -> str:
     """
     @brief      Format the profile list item.
     @param[in]  profile Value for `profile`.
+    @param[in]  language Runtime UI language code.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
@@ -871,7 +872,7 @@ def _format_profile_list_item(profile: dict[str, object]) -> str:
     """
     display_name = _display_profile_name(str(profile.get("display_name", "")))
     if bool(profile.get("is_selected", False)):
-        selected_label = str(profile.get("selected_label", "")).strip() or "Selected"
+        selected_label = ui_state_service.translate("narator_voice.list_selected", language)
         return f"{display_name} | {selected_label}"
     return display_name
 

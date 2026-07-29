@@ -1198,12 +1198,13 @@ def test_speech_blocks_page_disables_generate_without_source_and_while_busy(qtbo
 def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
     """
     @brief      Verify Speech Blocks labels are translated through the runtime UI catalog.
+    @details    Covers REQ-UX-aa109e16-4c45-4fb8-886c-008ade7260eb.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.2.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -1212,7 +1213,7 @@ def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
     assert "Blocuri Vorbire" in page._title_label.text()
     assert page._profile_label.text() == "Profil AI"
     assert page._generate_button.text() == "Genereaza Tot"
-    assert page._reset_generation_button.text() == "Reset"
+    assert page._reset_generation_button.text() == "Reseteaza"
     assert page._approve_all_button.text() == "Aproba Tot"
     assert page._approve_block_button.text() == "Aproba"
     assert page._chunk_group.title() == "Lista Segmentelor"

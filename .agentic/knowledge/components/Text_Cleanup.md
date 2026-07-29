@@ -171,8 +171,10 @@ before any new model request is submitted.
 
 ## 7. Workflow Integration
 
-Extraction is mandatory before Cleanup. Supported content languages are
-English, Romanian, German, French, Russian, Portuguese, Spanish, and Italian.
+Extraction is mandatory before Cleanup.
+`config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES` defines the supported
+source-content set: English, Romanian, German, French, Russian, Portuguese,
+Spanish, and Italian. This set is independent of the operator interface locale.
 Predominantly CJK or Hangul input is rejected before Cleanup artifacts are
 published.
 

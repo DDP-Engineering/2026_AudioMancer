@@ -469,6 +469,15 @@ class TtsSettingsPage(QWidget):
         self._preview_timeout_label.setText(ui_state_service.translate("tts_settings.preview_timeout", language))
         self._generation_timeout_label.setText(ui_state_service.translate("tts_settings.generation_timeout", language))
         self._preview_text_limit_label.setText(ui_state_service.translate("tts_settings.preview_text_limit", language))
+        self._speech_block_target_label.setText(
+            ui_state_service.translate("tts_settings.speech_block_target", language)
+        )
+        self._speech_block_target_spin.setSpecialValueText(
+            ui_state_service.translate("tts_settings.speech_block_target_auto", language)
+        )
+        self._speech_block_target_spin.setToolTip(
+            ui_state_service.translate("tts_settings.speech_block_target_tooltip", language)
+        )
         self._scene_ambience_placement_label.setText(
             ui_state_service.translate("tts_settings.scene_ambience_placement", language)
         )
@@ -486,6 +495,9 @@ class TtsSettingsPage(QWidget):
         )
         self._scene_ambience_seed_label.setText(
             ui_state_service.translate("tts_settings.scene_ambience_seed", language)
+        )
+        self._scene_ambience_seed_spin.setSpecialValueText(
+            ui_state_service.translate("tts_settings.scene_ambience_seed_random", language)
         )
         self._refresh_scene_ambience_placement_labels()
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))

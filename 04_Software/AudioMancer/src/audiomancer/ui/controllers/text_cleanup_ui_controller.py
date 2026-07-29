@@ -45,8 +45,8 @@ def handle_extract_text_requested(window: MainWindow) -> None:
     start_operation(
         window,
         "extraction",
-        "Text Extraction",
-        "Extracting text and source structure...",
+        ui_state_service.translate("text_cleanup.operation_extraction", language),
+        ui_state_service.translate("text_cleanup.progress_extraction_start", language),
         text_extraction_service.extract_text,
         partial(handle_extraction_success, window),
         partial(handle_operation_failure, window),
@@ -62,7 +62,7 @@ def handle_cleanup_requested(window: MainWindow, profile_id: str | None) -> None
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", language),
-            "Complete Text Extraction before Cleanup.",
+            ui_state_service.translate("text_cleanup.error_extraction_required", language),
         )
         return
     try:
@@ -79,8 +79,8 @@ def handle_cleanup_requested(window: MainWindow, profile_id: str | None) -> None
     start_operation(
         window,
         "cleanup",
-        "Cleanup",
-        "Analyzing text structure...",
+        ui_state_service.translate("text_cleanup.operation_cleanup", language),
+        ui_state_service.translate("text_cleanup.progress_cleanup_start", language),
         partial(
             text_cleanup_service.clean_text,
             ai_profile_payload=profile,

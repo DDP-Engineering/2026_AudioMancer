@@ -18,6 +18,8 @@ window frame in which all AudioMancer workflow components run.
 - Initialize logging, settings, scroll filtering, application-wide theme, and the application icon before constructing the main window, tolerating logging that degraded to console output only.
 - Compose the toolbar, left navigation sidebar, pages, dialogs, project summaries, and lifecycle cleanup in `MainWindow`.
 - Provide shared user-facing help, about/license, message, progress, and title helpers.
+- Reapply the active locale to app-owned persistent surfaces and rebuild the
+  current project page when runtime language settings change.
 
 The component coordinates page integration; it does not own the behavior,
 state, or persistence contracts of individual workflow domains.
@@ -42,6 +44,13 @@ active audio playback when it closes. `misc_ui_controller` resolves localized
 help and license resources and builds common dialogs; packaged icons supply the
 window identity.
 
+Settings application first reapplies theme and catalog-backed captions to the
+shell and all persistent pages. If a project is open, the shell then invokes
+its current-page refresh path with the new language, rebuilding derived notes
+and rows without eagerly loading every hidden workflow page. Common popup and
+operation-progress text is supplied already translated by the owning
+controller.
+
 ## 4. Dependencies
 
 Internal dependencies are configuration, settings, logging, UI state/theme and
@@ -62,7 +71,9 @@ activation updates the Home summary and each page's active-project state.
 The package API exports `__version__` and `main`. Page identifiers must match
 the sidebar and stacked-page registration. Theme is applied before widgets are
 constructed at startup; page refreshes are limited to the current workflow page
-to avoid unrelated state work. `initialize_logging()` returns `Path | None`, and
+to avoid unrelated state work, including after a runtime language change.
+App-owned dialog text comes from the same English/Romanian catalog as persistent
+page text. `initialize_logging()` returns `Path | None`, and
 `None` means logging degraded to console output only rather than that startup
 failed.
 
@@ -86,6 +97,7 @@ Primary automated coverage:
 - `tests/test_app_entrypoint.py`
 - `tests/test_main_window_lifecycle.py`
 - `tests/test_package_import.py`
+- `tests/test_ui_localization_coverage.py`
 
 Minimum validation after a change: run the focused modules above with
 `uv run pytest`, plus `uv run python -m py_compile` and `uv run ruff check` on

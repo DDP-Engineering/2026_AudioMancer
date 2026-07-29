@@ -78,6 +78,9 @@ class AiTranslationPage(QWidget):
         self._edit_timer.timeout.connect(self.flush_pending_translation_edit)
         self._target_language = config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
         self._original_language = "Unknown"
+        self._current_language = config.DEFAULT_LANGUAGE
+        self._approved_count = 0
+        self._total_count = 0
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -235,7 +238,7 @@ class AiTranslationPage(QWidget):
             )
             self._profile_combo.setCurrentIndex(selected_index)
         else:
-            self._profile_combo.addItem("(none)", None)
+            self._profile_combo.addItem(ui_state_service.translate("ai_settings.none", self._current_language), None)
             self._profile_combo.setCurrentIndex(0)
         self._profile_combo.blockSignals(False)
         self._apply_control_state()
@@ -278,8 +281,14 @@ class AiTranslationPage(QWidget):
         self._stage_status = stage_status
         self._original_language = str(original_language)
         self._target_language = str(target_language or config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
-        self._original_language_value_label.setText(self._original_language)
-        self._target_language_value_label.setText(_language_label(self._target_language))
+        self._approved_count = approved_count
+        self._total_count = total_count
+        self._original_language_value_label.setText(
+            ui_state_service.localized_language_label(self._original_language, self._current_language)
+        )
+        self._target_language_value_label.setText(
+            ui_state_service.localized_language_label(self._target_language, self._current_language)
+        )
         if selected_profile_id is not None:
             profile_index = self._profile_combo.findData(selected_profile_id)
             if profile_index >= 0:
@@ -287,10 +296,15 @@ class AiTranslationPage(QWidget):
         current_chunk_id = self.selected_chunk_id()
         self._chunk_list.clear()
         for translated_chunk in self._display_chunks:
-            self._chunk_list.addItem(_format_chunk_list_item(translated_chunk))
+            self._chunk_list.addItem(_format_chunk_list_item(translated_chunk, self._current_language))
         self._approved_progress_bar.setRange(0, max(total_count, 1))
         self._approved_progress_bar.setValue(min(approved_count, max(total_count, 1)))
-        self._approved_progress_label.setText(f"Approved chunks: {approved_count}/{total_count}")
+        self._approved_progress_label.setText(
+            ui_state_service.translate("ai_translation.approved_chunks", self._current_language).format(
+                approved_count=approved_count,
+                total_count=total_count,
+            )
+        )
         self._status_edit.setPlainText("\n".join(notes))
         row_to_select = 0
         if current_chunk_id is not None:
@@ -545,7 +559,7 @@ class AiTranslationPage(QWidget):
                 selected_chunk["approved"] = False
             current_item = self._chunk_list.currentItem()
             if current_item is not None:
-                current_item.setText(_format_chunk_list_item(selected_chunk))
+                current_item.setText(_format_chunk_list_item(selected_chunk, self._current_language))
         self._apply_control_state()
 
     def flush_pending_translation_edit(self) -> None:
@@ -592,6 +606,7 @@ class AiTranslationPage(QWidget):
         @date       2026-06-09
         @version    0.1.2
         """
+        self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>")
         self._original_language_label.setText(ui_state_service.translate("ai_translation.original_language", language))
         self._target_language_label.setText(ui_state_service.translate("ai_translation.target_language", language))
@@ -604,6 +619,26 @@ class AiTranslationPage(QWidget):
         self._translated_group.setTitle(ui_state_service.translate("ai_translation.translated_group", language))
         self._retranslate_button.setText(ui_state_service.translate("ai_translation.retranslate", language))
         self._approve_selected_button.setText(ui_state_service.translate("ai_translation.approve_selected", language))
+        if self._profile_combo.count() > 0 and self._profile_combo.itemData(0) is None:
+            self._profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
+        self._original_language_value_label.setText(
+            ui_state_service.localized_language_label(self._original_language, language)
+        )
+        self._target_language_value_label.setText(
+            ui_state_service.localized_language_label(self._target_language, language)
+        )
+        self._approved_progress_label.setText(
+            ui_state_service.translate("ai_translation.approved_chunks", language).format(
+                approved_count=self._approved_count,
+                total_count=self._total_count,
+            )
+        )
+        for index, chunk in enumerate(self._display_chunks):
+            item = self._chunk_list.item(index)
+            if item is not None:
+                item.setText(_format_chunk_list_item(chunk, language))
+        if not self._project_active:
+            self._status_edit.setPlainText(ui_state_service.translate("ai_translation.initial_note", language))
 
 
 # HELPER FUNCTIONS
@@ -644,24 +679,11 @@ def _build_display_chunks(
     return display_chunks
 
 
-def _language_label(language_code: object) -> str:
-    """
-    @brief      Resolve one translation-language label.
-    @param[in]  language_code Candidate language code.
-    @return     Operator-facing language label.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    normalized_code = str(language_code or "").strip()
-    return str(dict(config.TRANSLATION_LANGUAGE_OPTIONS).get(normalized_code, normalized_code or "-"))
-
-
-def _format_chunk_list_item(chunk: dict[str, object]) -> str:
+def _format_chunk_list_item(chunk: dict[str, object], language: str) -> str:
     """
     @brief      Format one translated-chunk row label for the chunk list.
     @param[in]  chunk Display-model chunk payload.
+    @param[in]  language Runtime UI language code.
     @return     Human-readable list item label.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -669,11 +691,11 @@ def _format_chunk_list_item(chunk: dict[str, object]) -> str:
     @version    0.1.1
     """
     if bool(chunk.get("approved", False)):
-        status_label = "Approved"
+        status_label = ui_state_service.translate("ai_translation.status_approved", language)
     elif str(chunk.get("translated_text", "")).strip():
-        status_label = "Translated"
+        status_label = ui_state_service.translate("ai_translation.status_translated", language)
     else:
-        status_label = "Pending"
+        status_label = ui_state_service.translate("ai_translation.status_pending", language)
     source_text = str(chunk.get("source_text", ""))
     preview_line = next((line.strip() for line in source_text.splitlines() if line.strip()), "")
     preview = " ".join(preview_line.split())

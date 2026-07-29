@@ -33,7 +33,10 @@ chunk-size balance.
 ## Supported domain
 
 - Formats: TXT, Markdown, RTF, DOCX, ODT, EPUB, and PDF with extractable text.
-- Languages: `en`, `ro`, `de`, `fr`, `ru`, `pt`, `es`, and `it`.
+- Source-content languages: `en`, `ro`, `de`, `fr`, `ru`, `pt`, `es`, and `it`,
+  exposed as `config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES`.
+- Operator interface languages are a separate platform contract and do not
+  derive from the Cleanup source-content language set.
 - Scripts: Latin and Cyrillic.
 - Predominantly CJK or Hangul source text is rejected before Cleanup rendering.
 - PDF without an extractable text layer remains unsupported.

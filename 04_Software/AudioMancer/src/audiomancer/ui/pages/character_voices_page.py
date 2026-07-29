@@ -82,6 +82,9 @@ class CharacterVoicesPage(QWidget):
         self._preview_available = False
         self._current_target_is_editable = False
         self._original_payload: dict[str, object] | None = None
+        self._original_language = "Unknown"
+        self._translated_language = "Not translated"
+        self._language_entries: list[tuple[str, str]] = []
 
         layout = QVBoxLayout(self)
         header_layout = QVBoxLayout()
@@ -299,6 +302,7 @@ class CharacterVoicesPage(QWidget):
         self._targets = [deepcopy(target) for target in targets]
         self._current_target_id = current_target_id
         self._selected_voice_language = selected_voice_language
+        self._language_entries = list(language_entries)
         self._current_target_is_editable = is_editable
         self._can_import_sample = can_import_sample
         self._can_edit_prompt = can_edit_prompt
@@ -453,7 +457,9 @@ class CharacterVoicesPage(QWidget):
         self._save_prompt_button.setText(ui_state_service.translate("character_voices.save_prompt", language))
         self._generate_sample_button.setText(ui_state_service.translate("character_voices.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
-        self._set_language_labels(self._current_original_language_text(), self._current_translated_language_text())
+        self._set_language_labels(self._original_language, self._translated_language)
+        self._set_voice_language_label(self._language_entries, self._selected_voice_language)
+        self._refresh_target_list(self._current_target_id)
 
     def _apply_control_state(self) -> None:
         """
@@ -551,7 +557,7 @@ class CharacterVoicesPage(QWidget):
         self._target_list.clear()
         selected_row = -1
         for index, target_payload in enumerate(self._targets):
-            self._target_list.addItem(_format_target_list_item(target_payload))
+            self._target_list.addItem(_format_target_list_item(target_payload, self._ui_language))
             if str(target_payload.get("target_id", "")).strip() == str(current_target_id or "").strip():
                 selected_row = index
         if selected_row >= 0:
@@ -573,7 +579,9 @@ class CharacterVoicesPage(QWidget):
             if str(value).strip() == str(selected_voice_language).strip():
                 display_label = str(label).strip()
                 break
-        self._voice_language_value_label.setText(display_label)
+        self._voice_language_value_label.setText(
+            ui_state_service.localized_language_label(display_label, self._ui_language)
+        )
 
     def _load_editor(self, prompt_text: str, preview_text: str) -> None:
         """
@@ -600,8 +608,14 @@ class CharacterVoicesPage(QWidget):
         @date       2026-04-21
         @version    0.1.0
         """
-        self._original_language_value_label.setText(original_language)
-        self._translated_language_value_label.setText(translated_language)
+        self._original_language = str(original_language)
+        self._translated_language = str(translated_language)
+        self._original_language_value_label.setText(
+            ui_state_service.localized_language_label(self._original_language, self._ui_language)
+        )
+        self._translated_language_value_label.setText(
+            ui_state_service.localized_language_label(self._translated_language, self._ui_language)
+        )
 
     def _current_original_language_text(self) -> str:
         """
@@ -726,18 +740,22 @@ class CharacterVoicesPage(QWidget):
             self.generate_sample_requested.emit(self._current_target_id)
 
 
-def _format_target_list_item(target_payload: dict[str, object]) -> str:
+def _format_target_list_item(target_payload: dict[str, object], language: str) -> str:
     """
     @brief      Format the target list item.
     @param[in]  target_payload Payload for `target_payload`.
+    @param[in]  language Runtime UI language code.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
     @version    0.1.0
     """
-    sample_label = str(target_payload.get("sample_status_label", "")).strip()
-    if not sample_label:
-        sample_label = "Sample present" if bool(target_payload.get("has_sample", False)) else "Sample missing"
+    sample_key = (
+        "character_voices.sample_present"
+        if bool(target_payload.get("has_sample", False))
+        else "character_voices.sample_missing"
+    )
+    sample_label = ui_state_service.translate(sample_key, language)
     return f"{str(target_payload.get('display_name', '')).strip()} | {sample_label}"
 
 

@@ -20,6 +20,10 @@ locale/theme state, and settings-page integration used by every workflow page.
 - Load, validate, migrate, and save operator settings, seeding a fresh settings file from the packaged scaffold.
 - Configure component logging, time and URL helpers, scrolling, translations, and UI theme/state.
 - Present and apply settings through the Settings page and controller.
+- Keep operator interface locales (`en`, `ro`) separate from workflow-domain
+  source-content and translation language sets.
+- Keep every app-owned window, page, and popup string in the shared English and
+  Romanian catalog, including visible labels for stable option data.
 - Resolve the operator completion-beep preference and expose the shared emitter that consumes it.
 
 ## 3. Implementation Overview
@@ -35,6 +39,13 @@ normalize settings and theme payloads before the app shell consumes them;
 `settings_ui_controller` and `settings_page` render operator changes. This
 component provides cross-cutting platform behavior but does not own any domain
 workflow artifact.
+
+`ui_state_service` owns the complete operator-facing English/Romanian string
+catalog. Persistent pages call `apply_language()` for captions, empty states,
+dynamic choices, and list markers; controllers translate popup and progress
+text before passing it to Qt. `settings_ui_controller.apply_current_ui_settings`
+also rebuilds the currently visible project page after a language change so
+derived notes do not retain the previous locale.
 
 `config.py` keeps two roots apart. `APP_ROOT` owns read-only packaged resources
 (prompts, help, licences, icon, `pyproject.toml`). `APP_USER_DATA_ROOT`, produced
@@ -82,6 +93,11 @@ instructions from the Chunking document.
   ever read. `settings.example.json` is placeholder documentation and is never a
   seed source. Invalid supported values are repaired, while unknown future keys
   are preserved unless an explicit migration removes them.
+- `config.SUPPORTED_LANGUAGES` is the operator interface allowlist and contains
+  exactly `en` and `ro`. `settings_service.validate_settings()` replaces any
+  other persisted or submitted interface language with
+  `config.DEFAULT_LANGUAGE` before use or persistence. Cleanup source-content
+  languages and AI translation targets have separate configuration contracts.
 - Theme payloads have normalized IDs, display names, font and color fields;
   settings validation normalizes AI profile/default IDs and cached TTS runtime
   discovery data before they are consumed.
@@ -97,6 +113,15 @@ instructions from the Chunking document.
   `.agentic/specs/ui_theme_catalog.spec.md`.
 - `translate`, `apply_theme`, `apply_ui_settings`, `load_settings`, and
   `save_settings` are the shared public runtime entry points.
+- `localized_language_label()` maps stable translation-language codes and their
+  canonical English labels to the active operator locale. Font-size steps,
+  chunking strategies, built-in theme IDs, and language codes keep
+  language-neutral item data while their combo labels are replaced in place;
+  relabeling therefore preserves the selected and persisted value.
+- App-owned popup titles, messages, prompt labels, file filters, progress
+  operation names, and initial statuses must be translated before display.
+  Brand names, provider/model IDs, file formats, numeric units, project
+  content, and operator-authored names remain unchanged.
 - `play_completion_beep` is the persisted operator preference for an audible
   end-of-operation signal. `ui_state_service.completion_beep_enabled_from_settings`
   is the pure resolver (a non-mapping payload and a missing key both yield the
@@ -121,6 +146,9 @@ instructions from the Chunking document.
 App startup loads settings before main-window construction. Settings changes
 flow from the Settings page/controller through `save_settings`, then apply UI
 language/theme and global scrolling without changing workflow-domain artifacts.
+When a project is open, the controller refreshes only the current workflow page
+from canonical state in the new language; other pages refresh normally when
+navigated to.
 AI and TTS settings surfaces consume the same normalized payload but retain
 their runtime-domain behavior.
 
@@ -146,13 +174,16 @@ Primary automated coverage:
 - `tests/test_settings_page.py`
 - `tests/test_misc_ui_controller.py`
 - `tests/test_localization_parity.py`
+- `tests/test_ui_localization_coverage.py`
 
 These cover configuration constants, writable data-root resolution across
 portable, override and read-only installation layouts, settings
 load/validate/self-heal/seed/save, component logging, URL joining, scroll-step
 behavior, runtime language/theme
 application, theme schema validation, Settings-page editing, and completion-beep
-preference resolution and emission. Minimum
+preference resolution and emission. Localization coverage additionally checks
+Settings dynamic labels, every audited persistent page, runtime current-page
+refresh, and direct popup/progress API calls. Minimum
 validation after a change: run the focused modules above with `uv run pytest`,
 plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 

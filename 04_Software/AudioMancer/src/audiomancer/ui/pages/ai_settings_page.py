@@ -886,6 +886,7 @@ class AiSettingsPage(QWidget):
         self._backend_kind_label.setText(ui_state_service.translate("ai_settings.backend_kind", language))
         self._base_url_label.setText(ui_state_service.translate("ai_settings.base_url", language))
         self._api_key_label.setText(ui_state_service.translate("ai_settings.api_key", language))
+        self._api_key_edit.setPlaceholderText(ui_state_service.translate("ai_settings.api_key_placeholder", language))
         self._model_name_label.setText(ui_state_service.translate("ai_settings.model_name", language))
         self._context_window_label.setText(ui_state_service.translate("ai_settings.context_window", language))
         self._max_output_label.setText(ui_state_service.translate("ai_settings.max_output_tokens", language))
@@ -904,6 +905,12 @@ class AiSettingsPage(QWidget):
             ui_state_service.translate("ai_settings.default_speech_blocks", language)
         )
         self._default_strategy_label.setText(ui_state_service.translate("ai_settings.default_strategy", language))
+        for index in range(self._default_strategy_combo.count()):
+            strategy = str(self._default_strategy_combo.itemData(index) or "")
+            self._default_strategy_combo.setItemText(
+                index,
+                ui_state_service.translate(f"chunking.strategy.{strategy}", language),
+            )
         self._default_context_mode_label.setText(
             ui_state_service.translate("ai_settings.default_context_mode", language)
         )

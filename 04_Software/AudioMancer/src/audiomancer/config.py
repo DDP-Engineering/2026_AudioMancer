@@ -521,6 +521,9 @@ CLEANED_TEXT_FILE_NAME = "clean_text.txt"
 # @brief Authoritative AI-assisted cleanup document file name.
 CLEANUP_DOCUMENT_FILE_NAME = "cleanup.json"
 
+# @brief Supported source-content language codes for Cleanup.
+CLEANUP_SUPPORTED_SOURCE_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
+
 # @brief File name used for the persisted chunk list artifact.
 CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
 
@@ -599,7 +602,7 @@ DEFAULT_WORKFLOW_STAGE = "project_created"
 DEFAULT_LANGUAGE = "en"
 
 # @brief Supported operator-selectable UI language codes.
-SUPPORTED_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
+SUPPORTED_LANGUAGES = ("en", "ro")
 
 # @brief Default UI text-scale preset.
 DEFAULT_UI_TEXT_SCALE = "normal"

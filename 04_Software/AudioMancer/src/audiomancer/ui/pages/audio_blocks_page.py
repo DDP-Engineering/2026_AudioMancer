@@ -540,6 +540,8 @@ class AudioBlocksPage(QWidget):
             ui_state_service.translate(self._selected_playback_label_key(), language)
         )
         self._approve_button.setText(ui_state_service.translate(self._approval_button_label_key(), language))
+        if not self._project_active:
+            self._status_edit.setPlainText(ui_state_service.translate("audio_blocks.initial_note", language))
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0:
             self._show_selected_block(current_row)

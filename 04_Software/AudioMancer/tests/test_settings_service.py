@@ -119,6 +119,7 @@ def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) 
 def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify invalid persisted settings are healed and rewritten.
+    @details    Covers S-0003 and REQ-PLAT-9fe6262f-238e-4020-aa23-5391bf9750a2.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -478,6 +479,7 @@ def test_validate_settings_preserves_unknown_extra_keys() -> None:
 def test_save_settings_writes_validated_payload_to_disk(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify save_settings validates and persists the payload.
+    @details    Covers S-0003 and REQ-PLAT-9fe6262f-238e-4020-aa23-5391bf9750a2.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.

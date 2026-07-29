@@ -655,6 +655,7 @@ class HomeProjectPage(QWidget):
         """
         self._current_language = language
         self._summary_group.setTitle(ui_state_service.translate("home.summary_group", language))
+        self._pipeline_group.setTitle(ui_state_service.translate("home.pipeline_group", language))
         self._exports_group.setTitle(ui_state_service.translate("home.exports_group", language))
         self._stage_group.setTitle(ui_state_service.translate("home.workflow_group", language))
         self._target_language_caption.setText(ui_state_service.translate("home.translation_language", language))
@@ -662,6 +663,12 @@ class HomeProjectPage(QWidget):
         self._import_button.setText(ui_state_service.translate("home.select_source", language))
         self._snapshot_button.setText(ui_state_service.translate("home.export_project_zip", language))
         self._start_project_button.setText(ui_state_service.translate("home.start_project", language))
+        for index in range(self._target_language_combo.count()):
+            language_code = str(self._target_language_combo.itemData(index) or "")
+            self._target_language_combo.setItemText(
+                index,
+                ui_state_service.localized_language_label(language_code, language),
+            )
         self._narration_mode_combo.setItemText(
             0,
             ui_state_service.translate("home.mode_same_narrator", language),

@@ -208,6 +208,8 @@ class TextCleanupPage(QWidget):
         self._extracted_group.setTitle(ui_state_service.translate("text_cleanup.extracted_group", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_cleanup.cleaned_group", language))
         self._ai_profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
+        if not self._project_active:
+            self._status_edit.setPlainText(ui_state_service.translate("text_cleanup.initial_note", language))
 
     def _emit_cleanup_requested(self) -> None:
         self.cleanup_requested.emit(self.current_ai_profile_id())

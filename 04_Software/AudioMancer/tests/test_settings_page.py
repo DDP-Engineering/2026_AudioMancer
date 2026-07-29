@@ -12,8 +12,8 @@
 @details Verifies theme selection, interface/text font-size step selectors, merged
          settings output, and the removal of the color/custom-theme editor.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.7.0
+@date 2026-07-29
+@version 0.8.0
 """
 
 # IMPORTS
@@ -22,6 +22,26 @@ from audiomancer import config
 from audiomancer.ui.pages.settings_page import SettingsPage
 
 # PUBLIC API
+
+
+def test_settings_page_offers_exactly_supported_ui_languages(qtbot) -> None:
+    """
+    @brief      Verify the interface language selector offers only English and Romanian.
+    @details    Covers S-0002 and REQ-UX-6f6f2126-58f4-4c7e-955a-74bc4ca70284.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    page = SettingsPage()
+    qtbot.addWidget(page)
+
+    language_items = [page._language_combo.itemText(index) for index in range(page._language_combo.count())]
+
+    assert config.SUPPORTED_LANGUAGES == ("en", "ro")
+    assert language_items == ["en", "ro"]
 
 
 def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:

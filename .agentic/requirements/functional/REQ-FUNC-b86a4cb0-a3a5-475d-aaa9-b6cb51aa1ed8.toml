@@ -3,9 +3,9 @@ id = "REQ-FUNC-b86a4cb0-a3a5-475d-aaa9-b6cb51aa1ed8"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Configured content and translation languages shall be exactly en, ro, de, fr, ru, pt, es, and it."
-rationale = "AudioMancer no longer supports Chinese, Japanese, or Korean and all language selectors must share one exact supported set."
-verification = "Exact eight-language configuration test passes."
+requirement = "Cleanup shall expose exactly en, ro, de, fr, ru, pt, es, and it as its supported source-content languages."
+rationale = "Cleanup source eligibility is a domain contract distinct from the operator UI locale and AI translation target-language contracts."
+verification = "Focused pytest selector passed: Cleanup source-language constant equals the approved eight-language tuple."
 spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
 
 affected_paths = [
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-24T19:56:45Z"
-last_updated = "2026-07-28T20:46:11Z"
+last_updated = "2026-07-29T15:10:09Z"

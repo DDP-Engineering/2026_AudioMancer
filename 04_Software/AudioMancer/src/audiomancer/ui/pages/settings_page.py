@@ -14,7 +14,7 @@
          windows). Colour/custom-theme editing has been intentionally removed.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-25
-@version 0.11.0
+@version 0.12.0
 """
 
 # IMPORTS
@@ -39,17 +39,6 @@ from audiomancer.services import ui_state_service, ui_theme_service
 
 # CONSTANTS
 
-# @brief Operator-facing labels for each font-size step (fallback English display names).
-_FONT_SIZE_STEP_LABELS = {
-    "extra_small": "Extra small",
-    "small": "Small",
-    "medium": "Medium",
-    "normal": "Normal",
-    "large": "Large",
-    "very_large": "Very large",
-    "huge": "Huge",
-}
-
 # @brief Nominal base point size used only for the settings-page font preview.
 _PREVIEW_BASE_POINT_SIZE = 10.0
 
@@ -65,7 +54,7 @@ class SettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-25
-    @version    0.11.0
+    @version    0.12.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -76,9 +65,10 @@ class SettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-07-25
-        @version    0.11.0
+        @version    0.12.0
         """
         super().__init__(parent)
+        self._current_language = config.DEFAULT_LANGUAGE
 
         layout = QVBoxLayout(self)
 
@@ -177,7 +167,7 @@ class SettingsPage(QWidget):
         """
         combo = QComboBox(self)
         for step in config.UI_FONT_SIZE_STEPS:
-            combo.addItem(_FONT_SIZE_STEP_LABELS.get(step, step), step)
+            combo.addItem(ui_state_service.translate(f"settings.font_size.{step}", self._current_language), step)
         combo.setMinimumWidth(150)
         return combo
 
@@ -304,14 +294,33 @@ class SettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-07-25
-        @version    0.4.0
+        @version    0.5.0
         """
+        self._current_language = language
         self._language_label.setText(ui_state_service.translate("settings.language", language))
         self._completion_beep_checkbox.setText(ui_state_service.translate("settings.play_beep", language))
         self._scroll_steps_label.setText(ui_state_service.translate("settings.scroll_steps", language))
         self._theme_group.setTitle(ui_state_service.translate("settings.theme_group", language))
         self._theme_label.setText(ui_state_service.translate("settings.theme", language))
+        self._ui_font_size_label.setText(ui_state_service.translate("settings.theme_font_size", language))
+        self._text_font_size_label.setText(ui_state_service.translate("settings.theme_text_font_size", language))
         self._preview_group.setTitle(ui_state_service.translate("settings.theme_preview", language))
+        self._preview_label.setText(ui_state_service.translate("settings.theme_preview_label", language))
+        self._preview_button.setText(ui_state_service.translate("settings.theme_preview_button", language))
+        self._preview_input.setPlainText(ui_state_service.translate("settings.theme_preview_input", language))
+        for index in range(self._theme_combo.count()):
+            theme_id = str(self._theme_combo.itemData(index) or "")
+            self._theme_combo.setItemText(
+                index,
+                ui_state_service.translate(f"settings.theme_name.{theme_id}", language),
+            )
+        for combo in (self._ui_font_size_combo, self._text_font_size_combo):
+            for index in range(combo.count()):
+                step = str(combo.itemData(index) or "")
+                combo.setItemText(
+                    index,
+                    ui_state_service.translate(f"settings.font_size.{step}", language),
+                )
         self._cancel_button.setText(ui_state_service.translate("settings.cancel", language))
         self._apply_button.setText(ui_state_service.translate("settings.apply", language))
         self._ok_button.setText(ui_state_service.translate("settings.ok", language))

@@ -333,8 +333,16 @@ def test_cleanup_rejects_predominantly_cjk_or_hangul(text, tmp_path) -> None:
 
 
 def test_cleanup_supported_languages_are_exactly_the_approved_eight() -> None:
-    """Cover S-0005 and REQ-FUNC-b86a4cb0-a3a5-475d-aaa9-b6cb51aa1ed8."""
-    assert config.SUPPORTED_LANGUAGES == ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
+    """
+    @brief      Verify Cleanup exposes exactly the approved source-content languages.
+    @details    Covers S-0001 and REQ-FUNC-b86a4cb0-a3a5-475d-aaa9-b6cb51aa1ed8.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    assert config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES == ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
 
 
 def test_cleanup_without_usable_ai_completes_from_deterministic_priors(tmp_path) -> None:

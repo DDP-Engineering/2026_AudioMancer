@@ -675,6 +675,8 @@ class CharactersPage(QWidget):
                 0,
                 ui_state_service.translate("ai_settings.none", language),
             )
+        if not self._project_active:
+            self._status_edit.setPlainText(ui_state_service.translate("characters.summary", language))
 
     def _align_demographic_confidence_labels(self) -> None:
         """
