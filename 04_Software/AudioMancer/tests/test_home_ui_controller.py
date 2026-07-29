@@ -10,10 +10,11 @@
 @file test_home_ui_controller.py
 @brief Home UI controller tests for AudioMancer.
 @details Verifies the Home-page UI controller still drives project creation and
-         activation correctly through the main-window shell.
+         activation correctly through the main-window shell and presents
+         project-open failures to the operator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-25
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -130,6 +131,74 @@ def test_home_ui_controller_project_dialogs_start_outside_the_install_root(
     home_ui_controller.handle_open_project_requested(window)
 
     assert start_directories == [str(project_root.parent), str(project_root)]
+
+
+def test_home_ui_controller_shows_warning_for_open_project_error(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify expected project-open failures are presented without escaping the UI slot.
+    @details    Covers REQ-UX-da3b47c4-e633-4132-b147-8e28e50ae0db / S-0001.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    expected_errors = [
+        PermissionError("chunks_text.json is locked"),
+        ValueError("project manifest is invalid"),
+    ]
+    warnings = []
+
+    def raise_expected_error(_selected_folder):
+        """
+        @brief      Raise the next expected project-open failure.
+        @param[in]  _selected_folder Ignored folder selected by the controller.
+        @return     None.
+        @exception  PermissionError Raised for the filesystem-error branch.
+        @exception  ValueError Raised for the invalid-project branch.
+        @version    0.1.0
+        """
+        raise expected_errors[len(warnings)]
+
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(tmp_path),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.project_workspace_service,
+        "open_project",
+        raise_expected_error,
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **kwargs: warnings.append(args),
+    )
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    home_ui_controller.handle_open_project_requested(window)
+    home_ui_controller.handle_open_project_requested(window)
+
+    assert [warning[0] for warning in warnings] == [window, window]
+    assert [warning[1] for warning in warnings] == [
+        home_ui_controller.ui_state_service.translate("dialog.project_error_title", "en"),
+        home_ui_controller.ui_state_service.translate("dialog.project_error_title", "en"),
+    ]
+    assert [warning[2] for warning in warnings] == [str(error) for error in expected_errors]
+    assert window._current_project_root is None
+    assert window._current_manifest is None
 
 
 def test_home_ui_controller_rejects_export_inside_project(

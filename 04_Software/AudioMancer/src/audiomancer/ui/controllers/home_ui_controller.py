@@ -109,13 +109,15 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     """
     @brief      Let the operator select and open one existing project folder.
     @details    The folder picker starts at the active project root when one is
-                open, and at the per-user documents root otherwise.
+                open, and at the per-user documents root otherwise. Expected
+                validation and filesystem failures use the existing localized
+                project-error warning instead of escaping the Qt slot.
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-25
-    @version    0.4.0
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_folder = QFileDialog.getExistingDirectory(
@@ -128,7 +130,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
 
     try:
         open_result = project_workspace_service.open_project(selected_folder)
-    except (FileNotFoundError, ValueError) as error:
+    except (OSError, ValueError) as error:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),

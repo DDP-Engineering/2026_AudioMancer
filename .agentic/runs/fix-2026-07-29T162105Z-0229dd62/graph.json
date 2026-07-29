@@ -1,0 +1,396 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "PermissionError and other OSError instances raised by project_workspace_service.open_project do not escape handle_open_project_requested.",
+      "The failure displays QMessageBox.warning with the localized dialog.project_error_title and str(error), then returns without activating a project.",
+      "Existing ValueError handling is preserved, with FileNotFoundError covered through the OSError hierarchy.",
+      "Filesystem I/O failures still propagate from the workspace service without resetting, deleting, or self-healing project artifacts.",
+      "A focused test monkeypatches open_project to raise PermissionError and verifies the warning path completes without a crash.",
+      "Existing project-open recovery and main-window project-flow tests remain green.",
+      "The complete pytest and Ruff repository gates pass."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-29T16:27:34+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+      "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      ".agentic/requirements/functional/REQ-FUNC-810d9787-dc4d-4ed6-8b7e-e746fefdf658.toml",
+      ".agentic/knowledge/components/Project_Lifecycle.md"
+    ],
+    "reason": "Issue #30 supplies an exact exception-boundary fix and checkable acceptance criteria; the project-lifecycle component is baseline-usable and intake audits are clean.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: Home controller exception handling, one focused controller regression test, the affected durable project-open requirement, and Project Lifecycle documentation. Out of scope: changes to project_workspace_service recovery decisions, reset/deletion behavior, repair flows, localization catalogs, and unrelated controller error handling."
+    ],
+    "source": "Gitea issue #30: http://192.168.1.15:3001/dpasare/2026_AudioMancer/issues/30",
+    "understanding": "When Open Project fails with PermissionError or another OSError, the Home controller must contain the exception at the Qt slot boundary and present the existing localized project-error warning with the original error text. The service must continue propagating filesystem failures without destructive reset or self-healing."
+  },
+  "change_units": [
+    {
+      "id": "CU-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+        "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+        ".agentic/requirements/ux/REQ-UX-da3b47c4-e633-4132-b147-8e28e50ae0db.toml",
+        ".agentic/knowledge/components/Project_Lifecycle.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-UX-da3b47c4-e633-4132-b147-8e28e50ae0db"
+      ],
+      "cites_spec": [
+        "S-0001"
+      ],
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_home_ui_controller.py::test_home_ui_controller_shows_warning_for_open_project_error",
+      "green_evidence": "E-0008",
+      "id": "C-0001",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-810d9787-dc4d-4ed6-8b7e-e746fefdf658"
+      ],
+      "cites_spec": [
+        "S-0002"
+      ],
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_project_workspace_service.py::test_open_project_propagates_chunking_io_error_without_reset",
+      "green_evidence": null,
+      "id": "C-0002",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "red_evidence": null,
+      "state": "unknown"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-29T16:46:37+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Route back for the codestyle-required docstring on the new test's nested exception helper; no test behavior or acceptance changes."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-29T16:47:18+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Return after the codestyle-required test docstring was added and the focused selector remained green; no check behavior changed."
+    }
+  ],
+  "evidence": [
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit traceability",
+      "created_at": "2026-07-29T16:22:52+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Traceability audit clean for issue #30 intake.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit coverage",
+      "created_at": "2026-07-29T16:23:00+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Coverage audit clean and planned issue #30 files are covered by existing project-lifecycle requirements.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T16:39:15+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "note",
+      "path": null,
+      "result": "info",
+      "stage": "check",
+      "status": "active",
+      "summary": "The initial uv invocations did not reach pytest because the user-cache path was unusable and the uv trampoline could not canonicalize/spawn under the sandbox; the project venv ran successfully after approved unsandboxed execution.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_home_ui_controller.py::test_home_ui_controller_shows_warning_for_open_project_error",
+      "created_at": "2026-07-29T16:39:26+00:00",
+      "failure_kind": "behavioral",
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red evidence: PermissionError escapes handle_open_project_requested before the controller source change; the focused selector fails at home_ui_controller.py:130.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_home_ui_controller.py::test_home_ui_controller_shows_warning_for_open_project_error",
+      "created_at": "2026-07-29T16:42:28+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Green evidence: the controller catches PermissionError and preserved ValueError failures, shows the localized project-error warning with the original text, and leaves the project inactive.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_project_workspace_service.py::test_open_project_propagates_chunking_io_error_without_reset",
+      "created_at": "2026-07-29T16:42:43+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Existing service preservation check passed: Chunking PermissionError propagates without reset or deletion (C-0002 command).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_home_ui_controller.py tests/test_project_workspace_service.py tests/test_main_window_project_flow.py",
+      "created_at": "2026-07-29T16:45:13+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused project-lifecycle regression passed: Home controller, workspace service, and main-window project flow produced 62 passed and 1 skipped.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_home_ui_controller.py::test_home_ui_controller_shows_warning_for_open_project_error",
+      "created_at": "2026-07-29T16:47:09+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      "result": "pass",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused controller selector still passes after the codestyle-only nested-helper documentation fix.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-29T16:48:30+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "scan",
+      "path": "02_Tools/audits/audit_codestyle.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Changed-only Python codestyle audit found no issues after the required nested-helper documentation fix.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\ruff.exe check src/audiomancer/ui/controllers/home_ui_controller.py tests/test_home_ui_controller.py",
+      "created_at": "2026-07-29T16:48:41+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Targeted Ruff check passed for the changed controller and controller test.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m py_compile 04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py 04_Software/AudioMancer/tests/test_home_ui_controller.py",
+      "created_at": "2026-07-29T16:48:49+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Python compilation passed for the changed controller and controller test.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-29T16:50:35+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit traceability",
+      "created_at": "2026-07-29T16:50:55+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Traceability audit found no issues after activating the new UX requirement.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit coverage",
+      "created_at": "2026-07-29T16:51:02+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Coverage audit found no issues; the changed controller is linked to the active UX requirement and focused selector.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T16:51:14+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "scan",
+      "path": ".agentic/knowledge/components/Project_Lifecycle.md",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Manual documentation audit confirmed Project_Lifecycle.md documents the controller warning boundary, service no-reset behavior, and focused tests; broad README/setup documentation is unaffected.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 impact <issue-30-paths>",
+      "created_at": "2026-07-29T16:51:23+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Impact review found no uncovered changed implementation module and no full-regression recommendation for the issue #30 paths.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T16:51:31+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Per the user's explicit instruction, the full pytest suite was not run because of duration. Validation uses the focused 62-passed/1-skipped project-lifecycle suite, the full configured Ruff gate, clean audits, and manual application testing remains pending with the user.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "git diff --check and scoped git diff review",
+      "created_at": "2026-07-29T16:51:40+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "diff",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Scoped diff review found no scope creep, weakened assertions, whitespace errors, secret patterns, or service-side recovery changes; unrelated prior-run workflow state was left untouched.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T16:56:46+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Human manual application test completed successfully after the issue #30 implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-29T16:21:05+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+      "04_Software/AudioMancer/tests/test_home_ui_controller.py"
+    ],
+    "statement": "Resolve Gitea issue #30 by handling OSError in the Open Project controller and presenting the existing project-error warning without changing service recovery behavior",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-29T162105Z-0229dd62",
+  "spec_items": [
+    {
+      "examples": [
+        "PermissionError('chunks_text.json is locked') produces the existing localized project-error warning and does not escape the Qt slot."
+      ],
+      "id": "S-0001",
+      "statement": "REQ-UX-da3b47c4-e633-4132-b147-8e28e50ae0db: handle_open_project_requested catches expected OSError and ValueError failures from project_workspace_service.open_project, shows QMessageBox.warning with dialog.project_error_title and str(error), and returns before project activation.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "A wrapped PermissionError from strict Chunking document loading is re-raised and operation_runtime_service.reset_operation_data is not called."
+      ],
+      "id": "S-0002",
+      "statement": "REQ-FUNC-810d9787-dc4d-4ed6-8b7e-e746fefdf658: project_workspace_service continues propagating filesystem I/O errors without resetting or deleting project artifacts.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

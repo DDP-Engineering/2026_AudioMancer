@@ -68,7 +68,9 @@ When strict Chunking loading reports incompatible persisted content,
 `project_workspace_service.open_project` invokes the operation-runtime reset,
 rewrites Chunking and downstream manifest summaries to `not_started`, retries
 validation once, and returns `recovered_operations = ["chunking"]`. Filesystem
-read failures remain fatal and do not trigger deletion.
+read failures fail the service-level open and do not trigger deletion;
+`handle_open_project_requested` presents the resulting `OSError` through the
+existing localized project-error warning without activating the project.
 
 `home_presenter_service` turns manifest summaries and the active operation into
 read-only workflow rows. `HomeUiController` owns the UI orchestration and keeps
@@ -110,8 +112,9 @@ and export or snapshot destinations.
 Outputs include the project root, root-level `project.json`, one copied source
 file and its metadata, normalized or repaired manifest dictionaries, Home-page
 status/readiness rows, external TXT/Markdown/ZIP exports, external project ZIP
-snapshots, and operator-visible success or validation messages. Export and
-snapshot deliverables are not registered as runtime project artifacts.
+snapshots, and operator-visible success, validation, or filesystem-error
+messages. Export and snapshot deliverables are not registered as runtime project
+artifacts.
 
 ## 6. Data Contracts
 
@@ -121,8 +124,10 @@ derived state: project open automatically removes Chunking-owned artifacts and
 all downstream results, resets their manifest summaries at
 `text_chunking_ready`, and retries validation exactly once. Source, Extraction,
 `cleanup.json`, `clean_text.txt`, project identity, and options remain
-unchanged. A wrapped `OSError` is re-raised without reset. Successful recovery
-is reported only after Home activates the project.
+unchanged. A wrapped `OSError` is re-raised without reset; the Home controller
+catches that service error and shows `dialog.project_error_title` with the
+original error text. Successful recovery is reported only after Home activates
+the project.
 
 Narrator completion evidence and exports are projections of the strict
 `narrator_voice.json` document. The selected profile's language, inline sample
@@ -217,6 +222,11 @@ Primary automated coverage:
 - `04_Software/AudioMancer/tests/test_main_window_project_flow.py`
 - `04_Software/AudioMancer/tests/test_main_window_home_exports.py`
 - `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
+
+The Home controller suite verifies that expected project-open `OSError` and
+`ValueError` failures use the localized project-error warning and do not
+activate a project. The workspace-service suite separately verifies that a
+Chunking `OSError` propagates without reset or deletion.
 
 After changes, run those focused tests with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files. Changes
