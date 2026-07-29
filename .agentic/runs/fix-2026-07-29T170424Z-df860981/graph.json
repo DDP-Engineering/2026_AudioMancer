@@ -1,0 +1,672 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "Under a fixed monotonic clock, deterministic chunking of 1000 narratable paragraphs performs one initial running write, only interval checkpoints at the 200-paragraph policy, and exactly one completed terminal-document write; write count is bounded by ceil(1000/200) plus a small constant rather than approximately 1000.",
+      "The 2.0-second checkpoint branch can persist before 200 additional paragraphs, and every persisted running checkpoint has chunks and next_paragraph describing the same processed prefix, including prefixes containing non-narratable separator records.",
+      "Cancellation and unexpected failure each persist one terminal cancelled or failed document containing the current consistent chunks/next_paragraph pair before propagating the exception.",
+      "Successful completion persists exactly one completed terminal document with next_paragraph set to null and final warnings populated, then returns the report.",
+      "Non-terminal progress callbacks are limited by the 0.1-second policy while the terminal completed progress update is always emitted.",
+      "Existing deterministic resume, cancellation, separator-prefix, source-fingerprint mismatch, and single-document contract tests remain green.",
+      "The AI-assisted chunking implementation and its one-write-per-model-window behavior are unchanged.",
+      "The complete pytest and Ruff repository gates pass, with traceability and coverage audits free of blocking findings."
+    ],
+    "assumptions": [],
+    "created_at": "2026-07-29T18:54:14+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      ".agentic/requirements/functional/REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2.toml",
+      ".agentic/specs/cleanup_chunking_v2.spec.md",
+      ".agentic/knowledge/components/Text_Chunking.md"
+    ],
+    "reason": "The defect is localized to one deterministic loop, the intended policies already exist as unused helpers/constants, the persisted schema is unchanged, and focused resume/cancellation contracts bound the risk.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: deterministic chunk_text checkpoint/progress scheduling, focused write-count/progress/resume regression coverage, the existing recoverable-checkpoint requirement, one bounded-performance requirement, the Cleanup/Chunking V2 specification, and Text Chunking component documentation. Out of scope: AI-assisted chunking, checkpoint interval values, chunk semantics, persistence-service atomic-write mechanics, document schema changes, legacy state-layer cleanup tracked by issue #36, and unrelated performance work."
+    ],
+    "source": "Gitea issue #31: http://192.168.1.15:3001/dpasare/2026_AudioMancer/issues/31; remediation order in issue #40",
+    "understanding": "Deterministic chunking currently rewrites and revalidates the growing chunks_text.json document and emits progress after every processed paragraph. Restore the existing 200-paragraph or 2.0-second checkpoint policy and 0.1-second non-terminal progress policy inside chunk_text, while preserving a consistent chunks/next_paragraph resume boundary and mandatory completed, cancelled, and failed terminal persistence. The AI-assisted chunking path and canonical document schema remain unchanged."
+  },
+  "change_units": [
+    {
+      "id": "CHG-0001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py"
+      ]
+    },
+    {
+      "id": "CHG-0002",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py"
+      ]
+    },
+    {
+      "id": "CHG-0003",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py"
+      ]
+    },
+    {
+      "id": "CHG-0004",
+      "touched_paths": [
+        ".agentic/specs/cleanup_chunking_v2.spec.md"
+      ]
+    },
+    {
+      "id": "CHG-0005",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Chunking.md"
+      ]
+    },
+    {
+      "id": "CHG-0006",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2.toml"
+      ]
+    },
+    {
+      "id": "CHG-0007",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-47c34bc6-1078-4ddd-85d9-98a84de4d6c7.toml"
+      ]
+    },
+    {
+      "id": "CHG-0008",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-5afe128a-721a-4e01-b99d-63364cd1fc0e.toml"
+      ]
+    },
+    {
+      "id": "CHG-0009",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-bdc31247-ef93-4a11-8548-d441552b747e.toml"
+      ]
+    },
+    {
+      "id": "CHG-0010",
+      "touched_paths": [
+        ".agentic/requirements/non_functional/REQ-NFR-b22bd156-ca68-45f8-a908-f4678da5464e.toml"
+      ]
+    },
+    {
+      "id": "CHG-0011",
+      "touched_paths": [
+        ".agentic/requirements/non_functional/REQ-NFR-c26cffd5-b20c-4016-9736-7bda8a4f1863.toml"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-NFR-b22bd156-ca68-45f8-a908-f4678da5464e",
+        "REQ-FUNC-5afe128a-721a-4e01-b99d-63364cd1fc0e"
+      ],
+      "cites_spec": [
+        "S-0001",
+        "S-0004"
+      ],
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_batches_checkpoints_without_full_chapter_rescans",
+      "green_evidence": "E-0008",
+      "id": "C-0001",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-NFR-b22bd156-ca68-45f8-a908-f4678da5464e",
+        "REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2"
+      ],
+      "cites_spec": [
+        "S-0001",
+        "S-0003"
+      ],
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_checkpoint_pairs_are_resume_consistent",
+      "green_evidence": "E-0009",
+      "id": "C-0002",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-NFR-c26cffd5-b20c-4016-9736-7bda8a4f1863"
+      ],
+      "cites_spec": [
+        "S-0002"
+      ],
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_throttles_non_terminal_progress_updates",
+      "green_evidence": "E-0010",
+      "id": "C-0003",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "red_evidence": "E-0003",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2",
+        "REQ-FUNC-bdc31247-ef93-4a11-8548-d441552b747e"
+      ],
+      "cites_spec": [
+        "S-0003",
+        "S-0005"
+      ],
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_persists_one_cancelled_terminal_document",
+      "green_evidence": "E-0011",
+      "id": "C-0004",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2",
+        "REQ-FUNC-47c34bc6-1078-4ddd-85d9-98a84de4d6c7"
+      ],
+      "cites_spec": [
+        "S-0003",
+        "S-0006"
+      ],
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_persists_one_failed_terminal_document",
+      "green_evidence": "E-0012",
+      "id": "C-0005",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "red_evidence": "E-0005",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2",
+        "REQ-FUNC-bdc31247-ef93-4a11-8548-d441552b747e"
+      ],
+      "cites_spec": [
+        "S-0003",
+        "S-0005"
+      ],
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_persists_resumable_state_after_cancellation",
+      "green_evidence": "E-0013",
+      "id": "C-0006",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "red_evidence": "E-0006",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2",
+        "REQ-FUNC-bdc31247-ef93-4a11-8548-d441552b747e"
+      ],
+      "cites_spec": [
+        "S-0003",
+        "S-0005"
+      ],
+      "command": "python -m pytest -q tests/test_chunking_single_document_contract.py::test_deterministic_cancellation_preserves_committed_chunks_and_next_paragraph",
+      "green_evidence": "E-0014",
+      "id": "C-0007",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "red_evidence": "E-0007",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-29T19:08:36+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "The legacy cancellation test requests cancellation only from a now-throttled progress callback; update the check to drive cancellation independently from progress before continuing implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-29T19:09:24+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "The cancellation check now drives cancellation independently of progress and passes; resume source implementation verification."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-29T19:09:56+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "The single-document cancellation contract test also requests cancellation only from a now-throttled progress callback; update the check to drive cancellation independently."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-29T19:11:12+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Both cancellation tests now drive cancellation independently of throttled progress and pass; resume implementation verification."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0017 -> E-0019",
+      "created_at": "2026-07-29T19:18:38+00:00",
+      "id": "D-0005",
+      "question": "Evidence superseded",
+      "rationale": "The AEGIS lint wrapper failed only because the configured uv launcher could not initialize; the exact ruff check . command passed through the project interpreter."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0018 -> E-0019",
+      "created_at": "2026-07-29T19:18:49+00:00",
+      "id": "D-0006",
+      "question": "Evidence superseded",
+      "rationale": "The alternate AEGIS lint wrapper invocation hit the same uv launcher issue; the exact ruff check . command passed through the project interpreter."
+    }
+  ],
+  "evidence": [
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_batches_checkpoints_without_full_chapter_rescans",
+      "created_at": "2026-07-29T19:04:41+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused checkpoint batching check fails because deterministic_chunking_service has no monotonic clock and still writes per paragraph.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_checkpoint_pairs_are_resume_consistent",
+      "created_at": "2026-07-29T19:04:49+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused resume-pair check fails because deterministic chunking does not yet use the monotonic checkpoint schedule.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_throttles_non_terminal_progress_updates",
+      "created_at": "2026-07-29T19:04:58+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused progress-throttle check fails because deterministic chunking has no monotonic progress scheduling.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_persists_one_cancelled_terminal_document",
+      "created_at": "2026-07-29T19:05:07+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused cancellation-terminal check fails because deterministic chunking does not yet use the throttled persistence clock.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py::test_chunking_persists_one_failed_terminal_document",
+      "created_at": "2026-07-29T19:05:17+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused failure-terminal check fails because deterministic chunking does not yet use the throttled persistence clock.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-29T19:08:53+00:00",
+      "failure_kind": "stale-test-trigger",
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Legacy cancellation check failed because it requested cancellation only from a per-paragraph progress callback that is now intentionally throttled.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_chunking_single_document_contract.py tests/test_cleanup_v2_chunking_contract.py",
+      "created_at": "2026-07-29T19:10:16+00:00",
+      "failure_kind": "stale-test-trigger",
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Single-document cancellation check failed because it requested cancellation only from a per-paragraph progress callback that is now intentionally throttled; 60 sibling Chunking contract tests passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-29T19:11:32+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused deterministic chunking file passed: 14 tests, including bounded checkpoints and one completed terminal write.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-29T19:11:43+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused deterministic chunking file passed: checkpoint pairs remain consistent across timed separators and resume cases.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-29T19:11:52+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused deterministic chunking file passed: non-terminal progress is throttled and completion progress is emitted.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-29T19:12:00+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused deterministic chunking file passed: one resume-consistent cancelled terminal document is persisted before cancellation propagates.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-29T19:12:14+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused deterministic chunking file passed: one resume-consistent failed terminal document is persisted before the original failure propagates.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py",
+      "created_at": "2026-07-29T19:12:22+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused deterministic chunking file passed: disk-backed cancellation state remains resumable without progress-callback coupling.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_chunking_single_document_contract.py tests/test_cleanup_v2_chunking_contract.py",
+      "created_at": "2026-07-29T19:12:30+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Chunking contract files passed: 61 tests covering single-document cancellation, separator prefixes, and source fingerprints.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m ruff check <three changed Python files>; python -m py_compile <three changed Python files>",
+      "created_at": "2026-07-29T19:15:59+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Changed Python files pass focused Ruff and py_compile checks; manual codestyle review confirms module prologues, callable docstrings, and local version metadata.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_deterministic_chunking_service.py tests/test_chunking_single_document_contract.py tests/test_cleanup_v2_chunking_contract.py",
+      "created_at": "2026-07-29T19:17:42+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused validation passed 75 deterministic, single-document, and Cleanup V2 Chunking contract tests in 0.60 seconds; full repository pytest was intentionally not run per human instruction.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-29T19:17:51+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": "The AEGIS lint wrapper failed only because the configured uv launcher could not initialize; the exact ruff check . command passed through the project interpreter.",
+      "superseded_by": "E-0019"
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-07-29T19:18:00+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": "The alternate AEGIS lint wrapper invocation hit the same uv launcher issue; the exact ruff check . command passed through the project interpreter.",
+      "superseded_by": "E-0019"
+    },
+    {
+      "command": "python -m ruff check .",
+      "created_at": "2026-07-29T19:18:27+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Configured full Ruff scope passed via the project interpreter; the AEGIS uv launcher failures were command-environment issues, not lint failures.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T19:19:06+00:00",
+      "failure_kind": null,
+      "id": "E-0020",
+      "kind": "scan",
+      "path": ".agentic/knowledge/components/Text_Chunking.md",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Manual documentation audit confirms Text_Chunking.md and cleanup_chunking_v2.spec.md match the implemented checkpoint cadence, progress throttle, resume-pair invariant, and unchanged AI path; broad README/setup scope is unaffected.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T19:19:15+00:00",
+      "failure_kind": null,
+      "id": "E-0021",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Human explicitly directed that the repository-wide pytest suite not run because of duration and will manually test the application; validation used 75 focused Chunking tests plus the full Ruff gate.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "aegis invariants; aegis audit traceability; aegis audit coverage; git diff --check",
+      "created_at": "2026-07-29T19:20:01+00:00",
+      "failure_kind": null,
+      "id": "E-0022",
+      "kind": "scan",
+      "path": ".agentic/runs/fix-2026-07-29T170424Z-df860981",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Validation invariants, traceability, coverage, secret scan, diff whitespace check, impact mapping, documentation audit, and full Ruff lint are clean; unrelated pre-existing workflow journal modifications remain outside this run.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "Manual application validation by project owner",
+      "created_at": "2026-07-29T19:36:43+00:00",
+      "failure_kind": null,
+      "id": "E-0023",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Human manually tested the AudioMancer application after issue #31 implementation and confirmed the behavior passes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-29T17:04:24+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py"
+    ],
+    "statement": "Restore bounded checkpoint and progress throttling in deterministic chunking while preserving resume-consistent checkpoints and mandatory terminal persistence",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-29T170424Z-df860981",
+  "spec_items": [
+    {
+      "examples": [
+        "With a fixed clock and 1000 narratable paragraphs, write one initial running document, checkpoints after paragraphs 200, 400, 600, 800, and 1000, then one completed document."
+      ],
+      "id": "S-0001",
+      "statement": "REQ-NFR-b22bd156-ca68-45f8-a908-f4678da5464e bounds deterministic running-document checkpoints by processed-paragraph and monotonic-time intervals.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "200 processed paragraphs or 2.0 elapsed monotonic seconds, whichever occurs first"
+    },
+    {
+      "examples": [
+        "A fixed clock suppresses per-paragraph updates; advancing the clock by 0.1 seconds permits the next non-terminal update, and completion always emits the final total."
+      ],
+      "id": "S-0002",
+      "statement": "REQ-NFR-c26cffd5-b20c-4016-9736-7bda8a4f1863 bounds deterministic non-terminal progress callback frequency while retaining terminal completion progress.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "0.1 elapsed monotonic seconds between non-terminal progress emissions"
+    },
+    {
+      "examples": [
+        "After processing paragraph index k, chunks reflect all narratable records through k and next_paragraph equals k + 2 in the one-based persisted contract, even when record k is a separator."
+      ],
+      "id": "S-0003",
+      "statement": "REQ-FUNC-3a22db38-2672-41f2-8e80-e5472c3356a2 requires each persisted running, cancelled, or failed checkpoint to describe one exact processed paragraph prefix.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "The sole completed write has next_paragraph set to null and contains final warnings."
+      ],
+      "id": "S-0004",
+      "statement": "REQ-FUNC-5afe128a-721a-4e01-b99d-63364cd1fc0e requires one completed terminal persistence before a successful deterministic report returns.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Cancellation after a processed prefix writes status cancelled with that prefix's chunks and next_paragraph, then re-raises."
+      ],
+      "id": "S-0005",
+      "statement": "REQ-FUNC-bdc31247-ef93-4a11-8548-d441552b747e requires one cancelled terminal persistence before OperationCancelledError propagates.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "A processing exception writes status failed with the current consistent checkpoint, then re-raises the original exception."
+      ],
+      "id": "S-0006",
+      "statement": "REQ-FUNC-47c34bc6-1078-4ddd-85d9-98a84de4d6c7 requires one failed terminal persistence before an unexpected processing exception propagates.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

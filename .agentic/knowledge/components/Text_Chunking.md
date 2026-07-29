@@ -21,6 +21,8 @@ rather than rediscovering document structure from plain text.
 - Slice exact Cleanup paragraph offsets and propagate their structural roles.
 - Derive deterministic chapter/paragraph chunks and one canonical Chunking
   document.
+- Bound deterministic running-document checkpoints by processed-paragraph and
+  monotonic-time intervals while always persisting terminal lifecycle state.
 - Run AI-assisted semantic chunking with validated paragraph descriptors,
   bounded context windows, resumable state, fallback windows, and usage logs.
 - Prefer heading, scene, structural, and sentence-complete cuts before applying
@@ -44,13 +46,17 @@ generic AI transport, or downstream translation/speech semantics.
 `chunks_text.json` document.
 `cleanup_metadata_service.load_completed_paragraph_records` gates and slices
 the Cleanup input for both chunking modes. `deterministic_chunking_service`
-uses typed roles and semantic cut priority, while `ai_chunking_service` turns
-the same paragraph records into budgeted windows, requires source-aligned
-descriptors from the provider, checkpoints each consecutive valid descriptor
-prefix, and retries from the first uncommitted paragraph when a later
-descriptor is invalid. If no valid prefix exists, deterministic fallback keeps
-explicit headings and scene separators as structural boundaries before using
-a complete-window chunk. Both modes use
+uses typed roles and semantic cut priority. It writes one initial running
+document, checkpoints after 200 additional processed paragraphs or 2.0 elapsed
+monotonic seconds, throttles non-terminal progress to 0.1-second intervals, and
+writes terminal completion, cancellation, or failure state before returning or
+propagating. `ai_chunking_service` turns the same paragraph records into
+budgeted windows, requires source-aligned descriptors from the provider,
+checkpoints each consecutive valid descriptor prefix, and retries from the
+first uncommitted paragraph when a later descriptor is invalid. If no valid
+prefix exists, deterministic fallback keeps explicit headings and scene
+separators as structural boundaries before using a complete-window chunk. Both
+modes use
 `cleanup_text_analysis_service.is_scene_separator_artifact` at materialization
 time. A separator ends the current narratable range but never becomes a chunk;
 separator-only input is rejected before an authoritative document is written.
@@ -113,6 +119,14 @@ derived artifacts, retrying validation once, and marking the open result for a
 post-activation operator message; it preserves Source, Extraction, and Cleanup.
 Filesystem read errors remain fatal and cause no reset.
 The explicit Reset Chunking action uses the same scoped artifact ownership.
+
+Every deterministic running, cancelled, or failed checkpoint stores a
+resume-consistent pair: `chunks` contains exactly the narratable output from the
+processed paragraph prefix and `next_paragraph` identifies the following
+one-based paragraph, including when processed separators produce no chunk.
+Successful completion writes exactly one terminal document with
+`next_paragraph=null` and final warnings. AI-assisted window checkpoint cadence
+is unchanged.
 
 Cut candidates are ordered by semantic meaning: heading, scene separator,
 other structural role (`list_item`, `verse`, `preformatted`, or `footnote`),

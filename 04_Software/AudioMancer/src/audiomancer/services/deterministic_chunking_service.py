@@ -14,7 +14,7 @@
          strict authoritative `chunks_text.json` document.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ from functools import partial
 import json
 from pathlib import Path
 import re
+from time import monotonic
 
 from audiomancer import config
 from audiomancer.services import (
@@ -95,8 +96,8 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @exception  IncompatibleChunkingDocumentError Raised for incompatible data; reset Chunking first.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.3.0
+    @date       2026-07-29
+    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     if not isinstance(manifest.get("source_document"), dict):
@@ -145,6 +146,9 @@ def chunk_text(
     chunking_document_service.write_chunking_document(resolved_project_root, document)
     progress_total = len(paragraph_records)
     chapter_count, last_chapter_label = _chapter_count_state_from_chunks(chunks)
+    last_checkpoint_index = start_index
+    last_checkpoint_time = monotonic()
+    last_progress_time = last_checkpoint_time
     try:
         for chunk_index in range(start_index, progress_total):
             raise_if_cancelled(cancel_requested)
@@ -158,21 +162,40 @@ def chunk_text(
                         chunk_index,
                     ),
                 )
-                chunks.append(chunk)
-                chapter_count, last_chapter_label = _update_chapter_count(
+                next_chapter_count, next_chapter_label = _update_chapter_count(
                     chapter_count,
                     last_chapter_label,
                     chunk,
                 )
+                chunks.append(chunk)
+                chapter_count = next_chapter_count
+                last_chapter_label = next_chapter_label
             document["chunks"] = chunks
             document["next_paragraph"] = chunk_index + 2
-            chunking_document_service.write_chunking_document(resolved_project_root, document)
-            _emit_progress(
-                progress_callback,
-                progress_current=chunk_index + 1,
-                progress_total=progress_total,
-                message="Deterministic chunking in progress...",
-            )
+            progress_current = chunk_index + 1
+            current_time = monotonic()
+            if _should_write_checkpoint(
+                progress_current,
+                last_checkpoint_index,
+                current_time,
+                last_checkpoint_time,
+            ):
+                chunking_document_service.write_chunking_document(resolved_project_root, document)
+                last_checkpoint_index = progress_current
+                last_checkpoint_time = current_time
+            if _should_emit_progress(
+                progress_current,
+                progress_total,
+                current_time,
+                last_progress_time,
+            ):
+                _emit_progress(
+                    progress_callback,
+                    progress_current=progress_current,
+                    progress_total=progress_total,
+                    message="Deterministic chunking in progress...",
+                )
+                last_progress_time = current_time
     except OperationCancelledError:
         document["status"] = "cancelled"
         chunking_document_service.write_chunking_document(resolved_project_root, document)
@@ -544,7 +567,7 @@ def _should_emit_progress(
     last_progress_time: float,
 ) -> bool:
     """
-    @brief      Return whether deterministic chunking should emit one progress callback.
+    @brief      Return whether deterministic chunking should emit one non-terminal progress callback.
     @param[in]  progress_current Current completed paragraph count.
     @param[in]  progress_total Total paragraph count.
     @param[in]  current_time Current monotonic timestamp.
@@ -552,10 +575,13 @@ def _should_emit_progress(
     @return     True when progress should be emitted.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
+    @date       2026-07-29
+    @version    0.2.0
     """
-    return progress_current >= progress_total or current_time - last_progress_time >= _PROGRESS_EMIT_INTERVAL_SECONDS
+    return (
+        progress_current < progress_total
+        and current_time - last_progress_time >= _PROGRESS_EMIT_INTERVAL_SECONDS
+    )
 
 
 def _build_operation_state(

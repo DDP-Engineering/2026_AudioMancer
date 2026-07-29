@@ -13,7 +13,7 @@
          REQ-FUNC-054 plus REQ-DATA-001 before production implementation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -234,33 +234,32 @@ def test_deterministic_chunking_commits_one_document_without_persisted_progress(
 
 def test_deterministic_cancellation_preserves_committed_chunks_and_next_paragraph(tmp_path) -> None:
     """
-    @brief Verify S-0002 and REQ-FUNC-049 resumable deterministic cancellation.
+    @brief Verify S-0003/S-0005 and REQ-FUNC-3a22db38/REQ-FUNC-bdc31247 cancellation.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
+    @version 0.2.0
     """
     project_root, manifest = _create_chunk_ready_project(
         tmp_path,
         "DeterministicCancelledDocument",
         "Paragraph one.\n\nParagraph two.\n\nParagraph three.\n",
     )
-    cancel = {"requested": False}
+    cancel_checks = {"count": 0}
 
-    def _capture_progress(*_args) -> None:
+    def _cancel_after_one_paragraph() -> bool:
         """
-        @brief Request cancellation after the first committed progress update.
-        @param[in]  _args Ignored positional arguments accepted by the test double.
-        @return     None.
-        @version 0.1.0
+        @brief Request cancellation before processing the second paragraph.
+        @return     True after one paragraph has been processed.
+        @version 0.2.0
         """
-        cancel["requested"] = True
+        cancel_checks["count"] += 1
+        return cancel_checks["count"] >= 2
 
     with pytest.raises(operation_runtime_service.OperationCancelledError):
         deterministic_chunking_service.chunk_text(
             project_root,
             manifest,
-            progress_callback=_capture_progress,
-            cancel_requested=lambda: cancel["requested"],
+            cancel_requested=_cancel_after_one_paragraph,
         )
 
     document = _read_document(project_root)

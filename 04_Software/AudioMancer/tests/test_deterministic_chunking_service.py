@@ -12,13 +12,14 @@
 @details Verifies runtime artifact naming, paragraph chunk generation, chapter
          counting, and resumable cancellation state for deterministic chunking.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.3.0
+@date 2026-07-29
+@version 0.4.0
 """
 
 # IMPORTS
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -194,13 +195,13 @@ def test_chunking_rejects_missing_cleanup_document(tmp_path) -> None:
 
 def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     """
-    @brief      Verify REQ-FUNC-017 cancelled chunking leaves resumable terminal state on disk.
+    @brief      Verify S-0003/S-0005 cancelled chunking leaves resumable terminal state on disk.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkCancel", tmp_path)
     source_path = project_root / "story.txt"
@@ -215,25 +216,25 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
     write_cleanup_input(project_root, "Paragraph one.\n\nParagraph two.\n")
-    should_cancel = {"value": False}
+    cancel_checks = {"count": 0}
 
-    def _progress_callback(*_args) -> None:
+    def _cancel_after_one_paragraph() -> bool:
         """
-        @brief      Provide the progress callback test helper.
-        @return     None.
+        @brief      Request cancellation before processing the second paragraph.
+        @return     True after one paragraph has been processed.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
+        @date       2026-07-29
+        @version    0.2.0
         """
-        should_cancel["value"] = True
+        cancel_checks["count"] += 1
+        return cancel_checks["count"] >= 2
 
     with pytest.raises(operation_runtime_service.OperationCancelledError):
         deterministic_chunking_service.chunk_text(
             project_root,
             manifest,
-            progress_callback=_progress_callback,
-            cancel_requested=lambda: should_cancel["value"],
+            cancel_requested=_cancel_after_one_paragraph,
         )
 
     state_payload = read_chunking_document(project_root)
@@ -245,46 +246,21 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
 
 def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify REQ-NFR-015 deterministic chunking avoids per-paragraph persistence and full rescans.
+    @brief      Verify S-0001/S-0004 and REQ-NFR-b22bd156/REQ-FUNC-5afe128a bound persistence.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
+    @date       2026-07-29
+    @version    0.2.0
     """
-    project_root, manifest = project_workspace_service.create_project("ChunkBatching", tmp_path)
-    source_path = project_root / "story.txt"
-    source_path.write_text("placeholder", encoding="utf-8")
-    manifest["source_document"] = {
-        "original_name": "story.txt",
-        "stored_relative_path": "story.txt",
-        "file_type": "txt",
-        "imported_at": "2026-06-10T12:00:00+00:00",
-        "size_bytes": source_path.stat().st_size,
-    }
-    manifest["operations"]["cleanup"]["status"] = "completed"
-    write_cleanup_input(
-        project_root,
-        "\n\n".join(f"Paragraph {index}." for index in range(1, 7)) + "\n",
+    project_root, manifest = _create_ready_chunking_project(
+        tmp_path,
+        "ChunkBatching",
+        "\n\n".join(f"Paragraph {index}." for index in range(1, 1001)) + "\n",
     )
-    document_write_count = {"value": 0}
-    original_write_document = chunking_document_service.write_chunking_document
-
-    def _counting_write_document(output_root, document):
-        """
-        @brief      Count chunk-artifact writes while preserving real persistence.
-        @param[in]  output_root Temporary output root used by the export test double.
-        @param[in]  document Authoritative operation document payload.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
-        """
-        document_write_count["value"] += 1
-        return original_write_document(output_root, document)
+    writes: list[tuple[str, int | None, int, tuple[str, ...]]] = []
 
     def _unexpected_full_chapter_scan(_chunks):
         """
@@ -297,13 +273,189 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
         """
         raise AssertionError("deterministic chunking should use incremental chapter counts")
 
-    monkeypatch.setattr(chunking_document_service, "write_chunking_document", _counting_write_document)
+    monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(
+        chunking_document_service,
+        "write_chunking_document",
+        lambda _root, document: writes.append(
+            (
+                str(document["status"]),
+                document["next_paragraph"],
+                len(document["chunks"]),
+                tuple(document["warnings"]),
+            )
+        ),
+    )
     monkeypatch.setattr(deterministic_chunking_service, "_chapter_count_from_chunks", _unexpected_full_chapter_scan)
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
-    assert report_payload["chunk_count"] == 6
-    assert document_write_count["value"] == 8
+    assert report_payload["chunk_count"] == 1000
+    assert len(writes) == 7
+    assert [item[1] for item in writes[:-1]] == [1, 201, 401, 601, 801, 1001]
+    assert [item[0] for item in writes].count("completed") == 1
+    assert writes[-1][0:3] == ("completed", None, 1000)
+
+
+def test_chunking_checkpoint_pairs_are_resume_consistent(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify S-0001/S-0003 and REQ-FUNC-3a22db38 preserve one exact processed prefix.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    project_root, manifest = _create_ready_chunking_project(
+        tmp_path,
+        "ChunkCheckpointPair",
+        "Opening narration.\n\n* * *\n\nClosing narration.\n",
+    )
+    cleanup_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+    cleanup_payload = json.loads(cleanup_path.read_text(encoding="utf-8"))
+    cleanup_payload["paragraphs"][1]["role"] = "scene_separator"
+    cleanup_path.write_text(json.dumps(cleanup_payload, indent=2) + "\n", encoding="utf-8")
+    timestamps = iter((0.0, 0.0, 2.1, 2.1))
+    writes: list[tuple[str, int | None, int]] = []
+    monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: next(timestamps))
+    monkeypatch.setattr(
+        chunking_document_service,
+        "write_chunking_document",
+        lambda _root, document: writes.append(
+            (str(document["status"]), document["next_paragraph"], len(document["chunks"]))
+        ),
+    )
+
+    deterministic_chunking_service.chunk_text(project_root, manifest)
+
+    assert writes == [
+        ("running", 1, 0),
+        ("running", 3, 1),
+        ("completed", None, 2),
+    ]
+
+
+def test_chunking_throttles_non_terminal_progress_updates(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify S-0002 and REQ-NFR-c26cffd5 throttle progress but always emit completion.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    project_root, manifest = _create_ready_chunking_project(
+        tmp_path,
+        "ChunkProgressThrottle",
+        "One.\n\nTwo.\n\nThree.\n\nFour.\n",
+    )
+    timestamps = iter((0.0, 0.0, 0.05, 0.1, 0.19))
+    progress_updates: list[tuple[int, int]] = []
+    monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: next(timestamps))
+
+    deterministic_chunking_service.chunk_text(
+        project_root,
+        manifest,
+        progress_callback=lambda current, total, *_args: progress_updates.append((current, total)),
+    )
+
+    assert progress_updates == [(3, 4), (4, 4)]
+
+
+def test_chunking_persists_one_cancelled_terminal_document(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify S-0003/S-0005 and REQ-FUNC-bdc31247 persist one resumable cancellation.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    project_root, manifest = _create_ready_chunking_project(
+        tmp_path,
+        "ChunkCancelledTerminal",
+        "One.\n\nTwo.\n\nThree.\n",
+    )
+    cancel_checks = {"count": 0}
+    writes: list[tuple[str, int | None, int]] = []
+
+    def _cancel_after_two_paragraphs() -> bool:
+        """Request cancellation before processing the third paragraph."""
+        cancel_checks["count"] += 1
+        return cancel_checks["count"] >= 3
+
+    monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(
+        chunking_document_service,
+        "write_chunking_document",
+        lambda _root, document: writes.append(
+            (str(document["status"]), document["next_paragraph"], len(document["chunks"]))
+        ),
+    )
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        deterministic_chunking_service.chunk_text(
+            project_root,
+            manifest,
+            cancel_requested=_cancel_after_two_paragraphs,
+        )
+
+    assert writes == [
+        ("running", 1, 0),
+        ("cancelled", 3, 2),
+    ]
+
+
+def test_chunking_persists_one_failed_terminal_document(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify S-0003/S-0006 and REQ-FUNC-47c34bc6 persist one resumable failure.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    project_root, manifest = _create_ready_chunking_project(
+        tmp_path,
+        "ChunkFailedTerminal",
+        "One.\n\nTwo.\n\nThree.\n",
+    )
+    original_build_chunk_payload = deterministic_chunking_service._build_chunk_payload
+    build_calls = {"count": 0}
+    writes: list[tuple[str, int | None, int]] = []
+
+    def _fail_on_second_paragraph(*args, **kwargs):
+        """Raise one deterministic processing failure after the first committed prefix."""
+        build_calls["count"] += 1
+        if build_calls["count"] == 2:
+            raise RuntimeError("synthetic chunking failure")
+        return original_build_chunk_payload(*args, **kwargs)
+
+    monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(deterministic_chunking_service, "_build_chunk_payload", _fail_on_second_paragraph)
+    monkeypatch.setattr(
+        chunking_document_service,
+        "write_chunking_document",
+        lambda _root, document: writes.append(
+            (str(document["status"]), document["next_paragraph"], len(document["chunks"]))
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="synthetic chunking failure"):
+        deterministic_chunking_service.chunk_text(project_root, manifest)
+
+    assert writes == [
+        ("running", 1, 0),
+        ("failed", 2, 1),
+    ]
 
 
 def test_incremental_chapter_count_matches_full_scan() -> None:
@@ -412,6 +564,38 @@ def test_chunking_rejects_empty_cleaned_text(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="chunkable paragraphs"):
         deterministic_chunking_service.chunk_text(project_root, manifest)
+
+
+def _create_ready_chunking_project(
+    tmp_path: Path,
+    project_name: str,
+    cleaned_text: str,
+) -> tuple[Path, dict[str, object]]:
+    """
+    @brief      Create one project with completed Cleanup input for focused chunking checks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  project_name Stable project folder name.
+    @param[in]  cleaned_text Canonical text consumed by deterministic Chunking.
+    @return     Project root and mutable manifest pair.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-07-29T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
+    write_cleanup_input(project_root, cleaned_text)
+    return project_root, manifest
 
 
 # END OF FILE

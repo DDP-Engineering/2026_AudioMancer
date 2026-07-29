@@ -311,6 +311,29 @@ Target-size balance is a soft cost. It cannot override semantic boundaries.
 A mid-sentence cut is permitted only when one sentence alone exceeds the hard
 chunk limit; that fallback is reported.
 
+Deterministic Chunking keeps the canonical document recoverable without
+rewriting it after every paragraph:
+
+- write one initial `running` document before processing;
+- write a `running` checkpoint after 200 additional processed paragraphs or
+  after 2.0 elapsed monotonic seconds, whichever occurs first;
+- every running checkpoint stores the chunks produced from exactly the
+  processed paragraph prefix and sets `next_paragraph` to the following
+  one-based paragraph index, including when the prefix contains omitted
+  non-narratable separators;
+- emit non-terminal progress no more often than once per 0.1 elapsed monotonic
+  seconds;
+- on success, write exactly one terminal `completed` document with
+  `next_paragraph=null` and final warnings before returning;
+- on cancellation or unexpected failure, write exactly one terminal document
+  with the matching status and the current resume-consistent checkpoint before
+  propagating the exception.
+
+For 1,000 narratable paragraphs under a fixed monotonic clock, persistence is
+bounded to the initial running document, five interval checkpoints, and one
+completed terminal document. AI-assisted Chunking retains its existing
+one-write-per-model-window behavior.
+
 AI descriptor validation is lossless and progress-preserving:
 
 - an exact punctuation-only anchor such as `* * *` is valid when its normalized
