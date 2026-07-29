@@ -23,7 +23,6 @@ from pathlib import Path
 from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
-    cleanup_metadata_service,
     operation_runtime_service,
     project_workspace_service,
     settings_service,
@@ -141,55 +140,13 @@ def test_operation_state_artifact_save_uses_atomic_json_writer(monkeypatch, tmp_
 
     output_path = operation_runtime_service.write_operation_json_artifact(
         project_root,
-        "cleanup",
-        config.CLEANUP_STATE_FILE_NAME,
+        "translation",
+        config.TRANSLATED_CHUNKS_FILE_NAME,
         payload,
     )
 
-    assert output_path == project_root / config.CLEANUP_STATE_FILE_NAME
+    assert output_path == project_root / config.TRANSLATED_CHUNKS_FILE_NAME
     assert write_calls == [(output_path, payload)]
-
-
-def test_cleanup_metadata_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify cleanup metadata sidecar persistence routes through the atomic JSON writer.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
-    """
-    project_root = tmp_path / "AtomicCleanupMetadata"
-    write_calls: list[tuple[Path, object]] = []
-
-    def _capture_atomic_write(target_path: str | Path, payload: object) -> None:
-        """
-        @brief      Capture one atomic writer call.
-        @param[in]  target_path Requested target path.
-        @param[in]  payload JSON payload passed to the writer.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
-        """
-        write_calls.append((Path(target_path), payload))
-
-    monkeypatch.setattr(cleanup_metadata_service, "write_json_atomic", _capture_atomic_write)
-
-    cleanup_metadata_service.write_cleanup_metadata(
-        project_root,
-        None,
-        project_root / config.CLEANED_TEXT_FILE_NAME,
-        [{"paragraph_id": "paragraph-0001", "text": "Story paragraph."}],
-        "deterministic",
-    )
-
-    assert len(write_calls) == 1
-    assert write_calls[0][0] == project_root / config.CLEANED_TEXT_METADATA_FILE_NAME
-    assert write_calls[0][1]["cleanup_mode"] == "deterministic"
 
 
 def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> None:
@@ -256,6 +213,10 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
     text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Edited text.\n")
 
     assert text_calls[0] == (cleaned_path, "Edited text.\n")
+    assert any(
+        path == project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+        for path, _payload in json_calls
+    )
     assert any(path == project_root / config.PROJECT_MANIFEST_FILE_NAME for path, _payload in json_calls)
 
 

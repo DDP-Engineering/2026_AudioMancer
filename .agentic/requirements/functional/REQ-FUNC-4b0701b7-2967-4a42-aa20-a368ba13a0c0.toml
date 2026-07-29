@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-4b0701b7-2967-4a42-aa20-a368ba13a0c0"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Cleanup shall assign one typed final resolution with confidence and reason codes to every non-terminal source boundary."
+rationale = "Whitespace must never encode unresolved uncertainty or an unclassified newline."
+verification = "All-boundary and 27-page-transition tests pass."
+spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_v2_acceptance_corpus.py::test_all_27_synthetic_page_transitions_receive_safe_typed_decisions",
+  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_analysis_assigns_roles_before_classifying_every_boundary",
+]
+
+created_on = "2026-07-28T19:59:29Z"
+last_updated = "2026-07-28T20:45:43Z"

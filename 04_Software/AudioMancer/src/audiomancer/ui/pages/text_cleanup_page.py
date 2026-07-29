@@ -133,7 +133,8 @@ class TextCleanupPage(QWidget):
         status_notes = list(notes)
         if validation_state in {"passed", "passed_with_warnings"}:
             status_notes.append(
-                f"Validation: {validation_state}; uncertain decisions preserved: {int(uncertainty_count)}."
+                f"Validation: {validation_state}; "
+                f"low-confidence boundaries: {int(uncertainty_count)}."
             )
         self._status_edit.setPlainText("\n".join(status_notes))
         self._apply_button_state()

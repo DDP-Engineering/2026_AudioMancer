@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Cleanup finalization recovery shall deterministically rerender persisted decisions without submitting an LLM request."
+rationale = "A crash between checkpoint completion and output replacement must be recoverable without cost or changed adjudication."
+verification = "Finalizing recovery test passes without an LLM call."
+spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
+]
+
+created_on = "2026-07-28T20:00:03Z"
+last_updated = "2026-07-28T20:46:11Z"

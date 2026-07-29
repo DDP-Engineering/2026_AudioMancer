@@ -10,12 +10,12 @@
 @file ai_chunking_service.py
 @brief AI-assisted text chunking helpers for AudioMancer.
 @details Consumes canonical cleaned text, asks one configured AI profile to
-         decide semantic chunk boundaries over ordered paragraphs, atomically
-         checkpoints one strict `chunks_text.json` document, and keeps AI
+         decide semantic chunk boundaries over ordered paragraphs, checkpoints
+         validated descriptor prefixes in one strict `chunks_text.json`, and keeps AI
          transaction logs separate from the durable Chunking contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.10.0
+@version 0.12.0
 """
 
 # IMPORTS
@@ -30,6 +30,7 @@ from audiomancer import config
 from audiomancer.services import (
     ai_budget_service,
     chunking_document_service,
+    cleanup_text_analysis_service,
     deterministic_chunking_service,
     llm_provider_service,
     project_workspace_service,
@@ -105,7 +106,7 @@ def chunk_text(
     @exception  IncompatibleChunkingDocumentError Raised when cleaned text changed; reset Chunking first.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-16
-    @version    1.0.0
+    @version    1.1.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -131,6 +132,8 @@ def chunk_text(
     paragraph_records = _build_paragraph_records(input_text, resolved_project_root)
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
+    if not any(_is_narratable_record(record) for record in paragraph_records):
+        raise ValueError("Cleaned text does not contain any narratable paragraphs.")
 
     _ = source_document
     existing_document = chunking_document_service.load_chunking_document(resolved_project_root)
@@ -252,7 +255,7 @@ def chunk_text(
             token_usage = _document_token_usage(
                 token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
             )
-            validated_ranges = _validate_chunk_descriptors(
+            validated_ranges, response_complete = _validate_chunk_descriptor_prefix(
                 response_payload,
                 paragraph_records,
                 window_start_index,
@@ -268,7 +271,11 @@ def chunk_text(
                     semantic_strategy,
                 )
                 next_paragraph = int(validated_ranges[-1]["end_index"]) + 2
-                if is_final_window and next_paragraph <= len(paragraph_records):
+                if (
+                    response_complete
+                    and is_final_window
+                    and next_paragraph <= len(paragraph_records)
+                ):
                     _append_chunks_from_ranges(
                         committed_chunks,
                         paragraph_records,
@@ -276,29 +283,51 @@ def chunk_text(
                         semantic_strategy,
                     )
                     next_paragraph = len(paragraph_records) + 1
+                elif not response_complete:
+                    progress_message = (
+                        "AI chunking accepted a valid descriptor prefix and "
+                        f"will retry from paragraph {next_paragraph}."
+                    )
             elif is_final_window:
+                fallback_ranges = _deterministic_structural_fallback_ranges(
+                    paragraph_records,
+                    window_start_index,
+                    len(paragraph_records) - 1,
+                )
                 _append_chunks_from_ranges(
                     committed_chunks,
                     paragraph_records,
-                    [{"start_index": window_start_index, "end_index": len(paragraph_records) - 1}],
+                    fallback_ranges,
                     semantic_strategy,
                 )
                 next_paragraph = len(paragraph_records) + 1
             else:
+                fallback_ranges = _deterministic_structural_fallback_ranges(
+                    paragraph_records,
+                    window_start_index,
+                    window_end_index,
+                )
                 _append_chunks_from_ranges(
                     committed_chunks,
                     paragraph_records,
-                    [{"start_index": window_start_index, "end_index": window_end_index}],
+                    fallback_ranges,
                     semantic_strategy,
                 )
                 context_window_fallback_count += 1
                 next_paragraph = window_end_index + 2
                 first_paragraph = window_start_index + 1
                 last_paragraph = window_end_index + 1
-                progress_message = (
-                    f"AI chunking returned no valid split for paragraphs {first_paragraph}-{last_paragraph}. "
-                    "AudioMancer saved this text window as one chunk."
-                )
+                if len(fallback_ranges) > 1:
+                    progress_message = (
+                        "AI chunking returned no valid split for paragraphs "
+                        f"{first_paragraph}-{last_paragraph}. AudioMancer used "
+                        "a deterministic structural fallback."
+                    )
+                else:
+                    progress_message = (
+                        f"AI chunking returned no valid split for paragraphs {first_paragraph}-{last_paragraph}. "
+                        "AudioMancer saved this text window as one chunk."
+                    )
 
             completed_window_count += 1
             remaining_windows = _build_windows_from_index(
@@ -348,7 +377,7 @@ def chunk_text(
         )
         warnings.append(
             f"{window_label} saved as a fallback chunk because AI chunking returned no valid internal split. "
-            "A larger AI chunking context may produce more natural boundaries."
+            "Explicit heading and scene-separator boundaries were preserved when available."
         )
     document["status"] = "completed"
     document["chunks"] = chunks
@@ -886,21 +915,40 @@ def _normalized_anchor_words(anchor_text: str) -> list[str]:
     return normalized_words
 
 
+def _normalized_complete_anchor(anchor_text: str) -> str:
+    """
+    @brief      Canonicalize one complete anchor while retaining punctuation.
+    @param[in]  anchor_text Source or model-returned anchor text.
+    @return     Compatibility-normalized, case-folded, whitespace-collapsed anchor.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    normalized_text = unicodedata.normalize("NFKC", str(anchor_text)).casefold()
+    return " ".join(normalized_text.split())
+
+
 def _start_anchor_matches(paragraph_text: str, returned_anchor: str) -> bool:
     """
     @brief      Confirm a model anchor against its declared source paragraph.
     @param[in]  paragraph_text Canonical source paragraph text.
     @param[in]  returned_anchor Model-returned start anchor.
-    @return     True for a complete short match or a five-word consecutive match.
+    @return     True for an exact punctuation anchor, a complete short match, or a five-word run.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-16
-    @version    0.1.0
+    @version    0.2.0
     """
     expected_words = _normalized_anchor_words(_paragraph_start_anchor(paragraph_text))
     returned_words = _normalized_anchor_words(returned_anchor)
     if not expected_words:
-        return False
+        expected_anchor = _normalized_complete_anchor(
+            _paragraph_start_anchor(paragraph_text)
+        )
+        return bool(expected_anchor) and (
+            _normalized_complete_anchor(returned_anchor) == expected_anchor
+        )
     if len(expected_words) < _ANCHOR_MIN_CONSECUTIVE_WORDS:
         return returned_words == expected_words
 
@@ -931,36 +979,65 @@ def _validate_chunk_descriptors(
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-16
-    @version    1.1.0
+    @version    1.2.0
+    """
+    validated_ranges, response_complete = _validate_chunk_descriptor_prefix(
+        response_payload,
+        paragraph_records,
+        window_start_index,
+        window_end_index,
+    )
+    if not validated_ranges or not response_complete:
+        return None
+    return validated_ranges
+
+
+def _validate_chunk_descriptor_prefix(
+    response_payload: dict[str, object],
+    paragraph_records: list[dict[str, object]],
+    window_start_index: int,
+    window_end_index: int,
+) -> tuple[list[dict[str, int]], bool]:
+    """
+    @brief      Validate the longest consecutive descriptor prefix.
+    @param[in]  response_payload Provider JSON response object.
+    @param[in]  paragraph_records Full ordered paragraph record list.
+    @param[in]  window_start_index Zero-based absolute first paragraph index.
+    @param[in]  window_end_index Zero-based absolute last paragraph index.
+    @return     Validated absolute prefix ranges and whole-response validity.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
     """
     if set(response_payload) != {"chunks"}:
-        return None
+        return [], False
     raw_chunks = response_payload.get("chunks")
     if not isinstance(raw_chunks, list) or not raw_chunks:
-        return None
+        return [], False
 
     expected_start_paragraph = window_start_index + 1
     validated_ranges: list[dict[str, int]] = []
     required_fields = {"start_paragraph", "start_text", "break_after_paragraph"}
     for item in raw_chunks:
         if not isinstance(item, dict) or set(item) != required_fields:
-            return None
+            return validated_ranges, False
         start_paragraph = item.get("start_paragraph")
         break_after_paragraph = item.get("break_after_paragraph")
         start_text = item.get("start_text")
         if type(start_paragraph) is not int or type(break_after_paragraph) is not int:
-            return None
+            return validated_ranges, False
         if not isinstance(start_text, str):
-            return None
+            return validated_ranges, False
         if start_paragraph != expected_start_paragraph:
-            return None
+            return validated_ranges, False
         if not window_start_index + 1 <= start_paragraph <= window_end_index + 1:
-            return None
+            return validated_ranges, False
         if not start_paragraph <= break_after_paragraph <= window_end_index + 1:
-            return None
+            return validated_ranges, False
         paragraph_text = str(paragraph_records[start_paragraph - 1]["text"])
         if not _start_anchor_matches(paragraph_text, start_text):
-            return None
+            return validated_ranges, False
         validated_ranges.append(
             {
                 "start_index": start_paragraph - 1,
@@ -968,7 +1045,95 @@ def _validate_chunk_descriptors(
             }
         )
         expected_start_paragraph = break_after_paragraph + 1
-    return validated_ranges
+    return validated_ranges, True
+
+
+def _is_structural_boundary_record(record: dict[str, object]) -> bool:
+    """
+    @brief      Identify an explicit heading or scene-separator paragraph.
+    @param[in]  record Canonical Cleanup paragraph record.
+    @return     True when deterministic fallback must preserve this boundary.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    role = str(record.get("role") or "body")
+    if role == "heading":
+        return True
+    return not _is_narratable_record(record)
+
+
+def _effective_cleanup_role(record: dict[str, object]) -> str:
+    """
+    @brief      Return the role exposed by an AI chunk after user text edits.
+    @param[in]  record Canonical Cleanup paragraph record.
+    @return     Stored role or a recovered raw scene-separator role.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    role = str(record.get("role") or "body")
+    if not _is_narratable_record(record):
+        return "scene_separator"
+    return role
+
+
+def _deterministic_structural_fallback_ranges(
+    paragraph_records: list[dict[str, object]],
+    window_start_index: int,
+    window_end_index: int,
+) -> list[dict[str, int]]:
+    """
+    @brief      Split a rejected AI window around explicit structural paragraphs.
+    @param[in]  paragraph_records Full ordered paragraph record list.
+    @param[in]  window_start_index Zero-based inclusive first paragraph index.
+    @param[in]  window_end_index Zero-based inclusive last paragraph index.
+    @return     Consecutive ranges that preserve headings and scene separators.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    structural_indices = [
+        index
+        for index in range(window_start_index, window_end_index + 1)
+        if _is_structural_boundary_record(paragraph_records[index])
+    ]
+    if not structural_indices:
+        return [
+            {
+                "start_index": window_start_index,
+                "end_index": window_end_index,
+            }
+        ]
+
+    ranges: list[dict[str, int]] = []
+    next_index = window_start_index
+    for structural_index in structural_indices:
+        if next_index < structural_index:
+            ranges.append(
+                {
+                    "start_index": next_index,
+                    "end_index": structural_index - 1,
+                }
+            )
+        ranges.append(
+            {
+                "start_index": structural_index,
+                "end_index": structural_index,
+            }
+        )
+        next_index = structural_index + 1
+    if next_index <= window_end_index:
+        ranges.append(
+            {
+                "start_index": next_index,
+                "end_index": window_end_index,
+            }
+        )
+    return ranges
 
 
 def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
@@ -1005,7 +1170,7 @@ def _build_chunk_from_range(
     @exception  ValueError Raised when the selected range is empty or invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-16
-    @version    1.0.0
+    @version    1.1.0
     """
     selected_records = paragraph_records[start_index : end_index + 1]
     if not selected_records:
@@ -1020,7 +1185,56 @@ def _build_chunk_from_range(
             bool(item.get("joined_across_page_break", False)) for item in selected_records
         ),
         "cleanup_warning_flags": _merged_warning_flags(selected_records),
+        "cleanup_role": next(
+            (
+                _effective_cleanup_role(item)
+                for item in selected_records
+                if _effective_cleanup_role(item) != "body"
+            ),
+            _effective_cleanup_role(selected_records[0]),
+        ),
     }
+
+
+def _is_narratable_record(record: dict[str, object]) -> bool:
+    """Return whether one Cleanup paragraph should be materialized as audio text."""
+    return not cleanup_text_analysis_service.is_scene_separator_artifact(
+        str(record.get("text") or ""),
+        str(record.get("role") or "body"),
+    )
+
+
+def _narratable_subranges(
+    paragraph_records: list[dict[str, object]],
+    start_index: int,
+    end_index: int,
+) -> list[dict[str, int]]:
+    """Split one selected range at non-narratable scene-separator paragraphs."""
+    if start_index < 0 or end_index < start_index or end_index >= len(paragraph_records):
+        raise ValueError("AI chunk range is outside the available paragraphs.")
+    ranges: list[dict[str, int]] = []
+    segment_start: int | None = None
+    for index in range(start_index, end_index + 1):
+        if _is_narratable_record(paragraph_records[index]):
+            if segment_start is None:
+                segment_start = index
+            continue
+        if segment_start is not None:
+            ranges.append(
+                {
+                    "start_index": segment_start,
+                    "end_index": index - 1,
+                }
+            )
+            segment_start = None
+    if segment_start is not None:
+        ranges.append(
+            {
+                "start_index": segment_start,
+                "end_index": end_index,
+            }
+        )
+    return ranges
 
 
 def _append_chunks_from_ranges(
@@ -1042,15 +1256,21 @@ def _append_chunks_from_ranges(
     @version    1.0.0
     """
     for range_payload in ranges:
-        chunks.append(
-            _build_chunk_from_range(
-                paragraph_records,
-                int(range_payload["start_index"]),
-                int(range_payload["end_index"]),
-                semantic_strategy,
-                len(chunks) + 1,
-            )
+        narratable_ranges = _narratable_subranges(
+            paragraph_records,
+            int(range_payload["start_index"]),
+            int(range_payload["end_index"]),
         )
+        for narratable_range in narratable_ranges:
+            chunks.append(
+                _build_chunk_from_range(
+                    paragraph_records,
+                    narratable_range["start_index"],
+                    narratable_range["end_index"],
+                    semantic_strategy,
+                    len(chunks) + 1,
+                )
+            )
 
 
 def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:

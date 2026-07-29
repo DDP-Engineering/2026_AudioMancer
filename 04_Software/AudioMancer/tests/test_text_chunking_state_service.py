@@ -328,7 +328,9 @@ def test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist(tmp_path) 
         "cleanup_boundary_confidence",
         "cleanup_joined_across_page_break",
         "cleanup_warning_flags",
+        "cleanup_role",
     }
+    assert chunks[0]["cleanup_role"] == "body"
     assert updated_manifest["current_stage"] == "translation_ready"
 
 

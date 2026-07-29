@@ -14,7 +14,7 @@
          strict authoritative `chunks_text.json` document.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -25,7 +25,12 @@ from pathlib import Path
 import re
 
 from audiomancer import config
-from audiomancer.services import chunking_document_service, cleanup_metadata_service, project_workspace_service
+from audiomancer.services import (
+    chunking_document_service,
+    cleanup_metadata_service,
+    cleanup_text_analysis_service,
+    project_workspace_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
@@ -103,6 +108,8 @@ def chunk_text(
     paragraph_records = _build_paragraph_records(input_text, resolved_project_root)
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any chunkable paragraphs.")
+    if not any(_is_narratable_record(record) for record in paragraph_records):
+        raise ValueError("Cleaned text does not contain any narratable paragraphs.")
 
     existing_document = chunking_document_service.load_chunking_document(resolved_project_root)
     start_index = 0
@@ -119,7 +126,11 @@ def chunk_text(
         next_paragraph = int(existing_document["next_paragraph"])
         start_index = next_paragraph - 1
         chunks = list(existing_document["chunks"])
-        if len(chunks) != start_index:
+        expected_chunk_count = sum(
+            _is_narratable_record(record)
+            for record in paragraph_records[:start_index]
+        )
+        if len(chunks) != expected_chunk_count:
             raise chunking_document_service.IncompatibleChunkingDocumentError(
                 "Chunking data is incompatible. Use Reset Chunking before continuing."
             )
@@ -137,13 +148,15 @@ def chunk_text(
     try:
         for chunk_index in range(start_index, progress_total):
             raise_if_cancelled(cancel_requested)
-            chunk = _build_chunk_payload(chunk_index + 1, paragraph_records[chunk_index])
-            chunks.append(chunk)
-            chapter_count, last_chapter_label = _update_chapter_count(
-                chapter_count,
-                last_chapter_label,
-                chunk,
-            )
+            paragraph_record = paragraph_records[chunk_index]
+            if _is_narratable_record(paragraph_record):
+                chunk = _build_chunk_payload(len(chunks) + 1, paragraph_record)
+                chunks.append(chunk)
+                chapter_count, last_chapter_label = _update_chapter_count(
+                    chapter_count,
+                    last_chapter_label,
+                    chunk,
+                )
             document["chunks"] = chunks
             document["next_paragraph"] = chunk_index + 2
             chunking_document_service.write_chunking_document(resolved_project_root, document)
@@ -229,6 +242,14 @@ def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
 # LOCAL HELPERS
 
 
+def _is_narratable_record(paragraph_record: dict[str, object]) -> bool:
+    """Return whether one Cleanup paragraph should be materialized as audio text."""
+    return not cleanup_text_analysis_service.is_scene_separator_artifact(
+        str(paragraph_record.get("text") or ""),
+        str(paragraph_record.get("role") or "body"),
+    )
+
+
 def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
     """
     @brief      Build the paragraph records.
@@ -239,7 +260,10 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
     @version    0.2.0
     """
     if project_root is not None:
-        paragraph_records = cleanup_metadata_service.load_or_build_paragraph_records(project_root, cleaned_text)
+        paragraph_records = cleanup_metadata_service.load_completed_paragraph_records(
+            project_root,
+            cleaned_text,
+        )
     else:
         paragraph_records = cleanup_metadata_service.build_paragraph_records_from_text(cleaned_text)
     records: list[dict[str, object]] = []
@@ -274,7 +298,55 @@ def _build_chunk_payload(
         "cleanup_boundary_confidence": paragraph_record.get("boundary_confidence"),
         "cleanup_joined_across_page_break": bool(paragraph_record.get("joined_across_page_break", False)),
         "cleanup_warning_flags": list(paragraph_record.get("warning_flags", [])),
+        "cleanup_role": str(paragraph_record.get("role") or "body"),
     }
+
+
+def semantic_cut_priority(role: str, sentence_complete: bool) -> int:
+    """Return the approved semantic cut tier before any size-balance cost."""
+    if role == "heading":
+        return 0
+    if role == "scene_separator":
+        return 1
+    if role in {"list_item", "verse", "preformatted", "footnote"}:
+        return 2
+    if sentence_complete:
+        return 3
+    return 4
+
+
+def split_for_hard_limit(
+    text: str,
+    *,
+    hard_limit: int,
+) -> tuple[list[str], bool]:
+    """Split at sentence ends, using mid-sentence cuts only for oversized sentences."""
+    if hard_limit <= 0:
+        raise ValueError("Chunk hard limit must be positive.")
+    sentences = [
+        item.strip()
+        for item in cleanup_text_analysis_service.sentence_spans(str(text))
+        if item.strip()
+    ]
+    if not sentences:
+        return [], False
+    result: list[str] = []
+    used_mid_sentence_fallback = False
+    for sentence in sentences:
+        if len(sentence) <= hard_limit:
+            result.append(sentence)
+            continue
+        used_mid_sentence_fallback = True
+        remaining = sentence
+        while len(remaining) > hard_limit:
+            split_at = remaining.rfind(" ", 0, hard_limit + 1)
+            if split_at <= 0:
+                split_at = hard_limit
+            result.append(remaining[:split_at].rstrip())
+            remaining = remaining[split_at:].lstrip()
+        if remaining:
+            result.append(remaining)
+    return result, used_mid_sentence_fallback
 
 
 def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:

@@ -49,9 +49,9 @@ def test_cleanup_state_requires_structural_extraction(tmp_path) -> None:
     assert state["validation_state"] == "not_started"
 
 
-def test_cleanup_state_exposes_passed_with_warnings_and_manual_save(tmp_path) -> None:
+def test_cleanup_state_exposes_runtime_quality_and_manual_save(tmp_path) -> None:
     """
-    @brief      Verify completed Cleanup exposes warnings and persists manual edits.
+    @brief      Verify completed Cleanup exposes runtime quality and persists manual edits.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -63,8 +63,8 @@ def test_cleanup_state_exposes_passed_with_warnings_and_manual_save(tmp_path) ->
     document = text_cleanup_service.clean_text(project_root, manifest)
 
     state = text_cleanup_state_service.build_text_cleanup_state(project_root, manifest, "en")
-    assert state["validation_state"] == "passed_with_warnings"
-    assert state["uncertainty_count"] == document["uncertainty_count"]
+    assert state["validation_state"] == "passed"
+    assert state["uncertainty_count"] == document["quality_report"]["low_confidence_count"]
     assert state["can_reset_cleanup"] is True
 
     text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Operator correction.\n")

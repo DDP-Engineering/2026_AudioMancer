@@ -608,7 +608,7 @@ DEFAULT_WORKFLOW_STAGE = "project_created"
 DEFAULT_LANGUAGE = "en"
 
 # @brief Supported operator-selectable UI language codes.
-SUPPORTED_LANGUAGES = ("en", "ro")
+SUPPORTED_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
 
 # @brief Default UI text-scale preset.
 DEFAULT_UI_TEXT_SCALE = "normal"

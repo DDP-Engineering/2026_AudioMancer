@@ -146,6 +146,73 @@ def read_chunking_document(document_root: str | Path) -> dict[str, object]:
     return payload
 
 
+def write_cleanup_input(
+    document_root: str | Path,
+    source_text: str,
+    *,
+    status: str = "completed",
+    paragraphs: list[dict[str, object]] | None = None,
+) -> Path:
+    """Write the strict Cleanup subset consumed by Chunking tests."""
+    paragraph_records = paragraphs or _cleanup_paragraphs(source_text)
+    payload = {
+        "status": status,
+        "phase": "done" if status == "completed" else "adjudication",
+        "started_at": "2026-07-28T12:00:00+00:00",
+        "updated_at": "2026-07-28T12:00:01+00:00",
+        "completed_at": "2026-07-28T12:00:01+00:00" if status == "completed" else None,
+        "source_hash": "0" * 64,
+        "ledger_hash": "1" * 64,
+        "policy_hash": "2" * 64,
+        "prompt_hash": "3" * 64,
+        "profile_fingerprint": None,
+        "document_profile": {
+            "source_format": "txt",
+            "structure_quality": "text_only",
+            "language": "en",
+        },
+        "unit_operations": [],
+        "boundaries": [],
+        "paragraphs": paragraph_records,
+        "progress": {
+            "question_count": 0,
+            "batch_order": [],
+            "next_batch_index": 0,
+            "completed_request_count": 0,
+            "estimated_request_count": 0,
+            "estimated_input_tokens": 0,
+        },
+        "warnings": [],
+        "token_usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "usage_available": False,
+        },
+        "quality_report": {
+            "introduced_fusion_count": 0,
+            "projection_violation_count": 0,
+            "invalid_operation_count": 0,
+            "unclassified_boundary_count": 0,
+            "low_confidence_count": 0,
+            "fallback_count": 0,
+            "override_count": 0,
+            "override_rate": 0.0,
+            "failed_batch_count": 0,
+            "online_fragment_count": 0,
+            "online_backend": None,
+        },
+        "output_hash": sha256(source_text.encode("utf-8")).hexdigest(),
+        "user_modified": False,
+        "structure_source": "cleanup_roles",
+    }
+    root = Path(document_root)
+    (root / config.CLEANED_TEXT_FILE_NAME).write_text(source_text, encoding="utf-8")
+    output_path = root / config.CLEANUP_DOCUMENT_FILE_NAME
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return output_path
+
+
 def _normalize_chunk(item: dict[str, object], sequence_index: int) -> dict[str, object]:
     """
     @brief Project a compact test record into the exact chunk field set.
@@ -161,6 +228,7 @@ def _normalize_chunk(item: dict[str, object], sequence_index: int) -> dict[str, 
         "cleanup_boundary_confidence": item.get("cleanup_boundary_confidence"),
         "cleanup_joined_across_page_break": bool(item.get("cleanup_joined_across_page_break", False)),
         "cleanup_warning_flags": list(item.get("cleanup_warning_flags", [])),
+        "cleanup_role": str(item.get("cleanup_role") or "body"),
     }
 
 
@@ -174,6 +242,36 @@ def _inferred_mode(chunks: list[dict[str, object]]) -> str:
     if chunks and chunks[0].get("chunking_mode") == "ai_assisted":
         return "ai_assisted"
     return "deterministic"
+
+
+def _cleanup_paragraphs(source_text: str) -> list[dict[str, object]]:
+    """Build body-role Cleanup paragraph offsets from blank-line-separated text."""
+    records = []
+    start = 0
+    for index, paragraph in enumerate(
+        [item for item in source_text.strip().split("\n\n") if item.strip()],
+        start=1,
+    ):
+        output_start = source_text.index(paragraph, start)
+        output_end = output_start + len(paragraph)
+        start = output_end
+        records.append(
+            {
+                "paragraph_id": f"paragraph-{index:06d}",
+                "output_start": output_start,
+                "output_end": output_end,
+                "role": "body",
+                "confidence": "strong",
+                "reason_codes": ["test_fixture"],
+                "source_page_start": None,
+                "source_page_end": None,
+                "starts_after_page_transition": False,
+                "crosses_page_transition": False,
+                "source_unit_ids": [],
+                "provenance_available": False,
+            }
+        )
+    return records
 
 
 # END OF FILE

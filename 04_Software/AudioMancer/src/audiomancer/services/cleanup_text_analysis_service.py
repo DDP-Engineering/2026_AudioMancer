@@ -15,7 +15,7 @@
          one consistent implementation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -30,6 +30,24 @@ from langdetect.lang_detect_exception import LangDetectException
 
 # @brief Unicode whitespace normalization pattern used before comparisons.
 _WHITESPACE_PATTERN = re.compile(r"\s+")
+# @brief Repeated same-glyph separators accepted when no semantic text is present.
+_SCENE_SEPARATOR_REPEAT_PATTERN = re.compile(
+    r"(?P<marker>[*_~#=•·◆◇♦◊▪■□●○\-\u2013\u2014])"
+    r"(?:\s*(?P=marker)){2,}"
+)
+# @brief Common singleton ornaments used as scene or section breaks in books.
+_SCENE_SEPARATOR_SINGLETONS = frozenset(
+    (
+        "⁂",
+        "❦",
+        "❧",
+        "☙",
+        "※",
+        "⁕",
+        "✦",
+        "✧",
+    )
+)
 # @brief Supported-language chapter/scene/part labels used for structure detection only.
 _CHAPTER_WORD_PATTERN = (
     r"chapter|capitolul|capitol|capítulo|capitulo|capitolo|chapitre|kapitel|глава|"
@@ -65,6 +83,35 @@ _HEADER_FOOTER_PAGE_AFFIX_PATTERNS = (
 
 
 # PUBLIC API
+
+
+def is_scene_separator_artifact(
+    text: str,
+    role: str | None = None,
+) -> bool:
+    """
+    @brief      Identify a non-narratable scene-separator paragraph.
+    @details    An explicit Cleanup role is authoritative. Raw-text recovery is
+                intentionally limited to repeated identical marker glyphs and
+                known singleton ornaments so ambiguous punctuation remains
+                narratable after user edits.
+    @param[in]  text Candidate paragraph text.
+    @param[in]  role Optional Cleanup paragraph role.
+    @return     True when Chunking must treat the paragraph as a hard boundary.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-29
+    @version    0.1.0
+    """
+    normalized_role = str(role or "body").strip().casefold()
+    if normalized_role == "scene_separator":
+        return True
+    if normalized_role not in {"", "body"}:
+        return False
+    normalized_text = normalize_text_line(text)
+    if normalized_text in _SCENE_SEPARATOR_SINGLETONS:
+        return True
+    return bool(_SCENE_SEPARATOR_REPEAT_PATTERN.fullmatch(normalized_text))
 
 
 def normalize_text_line(line: str) -> str:

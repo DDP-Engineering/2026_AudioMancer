@@ -3,19 +3,19 @@ id = "REQ-UX-61dacc39-d0e3-453a-8ce9-3820cd5816bf"
 category = "ux"
 status = "Active"
 priority = "Must"
-requirement = "Text Cleanup shall report monotonic operation progress and reserve 100 percent for completed validation and rendering."
-rationale = "The modal dialog must truthfully show forward movement during long local inference without implying completion before the output is safe and persisted."
-verification = "Focused pytest passed: AI and no-AI Cleanup paths emit monotonic percentages and reserve 100 percent for completion."
-spec_ref = ""
+requirement = "Text Cleanup shall report monotonic progress plus AI workload estimates through the existing progress dialog and reserve 100 percent for validated publication."
+rationale = "Long local inference must remain observable without adding UI elements or implying completion before output validation."
+verification = "Monotonic progress and workload estimate test passes."
+spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_cleanup_maps_ai_work_to_monotonic_global_progress",
-  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_cleanup_without_ai_still_reports_phase_progress",
+  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_cleanup_without_ai_reports_monotonic_phase_progress",
 ]
 
 created_on = "2026-07-27T15:46:26Z"
-last_updated = "2026-07-27T15:52:49Z"
+last_updated = "2026-07-28T21:55:48Z"

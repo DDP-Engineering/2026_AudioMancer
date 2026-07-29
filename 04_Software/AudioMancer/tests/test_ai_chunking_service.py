@@ -24,7 +24,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
-from chunking_test_support import read_chunking_document, write_chunking_document
+from chunking_test_support import read_chunking_document, write_chunking_document, write_cleanup_input
 
 
 def test_ai_chunking_windows_use_configured_strategy_caps(monkeypatch) -> None:
@@ -310,6 +310,7 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
         "CHAPTER I\n\nParagraph one.\n\nParagraph two.\n\nParagraph three.\n",
         encoding="utf-8",
     )
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -394,6 +395,7 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -480,6 +482,7 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -552,33 +555,26 @@ def test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata(tmp_pa
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
 
     project_root, manifest = project_workspace_service.create_project("AiChunkingMetadataIds", tmp_path)
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "Visible first.\n\nVisible second.\n",
-        encoding="utf-8",
-    )
-    (project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).write_text(
-        json.dumps(
+    cleaned_text = "Visible first.\n\nVisible second.\n"
+    write_cleanup_input(
+        project_root,
+        cleaned_text,
+        paragraphs=[
             {
-                "schema_version": 1,
-                "paragraphs": [
-                    {
-                        "paragraph_id": "paragraph-0042",
-                        "text": "Visible first.\n\nVisible second.",
-                        "source_start_line": 1,
-                        "source_end_line": 3,
-                        "source_page_start": 1,
-                        "source_page_end": 2,
-                        "starts_after_page_break": False,
-                        "joined_across_page_break": True,
-                        "boundary_confidence": "repaired",
-                        "warning_flags": [],
-                    }
-                ],
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+                "paragraph_id": "paragraph-0042",
+                "output_start": 0,
+                "output_end": len(cleaned_text.rstrip("\n")),
+                "role": "body",
+                "confidence": "repaired",
+                "reason_codes": ["page_transition_repaired"],
+                "source_page_start": 1,
+                "source_page_end": 2,
+                "starts_after_page_transition": False,
+                "crosses_page_transition": True,
+                "source_unit_ids": ["u-000001", "u-000002"],
+                "provenance_available": True,
+            }
+        ],
     )
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -672,6 +668,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_text = "\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n"
     cleaned_path.write_text(cleaned_text, encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_text)
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -861,6 +858,7 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -980,6 +978,7 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",

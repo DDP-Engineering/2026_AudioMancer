@@ -29,7 +29,7 @@ from audiomancer.services import (
     operation_runtime_service,
     project_workspace_service,
 )
-from chunking_test_support import read_chunking_document, write_chunking_document
+from chunking_test_support import read_chunking_document, write_chunking_document, write_cleanup_input
 
 
 def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> None:
@@ -55,9 +55,9 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     cleaned_relative_path = config.CLEANED_TEXT_FILE_NAME
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [cleaned_relative_path]
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+    write_cleanup_input(
+        project_root,
         "Chapter I\n\nParagraph one.\n\nParagraph two.\n",
-        encoding="utf-8",
     )
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
@@ -101,10 +101,7 @@ def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) 
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["progress_current"] = 1
     manifest["operations"]["cleanup"]["progress_total"] = 1
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "Paragraph one.\n\nParagraph two.\n",
-        encoding="utf-8",
-    )
+    write_cleanup_input(project_root, "Paragraph one.\n\nParagraph two.\n")
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
@@ -113,9 +110,9 @@ def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) 
     assert len(chunks) == 2
 
 
-def test_chunking_prefers_cleanup_metadata_paragraph_records(tmp_path) -> None:
+def test_chunking_prefers_cleanup_document_paragraph_records(tmp_path) -> None:
     """
-    @brief      Verify deterministic chunking uses cleanup metadata before blank-line fallback.
+    @brief      Verify deterministic chunking uses cleanup.json paragraph offsets.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -134,32 +131,26 @@ def test_chunking_prefers_cleanup_metadata_paragraph_records(tmp_path) -> None:
         "size_bytes": source_path.stat().st_size,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "Split by visible text.\n\nBut metadata says one unit.\n",
-        encoding="utf-8",
-    )
-    (project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).write_text(
-        json.dumps(
+    cleaned_text = "Split by visible text.\n\nBut metadata says one unit.\n"
+    write_cleanup_input(
+        project_root,
+        cleaned_text,
+        paragraphs=[
             {
-                "schema_version": 1,
-                "paragraphs": [
-                    {
-                        "paragraph_id": "paragraph-0001",
-                        "source_start_line": 1,
-                        "source_end_line": 3,
-                        "source_page_start": 1,
-                        "source_page_end": 2,
-                        "starts_after_page_break": False,
-                        "joined_across_page_break": True,
-                        "boundary_confidence": "repaired",
-                        "warning_flags": [],
-                    }
-                ],
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+                "paragraph_id": "paragraph-000001",
+                "output_start": 0,
+                "output_end": len(cleaned_text.rstrip("\n")),
+                "role": "body",
+                "confidence": "repaired",
+                "reason_codes": ["page_transition_repaired"],
+                "source_page_start": 1,
+                "source_page_end": 2,
+                "starts_after_page_transition": False,
+                "crosses_page_transition": True,
+                "source_unit_ids": ["u-000001", "u-000002"],
+                "provenance_available": True,
+            }
+        ],
     )
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
@@ -171,9 +162,9 @@ def test_chunking_prefers_cleanup_metadata_paragraph_records(tmp_path) -> None:
     assert chunks[0]["cleanup_boundary_confidence"] == "repaired"
 
 
-def test_chunking_falls_back_when_cleanup_metadata_is_missing(tmp_path) -> None:
+def test_chunking_rejects_missing_cleanup_document(tmp_path) -> None:
     """
-    @brief      Verify old projects without cleanup metadata still chunk from cleaned text.
+    @brief      Verify Chunking does not consume unverified cleaned text without cleanup.json.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -197,11 +188,8 @@ def test_chunking_falls_back_when_cleanup_metadata_is_missing(tmp_path) -> None:
         encoding="utf-8",
     )
 
-    report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
-
-    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
-    assert report_payload["chunk_count"] == 2
-    assert len(chunks) == 2
+    with pytest.raises(ValueError, match="completed Cleanup"):
+        deterministic_chunking_service.chunk_text(project_root, manifest)
 
 
 def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
@@ -226,10 +214,7 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "Paragraph one.\n\nParagraph two.\n",
-        encoding="utf-8",
-    )
+    write_cleanup_input(project_root, "Paragraph one.\n\nParagraph two.\n")
     should_cancel = {"value": False}
 
     def _progress_callback(*_args) -> None:
@@ -280,9 +265,9 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
         "size_bytes": source_path.stat().st_size,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+    write_cleanup_input(
+        project_root,
         "\n\n".join(f"Paragraph {index}." for index in range(1, 7)) + "\n",
-        encoding="utf-8",
     )
     document_write_count = {"value": 0}
     original_write_document = chunking_document_service.write_chunking_document
@@ -367,7 +352,7 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
     cleaned_text = "Paragraph one.\n\nParagraph two.\n"
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(cleaned_text, encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_text)
     write_chunking_document(
         project_root,
         [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Paragraph one."}],
@@ -423,7 +408,7 @@ def test_chunking_rejects_empty_cleaned_text(tmp_path) -> None:
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("\n\n", encoding="utf-8")
+    write_cleanup_input(project_root, "\n\n")
 
     with pytest.raises(ValueError, match="chunkable paragraphs"):
         deterministic_chunking_service.chunk_text(project_root, manifest)

@@ -35,6 +35,7 @@ from audiomancer.services import (
     project_workspace_service,
     text_chunking_state_service,
 )
+from chunking_test_support import write_cleanup_input
 
 # CONSTANTS
 
@@ -58,6 +59,7 @@ _CHUNK_FIELDS = {
     "cleanup_boundary_confidence",
     "cleanup_joined_across_page_break",
     "cleanup_warning_flags",
+    "cleanup_role",
 }
 _FORBIDDEN_PERSISTED_FIELDS = {
     "schema_version",
@@ -572,6 +574,7 @@ def _chunk(chunk_id: str, sequence_index: int, text: str) -> dict[str, object]:
         "cleanup_boundary_confidence": "high",
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
+        "cleanup_role": "body",
     }
 
 
@@ -659,7 +662,7 @@ def _create_chunk_ready_project(tmp_path, name: str, source_text: str):
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(source_text, encoding="utf-8")
+    write_cleanup_input(project_root, source_text)
     project_workspace_service.save_manifest(manifest, project_root)
     return project_root, manifest
 

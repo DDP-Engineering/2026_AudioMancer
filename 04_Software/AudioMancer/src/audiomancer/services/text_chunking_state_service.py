@@ -468,6 +468,7 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
         "cleanup_boundary_confidence": None,
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
+        "cleanup_role": str(source_chunk.get("cleanup_role") or "body"),
     }
 
 
@@ -494,6 +495,7 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
         "cleanup_boundary_confidence": None,
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
+        "cleanup_role": "body",
     }
 
 

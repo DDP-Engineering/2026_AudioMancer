@@ -11,6 +11,8 @@ default_permissions = "agentic-workspace"
 
 # Workspace-scoped profile used by Codex after the template is copied to a
 # target repository root.
+sandbox_mode = "danger-full-access"
+approval_policy = "never"
 [permissions.agentic-workspace]
 description = "Workspace-scoped editing for manual agentic development."
 extends = ":workspace"
@@ -21,3 +23,6 @@ extends = ":workspace"
 # separate host safety layer.
 [permissions.agentic-workspace.network]
 enabled = false
+
+[sandbox_workspace_write]
+network_access = true

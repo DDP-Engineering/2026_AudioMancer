@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-807c56f0-12b7-42e9-bd8f-0d562c903e70"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Saving a whitespace-only manual Cleanup edit shall realign paragraph offsets while retaining unambiguous Cleanup provenance."
+rationale = "Whitespace correction should preserve truthful source roles and page evidence when lexical content is unchanged."
+verification = "Whitespace-only provenance realignment test passes."
+spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
+]
+
+created_on = "2026-07-28T20:00:04Z"
+last_updated = "2026-07-28T20:46:10Z"

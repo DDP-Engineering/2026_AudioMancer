@@ -72,7 +72,15 @@ def build_text_cleanup_state(
         notes.append("Cleanup data is invalid. Reset Cleanup and run it again.")
     elif cleanup_document is not None:
         notes.extend(str(item) for item in cleanup_document["warnings"])
-        notes.append("Cleanup passed and Text Chunking is available.")
+        if cleanup_document["status"] == "completed":
+            notes.append("Cleanup passed and Text Chunking is available.")
+        elif cleanup_document["status"] == "paused":
+            notes.append("Cleanup is paused and can resume from its checkpoint.")
+        else:
+            notes.append(
+                f"Cleanup status: {cleanup_document['status']} "
+                f"({cleanup_document['phase']})."
+            )
 
     extraction_complete = (
         extracted_text is not None
@@ -87,9 +95,11 @@ def build_text_cleanup_state(
     cleanup_artifacts = (
         config.CLEANUP_DOCUMENT_FILE_NAME,
         config.CLEANED_TEXT_FILE_NAME,
-        config.CLEANED_TEXT_METADATA_FILE_NAME,
-        config.CLEANUP_REPORT_FILE_NAME,
-        config.CLEANUP_STATE_FILE_NAME,
+    )
+    quality_report = (
+        cleanup_document.get("quality_report")
+        if isinstance(cleanup_document, dict)
+        else None
     )
     return {
         "extracted_text": extracted_text,
@@ -101,9 +111,15 @@ def build_text_cleanup_state(
         "validation_state": (
             "invalid"
             if cleanup_invalid
-            else str((cleanup_document or {}).get("validation_state", "not_started"))
+            else "passed"
+            if (cleanup_document or {}).get("status") == "completed"
+            else str((cleanup_document or {}).get("status", "not_started"))
         ),
-        "uncertainty_count": int((cleanup_document or {}).get("uncertainty_count", 0)),
+        "uncertainty_count": (
+            int(quality_report.get("low_confidence_count", 0))
+            if isinstance(quality_report, dict)
+            else 0
+        ),
     }
 
 

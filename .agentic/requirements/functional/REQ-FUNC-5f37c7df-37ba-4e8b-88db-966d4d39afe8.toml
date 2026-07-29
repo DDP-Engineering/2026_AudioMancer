@@ -3,10 +3,10 @@ id = "REQ-FUNC-5f37c7df-37ba-4e8b-88db-966d4d39afe8"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "The Text Cleanup V2 controller shall route Extraction and Cleanup through the threaded runner while forwarding the optional selected AI profile."
-rationale = "Long operations must remain cancellable and use the operator-selected local model configuration."
-verification = "Full pytest gate E-0009 passed: 1025 passed, 62 skipped, 1 deselected."
-spec_ref = ""
+requirement = "The existing Cleanup action shall start or resume Cleanup through the threaded runner using the currently selected optional AI profile."
+rationale = "The unchanged UI needs one action that supports new runs, compatible resume, and profile-driven AI re-adjudication."
+verification = "Existing Cleanup action routes the selected optional profile through the runner."
+spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
@@ -14,8 +14,7 @@ affected_paths = [
 
 linked_tests = [
   "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_cleanup_controller_passes_optional_selected_profile",
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_extraction_controller_leaves_project_arguments_for_threaded_runner",
 ]
 
 created_on = "2026-07-27T17:59:42Z"
-last_updated = "2026-07-27T18:00:11Z"
+last_updated = "2026-07-28T20:45:44Z"

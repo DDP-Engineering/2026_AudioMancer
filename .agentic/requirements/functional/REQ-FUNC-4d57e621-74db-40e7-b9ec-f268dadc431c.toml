@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-4d57e621-74db-40e7-b9ec-f268dadc431c"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Removing a page artifact shall leave an explicit safe boundary between the nearest surviving narrative units."
+rationale = "Dropped page numbers, headers, and footers must not erase the separator across a page transition."
+verification = "Page-artifact gap guard test passes."
+spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_removed_page_artifact_keeps_a_typed_safe_gap",
+]
+
+created_on = "2026-07-28T19:59:30Z"
+last_updated = "2026-07-28T20:45:43Z"

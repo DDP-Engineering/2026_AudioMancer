@@ -52,6 +52,7 @@ CHUNK_FIELDS = frozenset(
         "cleanup_boundary_confidence",
         "cleanup_joined_across_page_break",
         "cleanup_warning_flags",
+        "cleanup_role",
     }
 )
 TOKEN_USAGE_FIELDS = frozenset({"input_tokens", "output_tokens", "total_tokens", "usage_available"})
@@ -373,6 +374,16 @@ def _validate_chunk(chunk: object, expected_index: int, seen_ids: set[str]) -> N
     flags = chunk["cleanup_warning_flags"]
     if not isinstance(flags, list) or any(not isinstance(item, str) for item in flags):
         raise TypeError("invalid cleanup warning flags")
+    if chunk["cleanup_role"] not in {
+        "body",
+        "heading",
+        "scene_separator",
+        "list_item",
+        "verse",
+        "preformatted",
+        "footnote",
+    }:
+        raise ValueError("invalid cleanup role")
 
 
 def _chapter_count(chunks: list[ChunkPayload]) -> int:

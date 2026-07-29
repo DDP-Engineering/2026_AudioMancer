@@ -5,17 +5,17 @@ status = "Active"
 priority = "Must"
 requirement = "Text Cleanup V2 state shall require structural extraction and expose terminal warning plus optional operator-edit state from authoritative artifacts."
 rationale = "The page must show truthful readiness and review state without legacy sidecars."
-verification = "Full pytest gate E-0009 passed: 1025 passed, 62 skipped, 1 deselected."
-spec_ref = ""
+verification = "Cleanup state readiness, runtime quality, and manual-save tests pass."
+spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_exposes_passed_with_warnings_and_manual_save",
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_exposes_runtime_quality_and_manual_save",
   "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_requires_structural_extraction",
 ]
 
 created_on = "2026-07-27T17:59:29Z"
-last_updated = "2026-07-27T18:00:11Z"
+last_updated = "2026-07-28T21:00:25Z"
