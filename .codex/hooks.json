@@ -1,7 +1,5 @@
 {
-  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
-  "_comment": "Codex hook configuration for the transboarded project root. Hook commands are project-root relative, and Codex runs them with the session cwd as their working directory, so they resolve whenever this file is the loaded project config.",
-  "_comment_launch_directory": "Start Codex from the repository root, the directory holding .agentic/. A host that locates its project config relative to the launch directory finds nothing when started in a subdirectory, which registers no hooks at all and leaves every guard silently absent for the session - it is not a wrong path, it is no guard. See ../.agentic/hooks/README.md for why anchoring these commands to the Git root is not the fix: it breaks in a project without .git, disagrees with find_repository_root which resolves .agentic/ first, and has no single form that works across bash, PowerShell, and cmd.exe.",
+  "description": "AEGIS agentic guards (SPDX: LicenseRef-PolyForm-Noncommercial-1.0.0). Start Codex from the repository root that holds .agentic/, trust the project, and review these hooks so they run. See .codex/README.md and .agentic/hooks/README.md.",
   "hooks": {
     "PreToolUse": [
       {
