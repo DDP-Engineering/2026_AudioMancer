@@ -8,10 +8,10 @@
 # -----------------------------------------------------------------------------
 """
 @file workflow_impact_service.py
-@brief V2 workflow impact helpers for selective downstream preservation.
+@brief Workflow impact helpers for selective downstream preservation.
 @details Defines shared workflow dependency policy, stable identity rules,
          reset summaries, manifest refresh helpers, and safe generated-artifact
-         deletion helpers used by staged v2 downstream invalidation work.
+         deletion helpers used by staged downstream invalidation work.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-04
 @version 0.1.3
@@ -33,13 +33,13 @@ from audiomancer.services.time_service import utc_now_iso
 # @brief Component logger used for shared workflow-impact mutations.
 _WORKFLOW_IMPACT_LOGGER = get_component_logger("operation_runtime")
 
-# @brief Canonical operation order used by the v2 workflow-impact layer.
+# @brief Canonical operation order used by the workflow-impact layer.
 WORKFLOW_OPERATION_ORDER = config.WORKFLOW_OPERATION_ORDER
 
 # @brief Workflow stage promoted by each completed operation.
 OPERATION_STAGE_BY_KIND = config.OPERATION_STAGE_BY_KIND
 
-# @brief Stable identity fields that must survive local v2 edit operations.
+# @brief Stable identity fields that must survive local edit operations.
 STABLE_IDENTITY_FIELDS = frozenset(("chunk_id", "speech_block_id", "voice_target_id"))
 
 # @brief Generated-audio folder holding artifacts derived from speech_block_id.
@@ -163,7 +163,7 @@ def operation_index(operation_kind: str) -> int:
 
 def downstream_operation_kinds(operation_kind: str, include_current: bool = False) -> tuple[str, ...]:
     """
-    @brief      Return ordered downstream operation kinds for v2 impact planning.
+    @brief      Return ordered downstream operation kinds for impact planning.
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  include_current True to include the selected operation.
     @return     Ordered operation-kind tuple.
@@ -180,7 +180,7 @@ def downstream_operation_kinds(operation_kind: str, include_current: bool = Fals
 
 def stable_identity_fields() -> tuple[str, ...]:
     """
-    @brief      Return stable persisted identity fields for local v2 edits.
+    @brief      Return stable persisted identity fields for local edits.
     @return     Ordered stable identity field tuple.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -192,7 +192,7 @@ def stable_identity_fields() -> tuple[str, ...]:
 
 def is_stable_identity_field(field_name: str) -> bool:
     """
-    @brief      Return whether one persisted field is a stable v2 identity.
+    @brief      Return whether one persisted field is a stable identity.
     @param[in]  field_name Candidate field name.
     @return     True when the field is a stable identity field.
     @exception  None
@@ -264,7 +264,7 @@ def apply_full_operation_reset(
     reason: str = "",
 ) -> WorkflowImpactSummary:
     """
-    @brief      Apply an existing broad reset through the v2 impact wrapper.
+    @brief      Apply an existing broad reset through the impact wrapper.
     @param[in]  project_root Active project root folder.
     @param[in]  operation_kind Selected workflow operation token.
     @param[in]  include_current True to reset the selected operation too.
@@ -304,7 +304,7 @@ def build_selective_invalidation_summary(
     artifact_deletion: ArtifactDeletionSummary | None = None,
 ) -> WorkflowImpactSummary:
     """
-    @brief      Build a summary for one selective v2 invalidation.
+    @brief      Build a summary for one selective invalidation.
     @param[in]  source_operation_kind Operation that caused the impact.
     @param[in]  reason Operator-readable impact reason.
     @param[in]  affected_chunk_ids Exact affected chunk identifiers.

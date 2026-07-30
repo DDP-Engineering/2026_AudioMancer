@@ -6,15 +6,15 @@ priority = "Must"
 requirement = "Cleanup document loading shall raise CleanupDocumentError for every malformed Progress payload."
 rationale = "Resume and manifest projection require a complete, safely typed progress structure and must not receive corrupt persisted shapes."
 verification = "Focused issue #33 run passed all malformed Progress variants; E-0008."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress",
 ]
 
 created_on = "2026-07-29T20:06:50Z"
-last_updated = "2026-07-29T20:22:55Z"
+last_updated = "2026-07-30T10:29:14Z"

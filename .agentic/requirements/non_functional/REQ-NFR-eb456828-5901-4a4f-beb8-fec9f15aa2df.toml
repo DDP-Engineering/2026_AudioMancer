@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-NFR-eb456828-5901-4a4f-beb8-fec9f15aa2df"
+category = "non_functional"
+status = "Active"
+priority = "Must"
+requirement = "The active AudioMancer tree shall contain no product-generation-specific compatibility asset proven unreachable after the hard break."
+rationale = "Dead compatibility constants and generation-only fixtures obscure the canonical implementation and invite accidental reuse."
+verification = "Automated canonical asset contract passed on 2026-07-30."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/tests/test_hard_break_contract.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_hard_break_contract.py::test_canonical_cleanup_assets_replace_generation_named_assets",
+]
+
+created_on = "2026-07-30T10:20:02Z"
+last_updated = "2026-07-30T10:35:35Z"

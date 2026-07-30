@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 """
 @file test_text_cleanup_page.py
-@brief Qt tests for the unified Cleanup V2 page.
+@brief Qt tests for the unified Cleanup page.
 @details Verifies the single Cleanup action, optional AI profile, and optional
          operator edit, save, and cancel controls.
 @author Eng. Dan Dumitru Pasare

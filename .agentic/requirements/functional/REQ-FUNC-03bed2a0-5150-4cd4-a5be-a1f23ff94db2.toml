@@ -5,7 +5,7 @@ status = "Active"
 priority = "Must"
 requirement = "Project opening shall automatically reset an incompatible Chunking document and all downstream operation data before retrying validation once."
 rationale = "Derived Chunking state must not make an otherwise valid project impossible to open, and one bounded retry prevents recovery loops."
-verification = "Focused project-open self-heal test passed against the Cleanup V2 persistence contract."
+verification = "Focused project-open self-heal test passed against the Cleanup persistence contract."
 spec_ref = ""
 
 affected_paths = [
@@ -18,4 +18,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-29T08:55:41Z"
-last_updated = "2026-07-29T09:10:27Z"
+last_updated = "2026-07-30T10:23:26Z"

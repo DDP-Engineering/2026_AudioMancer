@@ -321,7 +321,7 @@ def _process_batch(
             midpoint = len(disagreements) // 2
             left_result = _process_verifier_split(
                 profile,
-                f"{batch_id}-v1",
+                f"{batch_id}-verifier-left",
                 disagreements[:midpoint],
                 log_path,
                 cancel_requested,
@@ -331,7 +331,7 @@ def _process_batch(
             )
             right_result = _process_verifier_split(
                 profile,
-                f"{batch_id}-v2",
+                f"{batch_id}-verifier-right",
                 disagreements[midpoint:],
                 log_path,
                 cancel_requested,
@@ -538,7 +538,7 @@ def _ask(
         user_prompt,
         log_path=log_path,
         log_context={
-            "operation": "cleanup_v2",
+            "operation": "cleanup",
             "pass": "verifier" if verifier else "primary",
         },
         cancel_requested=cancel_requested,

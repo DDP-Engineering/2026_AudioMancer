@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Chunking shall permit a mid-sentence fallback cut only when one sentence alone exceeds the hard chunk limit."
 rationale = "Ordinary cuts must remain sentence-safe while pathological long sentences still produce bounded chunks."
 verification = "Sentence-safe overflow fallback test passes."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
@@ -14,8 +14,8 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_chunking_contract.py::test_mid_sentence_cut_is_used_only_for_one_oversized_sentence",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_mid_sentence_cut_is_used_only_for_one_oversized_sentence",
 ]
 
 created_on = "2026-07-28T20:00:05Z"
-last_updated = "2026-07-28T20:45:42Z"
+last_updated = "2026-07-30T10:28:58Z"

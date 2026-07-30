@@ -13,9 +13,11 @@
          checkpoints, source-only rendering, publication, and manual edits
          through cleanup.json plus clean_text.txt.
 @author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.6.0
+@date 2026-07-30
+@version 0.7.0
 """
+
+# IMPORTS
 
 from __future__ import annotations
 
@@ -46,6 +48,8 @@ from audiomancer.services.persistence_service import (
     write_text_atomic,
 )
 from audiomancer.services.time_service import utc_now_iso
+
+# CONSTANTS
 
 CLEANUP_ROOT_FIELDS = frozenset(
     (
@@ -95,6 +99,8 @@ _ANALYSIS_COMPLETE_PERCENT = 8
 _AI_COMPLETE_PERCENT = 88
 _VALIDATION_PERCENT = 94
 _PERSISTENCE_PERCENT = 98
+
+# PUBLIC API
 
 
 class CleanupDocumentError(ValueError):
@@ -430,7 +436,17 @@ def save_user_cleaned_text(
     project_root: str | Path,
     cleaned_text: str,
 ) -> dict[str, object]:
-    """Persist an operator edit with truthful structure and downstream reset."""
+    """
+    @brief      Persist an operator edit with truthful structure and downstream reset.
+    @param[in]  project_root Active project root folder.
+    @param[in]  cleaned_text Operator-edited canonical Cleanup text.
+    @return     Updated completed Cleanup document.
+    @exception  ValueError Raised when the edited text is empty.
+    @exception  CleanupDocumentError Raised when completed Cleanup is unavailable.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-30
+    @version    0.2.0
+    """
     root = Path(project_root)
     edited_text = str(cleaned_text).replace("\r\n", "\n").replace("\r", "\n")
     if not edited_text.strip():
@@ -444,6 +460,12 @@ def save_user_cleaned_text(
         edited_text
     )
     if whitespace_only:
+        previous_records = (
+            cleanup_metadata_service.load_completed_paragraph_records(
+                root,
+                current_text,
+            )
+        )
         _realign_whitespace_boundaries(
             root,
             document,
@@ -457,21 +479,10 @@ def save_user_cleaned_text(
             for item in document["paragraphs"]
             for unit_id in item.get("source_unit_ids", [])
         ]
-        previous_records = list(document["paragraphs"])
-        roles = [str(item.get("role") or "body") for item in previous_records]
-        roles_align_by_index = len(runtime_records) == len(previous_records)
-        for record_index, record in enumerate(runtime_records):
+        _realign_whitespace_roles(previous_records, runtime_records)
+        for record in runtime_records:
             record["source_unit_ids"] = list(dict.fromkeys(source_ids))
             record["provenance_available"] = True
-            classified_role = str(record.get("role") or "body")
-            if classified_role == "scene_separator":
-                record["role"] = classified_role
-            elif roles_align_by_index:
-                record["role"] = roles[record_index]
-            elif len(runtime_records) == 1:
-                record["role"] = next((role for role in roles if role != "body"), "body")
-            else:
-                record["role"] = "body"
             record["reason_codes"] = ["user_whitespace_realign"]
         document["paragraphs"] = (
             cleanup_metadata_service.persisted_paragraph_records(runtime_records)
@@ -849,6 +860,43 @@ def _resume_answers(
         }
         for question in questions
     }
+
+
+def _realign_whitespace_roles(
+    previous_records: list[dict[str, object]],
+    current_records: list[dict[str, object]],
+) -> None:
+    """
+    @brief      Carry prior Cleanup roles across unambiguous content matches.
+    @param[in]  previous_records Prior runtime paragraph records with text.
+    @param[out] current_records Rebuilt runtime records receiving safe roles.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-30
+    @version    0.1.0
+    """
+    roles_by_text: dict[str, list[str]] = {}
+    for record in previous_records:
+        comparison_key = cleanup_text_analysis_service.normalized_compare_key(
+            str(record.get("text") or "")
+        )
+        if comparison_key:
+            roles_by_text.setdefault(comparison_key, []).append(
+                str(record.get("role") or "body")
+            )
+
+    for record in current_records:
+        classified_role = str(record.get("role") or "body")
+        record["role"] = classified_role
+        if classified_role == "scene_separator":
+            continue
+        comparison_key = cleanup_text_analysis_service.normalized_compare_key(
+            str(record.get("text") or "")
+        )
+        prior_roles = roles_by_text.get(comparison_key, [])
+        if len(prior_roles) == 1 and prior_roles[0] != "scene_separator":
+            record["role"] = prior_roles[0]
 
 
 def _realign_whitespace_boundaries(

@@ -87,7 +87,7 @@ Known broad reset that remains documented:
 - AI Translation approval loss after a manual translation edit still broad
   resets downstream operation data through the current AI Translation
   controller. This is intentionally documented as a remaining broad reset for
-  the v2 release rather than claimed as selective behavior.
+  the hard-break release rather than claimed as selective behavior.
 
 ## Manual QA
 

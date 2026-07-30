@@ -6,16 +6,16 @@ priority = "Must"
 requirement = "Cleanup rendering shall construct output only from source-ledger slices and validated typed separators."
 rationale = "Automated cleanup must not reproduce, invent, or accept replacement story text from an LLM."
 verification = "Source-ledger projection and invalid-action renderer tests pass."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
-  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_renderer_rejects_replacement_text_and_unknown_actions",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_renderer_rejects_replacement_text_and_unknown_actions",
 ]
 
 created_on = "2026-07-27T17:59:17Z"
-last_updated = "2026-07-28T20:45:45Z"
+last_updated = "2026-07-30T10:29:07Z"

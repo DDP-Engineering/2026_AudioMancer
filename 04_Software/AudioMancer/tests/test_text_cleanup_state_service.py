@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 """
 @file test_text_cleanup_state_service.py
-@brief State projection tests for the unified Cleanup V2 page.
+@brief State projection tests for the unified Cleanup page.
 @details Verifies structural-extraction readiness, completed Cleanup state,
          manual edits, and optional compatible AI profiles.
 @author Eng. Dan Dumitru Pasare

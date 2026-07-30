@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Any manual Cleanup edit shall invalidate every downstream operation."
 rationale = "Chunking and later artifacts must never remain valid after the canonical cleaned text changes."
 verification = "Manual edit downstream invalidation test passes."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
@@ -14,8 +14,8 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
 ]
 
 created_on = "2026-07-28T20:00:03Z"
-last_updated = "2026-07-28T20:45:43Z"
+last_updated = "2026-07-30T10:29:01Z"

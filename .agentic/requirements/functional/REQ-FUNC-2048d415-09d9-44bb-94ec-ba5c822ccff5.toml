@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Manual Chunking mutations shall preserve an existing leading scene-separator boundary."
 rationale = "Editing or deleting a chunk must not silently erase structural information already confirmed by Cleanup and Chunking."
 verification = "Focused state-service mutation test passed within the 126-test module run."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-29T05:55:43Z"
-last_updated = "2026-07-29T06:10:31Z"
+last_updated = "2026-07-30T10:23:28Z"

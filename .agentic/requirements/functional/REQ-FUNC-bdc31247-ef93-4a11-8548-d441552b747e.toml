@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Deterministic chunking shall persist one cancelled terminal document before propagating cancellation."
 rationale = "Operator cancellation must retain the current resumable prefix without swallowing the cancellation signal."
 verification = "Automated focused pytest: deterministic and single-document contract files passed; cancellation persists one resumable terminal document before OperationCancelledError propagates."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
@@ -18,4 +18,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-29T18:58:48Z"
-last_updated = "2026-07-29T19:13:27Z"
+last_updated = "2026-07-30T10:23:41Z"

@@ -6,15 +6,15 @@ priority = "Must"
 requirement = "Cleanup shall expose exactly en, ro, de, fr, ru, pt, es, and it as its supported source-content languages."
 rationale = "Cleanup source eligibility is a domain contract distinct from the operator UI locale and AI translation target-language contracts."
 verification = "Focused pytest selector passed: Cleanup source-language constant equals the approved eight-language tuple."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_cleanup_supported_languages_are_exactly_the_approved_eight",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_supported_languages_are_exactly_the_approved_eight",
 ]
 
 created_on = "2026-07-24T19:56:45Z"
-last_updated = "2026-07-29T15:10:09Z"
+last_updated = "2026-07-30T10:29:13Z"

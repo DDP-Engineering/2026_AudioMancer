@@ -7,8 +7,8 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file cleanup_v2_test_support.py
-@brief Shared fixtures for the Cleanup and Chunking V2 quality contract.
+@file cleanup_test_support.py
+@brief Shared fixtures for the Cleanup and Chunking quality contract.
 @details Builds source-ledger projects and exact contract assertions without
          depending on production persistence helpers.
 @author Eng. Dan Dumitru Pasare

@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "cleanup.json shall persist neither prompt excerpts nor credentials."
 rationale = "Resume metadata must not duplicate submitted book fragments or secrets."
 verification = "Automated secret and fragment exclusion test passes."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
@@ -14,8 +14,8 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_online_disclosure_metrics_do_not_persist_fragments_or_secrets",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_online_disclosure_metrics_do_not_persist_fragments_or_secrets",
 ]
 
 created_on = "2026-07-28T19:59:32Z"
-last_updated = "2026-07-28T20:45:41Z"
+last_updated = "2026-07-30T10:28:57Z"

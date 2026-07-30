@@ -13,11 +13,11 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_v2_selective_impact_strings_cover_supported_languages",
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_settings_strings_cover_supported_languages",
   "04_Software/AudioMancer/tests/test_ui_state_service.py::test_ai_settings_dialog_flow_strings_cover_supported_languages",
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_selective_impact_strings_cover_supported_languages",
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_settings_strings_cover_supported_languages",
   "04_Software/AudioMancer/tests/test_ui_state_service.py::test_tts_settings_dialog_flow_strings_cover_supported_languages",
 ]
 
 created_on = "2026-07-24T19:56:45Z"
-last_updated = "2026-07-24T19:56:45Z"
+last_updated = "2026-07-30T10:32:45Z"

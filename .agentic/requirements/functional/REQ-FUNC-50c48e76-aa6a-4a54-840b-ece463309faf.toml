@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Cleanup shall use cleanup.json as its only durable metadata artifact, and shall not define config constants for the retired cleanup_report.json, cleanup_state.json and clean_text_metadata.json artifacts."
 rationale = "One authoritative metadata document avoids divergent lifecycle, resume, quality, and paragraph sources of truth, and retiring the unused constants stops config from advertising artifacts Cleanup never writes."
 verification = "Exact Cleanup artifact contract test and retired-constant contract test pass."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",
@@ -16,10 +16,10 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_cleanup_persists_exactly_one_metadata_file_and_one_text_file",
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_retired_cleanup_artifact_config_constants_are_gone",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_persists_exactly_one_metadata_file_and_one_text_file",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_retired_cleanup_artifact_config_constants_are_gone",
   "04_Software/AudioMancer/tests/test_config_contract.py::test_config_exposes_expected_identity_and_window_defaults",
 ]
 
 created_on = "2026-07-28T19:59:31Z"
-last_updated = "2026-07-29T12:52:45Z"
+last_updated = "2026-07-30T10:29:04Z"

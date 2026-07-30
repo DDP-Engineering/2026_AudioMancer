@@ -7,8 +7,8 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_cleanup_v2_acceptance_corpus.py
-@brief Test-only oracle for the synthetic Cleanup V2 acceptance corpus.
+@file test_cleanup_acceptance_corpus.py
+@brief Test-only oracle for the synthetic Cleanup acceptance corpus.
 @details Measures boundary classification, output projection, page-transition
          coverage, and zero introduced fusion without exposing oracle metrics
          in runtime metadata.
@@ -24,9 +24,9 @@ import json
 from pathlib import Path
 
 from audiomancer.services import cleanup_analysis_service, cleanup_renderer_service
-from cleanup_v2_test_support import build_ledger
+from cleanup_test_support import build_ledger
 
-_CORPUS_PATH = Path(__file__).parent / "fixtures" / "cleanup_v2_corpus.json"
+_CORPUS_PATH = Path(__file__).parent / "fixtures" / "cleanup_corpus.json"
 
 
 def test_acceptance_corpus_has_required_size_and_domain_coverage() -> None:

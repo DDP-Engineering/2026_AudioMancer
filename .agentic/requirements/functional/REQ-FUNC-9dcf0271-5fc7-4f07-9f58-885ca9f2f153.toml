@@ -6,15 +6,15 @@ priority = "Must"
 requirement = "Cleanup AI adjudication shall retry an invalid batch once and continue later batches with deterministic fallback after the retry fails."
 rationale = "A provider or schema failure must remain local to the affected boundaries."
 verification = "One-retry and later-batch continuation test passes."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_adjudication_contract.py::test_invalid_batch_retries_once_then_falls_back_and_continues",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_invalid_batch_retries_once_then_falls_back_and_continues",
 ]
 
 created_on = "2026-07-28T19:59:31Z"
-last_updated = "2026-07-28T20:46:11Z"
+last_updated = "2026-07-30T10:29:12Z"

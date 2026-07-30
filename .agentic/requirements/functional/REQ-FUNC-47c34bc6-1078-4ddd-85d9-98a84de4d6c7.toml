@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Deterministic chunking shall persist one failed terminal document before propagating an unexpected processing exception."
 rationale = "Unexpected failures must leave an inspectable resumable boundary while preserving the original exception."
 verification = "Automated focused pytest: an injected processing exception persists one resume-consistent failed terminal document and re-raises the original exception."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-29T18:58:57Z"
-last_updated = "2026-07-29T19:13:36Z"
+last_updated = "2026-07-30T10:23:31Z"

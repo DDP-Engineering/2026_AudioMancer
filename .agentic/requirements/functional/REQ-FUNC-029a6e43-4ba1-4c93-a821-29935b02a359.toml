@@ -5,7 +5,7 @@ status = "Retired"
 priority = "Must"
 requirement = "AI cleanup validation shall preserve exact block order and reconstruct whitespace and artifact separators for every block."
 rationale = "Provider output must not reorder or lose source blocks."
-verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and V2 behavior is covered by Cleanup V2 requirements."
+verification = "Retired by the incompatible hard break; replacement behavior is covered by current Cleanup requirements."
 spec_ref = ""
 
 affected_paths = [
@@ -15,4 +15,4 @@ affected_paths = [
 linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-27T17:56:52Z"
+last_updated = "2026-07-30T10:23:26Z"

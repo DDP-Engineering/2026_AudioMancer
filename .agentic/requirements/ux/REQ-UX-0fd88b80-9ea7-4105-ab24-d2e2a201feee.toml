@@ -5,7 +5,7 @@ status = "Retired"
 priority = "Must"
 requirement = "The Text Cleanup page shall enable actions from project readiness, present source and cleaned previews with edit/find support, expose AI profile and spacing choices, and route extraction, cleanup, cancellation, edit, and spacing actions through its controller with project-state refresh."
 rationale = "Operators need a reviewable and recoverable workflow surface that prevents unavailable actions and keeps visible state synchronized with persisted artifacts."
-verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
+verification = "Retired by the incompatible hard break; replacement behavior is covered by current requirements."
 spec_ref = ""
 
 affected_paths = [
@@ -16,4 +16,4 @@ affected_paths = [
 linked_tests = []
 
 created_on = "2026-07-18T18:14:00Z"
-last_updated = "2026-07-27T17:57:43Z"
+last_updated = "2026-07-30T10:23:47Z"

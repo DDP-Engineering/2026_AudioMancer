@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-  # noqa: UP009
 """
 @file text_cleanup_ui_controller.py
-@brief UI orchestration for Extraction and the single hybrid Cleanup V2 action.
+@brief UI orchestration for Extraction and the single hybrid Cleanup action.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def handle_extract_text_requested(window: MainWindow) -> None:
 
 
 def handle_cleanup_requested(window: MainWindow, profile_id: str | None) -> None:
-    """Run Cleanup V2 with an optional compatible AI profile."""
+    """Run Cleanup with an optional compatible AI profile."""
     if window._current_project_root is None or window._current_manifest is None:
         return
     language = ui_state_service.current_language_from_settings(window._settings_payload)

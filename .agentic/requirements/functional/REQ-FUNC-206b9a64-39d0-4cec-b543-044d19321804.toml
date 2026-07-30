@@ -1,0 +1,22 @@
+schema_version = 1
+id = "REQ-FUNC-206b9a64-39d0-4cec-b543-044d19321804"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Canonical Cleanup and Chunking validators shall reject noncanonical persisted document shapes without product-generation migration."
+rationale = "Removing generation labels must not weaken corrupt or old-shaped data rejection for the sole supported schema."
+verification = "Fourteen focused malformed Cleanup and incompatible Chunking document cases passed on 2026-07-30."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress",
+]
+
+created_on = "2026-07-30T10:20:02Z"
+last_updated = "2026-07-30T10:35:35Z"

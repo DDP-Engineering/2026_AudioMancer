@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "AI Chunking shall accept an exact complete anchor for a punctuation-only paragraph that contains no lexical anchor words."
 rationale = "Scene separators such as * * * are valid semantic paragraphs and must not invalidate an otherwise useful descriptor response."
 verification = "Focused pytest passed: exact normalized punctuation-only anchors validate without weakening lexical anchor checks."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-28T21:54:30Z"
-last_updated = "2026-07-28T22:05:45Z"
+last_updated = "2026-07-30T10:23:31Z"

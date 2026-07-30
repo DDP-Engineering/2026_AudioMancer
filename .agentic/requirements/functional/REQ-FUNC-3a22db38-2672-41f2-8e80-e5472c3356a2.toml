@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Every persisted deterministic chunking checkpoint shall encode the exact processed paragraph prefix in its chunks and next_paragraph values."
 rationale = "Resume validation must observe one self-consistent boundary even when processed paragraphs do not produce narratable chunks."
 verification = "Automated focused pytest: 75 deterministic and Chunking contract tests passed across checkpoint pairs, cancellation, resume, separator prefixes, and source fingerprints."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
@@ -14,11 +14,11 @@ affected_paths = [
 
 linked_tests = [
   "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_cancellation_preserves_committed_chunks_and_next_paragraph",
-  "04_Software/AudioMancer/tests/test_cleanup_v2_chunking_contract.py::test_chunking_resume_counts_processed_separator_without_persisting_it",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_resume_counts_processed_separator_without_persisting_it",
   "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_checkpoint_pairs_are_resume_consistent",
   "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_persists_resumable_state_after_cancellation",
   "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_resumes_after_interruption",
 ]
 
 created_on = "2026-07-19T16:32:00Z"
-last_updated = "2026-07-29T19:13:49Z"
+last_updated = "2026-07-30T10:29:02Z"

@@ -7,7 +7,7 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_cleanup_v2_adjudication_contract.py
+@file test_cleanup_adjudication_contract.py
 @brief Red-first checks for bounded model-agnostic Cleanup adjudication.
 @details Verifies context tiers, selective verification, retry isolation,
          recursive splitting, and deterministic fallback.
@@ -24,7 +24,7 @@ from audiomancer.services import (
     cleanup_ai_adjudication_service,
     prompt_template_service,
 )
-from cleanup_v2_test_support import make_profile
+from cleanup_test_support import make_profile
 
 
 def test_context_tiers_use_4_8_and_16_question_batches(monkeypatch) -> None:

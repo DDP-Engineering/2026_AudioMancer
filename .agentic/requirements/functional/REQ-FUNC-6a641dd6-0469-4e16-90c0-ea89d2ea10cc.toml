@@ -6,16 +6,16 @@ priority = "Must"
 requirement = "Cleanup shall publish clean_text.txt only when cleanup.json contains completed validated decisions."
 rationale = "Partial checkpoints or stale output must never become Chunking input."
 verification = "Finalization recovery and incomplete-output rejection tests pass."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_chunking_contract.py::test_chunking_rejects_noncompleted_cleanup_even_when_text_exists",
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_rejects_noncompleted_cleanup_even_when_text_exists",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
 ]
 
 created_on = "2026-07-28T19:59:32Z"
-last_updated = "2026-07-28T20:45:44Z"
+last_updated = "2026-07-30T10:29:07Z"

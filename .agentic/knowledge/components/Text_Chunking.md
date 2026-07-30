@@ -187,7 +187,7 @@ Primary automated coverage:
 - `tests/test_deterministic_chunking_service.py`
 - `tests/test_ai_chunking_service.py`
 - `tests/test_ai_chunking_descriptor_contract.py`
-- `tests/test_cleanup_v2_chunking_contract.py`
+- `tests/test_cleanup_chunking_contract.py`
 - `tests/test_project_workspace_service.py`
 - `tests/test_operation_runtime_service.py`
 - `tests/test_text_chunking_state_service.py`

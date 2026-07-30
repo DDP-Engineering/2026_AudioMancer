@@ -808,7 +808,7 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
 
 def _cleanup_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
     """
-    @brief      Verify the single Cleanup V2 document and cleaned-text artifact.
+    @brief      Verify the single Cleanup document and cleaned-text artifact.
     @param[in]  project_root Active project root folder.
     @param[out] warnings Non-destructive repair warnings accepted for parity.
     @return     Completed operation evidence payload or `None`.

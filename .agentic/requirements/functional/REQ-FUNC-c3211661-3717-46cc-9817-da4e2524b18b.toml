@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Project validation shall return normally when Cleanup completion evidence is invalid."
 rationale = "A corrupt Cleanup document must become unavailable completion evidence without crashing the Open Project path; existing metadata-healing policy determines whether the normal result is ok or repair_required."
 verification = "Focused project-open regression returned normally without exception; E-0011."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
@@ -18,4 +18,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-29T20:06:56Z"
-last_updated = "2026-07-29T20:23:01Z"
+last_updated = "2026-07-30T10:23:42Z"

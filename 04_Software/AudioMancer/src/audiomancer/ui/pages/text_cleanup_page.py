@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-  # noqa: UP009
 """
 @file text_cleanup_page.py
-@brief Unified Text Extraction and Cleanup V2 page.
+@brief Unified Text Extraction and Cleanup page.
 @details Exposes one Cleanup action with an optional AI profile, split source
          and result previews, and optional operator Edit/Save/Cancel controls.
 """

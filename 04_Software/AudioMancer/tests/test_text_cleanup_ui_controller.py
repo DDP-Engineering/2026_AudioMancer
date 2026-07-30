@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 """
 @file test_text_cleanup_ui_controller.py
-@brief Controller tests for the single Cleanup V2 command.
+@brief Controller tests for the single Cleanup command.
 @details Verifies threaded-runner argument ownership and optional AI profile
          forwarding from the Cleanup page controller.
 @author Eng. Dan Dumitru Pasare

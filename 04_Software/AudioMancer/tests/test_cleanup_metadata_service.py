@@ -18,7 +18,7 @@
 
 from audiomancer import config
 from audiomancer.services import text_cleanup_service
-from cleanup_v2_test_support import build_ledger, build_project
+from cleanup_test_support import build_ledger, build_project
 
 
 def test_cleanup_paragraph_offsets_reconstruct_clean_text_without_sidecar(tmp_path) -> None:

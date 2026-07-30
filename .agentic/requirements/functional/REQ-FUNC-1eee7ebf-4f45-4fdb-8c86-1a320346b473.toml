@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Cleanup analysis shall assign a typed structural role to every source unit before resolving its adjacent boundaries."
 rationale = "Boundary decisions must distinguish prose, headings, separators, lists, verse, preformatted text, footnotes, and artifacts before applying layout heuristics."
 verification = "Role-before-boundary analysis contract test passes."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
@@ -14,8 +14,8 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_analysis_assigns_roles_before_classifying_every_boundary",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_analysis_assigns_roles_before_classifying_every_boundary",
 ]
 
 created_on = "2026-07-27T17:59:05Z"
-last_updated = "2026-07-28T20:45:42Z"
+last_updated = "2026-07-30T10:28:59Z"

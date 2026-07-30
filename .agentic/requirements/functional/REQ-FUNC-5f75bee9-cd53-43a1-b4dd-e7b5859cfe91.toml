@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "AI Chunking shall commit every consecutive valid descriptor prefix and resume from the first uncommitted paragraph when a later descriptor is invalid."
 rationale = "A single malformed tail descriptor must not discard already validated semantic boundaries or force an oversized whole-window chunk."
 verification = "Focused pytest passed: a consecutive valid descriptor prefix is committed and the invalid tail is retried without loss or duplication."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-19T20:30:00Z"
-last_updated = "2026-07-28T22:05:44Z"
+last_updated = "2026-07-30T10:23:34Z"

@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "AI Chunking shall preserve explicit heading and scene-separator boundaries when a provider response has no valid descriptor prefix."
 rationale = "Invalid provider output must not collapse an entire multi-scene context window into one oversized chunk."
 verification = "Focused pytest passed: a no-prefix response preserves explicit scene-separator structure during deterministic fallback."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-28T21:54:24Z"
-last_updated = "2026-07-28T22:05:45Z"
+last_updated = "2026-07-30T10:23:31Z"

@@ -3,10 +3,10 @@ id = "REQ-FUNC-80165518-6747-4ce9-9260-673d485fe531"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Text Cleanup V2 state shall require structural extraction and expose terminal warning plus optional operator-edit state from authoritative artifacts."
+requirement = "Text Cleanup state shall require structural extraction and expose terminal warning plus optional operator-edit state from authoritative artifacts."
 rationale = "The page must show truthful readiness and review state without legacy sidecars."
 verification = "Cleanup state readiness, runtime quality, and manual-save tests pass."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
@@ -18,4 +18,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-27T17:59:29Z"
-last_updated = "2026-07-28T21:00:25Z"
+last_updated = "2026-07-30T10:23:38Z"

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
-"""Read-only UI state and shared manifest reset helpers for Cleanup V2."""
+"""Read-only UI state and shared manifest reset helpers for Cleanup."""
 
 from collections.abc import Iterable
 from pathlib import Path

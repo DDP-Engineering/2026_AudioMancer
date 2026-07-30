@@ -111,7 +111,7 @@ sidecar. The current unversioned contract is the only accepted contract.
 
 `config` therefore defines no constant for `cleanup_report.json`,
 `cleanup_state.json`, or `clean_text_metadata.json`. Reset still deletes those
-three names as bare string literals so pre-V2 project folders are cleaned, and
+three names as bare string literals so pre-hard-break project folders are cleaned, and
 `test_retired_cleanup_artifact_config_constants_are_gone` keeps the constants
 from returning.
 
@@ -188,10 +188,15 @@ Cleanup completion promotes the project to `text_chunking_ready` immediately.
 Review and manual editing are optional rather than approval gates. Saving an
 operator edit updates the output hash, marks `user_modified`, and invalidates
 Chunking and later artifacts. A whitespace-only edit realigns typed structure
-where possible; a lexical edit publishes minimal `user_edited` paragraph
-structure without claiming source provenance. Rebuilt user-edited paragraphs
-conservatively reclassify explicit marker-only scene separators while ambiguous
-punctuation and lexical content remain `body`.
+by unambiguous normalized paragraph content rather than list index. The current
+classifier remains authoritative for explicit scene separators; a stale prior
+`scene_separator` role is never carried onto classifier-negative prose.
+Unmatched or multiply matched content keeps the classifier-only role, while a
+unique content match may preserve headings and other noncontradicted roles. A
+lexical edit publishes minimal `user_edited` paragraph structure without
+claiming source provenance. Rebuilt user-edited paragraphs conservatively
+reclassify explicit marker-only scene separators while ambiguous punctuation
+and lexical content remain `body`.
 
 The existing Cleanup page layout and controls remain unchanged. The status pane
 projects running, paused, invalid, and completed state from `cleanup.json`;
@@ -215,10 +220,10 @@ result = text_cleanup_service.clean_text(
 Primary coverage:
 
 - `tests/test_text_extraction_service.py`
-- `tests/test_cleanup_v2_quality_contract.py`
-- `tests/test_cleanup_v2_adjudication_contract.py`
-- `tests/test_cleanup_v2_acceptance_corpus.py`
-- `tests/test_cleanup_v2_service.py`
+- `tests/test_cleanup_quality_contract.py`
+- `tests/test_cleanup_adjudication_contract.py`
+- `tests/test_cleanup_acceptance_corpus.py`
+- `tests/test_cleanup_service.py`
 - `tests/test_cleanup_metadata_service.py`
 - `tests/test_text_cleanup_state_service.py`
 - `tests/test_project_workspace_service.py`

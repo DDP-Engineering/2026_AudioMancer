@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-FUNC-376f4f7a-a9e4-4653-845b-edbba25cf170"
+category = "functional"
+status = "Active"
+priority = "Must"
+requirement = "Saving a whitespace-only manual Cleanup edit shall not assign scene_separator to classifier-negative paragraph text."
+rationale = "A stale scene-separator role makes prose non-narratable and silently removes it from every downstream audio path."
+verification = "Issue #32 merge/split regression passed through deterministic Chunking; green evidence E-0006 within the 111-test focused suite."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_merge_split_preserves_narratable_prose",
+]
+
+created_on = "2026-07-30T06:00:30Z"
+last_updated = "2026-07-30T10:29:01Z"

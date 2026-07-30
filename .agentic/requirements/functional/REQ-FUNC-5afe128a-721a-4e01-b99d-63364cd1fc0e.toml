@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Deterministic chunking shall persist exactly one completed terminal document before returning a successful report."
 rationale = "Successful publication must expose one unambiguous final document without duplicate terminal writes."
 verification = "Automated focused pytest: captured persistence sequence contains exactly one completed terminal document with next_paragraph null after bounded running checkpoints."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-29T18:58:38Z"
-last_updated = "2026-07-29T19:13:17Z"
+last_updated = "2026-07-30T10:23:34Z"

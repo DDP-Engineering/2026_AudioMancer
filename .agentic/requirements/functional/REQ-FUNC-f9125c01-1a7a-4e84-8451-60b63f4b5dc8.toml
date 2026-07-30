@@ -6,16 +6,16 @@ priority = "Must"
 requirement = "Cleanup runtime quality reporting shall contain only metrics computable without an expected editorial structure."
 rationale = "Paragraph F1 and benchmark correctness require ground truth and must not be presented as production facts."
 verification = "Runtime quality excludes ground-truth-only metrics."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_acceptance_corpus.py::test_runtime_quality_report_excludes_oracle_only_metrics",
-  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_completed_cleanup_reports_only_runtime_quality_metrics",
+  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_runtime_quality_report_excludes_oracle_only_metrics",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_completed_cleanup_reports_only_runtime_quality_metrics",
 ]
 
 created_on = "2026-07-28T20:00:04Z"
-last_updated = "2026-07-28T20:46:12Z"
+last_updated = "2026-07-30T10:29:18Z"

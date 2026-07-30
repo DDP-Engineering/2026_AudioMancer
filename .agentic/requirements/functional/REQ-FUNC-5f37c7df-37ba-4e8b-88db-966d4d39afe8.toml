@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "The existing Cleanup action shall start or resume Cleanup through the threaded runner using the currently selected optional AI profile."
 rationale = "The unchanged UI needs one action that supports new runs, compatible resume, and profile-driven AI re-adjudication."
 verification = "Existing Cleanup action routes the selected optional profile through the runner."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
@@ -17,4 +17,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-27T17:59:42Z"
-last_updated = "2026-07-28T20:45:44Z"
+last_updated = "2026-07-30T10:23:34Z"

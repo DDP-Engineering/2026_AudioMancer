@@ -13,8 +13,8 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_adjudication_contract.py::test_ai_adjudication_reports_each_primary_and_verifier_request",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_ai_adjudication_reports_each_primary_and_verifier_request",
 ]
 
 created_on = "2026-07-27T15:46:14Z"
-last_updated = "2026-07-28T21:01:16Z"
+last_updated = "2026-07-30T10:29:06Z"

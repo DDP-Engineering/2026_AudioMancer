@@ -73,7 +73,7 @@ logging redacts sensitive field names before persistence.
 Callers may opt into a strict schema path. Strict calls require a profile that
 advertises structured output plus a supplied JSON Schema, may disable the
 unconstrained `response_format` fallback and model-based JSON repair, and may
-override retry/output-token limits. Cleanup V2 uses this path; existing AI
+override retry/output-token limits. Cleanup uses this path; existing AI
 operations retain the default compatibility behavior.
 
 ## 7. Workflow Integration

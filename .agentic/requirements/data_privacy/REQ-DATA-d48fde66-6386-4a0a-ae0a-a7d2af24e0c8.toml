@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Cleanup runtime quality reporting shall expose the backend kind and count of fragments submitted to an online provider."
 rationale = "Operators need durable disclosure visibility without persisting the submitted text."
 verification = "Successful and failed online submission disclosure tests pass without persisting submitted fragments."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
@@ -14,9 +14,9 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_online_disclosure_counts_failed_submission_attempts",
-  "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py::test_online_disclosure_metrics_do_not_persist_fragments_or_secrets",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_online_disclosure_counts_failed_submission_attempts",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_online_disclosure_metrics_do_not_persist_fragments_or_secrets",
 ]
 
 created_on = "2026-07-28T20:00:04Z"
-last_updated = "2026-07-28T20:55:38Z"
+last_updated = "2026-07-30T10:28:56Z"

@@ -5,7 +5,7 @@ status = "Retired"
 priority = "Must"
 requirement = "Deterministic cleanup shall write canonical clean text preserving structure and require the canonical extracted-text artifact."
 rationale = "Cleanup must improve extracted text from a required canonical input."
-verification = "Retired on the incompatible AudioMancer V2 branch; V1 remains on master and replacement behavior is covered by V2 requirements."
+verification = "Retired by the incompatible hard break; replacement behavior is covered by current requirements."
 spec_ref = ""
 
 affected_paths = [
@@ -15,4 +15,4 @@ affected_paths = [
 linked_tests = []
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-27T17:57:39Z"
+last_updated = "2026-07-30T10:23:40Z"

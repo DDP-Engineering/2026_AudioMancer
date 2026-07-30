@@ -7,7 +7,7 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_cleanup_v2_chunking_contract.py
+@file test_cleanup_chunking_contract.py
 @brief Red-first checks for consuming completed typed Cleanup metadata.
 @details Verifies hash/status gating, role propagation, semantic cut priority,
          and the sole permitted mid-sentence overflow fallback.
@@ -28,7 +28,7 @@ from audiomancer.services import (
     deterministic_chunking_service,
 )
 from chunking_test_support import write_chunking_document
-from cleanup_v2_test_support import build_ledger, build_project, write_completed_cleanup
+from cleanup_test_support import build_ledger, build_project, write_completed_cleanup
 
 
 def test_chunking_rejects_noncompleted_cleanup_even_when_text_exists(tmp_path) -> None:

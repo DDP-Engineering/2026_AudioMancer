@@ -113,8 +113,6 @@ _BLOCK_FIELDS = frozenset(
 _SPLIT_BLOCK_FIELDS = frozenset(("split_part_count", "split_plan_fingerprint"))
 
 # @brief Legacy Audio Blocks sidecars removed by the single-document consolidation.
-_LEGACY_ARTIFACT_FILE_NAMES = ("audio_blocks_report.json", "audio_blocks_state.json")
-
 _audio_artifact_file_stem = audio_blocks_artifact_service.audio_artifact_file_stem
 _audio_artifact_path = audio_blocks_artifact_service.audio_artifact_path
 _audio_part_artifact_path = audio_blocks_artifact_service.audio_part_artifact_path

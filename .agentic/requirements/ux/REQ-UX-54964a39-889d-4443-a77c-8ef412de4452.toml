@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "The Text Cleanup page shall retain its existing profile selector, Cleanup and Reset actions, two previews, Edit/Save/Cancel controls, progress dialog, and status pane without adding another control surface."
 rationale = "The new quality and resume behavior must not complicate the established Cleanup UI."
 verification = "Existing Cleanup page controls remain unchanged."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
@@ -18,4 +18,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-27T17:59:54Z"
-last_updated = "2026-07-28T20:46:13Z"
+last_updated = "2026-07-30T10:23:47Z"

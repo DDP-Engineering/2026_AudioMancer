@@ -318,7 +318,7 @@ def _persist_manual_chunk_change(
     reason: str,
 ) -> dict[str, object]:
     """
-    @brief      Persist a manual chunk-list change and apply selective v2 impact.
+    @brief      Persist a manual chunk-list change and apply selective impact.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Current project manifest payload.
     @param[in]  chunks Full updated chunk payload list.

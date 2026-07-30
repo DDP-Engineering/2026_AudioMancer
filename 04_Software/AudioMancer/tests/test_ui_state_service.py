@@ -123,9 +123,9 @@ def test_operator_status_pane_height_scales_with_line_count(qtbot) -> None:
     )
 
 
-def test_v2_selective_impact_strings_cover_supported_languages() -> None:
+def test_selective_impact_strings_cover_supported_languages() -> None:
     """
-    @brief      Verify v2 selective-impact labels and confirmations exist in EN and RO.
+    @brief      Verify selective-impact labels and confirmations exist in EN and RO.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare

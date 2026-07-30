@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Cleanup paragraph records shall live in cleanup.json as output offsets without duplicating paragraph text."
 rationale = "One metadata document remains authoritative while Chunking reconstructs text from the verified clean-text output."
 verification = "Paragraph offset reconstruction test passes without a sidecar."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
@@ -18,4 +18,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-18T21:07:00Z"
-last_updated = "2026-07-28T20:45:44Z"
+last_updated = "2026-07-30T10:23:36Z"

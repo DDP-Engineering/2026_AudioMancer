@@ -5,10 +5,10 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# Spec: Cleanup + Chunking V2 quality contract
+# Spec: Cleanup + Chunking quality contract
 
-Companion specification for the Cleanup + Chunking V2 requirement snapshots
-updated or created by run `change-2026-07-28T194954Z-762fe256`.
+Companion specification for the current Cleanup + Chunking requirement
+snapshots.
 
 ## Behavior
 
@@ -29,6 +29,21 @@ deterministic prior locally and do not abort the rest of the document.
 Chunking consumes completed Cleanup paragraphs, roles, confidence, and
 provenance from `cleanup.json`. Semantic structure takes precedence over target
 chunk-size balance.
+
+## Canonical generation naming
+
+AudioMancer uses one hard-break implementation and one canonical persisted
+schema. Active source, tests, fixtures, support modules, specifications,
+requirements, logs, and current documentation use unversioned names. No
+product-generation label distinguishes the current contract.
+
+Strict validation remains authoritative. Corrupt, incomplete, or old-shaped
+data is rejected through the same generic validation paths; removing
+generation-specific compatibility assets does not relax the canonical schema.
+
+Version tokens remain only when they are part of a real current contract, such
+as an external API route, an artifact-format token, semantic source metadata, a
+release/dependency identifier, or historical changelog material.
 
 ## Supported domain
 
@@ -269,10 +284,24 @@ report F1 or other metrics requiring ground truth.
 ## Manual edits
 
 Whitespace-only edits update boundary choices, paragraph offsets, and output
-hash while retaining unambiguous roles/provenance. Lexical edits set
-`user_modified=true` and `structure_source="user_edited"`, rebuild minimal
-paragraph records, mark unavailable provenance explicitly, and invalidate all
-downstream operations.
+hash while retaining unambiguous roles/provenance. Prior roles are realigned by
+paragraph content, never by list index:
+
+- the comparison key is the paragraph text normalized with NFKC, collapsed
+  whitespace, trimming, and case folding;
+- a prior role is eligible only when exactly one prior paragraph has the same
+  non-empty comparison key;
+- a current paragraph positively classified as an explicit scene separator
+  remains `scene_separator`;
+- a prior `scene_separator` role is never carried when the current paragraph
+  text is not positively classified as a scene separator;
+- unmatched or multiply matched content retains the current classifier result,
+  so prose falls back to `body`.
+
+This rule applies even when a merge before a scene separator and a split after
+it preserve the total paragraph count. Lexical edits set `user_modified=true`
+and `structure_source="user_edited"`, rebuild minimal paragraph records, mark
+unavailable provenance explicitly, and invalidate all downstream operations.
 When paragraph records are rebuilt from user-edited text, conservative explicit
 scene-separator forms are assigned `role="scene_separator"` instead of the
 generic `body` fallback. Ambiguous punctuation and lexical content remain
@@ -403,6 +432,7 @@ but they are non-narratable at Chunking materialization:
 | `status=paused` with an old output file | Chunking rejects the output |
 | lexical manual correction | minimal `user_edited` structure; downstream invalidated |
 | `Narrative A\n\n* * *\n\nNarrative B` | two narratable chunks; separator omitted; second chunk has `starts_after_scene_separator=true` |
+| merge `A` + `B` before `* * *`, split `C D` after it, count unchanged | only `* * *` is `scene_separator`; deterministic Chunking materializes `A B`, `C`, and `D` |
 
 ## Oracle and acceptance corpus
 

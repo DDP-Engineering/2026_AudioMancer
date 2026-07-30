@@ -7,8 +7,8 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_cleanup_v2_quality_contract.py
-@brief Red-first checks for the approved Cleanup V2 quality contract.
+@file test_cleanup_quality_contract.py
+@brief Red-first checks for the approved Cleanup quality contract.
 @details Covers the strict two-artifact contract, typed boundaries, protected
          roles, fusion safety, script eligibility, resume, and manual edits.
 @author Eng. Dan Dumitru Pasare
@@ -30,7 +30,7 @@ from audiomancer.services import (
     source_ledger_service,
     text_cleanup_service,
 )
-from cleanup_v2_test_support import (
+from cleanup_test_support import (
     BOUNDARY_CHOICES,
     UNIT_ROLES,
     assert_strict_cleanup_document,

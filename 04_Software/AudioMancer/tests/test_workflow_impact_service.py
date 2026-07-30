@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 """
 @file test_workflow_impact_service.py
-@brief Focused tests for the v2 workflow-impact foundation service.
+@brief Focused tests for the workflow-impact foundation service.
 @details Verifies dependency ordering, impact summaries, stable identity policy,
          manifest refresh behavior, and safe generated-artifact deletion.
 @author Eng. Dan Dumitru Pasare
@@ -31,7 +31,7 @@ from audiomancer.services import project_workspace_service, workflow_impact_serv
 
 def test_workflow_impact_operation_order_matches_current_workflow() -> None:
     """
-    @brief      Verify v2 impact ordering matches the current workflow sequence.
+    @brief      Verify impact ordering matches the current workflow sequence.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -351,7 +351,7 @@ def test_workflow_impact_rejects_legacy_cleanup_without_source_ledger(tmp_path) 
 
 def test_workflow_impact_full_reset_wrapper_keeps_existing_broad_reset_behavior(tmp_path) -> None:
     """
-    @brief      Verify the v2 wrapper delegates to the existing broad reset service.
+    @brief      Verify the wrapper delegates to the existing broad reset service.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None

@@ -6,7 +6,7 @@ priority = "Must"
 requirement = "Text Cleanup shall report monotonic progress plus AI workload estimates through the existing progress dialog and reserve 100 percent for validated publication."
 rationale = "Long local inference must remain observable without adding UI elements or implying completion before output validation."
 verification = "Monotonic progress and workload estimate test passes."
-spec_ref = ".agentic/specs/cleanup_chunking_v2.spec.md"
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
@@ -14,8 +14,8 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_v2_service.py::test_cleanup_without_ai_reports_monotonic_phase_progress",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_cleanup_without_ai_reports_monotonic_phase_progress",
 ]
 
 created_on = "2026-07-27T15:46:26Z"
-last_updated = "2026-07-28T21:55:48Z"
+last_updated = "2026-07-30T10:29:21Z"
