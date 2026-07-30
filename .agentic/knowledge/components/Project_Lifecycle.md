@@ -71,6 +71,11 @@ validation once, and returns `recovered_operations = ["chunking"]`. Filesystem
 read failures fail the service-level open and do not trigger deletion;
 `handle_open_project_requested` presents the resulting `OSError` through the
 existing localized project-error warning without activating the project.
+When the recovered result also requires a separate metadata repair, the Home
+controller shows the localized Chunking recovery information before requesting
+that repair decision. Declining the repair therefore leaves the project
+unopened without hiding the completed reset; accepting it continues through
+repair and activation without repeating the recovery information.
 
 `home_presenter_service` turns manifest summaries and the active operation into
 read-only workflow rows. `HomeUiController` owns the UI orchestration and keeps
@@ -234,8 +239,10 @@ Primary automated coverage:
 
 The Home controller suite verifies that expected project-open `OSError` and
 `ValueError` failures use the localized project-error warning and do not
-activate a project. The workspace-service suite separately verifies that a
-Chunking `OSError` propagates without reset or deletion.
+activate a project. The main-window project-flow suite verifies that Chunking
+recovery information precedes both accepted and declined follow-up repair
+decisions and appears exactly once. The workspace-service suite separately
+verifies that a Chunking `OSError` propagates without reset or deletion.
 
 After changes, run those focused tests with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files. Changes

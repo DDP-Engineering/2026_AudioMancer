@@ -329,6 +329,34 @@ Cleanup completed with {low_confidence} low-confidence boundaries.
 Cleanup supports Latin and Cyrillic source text only; the document appears to use CJK or Hangul.
 ```
 
+### Project-open recovery notice
+
+When project opening reports `recovered_operations = ["chunking"]`, Home shows
+the existing localized recovery information exactly once:
+
+```text
+title key: dialog.project_recovery_title
+message key: project.chunking_self_heal_message
+```
+
+The notice remains post-hoc: automatic Chunking and downstream reset completes
+before the controller receives the project-open result, and no self-heal
+confirmation is added.
+
+If the same result has `status = "repair_required"`, Home shows the recovery
+information before `confirm_project_repair`. This ordering applies to both
+follow-up outcomes:
+
+- Decline: recovery information, then repair question; the project remains
+  unopened and `repair_project` is not called.
+- Accept: recovery information, then repair question, repair, and activation;
+  the recovery information is not repeated after activation.
+
+An ordinary successful recovery without a follow-up repair retains the existing
+activation and single-notice behavior. A result that does not report recovered
+Chunking data shows no recovery information. No combined dialog, new copy,
+additional logging, or service-level recovery change is part of this contract.
+
 ## Chunking
 
 Chunking accepts only completed `cleanup.json` with matching `clean_text.txt`.

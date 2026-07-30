@@ -3,10 +3,10 @@ id = "REQ-UX-c62252e7-2325-40cf-bf01-4701a429fc9d"
 category = "ux"
 status = "Active"
 priority = "Must"
-requirement = "After activating a project recovered from incompatible Chunking data, Home shall display a localized message stating that Chunking and downstream results were reset while Cleanup was preserved."
-rationale = "Operators must understand why derived results disappeared and what must be rerun without being blocked from opening the project."
-verification = "Home flow and English/Romanian localization parity tests passed."
-spec_ref = ""
+requirement = "Home shall display the localized recovery notice exactly once for every project-open result reporting recovered Chunking data, before any follow-up repair confirmation."
+rationale = "A completed destructive recovery must always be disclosed, including when the operator declines an unrelated follow-up repair and the project remains unopened."
+verification = "Focused combined recovery-and-repair regression passed both accepted and declined decision cases on 2026-07-30 (2 passed); existing recovery and localization parity coverage remains linked."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
@@ -15,8 +15,9 @@ affected_paths = [
 
 linked_tests = [
   "04_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
+  "04_Software/AudioMancer/tests/test_main_window_project_flow.py::test_main_window_shows_chunking_recovery_before_follow_up_repair",
   "04_Software/AudioMancer/tests/test_main_window_project_flow.py::test_main_window_shows_message_after_chunking_self_heal",
 ]
 
 created_on = "2026-07-29T08:55:41Z"
-last_updated = "2026-07-29T09:10:28Z"
+last_updated = "2026-07-30T11:58:06Z"

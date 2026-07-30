@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
 )
+import pytest
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service, speech_blocks_service
@@ -165,6 +166,96 @@ def test_main_window_shows_message_after_chunking_self_heal(
     assert information_calls[0][0] == project_root
     assert "Chunking" in information_calls[0][1][2]
     assert "Cleanup" in information_calls[0][1][2]
+
+
+@pytest.mark.parametrize(
+    ("repair_choice", "expected_open"),
+    [
+        pytest.param(QMessageBox.StandardButton.No, False, id="declined"),
+        pytest.param(QMessageBox.StandardButton.Yes, True, id="accepted"),
+    ],
+)
+def test_main_window_shows_chunking_recovery_before_follow_up_repair(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+    repair_choice,
+    expected_open,
+) -> None:
+    """
+    @brief      Verify S-0001 and REQ-UX-c62252e7-2325-40cf-bf01-4701a429fc9d.
+    @details    A completed Chunking recovery is disclosed exactly once before
+                either accepting or declining a separate project repair.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @param[in]  repair_choice Simulated follow-up repair decision.
+    @param[in]  expected_open Whether the repaired project should be activated.
+    @return     None.
+    @exception  None
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("RecoveredThenRepair", tmp_path)
+    open_result = {
+        "status": "repair_required",
+        "project_root": project_root,
+        "manifest": manifest,
+        "metadata_only": True,
+        "message": "Project metadata needs repair.",
+        "changes": ["operations.chunking.status: completed -> not_started"],
+        "warnings": [],
+        "recovered_operations": ["chunking"],
+    }
+    dialog_events = []
+    repair_calls = []
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root),
+    )
+    monkeypatch.setattr(
+        project_workspace_service,
+        "open_project",
+        lambda _selected_path: open_result,
+    )
+    monkeypatch.setattr(
+        project_workspace_service,
+        "repair_project",
+        lambda repair_result: (
+            repair_calls.append(repair_result),
+            {
+                "status": "ok",
+                "project_root": project_root,
+                "manifest": manifest,
+            },
+        )[1],
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "information",
+        lambda *args, **kwargs: (
+            dialog_events.append("recovery"),
+            QMessageBox.StandardButton.Ok,
+        )[1],
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            dialog_events.append("repair"),
+            repair_choice,
+        )[1],
+    )
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    window._action_open_project.trigger()
+
+    assert dialog_events == ["recovery", "repair"]
+    assert repair_calls == ([open_result] if expected_open else [])
+    assert window._current_project_root == (project_root if expected_open else None)
 
 
 def test_main_window_clears_audio_players_when_switching_projects(qtbot, tmp_path, default_settings_payload) -> None:

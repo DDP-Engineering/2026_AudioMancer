@@ -139,6 +139,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
         return
 
     if str(open_result.get("status")) == "repair_required":
+        show_project_open_recovery(window, open_result, current_language)
         if not confirm_project_repair(window, open_result, current_language):
             return
         repaired_result = project_workspace_service.repair_project(open_result)
@@ -149,7 +150,6 @@ def handle_open_project_requested(window: "MainWindow") -> None:
             window,
             ui_state_service.translate("status.project_repaired", current_language),
         )
-        show_project_open_recovery(window, open_result, current_language)
         return
 
     project_root = Path(str(open_result["project_root"]))
@@ -168,7 +168,7 @@ def show_project_open_recovery(
     language: str,
 ) -> None:
     """
-    @brief      Show one post-activation message for automatic project recovery.
+    @brief      Show one operator message for automatic project recovery.
     @param[in]  window Active main window shell.
     @param[in]  open_result Tagged project-open result dictionary.
     @param[in]  language Current UI language code.
