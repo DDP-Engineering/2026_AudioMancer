@@ -1,0 +1,20 @@
+schema_version = 1
+id = "REQ-REL-33fa2b3b-c400-4ad7-96e1-29dde53202af"
+category = "release"
+status = "Active"
+priority = "Must"
+requirement = "Development builds shall not migrate obsolete Chunking document schemas."
+rationale = "AudioMancer is not yet subject to a project-artifact compatibility promise; every schema correction may intentionally invalidate derived artifacts produced by an older development build."
+verification = "Focused strict-schema and component-contract run passed on 2026-07-30: 11 passed; obsolete Chunking shapes remain rejected without migration."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
+]
+
+created_on = "2026-07-30T13:27:18Z"
+last_updated = "2026-07-30T13:30:44Z"

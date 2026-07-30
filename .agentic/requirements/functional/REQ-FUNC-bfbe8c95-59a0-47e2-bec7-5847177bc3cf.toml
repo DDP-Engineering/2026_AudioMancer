@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf"
+category = "functional"
+status = "Active"
+priority = "Should"
+requirement = "The Text Chunking component contract shall identify a separately planned Audio Assembly scene-transition consumer without presenting it as implemented."
+rationale = "The persisted boundary marker is intentionally retained for future audible behavior, while current documentation must distinguish reserved design from implemented runtime behavior."
+verification = "Focused strict-schema and component-contract run passed on 2026-07-30: 11 passed; documentation names future scene-transition work without claiming it exists."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
+
+affected_paths = [
+  ".agentic/knowledge/components/Text_Chunking.md",
+  ".agentic/specs/cleanup_chunking.spec.md",
+]
+
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_component_documentation_describes_the_new_contract",
+]
+
+created_on = "2026-07-30T13:24:55Z"
+last_updated = "2026-07-30T13:32:38Z"

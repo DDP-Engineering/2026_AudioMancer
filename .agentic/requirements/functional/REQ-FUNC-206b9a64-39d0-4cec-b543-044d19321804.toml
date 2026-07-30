@@ -3,9 +3,9 @@ id = "REQ-FUNC-206b9a64-39d0-4cec-b543-044d19321804"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Canonical Cleanup and Chunking validators shall reject noncanonical persisted document shapes without product-generation migration."
-rationale = "Removing generation labels must not weaken corrupt or old-shaped data rejection for the sole supported schema."
-verification = "Fourteen focused malformed Cleanup and incompatible Chunking document cases passed on 2026-07-30."
+requirement = "Canonical Cleanup and Chunking validators shall reject persisted document shapes that differ from the current canonical schemas without migration."
+rationale = "AudioMancer supports only current project-artifact schemas during development, so corrections are breaking and loaders must not retain old-shape detection, defaults, normalization, or migration branches."
+verification = "Focused malformed Cleanup and incompatible Chunking tests verify rejection through the canonical validation paths."
 spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
@@ -19,4 +19,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-30T10:20:02Z"
-last_updated = "2026-07-30T10:35:35Z"
+last_updated = "2026-07-30T13:26:03Z"

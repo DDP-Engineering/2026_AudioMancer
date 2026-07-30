@@ -41,6 +41,22 @@ Strict validation remains authoritative. Corrupt, incomplete, or old-shaped
 data is rejected through the same generic validation paths; removing
 generation-specific compatibility assets does not relax the canonical schema.
 
+### Development-phase schema compatibility
+
+While AudioMancer is in development, only the current canonical project-artifact
+schema is supported. Schema corrections are intentionally breaking: loaders do
+not detect, default, normalize, or migrate fields from older persisted shapes.
+Project artifacts created by an earlier schema are not compatibility targets.
+
+For Chunking, every chunk must contain the complete current field set. A
+`chunks_text.json` document that omits `starts_after_scene_separator` is
+incompatible even when every older field is otherwise valid. A direct load
+raises `IncompatibleChunkingDocumentError`. During project open, the existing
+bounded recovery resets Chunking and all downstream derived operation data,
+retries validation once, and preserves Source, Extraction, and Cleanup. This
+destructive derived-state reset is an accepted development-phase migration
+cost, not a request to add a compatibility branch.
+
 Version tokens remain only when they are part of a real current contract, such
 as an external API route, an artifact-format token, semantic source metadata, a
 release/dependency identifier, or historical changelog material.
@@ -381,6 +397,17 @@ separator therefore marks the first narratable chunk, consecutive separators
 collapse to one leading marker, and a trailing separator with no following
 narration emits no chunk. The narratable chunk retains its content role and is
 never relabeled `scene_separator`.
+
+The field currently preserves structural truth only. Translation, character
+discovery, Speech Blocks, Audio Blocks, and Audio Assembly do not consume it in
+this contract. Issue #35 intentionally leaves those runtime behaviors
+unchanged. Requirement `REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf`
+keeps that implemented limitation visible in the component contract.
+Separately planned runtime requirement
+`REQ-FUNC-ca5357e1-f690-4254-981b-d803fe5fb385` defines a configurable
+scene-transition pause consumer; it must receive a dedicated owner-approved
+design for pause duration and interaction with ordinary inter-chunk silence and
+scene ambience before activation.
 
 Manual text edits preserve the selected chunk's leading scene marker. A newly
 inserted chunk defaults to `false`. When a chunk whose marker is `true` is

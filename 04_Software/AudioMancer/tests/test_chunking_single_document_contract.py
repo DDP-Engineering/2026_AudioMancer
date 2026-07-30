@@ -153,6 +153,18 @@ def test_document_api_rejects_non_boolean_scene_boundary_flag(tmp_path) -> None:
             lambda: _valid_document([{**_chunk("chunk-0001", 1, "Text"), "source_start_line": 1}]),
         ),
         (
+            "missing scene boundary field",
+            lambda: _valid_document(
+                [
+                    {
+                        key: value
+                        for key, value in _chunk("chunk-0001", 1, "Text").items()
+                        if key != "starts_after_scene_separator"
+                    }
+                ]
+            ),
+        ),
+        (
             "out of order chunk",
             lambda: _valid_document([_chunk("chunk-0002", 2, "Text")]),
         ),
@@ -552,9 +564,12 @@ def test_text_chunking_state_projects_resumable_document_without_durable_progres
 
 def test_text_chunking_component_documentation_describes_the_new_contract() -> None:
     """
-    @brief Verify S-0006/S-0007 make required component documentation visible.
+    @brief Verify S-0001 through S-0004 and the strict development schema policy.
+    @details Covers REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012,
+             REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf, and
+             REQ-REL-33fa2b3b-c400-4ad7-96e1-29dde53202af.
     @return     None.
-    @version 0.1.0
+    @version 0.2.0
     """
     repository_root = Path(__file__).resolve().parents[3]
     documentation = (
@@ -567,6 +582,9 @@ def test_text_chunking_component_documentation_describes_the_new_contract() -> N
     assert "runtime-only" in normalized
     assert "currently selected profile" in normalized
     assert "reset chunking" in normalized
+    assert "only the current canonical project-artifact schema is supported" in normalized
+    assert "does not consume" in normalized
+    assert "req-func-bfbe8c95-59a0-47e2-bec7-5847177bc3cf" in normalized
 
 
 # LOCAL HELPERS

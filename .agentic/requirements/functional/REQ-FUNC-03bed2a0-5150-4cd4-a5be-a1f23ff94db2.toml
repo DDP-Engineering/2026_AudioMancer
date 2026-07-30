@@ -4,9 +4,9 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Project opening shall automatically reset an incompatible Chunking document and all downstream operation data before retrying validation once."
-rationale = "Derived Chunking state must not make an otherwise valid project impossible to open, and one bounded retry prevents recovery loops."
-verification = "Focused project-open self-heal test passed against the Cleanup persistence contract."
-spec_ref = ""
+rationale = "During development, derived artifacts from older Chunking schemas are intentionally unsupported; one bounded recovery restores a usable current-schema project without a compatibility branch or recovery loop."
+verification = "Focused project-open self-heal test verifies reset of incompatible Chunking and downstream state followed by one successful validation retry."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
@@ -18,4 +18,4 @@ linked_tests = [
 ]
 
 created_on = "2026-07-29T08:55:41Z"
-last_updated = "2026-07-30T10:23:26Z"
+last_updated = "2026-07-30T13:25:58Z"

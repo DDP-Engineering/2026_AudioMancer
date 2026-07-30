@@ -21,6 +21,8 @@ rather than rediscovering document structure from plain text.
 - Slice exact Cleanup paragraph offsets and propagate their structural roles.
 - Derive deterministic chapter/paragraph chunks and one canonical Chunking
   document.
+- Support only the current canonical project-artifact schema during
+  development; reject older Chunking shapes without defaults or migration.
 - Bound deterministic running-document checkpoints by processed-paragraph and
   monotonic-time intervals while always persisting terminal lifecycle state.
 - Run AI-assisted semantic chunking with validated paragraph descriptors,
@@ -110,13 +112,23 @@ count, and ordered chunks. Every chunk has exactly:
 chunks never carry `scene_separator` because separator paragraphs are
 non-narratable hard boundaries. `starts_after_scene_separator` is a required
 boolean that records whether one or more omitted separators immediately precede
-the chunk. Inserted and edited chunks retain a valid role.
-Legacy root arrays and obsolete `chunking_report.json` or
-`chunking_state.json` sidecars are never migrated. Strict direct loads raise
-`IncompatibleChunkingDocumentError`. During project open, Project Lifecycle
-handles a content-caused incompatibility by resetting Chunking and downstream
-derived artifacts, retrying validation once, and marking the open result for a
-post-activation operator message; it preserves Source, Extraction, and Cleanup.
+the chunk. Inserted and edited chunks retain a valid role. The current
+Translation, Character Discovery, Speech Blocks, Audio Blocks, and Audio
+Assembly pipeline does not consume this field; issue #35 retains it as required
+structural metadata without adding scene-transition runtime behavior.
+
+While AudioMancer remains in development,
+only the current canonical project-artifact schema is supported. Schema
+corrections are intentionally breaking. A chunk that omits
+`starts_after_scene_separator`, a legacy root array, and every other old-shaped
+document are incompatible; the loader does not detect, default, normalize, or
+migrate them. Obsolete
+`chunking_report.json` and `chunking_state.json` sidecars are also never
+migrated. Strict direct loads raise `IncompatibleChunkingDocumentError`.
+During project open, Project Lifecycle handles a content-caused incompatibility
+by resetting Chunking and downstream derived artifacts, retrying validation
+once, and marking the open result for a post-activation operator message. This
+accepted development-phase reset preserves Source, Extraction, and Cleanup.
 Filesystem read errors remain fatal and cause no reset.
 The explicit Reset Chunking action uses the same scoped artifact ownership.
 
@@ -166,7 +178,8 @@ running, malformed, or output-hash-mismatched Cleanup state is rejected even
 when a text output happens to exist. Approved chunks feed AI Translation,
 Character Discovery, Speech Blocks, and later audio stages. Any manual edit or
 recomputation uses Operation Orchestration to reset only affected downstream
-state.
+state. Those downstream components currently consume chunk content and
+provenance but do not consume `starts_after_scene_separator`.
 
 ## 8. Usage
 
@@ -208,3 +221,12 @@ prefixes; responses with no valid prefix use deterministic structural
 fallback and may still produce a larger window chunk when no explicit
 structure exists. Token budgeting is estimated by AI Runtime. Operator review
 remains available for semantic corrections.
+
+`starts_after_scene_separator` has no current audible consumer. Requirement
+`REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf` keeps that limitation visible
+in this component contract. Separately planned runtime requirement
+`REQ-FUNC-ca5357e1-f690-4254-981b-d803fe5fb385` reserves a configurable Audio
+Assembly scene-transition pause. It remains Planned until an owner-approved
+follow-up defines pause duration and its interaction with ordinary inter-chunk
+silence and scene ambience; this component does not present that future
+behavior as implemented.

@@ -1,0 +1,18 @@
+schema_version = 1
+id = "REQ-FUNC-ca5357e1-f690-4254-981b-d803fe5fb385"
+category = "functional"
+status = "Planned"
+priority = "Should"
+requirement = "Audio Assembly shall apply a separately configurable scene-transition pause before each chunk whose starts_after_scene_separator field is true."
+rationale = "The current field preserves scene structure but issue #35 intentionally defers its audible consumer until timing and settings interactions are separately designed."
+verification = "Manual: Activate only after a dedicated owner-approved scene-transition design defines pause duration, ordinary inter-chunk silence interaction, scene-ambience interaction, and focused audible or structural verification."
+spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+
+linked_tests = []
+
+created_on = "2026-07-30T13:32:42Z"
+last_updated = "2026-07-30T13:32:42Z"

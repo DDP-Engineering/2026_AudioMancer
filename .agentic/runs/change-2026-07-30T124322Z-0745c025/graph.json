@@ -1,0 +1,279 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "The canonical Chunking contract continues to require starts_after_scene_separator as a boolean on every persisted narratable chunk.",
+      "A Chunking document missing starts_after_scene_separator remains incompatible and receives no load-time default, migration, or compatibility branch.",
+      "Project opening may continue to reset incompatible Chunking and all downstream derived artifacts through the existing bounded recovery path; this development-phase migration cost is explicitly documented as accepted.",
+      "The specification and Text Chunking component documentation state that older schemas are unsupported during development and identify the reset consequences.",
+      "The durable requirement set is reconciled rather than duplicated and names a separate planned follow-up contract for a future downstream scene-transition consumer.",
+      "No speech-block, audio-block, audio-assembly, settings, or scene-transition runtime behavior changes in this ticket.",
+      "Relevant strict-schema and project-open recovery tests, repository pytest and Ruff gates, traceability audit, and coverage audit pass."
+    ],
+    "assumptions": [
+      "While AudioMancer remains in development, project artifacts produced by earlier schemas are disposable derived state and are not compatibility targets.",
+      "The current canonical schema is the only supported schema; schema corrections may intentionally invalidate older project artifacts.",
+      "A downstream consumer for the scene-boundary flag requires a separate product decision and implementation run."
+    ],
+    "created_at": "2026-07-30T13:14:15+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      ".agentic/requirements/functional/REQ-FUNC-730a4323-644a-4d3f-a806-797250365e22.toml",
+      ".agentic/requirements/functional/REQ-FUNC-206b9a64-39d0-4cec-b543-044d19321804.toml",
+      ".agentic/requirements/functional/REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012.toml",
+      ".agentic/specs/cleanup_chunking.spec.md",
+      ".agentic/knowledge/components/Text_Chunking.md",
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "04_Software/AudioMancer/tests/test_project_workspace_service.py"
+    ],
+    "reason": "The owner explicitly selected strict breaking schemas for the development phase. The runtime already rejects the old shape and performs bounded recovery, so this ticket records and verifies existing policy without adding destructive behavior or expanding into an unspecified audio feature.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: reconcile durable requirements, the canonical Cleanup and Chunking specification, and Text Chunking component documentation with the breaking-schema policy; name a future consumer requirement without implementing it; use existing strict-schema and recovery behavior as verification. Out of scope: legacy schema detection or migration, defaulting the missing field, preserving pre-correction derived artifacts, speech/audio scene-transition behavior, new audio settings, and changes to the existing bounded self-heal implementation."
+    ],
+    "source": "Gitea issue #35 and owner decision in Codex on 2026-07-30",
+    "understanding": "During the current development phase, AudioMancer intentionally supports only the latest canonical project-artifact schemas. starts_after_scene_separator remains a required boolean chunk field. A chunks_text.json document missing it is incompatible, and the existing bounded project-open recovery may reset Chunking plus downstream derived artifacts. This ticket records that migration cost as intentional; it adds no compatibility normalization and no downstream audio consumer."
+  },
+  "change_units": [
+    {
+      "id": "CHG-0001",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-03bed2a0-5150-4cd4-a5be-a1f23ff94db2.toml"
+      ]
+    },
+    {
+      "id": "CHG-0002",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-206b9a64-39d0-4cec-b543-044d19321804.toml"
+      ]
+    },
+    {
+      "id": "CHG-0003",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-730a4323-644a-4d3f-a806-797250365e22.toml"
+      ]
+    },
+    {
+      "id": "CHG-0004",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012.toml"
+      ]
+    },
+    {
+      "id": "CHG-0005",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf.toml"
+      ]
+    },
+    {
+      "id": "CHG-0006",
+      "touched_paths": [
+        ".agentic/requirements/release/REQ-REL-33fa2b3b-c400-4ad7-96e1-29dde53202af.toml"
+      ]
+    },
+    {
+      "id": "CHG-0007",
+      "touched_paths": [
+        ".agentic/specs/cleanup_chunking.spec.md"
+      ]
+    },
+    {
+      "id": "CHG-0008",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Chunking.md"
+      ]
+    },
+    {
+      "id": "CHG-0009",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py"
+      ]
+    },
+    {
+      "id": "CHG-0010",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-ca5357e1-f690-4254-981b-d803fe5fb385.toml"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-03bed2a0-5150-4cd4-a5be-a1f23ff94db2",
+        "REQ-FUNC-206b9a64-39d0-4cec-b543-044d19321804",
+        "REQ-FUNC-730a4323-644a-4d3f-a806-797250365e22",
+        "REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012",
+        "REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf",
+        "REQ-REL-33fa2b3b-c400-4ad7-96e1-29dde53202af"
+      ],
+      "cites_spec": [
+        "S-0001",
+        "S-0002",
+        "S-0003",
+        "S-0004"
+      ],
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes tests/test_chunking_single_document_contract.py::test_text_chunking_component_documentation_describes_the_new_contract tests/test_project_workspace_service.py::test_open_project_self_heals_incompatible_chunking_and_downstream",
+      "green_evidence": "E-0003",
+      "id": "C-0001",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    }
+  ],
+  "decisions": [],
+  "evidence": [
+    {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes tests/test_chunking_single_document_contract.py::test_text_chunking_component_documentation_describes_the_new_contract",
+      "created_at": "2026-07-30T13:28:46+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused check reproduced the missing Text Chunking documentation for the development-only breaking-schema policy and named future consumer; strict obsolete-shape cases passed (9 passed, 1 expected failure).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes tests/test_chunking_single_document_contract.py::test_text_chunking_component_documentation_describes_the_new_contract tests/test_project_workspace_service.py::test_open_project_self_heals_incompatible_chunking_and_downstream",
+      "created_at": "2026-07-30T13:30:35+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused strict-schema, component-documentation, and bounded project-open recovery checks pass (11 passed).",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q <8 focused selectors>",
+      "created_at": "2026-07-30T13:35:02+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused issue #35 validation passed: 21 strict-schema, field-contract, component-documentation, project-open recovery, Cleanup-validator, and scene-boundary materialization tests.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv\\Scripts\\python.exe -m ruff check .",
+      "created_at": "2026-07-30T13:35:06+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Ruff validation passed for the complete AudioMancer project.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".agentic tools: audit traceability; audit coverage; impact changed paths",
+      "created_at": "2026-07-30T13:35:10+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "scan",
+      "path": ".agentic/requirements",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Canonical requirement traceability and source coverage audits report no findings; changed-set impact reports no uncovered files and no full regression recommendation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "Full pytest intentionally omitted",
+      "created_at": "2026-07-30T13:35:14+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Per owner instruction, the full pytest suite was not run because it is too slow; manual app verification is deferred to the owner after implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "Manual documentation-audit checklist; no deterministic audit entry point found",
+      "created_at": "2026-07-30T13:36:01+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "scan",
+      "path": ".agentic/knowledge/components/Text_Chunking.md",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Manual documentation audit passed: Text_Chunking.md matches the current strict loader and bounded recovery behavior, names the unimplemented future consumer as Planned, adds no new component page, requires no index change, and does not broaden README or operator-workflow scope.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-30T12:43:22+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [],
+    "statement": "Resolve Gitea issue #35 by deciding and implementing the fate of starts_after_scene_separator so its contract and legacy-project migration behavior are intentional and verified.",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-30T124322Z-0745c025",
+  "spec_items": [
+    {
+      "examples": [
+        "A document with the complete former chunk field set but no starts_after_scene_separator raises IncompatibleChunkingDocumentError."
+      ],
+      "id": "S-0001",
+      "statement": "The canonical Chunking loader rejects a chunk that omits starts_after_scene_separator and does not default, normalize, or migrate the missing field.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Source, Extraction, and Cleanup remain; Chunking, Translation, Characters, Speech Blocks, Audio Blocks, and Audio Assembly derived state are cleared by existing scoped recovery."
+      ],
+      "id": "S-0002",
+      "statement": "Project opening handles content-caused Chunking incompatibility by resetting Chunking and all downstream derived operation data before retrying validation once.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": "At most one recovery retry."
+    },
+    {
+      "examples": [
+        "Issue #35 changes contracts and documentation but introduces no runtime scene-transition behavior."
+      ],
+      "id": "S-0003",
+      "statement": "starts_after_scene_separator is required structural metadata with no current Translation, Character Discovery, Speech Blocks, Audio Blocks, or Audio Assembly consumer.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf remains Planned until a dedicated owner-approved design defines timing and settings interactions."
+      ],
+      "id": "S-0004",
+      "statement": "A separately planned requirement owns a configurable Audio Assembly scene-transition pause for chunks marked starts_after_scene_separator=true.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}
