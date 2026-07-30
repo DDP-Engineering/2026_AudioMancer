@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-30
+
 ### Added
 
 - New **Narration Block Target (s)** setting under TTS Settings → Runtime Audio
