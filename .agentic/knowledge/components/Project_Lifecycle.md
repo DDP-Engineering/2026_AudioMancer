@@ -129,6 +129,15 @@ catches that service error and shows `dialog.project_error_title` with the
 original error text. Successful recovery is reported only after Home activates
 the project.
 
+Cleanup completion evidence is available only when
+`text_cleanup_service.load_cleanup_document` accepts the strict persisted
+document. `CleanupDocumentError` is a `ValueError`, so malformed progress or
+completed blocking-quality data is treated as unavailable completion evidence.
+Project opening then returns through its existing validation flow with `ok` or
+`repair_required`, depending on whether the remaining evidence implies a
+concrete manifest normalization, instead of propagating a document-shape
+exception.
+
 Narrator completion evidence and exports are projections of the strict
 `narrator_voice.json` document. The selected profile's language, inline sample
 metadata, and canonical `audio_narator_<profile_id>.wav` are resolved at read

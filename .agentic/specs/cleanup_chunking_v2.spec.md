@@ -150,6 +150,29 @@ unit IDs. Chunking slices `clean_text.txt` by these offsets after verifying
 }
 ```
 
+### Loaded-document validation
+
+`load_cleanup_document` treats persisted Cleanup data as untrusted input. The
+`progress` object has exactly the fields shown above. Every numeric progress
+field is a non-boolean integer greater than or equal to zero; `batch_order` is a
+list of lists of string boundary IDs; and `next_batch_index` does not exceed the
+number of batches. A missing field, extra field, invalid value type, negative
+counter, malformed batch, or out-of-range next index raises
+`CleanupDocumentError`.
+
+For a completed document, each blocking quality metric
+(`introduced_fusion_count`, `projection_violation_count`,
+`invalid_operation_count`, and `unclassified_boundary_count`) is required to be
+a non-boolean integer equal to zero. Missing, malformed, boolean, or nonzero
+values raise `CleanupDocumentError`; the validator never exposes a conversion
+`TypeError`, lookup `KeyError`, or shape-related `AttributeError` to callers.
+
+Project completion evidence treats `CleanupDocumentError` as unavailable
+Cleanup completion. Project opening returns through the existing validation
+flow with `status="ok"` or `status="repair_required"`, according to whether
+the remaining artifact evidence implies a concrete metadata normalization; it
+never propagates the Cleanup document-validation exception.
+
 ## Deterministic decisions
 
 Precedence is:

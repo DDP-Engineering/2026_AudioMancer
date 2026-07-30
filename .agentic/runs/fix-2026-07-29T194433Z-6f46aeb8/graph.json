@@ -1,0 +1,499 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "Loading a completed cleanup.json whose introduced_fusion_count is null raises CleanupDocumentError and never leaks TypeError.",
+      "Each required blocking quality metric is present as a non-boolean integer; malformed or missing values and nonzero values are rejected as CleanupDocumentError, while zero-valued valid metrics remain accepted.",
+      "Progress fields required by the Cleanup V2 contract and by resume/manifest projection are validated for required keys and safe shapes so missing or malformed progress data raises CleanupDocumentError rather than a downstream KeyError, TypeError, or AttributeError.",
+      "Opening a project whose cleanup.json contains a malformed blocking quality metric returns a normal project validation result with status ok or repair_required instead of propagating an exception.",
+      "Existing valid Cleanup loading, completion evidence, resume, manual-edit, and project-repair behavior remains unchanged under focused regression coverage.",
+      "Focused Cleanup and project-workspace tests, Ruff, and traceability/coverage audits pass; the human manually verifies the application before publishing, and the full pytest suite is not run for this ticket by explicit instruction."
+    ],
+    "assumptions": [
+      "project_workspace_service's existing OSError/ValueError completion-evidence boundary and metadata-healing policy are intentional; the fix belongs in text_cleanup_service rather than a broader consumer catch or new repair-status rule."
+    ],
+    "created_at": "2026-07-29T20:17:23+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+      "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      ".agentic/requirements/functional",
+      ".agentic/specs/cleanup_chunking_v2.spec.md",
+      ".agentic/knowledge/components/Text_Cleanup.md",
+      ".agentic/knowledge/components/Project_Lifecycle.md"
+    ],
+    "reason": "The defect is confined to one strict document boundary, the exception contract is established, the original ticket explicitly accepts either normal project-validation status, focused tests bound the change, and the human accepted focused automated validation plus manual application testing.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: strict validation of the Cleanup progress structure and completed-document blocking quality metrics; normalization of malformed loaded data to CleanupDocumentError; focused loader and project-open normal-return regressions; durable requirements, Cleanup V2 specification detail, and Text Cleanup/Project Lifecycle documentation review. Out of scope: Cleanup metric generation, renderer semantics, non-Cleanup artifacts, UI changes, broad TypeError catches in project_workspace_service, changes to project metadata-healing policy, schema migration/versioning, chunking behavior, unrelated validation hardening, and the full pytest suite explicitly deferred by the human due runtime."
+    ],
+    "source": "Gitea issue #33: http://192.168.1.15:3001/dpasare/2026_AudioMancer/issues/33; remediation order in issue #40; validation override from human on 2026-07-29",
+    "understanding": "The strict Cleanup document validator currently coerces four blocking quality metrics with int(), allowing malformed JSON values such as null to leak TypeError instead of the documented CleanupDocumentError. Because project completion evidence intentionally catches OSError and ValueError, that leak crashes project opening instead of treating Cleanup completion evidence as unavailable and returning through the normal project validation flow. Harden the validator at the document boundary, including the progress fields consumed by resume and manifest projection, while preserving the existing valid Cleanup schema and project-workspace exception policy."
+  },
+  "change_units": [
+    {
+      "id": "CH-0001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py"
+      ]
+    },
+    {
+      "id": "CH-0002",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py"
+      ]
+    },
+    {
+      "id": "CH-0003",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_project_workspace_service.py"
+      ]
+    },
+    {
+      "id": "CH-0004",
+      "touched_paths": [
+        ".agentic/specs/cleanup_chunking_v2.spec.md"
+      ]
+    },
+    {
+      "id": "CH-0005",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Cleanup.md"
+      ]
+    },
+    {
+      "id": "CH-0006",
+      "touched_paths": [
+        ".agentic/knowledge/components/Project_Lifecycle.md"
+      ]
+    },
+    {
+      "id": "CH-0007",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-554ffe77-0dff-49d8-b4ad-8df145532b8a.toml"
+      ]
+    },
+    {
+      "id": "CH-0008",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-cdb7617a-5ec1-44b9-9ea5-a650e3f7f3e6.toml"
+      ]
+    },
+    {
+      "id": "CH-0009",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-c3211661-3717-46cc-9817-da4e2524b18b.toml"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-554ffe77-0dff-49d8-b4ad-8df145532b8a"
+      ],
+      "cites_spec": [
+        "S-0001"
+      ],
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics",
+      "green_evidence": "E-0007",
+      "id": "C-0001",
+      "level": "regression",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-cdb7617a-5ec1-44b9-9ea5-a650e3f7f3e6"
+      ],
+      "cites_spec": [
+        "S-0002"
+      ],
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress",
+      "green_evidence": "E-0008",
+      "id": "C-0002",
+      "level": "regression",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-c3211661-3717-46cc-9817-da4e2524b18b"
+      ],
+      "cites_spec": [
+        "S-0003"
+      ],
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "green_evidence": "E-0009",
+      "id": "C-0003",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "red_evidence": "E-0003",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-554ffe77-0dff-49d8-b4ad-8df145532b8a"
+      ],
+      "cites_spec": [
+        "S-0004"
+      ],
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py tests/test_text_cleanup_state_service.py tests/test_project_workspace_service.py",
+      "green_evidence": "E-0013",
+      "id": "C-0004",
+      "level": "regression",
+      "path": "04_Software/AudioMancer/tests",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-c3211661-3717-46cc-9817-da4e2524b18b"
+      ],
+      "cites_spec": [
+        "S-0005"
+      ],
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "green_evidence": "E-0011",
+      "id": "C-0005",
+      "level": "integration",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "red_evidence": "E-0006",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "alignment",
+      "created_at": "2026-07-29T20:04:28+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Human explicitly replaced full pytest validation with focused regression tests and manual application verification because the full suite is too slow."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-29T20:13:09+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Attach the red-first test selectors now that the check-stage test functions exist and resolve."
+    },
+    {
+      "approver": "human",
+      "chosen": "alignment",
+      "created_at": "2026-07-29T20:17:01+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Implementation proved project validation intentionally returns ok when invalid Cleanup evidence produces no concrete manifest normalization; Gitea #33 accepts ok or repair_required and only forbids exception propagation."
+    }
+  ],
+  "evidence": [
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:12:21+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red baseline: malformed metric cases leak TypeError or accept invalid zero-like values; combined focused run was 12 failed, 3 passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:12:26+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red baseline: all six malformed Progress shapes were accepted; combined focused run was 12 failed, 3 passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:12:32+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red baseline: project opening propagated TypeError for a null Cleanup blocking metric; combined focused run was 12 failed, 3 passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py tests/test_text_cleanup_state_service.py tests/test_project_workspace_service.py",
+      "created_at": "2026-07-29T20:12:37+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused regression baseline: 12 failed, 63 passed, 1 skipped; every failure is one newly added issue #33 case.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T20:19:35+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "S-0005 corrects the over-specific S-0003 status expectation: Gitea #33 accepts ok or repair_required, and existing metadata-healing policy decides which normal result applies. The immutable run-local S-0003 record is superseded semantically by S-0005 and REQ-FUNC-c3211661-3717-46cc-9817-da4e2524b18b.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:20:13+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red baseline inherited from E-0003: before validator hardening, project opening propagated TypeError instead of returning either allowed normal status.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:21:59+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Blocking quality metric validation passed all 8 malformed/missing/nonzero cases.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:22:04+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_v2_quality_contract.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Progress validation passed all 6 malformed-shape cases.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:22:09+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Project opening returned normally for a malformed Cleanup quality metric; combined focused run was 15 passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py tests/test_text_cleanup_state_service.py tests/test_project_workspace_service.py",
+      "created_at": "2026-07-29T20:22:15+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Cleanup and project-workspace regression: 75 passed, 1 skipped.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics tests/test_cleanup_v2_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+      "created_at": "2026-07-29T20:22:20+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Corrected project-validation contract passed: invalid Cleanup evidence yielded an allowed normal status without exception.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\ruff.exe check .",
+      "created_at": "2026-07-29T20:25:47+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Configured Ruff gate passed: All checks passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q tests/test_cleanup_v2_quality_contract.py tests/test_text_cleanup_state_service.py tests/test_project_workspace_service.py",
+      "created_at": "2026-07-29T20:25:52+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Validation-focused Cleanup and project-workspace suite: 75 passed, 1 skipped.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --directory 04_Software/AudioMancer pytest -q",
+      "created_at": "2026-07-29T20:25:57+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "note",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "The configured full pytest gate was not run by explicit human instruction because of its duration; manual application verification is required before publishing.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T20:26:03+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "scan",
+      "path": ".agentic/knowledge/components",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Manual documentation audit confirms Text Cleanup and Project Lifecycle describe the implemented strict validation and normal project-open behavior; broad docs are unaffected.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-29T20:26:08+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Python style audit: module versions and docstrings reviewed; changed files compile and focused Ruff passes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-30T05:39:55+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "note",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Human manually tested the application after implementation and confirmed issue #33 is ready for delivery.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-29T19:44:33+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+      "04_Software/AudioMancer/tests"
+    ],
+    "statement": "Map malformed cleanup.json quality metrics to CleanupDocumentError so project validation returns repair-required evidence instead of leaking TypeError",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-29T194433Z-6f46aeb8",
+  "spec_items": [
+    {
+      "examples": [
+        "introduced_fusion_count=null raises CleanupDocumentError; integer zero is accepted."
+      ],
+      "id": "S-0001",
+      "statement": "Completed Cleanup documents reject every invalid blocking quality metric as CleanupDocumentError.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "A missing batch_order, boolean counter, malformed batch, or next_batch_index beyond the batch count is rejected."
+      ],
+      "id": "S-0002",
+      "statement": "Cleanup documents reject every malformed Progress payload as CleanupDocumentError.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "A completed manifest plus cleanup.json with a null blocking metric returns repair_required for Cleanup."
+      ],
+      "id": "S-0003",
+      "statement": "Project opening treats invalid Cleanup completion evidence as repair-required Cleanup state.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0004",
+      "statement": "Valid Cleanup loading and existing Cleanup lifecycle behavior remain unchanged by persisted-document hardening.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "Focused Cleanup quality, resume, manual-edit, and project-workspace regressions remain green."
+    },
+    {
+      "examples": [
+        "A null blocking metric yields status ok or repair_required according to existing metadata-healing policy, never an exception."
+      ],
+      "id": "S-0005",
+      "statement": "Project validation returns normally when Cleanup completion evidence is invalid.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

@@ -14,7 +14,7 @@
          through cleanup.json plus clean_text.txt.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.5.0
+@version 0.6.0
 """
 
 from __future__ import annotations
@@ -74,6 +74,23 @@ CLEANUP_ROOT_FIELDS = frozenset(
 )
 _STATUSES = frozenset(("running", "paused", "finalizing", "completed", "failed"))
 _PHASES = frozenset(("analysis", "adjudication", "rendering", "done"))
+_PROGRESS_FIELDS = frozenset(
+    (
+        "question_count",
+        "batch_order",
+        "next_batch_index",
+        "completed_request_count",
+        "estimated_request_count",
+        "estimated_input_tokens",
+    )
+)
+_PROGRESS_COUNTER_FIELDS = _PROGRESS_FIELDS - {"batch_order"}
+_BLOCKING_QUALITY_FIELDS = (
+    "introduced_fusion_count",
+    "projection_violation_count",
+    "invalid_operation_count",
+    "unclassified_boundary_count",
+)
 _ANALYSIS_COMPLETE_PERCENT = 8
 _AI_COMPLETE_PERCENT = 88
 _VALIDATION_PERCENT = 94
@@ -533,9 +550,12 @@ def validate_cleanup_document(
             raise CleanupDocumentError(
                 f"Cleanup {list_field} must be a list."
             )
-    if not isinstance(payload.get("progress"), dict):
+    progress = payload.get("progress")
+    if not isinstance(progress, dict):
         raise CleanupDocumentError("Cleanup progress is invalid.")
-    if not isinstance(payload.get("quality_report"), dict):
+    _validate_progress(progress)
+    quality_report = payload.get("quality_report")
+    if not isinstance(quality_report, dict):
         raise CleanupDocumentError("Cleanup quality report is invalid.")
     cleanup_renderer_service.validate_operations(
         canonical_text,
@@ -548,16 +568,48 @@ def validate_cleanup_document(
             raise CleanupDocumentError(
                 "Completed Cleanup metadata is incomplete."
             )
-        for field in (
-            "introduced_fusion_count",
-            "projection_violation_count",
-            "invalid_operation_count",
-            "unclassified_boundary_count",
-        ):
-            if int(payload["quality_report"].get(field, -1)) != 0:
-                raise CleanupDocumentError(
-                    f"Cleanup blocking quality metric failed: {field}."
-                )
+        _validate_blocking_quality_metrics(quality_report)
+
+
+def _validate_progress(progress: dict[str, object]) -> None:
+    """Validate the exact persisted Cleanup progress contract."""
+    if set(progress) != _PROGRESS_FIELDS:
+        raise CleanupDocumentError(
+            "Cleanup progress fields do not match the current contract."
+        )
+    for field in _PROGRESS_COUNTER_FIELDS:
+        value = progress[field]
+        if type(value) is not int or value < 0:
+            raise CleanupDocumentError(
+                f"Cleanup progress counter is invalid: {field}."
+            )
+    batch_order = progress["batch_order"]
+    if not isinstance(batch_order, list) or any(
+        not isinstance(batch, list)
+        or any(not isinstance(boundary_id, str) for boundary_id in batch)
+        for batch in batch_order
+    ):
+        raise CleanupDocumentError("Cleanup progress batch order is invalid.")
+    if progress["next_batch_index"] > len(batch_order):
+        raise CleanupDocumentError(
+            "Cleanup progress next batch index is out of range."
+        )
+
+
+def _validate_blocking_quality_metrics(
+    quality_report: dict[str, object],
+) -> None:
+    """Require completed Cleanup blocking metrics to be integer zeroes."""
+    for field in _BLOCKING_QUALITY_FIELDS:
+        value = quality_report.get(field)
+        if type(value) is not int:
+            raise CleanupDocumentError(
+                f"Cleanup blocking quality metric is invalid: {field}."
+            )
+        if value != 0:
+            raise CleanupDocumentError(
+                f"Cleanup blocking quality metric failed: {field}."
+            )
 
 
 def _finalize_document(

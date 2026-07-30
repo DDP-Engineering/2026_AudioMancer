@@ -159,6 +159,12 @@ progress, warnings, normalized token use, runtime quality metrics, output hash,
 and manual-edit/structure flags. Status is `running`, `paused`, `finalizing`,
 `completed`, or `failed`; only `completed` with phase `done`, zero blocking
 quality counters, and a matching `clean_text.txt` hash unlocks Chunking.
+Loaded documents also require the exact Progress field set, non-boolean
+non-negative integer counters, string-only batch IDs, and a bounded next-batch
+index. Completed blocking quality counters must be present as non-boolean
+integer zeroes. Every violation raises `CleanupDocumentError`; persisted shape
+or value corruption does not leak `TypeError`, `KeyError`, or `AttributeError`
+to consumers.
 Online disclosure counts every submitted question fragment, including failed
 retry attempts, separately from completed resumable responses.
 
@@ -215,6 +221,7 @@ Primary coverage:
 - `tests/test_cleanup_v2_service.py`
 - `tests/test_cleanup_metadata_service.py`
 - `tests/test_text_cleanup_state_service.py`
+- `tests/test_project_workspace_service.py`
 - `tests/test_text_cleanup_ui_controller.py`
 - `tests/test_text_cleanup_page.py`
 

@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.0
+@version 1.3.0
 """
 
 # IMPORTS
@@ -31,6 +31,7 @@ from audiomancer.services import (
     project_export_service,
     project_workspace_service,
     speech_blocks_service,
+    text_cleanup_service,
     text_extraction_service,
 )
 from chunking_test_support import write_cleanup_input
@@ -212,6 +213,44 @@ def test_open_project_resolves_flat_project_root(tmp_path) -> None:
     assert open_result["status"] == "ok"
     assert open_result["project_root"] == created_root
     assert open_result["manifest"]["display_name"] == "Book5_CAL_CAL"
+
+
+def test_open_project_requires_repair_for_malformed_cleanup_quality_metric(
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify invalid Cleanup completion does not abort project open.
+    @details    Covers corrected S-0005 and
+                REQ-FUNC-c3211661-3717-46cc-9817-da4e2524b18b.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "CorruptCleanupRepair",
+        tmp_path,
+    )
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story source.", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-07-29T20:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    text_extraction_service.extract_text(project_root, manifest)
+    document = text_cleanup_service.clean_text(project_root, manifest)
+    document["quality_report"]["introduced_fusion_count"] = None
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] in {"ok", "repair_required"}
 
 
 def test_open_project_self_heals_incompatible_chunking_and_downstream(monkeypatch, tmp_path) -> None:

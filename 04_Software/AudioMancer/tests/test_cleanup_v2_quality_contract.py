@@ -13,7 +13,7 @@
          roles, fusion safety, script eligibility, resume, and manual edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.2.0
+@version 0.3.0
 """
 
 from __future__ import annotations
@@ -47,6 +47,25 @@ _RETIRED_CLEANUP_CONFIG_CONSTANTS = (
 )
 
 
+def _build_completed_cleanup(tmp_path):
+    """Build one valid completed Cleanup document for corruption checks."""
+    canonical_text, ledger = build_ledger(
+        ["A complete paragraph.", "A second paragraph."],
+        kinds=["paragraph", "paragraph"],
+        boundaries=[("\n\n", "native_paragraph")],
+        origins=["native", "native"],
+        structure_quality="native",
+    )
+    project_root, manifest = build_project(
+        tmp_path,
+        "CorruptCleanupDocument",
+        canonical_text,
+        ledger,
+    )
+    document = text_cleanup_service.clean_text(project_root, manifest)
+    return project_root, document
+
+
 def test_retired_cleanup_artifact_config_constants_are_gone() -> None:
     """Cover S-0007 and REQ-FUNC-50c48e76-aa6a-4a54-840b-ece463309faf."""
     for constant_name in _RETIRED_CLEANUP_CONFIG_CONSTANTS:
@@ -75,6 +94,76 @@ def test_cleanup_persists_exactly_one_metadata_file_and_one_text_file(tmp_path) 
     assert not (project_root / "clean_text_metadata.json").exists()
     assert not (project_root / "cleanup_report.json").exists()
     assert not (project_root / "cleanup_state.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value", "remove_field"),
+    [
+        ("introduced_fusion_count", None, False),
+        ("introduced_fusion_count", None, True),
+        ("projection_violation_count", True, False),
+        ("invalid_operation_count", "0", False),
+        ("unclassified_boundary_count", 0.0, False),
+        ("introduced_fusion_count", [], False),
+        ("projection_violation_count", {}, False),
+        ("invalid_operation_count", 1, False),
+    ],
+)
+def test_load_cleanup_document_rejects_malformed_blocking_quality_metrics(
+    tmp_path,
+    field,
+    invalid_value,
+    remove_field,
+) -> None:
+    """Cover S-0001 and REQ-FUNC-554ffe77-0dff-49d8-b4ad-8df145532b8a."""
+    project_root, document = _build_completed_cleanup(tmp_path)
+    if remove_field:
+        del document["quality_report"][field]
+    else:
+        document["quality_report"][field] = invalid_value
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(text_cleanup_service.CleanupDocumentError):
+        text_cleanup_service.load_cleanup_document(project_root)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing_field",
+        "extra_field",
+        "boolean_counter",
+        "negative_counter",
+        "malformed_batch",
+        "out_of_range_next_index",
+    ],
+)
+def test_load_cleanup_document_rejects_malformed_progress(tmp_path, case) -> None:
+    """Cover S-0002 and REQ-FUNC-cdb7617a-5ec1-44b9-9ea5-a650e3f7f3e6."""
+    project_root, document = _build_completed_cleanup(tmp_path)
+    progress = document["progress"]
+    if case == "missing_field":
+        del progress["batch_order"]
+    elif case == "extra_field":
+        progress["unexpected"] = 0
+    elif case == "boolean_counter":
+        progress["question_count"] = True
+    elif case == "negative_counter":
+        progress["estimated_input_tokens"] = -1
+    elif case == "malformed_batch":
+        progress["batch_order"] = [["boundary-1", 2]]
+    else:
+        progress["next_batch_index"] = 1
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(text_cleanup_service.CleanupDocumentError):
+        text_cleanup_service.load_cleanup_document(project_root)
 
 
 def test_analysis_assigns_roles_before_classifying_every_boundary() -> None:
