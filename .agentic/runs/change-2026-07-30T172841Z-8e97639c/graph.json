@@ -1,0 +1,675 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "Whitespace-only edits whose source units cannot be realigned emit a component warning and persist user_whitespace_realign_incomplete once in cleanup.json warnings.",
+      "All three chapter detectors accept valid uppercase bare Roman numerals and reject lowercase or invalid Roman-only words including I, did, mix, and civil as specified by case and grammar.",
+      "A matching completed Cleanup checkpoint whose clean_text.txt is missing or hash-invalid is rerendered deterministically without an LLM request and returns completed output.",
+      "create_project raises a friendly FileExistsError when the target path is an existing file and leaves it unchanged.",
+      "Paragraph reason_codes remain available as provenance, while warning_flags and downstream cleanup_warning_flags contain only the explicit real warning-code set; the strict chunk field set does not change.",
+      "The translation reset comment, validate_project_name @version indentation, and missing module-level blank lines are corrected.",
+      "test_logging_service.py no longer begins with a UTF-8 BOM and its content otherwise remains unchanged.",
+      "Focused tests for behavior items 1-5, Ruff, compilation, traceability, coverage, documentation review, and impact pass without running the full pytest suite."
+    ],
+    "assumptions": [
+      "Bare Roman numerals are recognized only when uppercase and valid under the non-empty standard Roman grammar; prefixed Chapter/Scene labels retain case-insensitive behavior.",
+      "A failed whitespace realignment appends the stable Cleanup warning token user_whitespace_realign_incomplete and logs a component warning, while the operator edit remains persisted as required by the ticket.",
+      "Real Cleanup paragraph warning flags are the explicit tokens deterministic_fallback, unknown_line_boundary, and page_transition_repaired; all other reason_codes remain provenance only.",
+      "A completed Cleanup checkpoint with a missing or hash-invalid clean_text.txt is deterministically rerendered without an LLM call.",
+      "The owner-deferred full pytest gate is replaced by focused tests for items 1-5, full Ruff, compilation, audits, and later manual app verification."
+    ],
+    "created_at": "2026-07-30T17:34:02+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+      "04_Software/AudioMancer/tests/test_cleanup_service.py",
+      "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
+      "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py",
+      "04_Software/AudioMancer/tests/test_logging_service.py",
+      ".agentic/specs/cleanup_chunking.spec.md",
+      ".agentic/requirements",
+      ".agentic/knowledge/components/Text_Cleanup.md",
+      ".agentic/knowledge/components/Text_Chunking.md",
+      ".agentic/knowledge/components/Project_Lifecycle.md"
+    ],
+    "reason": "Each fix is local, existing component baselines and tests are strong, no persisted field set changes, and the assumptions make the two discretionary ticket choices explicit and testable.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: the seven ticket items, focused regression checks, minimal existing requirement/spec/component-document updates, and no change to the strict chunks_text.json field set. Out of scope: compatibility shims, schema migrations, broad refactors, ticket #40, changing starts_after_scene_separator, commits, pushes, PRs, Gitea mutations, or the full pytest suite."
+    ],
+    "source": "Gitea issue #38 read through authenticated tea CLI plus owner instruction on 2026-07-30",
+    "understanding": "Implement the seven independent robustness and consistency items as one bounded change: diagnose whitespace realignment failure both in the component log and Cleanup document; make bare Roman-numeral headings strict and uppercase-only in all three detectors; rerender a matching completed Cleanup checkpoint when clean_text.txt is missing or hash-invalid; reject a project target that is an existing file with a friendly FileExistsError; separate paragraph provenance reason_codes from a small explicit warning-code set before downstream chunk and Speech Blocks projection; correct three comments/docstrings/spacing defects; and remove the sole UTF-8 BOM."
+  },
+  "change_units": [
+    {
+      "id": "CH-0001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py"
+      ]
+    },
+    {
+      "id": "CH-0002",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py"
+      ]
+    },
+    {
+      "id": "CH-0003",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py"
+      ]
+    },
+    {
+      "id": "CH-0004",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py"
+      ]
+    },
+    {
+      "id": "CH-0005",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py"
+      ]
+    },
+    {
+      "id": "CH-0006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py"
+      ]
+    },
+    {
+      "id": "CH-0007",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py"
+      ]
+    },
+    {
+      "id": "CH-0008",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_cleanup_service.py"
+      ]
+    },
+    {
+      "id": "CH-0009",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py"
+      ]
+    },
+    {
+      "id": "CH-0010",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py"
+      ]
+    },
+    {
+      "id": "CH-0011",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_project_workspace_service.py"
+      ]
+    },
+    {
+      "id": "CH-0012",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py"
+      ]
+    },
+    {
+      "id": "CH-0013",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_logging_service.py"
+      ]
+    },
+    {
+      "id": "CH-0014",
+      "touched_paths": [
+        ".agentic/specs/cleanup_chunking.spec.md"
+      ]
+    },
+    {
+      "id": "CH-0015",
+      "touched_paths": [
+        ".agentic/specs/minor_robustness_consistency.spec.md"
+      ]
+    },
+    {
+      "id": "CH-0016",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-1179da33-b65d-4192-a875-353a38c37ab7.toml"
+      ]
+    },
+    {
+      "id": "CH-0017",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-cf65391c-89ba-4787-8df3-33eb22337b74.toml"
+      ]
+    },
+    {
+      "id": "CH-0018",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-c593854d-38a1-44f3-aff1-33ede63b8dde.toml"
+      ]
+    },
+    {
+      "id": "CH-0019",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-9c9b7202-3dcd-4a19-a0bd-65a9278f8aa8.toml"
+      ]
+    },
+    {
+      "id": "CH-0020",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2.toml"
+      ]
+    },
+    {
+      "id": "CH-0021",
+      "touched_paths": [
+        ".agentic/requirements/non_functional/REQ-NFR-5b12e005-3baf-4c44-b7de-7346fcf8f605.toml"
+      ]
+    },
+    {
+      "id": "CH-0022",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Cleanup.md"
+      ]
+    },
+    {
+      "id": "CH-0023",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Chunking.md"
+      ]
+    },
+    {
+      "id": "CH-0024",
+      "touched_paths": [
+        ".agentic/knowledge/components/Project_Lifecycle.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-1179da33-b65d-4192-a875-353a38c37ab7"
+      ],
+      "cites_spec": [
+        "S-0001"
+      ],
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_service.py::test_whitespace_realign_failure_records_diagnostic",
+      "green_evidence": "E-0008",
+      "id": "C-0001",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_service.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-cf65391c-89ba-4787-8df3-33eb22337b74"
+      ],
+      "cites_spec": [
+        "S-0002"
+      ],
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_deterministic_chunking_service.py::test_bare_roman_chapter_detection_requires_valid_uppercase_numerals",
+      "green_evidence": "E-0009",
+      "id": "C-0002",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py",
+      "red_evidence": "E-0003",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2"
+      ],
+      "cites_spec": [
+        "S-0003"
+      ],
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_quality_contract.py::test_completed_cleanup_rerenders_when_output_missing_or_mismatched",
+      "green_evidence": "E-0010",
+      "id": "C-0003",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-c593854d-38a1-44f3-aff1-33ede63b8dde"
+      ],
+      "cites_spec": [
+        "S-0004"
+      ],
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_project_workspace_service.py::test_create_project_rejects_existing_file_target",
+      "green_evidence": "E-0011",
+      "id": "C-0004",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_project_workspace_service.py",
+      "red_evidence": "E-0005",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-9c9b7202-3dcd-4a19-a0bd-65a9278f8aa8"
+      ],
+      "cites_spec": [
+        "S-0005"
+      ],
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_metadata_service.py::test_cleanup_reason_codes_do_not_masquerade_as_warnings",
+      "green_evidence": "E-0012",
+      "id": "C-0005",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py",
+      "red_evidence": "E-0006",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-NFR-5b12e005-3baf-4c44-b7de-7346fcf8f605"
+      ],
+      "cites_spec": [
+        "S-0006",
+        "S-0007",
+        "S-0008"
+      ],
+      "command": "focused issue #38 tests; source-format/BOM scan; Ruff; py_compile; AEGIS audits and impact",
+      "green_evidence": "E-0013",
+      "id": "C-0006",
+      "level": "deterministic",
+      "path": "04_Software/AudioMancer",
+      "red_evidence": "E-0007",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-30T17:41:12+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "The red-first test functions now exist, so durable requirement snapshots can receive their exact linked test selectors."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-30T17:41:13+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Linked-test snapshots now match the current red-first checks."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-30T17:41:28+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "The first linked-test update used mutually exclusive CLI flags and did not apply; retrying with the replacement form."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-30T17:41:29+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Exact linked-test sets now resolve."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-30T17:41:29+00:00",
+      "id": "D-0005",
+      "question": "Workflow stage route",
+      "rationale": "Red checks and linked requirements are complete; beginning source implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-30T17:44:45+00:00",
+      "id": "D-0006",
+      "question": "Workflow stage route",
+      "rationale": "The focused Roman test incorrectly marked uppercase MIX invalid even though the approved standard grammar accepts it; the ticket example is lowercase mix."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-30T17:45:00+00:00",
+      "id": "D-0007",
+      "question": "Workflow stage route",
+      "rationale": "Roman test now matches the approved uppercase-only standard grammar."
+    }
+  ],
+  "evidence": [
+    {
+      "command": "tea issues 38 --comments; aegis audit traceability; aegis audit coverage; aegis impact --json <likely issue #38 files>",
+      "created_at": "2026-07-30T17:33:18+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "scan",
+      "path": null,
+      "result": "info",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Issue #38 intake: five behavior fixes and two style/encoding cleanups affect baseline-usable Text Cleanup, Text Chunking, Project Lifecycle, and Operation Orchestration components. Existing traceability and coverage audits are clean; impact reports 10 likely files covered and no full regression recommendation. Full pytest is owner-deferred.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_service.py::test_whitespace_realign_failure_records_diagnostic",
+      "created_at": "2026-07-30T17:40:57+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red as intended: incomplete whitespace realignment persists no diagnostic warning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_deterministic_chunking_service.py::test_bare_roman_chapter_detection_requires_valid_uppercase_numerals",
+      "created_at": "2026-07-30T17:40:57+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red as intended: loose case-insensitive Roman character patterns accept lowercase words and invalid Roman strings.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_quality_contract.py::test_completed_cleanup_rerenders_when_output_missing_or_mismatched",
+      "created_at": "2026-07-30T17:40:57+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red as intended: reusable completed Cleanup metadata returns without recreating missing or mismatched clean_text.txt.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_project_workspace_service.py::test_create_project_rejects_existing_file_target",
+      "created_at": "2026-07-30T17:40:58+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red as intended: create_project leaks NotADirectoryError for an existing-file target.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_metadata_service.py::test_cleanup_reason_codes_do_not_masquerade_as_warnings",
+      "created_at": "2026-07-30T17:40:58+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red as intended: runtime warning_flags contain all provenance reason_codes instead of the explicit warning set.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "inline issue #38 source consistency scan",
+      "created_at": "2026-07-30T17:40:58+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0007",
+      "kind": "scan",
+      "path": null,
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Red as intended: stale Translation comment, missing module blank lines, and the UTF-8 BOM remain before implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_service.py::test_whitespace_realign_failure_records_diagnostic",
+      "created_at": "2026-07-30T17:46:46+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Whitespace realignment diagnostic check passes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_deterministic_chunking_service.py::test_bare_roman_chapter_detection_requires_valid_uppercase_numerals",
+      "created_at": "2026-07-30T17:46:46+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Strict uppercase Roman grammar passes across all three chapter detectors.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_quality_contract.py::test_completed_cleanup_rerenders_when_output_missing_or_mismatched",
+      "created_at": "2026-07-30T17:46:46+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Completed Cleanup output recovery passes for missing and mismatched artifacts without an LLM call.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_project_workspace_service.py::test_create_project_rejects_existing_file_target",
+      "created_at": "2026-07-30T17:46:46+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Existing-file project target rejection passes and preserves file bytes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_cleanup_metadata_service.py::test_cleanup_reason_codes_do_not_masquerade_as_warnings",
+      "created_at": "2026-07-30T17:46:47+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Cleanup reason-code provenance is separated from downstream warning flags.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "source consistency scan; .venv/Scripts/ruff.exe check .; py_compile <13 files>; pytest -q <7 focused modules>",
+      "created_at": "2026-07-30T17:46:47+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Issue #38 source consistency, BOM scan, full-project Ruff, touched-file compilation, and seven focused modules pass; 140 passed and 1 skipped.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "aegis audit traceability; aegis audit coverage; aegis invariants; aegis impact --json <issue #38 source paths>",
+      "created_at": "2026-07-30T17:48:43+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Issue #38 validation passed: traceability and coverage have no findings, all invariants hold, and impact reports seven source paths covered with full_regression_recommended=false.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "manual documentation audit; git diff inspection; git diff --check",
+      "created_at": "2026-07-30T17:48:43+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Documentation and diff review passed: Text Cleanup, Text Chunking, and Project Lifecycle describe the implemented contracts; no README/index change, assertion weakening, compatibility shim, whitespace error, scope creep, or secret finding.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-30T17:48:44+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "decision",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Owner explicitly deferred the full pytest suite and will manually test the application. Validation used 140 focused passes, 1 skip, full-project Ruff, touched-file compilation, source/BOM inspection, and AEGIS audits.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "aegis delivery-preflight",
+      "created_at": "2026-07-30T17:51:07+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Delivery preflight passed with all invariants holding and no traceability, coverage, component-documentation, or working-tree blockers.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-30T17:28:41+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [
+      "04_Software/AudioMancer/src/audiomancer;04_Software/AudioMancer/tests;.agentic/requirements;.agentic/specs;.agentic/knowledge/components"
+    ],
+    "statement": "Resolve Gitea issue #38 by implementing the seven minor robustness, consistency, documentation, and encoding fixes with focused validation and no full pytest suite.",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-30T172841Z-8e97639c",
+  "spec_items": [
+    {
+      "examples": [
+        "An internal whitespace change makes an exact source-unit lookup fail; the edit persists with both diagnostics."
+      ],
+      "id": "S-0001",
+      "statement": "An incomplete whitespace-only source-unit realignment emits a component warning and persists user_whitespace_realign_incomplete exactly once in cleanup.json warnings while retaining the operator edit.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "XIV is a heading; civil, mix, did, and lowercase i are not."
+      ],
+      "id": "S-0002",
+      "statement": "All three chapter detectors accept only valid uppercase bare Roman numerals while preserving existing prefixed heading detection.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Deleting clean_text.txt after completion and invoking Cleanup recreates a matching completed artifact."
+      ],
+      "id": "S-0003",
+      "statement": "A matching completed Cleanup checkpoint with missing or hash-invalid clean_text.txt rerenders deterministically without an LLM request.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0004",
+      "statement": "Project creation rejects an existing-file target with the specified FileExistsError and preserves the file bytes.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0005",
+      "statement": "Cleanup reason_codes remain complete provenance while warning_flags and downstream cleanup_warning_flags contain only deterministic_fallback, unknown_line_boundary, and page_transition_repaired without changing the strict chunk field set.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0006",
+      "statement": "The issue #38 comment, docstring alignment, and module-level blank-line corrections match the source-consistency specification.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0007",
+      "statement": "test_logging_service.py is UTF-8 without a BOM and otherwise retains its content.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0008",
+      "statement": "Focused behavior tests, Ruff, compilation, traceability, coverage, documentation review, and impact pass without running the owner-deferred full pytest suite.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

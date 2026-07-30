@@ -14,7 +14,7 @@
          resume.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -24,7 +24,12 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
+from audiomancer.services import (
+    ai_chunking_service,
+    chunking_document_service,
+    operation_runtime_service,
+    project_workspace_service,
+)
 from chunking_test_support import read_chunking_document, write_cleanup_input
 
 
@@ -155,53 +160,68 @@ def test_descriptor_validation_accepts_five_consecutive_normalized_anchor_words(
     """
     @brief      Verify S-0005 and REQ-FUNC-065 accept five normalized prefix words.
     @return     None.
-    @version    0.1.0
+    @version    0.2.0
     """
     records = _records("“It is a truth universally acknowledged, that a single person exists.”")
     payload = {"chunks": [_descriptor(1, "IT is a truth universally", 1)]}
 
-    assert ai_chunking_service._validate_chunk_descriptors(payload, records, 0, 0) == [
-        {"start_index": 0, "end_index": 0}
-    ]
+    assert ai_chunking_service._validate_chunk_descriptor_prefix(payload, records, 0, 0) == (
+        [{"start_index": 0, "end_index": 0}],
+        True,
+    )
 
 
 def test_descriptor_validation_requires_complete_short_paragraph_anchor() -> None:
     """
     @brief      Verify S-0005 and REQ-FUNC-065 require every short-anchor word.
     @return     None.
-    @version    0.1.0
+    @version    0.2.0
     """
     records = _records("Mr. Bennet replied.")
 
     accepted = {"chunks": [_descriptor(1, "MR Bennet, REPLIED", 1)]}
     incomplete = {"chunks": [_descriptor(1, "Mr. Bennet", 1)]}
 
-    assert ai_chunking_service._validate_chunk_descriptors(accepted, records, 0, 0) == [
-        {"start_index": 0, "end_index": 0}
-    ]
-    assert ai_chunking_service._validate_chunk_descriptors(incomplete, records, 0, 0) is None
+    assert ai_chunking_service._validate_chunk_descriptor_prefix(accepted, records, 0, 0) == (
+        [{"start_index": 0, "end_index": 0}],
+        True,
+    )
+    assert ai_chunking_service._validate_chunk_descriptor_prefix(
+        incomplete,
+        records,
+        0,
+        0,
+    ) == ([], False)
 
 
 def test_descriptor_validation_accepts_exact_punctuation_only_scene_separator() -> None:
-    """Cover S-0011 and REQ-FUNC-bd7cd503-2d84-4adb-94bc-d8f31d297368."""
+    """
+    @brief      Cover S-0011 and REQ-FUNC-bd7cd503 descriptor validation.
+    @return     None.
+    @version    0.2.0
+    """
     records = _records("* * *")
     payload = {"chunks": [_descriptor(1, "* * *", 1)]}
 
-    assert ai_chunking_service._validate_chunk_descriptors(payload, records, 0, 0) == [
-        {"start_index": 0, "end_index": 0}
-    ]
+    assert ai_chunking_service._validate_chunk_descriptor_prefix(payload, records, 0, 0) == (
+        [{"start_index": 0, "end_index": 0}],
+        True,
+    )
 
 
 def test_descriptor_validation_rejects_nonconsecutive_anchor_matches() -> None:
     """
     @brief      Verify S-0005 and REQ-FUNC-065 require one five-word matching run.
     @return     None.
-    @version    0.1.0
+    @version    0.2.0
     """
     records = _records("One two three four five six seven eight nine.")
     payload = {"chunks": [_descriptor(1, "One two wrong four five six wrong eight", 1)]}
 
-    assert ai_chunking_service._validate_chunk_descriptors(payload, records, 0, 0) is None
+    assert ai_chunking_service._validate_chunk_descriptor_prefix(payload, records, 0, 0) == (
+        [],
+        False,
+    )
 
 
 def test_chunking_prompt_demonstrates_exactly_eight_anchor_words() -> None:
@@ -225,7 +245,7 @@ def test_descriptor_validation_accepts_consecutive_multi_chunk_ranges() -> None:
     """
     @brief      Verify S-0001 and REQ-FUNC-065 accept consecutive descriptor spans.
     @return     None.
-    @version    0.1.0
+    @version    0.2.0
     """
     records = _records(
         "Alpha one two three four five six seven eight nine.",
@@ -240,32 +260,52 @@ def test_descriptor_validation_accepts_consecutive_multi_chunk_ranges() -> None:
         ]
     }
 
-    assert ai_chunking_service._validate_chunk_descriptors(payload, records, 0, 3) == [
-        {"start_index": 0, "end_index": 1},
-        {"start_index": 2, "end_index": 3},
-    ]
+    assert ai_chunking_service._validate_chunk_descriptor_prefix(payload, records, 0, 3) == (
+        [
+            {"start_index": 0, "end_index": 1},
+            {"start_index": 2, "end_index": 3},
+        ],
+        True,
+    )
 
 
 @pytest.mark.parametrize(
-    "chunks",
+    ("chunks", "expected_prefix"),
     [
-        [_descriptor(1, "wrong anchor", 1)],
-        [_descriptor(2, "Bravo short.", 2)],
-        [_descriptor(1, "Alpha short.", 1), _descriptor(3, "Charlie short.", 3)],
-        [_descriptor(1, "Alpha short.", 2), _descriptor(2, "Bravo short.", 3)],
-        [_descriptor(1, "Alpha short.", 4)],
-        [{"start_paragraph": True, "start_text": "Alpha short.", "break_after_paragraph": 1}],
+        ([_descriptor(1, "wrong anchor", 1)], []),
+        ([_descriptor(2, "Bravo short.", 2)], []),
+        (
+            [_descriptor(1, "Alpha short.", 1), _descriptor(3, "Charlie short.", 3)],
+            [{"start_index": 0, "end_index": 0}],
+        ),
+        (
+            [_descriptor(1, "Alpha short.", 2), _descriptor(2, "Bravo short.", 3)],
+            [{"start_index": 0, "end_index": 1}],
+        ),
+        ([_descriptor(1, "Alpha short.", 4)], []),
+        (
+            [{"start_paragraph": True, "start_text": "Alpha short.", "break_after_paragraph": 1}],
+            [],
+        ),
     ],
 )
-def test_descriptor_validation_rejects_the_entire_invalid_response(chunks) -> None:
+def test_descriptor_validation_returns_valid_prefix_for_incomplete_response(
+    chunks,
+    expected_prefix,
+) -> None:
     """
-    @brief      Verify S-0001 and REQ-FUNC-065 reject invalid response fields atomically.
+    @brief      Verify S-0004 returns the valid prefix and marks invalid responses incomplete.
     @return     None.
-    @version    0.1.0
+    @version    0.2.0
     """
     records = _records("Alpha short.", "Bravo short.", "Charlie short.")
 
-    assert ai_chunking_service._validate_chunk_descriptors({"chunks": chunks}, records, 0, 2) is None
+    assert ai_chunking_service._validate_chunk_descriptor_prefix(
+        {"chunks": chunks},
+        records,
+        0,
+        2,
+    ) == (expected_prefix, False)
 
 
 def test_valid_non_final_split_advances_from_the_last_break_and_closes_final_remainder(tmp_path, monkeypatch) -> None:
@@ -546,7 +586,7 @@ def test_old_break_id_checkpoint_restarts_from_paragraph_one(tmp_path, monkeypat
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _prepare_project(tmp_path, monkeypatch)
     state_path = project_root / "chunking_state.json"
@@ -558,7 +598,7 @@ def test_old_break_id_checkpoint_restarts_from_paragraph_one(tmp_path, monkeypat
                 "started_at": "2026-07-16T12:00:00+00:00",
                 "metadata": {"token_usage": _usage(99)},
                 "resume_checkpoint": {
-                    "input_fingerprint": ai_chunking_service._compute_input_fingerprint(
+                    "input_fingerprint": chunking_document_service.source_fingerprint(
                         (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
                     ),
                     "semantic_strategy": "paragraph",

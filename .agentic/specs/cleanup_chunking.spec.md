@@ -272,6 +272,9 @@ primary/verifier request, on cancellation, and before rendering.
 - Changed source or ledger: start a new Cleanup document.
 - Resume with no AI profile: finalize from deterministic priors.
 - `finalizing` with complete decisions: rerender without an LLM call.
+- A reusable `completed` checkpoint is returned only when `clean_text.txt`
+  exists and its hash matches `output_hash`; otherwise rerender the persisted
+  decisions without an LLM call.
 
 `clean_text.txt` is replaced atomically only after validation. Existing text is
 not consumable while metadata is non-completed. Same persisted decisions must
@@ -313,6 +316,9 @@ paragraph content, never by list index:
   text is not positively classified as a scene separator;
 - unmatched or multiply matched content retains the current classifier result,
   so prose falls back to `body`.
+- when any retained source unit cannot be located, the edit still persists but
+  the component logger warns and `cleanup.json.warnings` contains the stable
+  token `user_whitespace_realign_incomplete`.
 
 This rule applies even when a merge before a scene separator and a split after
 it preserve the total paragraph count. Lexical edits set `user_modified=true`
@@ -380,6 +386,19 @@ Candidate cuts are ordered by chapter/heading, scene separator, other structural
 boundary, then a sentence-complete paragraph. Heading, separator, list, verse,
 and preformatted boundaries do not require sentence-terminal punctuation.
 
+Bare Roman-numeral chapter labels must be uppercase, non-empty, and valid under
+the standard subtractive Roman grammar. Values such as `I`, `IV`, `XIV`, and
+`MCMXCIV` are headings; lowercase values and invalid Roman-only words such as
+`civil`, `mix`, and `did` are ordinary text. This rule is identical in Cleanup
+analysis, deterministic Chunking, and the canonical Chunking report projection.
+
+Cleanup paragraph `reason_codes` remain provenance. Runtime and persisted chunk
+warning flags contain only the explicit warning reason codes
+`deterministic_fallback`, `unknown_line_boundary`, and
+`page_transition_repaired`; benign provenance such as `user_edited`,
+`llm_verified_override`, and `user_whitespace_realign` is not a warning. The
+strict Chunking field set is unchanged.
+
 Every persisted chunk contains the required boolean field
 `starts_after_scene_separator`. The field describes the leading boundary, not
 the chunk text:
@@ -414,9 +433,11 @@ inserted chunk defaults to `false`. When a chunk whose marker is `true` is
 deleted, the marker transfers to the next surviving chunk when one exists so
 that deletion does not silently erase the structural boundary.
 
-Target-size balance is a soft cost. It cannot override semantic boundaries.
-A mid-sentence cut is permitted only when one sentence alone exceeds the hard
-chunk limit; that fallback is reported.
+The Chunking services persist operation state only through the canonical
+`chunks_text.json` document API. They do not read, write, rebuild, or migrate
+the obsolete checkpoint, report, or state sidecars. Obsolete filenames remain
+owned only by Reset Chunking so explicit or automatic recovery can delete
+stale derived artifacts without interpreting them.
 
 Deterministic Chunking keeps the canonical document recoverable without
 rewriting it after every paragraph:
@@ -486,6 +507,10 @@ but they are non-narratable at Chunking materialization:
 | resume with a different 32K model | deterministic analysis retained; all AI answers regenerated |
 | `status=paused` with an old output file | Chunking rejects the output |
 | lexical manual correction | minimal `user_edited` structure; downstream invalidated |
+| completed checkpoint with missing or hash-invalid output | deterministic rerender without an LLM request |
+| whitespace-only edit cannot locate one retained source unit | edit persists; logger and Cleanup document record incomplete realignment |
+| bare `XIV` / bare `civil` | chapter heading / ordinary text |
+| paragraph reasons include `user_edited` and `unknown_line_boundary` | provenance keeps both; warning flags keep only `unknown_line_boundary` |
 | `Narrative A\n\n* * *\n\nNarrative B` | two narratable chunks; separator omitted; second chunk has `starts_after_scene_separator=true` |
 | merge `A` + `B` before `* * *`, split `C D` after it, count unchanged | only `* * *` is `scene_separator`; deterministic Chunking materializes `A B`, `C`, and `D` |
 

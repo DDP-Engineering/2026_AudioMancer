@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.11.0
+@version 1.12.0
 """
 
 # IMPORTS
@@ -935,31 +935,6 @@ def _emit_sample_progress(progress_callback, percent: int, message: str) -> None
     """
     if progress_callback is not None:
         progress_callback(0, 100, percent, message)
-
-
-def _preview_timeout_seconds(window: "MainWindow") -> int:
-    """
-    @brief      Resolve the preview timeout seconds.
-    @param[in]  window Value for `window`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
-    """
-    return tts_runtime_ui_support.preview_timeout_seconds(window)
-
-
-def _persist_runtime_status(window: "MainWindow", status_payload: dict[str, object]) -> None:
-    """
-    @brief      Persist the runtime status.
-    @param[in]  window Value for `window`.
-    @param[in]  status_payload Payload for `status_payload`.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
-    """
-    tts_runtime_ui_support.persist_runtime_status(window, status_payload)
 
 
 def _active_model_id_from_status(status_payload: dict[str, object]) -> str | None:

@@ -14,7 +14,7 @@
          service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -895,25 +895,6 @@ def _append_narration_source_spans(
         cursor = next_cursor
     if cursor < paragraph_end:
         _append_source_span(spans, source_text, cursor, paragraph_end, _CANDIDATE_KIND_NARRATION)
-
-
-def _dash_dialogue_has_attribution(paragraph: str) -> bool:
-    """
-    @brief      Detect dash-led dialogue that contains a later attribution dash.
-    @param[in]  paragraph Paragraph text.
-    @return     True when a second dialogue dash suggests mixed dialogue/attribution text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
-    """
-    stripped_paragraph = str(paragraph).lstrip()
-    if not stripped_paragraph:
-        return False
-    for dash in _DIALOGUE_DASHES:
-        if stripped_paragraph.startswith(dash) and f" {dash} " in stripped_paragraph[1:]:
-            return True
-    return False
 
 
 def _quote_dialogue_ranges(paragraph: str) -> list[tuple[int, int]]:

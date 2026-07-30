@@ -13,7 +13,7 @@
          root-object contract and exposes defensive derived views to callers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -55,6 +55,9 @@ CHUNK_FIELDS = frozenset(
         "cleanup_role",
         "starts_after_scene_separator",
     }
+)
+_ROMAN_NUMERAL_PATTERN = re.compile(
+    r"(?=[MDCLXVI]+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})"
 )
 TOKEN_USAGE_FIELDS = frozenset({"input_tokens", "output_tokens", "total_tokens", "usage_available"})
 RESUMABLE_STATUSES = frozenset({"running", "cancelled", "failed"})
@@ -402,7 +405,7 @@ def _chapter_count(chunks: list[ChunkPayload]) -> int:
             normalized = line.strip()
             if len(normalized) <= 100 and (
                 re.fullmatch(r"(?i)(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*", normalized)
-                or re.fullmatch(r"(?i)[IVXLCDM]+", normalized)
+                or _ROMAN_NUMERAL_PATTERN.fullmatch(normalized)
             ):
                 if not labels or labels[-1] != normalized:
                     labels.append(normalized)

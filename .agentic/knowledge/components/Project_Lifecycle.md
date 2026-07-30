@@ -19,6 +19,8 @@ the shared atomic writer used for critical project metadata.
 
 - Create, validate, open, normalize, save, and metadata-repair project
   workspaces and manifests.
+- Reject a create-project target that already exists as a file before directory
+  inspection or mutation.
 - Recover an otherwise valid project from an incompatible Chunking document by
   resetting Chunking and downstream derived state while preserving Source,
   Extraction, and Cleanup.
@@ -172,6 +174,9 @@ resolve inside the active project even when symlinks are present. New projects
 use a flat root, with generated audio permitted under `audio_blocks/` and final
 assembly output under `audiobook/`; numbered legacy workflow folders are not
 accepted.
+Creation accepts an absent target or an empty target directory. A non-empty
+directory raises `FileExistsError`; an existing file raises `FileExistsError`
+with `Project path already exists as a file: <path>` and remains unchanged.
 
 Supported source suffixes are `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`,
 and `.epub`. Atomic JSON uses UTF-8, two-space indentation, unescaped Unicode,

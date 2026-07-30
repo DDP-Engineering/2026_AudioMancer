@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.17.3
+@version 0.18.0
 """
 
 # IMPORTS
@@ -382,23 +382,6 @@ def handle_selection_change_requested(
     else:
         page.discard_changes()
     page.apply_selected_character(_optional_character_id(target_character_id))
-
-
-def handle_character_profile_changed(
-    window: "MainWindow",
-    profile_payload: dict[str, object],
-) -> None:
-    """
-    @brief      Persist one page profile payload through the explicit save path.
-    @param[in]  window Main application window.
-    @param[in]  profile_payload Character profile payload from the page.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
-    """
-    handle_save_character_requested(window, profile_payload)
 
 
 def _start_character_save_progress(

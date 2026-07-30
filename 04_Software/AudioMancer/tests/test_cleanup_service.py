@@ -14,7 +14,7 @@
          covers whitespace role realignment through deterministic Chunking.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-28
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -210,6 +210,33 @@ def test_whitespace_role_realign_falls_back_for_ambiguous_content(tmp_path) -> N
         "body",
         "body",
     ]
+
+
+def test_whitespace_realign_failure_records_diagnostic(tmp_path, caplog) -> None:
+    """
+    @brief      Cover S-0001 and REQ-FUNC-1179da33-b65d-4192-a875-353a38c37ab7.
+    @version    0.1.0
+    """
+    canonical_text, ledger = build_ledger(["Alpha  beta."])
+    project_root, manifest = build_project(
+        tmp_path,
+        "WhitespaceRealignDiagnostic",
+        canonical_text,
+        ledger,
+    )
+    text_cleanup_service.clean_text(project_root, manifest)
+
+    with caplog.at_level("WARNING"):
+        edited = text_cleanup_service.save_user_cleaned_text(
+            project_root,
+            "Alpha beta.\n",
+        )
+
+    assert edited["warnings"].count("user_whitespace_realign_incomplete") == 1
+    assert any(
+        "could not realign Cleanup boundaries" in record.getMessage()
+        for record in caplog.records
+    )
 
 
 # END OF FILE

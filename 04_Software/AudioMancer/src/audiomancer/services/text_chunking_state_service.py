@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -29,7 +29,6 @@ from audiomancer.services import (
     character_discovery_service,
     chunking_document_service,
     home_presenter_service,
-    operation_runtime_service,
     project_workspace_service,
     speech_blocks_service,
     text_cleanup_state_service,
@@ -286,28 +285,6 @@ def delete_selected_chunk(
         affected_chunk_ids=(chunk_id,),
         reason="manual_chunk_delete",
     )
-
-
-def build_manifest_after_chunk_edit(manifest: dict[str, object]) -> dict[str, object]:
-    """
-    @brief      Build one manifest payload after a manual selected-chunk edit.
-    @param[in]  manifest Current manifest payload before the edit.
-    @return     Manifest with chunking preserved and downstream operations reset.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
-    """
-    updated_manifest = dict(manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    preserved_operation_kinds = operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS
-    for selected_kind in operation_runtime_service.downstream_operation_kinds("chunking", include_current=False):
-        if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
-            operations[selected_kind] = default_operations[selected_kind]
-    updated_manifest["operations"] = operations
-    updated_manifest["current_stage"] = "translation_ready"
-    return updated_manifest
 
 
 def _persist_manual_chunk_change(

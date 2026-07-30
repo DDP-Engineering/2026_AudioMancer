@@ -13,7 +13,7 @@
          cleanup.json; it does not create or read a metadata sidecar.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.4.0
+@version 0.6.0
 """
 
 from __future__ import annotations
@@ -27,6 +27,13 @@ from audiomancer.services.source_ledger_service import text_sha256
 
 ParagraphRecordPayload = dict[str, object]
 CleanupMetadataPayload = dict[str, object]
+_WARNING_REASON_CODES = frozenset(
+    {
+        "deterministic_fallback",
+        "page_transition_repaired",
+        "unknown_line_boundary",
+    }
+)
 
 
 def cleanup_metadata_path(project_root: str | Path) -> Path:
@@ -83,20 +90,6 @@ def build_paragraph_records_from_text(
         while cursor < limit and source[cursor] == "\n":
             cursor += 1
     return records
-
-
-def finalize_paragraph_records(
-    records: list[ParagraphRecordPayload],
-) -> list[ParagraphRecordPayload]:
-    """Normalize runtime paragraph records without persisting duplicate text."""
-    text = "\n\n".join(
-        str(item.get("text", "")).strip()
-        for item in records
-        if str(item.get("text", "")).strip()
-    )
-    if text:
-        text += "\n"
-    return build_paragraph_records_from_text(text)
 
 
 def load_cleanup_metadata(
@@ -210,7 +203,11 @@ def _runtime_record(
         ),
         "joined_across_page_break": crosses_page,
         "boundary_confidence": confidence,
-        "warning_flags": [str(value) for value in item.get("reason_codes", [])],
+        "warning_flags": [
+            resolved
+            for value in item.get("reason_codes", [])
+            if (resolved := str(value)) in _WARNING_REASON_CODES
+        ],
     }
 
 

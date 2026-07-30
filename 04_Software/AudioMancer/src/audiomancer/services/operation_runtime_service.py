@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.15.3
+@version 0.16.1
 """
 
 # IMPORTS
@@ -76,7 +76,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     ),
     "translation": (
         config.TRANSLATED_CHUNKS_FILE_NAME,
-        # Cleanup-only legacy names; Translation never reads or writes them.
+        # Reset-only legacy names; Translation never reads or writes them.
         "translation_report.json",
         "translation_state.json",
     ),
@@ -139,21 +139,6 @@ class OperationCancelledError(RuntimeError):
 
 
 # PUBLIC API
-
-
-def operation_folder_name(operation_kind: str) -> str:
-    """
-    @brief      Resolve one operation kind to its project-relative artifact root.
-    @param[in]  operation_kind Stable workflow operation token.
-    @return     Project-relative artifact-root name.
-    @exception  KeyError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.1
-    """
-    if operation_kind not in _OPERATION_ORDER:
-        raise ValueError(f"Unsupported operation kind: {operation_kind}")
-    return config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
 
 
 def downstream_operation_kinds(

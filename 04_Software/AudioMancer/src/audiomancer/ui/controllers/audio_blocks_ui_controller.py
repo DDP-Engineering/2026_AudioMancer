@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.8.6
+@version 0.9.0
 """
 
 # IMPORTS
@@ -362,25 +362,6 @@ def handle_media_status_changed(window: "MainWindow", media_status: QMediaPlayer
         _stop_audio_blocks_playback(window, preserved_block_id=_current_audio_blocks_playback_block_id(window))
 
 
-def confirm_audio_blocks_invalidation(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Ask the operator whether upstream voice changes may invalidate persisted Audio Blocks data.
-    @param[in]  window Active main window instance.
-    @param[in]  language Current UI language code.
-    @return     `True` when the upstream mutation may continue.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.1
-    """
-    return _confirm_persisted_audio_blocks_invalidation(
-        window,
-        language,
-        "dialog.confirm_audio_blocks_invalidation_title",
-        "project.confirm_audio_blocks_invalidation",
-    )
-
-
 def confirm_single_voice_target_invalidation(window: "MainWindow", language: str) -> bool:
     """
     @brief      Ask whether one character voice-target change may reset matching generated audio.
@@ -534,27 +515,6 @@ def invalidate_all_audio_blocks_after_voice_settings_change(window: "MainWindow"
     )
 
 
-def invalidate_audio_blocks_after_upstream_change(window: "MainWindow") -> None:
-    """
-    @brief      Reset Audio Blocks plus Audio Assembly after a confirmed upstream mutation.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    if not audio_blocks_service.has_persisted_audio_blocks(window._current_project_root):
-        return
-    _reset_audio_blocks_and_downstream(window)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-
-
 def _start_operation(
     window: "MainWindow",
     operation_name: str,
@@ -692,44 +652,6 @@ def _handle_audio_blocks_cancelled(
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.operation_cancelled", current_language_from_window(window)),
-    )
-
-
-def _sync_manifest_after_audio_blocks_update(window: "MainWindow") -> None:
-    """
-    @brief      Persist the latest Audio Blocks summary into the manifest and
-                advance the stage only when fully approved.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.1
-    """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operation_state = audio_blocks_service.load_operation_state(window._current_project_root)
-    if operation_state is not None:
-        operations["audio_blocks"] = project_workspace_service.project_manifest_operation_summary(
-            "audio_blocks",
-            operation_state,
-        )
-    updated_manifest["operations"] = operations
-    report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
-    if (
-        isinstance(report, dict)
-        and str(report.get("audio_blocks_stage_status", "")).strip()
-        == audio_blocks_service.AUDIO_BLOCKS_STAGE_COMPLETED
-    ):
-        updated_manifest["current_stage"] = "audio_blocks_ready"
-    elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("speech_blocks_ready"):
-        updated_manifest["current_stage"] = "speech_blocks_ready"
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
     )
 
 

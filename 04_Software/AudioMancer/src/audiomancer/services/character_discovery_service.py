@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.18.3
+@version 0.19.0
 """
 
 # IMPORTS
@@ -2624,23 +2624,6 @@ def _edited_review_status(existing_profile: dict[str, object]) -> str:
     return CHARACTER_REVIEW_STATUS_EDITED
 
 
-def _review_status_summary(profiles: list[dict[str, object]]) -> dict[str, int]:
-    """
-    @brief      Build a count summary for persisted internal review statuses.
-    @param[in]  profiles Character profile payload list.
-    @return     Review-status count summary.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
-    """
-    summary = dict.fromkeys(sorted(CHARACTER_REVIEW_STATUSES), 0)
-    for profile in profiles:
-        review_status = _normalize_review_status(profile.get("review_status", ""))
-        summary[review_status] = summary.get(review_status, 0) + 1
-    return summary
-
-
 def _normalized_character_profile_core(profile_payload: dict[str, object]) -> CharacterProfilePayload:
     """
     @brief      Normalize one compact character profile payload without regenerating the final voice prompt.
@@ -2673,18 +2656,6 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
         "evidence": _restore_evidence(profile_payload.get("evidence", [])),
     }
     return normalized_profile
-
-
-def _persistable_character_profile(profile_payload: dict[str, object]) -> CharacterProfilePayload:
-    """
-    @brief      Execute the persistable character profile helper.
-    @param[in]  profile_payload Profile payload.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return _normalize_character_profile(profile_payload)
 
 
 def _build_character_preview_text(
@@ -2965,22 +2936,6 @@ def _prompt_has_explicit_age_instruction(prompt_text: str) -> bool:
     """
     normalized_prompt = str(prompt_text).casefold()
     return bool(re.search(r"\b(age domain|age hint|age)\s*:", normalized_prompt))
-
-
-def _sentence_fragment(value: object) -> str:
-    """
-    @brief      Execute the sentence fragment helper.
-    @param[in]  value Candidate value.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_value = re.sub(r"\s+", " ", str(value or "").strip())
-    if not normalized_value:
-        return ""
-    normalized_value = normalized_value.rstrip(".")
-    return normalized_value if normalized_value.endswith(".") else f"{normalized_value}."
 
 
 def _normalize_identity(value: str) -> str:

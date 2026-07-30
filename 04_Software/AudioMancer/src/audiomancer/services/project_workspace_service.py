@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.2.0
+@version    2.4.0
 """
 
 # IMPORTS
@@ -88,7 +88,7 @@ def validate_project_name(name: str) -> None:
     @exception  ValueError Raised when the name is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-        @version    0.3.0
+    @version    0.3.0
     """
     if not name or not name.strip():
         raise ValueError("Project name cannot be empty.")
@@ -118,10 +118,10 @@ def create_project(
     @param[in]  parent_path Existing parent directory selected by the operator.
     @return     Tuple of created project root path and manifest payload.
     @exception  FileNotFoundError Raised when the selected parent folder does not exist.
-    @exception  FileExistsError Raised when the target project folder is not empty.
+    @exception  FileExistsError Raised when the target path is a file or non-empty folder.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.5.0
+    @version    0.6.0
     """
     validate_project_name(name)
     resolved_parent = Path(parent_path)
@@ -129,6 +129,10 @@ def create_project(
         raise FileNotFoundError(f"Project parent folder was not found: {resolved_parent}")
 
     project_root = resolved_parent / name
+    if project_root.is_file():
+        raise FileExistsError(
+            f"Project path already exists as a file: {project_root}"
+        )
     if project_root.exists() and any(project_root.iterdir()):
         raise FileExistsError(f"Project folder is not empty: {project_root}")
 
@@ -1182,12 +1186,11 @@ def _heal_narrator_manifest_fields(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     profile = evidence.get("profile")
-    selection = evidence.get("selection")
-    narrator_name = _first_optional_string(selection, profile, "display_name", "profile_name", "name", "voice_name")
-    narrator_language = _first_optional_string(selection, profile, "selected_language", "language", "voice_language")
+    narrator_name = _first_optional_string(profile, "display_name", "profile_name", "name", "voice_name")
+    narrator_language = _first_optional_string(profile, "selected_language", "language", "voice_language")
     if narrator_name is not None:
         _record_manifest_value_change(manifest, "narrator_profile_name", narrator_name, changes)
     if narrator_language is not None:
@@ -1328,51 +1331,6 @@ def _non_empty_payload_list(payload: object) -> bool:
     @version    0.1.0
     """
     return isinstance(payload, list) and bool(payload)
-
-
-def _payload_has_text(payload: object, field_names: tuple[str, ...]) -> bool:
-    """
-    @brief      Return whether one parsed dictionary has any non-empty text field.
-    @param[in]  payload Candidate parsed payload.
-    @param[in]  field_names Candidate field names.
-    @return     True when a field contains text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    return isinstance(payload, dict) and any(str(payload.get(field_name, "")).strip() for field_name in field_names)
-
-
-def _selected_narrator_profile(profiles: object, selection: dict[str, object]) -> dict[str, object] | None:
-    """
-    @brief      Resolve the selected narrator profile from persisted profile data.
-    @param[in]  profiles Parsed narrator profile list.
-    @param[in]  selection Parsed narrator selection payload.
-    @return     Matching profile payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    if not isinstance(profiles, list):
-        return None
-    selected_identifier = _first_optional_string(selection, "selected_profile_id", "profile_id", "id")
-    selected_name = _first_optional_string(selection, "selected_profile_name", "profile_name", "name", "display_name")
-    for profile in profiles:
-        if not isinstance(profile, dict):
-            continue
-        profile_identifiers = {
-            value
-            for value in (
-                _first_optional_string(profile, "profile_id", "id"),
-                _first_optional_string(profile, "profile_name", "name", "display_name"),
-            )
-            if value is not None
-        }
-        if selected_identifier in profile_identifiers or selected_name in profile_identifiers:
-            return profile
-    return None
 
 
 def _character_voice_target_has_sample(project_root: Path, target: object) -> bool:

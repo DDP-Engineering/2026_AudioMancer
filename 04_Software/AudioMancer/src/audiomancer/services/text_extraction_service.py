@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
-"""Structural source extraction orchestration for AudioMancer."""
+"""
+@file text_extraction_service.py
+@brief Structural source extraction orchestration for AudioMancer.
+@details Builds canonical extracted text, source ledgers, and strict extraction
+         metadata while coordinating cancellation and downstream resets.
+@author Eng. Dan Dumitru Pasare
+@date 2026-07-30
+@version 0.1.0
+"""
 
 from functools import partial
 import json
@@ -155,24 +163,6 @@ def write_extraction_metadata(
     path = root / config.EXTRACTION_METADATA_FILE_NAME
     write_json_atomic(path, metadata)
     return path
-
-
-def build_extraction_summary(metadata: ExtractionMetadataPayload | None) -> dict[str, object]:
-    """Derive compact UI state without introducing a second persisted summary."""
-    if metadata is None:
-        return {
-            "status": "not_started",
-            "progress_current": 0,
-            "progress_total": 0,
-            "warning_count": 0,
-        }
-    _validate_metadata(metadata)
-    return {
-        "status": str(metadata["status"]),
-        "progress_current": int(metadata["progress_current"]),
-        "progress_total": int(metadata["progress_total"]),
-        "warning_count": len(metadata["warnings"]),
-    }
 
 
 @trace_function(_EXTRACTION_LOGGER)

@@ -13,7 +13,7 @@
          roles, fusion safety, script eligibility, resume, and manual edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.3.0
+@version 0.4.0
 """
 
 from __future__ import annotations
@@ -600,6 +600,40 @@ def test_finalizing_recovery_renders_without_an_llm_call(tmp_path, monkeypatch) 
 
     assert recovered["status"] == "completed"
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).is_file()
+
+
+@pytest.mark.parametrize("artifact_state", ["missing", "mismatched"])
+def test_completed_cleanup_rerenders_when_output_missing_or_mismatched(
+    tmp_path,
+    monkeypatch,
+    artifact_state,
+) -> None:
+    """Cover S-0003 and REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2."""
+    canonical_text, ledger = build_ledger(["One wrapped line", "continues safely."])
+    project_root, manifest = build_project(
+        tmp_path,
+        f"CompletedOutputRecovery-{artifact_state}",
+        canonical_text,
+        ledger,
+    )
+    completed = text_cleanup_service.clean_text(project_root, manifest)
+    cleaned_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    expected_text = cleaned_path.read_text(encoding="utf-8")
+    if artifact_state == "missing":
+        cleaned_path.unlink()
+    else:
+        cleaned_path.write_text("stale output\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "audiomancer.services.cleanup_ai_adjudication_service.llm_provider_service.chat_json",
+        lambda *_args, **_kwargs: pytest.fail("Completed-output recovery must not call an LLM."),
+    )
+
+    recovered = text_cleanup_service.clean_text(project_root, manifest)
+
+    assert recovered["status"] == "completed"
+    assert recovered["output_hash"] == completed["output_hash"]
+    assert cleaned_path.read_text(encoding="utf-8") == expected_text
 
 
 def test_manual_whitespace_and_lexical_edits_keep_truthful_structure(tmp_path) -> None:

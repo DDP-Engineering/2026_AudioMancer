@@ -15,7 +15,7 @@
          such as the operator completion beep.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.60.0
+@version 0.61.0
 """
 
 # ruff: noqa: E501
@@ -1051,10 +1051,6 @@ _UI_STRINGS = {
             "Continuing will delete all generated audio blocks, reusable voice prompts, and downstream Audio Assembly "
             "data. Continue?"
         ),
-        "project.confirm_audio_blocks_invalidation": (
-            "This change affects the current Audio Blocks inputs. Continuing will reset generated audio blocks, "
-            "their approvals, and downstream Audio Assembly data. Continue?"
-        ),
         "project.confirm_audio_block_regeneration": (
             "Continuing will regenerate only the selected Audio Block, clear its approval, and reset downstream "
             "Audio Assembly outputs. Other Audio Blocks and upstream workflow data will be preserved. Continue?"
@@ -1117,7 +1113,6 @@ _UI_STRINGS = {
         "dialog.confirm_scene_ambience_audio_blocks_title": "Enable Scene Ambience Audio",
         "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
         "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
-        "dialog.confirm_audio_blocks_invalidation_title": "Confirm Audio Blocks Reset",
         "dialog.confirm_audio_block_regeneration_title": "Confirm Selected Audio Regeneration",
         "dialog.confirm_audio_block_approval_title": "Confirm Audio Approval Change",
         "dialog.confirm_single_voice_target_invalidation_title": "Confirm Voice Target Audio Reset",
@@ -2164,10 +2159,6 @@ _UI_STRINGS = {
             "Continuarea va sterge toate blocurile audio generate, prompturile vocale reutilizabile si datele din aval pentru "
             "Asamblarea Audio. Continui?"
         ),
-        "project.confirm_audio_blocks_invalidation": (
-            "Aceasta schimbare afecteaza intrarile curente pentru Blocurile Audio. Continuarea va reseta blocurile "
-            "audio generate, aprobarile lor si datele din aval pentru Asamblarea Audio. Continui?"
-        ),
         "project.confirm_audio_block_regeneration": (
             "Continuarea va regenera doar Blocul Audio selectat, ii va elimina aprobarea si va reseta iesirile "
             "Asamblarii Audio din aval. Celelalte Blocuri Audio si datele workflow din amonte vor fi pastrate. "
@@ -2234,7 +2225,6 @@ _UI_STRINGS = {
         "dialog.confirm_scene_ambience_audio_blocks_title": "Activeaza Audio Ambienta Scena",
         "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
         "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",
-        "dialog.confirm_audio_blocks_invalidation_title": "Confirma Resetarea Blocurilor Audio",
         "dialog.confirm_audio_block_regeneration_title": "Confirma Regenerarea Audio Selectata",
         "dialog.confirm_audio_block_approval_title": "Confirma Schimbarea Aprobarii Audio",
         "dialog.confirm_single_voice_target_invalidation_title": "Confirma Resetarea Audio a Tintei Vocale",

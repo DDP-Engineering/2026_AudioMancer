@@ -14,7 +14,7 @@
          replacement for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.8.0
+@version 1.9.0
 """
 
 # IMPORTS
@@ -79,11 +79,9 @@ def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edi
     assert window._character_voices_page._preview_text_edit.isReadOnly() is False
 
 
-def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after_audio_invalidation(
-    monkeypatch, qtbot, tmp_path
-) -> None:
+def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked(monkeypatch, qtbot, tmp_path) -> None:
     """
-    @brief      Verify downstream refreshes do not relock editors after pressing Edit Voice Prompt.
+    @brief      Verify pressing Edit Voice Prompt keeps both editors unlocked.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -91,7 +89,7 @@ def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerEditReset")
     window = _build_window(qtbot, project_root)
@@ -99,26 +97,6 @@ def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after
         character_voices_ui_controller.QMessageBox,
         "question",
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
-    )
-
-    def _fake_audio_invalidation(window):
-        """
-        @brief      Emulate the downstream invalidation refresh that used to relock editors.
-        @param[in]  window Main window under test.
-        @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
-        """
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-
-    monkeypatch.setattr(
-        character_voices_ui_controller.audio_blocks_ui_controller,
-        "invalidate_audio_blocks_after_upstream_change",
-        _fake_audio_invalidation,
     )
 
     character_voices_ui_controller.handle_edit_prompt_requested(window, "character_alice")
@@ -481,11 +459,6 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
     monkeypatch.setattr(
         character_voices_ui_controller,
         "_stop_preview_playback",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr(
-        character_voices_ui_controller.audio_blocks_ui_controller,
-        "invalidate_audio_blocks_after_upstream_change",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(

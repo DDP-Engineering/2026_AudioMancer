@@ -9,11 +9,11 @@
 """
 @file test_cleanup_chunking_contract.py
 @brief Red-first checks for consuming completed typed Cleanup metadata.
-@details Verifies hash/status gating, role propagation, semantic cut priority,
-         and the sole permitted mid-sentence overflow fallback.
+@details Verifies hash/status gating, role propagation, scene-separator
+         filtering, and resumable deterministic materialization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.2.0
+@version 0.3.0
 """
 
 from __future__ import annotations
@@ -255,39 +255,6 @@ def test_chunking_resume_counts_processed_separator_without_persisting_it(
     ]
     assert [item["sequence_index"] for item in payload["chunks"]] == [1, 2]
     assert [item["starts_after_scene_separator"] for item in payload["chunks"]] == [False, True]
-
-
-@pytest.mark.parametrize(
-    ("role", "sentence_complete", "expected_priority"),
-    [
-        ("heading", False, 0),
-        ("scene_separator", False, 1),
-        ("verse", False, 2),
-        ("body", True, 3),
-        ("body", False, 4),
-    ],
-)
-def test_semantic_cut_priority_precedes_size_balance(role, sentence_complete, expected_priority) -> None:
-    """Cover S-0011 and REQ-FUNC-747584c1-19b0-42e3-b5c9-fb2b6dac5150."""
-    assert deterministic_chunking_service.semantic_cut_priority(role, sentence_complete) == expected_priority
-
-
-def test_mid_sentence_cut_is_used_only_for_one_oversized_sentence() -> None:
-    """Cover S-0011 and REQ-FUNC-11c404c6-4de0-47d9-b539-8de5a7f76a02."""
-    sentence_chunks, sentence_fallback = deterministic_chunking_service.split_for_hard_limit(
-        "First sentence ends here. Second sentence also ends here.",
-        hard_limit=32,
-    )
-    oversized_chunks, oversized_fallback = deterministic_chunking_service.split_for_hard_limit(
-        "One deliberately oversized sentence without any earlier terminal punctuation "
-        "continues until it exceeds the configured hard limit.",
-        hard_limit=32,
-    )
-
-    assert sentence_fallback is False
-    assert sentence_chunks == ["First sentence ends here.", "Second sentence also ends here."]
-    assert oversized_fallback is True
-    assert all(len(item) <= 32 for item in oversized_chunks)
 
 
 # END OF FILE

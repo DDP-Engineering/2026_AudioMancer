@@ -14,7 +14,7 @@
          through cleanup.json plus clean_text.txt.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-30
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -38,6 +38,7 @@ from audiomancer.services import (
     source_ledger_service,
     token_usage_service,
 )
+from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     raise_if_cancelled,
@@ -51,6 +52,7 @@ from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
 
+_CLEANUP_LOGGER = get_component_logger("text_cleanup")
 CLEANUP_ROOT_FIELDS = frozenset(
     (
         "status",
@@ -158,6 +160,21 @@ def clean_text(
             and document["profile_fingerprint"] == profile_fingerprint
             and document["prompt_hash"] == prompt_hash
         ):
+            try:
+                _validate_completed_output(root, document)
+            except CleanupDocumentError as error:
+                _CLEANUP_LOGGER.warning(
+                    "Rerendering completed Cleanup after output validation failed: %s",
+                    error,
+                )
+                return _finalize_document(
+                    root,
+                    manifest,
+                    canonical_text,
+                    ledger,
+                    document,
+                    progress_callback,
+                )
             _emit(progress_callback, 1, 1, 100, "Cleanup completed.")
             return document
         if (
@@ -419,16 +436,7 @@ def load_cleanup_document(
         ledger=ledger,
     )
     if payload["status"] == "completed":
-        cleaned_path = root / config.CLEANED_TEXT_FILE_NAME
-        if not cleaned_path.is_file():
-            raise CleanupDocumentError(
-                "Completed Cleanup requires clean_text.txt."
-            )
-        cleaned_text = cleaned_path.read_text(encoding="utf-8")
-        if source_ledger_service.text_sha256(cleaned_text) != payload["output_hash"]:
-            raise CleanupDocumentError(
-                "clean_text.txt does not match cleanup.json."
-            )
+        _validate_completed_output(root, payload)
     return payload
 
 
@@ -762,6 +770,8 @@ def _apply_ai_result(
     document["quality_report"]["failed_batch_count"] = int(
         result.get("failed_batch_count", 0)
     )
+
+
 def _can_reuse_analysis(
     document: dict[str, object] | None,
     source_hash: str,
@@ -938,6 +948,19 @@ def _realign_whitespace_boundaries(
             candidate = candidate[:-1]
         start = edited_text.find(candidate, cursor)
         if start < 0:
+            warning_code = "user_whitespace_realign_incomplete"
+            _CLEANUP_LOGGER.warning(
+                "Whitespace-only edit could not realign Cleanup boundaries because source unit %s was not found.",
+                unit_id,
+            )
+            document["warnings"] = list(
+                dict.fromkeys(
+                    [
+                        *[str(item) for item in document["warnings"]],
+                        warning_code,
+                    ]
+                )
+            )
             return
         located[unit_id] = (start, start + len(candidate))
         cursor = start + len(candidate)
@@ -971,6 +994,19 @@ def _realign_whitespace_boundaries(
             "confidence": "strong",
             "reason_codes": ["user_whitespace_realign"],
         }
+
+
+def _validate_completed_output(
+    root: Path,
+    document: dict[str, object],
+) -> None:
+    """Require the completed Cleanup text artifact to exist and match its hash."""
+    cleaned_path = root / config.CLEANED_TEXT_FILE_NAME
+    if not cleaned_path.is_file():
+        raise CleanupDocumentError("Completed Cleanup requires clean_text.txt.")
+    cleaned_text = cleaned_path.read_text(encoding="utf-8")
+    if source_ledger_service.text_sha256(cleaned_text) != document["output_hash"]:
+        raise CleanupDocumentError("clean_text.txt does not match cleanup.json.")
 
 
 def _read_checkpoint(root: Path) -> dict[str, object] | None:

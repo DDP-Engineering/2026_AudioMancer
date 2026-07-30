@@ -15,13 +15,12 @@
          transaction logs separate from the durable Chunking contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.13.0
+@version 0.14.0
 """
 
 # IMPORTS
 
 import hashlib
-import json
 from pathlib import Path
 import re
 import unicodedata
@@ -41,14 +40,11 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     build_operation_output_path,
-    build_operation_state_payload,
-    load_operation_state_file,
     raise_if_cancelled,
 )
 from audiomancer.services.operation_runtime_service import (
     emit_progress_update as _emit_progress,
 )
-from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -72,7 +68,6 @@ ChunkingReportPayload = dict[str, object]
 OperationStatePayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
-ProfileRuntimeMetadataPayload = dict[str, object]
 
 
 # PUBLIC API
@@ -421,35 +416,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
 # LOCAL HELPERS
 
 
-def _load_resume_state(state_path: Path) -> OperationStatePayload:
-    """
-    @brief      Load resumable AI chunking state, treating malformed JSON as no state.
-    @param[in]  state_path Operation-state file path.
-    @return     Persisted state payload or an empty dictionary.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    try:
-        return load_operation_state_file(state_path) or {}
-    except (OSError, TypeError, json.JSONDecodeError) as error:
-        _AI_CHUNKING_LOGGER.warning("Restarting AI chunking after unreadable state file: %s", error)
-        return {}
-
-
-def _compute_input_fingerprint(input_text: str) -> str:
-    """
-    @brief      Execute the compute input fingerprint helper.
-    @param[in]  input_text Text value for `input_text`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    return hashlib.sha256(input_text.encode("utf-8")).hexdigest()
-
-
 def _compute_prompt_fingerprint(prompt_text: str) -> str:
     """
     @brief      Compute a stable fingerprint for operator-supplied prompt rules.
@@ -625,23 +591,6 @@ def _render_chunking_user_prompt(variables: dict[str, object]) -> str:
     return rendered_prompt
 
 
-def _resolve_additional_chunking_instructions(
-    additional_chunking_instructions: str | None,
-    existing_state: dict[str, object],
-) -> str:
-    """
-    @brief      Resolve the operator chunking rules for a new or resumed AI chunking run.
-    @param[in]  additional_chunking_instructions New operator instructions or None when resuming.
-    @param[in]  existing_state Existing chunking operation state.
-    @return     Normalized operator chunking instructions.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    _ = existing_state
-    return _normalized_additional_chunking_instructions(additional_chunking_instructions)
-
-
 def _normalized_additional_chunking_instructions(value: object) -> str:
     """
     @brief      Normalize optional operator chunking rules for prompt insertion and state storage.
@@ -669,24 +618,6 @@ def _append_additional_chunking_instructions(prompt_text: str, additional_chunki
     if not additional_chunking_instructions:
         return prompt_text
     return f"{prompt_text.rstrip()}\n\nAdditional operator chunking instructions:\n{additional_chunking_instructions}\n"
-
-
-def _build_profile_runtime_metadata(ai_profile_payload: dict[str, object]) -> ProfileRuntimeMetadataPayload:
-    """
-    @brief      Build persisted runtime metadata for the selected AI profile.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @return     JSON-ready profile settings relevant to AI chunking behavior.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    return {
-        "model_name": str(ai_profile_payload.get("model_name", "")).strip(),
-        "context_window": int(ai_profile_payload.get("context_window", 0) or 0),
-        "max_output_tokens": int(ai_profile_payload.get("max_output_tokens", 0) or 0),
-        "temperature": float(ai_profile_payload.get("temperature", 0.0) or 0.0),
-    }
 
 
 def _estimate_text_tokens(text: str) -> int:
@@ -717,133 +648,6 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
         record["unit_id"] = str(record.get("paragraph_id") or f"paragraph-{index:04d}")
         record["paragraph_number"] = index
     return records
-
-
-def _restore_descriptor_resume_state(
-    existing_state: dict[str, object],
-    output_path: Path,
-    paragraph_count: int,
-    input_fingerprint: str,
-    semantic_strategy: str,
-    additional_chunking_instructions_fingerprint: str,
-) -> tuple[int, int, list[ChunkPayload], int, str | None, TokenUsagePayload]:
-    """
-    @brief      Restore only the descriptor-contract AI chunking checkpoint.
-    @param[in]  existing_state Persisted operation state.
-    @param[in]  output_path Canonical committed chunk artifact path.
-    @param[in]  paragraph_count Current canonical paragraph count.
-    @param[in]  input_fingerprint Current cleaned-text fingerprint.
-    @param[in]  semantic_strategy Current semantic strategy.
-    @param[in]  additional_chunking_instructions_fingerprint Current instruction fingerprint.
-    @return     Completed windows, next paragraph, committed chunks, fallback count, log path, and usage.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
-    """
-    empty_result = (0, 1, [], 0, None, token_usage_service.empty_token_usage())
-    if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
-        return empty_result
-    if str(existing_state.get("mode", "")) != "ai_assisted":
-        return empty_result
-    checkpoint = existing_state.get("resume_checkpoint")
-    expected_fields = {
-        "input_fingerprint",
-        "semantic_strategy",
-        "additional_chunking_instructions_fingerprint",
-        "next_paragraph",
-        "committed_chunk_count",
-        "completed_window_count",
-        "context_window_fallback_count",
-        "token_usage",
-        "log_relative_path",
-    }
-    if not isinstance(checkpoint, dict) or set(checkpoint) != expected_fields:
-        return empty_result
-    if str(checkpoint.get("input_fingerprint", "")) != input_fingerprint:
-        return empty_result
-    if str(checkpoint.get("semantic_strategy", "")) != semantic_strategy:
-        return empty_result
-    if (
-        str(checkpoint.get("additional_chunking_instructions_fingerprint", ""))
-        != additional_chunking_instructions_fingerprint
-    ):
-        return empty_result
-
-    next_paragraph = checkpoint.get("next_paragraph")
-    committed_chunk_count = checkpoint.get("committed_chunk_count")
-    completed_window_count = checkpoint.get("completed_window_count")
-    fallback_count = checkpoint.get("context_window_fallback_count")
-    if any(
-        type(value) is not int
-        for value in (next_paragraph, committed_chunk_count, completed_window_count, fallback_count)
-    ):
-        return empty_result
-    if not 1 <= int(next_paragraph) <= paragraph_count + 1:
-        return empty_result
-    if min(int(committed_chunk_count), int(completed_window_count), int(fallback_count)) < 0:
-        return empty_result
-    try:
-        raw_chunks = json.loads(output_path.read_text(encoding="utf-8"))
-    except (OSError, TypeError, json.JSONDecodeError):
-        return empty_result
-    if not isinstance(raw_chunks, list) or len(raw_chunks) != int(committed_chunk_count):
-        return empty_result
-    committed_chunks = [dict(item) for item in raw_chunks if isinstance(item, dict)]
-    if len(committed_chunks) != int(committed_chunk_count):
-        return empty_result
-    log_relative_path = checkpoint.get("log_relative_path")
-    return (
-        int(completed_window_count),
-        int(next_paragraph),
-        committed_chunks,
-        int(fallback_count),
-        None if log_relative_path in (None, "") else str(log_relative_path),
-        token_usage_service.restore_token_usage(checkpoint.get("token_usage")),
-    )
-
-
-def _restore_profile_usage_history(existing_state: dict[str, object]) -> list[ProfileRuntimeMetadataPayload]:
-    """
-    @brief      Restore persisted AI profile runtime settings used by earlier chunking segments.
-    @param[in]  existing_state Persisted operation-state payload.
-    @return     Ordered profile runtime metadata entries.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return []
-    raw_history = metadata.get("profile_usage_history", [])
-    if not isinstance(raw_history, list):
-        return []
-    profile_usage_history: list[ProfileRuntimeMetadataPayload] = []
-    for item in raw_history:
-        if isinstance(item, dict):
-            profile_usage_history.append(dict(item))
-    return profile_usage_history
-
-
-def _merge_profile_usage_history(
-    existing_history: list[ProfileRuntimeMetadataPayload],
-    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
-) -> list[ProfileRuntimeMetadataPayload]:
-    """
-    @brief      Append the current profile runtime settings when not already represented.
-    @param[in]  existing_history Existing ordered profile runtime metadata entries.
-    @param[in]  profile_runtime_metadata Current selected profile runtime metadata.
-    @return     Ordered profile runtime metadata history.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    resolved_history = [dict(item) for item in existing_history]
-    if dict(profile_runtime_metadata) not in resolved_history:
-        resolved_history.append(dict(profile_runtime_metadata))
-    return resolved_history
 
 
 def _build_response_schema() -> dict[str, object]:
@@ -961,35 +765,6 @@ def _start_anchor_matches(paragraph_text: str, returned_anchor: str) -> bool:
         else:
             current_run = 0
     return longest_run >= _ANCHOR_MIN_CONSECUTIVE_WORDS
-
-
-def _validate_chunk_descriptors(
-    response_payload: dict[str, object],
-    paragraph_records: list[dict[str, object]],
-    window_start_index: int,
-    window_end_index: int,
-) -> list[dict[str, int]] | None:
-    """
-    @brief      Validate one descriptor response atomically.
-    @param[in]  response_payload Provider JSON response object.
-    @param[in]  paragraph_records Full ordered paragraph record list.
-    @param[in]  window_start_index Zero-based absolute first paragraph index.
-    @param[in]  window_end_index Zero-based absolute last paragraph index.
-    @return     Validated absolute ranges, or None when no valid split exists.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.2.0
-    """
-    validated_ranges, response_complete = _validate_chunk_descriptor_prefix(
-        response_payload,
-        paragraph_records,
-        window_start_index,
-        window_end_index,
-    )
-    if not validated_ranges or not response_complete:
-        return None
-    return validated_ranges
 
 
 def _validate_chunk_descriptor_prefix(
@@ -1285,19 +1060,6 @@ def _append_chunks_from_ranges(
             )
 
 
-def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
-    """
-    @brief      Write the chunk payload.
-    @param[in]  output_path Output file path.
-    @param[in]  chunks Value for `chunks`.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    write_json_atomic(output_path, chunks)
-
-
 def _merged_warning_flags(paragraph_records: list[dict[str, object]]) -> list[str]:
     """
     @brief      Merge cleanup warning flags across selected paragraph records.
@@ -1314,166 +1076,6 @@ def _merged_warning_flags(paragraph_records: list[dict[str, object]]) -> list[st
             if resolved_flag and resolved_flag not in flags:
                 flags.append(resolved_flag)
     return flags
-
-
-def _write_descriptor_state(
-    state_path: Path,
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    started_at: str,
-    progress_current: int,
-    progress_total: int,
-    chunks: list[ChunkPayload],
-    profile_id: str,
-    semantic_strategy: str,
-    input_fingerprint: str,
-    log_relative_path: str,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
-    profile_usage_history: list[ProfileRuntimeMetadataPayload],
-    next_paragraph: int,
-    additional_chunking_instructions_fingerprint: str,
-    context_window_fallback_count: int,
-    status: str = "running",
-    completed_at: str | None = None,
-) -> None:
-    """
-    @brief      Persist one descriptor-contract AI chunking checkpoint.
-    @param[in]  state_path Filesystem path for state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Filesystem path for input snapshot.
-    @param[in]  output_path Filesystem path for output.
-    @param[in]  started_at ISO-8601 timestamp marking operation start.
-    @param[in]  progress_current Number of processing units completed so far.
-    @param[in]  progress_total Total number of processing units expected.
-    @param[in]  chunks Ordered canonical chunk payloads.
-    @param[in]  profile_id Stable AI profile identifier.
-    @param[in]  semantic_strategy Selected semantic chunking strategy token.
-    @param[in]  input_fingerprint Stable fingerprint of the canonical input text.
-    @param[in]  log_relative_path Filesystem path for log relative.
-    @param[in]  token_usage Cumulative AI token-usage metadata.
-    @param[in]  budget_metadata Context-window budgeting metadata for the selected profile.
-    @param[in]  profile_runtime_metadata Runtime metadata for the selected AI profile.
-    @param[in]  profile_usage_history Ordered AI profile usage history.
-    @param[in]  next_paragraph Absolute index of the next paragraph awaiting processing.
-    @param[in]  additional_chunking_instructions_fingerprint Supplemental-instructions fingerprint.
-    @param[in]  context_window_fallback_count Number of context-window fallback retries.
-    @param[in]  status Operation status token under evaluation.
-    @param[in]  completed_at Optional ISO-8601 operation completion timestamp.
-    @return     None.
-    @exception  OSError Raised when state persistence fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
-    """
-    _write_chunk_payload(output_path, chunks)
-    state_payload = _build_operation_state(
-        project_root=project_root,
-        input_snapshot_path=input_snapshot_path,
-        output_path=output_path,
-        report_path=None,
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        started_at=started_at,
-        completed_at=completed_at,
-        warnings=[],
-        chunks=chunks,
-        profile_id=profile_id,
-        semantic_strategy=semantic_strategy,
-        log_relative_path=log_relative_path,
-        resume_checkpoint={
-            "input_fingerprint": input_fingerprint,
-            "semantic_strategy": semantic_strategy,
-            "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
-            "next_paragraph": int(next_paragraph),
-            "committed_chunk_count": len(chunks),
-            "completed_window_count": int(progress_current),
-            "context_window_fallback_count": int(context_window_fallback_count),
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-            "log_relative_path": log_relative_path,
-        },
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        profile_runtime_metadata=profile_runtime_metadata,
-        profile_usage_history=profile_usage_history,
-    )
-    write_json_atomic(state_path, state_payload)
-
-
-def _build_operation_state(
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    report_path: Path | None,
-    status: str,
-    progress_current: int,
-    progress_total: int,
-    started_at: str,
-    completed_at: str | None,
-    warnings: list[str],
-    chunks: list[ChunkPayload] | None,
-    profile_id: str,
-    semantic_strategy: str,
-    log_relative_path: str,
-    resume_checkpoint: dict[str, object] | None,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
-    profile_usage_history: list[ProfileRuntimeMetadataPayload],
-) -> OperationStatePayload:
-    """
-    @brief      Build the operation state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Input snapshot file path.
-    @param[in]  output_path Output file path.
-    @param[in]  report_path Report file path.
-    @param[in]  status Value for `status`.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  started_at Value for `started_at`.
-    @param[in]  completed_at Value for `completed_at`.
-    @param[in]  warnings Value for `warnings`.
-    @param[in]  chunks Value for `chunks`.
-    @param[in]  profile_id Profile identifier.
-    @param[in]  semantic_strategy Value for `semantic_strategy`.
-    @param[in]  log_relative_path Path for `log_relative_path`.
-    @param[in]  resume_checkpoint Value for `resume_checkpoint`.
-    @param[in]  token_usage Value for `token_usage`.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  profile_runtime_metadata Runtime metadata for the current AI profile.
-    @param[in]  profile_usage_history Runtime metadata entries used across resumed segments.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.5.0
-    """
-    _ = project_root
-    _ = input_snapshot_path
-    _ = output_path
-    _ = report_path
-    return build_operation_state_payload(
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        mode="ai_assisted",
-        warning_count=len(warnings),
-        metadata={
-            "warnings": list(warnings),
-            "chunk_count": 0 if chunks is None else len(chunks),
-            "detected_chapter_count": 0 if chunks is None else _chapter_count_from_chunks(chunks),
-            "ai_profile_id": profile_id,
-            **profile_runtime_metadata,
-            "semantic_strategy": semantic_strategy,
-            "log_relative_path": log_relative_path,
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-            "budget_metadata": dict(budget_metadata),
-            "profile_usage_history": [dict(item) for item in profile_usage_history],
-        },
-        resume_checkpoint=resume_checkpoint,
-    )
 
 
 def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:

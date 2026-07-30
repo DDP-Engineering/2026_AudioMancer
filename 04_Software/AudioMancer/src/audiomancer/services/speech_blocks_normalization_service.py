@@ -13,7 +13,7 @@
          text, and identifier normalization outside the orchestration service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -489,53 +489,6 @@ def normalize_source_span_selection_chunk_blocks(
             )
         )
     return normalized_blocks, warning_entries
-
-
-def validate_source_span_response_payload(
-    source_chunk: dict[str, object],
-    response_payload: dict[str, object],
-    speaker_catalog: dict[str, dict[str, object]],
-) -> SpeechBlockSelectionValidationResult:
-    """
-    @brief      Validate one raw source-span response payload without building fallback blocks.
-    @param[in]  source_chunk Current source chunk payload.
-    @param[in]  response_payload Raw model response payload.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @return     Validation result describing valid reconstructed blocks or the compact failure reason.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
-    """
-    chunk_text = str(source_chunk.get("text", ""))
-    source_spans, source_span_error = parse_source_spans(source_chunk, chunk_text)
-    if source_span_error:
-        return SpeechBlockSelectionValidationResult(
-            (),
-            "source_span_selection_invalid",
-            source_span_error,
-        )
-    candidate_blocks = source_span_candidate_blocks(response_payload)
-    if any(isinstance(candidate_block, dict) and "unit_ids" in candidate_block for candidate_block in candidate_blocks):
-        atomic_units, atomic_unit_error = parse_atomic_units(source_chunk, chunk_text)
-        if atomic_unit_error:
-            return SpeechBlockSelectionValidationResult(
-                (),
-                "atomic_unit_selection_invalid",
-                atomic_unit_error,
-            )
-        return validate_atomic_unit_model_selections(
-            candidate_blocks,
-            atomic_units,
-            speaker_catalog,
-            require_confidence=source_span_response_requires_confidence(response_payload),
-        )
-    return validate_source_span_model_selections(
-        candidate_blocks,
-        source_spans,
-        speaker_catalog,
-        require_confidence=source_span_response_requires_confidence(response_payload),
-    )
 
 
 def source_span_response_requires_confidence(response_payload: dict[str, object]) -> bool:
@@ -1430,65 +1383,6 @@ def normalize_ai_block(
         "text": text,
         "warning_flags": warning_flags,
     }
-
-
-def validate_ai_block_source_spans(
-    chunk_id: str,
-    chunk_text: str,
-    ai_blocks: list[dict[str, object]],
-) -> list[dict[str, object]]:
-    """
-    @brief      Validate AI-owned source spans without replacing model block boundaries.
-    @param[in]  chunk_id Source chunk identifier.
-    @param[in]  chunk_text Full source chunk text.
-    @param[in]  ai_blocks Normalized AI blocks to validate and annotate.
-    @return     Human-readable warning entries for the chunk.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
-    """
-    warning_entries: list[dict[str, object]] = []
-    cursor = 0
-    for ai_block in ai_blocks:
-        source_text = str(ai_block.get("source_text", ""))
-        text = str(ai_block.get("text", ""))
-        content_kind = str(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
-        warning_flags = list(ai_block.get("warning_flags", []))
-
-        if not source_text.strip():
-            append_warning_flag(warning_flags, "source_coverage_mismatch")
-        else:
-            ordered_index = chunk_text.find(source_text, cursor)
-            if ordered_index >= 0:
-                if chunk_text[cursor:ordered_index].strip():
-                    append_warning_flag(warning_flags, "source_coverage_mismatch")
-                cursor = ordered_index + len(source_text)
-            elif chunk_text.find(source_text) >= 0:
-                append_warning_flag(warning_flags, "source_order_mismatch")
-            else:
-                append_warning_flag(warning_flags, "source_coverage_mismatch")
-
-        expected_audio_text = normalize_block_text(source_text, content_kind)
-        if block_text_key(text) != block_text_key(expected_audio_text):
-            append_warning_flag(warning_flags, "model_text_modified")
-
-        ai_block["warning_flags"] = warning_flags
-
-    if ai_blocks and chunk_text[cursor:].strip():
-        warning_flags = list(ai_blocks[-1].get("warning_flags", []))
-        append_warning_flag(warning_flags, "source_coverage_mismatch")
-        ai_blocks[-1]["warning_flags"] = warning_flags
-
-    if block_text_key(" ".join(str(block.get("source_text", "")) for block in ai_blocks)) != block_text_key(chunk_text):
-        warning_flags = list(ai_blocks[-1].get("warning_flags", []))
-        append_warning_flag(warning_flags, "source_coverage_mismatch")
-        ai_blocks[-1]["warning_flags"] = warning_flags
-
-    for ai_block in ai_blocks:
-        for warning_flag in normalize_warning_flags(ai_block.get("warning_flags")):
-            warning_entries.append({"chunk_id": chunk_id, "reason": speech_block_warning_reason(warning_flag)})
-    return warning_entries
 
 
 def validate_narrator_only_budget(

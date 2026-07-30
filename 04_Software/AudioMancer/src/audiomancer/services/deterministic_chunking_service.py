@@ -14,13 +14,12 @@
          strict authoritative `chunks_text.json` document.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.8.0
+@version 0.10.0
 """
 
 # IMPORTS
 
 from functools import partial
-import json
 from pathlib import Path
 import re
 from time import monotonic
@@ -35,13 +34,9 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_state_payload,
     emit_progress_update,
-    load_operation_state_file,
     raise_if_cancelled,
 )
-from audiomancer.services.persistence_service import write_json_atomic
-from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -49,10 +44,14 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 _CHUNKING_LOGGER = get_component_logger("deterministic_chunking")
 _emit_progress = partial(emit_progress_update, include_token_usage=False)
 
+# @brief Strict uppercase grammar for bare Roman-numeral chapter headings.
+_ROMAN_NUMERAL_PATTERN = re.compile(
+    r"(?=[MDCLXVI]+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})"
+)
 # @brief Supported chapter-heading detection patterns used for transient chapter-count and prompt context.
 _CHAPTER_PATTERNS = (
     re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
-    re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
+    _ROMAN_NUMERAL_PATTERN,
 )
 
 # @brief Maximum deterministic paragraphs processed between resumable checkpoints.
@@ -241,21 +240,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
 
 
 @trace_function(_CHUNKING_LOGGER)
-def load_chunking_report(project_root: str | Path) -> ChunkingReportPayload | None:
-    """
-    @brief      Load one optional deterministic chunking report payload.
-    @param[in]  project_root Active project root folder.
-    @return     Chunking report payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    document = chunking_document_service.load_chunking_document(project_root)
-    return None if document is None else chunking_document_service.derive_report(document)
-
-
-@trace_function(_CHUNKING_LOGGER)
 def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
     """
     @brief      Load the optional persisted chunk artifact from one project.
@@ -345,197 +329,6 @@ def _build_chunk_payload(
     }
 
 
-def semantic_cut_priority(role: str, sentence_complete: bool) -> int:
-    """Return the approved semantic cut tier before any size-balance cost."""
-    if role == "heading":
-        return 0
-    if role == "scene_separator":
-        return 1
-    if role in {"list_item", "verse", "preformatted", "footnote"}:
-        return 2
-    if sentence_complete:
-        return 3
-    return 4
-
-
-def split_for_hard_limit(
-    text: str,
-    *,
-    hard_limit: int,
-) -> tuple[list[str], bool]:
-    """Split at sentence ends, using mid-sentence cuts only for oversized sentences."""
-    if hard_limit <= 0:
-        raise ValueError("Chunk hard limit must be positive.")
-    sentences = [
-        item.strip()
-        for item in cleanup_text_analysis_service.sentence_spans(str(text))
-        if item.strip()
-    ]
-    if not sentences:
-        return [], False
-    result: list[str] = []
-    used_mid_sentence_fallback = False
-    for sentence in sentences:
-        if len(sentence) <= hard_limit:
-            result.append(sentence)
-            continue
-        used_mid_sentence_fallback = True
-        remaining = sentence
-        while len(remaining) > hard_limit:
-            split_at = remaining.rfind(" ", 0, hard_limit + 1)
-            if split_at <= 0:
-                split_at = hard_limit
-            result.append(remaining[:split_at].rstrip())
-            remaining = remaining[split_at:].lstrip()
-        if remaining:
-            result.append(remaining)
-    return result, used_mid_sentence_fallback
-
-
-def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
-    """
-    @brief      Write the chunk payload.
-    @param[in]  output_path Output file path.
-    @param[in]  chunks Value for `chunks`.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    write_json_atomic(output_path, chunks)
-
-
-def _load_partial_chunks(output_path: Path) -> list[ChunkPayload]:
-    """
-    @brief      Load the partial chunks.
-    @param[in]  output_path Output file path.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    if not output_path.is_file():
-        return []
-    try:
-        payload = json.loads(output_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        _CHUNKING_LOGGER.warning("Ignored unreadable partial chunk artifact: %s", error)
-        return []
-    if not isinstance(payload, list):
-        return []
-    return [dict(item) for item in payload if isinstance(item, dict)]
-
-
-def _load_resume_state(state_path: Path) -> OperationStatePayload:
-    """
-    @brief      Load resumable chunking state, treating malformed JSON as no state.
-    @param[in]  state_path Operation-state file path.
-    @return     Persisted state payload or an empty dictionary.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    try:
-        return load_operation_state_file(state_path) or {}
-    except (OSError, TypeError, json.JSONDecodeError) as error:
-        _CHUNKING_LOGGER.warning("Restarting deterministic chunking after unreadable state file: %s", error)
-        return {}
-
-
-def _write_running_state(
-    state_path: Path,
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    started_at: str,
-    progress_current: int,
-    progress_total: int,
-    chunks: list[ChunkPayload],
-    chapter_count: int,
-    status: str = "running",
-    completed_at: str | None = None,
-) -> None:
-    """
-    @brief      Write the running state.
-    @param[in]  state_path Operation-state file path.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Input snapshot file path.
-    @param[in]  output_path Output file path.
-    @param[in]  started_at Value for `started_at`.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  chunks Value for `chunks`.
-    @param[in]  chapter_count Current detected chapter count.
-    @param[in]  status Operation status to persist.
-    @param[in]  completed_at Optional terminal timestamp.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    running_state = _build_operation_state(
-        project_root,
-        input_snapshot_path=input_snapshot_path,
-        output_path=output_path,
-        report_path=None,
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        started_at=started_at,
-        completed_at=completed_at,
-        warnings=[],
-        chunk_count=len(chunks),
-        chapter_count=chapter_count,
-        resume_checkpoint=None if status == "completed" else {"next_chunk_index": progress_current},
-    )
-    write_json_atomic(state_path, running_state)
-
-
-def _persist_terminal_state(
-    state_path: Path,
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    started_at: str,
-    progress_total: int,
-    chunks: list[ChunkPayload],
-    chapter_count: int,
-    status: str,
-) -> None:
-    """
-    @brief      Persist the latest deterministic chunks and a terminal resumable state.
-    @param[in]  state_path Operation-state file path.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Input snapshot file path.
-    @param[in]  output_path Output file path.
-    @param[in]  started_at Original operation start timestamp.
-    @param[in]  progress_total Total paragraph count.
-    @param[in]  chunks Latest in-memory chunk payloads.
-    @param[in]  chapter_count Latest detected chapter count.
-    @param[in]  status Terminal status token.
-    @return     None
-    @exception  OSError Raised when persistence fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    _write_chunk_payload(output_path, chunks)
-    _write_running_state(
-        state_path,
-        project_root,
-        input_snapshot_path,
-        output_path,
-        started_at,
-        len(chunks),
-        progress_total,
-        chunks,
-        chapter_count,
-        status=status,
-        completed_at=_utc_now_iso(),
-    )
-
-
 def _should_write_checkpoint(
     progress_current: int,
     last_checkpoint_index: int,
@@ -581,60 +374,6 @@ def _should_emit_progress(
     return (
         progress_current < progress_total
         and current_time - last_progress_time >= _PROGRESS_EMIT_INTERVAL_SECONDS
-    )
-
-
-def _build_operation_state(
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    report_path: Path | None,
-    status: str,
-    progress_current: int,
-    progress_total: int,
-    started_at: str,
-    completed_at: str | None,
-    warnings: list[str],
-    chunk_count: int,
-    chapter_count: int,
-    resume_checkpoint: dict[str, object] | None,
-) -> OperationStatePayload:
-    """
-    @brief      Build the operation state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Input snapshot file path.
-    @param[in]  output_path Output file path.
-    @param[in]  report_path Report file path.
-    @param[in]  status Value for `status`.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  started_at Value for `started_at`.
-    @param[in]  completed_at Value for `completed_at`.
-    @param[in]  warnings Value for `warnings`.
-    @param[in]  chunk_count Value for `chunk_count`.
-    @param[in]  chapter_count Value for `chapter_count`.
-    @param[in]  resume_checkpoint Value for `resume_checkpoint`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    _ = project_root
-    _ = input_snapshot_path
-    _ = output_path
-    _ = report_path
-    return build_operation_state_payload(
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        mode="deterministic",
-        warning_count=len(warnings),
-        metadata={
-            "warnings": list(warnings),
-            "chunk_count": chunk_count,
-            "detected_chapter_count": chapter_count,
-        },
-        resume_checkpoint=resume_checkpoint,
     )
 
 

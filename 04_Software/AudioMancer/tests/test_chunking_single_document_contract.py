@@ -10,10 +10,11 @@
 @file test_chunking_single_document_contract.py
 @brief Red-first contract tests for the authoritative Chunking document.
 @details Covers S-0001 through S-0007 and REQ-FUNC-048 through
-         REQ-FUNC-054 plus REQ-DATA-001 before production implementation.
+         REQ-FUNC-054 plus REQ-DATA-001, including removal of obsolete
+         persistence helpers from both Chunking services.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -208,6 +209,44 @@ def test_document_api_ignores_obsolete_sidecars_and_never_migrates_them(tmp_path
     assert service.load_chunking_document(tmp_path) is None
     assert service.load_chunks(tmp_path) == []
     assert not (tmp_path / config.CHUNK_ARTIFACT_FILE_NAME).exists()
+
+
+def test_chunking_services_do_not_expose_legacy_persistence_helpers() -> None:
+    """
+    @brief      Verify S-0001/S-0002/S-0003 and REQ-FUNC-236b922c canonical persistence.
+    @return     None.
+    @version    0.1.0
+    """
+    retired_deterministic_helpers = {
+        "load_chunking_report",
+        "_load_partial_chunks",
+        "_load_resume_state",
+        "_write_running_state",
+        "_persist_terminal_state",
+        "_build_operation_state",
+        "_write_chunk_payload",
+    }
+    retired_ai_helpers = {
+        "_load_resume_state",
+        "_compute_input_fingerprint",
+        "_resolve_additional_chunking_instructions",
+        "_build_profile_runtime_metadata",
+        "_restore_descriptor_resume_state",
+        "_restore_profile_usage_history",
+        "_merge_profile_usage_history",
+        "_validate_chunk_descriptors",
+        "_write_descriptor_state",
+        "_build_operation_state",
+        "_write_chunk_payload",
+    }
+    live_deterministic_throttle_helpers = {
+        "_should_write_checkpoint",
+        "_should_emit_progress",
+    }
+
+    assert retired_deterministic_helpers.isdisjoint(vars(deterministic_chunking_service))
+    assert retired_ai_helpers.isdisjoint(vars(ai_chunking_service))
+    assert live_deterministic_throttle_helpers <= vars(deterministic_chunking_service).keys()
 
 
 def test_deterministic_chunking_commits_one_document_without_persisted_progress(tmp_path) -> None:

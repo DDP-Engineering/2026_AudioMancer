@@ -14,7 +14,7 @@
          TTS plan data, and derived selected-sample views.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 4.0.0
+@version 4.1.0
 """
 
 # IMPORTS
@@ -930,22 +930,6 @@ def import_profile_sample(
         metadata_payload=metadata_payload,
     )
     return metadata_payload
-
-
-def clear_all_profile_samples(project_root: str | Path) -> None:
-    """
-    @brief      Delete every persisted narrator profile sample artifact from the project root.
-    @param[in]  project_root Active project root folder.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
-    """
-    for child_path in Path(project_root).glob("audio_narator_*"):
-        if child_path.is_file():
-            child_path.unlink()
-    _clear_profile_sample_metadata(project_root)
 
 
 def selected_narrator_sample_path(project_root: str | Path) -> Path | None:

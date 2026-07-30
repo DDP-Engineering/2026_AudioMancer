@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.18.10
+@version 0.19.0
 """
 
 # IMPORTS
@@ -932,33 +932,6 @@ def approve_all_audio_blocks(project_root: str | Path) -> AudioBlocksReportPaylo
     for block in audio_blocks:
         if is_generated(block):
             block["approved"] = approved_at
-    return _persist_report_update(resolved_project_root, audio_blocks)
-
-
-@trace_function(_AUDIO_BLOCKS_LOGGER)
-def invalidate_audio_for_speech_block(project_root: str | Path, speech_block_id: str) -> AudioBlocksReportPayload:
-    """
-    @brief      Clear generated audio for one changed Speech Block.
-    @param[in]  project_root Active project root folder.
-    @param[in]  speech_block_id Changed Speech Block identifier.
-    @return     Updated Audio Blocks report payload.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
-    """
-    resolved_project_root = Path(project_root)
-    audio_blocks = load_audio_blocks(resolved_project_root)
-    changed = False
-    for block in audio_blocks:
-        if str(block.get("speech_block_id", "")).strip() != str(speech_block_id).strip():
-            continue
-        _delete_audio_block_artifacts(resolved_project_root, block)
-        block.update(_cleared_audio_fields())
-        changed = True
-        break
-    if not changed:
-        return load_audio_blocks_report(resolved_project_root) or _persist_report_update(resolved_project_root, [])
     return _persist_report_update(resolved_project_root, audio_blocks)
 
 
@@ -3154,19 +3127,6 @@ def _checkpoint_int(checkpoint: object, field_name: str, fallback: int) -> int:
         return max(int(fallback), 0)
 
 
-def _speech_blocks_snapshot_path(project_root: Path) -> Path:
-    """
-    @brief      Resolve the Audio Blocks Speech Blocks snapshot path.
-    @param[in]  project_root Active project root folder.
-    @return     Absolute project-local snapshot path.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    return project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
-
-
 def _voice_target_id_for_block(
     speech_block: dict[str, object],
     voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
@@ -3252,26 +3212,6 @@ def _generated_count(audio_blocks: list[AudioBlockPayload]) -> int:
     @version    0.2.0
     """
     return sum(1 for block in audio_blocks if is_generated(block))
-
-
-def _first_incomplete_block_index(audio_blocks: list[AudioBlockPayload], project_root: Path | None = None) -> int:
-    """
-    @brief      Resolve the first block index that still needs generated audio.
-    @param[in]  audio_blocks Current Audio Blocks payload list.
-    @param[in]  project_root Optional active project root for WAV validation.
-    @return     Zero-based first incomplete index, or list length when complete.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
-    """
-    for index, block in enumerate(audio_blocks):
-        if bool(block.get("speech_block_approved", False)) and not _audio_block_has_reusable_audio(
-            block,
-            project_root,
-        ):
-            return index
-    return len(audio_blocks)
 
 
 def _audio_generation_order_indices(
@@ -3792,33 +3732,6 @@ def _normalize_warning_flags(value: object) -> list[str]:
         if normalized_item and normalized_item not in normalized_flags:
             normalized_flags.append(normalized_item)
     return normalized_flags
-
-
-def _status_timestamp(value: object, fallback: object = None) -> str | None:
-    """
-    @brief      Normalize one nullable timestamp status field.
-    @param[in]  value Primary status value.
-    @param[in]  fallback Legacy timestamp fallback.
-    @return     Non-empty timestamp string or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.2.0
-    """
-    if value is True:
-        normalized_fallback = _optional_string(fallback)
-        if normalized_fallback is not None and normalized_fallback.lower() not in {"true", "false"}:
-            return normalized_fallback
-        return _utc_now_iso()
-    if value is False:
-        return None
-    normalized_value = _optional_string(value)
-    if normalized_value is not None and normalized_value.lower() not in {"true", "false"}:
-        return normalized_value
-    normalized_fallback = _optional_string(fallback)
-    if normalized_fallback is not None and normalized_fallback.lower() not in {"true", "false"}:
-        return normalized_fallback
-    return None
 
 
 def _optional_int(value: object, fallback: int) -> int:

@@ -1,0 +1,393 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "deterministic_chunking_service no longer defines load_chunking_report, semantic_cut_priority, split_for_hard_limit, _load_partial_chunks, _load_resume_state, _write_running_state, _persist_terminal_state, _build_operation_state, or _write_chunk_payload, and their unused imports are removed.",
+      "The live _CHECKPOINT_PARAGRAPH_INTERVAL, _CHECKPOINT_TIME_INTERVAL_SECONDS, _PROGRESS_EMIT_INTERVAL_SECONDS, _should_write_checkpoint, and _should_emit_progress implementation and tests remain unchanged and green.",
+      "ai_chunking_service no longer defines _load_resume_state, _compute_input_fingerprint, _resolve_additional_chunking_instructions, _build_profile_runtime_metadata, _restore_descriptor_resume_state, _restore_profile_usage_history, _merge_profile_usage_history, _validate_chunk_descriptors, _write_descriptor_state, _build_operation_state, or _write_chunk_payload, and import fallout is pruned without removing build_operation_output_path.",
+      "Descriptor contract tests exercise _validate_chunk_descriptor_prefix directly for complete and invalid-prefix semantics, and resume fixtures use chunking_document_service.source_fingerprint rather than the deleted wrapper.",
+      "The direct semantic_cut_priority and split_for_hard_limit tests are deleted and no test or production reference to either symbol remains.",
+      "REQ-FUNC-747584c1-19b0-42e3-b5c9-fb2b6dac5150 and REQ-FUNC-11c404c6-4de0-47d9-b539-8de5a7f76a02 are deleted, with all references to those IDs and their unimplemented behavior removed from the canonical specification and Text Chunking component documentation.",
+      "A red-first single-document contract check proves the retired legacy helper names are absent from both chunking service modules while canonical chunks_text.json checkpoint, resume, cancellation, failure, and completion behavior remains green.",
+      "The existing obsolete-sidecar durable requirement is reconciled to cover both chunking services using only canonical document persistence and links to the exact regression check without creating a duplicate requirement.",
+      "No compatibility alias, migration path, deprecated wrapper, planned replacement requirement, or Gitea follow-up is created for the deleted semantic-cut code.",
+      "No Text Chunking runtime output, strict document field, checkpoint cadence, progress cadence, resume boundary, or downstream behavior changes.",
+      "Focused Chunking tests, Ruff, traceability audit, coverage audit, and changed-set impact complete without blocking findings; the complete pytest gate is intentionally deferred by owner instruction and manual application verification is required at delivery."
+    ],
+    "assumptions": [
+      "Exact source-and-test reference scans are authoritative for the listed deletion candidates; dynamic string-based invocation is not part of the project contract.",
+      "The #31 checkpoint and progress helpers/constants are live production behavior and are excluded from deletion.",
+      "Cross-module private helpers _build_paragraph_records, _build_chunking_warnings, and _chapter_count_from_chunks remain unchanged; promoting them to public APIs would add unnecessary scope.",
+      "The repository is in development mode: no compatibility alias, migration, deprecated wrapper, or dormant roadmap artifact is retained for deleted implementation."
+    ],
+    "created_at": "2026-07-30T14:40:34+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+      "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
+      "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py",
+      ".agentic/requirements/functional/REQ-FUNC-236b922c-9f4f-4db8-8ecf-ada449c7cbc2.toml",
+      ".agentic/requirements/functional/REQ-FUNC-747584c1-19b0-42e3-b5c9-fb2b6dac5150.toml",
+      ".agentic/requirements/functional/REQ-FUNC-11c404c6-4de0-47d9-b539-8de5a7f76a02.toml",
+      ".agentic/specs/cleanup_chunking.spec.md",
+      ".agentic/knowledge/components/Text_Chunking.md"
+    ],
+    "reason": "The owner explicitly rejected the unimplemented semantic-cut behavior and all compatibility or roadmap retention. The remaining work is bounded deletion of zero-production-reference code plus truthful requirement/spec/test cleanup, with canonical runtime behavior protected by existing and red-first regression checks.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: delete all zero-production-reference deterministic and AI legacy sidecar/resume helpers listed by #36; prune import fallout; preserve #31 checkpoint/progress throttling; repoint obsolete descriptor/fingerprint tests to canonical APIs; add a red-first contract check preventing legacy helper reintroduction; reconcile the obsolete-sidecar requirement; delete semantic_cut_priority, split_for_hard_limit, their direct tests, REQ-FUNC-747584c1-19b0-42e3-b5c9-fb2b6dac5150, REQ-FUNC-11c404c6-4de0-47d9-b539-8de5a7f76a02, and the corresponding spec/component claims. Out of scope: runtime chunking semantics, checkpoint cadence, document schema, public renaming of cross-module private helpers, compatibility or migration code, future replacement requirements, tickets #37/#38, external Gitea mutations, and delivery operations."
+    ],
+    "source": "Gitea issues #36 and #40 plus owner decision in Codex on 2026-07-30 to delete the unimplemented semantic-cut code, tests, and requirements",
+    "understanding": "Issue #36 removes obsolete state-file and checkpoint helper chains left by the canonical chunks_text.json rewrite. Post-#31 inspection proves the deterministic checkpoint/progress interval helpers are live and must remain, while the old deterministic sidecar chain and the listed AI resume/state chain remain dead. The owner confirmed that semantic_cut_priority and split_for_hard_limit are unwanted premature code: delete both, delete their direct tests and requirement snapshots, and remove their spec/component claims without compatibility aliases, migrations, deprecations, or roadmap placeholders."
+  },
+  "change_units": [
+    {
+      "id": "CH-0001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py"
+      ]
+    },
+    {
+      "id": "CH-0002",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py"
+      ]
+    },
+    {
+      "id": "CH-0003",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py"
+      ]
+    },
+    {
+      "id": "CH-0004",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py"
+      ]
+    },
+    {
+      "id": "CH-0005",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py"
+      ]
+    },
+    {
+      "id": "CH-0006",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-236b922c-9f4f-4db8-8ecf-ada449c7cbc2.toml"
+      ]
+    },
+    {
+      "id": "CH-0007",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-747584c1-19b0-42e3-b5c9-fb2b6dac5150.toml"
+      ]
+    },
+    {
+      "id": "CH-0008",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-11c404c6-4de0-47d9-b539-8de5a7f76a02.toml"
+      ]
+    },
+    {
+      "id": "CH-0009",
+      "touched_paths": [
+        ".agentic/specs/cleanup_chunking.spec.md"
+      ]
+    },
+    {
+      "id": "CH-0010",
+      "touched_paths": [
+        ".agentic/knowledge/components/Text_Chunking.md"
+      ]
+    },
+    {
+      "id": "CH-0011",
+      "touched_paths": [
+        ".agentic/requirements/functional/REQ-FUNC-b9aba951-2ee0-4c27-84b9-80020daa09e0.toml"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-236b922c-9f4f-4db8-8ecf-ada449c7cbc2",
+        "REQ-NFR-b22bd156-ca68-45f8-a908-f4678da5464e",
+        "REQ-NFR-c26cffd5-b20c-4016-9736-7bda8a4f1863",
+        "REQ-FUNC-b9aba951-2ee0-4c27-84b9-80020daa09e0",
+        "REQ-FUNC-d62a54a9-fd23-4358-acc1-44edb7af4b9a"
+      ],
+      "cites_spec": [
+        "S-0001",
+        "S-0002",
+        "S-0003",
+        "S-0004"
+      ],
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_chunking_single_document_contract.py tests/test_ai_chunking_descriptor_contract.py tests/test_cleanup_chunking_contract.py tests/test_deterministic_chunking_service.py tests/test_ai_chunking_service.py",
+      "green_evidence": "E-0002",
+      "id": "C-0001",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "alignment",
+      "created_at": "2026-07-30T14:40:09+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Correct the semantic-priority requirement UUID before requirement deletion; scope and owner decision are unchanged."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-30T14:43:52+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Link the now-existing red-first canonical-persistence selector to the updated durable requirement."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-30T14:57:30+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Traceability validation found REQ-FUNC-b9aba951 linked to the renamed descriptor validation test; reconcile the exact linked-test set without changing behavior."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-30T14:58:59+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Owner requested zero residual semantic-cut test noise; remove the rejected helper names from the legacy persistence absence contract while preserving its red-first coverage of dead persistence helpers."
+    }
+  ],
+  "evidence": [
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_chunking_single_document_contract.py::test_chunking_services_do_not_expose_legacy_persistence_helpers",
+      "created_at": "2026-07-30T14:43:39+00:00",
+      "failure_kind": "assertion",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "C-0001 red as intended: the new canonical-persistence contract found the retired deterministic and AI helper names still present before source deletion.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_chunking_single_document_contract.py tests/test_ai_chunking_descriptor_contract.py tests/test_cleanup_chunking_contract.py tests/test_deterministic_chunking_service.py tests/test_ai_chunking_service.py",
+      "created_at": "2026-07-30T14:54:49+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Chunking regression set passes: 108 passed; canonical persistence, descriptor-prefix behavior, and deterministic checkpoint/progress contracts remain green.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m ruff check <five changed Python files>; .venv/Scripts/python.exe -m py_compile <five changed Python files>",
+      "created_at": "2026-07-30T14:55:07+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Changed Python files pass targeted Ruff and py_compile; module and changed-callable version metadata were reviewed and updated without bulk restyling.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_chunking_single_document_contract.py tests/test_ai_chunking_descriptor_contract.py tests/test_cleanup_chunking_contract.py tests/test_deterministic_chunking_service.py tests/test_ai_chunking_service.py",
+      "created_at": "2026-07-30T14:57:06+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final focused Chunking validation passes: 108 tests.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m ruff check .",
+      "created_at": "2026-07-30T14:57:06+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Complete configured Ruff lint scope passes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-30T14:57:06+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "scan",
+      "path": ".agentic/knowledge/components/Text_Chunking.md",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Manual documentation audit passes: Text Chunking component, specification, requirement, source, and tests consistently describe canonical-only persistence; broad docs are unaffected.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_chunking_single_document_contract.py tests/test_ai_chunking_descriptor_contract.py tests/test_cleanup_chunking_contract.py tests/test_deterministic_chunking_service.py tests/test_ai_chunking_service.py",
+      "created_at": "2026-07-30T15:00:43+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Post-cleanup focused Chunking validation passes: 108 tests.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "rg current contract roots for deleted symbols/requirements and live throttle symbols",
+      "created_at": "2026-07-30T15:00:43+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Current source, tests, specs, component docs, and durable requirements contain no rejected semantic helper names or deleted requirement IDs; live checkpoint/progress throttling remains present.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".agentic/tools/run.ps1 audit traceability; audit coverage; impact --json <changed paths>",
+      "created_at": "2026-07-30T15:00:43+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "scan",
+      "path": ".agentic/requirements",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Traceability and coverage audits report no issues; changed-set impact reports no uncovered file and does not recommend full regression.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-30T15:00:43+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "note",
+      "path": null,
+      "result": "info",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Complete pytest gate intentionally not run by explicit owner instruction because of duration; focused automated validation is complete and manual application testing remains required at delivery.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m ruff check .; git diff --check",
+      "created_at": "2026-07-30T15:00:54+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "gate",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Post-cleanup complete Ruff gate passes and git diff whitespace check reports no errors.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-30T15:17:54+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "note",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Owner reports manual application testing passed for issue #36.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-30T14:07:45+00:00",
+    "id": "I-0001",
+    "kind": "change",
+    "scope_hint": [],
+    "statement": "Resolve Gitea issue #36 by removing the dead legacy state-file layer from deterministic and AI chunking without changing runtime behavior, while preserving #31's live throttling helpers and explicitly resolving the production-dead semantic-cut helpers.",
+    "status": "draft"
+  },
+  "run_id": "change-2026-07-30T140745Z-7b258e5b",
+  "spec_items": [
+    {
+      "examples": [
+        "Reset may delete obsolete chunking_checkpoint.json, chunking_report.json, and chunking_state.json files, but runtime services never interpret or recreate them."
+      ],
+      "id": "S-0001",
+      "statement": "Text Chunking runtime services persist state only through the canonical chunks_text.json document API and expose no legacy sidecar persistence helpers.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "S-0002",
+      "statement": "The deterministic 200-paragraph or 2.0-second checkpoint policy and 0.1-second progress policy remain live and unchanged.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "Checkpoint and progress constants plus both _should_* helpers remain production-referenced."
+    },
+    {
+      "examples": [
+        "No compatibility alias, migration, deprecated wrapper, Planned requirement, or follow-up placeholder replaces them."
+      ],
+      "id": "S-0003",
+      "statement": "The unintegrated semantic_cut_priority and split_for_hard_limit helpers, their direct tests, requirements, and documentation claims do not remain in the repository.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "A complete valid response returns its ranges with true; an invalid later descriptor returns the valid prefix with false."
+      ],
+      "id": "S-0004",
+      "statement": "Descriptor validation tests use the production _validate_chunk_descriptor_prefix contract and resume fixtures use chunking_document_service.source_fingerprint.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

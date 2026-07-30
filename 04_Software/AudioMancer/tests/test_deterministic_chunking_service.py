@@ -13,7 +13,7 @@
          counting, and resumable cancellation state for deterministic chunking.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ import pytest
 from audiomancer import config
 from audiomancer.services import (
     chunking_document_service,
+    cleanup_text_analysis_service,
     deterministic_chunking_service,
     operation_runtime_service,
     project_workspace_service,
@@ -74,6 +75,39 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     assert "source_start_line" not in chunks[2]
     assert report_payload["chunk_count"] == 3
     assert report_payload["detected_chapter_count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("candidate", "expected"),
+    [
+        ("I", True),
+        ("IV", True),
+        ("XIV", True),
+        ("MCMXCIV", True),
+        ("chapter xiv", True),
+        ("", False),
+        ("i", False),
+        ("civil", False),
+        ("did", False),
+        ("mix", False),
+        ("IIII", False),
+        ("VX", False),
+        ("IC", False),
+        ("MMMM", False),
+    ],
+)
+def test_bare_roman_chapter_detection_requires_valid_uppercase_numerals(
+    candidate,
+    expected,
+) -> None:
+    """Cover S-0002 and REQ-FUNC-cf65391c-89ba-4787-8df3-33eb22337b74."""
+    cleanup_label = cleanup_text_analysis_service.detect_chapter_label(candidate)
+    deterministic_label = deterministic_chunking_service._detect_chapter_label(candidate)
+    document_count = chunking_document_service._chapter_count([{"text": candidate}])
+
+    assert (cleanup_label is not None) is expected
+    assert (deterministic_label is not None) is expected
+    assert document_count == int(expected)
 
 
 def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) -> None:

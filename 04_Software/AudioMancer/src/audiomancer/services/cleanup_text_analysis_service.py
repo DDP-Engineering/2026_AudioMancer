@@ -15,7 +15,7 @@
          one consistent implementation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -53,12 +53,16 @@ _CHAPTER_WORD_PATTERN = (
     r"chapter|capitolul|capitol|capítulo|capitulo|capitolo|chapitre|kapitel|глава|"
     r"scene|scena|escena|cena|scène|szene|сцена|part|partea|parte|partie|teil|часть"
 )
+# @brief Strict uppercase grammar for bare Roman-numeral chapter headings.
+_ROMAN_NUMERAL_PATTERN = re.compile(
+    r"(?=[MDCLXVI]+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})"
+)
 # @brief Shared chapter-heading detection patterns for supported-language cleanup.
 _CHAPTER_PATTERNS = (
     re.compile(rf"^(?:{_CHAPTER_WORD_PATTERN})\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
     re.compile(r"^第\s*[0-9０-９一二三四五六七八九十百千〇零壱弐参]+\s*[章节章節回卷部幕场場話话].*$"),
     re.compile(r"^(?:제\s*)?[0-9０-９]+\s*(?:장|화|부|막).*$"),
-    re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
+    _ROMAN_NUMERAL_PATTERN,
 )
 # @brief Sentence-ending punctuation accepted across supported language scripts.
 _SENTENCE_TERMINAL_CHARACTERS = frozenset(".!?\u2026。！？｡．؟")
@@ -70,10 +74,6 @@ _CLAUSE_TERMINAL_CHARACTERS = frozenset(";:；：؛")
 _WIDE_SENTENCE_TERMINAL_CHARACTERS = frozenset("。！？｡．；：")
 # @brief Closing marks ignored while checking whether a line ends a sentence.
 _CLOSING_SENTENCE_MARKS = frozenset("\"'»”’)]}）】》」』〉")
-# @brief Dialogue formatter rule that inserts breaks before spoken text after punctuation.
-_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(r'([:;.!?\u2026。！？｡．]["»”\']?)\s+[-–—]\s+(?=\S)')
-# @brief Dialogue formatter rule that inserts breaks after attributions and pauses.
-_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(r"([,:])\s+[-–—]\s+(?=\S)")
 # @brief Header/footer comparison cleanup patterns that strip page-number suffixes.
 _HEADER_FOOTER_PAGE_AFFIX_PATTERNS = (
     re.compile(r"^(.+?)\s*[-–—]\s*(?:page\s+)?\d+(?:\s*(?:/|of)\s*\d+)?\.?$", re.IGNORECASE),
@@ -258,26 +258,6 @@ def sentence_spans(text: str, include_clause_marks: bool = False) -> list[str]:
     return [span for span in spans if span]
 
 
-def count_detected_chapters(paragraph_texts: list[str]) -> int:
-    """
-    @brief      Count distinct chapter or scene labels in paragraph order.
-    @param[in]  paragraph_texts Normalized paragraph text payloads.
-    @return     Number of detected chapter boundaries.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
-    """
-    chapter_count = 0
-    current_chapter: str | None = None
-    for paragraph_text in paragraph_texts:
-        chapter_label = detect_chapter_label(paragraph_text)
-        if chapter_label is not None and chapter_label != current_chapter:
-            current_chapter = chapter_label
-            chapter_count += 1
-    return chapter_count
-
-
 def detect_language(text: str) -> str | None:
     """
     @brief      Detect one stable language code from cleanup text.
@@ -314,22 +294,6 @@ def detect_chapter_label(paragraph_text: str) -> str | None:
         if pattern.fullmatch(normalized):
             return normalized
     return None
-
-
-def format_dialogue_lines(paragraph_text: str) -> str:
-    """
-    @brief      Insert stable line breaks into dialogue-like paragraph text.
-    @param[in]  paragraph_text Candidate paragraph text.
-    @return     Dialogue-formatted paragraph text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
-    """
-    normalized = str(paragraph_text).strip()
-    normalized = _DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN.sub(r"\1\n- ", normalized)
-    normalized = _DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN.sub(r"\1\n- ", normalized)
-    return normalized
 
 
 # HELPER FUNCTIONS

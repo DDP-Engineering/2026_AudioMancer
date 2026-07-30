@@ -1,0 +1,21 @@
+schema_version = 1
+id = "REQ-NFR-5b12e005-3baf-4c44-b7de-7346fcf8f605"
+category = "non_functional"
+status = "Active"
+priority = "Should"
+requirement = "Python files touched by issue #38 shall conform to the repository source-format and UTF-8-without-BOM conventions pinned by its specification."
+rationale = "Correct comments, docstring alignment, module spacing, and consistent encoding reduce maintenance surprises missed by non-preview Ruff rules."
+verification = "Inspection: Issue #38 source consistency and BOM scan, full-project Ruff, and touched-file compilation passed; E-0013."
+spec_ref = ".agentic/specs/minor_robustness_consistency.spec.md"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/tests/test_logging_service.py",
+]
+
+linked_tests = []
+
+created_on = "2026-07-30T17:35:48Z"
+last_updated = "2026-07-30T17:47:00Z"

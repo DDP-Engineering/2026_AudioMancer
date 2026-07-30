@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.0
+@version 1.4.0
 """
 
 # IMPORTS
@@ -191,6 +191,21 @@ def test_create_project_rejects_non_empty_target_folder(tmp_path) -> None:
 
     with pytest.raises(FileExistsError, match="not empty"):
         project_workspace_service.create_project("Book5_CAL_CAL", tmp_path)
+
+
+def test_create_project_rejects_existing_file_target(tmp_path) -> None:
+    """Cover S-0004 and REQ-FUNC-c593854d-38a1-44f3-aff1-33ede63b8dde."""
+    target_path = tmp_path / "ExistingProjectFile"
+    target_path.write_bytes(b"existing project bytes")
+
+    with pytest.raises(
+        FileExistsError,
+        match="Project path already exists as a file",
+    ):
+        project_workspace_service.create_project("ExistingProjectFile", tmp_path)
+
+    assert target_path.is_file()
+    assert target_path.read_bytes() == b"existing project bytes"
 
 
 def test_open_project_resolves_flat_project_root(tmp_path) -> None:

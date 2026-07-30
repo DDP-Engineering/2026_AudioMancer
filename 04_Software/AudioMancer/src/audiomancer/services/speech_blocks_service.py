@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.21.0
+@version 0.22.0
 """
 
 # IMPORTS
@@ -1116,47 +1116,6 @@ def remove_speech_blocks_for_chunks(
         block for block in speech_blocks if str(block.get("chunk_id", "")).strip() not in normalized_chunk_ids
     ]
     return _persist_report_update(resolved_project_root, preserved_blocks)
-
-
-@trace_function(_SPEECH_BLOCKS_LOGGER)
-def mark_speech_blocks_for_character_review(
-    project_root: str | Path,
-    character_id: str,
-    display_name: str | None = None,
-) -> tuple[SpeechBlocksReportPayload | None, tuple[str, ...]]:
-    """
-    @brief      Mark Speech Blocks assigned to one character as needing review.
-    @param[in]  project_root Active project root folder.
-    @param[in]  character_id Character identifier whose assignments changed.
-    @param[in]  display_name Optional refreshed speaker display name.
-    @return     Updated report, if Speech Blocks existed, plus affected block ids.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
-    """
-    normalized_character_id = str(character_id).strip()
-    if not normalized_character_id:
-        return load_speech_blocks_report(project_root), ()
-    resolved_project_root = Path(project_root)
-    speech_blocks = load_speech_blocks(resolved_project_root)
-    if not speech_blocks:
-        return load_speech_blocks_report(resolved_project_root), ()
-    normalized_display_name = None if display_name is None else str(display_name).strip()
-    affected_block_ids: list[str] = []
-    updated_blocks: list[SpeechBlockPayload] = []
-    for block in speech_blocks:
-        updated_block = dict(block)
-        if _is_character_speech_block(updated_block, normalized_character_id):
-            affected_block_ids.append(str(updated_block.get("speech_block_id", "")).strip())
-            updated_block["approved"] = False
-            updated_block["approved_at"] = None
-            if normalized_display_name:
-                updated_block["speaker_display_name"] = normalized_display_name
-        updated_blocks.append(updated_block)
-    if not affected_block_ids:
-        return load_speech_blocks_report(resolved_project_root), ()
-    return _persist_report_update(resolved_project_root, updated_blocks), tuple(affected_block_ids)
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)

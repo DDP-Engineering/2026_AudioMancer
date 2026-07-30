@@ -5,7 +5,7 @@ status = "Active"
 priority = "Must"
 requirement = "AI chunking shall validate descriptors, accepting consecutive anchor ranges and rejecting nonconsecutive or invalid responses."
 rationale = "Only source-aligned descriptors may be accepted."
-verification = "Automated: 5 linked pytest selector(s)."
+verification = "Focused descriptor contract validation passes with five linked pytest selectors."
 spec_ref = ""
 
 affected_paths = [
@@ -13,12 +13,12 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_five_consecutive_normalized_anchor_words",
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_requires_complete_short_paragraph_anchor",
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_rejects_nonconsecutive_anchor_matches",
   "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_consecutive_multi_chunk_ranges",
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_rejects_the_entire_invalid_response",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_five_consecutive_normalized_anchor_words",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_rejects_nonconsecutive_anchor_matches",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_requires_complete_short_paragraph_anchor",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_returns_valid_prefix_for_incomplete_response",
 ]
 
 created_on = "2026-07-19T20:30:00Z"
-last_updated = "2026-07-24T19:30:55Z"
+last_updated = "2026-07-30T14:58:00Z"

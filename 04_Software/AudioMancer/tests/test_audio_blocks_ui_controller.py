@@ -14,7 +14,7 @@
          generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.6
+@version 0.7.0
 """
 
 # IMPORTS
@@ -333,12 +333,6 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_
     window = _build_window(qtbot, project_root, default_settings_payload)
     window._audio_blocks_page.select_block_id("0001-000002")
     monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
-    monkeypatch.setattr(
-        audio_blocks_ui_controller,
-        "_sync_manifest_after_audio_blocks_update",
-        lambda active_window: active_window._audio_blocks_page.select_block_id("0001-000001"),
-    )
-
     def _start_threaded_operation(
         window,
         operation_kind,

@@ -30,6 +30,8 @@ ambiguous typed boundaries and may never generate replacement book text.
   introduced alphanumeric fusion, projection loss, or incomplete decisions.
 - Persist exactly one Cleanup metadata/checkpoint file and one text output.
 - Stop safely after a completed model request and resume compatible work.
+- Diagnose incomplete source-unit realignment when a whitespace-only operator
+  edit cannot update every persisted boundary.
 - Expose the existing Cleanup page, profile selector, Reset, previews, and
   Edit/Save/Cancel controls without adding a new layout or control.
 
@@ -174,6 +176,14 @@ analysis but clears all AI answers and regenerates the AI batch plan.
 `finalizing/rendering` recovery rerenders from persisted decisions without
 calling a model. The first resume update reports the persisted request fraction
 before any new model request is submitted.
+A reusable completed checkpoint also verifies that `clean_text.txt` exists and
+matches `output_hash`; missing or mismatched output rerenders the same persisted
+decisions without a model request.
+
+Paragraph `reason_codes` remain complete decision provenance. Runtime
+`warning_flags` contain only `deterministic_fallback`,
+`unknown_line_boundary`, and `page_transition_repaired`, so user-edit and
+LLM-override provenance does not become a downstream warning.
 
 ## 7. Workflow Integration
 
@@ -197,6 +207,9 @@ lexical edit publishes minimal `user_edited` paragraph structure without
 claiming source provenance. Rebuilt user-edited paragraphs conservatively
 reclassify explicit marker-only scene separators while ambiguous punctuation
 and lexical content remain `body`.
+If an exact source unit cannot be found during whitespace realignment, the edit
+still persists, the component logger emits a warning, and `cleanup.json`
+records `user_whitespace_realign_incomplete`.
 
 The existing Cleanup page layout and controls remain unchanged. The status pane
 projects running, paused, invalid, and completed state from `cleanup.json`;

@@ -21,19 +21,17 @@ rather than rediscovering document structure from plain text.
 - Slice exact Cleanup paragraph offsets and propagate their structural roles.
 - Derive deterministic chapter/paragraph chunks and one canonical Chunking
   document.
+- Count bare Roman-numeral headings only when they are valid uppercase Roman
+  values; ordinary words and invalid numeral strings remain paragraph text.
 - Support only the current canonical project-artifact schema during
   development; reject older Chunking shapes without defaults or migration.
 - Bound deterministic running-document checkpoints by processed-paragraph and
   monotonic-time intervals while always persisting terminal lifecycle state.
 - Run AI-assisted semantic chunking with validated paragraph descriptors,
   bounded context windows, resumable state, fallback windows, and usage logs.
-- Prefer heading, scene, structural, and sentence-complete cuts before applying
-  size-balance costs.
 - Keep recognized scene separators as structural evidence while omitting their
   text from generated chunks, splitting ranges on either side, and marking the
   following narratable chunk's leading boundary.
-- Use a mid-sentence hard-limit cut only when a single sentence is itself
-  oversized, and report that fallback.
 - Project persisted chunks and readiness into page state; make controlled
   insert, delete, and text edits invalidate downstream work appropriately.
 - Present deterministic/AI actions, profile and strategy selection, previews,
@@ -48,11 +46,11 @@ generic AI transport, or downstream translation/speech semantics.
 `chunks_text.json` document.
 `cleanup_metadata_service.load_completed_paragraph_records` gates and slices
 the Cleanup input for both chunking modes. `deterministic_chunking_service`
-uses typed roles and semantic cut priority. It writes one initial running
-document, checkpoints after 200 additional processed paragraphs or 2.0 elapsed
-monotonic seconds, throttles non-terminal progress to 0.1-second intervals, and
-writes terminal completion, cancellation, or failure state before returning or
-propagating. `ai_chunking_service` turns the same paragraph records into
+materializes each narratable paragraph while retaining Cleanup provenance. It
+writes one initial running document, checkpoints after 200 additional processed
+paragraphs or 2.0 elapsed monotonic seconds, throttles non-terminal progress to
+0.1-second intervals, and writes terminal completion, cancellation, or failure
+state before returning or propagating. `ai_chunking_service` turns the same paragraph records into
 budgeted windows, requires source-aligned descriptors from the provider,
 checkpoints each consecutive valid descriptor prefix, and retries from the
 first uncommitted paragraph when a later descriptor is invalid. If no valid
@@ -85,6 +83,8 @@ profile, optional instructions/context mode, and user chunk-edit requests.
 The sole durable Chunking output is `chunks_text.json`. Operation summaries,
 progress, budget details, provider/model settings, and AI log paths are
 runtime-only projections. AI transaction logs remain separate diagnostics.
+The deterministic and AI services do not contain runtime readers, writers, or
+builders for legacy Chunking sidecars.
 Reset also owns the obsolete `chunking_checkpoint.json`,
 `chunking_report.json`, and `chunking_state.json` names so incompatible derived
 state cannot survive explicit or automatic recovery.
@@ -117,14 +117,22 @@ Translation, Character Discovery, Speech Blocks, Audio Blocks, and Audio
 Assembly pipeline does not consume this field; issue #35 retains it as required
 structural metadata without adding scene-transition runtime behavior.
 
+`cleanup_warning_flags` carries only Cleanup's explicit warning-code set:
+`deterministic_fallback`, `unknown_line_boundary`, and
+`page_transition_repaired`. Cleanup reason codes remain provenance and do not
+change the strict Chunking field set. Bare Roman-numeral detection is shared by
+Cleanup analysis, deterministic Chunking, and the canonical report projection:
+it uses uppercase standard subtractive grammar and rejects lowercase or invalid
+forms such as `civil`, `mix`, `did`, `IIII`, and `IC`.
+
 While AudioMancer remains in development,
 only the current canonical project-artifact schema is supported. Schema
 corrections are intentionally breaking. A chunk that omits
 `starts_after_scene_separator`, a legacy root array, and every other old-shaped
 document are incompatible; the loader does not detect, default, normalize, or
-migrate them. Obsolete
-`chunking_report.json` and `chunking_state.json` sidecars are also never
-migrated. Strict direct loads raise `IncompatibleChunkingDocumentError`.
+migrate them. Runtime services never read, write, rebuild, or migrate obsolete
+`chunking_checkpoint.json`, `chunking_report.json`, or `chunking_state.json`
+sidecars. Strict direct loads raise `IncompatibleChunkingDocumentError`.
 During project open, Project Lifecycle handles a content-caused incompatibility
 by resetting Chunking and downstream derived artifacts, retrying validation
 once, and marking the open result for a post-activation operator message. This
@@ -139,11 +147,6 @@ one-based paragraph, including when processed separators produce no chunk.
 Successful completion writes exactly one terminal document with
 `next_paragraph=null` and final warnings. AI-assisted window checkpoint cadence
 is unchanged.
-
-Cut candidates are ordered by semantic meaning: heading, scene separator,
-other structural role (`list_item`, `verse`, `preformatted`, or `footnote`),
-sentence-complete body, then incomplete body. Target-size balance is a soft
-cost and cannot override that order.
 
 AI descriptor ranges must align to ordered Cleanup paragraph records. Resume
 restores the document's strategy, instructions, committed chunks, checkpoint,
@@ -207,10 +210,10 @@ Primary automated coverage:
 - `tests/test_text_chunking_ui_controller.py`
 - `tests/test_text_chunking_page.py`
 
-These cover strict Cleanup gating, role propagation, semantic priority,
-oversized-sentence fallback, deterministic artifacts/chapter behavior, AI
-descriptor validation/resume/fallback contracts, scene-separator recognition
-and omission, state edits/invalidation, controller dispatch, and page behavior.
+These cover strict Cleanup gating, role propagation, canonical-only
+persistence, deterministic artifacts/chapter behavior, AI descriptor
+validation/resume/fallback contracts, scene-separator recognition and omission,
+state edits/invalidation, controller dispatch, and page behavior.
 Minimum validation after a change: run the focused modules above with
 `uv run pytest`, plus `uv run ruff check` on changed files.
 

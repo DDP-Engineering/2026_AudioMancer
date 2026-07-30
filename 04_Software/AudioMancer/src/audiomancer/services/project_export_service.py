@@ -14,7 +14,7 @@
          audiobook assets without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -1296,26 +1296,6 @@ def _metadata_from_state(state: dict[str, object]) -> dict[str, object]:
     """
     metadata = state.get("metadata")
     return dict(metadata) if isinstance(metadata, dict) else {}
-
-
-def _removed_line_count(metadata: dict[str, object]) -> int:
-    """
-    @brief      Sum cleanup removed-line counters from metadata.
-    @param[in]  metadata Cleanup metadata payload.
-    @return     Total removed-line count.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    return sum(
-        int(metadata.get(key, 0) or 0)
-        for key in (
-            "removed_header_footer_line_count",
-            "removed_page_number_line_count",
-            "removed_separator_line_count",
-        )
-    )
 
 
 def _sorted_by_sequence(items: list[dict[str, object]]) -> list[dict[str, object]]:
