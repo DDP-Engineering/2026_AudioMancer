@@ -11,9 +11,6 @@
 @brief Checks for paragraph offsets embedded in cleanup.json.
 @details Verifies the sole metadata document omits duplicate paragraph text
          while its offsets reconstruct the canonical Cleanup output.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.3.0
 """
 
 from audiomancer import config

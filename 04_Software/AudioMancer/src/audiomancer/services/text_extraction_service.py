@@ -5,9 +5,6 @@
 @brief Structural source extraction orchestration for AudioMancer.
 @details Builds canonical extracted text, source ledgers, and strict extraction
          metadata while coordinating cancellation and downstream resets.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-30
-@version 0.1.0
 """
 
 from functools import partial

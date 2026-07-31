@@ -11,9 +11,6 @@
 @brief Pure source-ledger renderer for typed Cleanup decisions.
 @details Validates unit operations and every boundary, renders only source
          slices plus typed separators, and reports projection/fusion quality.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.2.0
 """
 
 from __future__ import annotations

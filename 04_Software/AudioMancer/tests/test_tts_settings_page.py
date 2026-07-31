@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer TTS settings page.
 @details Verifies the simplified runtime layout, connection-status labeling,
          discovered-model rendering, and runtime limit persistence.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-17
-@version 1.4.6
 """
 
 # IMPORTS
@@ -31,9 +28,6 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     @param[in]  default_settings_payload Shared default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.3.3
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -95,9 +89,6 @@ def test_tts_settings_page_round_trips_the_narration_block_target(qtbot, default
     @param[in]  default_settings_payload Shared default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -121,9 +112,6 @@ def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> Non
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -159,9 +147,6 @@ def test_tts_settings_page_keeps_runtime_limits_available_without_project(qtbot)
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -178,9 +163,6 @@ def test_tts_settings_page_uses_compact_runtime_limit_controls(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.2.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -223,9 +205,6 @@ def test_tts_settings_page_numeric_increment_arrows_change_values(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.4.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -283,9 +262,6 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
     @brief      Provide the minimum qwen models test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return [
         {

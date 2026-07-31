@@ -12,9 +12,6 @@
 @details Verifies translated string lookup, application-wide text-scale changes,
          and settings-backed runtime preference resolution used by the
          settings-backed runtime UI behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-09
-@version 0.8.0
 """
 
 # IMPORTS
@@ -34,9 +31,6 @@ def _custom_theme(**overrides) -> dict[str, object]:
     @param[in]  overrides Theme field overrides.
     @return     Valid custom theme payload.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     theme_payload = {
         "schema_version": config.UI_THEME_SCHEMA_VERSION,
@@ -70,9 +64,6 @@ def _restore_application_state(application: QApplication, font: QFont, palette: 
     @param[in]  stylesheet Stylesheet to restore.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     application.setFont(font)
     application.setPalette(palette)
@@ -89,9 +80,6 @@ def test_translate_returns_expected_english_and_romanian_strings() -> None:
     @brief      Verify the UI string catalog resolves EN and RO labels.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     assert ui_state_service.translate("toolbar.settings", "en") == "Settings"
     assert ui_state_service.translate("toolbar.settings", "ro") == "Setari"
@@ -106,9 +94,6 @@ def test_operator_status_pane_height_scales_with_line_count(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.0
     """
     widget = QWidget()
     qtbot.addWidget(widget)
@@ -128,9 +113,6 @@ def test_selective_impact_strings_cover_supported_languages() -> None:
     @brief      Verify selective-impact labels and confirmations exist in EN and RO.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     required_keys = (
         "dialog.confirm_cleaned_text_edit_title",
@@ -168,9 +150,6 @@ def test_theme_settings_strings_cover_supported_languages() -> None:
     @brief      Verify theme-management labels and messages exist in EN and RO.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     required_keys = (
         "settings.theme_group",
@@ -244,9 +223,6 @@ def test_ai_settings_dialog_flow_strings_cover_supported_languages() -> None:
     @brief      Verify AI Settings dialog action labels exist in EN and RO.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     required_keys = (
         "ai_settings.cancel",
@@ -270,9 +246,6 @@ def test_tts_settings_dialog_flow_strings_cover_supported_languages() -> None:
     @brief      Verify TTS Settings dialog action labels exist in EN and RO.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     required_keys = (
         "tts_settings.cancel",
@@ -293,9 +266,6 @@ def test_apply_text_scale_updates_application_font(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     application = QApplication.instance()
     original_font = QFont(application.font())
@@ -322,9 +292,6 @@ def test_apply_theme_updates_application_font_family(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     application = QApplication.instance()
     original_font = QFont(application.font())
@@ -350,9 +317,6 @@ def test_apply_theme_updates_application_palette_roles(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     application = QApplication.instance()
     original_font = QFont(application.font())
@@ -380,9 +344,6 @@ def test_build_theme_stylesheet_applies_text_window_font() -> None:
     @brief      Verify text-window font settings are scoped to multi-line text editors.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.2.0
     """
     theme_payload = _custom_theme(
         font={"family": "Courier New", "point_size": 11.0, "scale": "normal"},
@@ -408,9 +369,6 @@ def test_build_theme_stylesheet_styles_toolbar_buttons_for_legibility() -> None:
                 on a dark themed toolbar. Covers REQ-UX-22740d0a-a29c-4937-977a-d3d43070dcc5 / SPEC-THEME-TOOLBAR.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     theme_payload = ui_theme_service.theme_by_id("audiomancer_dark", [])
     text_primary = theme_payload["colors"]["text_primary"]
@@ -430,9 +388,6 @@ def _qss_block(stylesheet: str, selector: str) -> str:
     @param[in]  selector Rule selector without the opening brace.
     @return     Text between the rule's braces.
     @exception  AssertionError Raised when the selector is not present.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     marker = f"{selector} {{"
     assert marker in stylesheet, f"missing rule: {selector}"
@@ -445,9 +400,6 @@ def test_theme_stylesheet_group_boxes_are_rounded_cards() -> None:
     @details    Covers REQ-UX-c3920985-0f4d-45a5-927a-bb0cb4adbce4 / SPEC-QSS-CARDS.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
     stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
@@ -463,9 +415,6 @@ def test_theme_stylesheet_controls_use_rounded_corners() -> None:
     @details    Covers REQ-UX-b37f9db2-2007-4dd7-8479-0f413be6f106 / SPEC-QSS-RADIUS.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
     stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
@@ -484,9 +433,6 @@ def test_theme_stylesheet_styles_scrollbars() -> None:
     @details    Covers REQ-UX-5f397ed7-59b5-4acf-8981-9fab7eb3ca10 / SPEC-QSS-SCROLLBAR.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
     stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
@@ -503,9 +449,6 @@ def test_theme_stylesheet_makes_popups_legible() -> None:
     @details    Covers REQ-UX-e9f779cf-7032-4a23-b8ca-2f305f71c7b9 / SPEC-QSS-POPUP.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
     panel = theme["colors"]["panel_background"]
@@ -526,9 +469,6 @@ def test_theme_stylesheet_progress_bar_uses_accent() -> None:
     @details    Covers REQ-UX-56d1df5c-36f3-4e55-b3b1-d075ec3a80bc / SPEC-QSS-PROGRESS.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
     stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
@@ -543,9 +483,6 @@ def test_theme_stylesheet_marks_active_sidebar_item_with_accent() -> None:
     @details    Covers REQ-UX-03b36e7b-8b07-412f-a861-9af51161b1a9 / SPEC-NAV-ACCENT.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
     stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
@@ -560,9 +497,6 @@ def test_apply_ui_settings_falls_back_to_default_theme_for_missing_theme_id(qtbo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     application = QApplication.instance()
     main_window = QWidget()
@@ -596,9 +530,6 @@ def test_font_size_step_resolution() -> None:
     @details    Covers REQ-UX-b5b21ac7-95f0-43bc-823e-6b8f769de448 / SPEC-FONT-RESOLVE.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert ui_state_service.font_size_step_factor("extra_small") == 0.80
     assert ui_state_service.font_size_step_factor("normal") == 1.00
@@ -618,9 +549,6 @@ def test_apply_ui_settings_scales_ui_and_text_fonts_independently(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     application = QApplication.instance()
     window = QWidget()
@@ -652,9 +580,6 @@ def test_completion_beep_enabled_from_settings_resolves_persisted_flag() -> None
                 REQ-FUNC-337ba16d-5990-4f3c-be79-18964d53036f / S-BEEP-RESOLVE.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert ui_state_service.completion_beep_enabled_from_settings({"play_completion_beep": True}) is True
     assert ui_state_service.completion_beep_enabled_from_settings({"play_completion_beep": False}) is False

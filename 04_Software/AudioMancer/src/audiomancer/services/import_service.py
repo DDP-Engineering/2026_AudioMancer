@@ -11,9 +11,6 @@
 @brief Functional source registration helpers for AudioMancer.
 @details Validates one supported source file, copies it into the project
          workspace, and returns normalized source metadata for `project.json`.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.2
 """
 
 # IMPORTS
@@ -51,9 +48,6 @@ def import_source(
     @return     Normalized source-document payload for manifest persistence.
     @exception  FileNotFoundError Raised when the source file is missing.
     @exception  ValueError Raised when the file type is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     resolved_source = Path(source_path)
     if not resolved_source.is_file():
@@ -100,9 +94,6 @@ def _delete_previous_source_file(
     @param[in]  selected_source Newly selected source path.
     @return     None.
     @exception  ValueError Raised when the previous path resolves outside the project.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
     """
     if not isinstance(previous_source_document, dict):
         return
@@ -126,9 +117,6 @@ def _build_unique_destination(destination_dir: Path, file_name: str) -> Path:
     @param[in]  file_name Original file name selected by the operator.
     @return     Unique destination path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     candidate = destination_dir / file_name
     if not candidate.exists():

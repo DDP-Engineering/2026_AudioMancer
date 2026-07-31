@@ -12,9 +12,6 @@
 @details Verifies the one-file persistence contract, exact source references,
          report/operation-state projections, resume from the document
          checkpoint, non-object handling, root validation, and reset cleanup.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-24
-@version 0.1.0
 """
 
 # IMPORTS
@@ -91,9 +88,6 @@ def test_document_round_trips_and_writes_only_one_artifact(tmp_path: Path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -113,9 +107,6 @@ def test_persisted_document_excludes_source_chunk_text(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -134,9 +125,6 @@ def test_load_report_projection_matches_recomputed_counts(tmp_path: Path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -164,9 +152,6 @@ def test_load_operation_state_projection_omits_source_chunks_and_exposes_checkpo
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -200,9 +185,6 @@ def test_resume_reads_segment_cursor_from_document_checkpoint(tmp_path: Path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -233,9 +215,6 @@ def test_non_object_document_is_treated_as_absent(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -255,9 +234,6 @@ def test_reset_removes_document(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -274,9 +250,6 @@ def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()

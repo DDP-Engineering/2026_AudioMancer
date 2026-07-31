@@ -13,9 +13,6 @@
          artifacts, warning fallback behavior, dialogue-quote stripping,
          approval/edit state, selected-chunk re-splitting, resumable
          chunk-based generation, and narrator-only segmentation.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.13.12
 """
 
 # IMPORTS
@@ -45,9 +42,6 @@ def test_resolve_source_chunks_uses_original_when_no_translation(tmp_path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.4.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksOriginal")
     manifest["original_language"] = "en"
@@ -68,9 +62,6 @@ def test_resolve_source_chunks_falls_back_to_original_when_translation_partially
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.3.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslationApproval")
     manifest["original_language"] = "en"
@@ -98,9 +89,6 @@ def test_resolve_source_chunks_uses_translated_when_fully_approved(tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslated")
     manifest["original_language"] = "en"
@@ -129,9 +117,6 @@ def test_resolve_source_chunks_uses_translated_regardless_of_selected_voice_lang
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslatedOverridesVoice")
     manifest["original_language"] = "en"
@@ -161,9 +146,6 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksArtifacts")
     manifest["original_language"] = "en"
@@ -269,9 +251,6 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSceneAmbience")
     _write_source_chunks(
@@ -341,9 +320,6 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake LLM response payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         captured_requests.append((str(system_prompt), str(user_prompt)))
         return responses.pop(0)
@@ -400,9 +376,6 @@ def test_scene_ambience_none_placement_disables_generation() -> None:
     @brief      Verify the TTS Settings `none` placement disables Scene Ambience generation.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-22
-    @version    0.1.0
     """
     settings = speech_blocks_service._resolve_scene_ambience_settings(  # noqa: SLF001
         {"scene_ambience_placement": "none"}
@@ -417,9 +390,6 @@ def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
     @brief      Verify composed Scene Ambience prompts become separate sound-source blocks.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-21
-    @version    0.1.0
     """
     speech_blocks = speech_blocks_service._normalize_scene_ambience_response(
         {
@@ -463,9 +433,6 @@ def test_start_generation_appends_and_persists_operator_speech_block_rules(monke
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksExtraPrompt")
     manifest["original_language"] = "en"
@@ -484,9 +451,6 @@ def test_start_generation_appends_and_persists_operator_speech_block_rules(monke
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake Speech Blocks response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-13
-        @version    0.1.0
         """
         requested_prompts.append(str(user_prompt))
         chunk_text = 'Narration. "Hello there."' if len(requested_prompts) == 1 else 'Maria smiled. "Welcome."'
@@ -537,9 +501,6 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksBudgetSplit")
     manifest["original_language"] = "en"
@@ -554,9 +515,6 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
         @brief      Provide the fake render prompt test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         if "chunk_text" not in variables:
             return "system prompt"
@@ -570,9 +528,6 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
         @brief      Provide the fake chat json test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
         requested_segments.append(segment_text)
@@ -614,9 +569,6 @@ def test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksDirectOutputCap")
     manifest["original_language"] = "en"
@@ -639,9 +591,6 @@ def test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap
         @brief      Provide a direct-block model response for one requested segment.
         @return     Fake direct Speech Blocks response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-07
-        @version    0.1.0
         """
         segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
         requested_segments.append(segment_text)
@@ -677,9 +626,6 @@ def test_start_generation_direct_malformed_json_falls_back_for_segment_only(monk
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksDirectMalformedSegment")
     manifest["original_language"] = "en"
@@ -709,9 +655,6 @@ def test_start_generation_direct_malformed_json_falls_back_for_segment_only(monk
         @brief      Fail the first segment and return a direct block for the second.
         @return     Fake direct Speech Blocks response.
         @exception  ValueError Raised for the first segment.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-07
-        @version    0.1.0
         """
         calls.append(str(user_prompt))
         if len(calls) == 1:
@@ -751,9 +694,6 @@ def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksDirectSegmentResume")
     manifest["original_language"] = "en"
@@ -852,9 +792,6 @@ def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypat
         @brief      Return a direct block for the requested resumed segment.
         @return     Fake direct Speech Blocks response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-07
-        @version    0.1.0
         """
         segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
         requested_segments.append(segment_text)
@@ -890,9 +827,6 @@ def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTinyBudget")
     manifest["original_language"] = "en"
@@ -916,9 +850,6 @@ def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) 
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     monkeypatch.setattr(
         speech_blocks_service.prompt_template_service,
@@ -951,9 +882,6 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksBudgetResume")
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
@@ -1003,9 +931,6 @@ def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-22
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksAmbienceResume")
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
@@ -1057,9 +982,6 @@ def test_speech_blocks_resume_ignores_source_chunk_count_without_processed_count
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNoSourceChunkFallback")
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
@@ -1082,9 +1004,6 @@ def test_speech_blocks_resume_restarts_previous_full_cast_state(tmp_path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksPreviousResume")
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
@@ -1137,9 +1056,6 @@ def test_same_narrator_resume_depends_on_the_recorded_response_contract(
     @param[in]  expected_next_chunk_index Chunk index generation must continue from.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSameNarratorResume")
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
@@ -1179,9 +1095,6 @@ def test_incompatible_response_contract_regenerates_without_error(tmp_path) -> N
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksIncompatibleContract")
     manifest["original_language"] = "en"
@@ -1209,9 +1122,6 @@ def test_insert_speech_block_appends_after_selected_block(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksInsert")
     _seed_review_speech_blocks(project_root)
@@ -1239,9 +1149,6 @@ def test_insert_speech_block_into_empty_chunk_creates_unapproved_narration(tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksInsertEmpty")
     _seed_review_speech_blocks(project_root)
@@ -1264,9 +1171,6 @@ def test_insert_speech_block_initializes_manual_state_without_generation(tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksManualInsert")
 
@@ -1310,9 +1214,6 @@ def test_insert_speech_block_after_first_manual_block_appends_next_block(tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksManualAppend")
 
@@ -1336,9 +1237,6 @@ def test_delete_speech_block_renumbers_remaining_chunk_blocks(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksDelete")
     _seed_review_speech_blocks(project_root)
@@ -1357,9 +1255,6 @@ def test_delete_unknown_speech_block_raises(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksDeleteUnknown")
     _seed_review_speech_blocks(project_root)
@@ -1374,9 +1269,6 @@ def test_indication_content_kind_normalizes_and_pause_duration_parses(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksIndication")
     _seed_review_speech_blocks(project_root)
@@ -1404,9 +1296,6 @@ def test_same_narrator_edit_forces_narration_but_preserves_operations(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSameNarratorEdit")
     manifest["voice_assignment_mode"] = "same_narrator"
@@ -1453,9 +1342,6 @@ def test_null_like_started_at_creates_timestamped_speech_blocks_log(tmp_path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksNullTimestamp")
 
@@ -1473,9 +1359,6 @@ def test_review_update_replaces_null_like_started_at(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksReviewNullTimestamp")
     _seed_review_speech_blocks(project_root)
@@ -1499,9 +1382,6 @@ def test_approve_all_and_edit_preserve_warning_cleared_state(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksApprovalEdit")
     _seed_review_speech_blocks(project_root)
@@ -1538,9 +1418,6 @@ def test_approve_selected_speech_block_only_marks_target_block(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksSelectedApproval")
     _seed_review_speech_blocks(project_root)
@@ -1565,9 +1442,6 @@ def test_unapprove_selected_speech_block_only_clears_target_block(tmp_path) -> N
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksSelectedUnapproval")
     _seed_review_speech_blocks(project_root)
@@ -1591,9 +1465,6 @@ def test_update_character_speech_block_display_name_preserves_approval(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksCharacterDisplayName")
     _seed_review_speech_blocks(project_root)
@@ -1627,9 +1498,6 @@ def test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksResplit")
     manifest["original_language"] = "en"
@@ -1691,9 +1559,6 @@ def test_normalize_chunk_blocks_preserves_ai_dialogue_and_attribution_boundaries
     @brief      Verify AI source spans drive dialogue and attribution boundaries.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     speaker_catalog = {
         "narrator": {
@@ -1808,9 +1673,6 @@ def test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias() -> None:
     @brief      Verify a unique model speaker suffix such as `drenthe` resolves to the catalog id.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": {
@@ -1854,9 +1716,6 @@ def test_normalize_chunk_blocks_reconstructs_text_from_source_span_ids() -> None
     @details    Covers SBCON-001, SBCON-003, and REQ-FUNC-040.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": _narrator_catalog_entry(),
@@ -1980,9 +1839,6 @@ def test_normalize_chunk_blocks_rejects_invalid_span_or_speaker_selection(
     @param[in]  expected_warning_flag Warning flag expected on deterministic fallback.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": _narrator_catalog_entry(),
@@ -2031,9 +1887,6 @@ def test_normalize_chunk_blocks_supports_french_guillemets() -> None:
     @brief      Verify French guillemet dialogue keeps exact source text and clean audio text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
 
@@ -2084,9 +1937,6 @@ def test_normalize_chunk_blocks_supports_dash_dialogue() -> None:
     @brief      Verify dash-led dialogue removes only the leading dash from audio text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
 
@@ -2124,9 +1974,6 @@ def test_normalize_chunk_blocks_flags_direct_source_gaps_and_unmatched_text() ->
     @brief      Verify direct normalization preserves source gaps and rejects unmatched model text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
 
@@ -2166,9 +2013,6 @@ def test_normalize_block_text_only_strips_wrapping_dialogue_quotes() -> None:
     @brief      Verify dialogue quote stripping removes only one outer quote pair for dialogue spans.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     assert (
         speech_blocks_service._normalize_block_text('"Hello there."', "dialogue")  # noqa: SLF001
@@ -2203,9 +2047,6 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksResume")
     manifest["original_language"] = "en"
@@ -2286,9 +2127,6 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
         @brief      Provide the fake chat json test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         calls.append(dict(profile))
         return {
@@ -2339,9 +2177,6 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksPartialReviewResume")
     manifest["original_language"] = "en"
@@ -2429,9 +2264,6 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake Speech Blocks model response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-08
-        @version    0.1.0
         """
         requested_prompts.append(str(user_prompt))
         return {
@@ -2481,9 +2313,6 @@ def test_start_generation_preserves_french_dash_and_guillemet_source_spans(monke
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksFrenchGeneration")
     manifest["original_language"] = "en"
@@ -2591,9 +2420,6 @@ def test_start_generation_splits_same_narrator_without_calling_a_model(monkeypat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorOnly")
     manifest["original_language"] = "en"
@@ -2609,9 +2435,6 @@ def test_start_generation_splits_same_narrator_without_calling_a_model(monkeypat
         @brief      Fail the test if same-narrator generation contacts a model.
         @return     None.
         @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-26
-        @version    0.1.0
         """
         raise AssertionError("same-narrator generation must not call the model")
 
@@ -2633,9 +2456,6 @@ def test_start_generation_allows_same_narrator_without_an_ai_profile(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorNoProfile")
     manifest["original_language"] = "en"
@@ -2658,9 +2478,6 @@ def test_same_narrator_blocks_inherit_uncertain_cleanup_boundaries(tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksWeakBoundary")
     manifest["original_language"] = "en"
@@ -2691,9 +2508,6 @@ def test_same_narrator_blocks_reproduce_every_source_chunk(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorCoverage")
     manifest["original_language"] = "en"
@@ -2744,9 +2558,6 @@ def test_speech_blocks_production_prompt_contract_matrix(
     @param[in]  expected_snippets Rendered prompt snippets expected for this prompt pair.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
     if include_character:
@@ -2815,9 +2626,6 @@ def test_speech_blocks_prompt_uses_direct_blocks_and_forbids_text_rewrites() -> 
     @details    Covers SB-DIRECT-001 and REQ-FUNC-052.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": _narrator_catalog_entry(),
@@ -2865,9 +2673,6 @@ def test_normalize_chunk_blocks_rejects_dialogue_attribution_unit_merge() -> Non
     @details    Covers SB-ATOMIC-003 and REQ-FUNC-052.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": _narrator_catalog_entry(),
@@ -2913,9 +2718,6 @@ def test_normalize_chunk_blocks_accepts_narration_with_non_spoken_quoted_words()
     @details    Covers SB-ATOMIC-006 and REQ-FUNC-051.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-05
-    @version    0.1.0
     """
     source_text = (
         'Not "our" Emperor, Scytale noted. "Your" Emperor. Irulan is too much the Bene Gesserit to miss that slip.'
@@ -2965,9 +2767,6 @@ def test_speech_blocks_direct_prompt_does_not_expose_atomic_separator_units() ->
     @details    Covers SB-DIRECT-001 and REQ-FUNC-054.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": _narrator_catalog_entry(),
@@ -3008,9 +2807,6 @@ def test_normalize_chunk_blocks_ignores_separator_coverage_and_rejects_separator
     @details    Covers SB-ATOMIC-005 and REQ-FUNC-054.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": _narrator_catalog_entry(),
@@ -3090,9 +2886,6 @@ def test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints() ->
     @details    Covers SB-DIRECT-001 and REQ-FUNC-053.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     speaker_catalog = {
         "narrator": _narrator_catalog_entry(),
@@ -3137,9 +2930,6 @@ def test_speaker_catalog_preserves_character_aliases_for_prompt() -> None:
     @details    Covers SB456-SPEC-002 and REQ-FUNC-048.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     catalog = speech_blocks_service._speaker_catalog(  # noqa: SLF001
         [
@@ -3164,9 +2954,6 @@ def test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context() 
     @details    Covers SB456-SPEC-003 and REQ-FUNC-049.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.2.0
     """
     translation_prompt = (config.APP_PROMPTS_PATH / "text_translation_system.txt").read_text(encoding="utf-8")
     chunking_prompt = (config.APP_PROMPTS_PATH / "text_chunking_system.txt").read_text(encoding="utf-8")
@@ -3183,9 +2970,6 @@ def test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets()
     @details    Covers SB456-SPEC-004 and REQ-PLAT-004.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     local_model_doc = (_REPO_ROOT / "05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md").read_text(
         encoding="utf-8"
@@ -3214,9 +2998,6 @@ def test_normalize_chunk_blocks_narrator_only_preserves_delimiters() -> None:
     @brief      Verify narrator-only normalization preserves dialogue delimiters.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
     """
     source_chunk = {"chunk_id": "chunk-0001", "text": "- Bonjour. Â« Venez. Â»"}
     blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
@@ -3253,9 +3034,6 @@ def test_budgeted_source_chunk_segments_attach_source_spans() -> None:
     @details    Covers SBSPAN-001, SBSPAN-003, and REQ-FUNC-042.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     source_text = 'Narration before. "Deal," the pilot said.\n\n- Vii acasa? intreba Ion.'
 
@@ -3281,9 +3059,6 @@ def test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries() -> None
     @brief      Verify over-budget AI output is split on sentence boundaries before payload persistence.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     source_text = "One two. Three four. Five six."
     blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
@@ -3317,9 +3092,6 @@ def test_normalize_chunk_blocks_hard_splits_over_budget_without_boundaries() -> 
     @brief      Verify hard fallback splits oversized text and marks the resulting blocks for review.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     source_text = "one two three four five"
     blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
@@ -3350,9 +3122,6 @@ def test_normalize_chunk_blocks_narrator_only_preserves_operation_blocks() -> No
     @brief      Verify narrator-only normalization does not coerce operation blocks into narrator rows.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "pause 2500 ms"},
@@ -3385,9 +3154,6 @@ def test_direct_blocks_align_mixed_narration_dialogue_to_source_text() -> None:
     @brief      Verify direct LLM blocks preserve aligned source text for mixed narration and dialogue.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     source_text = 'Despite the plan, Paul whispered, "Stay ready." The room stilled.'
 
@@ -3441,9 +3207,6 @@ def test_direct_blocks_unknown_speaker_defaults_to_review_narrator() -> None:
     @brief      Verify unknown direct-block speakers become narrator review blocks.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": '"Who speaks?"'},
@@ -3474,9 +3237,6 @@ def test_direct_blocks_preserve_source_gaps_and_reject_unmatched_text() -> None:
     @brief      Verify direct normalization preserves missed source text and drops invented model text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "First. Second. Third."},
@@ -3523,9 +3283,6 @@ def test_direct_blocks_ignore_whitespace_model_blocks_and_preserve_source_gaps()
     @brief      Verify whitespace model blocks are ignored while missed source text remains reviewable.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "A.\n\nB."},
@@ -3561,9 +3318,6 @@ def test_direct_blocks_split_long_blocks_to_tts_budget() -> None:
     @brief      Verify long direct LLM blocks are split after attribution to fit the TTS budget.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     source_text = "One two. Three four. Five six."
 
@@ -3598,9 +3352,6 @@ def _create_chunked_project(tmp_path, name: str):
     @param[in]  name Project display name.
     @return     Tuple containing project root and loaded manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -3656,9 +3407,6 @@ def _write_source_chunks(project_root, source_chunks: list[dict[str, object]]) -
     @param[in]  source_chunks Source chunk payload list.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     chunk_payload = []
     for chunk in source_chunks:
@@ -3688,9 +3436,6 @@ def _seed_review_speech_blocks(project_root) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     speech_blocks_payload = [
         {
@@ -3770,9 +3515,6 @@ def _write_translation_artifacts(
     @param[in]  target_language Translation target language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     strict_chunks = [
         {
@@ -3813,9 +3555,6 @@ def _prepare_single_chunk_generation_project(monkeypatch, tmp_path, name: str, s
     @param[in]  source_text Optional custom one-chunk source text.
     @return     Tuple containing project root and loaded manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, name)
     manifest["original_language"] = "en"
@@ -3845,9 +3584,6 @@ def _valid_single_chunk_span_response() -> dict[str, object]:
     @brief      Build one valid source-span selection response for the default one-chunk fixture.
     @return     Fake Speech Blocks model response.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     return {
         "payload": {
@@ -3877,9 +3613,6 @@ def _narrator_catalog_entry() -> dict[str, object]:
     @brief      Build the minimal narrator speaker-catalog entry used by direct normalization tests.
     @return     Narrator speaker catalog entry.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return {
         "speaker_id": "narrator",
@@ -3893,9 +3626,6 @@ def _direct_speaker_catalog() -> dict[str, dict[str, object]]:
     @brief      Build a minimal narrator-and-character speaker catalog for direct Speech Blocks tests.
     @return     Speaker catalog payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     return {
         "narrator": _narrator_catalog_entry(),
@@ -3913,9 +3643,6 @@ def _profile_payload() -> dict[str, object]:
     @brief      Build one enabled Speech Blocks AI profile payload.
     @return     AI profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     return {
         "id": "profile-1",

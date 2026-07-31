@@ -12,9 +12,6 @@
 @details Centralizes common threaded operation startup, cancellation flags,
          manifest refresh from persisted operation state, and enabled AI profile
          resolution used by workflow page controllers.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.2.0
 """
 
 # IMPORTS
@@ -55,9 +52,6 @@ def start_operation(
     @param[in]  cancel_handler Callable invoked after worker cancellation.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     operation_runner_controller.start_threaded_operation(
         window,
@@ -86,9 +80,6 @@ def sync_manifest_operation_from_disk(
     @param[in]  current_stage Optional manifest stage override.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -120,9 +111,6 @@ def resolve_enabled_ai_profile(
     @param[in]  profile_id Requested profile identifier.
     @return     Resolved enabled profile payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict) or profile_id in (None, ""):
         return None

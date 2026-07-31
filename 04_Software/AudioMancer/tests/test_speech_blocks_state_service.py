@@ -11,9 +11,6 @@
 @brief Focused Speech Blocks state-service tests for AudioMancer.
 @details Verifies Speech Blocks profile selection, persisted output loading,
          and operator note rendering for resumable and warning-bearing state.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.5.2
 """
 
 # IMPORTS
@@ -38,9 +35,6 @@ def test_build_speech_blocks_profile_state_prefers_default_enabled_profile() -> 
     @brief      Verify Speech Blocks profile state prefers the configured default enabled profile.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     profile_state = speech_blocks_state_service.build_speech_blocks_profile_state(
         {
@@ -62,9 +56,6 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksState")
     character_voices_service.save_selected_voice_language(project_root, "en")
@@ -180,9 +171,6 @@ def test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generati
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSceneAmbienceState")
     character_voices_service.save_selected_voice_language(project_root, "en")
@@ -273,9 +261,6 @@ def test_build_speech_blocks_notes_show_resume_and_warning_entries() -> None:
     @brief      Verify Speech Blocks notes surface warning entries and resumable failed state.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     notes = speech_blocks_state_service.build_speech_blocks_notes(
         manifest={"source_document": {"original_name": "story.txt"}},
@@ -318,9 +303,6 @@ def test_build_speech_blocks_state_does_not_resolve_missing_chunks(monkeypatch, 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SpeechBlocksNoChunks", tmp_path)
     manifest["source_document"] = {
@@ -337,9 +319,6 @@ def test_build_speech_blocks_state_does_not_resolve_missing_chunks(monkeypatch, 
         @brief      Provide the fail resolve test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         raise AssertionError("resolve_source_chunks should not be called before chunking output exists")
 
@@ -364,9 +343,6 @@ def test_build_speech_blocks_state_does_not_resolve_unapproved_translation(monke
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksUnapprovedTranslation")
     character_voices_service.save_selected_voice_language(project_root, "ro")
@@ -399,9 +375,6 @@ def test_build_speech_blocks_state_does_not_resolve_unapproved_translation(monke
         @brief      Provide the fail resolve test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         raise AssertionError("resolve_source_chunks should not be called before translated chunks are approved")
 
@@ -426,9 +399,6 @@ def test_build_speech_blocks_state_filters_speaker_catalog_for_same_narrator(mon
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSameNarratorSpeakers")
     manifest["voice_assignment_mode"] = "same_narrator"
@@ -463,9 +433,6 @@ def test_merge_audio_preview_state_uses_persisted_playability_without_file_check
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
 
     def fail_is_file(_path) -> bool:
@@ -474,9 +441,6 @@ def test_merge_audio_preview_state_uses_persisted_playability_without_file_check
         @param[in]  _path Ignored filesystem path.
         @return     No return; always raises.
         @exception  AssertionError Always raised when called.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         raise AssertionError("Path.is_file should not be called for persisted audio preview flags")
 
@@ -515,9 +479,6 @@ def _create_chunked_project(tmp_path, name: str):
     @param[in]  name Project display name.
     @return     Tuple containing project root and loaded manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {

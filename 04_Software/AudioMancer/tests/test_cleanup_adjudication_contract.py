@@ -11,9 +11,6 @@
 @brief Red-first checks for bounded model-agnostic Cleanup adjudication.
 @details Verifies context tiers, selective verification, retry isolation,
          recursive splitting, and deterministic fallback.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.1.0
 """
 
 from __future__ import annotations

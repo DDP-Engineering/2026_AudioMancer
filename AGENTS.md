@@ -203,6 +203,16 @@ integration materially change. Follow the component template and update the
 component index. Component documents complement requirements, design, and
 checks; they replace none of them.
 
+## Python Docstring Attribution and Versioning
+
+Python docstrings may retain applicable `@brief`, `@details`, `@param`,
+`@return`, and `@exception` tags, but must not contain `@author`, `@date`, or
+`@version` tags. The file-top copyright/license comment block is the sole
+in-file attribution. Versioning is project-level only, through
+`04_Software/AudioMancer/pyproject.toml`,
+`04_Software/AudioMancer/src/audiomancer/**init**.py`, and the existing root
+`CHANGELOG.md`.
+
 ## Stop Format
 
 ```text

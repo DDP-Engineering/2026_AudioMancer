@@ -12,9 +12,6 @@
 @details Verifies success, failure, cancellation, progress delivery, completion
          beeps, and active operation cleanup without showing real modal progress
          dialogs or producing audible output.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.3.0
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ class _FakeProgressDialog:
     """
     @brief      Minimal progress-dialog double used by runner tests.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
 
     def __init__(self, message: str) -> None:
@@ -44,9 +38,6 @@ class _FakeProgressDialog:
         @param[in]  message Initial progress status message.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         self._message = message
 
@@ -55,9 +46,6 @@ class _FakeProgressDialog:
         @brief      Return the current status message.
         @return     Current status message.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         return self._message
 
@@ -67,9 +55,6 @@ class _FakeProgressDialog:
         @param[in]  message New progress status message.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         self._message = message
 
@@ -82,9 +67,6 @@ def test_threaded_operation_success_reports_progress_and_cleans_up(monkeypatch, 
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     window = _build_runner_window(qtbot, tmp_path)
     events = _patch_progress_dialog(monkeypatch)
@@ -98,9 +80,6 @@ def test_threaded_operation_success_reports_progress_and_cleans_up(monkeypatch, 
         @param[in]  bridge Operation UI bridge instance.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
         """
         deleted_bridges.append(bridge)
 
@@ -111,9 +90,6 @@ def test_threaded_operation_success_reports_progress_and_cleans_up(monkeypatch, 
         @brief      Provide the worker test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() != window.thread()
         assert project_root == tmp_path
@@ -152,9 +128,6 @@ def test_threaded_operation_failure_calls_failure_handler_and_cleans_up(monkeypa
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     window = _build_runner_window(qtbot, tmp_path)
     events = _patch_progress_dialog(monkeypatch)
@@ -165,9 +138,6 @@ def test_threaded_operation_failure_calls_failure_handler_and_cleans_up(monkeypa
         @brief      Provide the worker test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() != window.thread()
         _ = project_root
@@ -203,9 +173,6 @@ def test_threaded_operation_cancel_sets_event_and_calls_cancel_handler(monkeypat
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     window = _build_runner_window(qtbot, tmp_path)
     events = _patch_progress_dialog(monkeypatch)
@@ -217,9 +184,6 @@ def test_threaded_operation_cancel_sets_event_and_calls_cancel_handler(monkeypat
         @brief      Provide the worker test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() != window.thread()
         _ = project_root
@@ -262,9 +226,6 @@ def test_threaded_operation_does_not_start_when_operation_is_active(monkeypatch,
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     window = _build_runner_window(qtbot, tmp_path)
     _patch_progress_dialog(monkeypatch)
@@ -296,9 +257,6 @@ def test_threaded_operation_success_and_failure_play_completion_beep_when_enable
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = _build_runner_window(qtbot, tmp_path)
     window._settings_payload = {"play_completion_beep": True}  # noqa: SLF001
@@ -321,9 +279,6 @@ def test_threaded_operation_stays_silent_when_completion_beep_is_disabled(monkey
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = _build_runner_window(qtbot, tmp_path)
     window._settings_payload = {"play_completion_beep": False}  # noqa: SLF001
@@ -345,9 +300,6 @@ def test_threaded_operation_cancel_does_not_play_completion_beep(monkeypatch, qt
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = _build_runner_window(qtbot, tmp_path)
     window._settings_payload = {"play_completion_beep": True}  # noqa: SLF001
@@ -360,9 +312,6 @@ def test_threaded_operation_cancel_does_not_play_completion_beep(monkeypatch, qt
         @brief      Provide the cancellable worker test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         _ = project_root
         _ = manifest
@@ -397,9 +346,6 @@ def _succeeding_worker(project_root, manifest, progress_callback=None, cancel_re
     @brief      Provide a worker test helper that completes successfully.
     @return     Minimal worker result payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _ = (project_root, manifest, progress_callback, cancel_requested)
     return {"ok": True}
@@ -410,9 +356,6 @@ def _failing_worker(project_root, manifest, progress_callback=None, cancel_reque
     @brief      Provide a worker test helper that raises a runtime failure.
     @return     None.
     @exception  RuntimeError Always raised to exercise the failure path.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _ = (project_root, manifest, progress_callback, cancel_requested)
     raise RuntimeError("boom")
@@ -426,9 +369,6 @@ def _run_worker_to_completion(qtbot, window: QWidget, worker) -> None:
     @param[in]  worker Callable executed on the worker thread.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     operation_runner_controller.start_threaded_operation(
         window,
@@ -453,9 +393,6 @@ def _record_beeps(monkeypatch) -> list[bool]:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     Recorded audible completion beeps.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     beeps: list[bool] = []
     monkeypatch.setattr(
@@ -473,9 +410,6 @@ def _build_runner_window(qtbot, project_root) -> QWidget:
     @param[in]  project_root Active project root path.
     @return     Window-like QWidget test double.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     window = QWidget()
     qtbot.addWidget(window)
@@ -498,9 +432,6 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     Recorded progress-dialog events.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     events: list[tuple] = []
     misc_ui_controller = operation_runner_controller.misc_ui_controller
@@ -510,9 +441,6 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
         @brief      Provide the create progress dialog test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() == window.thread()
         _ = operation_name
@@ -526,9 +454,6 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
         @brief      Provide the update progress dialog test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() == window.thread()
         _ = token_usage
@@ -541,9 +466,6 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
         @brief      Provide the finish progress dialog test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() == window.thread()
         _ = window
@@ -554,9 +476,6 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
         @brief      Provide the fail progress dialog test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() == window.thread()
         _ = window
@@ -567,9 +486,6 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
         @brief      Provide the clear progress dialog test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert QThread.currentThread() == window.thread()
         window._operation_progress_dialog = None  # noqa: SLF001
@@ -589,9 +505,6 @@ def _assert_runner_state_cleared(window: QWidget) -> None:
     @param[in]  window Window-like QWidget test double.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     assert window._active_operation_kind is None  # noqa: SLF001
     assert window._active_operation_name is None  # noqa: SLF001
@@ -611,9 +524,6 @@ def _append_on_ui_thread(window: QWidget, target: list, value: object) -> None:
     @param[in]  value Value to append.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     assert QThread.currentThread() == window.thread()
     target.append(value)

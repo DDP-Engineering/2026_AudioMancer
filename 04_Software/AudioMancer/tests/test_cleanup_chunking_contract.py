@@ -11,9 +11,6 @@
 @brief Red-first checks for consuming completed typed Cleanup metadata.
 @details Verifies hash/status gating, role propagation, scene-separator
          filtering, and resumable deterministic materialization.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.3.0
 """
 
 from __future__ import annotations

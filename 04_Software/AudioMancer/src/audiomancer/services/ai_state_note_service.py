@@ -12,9 +12,6 @@
 @details Provides reusable operator-facing note rendering for AI token usage
          persisted in reports, operation-state metadata, or compact top-level
          operation state.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.2.0
 """
 
 # IMPORTS
@@ -36,9 +33,6 @@ def build_token_usage_notes(
     @param[in]  language Runtime UI language code.
     @return     Ordered token-usage notes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     metadata = {}
     state_token_usage = None

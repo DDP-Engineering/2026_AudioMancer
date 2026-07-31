@@ -11,9 +11,6 @@
 @brief Narator Voice page tests for AudioMancer.
 @details Verifies the simplified Narator Voice page layout, edit-mode behavior,
          sample-dependent button enablement, and bottom status rendering.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-18
-@version 3.6.7
 """
 
 # IMPORTS
@@ -31,9 +28,6 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    1.5.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -66,9 +60,6 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.5.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -130,9 +121,6 @@ def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_chang
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.2.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -181,9 +169,6 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.2
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -230,9 +215,6 @@ def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) ->
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-        @version    1.2.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -266,9 +248,6 @@ def test_narator_voice_page_renders_ai_profile_selector_and_generation_button(qt
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)

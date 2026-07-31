@@ -12,9 +12,6 @@
 @details Consumes cleaned text, produces one ordered paragraph chunk per unit,
          and atomically checkpoints resumable lifecycle and chunk data in the
          strict authoritative `chunks_text.json` document.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.10.0
 """
 
 # IMPORTS
@@ -94,9 +91,6 @@ def chunk_text(
     @exception  ValueError Raised when no chunkable paragraphs remain.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @exception  IncompatibleChunkingDocumentError Raised for incompatible data; reset Chunking first.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     if not isinstance(manifest.get("source_document"), dict):
@@ -231,9 +225,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @param[in]  project_root Active project root folder.
     @return     Persisted chunking operation-state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.1
     """
     document = chunking_document_service.load_chunking_document(project_root)
     return None if document is None else chunking_document_service.derive_operation_state(document)
@@ -246,9 +237,6 @@ def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
     @param[in]  project_root Active project root folder.
     @return     Ordered chunk payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     return chunking_document_service.load_chunks(project_root)
 
@@ -279,9 +267,6 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
     @brief      Build the paragraph records.
     @param[in]  cleaned_text Text value for `cleaned_text`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
     """
     if project_root is not None:
         paragraph_records = cleanup_metadata_service.load_completed_paragraph_records(
@@ -313,9 +298,6 @@ def _build_chunk_payload(
     @param[in]  sequence_index Value for `sequence_index`.
     @param[in]  paragraph_record Value for `paragraph_record`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
     """
     return {
         "chunk_id": f"chunk-{sequence_index:04d}",
@@ -343,9 +325,6 @@ def _should_write_checkpoint(
     @param[in]  last_checkpoint_time Monotonic timestamp of the previous checkpoint.
     @return     True when checkpoint interval policy is met.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     return (
         progress_current - last_checkpoint_index >= _CHECKPOINT_PARAGRAPH_INTERVAL
@@ -367,9 +346,6 @@ def _should_emit_progress(
     @param[in]  last_progress_time Monotonic timestamp of the previous progress callback.
     @return     True when progress should be emitted.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.2.0
     """
     return (
         progress_current < progress_total
@@ -382,9 +358,6 @@ def _build_chunking_warnings(chapter_count: int) -> list[str]:
     @brief      Build the chunking warnings.
     @param[in]  chapter_count Value for `chapter_count`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     warnings: list[str] = []
     if chapter_count == 0:
@@ -400,9 +373,6 @@ def _chapter_count_state_from_chunks(chunks: list[ChunkPayload]) -> tuple[int, s
     @param[in]  chunks Current ordered chunk payload prefix.
     @return     Detected chapter count and last detected chapter label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     chapter_count = 0
     last_chapter_label: str | None = None
@@ -423,9 +393,6 @@ def _update_chapter_count(
     @param[in]  chunk Newly appended chunk payload.
     @return     Updated chapter count and last detected chapter label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     chapter_label = _chapter_label_from_text(str(chunk.get("text", "")))
     if chapter_label is not None and chapter_label != last_chapter_label:
@@ -438,9 +405,6 @@ def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
     @brief      Count distinct chapter or scene headings from chunk text.
     @param[in]  chunks Value for `chunks`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     chapter_labels: list[str] = []
     for chunk in chunks:
@@ -455,9 +419,6 @@ def _chapter_label_from_text(chunk_text: str) -> str | None:
     @brief      Return the first chapter or scene heading found in chunk text.
     @param[in]  chunk_text Chunk text to scan.
     @return     Detected chapter label or `None`.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     for line in chunk_text.splitlines():
         chapter_label = _detect_chapter_label(line)
@@ -471,9 +432,6 @@ def _detect_chapter_label(paragraph_text: str) -> str | None:
     @brief      Detect the chapter label.
     @param[in]  paragraph_text Text value for `paragraph_text`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     normalized = paragraph_text.strip()
     if len(normalized) > 100:

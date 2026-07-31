@@ -11,9 +11,6 @@
 @brief Project export projection service tests for AudioMancer.
 @details Verifies readiness detection and TXT/Markdown rendering for Home-page
          user-facing export artifacts.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.4.0
 """
 
 # IMPORTS
@@ -39,9 +36,6 @@ def test_project_export_service_detects_readiness_for_all_export_types(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -65,9 +59,6 @@ def test_project_export_service_reports_not_ready_and_missing_artifact(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
     manifest["operations"]["chunking"]["status"] = "not_started"
@@ -90,9 +81,6 @@ def test_project_export_service_preserves_utf8_and_source_header(tmp_path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -114,9 +102,6 @@ def test_project_export_service_renders_markdown_and_hides_internal_metadata(tmp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -157,9 +142,6 @@ def test_project_export_service_renders_character_dossier_labels(tmp_path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -183,9 +165,6 @@ def test_project_export_service_renders_markdown_character_dossiers_as_tables(tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -210,9 +189,6 @@ def test_project_export_markdown_character_dossiers_survive_separator_and_colon_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     project_root, manifest = _build_export_project(tmp_path)
     tricky_prompt = "Whispered: intimate.\n\n----\n\nTone: warm and resonant."
@@ -251,9 +227,6 @@ def test_project_export_service_exports_ai_request_parameters_without_prompts(tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -281,9 +254,6 @@ def test_project_export_service_creates_voice_and_audio_archives(tmp_path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -332,9 +302,6 @@ def test_project_export_archives_never_include_ai_transaction_logs(tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     project_root, manifest = _build_export_project(tmp_path)
     ai_log_name = (
@@ -369,9 +336,6 @@ def test_project_export_service_detects_paths_inside_project(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("PathProject", tmp_path)
 
@@ -388,9 +352,6 @@ def _build_export_project(tmp_path):
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     Tuple of project root and manifest.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("ExportProject", tmp_path)
     manifest["source_document"] = {
@@ -629,9 +590,6 @@ def _write_json(path, payload: object) -> None:
     @param[in]  payload JSON-serializable payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -642,9 +600,6 @@ def _write_ai_log(path) -> None:
     @param[in]  path Target log path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     payload = {
         "timestamp": "2026-04-25T10:10:00+00:00",

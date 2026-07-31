@@ -11,9 +11,6 @@
 @brief AI Translation workflow page for AudioMancer.
 @details Provides locked-language indicators, translation profile selection,
          chunk review, manual edits, approval controls, and progress display.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.7.0
 """
 
 # IMPORTS
@@ -41,9 +38,6 @@ class AiTranslationPage(QWidget):
     """
     @brief      Display the functional AI Translation workflow surface.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
     """
 
     start_translation_requested = Signal(str)
@@ -59,9 +53,6 @@ class AiTranslationPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.4.5
         """
         super().__init__(parent)
         self._project_active = False
@@ -197,9 +188,6 @@ class AiTranslationPage(QWidget):
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-06
-        @version    0.1.0
         """
         super().resizeEvent(event)
         self._apply_chunk_text_splitter_minimums()
@@ -210,9 +198,6 @@ class AiTranslationPage(QWidget):
         @param[in]  is_active True when a project is currently open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -224,9 +209,6 @@ class AiTranslationPage(QWidget):
         @param[in]  selected_profile_id Preferred selected profile id.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self._profile_combo.blockSignals(True)
         self._profile_combo.clear()
@@ -270,9 +252,6 @@ class AiTranslationPage(QWidget):
         @param[in]  total_count Total number of chunks.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.2.1
         """
         self._edit_timer.stop()
         self._pending_edit = None
@@ -324,9 +303,6 @@ class AiTranslationPage(QWidget):
         @param[in]  is_busy True while the page is busy.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -336,9 +312,6 @@ class AiTranslationPage(QWidget):
         @brief      Return the currently selected AI translation profile id.
         @return     Selected profile identifier or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         value = self._profile_combo.currentData()
         return None if value in (None, "") else str(value)
@@ -348,9 +321,6 @@ class AiTranslationPage(QWidget):
         @brief      Return the currently selected target language code.
         @return     Selected target language code.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         return self._target_language
 
@@ -359,9 +329,6 @@ class AiTranslationPage(QWidget):
         @brief      Return the identifier of the currently selected chunk.
         @return     Selected chunk id or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         return self._current_chunk_id
 
@@ -370,9 +337,6 @@ class AiTranslationPage(QWidget):
         @brief      Move the chunk selection one row forward when a next row exists.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         current_row = self._chunk_list.currentRow()
         if current_row < 0:
@@ -386,9 +350,6 @@ class AiTranslationPage(QWidget):
         @brief      Apply the current translation-page button and editor states.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.2.1
         """
         has_source_chunks = bool(self._source_chunks)
         has_started_translation = self._stage_status not in {
@@ -448,9 +409,6 @@ class AiTranslationPage(QWidget):
         @brief      Set original and translated chunk pane minimum widths to thirty percent of splitter width.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-06
-        @version    0.1.0
         """
         required_attributes = ("_chunk_text_splitter", "_source_group", "_translated_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -468,9 +426,6 @@ class AiTranslationPage(QWidget):
         @param[in]  row Currently selected list row.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self.flush_pending_translation_edit()
         if row < 0 or row >= len(self._display_chunks):
@@ -494,9 +449,6 @@ class AiTranslationPage(QWidget):
         @brief      Emit the start-or-continue translation request signal.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         profile_id = self.current_profile_id()
         if profile_id is not None:
@@ -507,9 +459,6 @@ class AiTranslationPage(QWidget):
         @brief      Emit the retranslation request for the currently selected chunk.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self.flush_pending_translation_edit()
         profile_id = self.current_profile_id()
@@ -522,9 +471,6 @@ class AiTranslationPage(QWidget):
         @brief      Emit the approve-selected signal for the active chunk.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self.flush_pending_translation_edit()
         chunk_id = self.selected_chunk_id()
@@ -536,9 +482,6 @@ class AiTranslationPage(QWidget):
         @brief      Persist and locally reflect edits to the translated text editor.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.2.0
         """
         if self._loading_translation_text:
             return
@@ -586,9 +529,6 @@ class AiTranslationPage(QWidget):
         @brief      Return the display-model payload for the selected chunk.
         @return     Selected display-chunk payload or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         if self._current_chunk_id is None:
             return None
@@ -602,9 +542,6 @@ class AiTranslationPage(QWidget):
         @param[in]  language Runtime UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.1.2
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>")
@@ -653,9 +590,6 @@ def _build_display_chunks(
     @param[in]  translated_chunks Persisted translated chunk payloads.
     @return     Display-model chunk payloads ordered by source chunk sequence.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     translated_by_id = {str(chunk.get("chunk_id", "")): dict(chunk) for chunk in translated_chunks}
     display_chunks: list[dict[str, object]] = []
@@ -686,9 +620,6 @@ def _format_chunk_list_item(chunk: dict[str, object], language: str) -> str:
     @param[in]  language Runtime UI language code.
     @return     Human-readable list item label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
     """
     if bool(chunk.get("approved", False)):
         status_label = ui_state_service.translate("ai_translation.status_approved", language)

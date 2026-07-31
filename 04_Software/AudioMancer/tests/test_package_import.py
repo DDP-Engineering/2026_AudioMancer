@@ -10,9 +10,6 @@
 @file test_package_import.py
 @brief Focused smoke tests for the AudioMancer package scaffold.
 @details Verifies that the package imports and keeps release version metadata aligned.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-14
-@version 1.2.0
 """
 
 # IMPORTS
@@ -41,9 +38,6 @@ def test_package_exposes_main_and_release_version_metadata() -> None:
     @brief      Verify every release surface exports one aligned release version.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    1.2.0
     """
     # REQ-REL-6347c5a6-71bf-4d9b-8197-cddae2ccfcd2; S-0001..S-0004.
     pyproject_payload = tomllib.loads((APP_ROOT / "pyproject.toml").read_text(encoding="utf-8"))

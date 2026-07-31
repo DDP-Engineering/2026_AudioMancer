@@ -11,9 +11,6 @@
 @brief Focused Qt tests for the AudioMancer text-chunking page.
 @details Verifies chunking-page button enablement, chunk list rendering, and
          selected chunk preview editing and search behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.4.5
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.1
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -80,9 +74,6 @@ def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -109,9 +100,6 @@ def test_text_chunking_page_keeps_full_chunk_list_preview_text(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -147,9 +135,6 @@ def test_text_chunking_page_enables_ai_button_when_profiles_exist(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -173,9 +158,6 @@ def test_text_chunking_page_enables_initial_manual_insert(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -203,9 +185,6 @@ def test_text_chunking_page_allows_selected_chunk_edit_and_save(monkeypatch, qtb
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     monkeypatch.setattr(
         "audiomancer.ui.pages.text_chunking_page.QMessageBox.question",
@@ -256,9 +235,6 @@ def test_text_chunking_page_cancelled_edit_confirmation_keeps_read_only(monkeypa
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     monkeypatch.setattr(
         "audiomancer.ui.pages.text_chunking_page.QMessageBox.question",
@@ -293,9 +269,6 @@ def test_text_chunking_page_emits_insert_and_delete_requests(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -335,9 +308,6 @@ def test_text_chunking_page_installs_preview_find_context_menus(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -353,9 +323,6 @@ def test_text_chunking_page_find_next_uses_last_preview_search(monkeypatch, qtbo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)

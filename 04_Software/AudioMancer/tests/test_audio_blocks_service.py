@@ -12,9 +12,6 @@
 @details Verifies direct-clone source preparation, ordered WAV generation,
          approval updates, single-block regeneration, and speaker-name
          normalization.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 1.9.8
 """
 
 # IMPORTS
@@ -44,9 +41,6 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.5.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceGenerate")
     wait_payloads = [
@@ -182,9 +176,6 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceSameNarrator")
     narrator_definition_service.save_tts_plan(
@@ -276,9 +267,6 @@ def test_audio_blocks_service_requires_selected_narrator_sample_metadata(tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCurrentNarratorMetadata")
     document = narrator_definition_service.load_narrator_voice_document(project_root)
@@ -301,9 +289,6 @@ def test_audio_blocks_service_clone_prompt_matching_uses_sample_language_for_rom
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceRomanianCloneReuse")
     character_voices_service.save_selected_voice_language(project_root, "ro")
@@ -349,9 +334,6 @@ def test_audio_blocks_service_clone_prompt_creation_uses_reference_sample_langua
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceRomanianCloneCreate")
     character_voices_service.save_selected_voice_language(project_root, "ro")
@@ -403,9 +385,6 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApprovedOnly")
     speech_blocks_payload = _read_speech_blocks_fixture_blocks(project_root)
@@ -490,9 +469,6 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceMetadataOnly")
     speech_blocks_payload = _read_speech_blocks_fixture_blocks(project_root)
@@ -610,9 +586,6 @@ def test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_ch
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.1
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksBlockFingerprint")
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
@@ -658,9 +631,6 @@ def test_audio_blocks_service_rejects_invalid_generated_wav_bytes() -> None:
     @brief      Verify downloaded generation payloads must be readable non-empty WAV files.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     with pytest.raises(RuntimeError, match="invalid WAV audio"):
         audio_blocks_service._validate_wav_bytes(b"not-a-wav")  # noqa: SLF001
@@ -676,9 +646,6 @@ def test_audio_blocks_generation_checkpoints_a_split_block_without_error(monkeyp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSplitCheckpointRun")
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
@@ -745,9 +712,6 @@ def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSplitCheckpoint")
     audio_block = audio_blocks_service._initialize_audio_blocks(  # noqa: SLF001
@@ -783,9 +747,6 @@ def test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint(tmp_
     @param[in]  path_kind Escaping path form under test.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksEscapingSplitCheckpoint")
     outside_path = tmp_path / "outside_part.wav"
@@ -817,9 +778,6 @@ def test_audio_blocks_service_deletes_only_project_relative_artifacts(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksEscapingDelete")
     outside_audio_path = tmp_path / "outside.wav"
@@ -849,9 +807,6 @@ def _escaping_artifact_path(path_kind: str, traversal_file_name: str, absolute_p
     @param[in]  absolute_path Absolute path used by the drive-qualified case.
     @return     Escaping path string.
     @exception  AssertionError Raised when the test path kind is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if path_kind == "parent_traversal":
         return f"../{traversal_file_name}"
@@ -868,9 +823,6 @@ def test_audio_blocks_service_reset_empty_generated_subfolders_are_not_persisted
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksResetEmptyFolders")
     parts_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "parts"
@@ -891,9 +843,6 @@ def test_audio_blocks_service_removes_audio_and_clone_profiles_for_voice_target(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksVoiceTargetInvalidation")
     _seed_generated_audio_blocks(project_root)
@@ -947,9 +896,6 @@ def test_audio_blocks_service_preserves_invalidated_voice_target_rows(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksVoiceTargetRowPreservation")
     _seed_generated_audio_blocks(project_root)
@@ -1021,9 +967,6 @@ def test_audio_blocks_service_regenerates_invalidated_voice_target_row_with_stal
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksInvalidatedVoiceTargetRegenerate")
     _seed_generated_audio_blocks(project_root)
@@ -1115,9 +1058,6 @@ def test_audio_blocks_service_detects_persisted_audio_for_exact_speech_block(tmp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksExactSpeechBlockDetection")
     _seed_generated_audio_blocks(project_root)
@@ -1133,9 +1073,6 @@ def test_audio_blocks_service_removes_audio_for_exact_speech_block_only(tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksExactSpeechBlockInvalidation")
     _seed_generated_audio_blocks(project_root)
@@ -1166,9 +1103,6 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.4.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApprove")
     _seed_generated_audio_blocks(project_root)
@@ -1256,9 +1190,6 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceResplitReconcile")
     _write_speech_blocks_fixture_document(
@@ -1346,9 +1277,6 @@ def test_audio_blocks_service_normalize_speaker_name_handles_diacritics() -> Non
     @brief      Verify speaker-name normalization strips punctuation and diacritics into stable ASCII tokens.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     assert audio_blocks_service.normalize_speaker_name(" Maria-Elena ÃˆËœtefan!? ") == "maria_elena_stefan"
 
@@ -1360,9 +1288,6 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceResume")
     wait_payloads = [
@@ -1487,9 +1412,6 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceContinueMissingOnly")
     _seed_generated_audio_blocks(project_root)
@@ -1596,9 +1518,6 @@ def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkey
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceFingerprint")
     _seed_generated_audio_blocks(project_root)
@@ -1676,9 +1595,6 @@ def test_audio_blocks_service_prefers_qwen_1_7b_base_model(monkeypatch, tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServicePreferredModel")
     observed_loaded_models: list[str] = []
@@ -1755,9 +1671,6 @@ def test_audio_blocks_service_approve_all_marks_only_generated_blocks(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApproveAll")
     _seed_generated_audio_blocks(project_root)
@@ -1781,9 +1694,6 @@ def test_audio_blocks_service_approve_all_promotes_stale_in_progress_state(tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.2.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApproveAllStaleState")
     _seed_generated_audio_blocks(project_root)
@@ -1808,9 +1718,6 @@ def test_audio_blocks_split_planner_prefers_sentences_then_word_groups() -> None
     @brief      Verify long Audio Blocks text is split on natural boundaries before word groups.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     sentence_plan = audio_blocks_service._plan_audio_block_splits(  # noqa: SLF001
         "One two. Three four. Five six.",
@@ -1833,9 +1740,6 @@ def test_audio_blocks_part_artifact_paths_are_keyed_by_speech_block_id(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     first_chunk_part = audio_blocks_service._audio_part_artifact_path(tmp_path, "0001-000001", 0)  # noqa: SLF001
     second_chunk_part = audio_blocks_service._audio_part_artifact_path(tmp_path, "0002-000001", 0)  # noqa: SLF001
@@ -1851,9 +1755,6 @@ def test_audio_blocks_model_budget_prefers_runtime_effective_parameters() -> Non
     @brief      Verify runtime effective `max_new_tokens` is preferred over model defaults.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     budget = audio_blocks_service._resolve_model_budget(  # noqa: SLF001
         {
@@ -1879,9 +1780,6 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSceneAmbience")
     speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
@@ -2003,9 +1901,6 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSceneAmbienceRegenerate")
     speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
@@ -2132,9 +2027,6 @@ def test_audio_blocks_service_reconciles_playability_for_missing_files(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksPlayabilityReconcile")
     _seed_generated_audio_blocks(project_root)
@@ -2155,9 +2047,6 @@ def _create_audio_blocks_project(tmp_path, name: str):
     @param[in]  name Project display name.
     @return     Tuple containing project root and loaded manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -2253,9 +2142,6 @@ def _seed_generated_audio_blocks(project_root) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
@@ -2350,9 +2236,6 @@ def _wav_bytes(label: str, frame_count: int = 240) -> bytes:
     @param[in]  frame_count Number of audio frames.
     @return     WAV payload bytes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     sample_value = len(str(label).encode("utf-8")) % 128
     buffer = io.BytesIO()
@@ -2369,9 +2252,6 @@ def _runtime_settings() -> dict[str, object]:
     @brief      Build minimal runtime settings with healthy clone-capable Qwen models.
     @return     Runtime settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     return {
         "base_url": "http://127.0.0.1:8059",

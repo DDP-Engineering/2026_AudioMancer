@@ -12,9 +12,6 @@
 @details Builds project-local Narator Voice page state from manifest summary fields,
          persisted narrator artifacts, narrator-generation AI profile settings,
          per-profile sample state, and the cached VoiceWeaver runtime discovery data.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 3.15.0
 """
 
 # IMPORTS
@@ -47,9 +44,6 @@ def build_narrator_profile_generation_profile_state(
     @param[in]  selected_profile_id Preferred profile identifier if available.
     @return     Selector entries, selected profile id, and source-text readiness flag.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None, "can_generate_profiles": False}
@@ -97,9 +91,6 @@ def build_narrator_definition_state(
     @param[in]  inspected_profile_id Optional currently inspected narrator-profile identifier.
     @return     Page-state payload consumed by the Narator Voice page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    2.4.0
     """
     preview_text_character_limit = _preview_text_character_limit(settings_payload)
     if project_root is None or manifest is None:
@@ -222,9 +213,6 @@ def _preview_text_character_limit(settings_payload: dict[str, object] | None) ->
     @param[in]  settings_payload Optional persisted application settings payload.
     @return     Positive preview text character limit.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.0
     """
     if not isinstance(settings_payload, dict):
         return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
@@ -260,9 +248,6 @@ def build_narrator_definition_notes(
     @param[in]  capability_matrix Current normalized runtime capability matrix.
     @return     Ordered Narator Voice page notes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.3.1
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("narator_voice.note_no_source", language)]
@@ -323,9 +308,6 @@ def build_status_lines(
     @param[in]  language Runtime UI language code.
     @return     Ordered status-window lines.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.3.0
     """
     sample_count = sum(1 for profile in profiles if bool(profile.get("has_sample", False)))
     selected_count = sum(1 for profile in profiles if bool(profile.get("is_selected", False)))
@@ -374,9 +356,6 @@ def _active_model_id_from_settings(settings_payload: dict[str, object] | None) -
     @param[in]  settings_payload Current application settings payload.
     @return     Active model identifier or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return ""
@@ -399,9 +378,6 @@ def _has_narrator_generation_source_text(project_root: Path | None) -> bool:
     @param[in]  project_root Optional active project root.
     @return     True when translation, chunking, metadata, or cleaned text can be analyzed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if project_root is None:
         return False
@@ -429,9 +405,6 @@ def voice_capability_matrix(discovered_models: list[dict[str, object]]) -> dict[
     @param[in]  discovered_models Current normalized discovered runtime models.
     @return     Capability matrix used by narrator state shaping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.0.0
     """
     return voiceweaver_runtime_service.build_capability_matrix(discovered_models)
 
@@ -455,9 +428,6 @@ def _build_profile_entry(
     @param[in]  selected_voice_language Current selected audiobook voice language.
     @param[in]  language Language code.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.3.0
     """
     generation_request = narrator_definition_service.profile_generation_request(
         {**dict(profile), "language": selected_voice_language},
@@ -502,9 +472,6 @@ def _resolve_current_profile(
     @param[in]  inspected_profile_id Identifier for `inspected_profile_id`.
     @param[in]  selected_profile_id Selected profile identifier.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     for preferred_profile_id in (inspected_profile_id, selected_profile_id):
         if preferred_profile_id:
@@ -520,9 +487,6 @@ def _profile_by_id(profiles: list[dict[str, object]], profile_id: str | None) ->
     @param[in]  profiles Value for `profiles`.
     @param[in]  profile_id Profile identifier.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     normalized_profile_id = str(profile_id or "").strip()
     if not normalized_profile_id:
@@ -539,9 +503,6 @@ def _voice_language_state(project_root: Path, manifest: dict[str, object]) -> tu
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @return     Selectable language codes and selected code.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.4.0
     """
     try:
         translation_document = ai_translation_service.load_translation_document(project_root)
@@ -573,9 +534,6 @@ def _resolved_original_language_code(project_root: Path, manifest: dict[str, obj
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @return     Source-language code when available, else an empty string.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     original_language = str(manifest.get("original_language", "") or "").strip()
     if original_language:

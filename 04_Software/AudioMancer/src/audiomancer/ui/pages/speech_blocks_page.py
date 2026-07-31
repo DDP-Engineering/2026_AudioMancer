@@ -12,9 +12,6 @@
 @details Provides chunk review, approval-aware speech-block editing, AI profile
          selection, whole-run generation controls, and selected-chunk re-split
          controls for the Speech Blocks workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.8.16
 """
 
 # IMPORTS
@@ -71,9 +68,6 @@ class SpeechBlocksPage(QWidget):
     @brief      Display the Speech Blocks workflow surface.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.6.2
     """
 
     generate_requested = Signal(str)
@@ -94,9 +88,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.7.10
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -312,9 +303,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.4
         """
         super().resizeEvent(event)
         self._apply_chunk_action_top_margin()
@@ -325,9 +313,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Align the chunk action column with the content area inside the Chunk List frame.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.2
         """
         if not hasattr(self, "_chunk_actions_column_layout"):
             return
@@ -339,9 +324,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  is_active True when a project is currently open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -353,9 +335,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  selected_profile_id Preferred selected profile id.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._profile_combo.blockSignals(True)
         self._profile_combo.clear()
@@ -411,9 +390,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  selected_text_character_limit Approximate selected speech text limit in characters.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.4.2
         """
         _ = selected_source_language
         _ = approved_block_count
@@ -469,9 +445,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  speech_block Updated Speech Block display payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_id = str(speech_block.get("speech_block_id", "")).strip()
         if not normalized_id:
@@ -500,9 +473,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  row Optional visible row override inside the selected chunk.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_id = str(speech_block.get("speech_block_id", "")).strip()
         if not normalized_id:
@@ -524,9 +494,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  speech_block_id Removed Speech Block identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_id = str(speech_block_id).strip()
         removed_chunk_id = ""
@@ -555,9 +522,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  chunk_id Source chunk identifier to refresh.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_chunk_id = str(chunk_id or "").strip()
         if not normalized_chunk_id:
@@ -584,9 +548,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  can_reset Optional reset enablement flag.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         self._status_edit.setPlainText("\n".join(notes))
         if can_approve_all is not None:
@@ -601,9 +562,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  is_busy True while the page is busy.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -614,9 +572,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  is_active True while selected-block audio playback is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         self._selected_audio_playback_active = bool(is_active)
         self._apply_control_state()
@@ -626,9 +581,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the currently selected Speech Blocks profile id.
         @return     Selected profile identifier or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         value = self._profile_combo.currentData()
         return None if value in (None, "") else str(value)
@@ -638,9 +590,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the identifier of the currently selected source chunk.
         @return     Selected chunk id or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         return self._current_chunk_id
 
@@ -649,9 +598,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the identifier of the currently selected speech block.
         @return     Selected speech-block id or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         return self._current_block_id
 
@@ -660,9 +606,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the selected-chunk text vertical scroll position.
         @return     Current vertical scrollbar value.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         return int(self._source_text_edit.verticalScrollBar().value())
 
@@ -671,9 +614,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the selected-chunk text cursor, selection, and scroll position.
         @return     Source text position payload suitable for later restoration.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.1.0
         """
         cursor = self._source_text_edit.textCursor()
         return {
@@ -688,9 +628,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the current Speech Blocks review selection and scroll positions.
         @return     Review-position payload suitable for later restoration.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         return {
             "chunk_id": self.selected_chunk_id(),
@@ -707,9 +644,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  speech_block_id Speech Block identifier being deleted.
         @return     Next visible Speech Block id, previous id when deleting the last row, or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-08
-        @version    0.1.0
         """
         normalized_id = str(speech_block_id).strip()
         blocks_for_chunk = self._blocks_for_current_chunk()
@@ -730,9 +664,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  scroll_position Vertical scrollbar value to restore.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.3.1
         """
         self._restore_source_scroll_position(scroll_position)
         QTimer.singleShot(0, lambda: self._restore_source_scroll_position(scroll_position))
@@ -747,9 +678,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  text_position Payload returned by `source_text_position`.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.1.2
         """
         self._source_text_restore_generation += 1
         restore_generation = self._source_text_restore_generation
@@ -766,9 +694,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  review_position Payload returned by `review_position`.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.1
         """
         block_id = str(review_position.get("block_id", "") or "").strip()
         chunk_id = str(review_position.get("chunk_id", "") or "").strip()
@@ -813,9 +738,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Move the visible Speech Block selection one row forward when possible.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         current_row = self._speech_block_list.currentRow()
         if current_row < 0:
@@ -830,9 +752,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  speech_block_id Speech Block identifier to select.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         normalized_id = str(speech_block_id).strip()
         selected_block = next(
@@ -853,9 +772,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Enable edit mode for the currently selected Speech Block.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         if self.selected_block_id() is None:
             return
@@ -869,9 +785,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  language Runtime UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.4.4
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('speech_blocks.title', language)}</h2>")
@@ -919,9 +832,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Refresh speaker and content-kind selector values.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.1
         """
         self._speaker_combo.blockSignals(True)
         self._speaker_combo.clear()
@@ -949,9 +859,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Apply the current Speech Blocks page button and widget states.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.6.2
         """
         selected_block = self._current_display_block()
         generated_all_chunks = (
@@ -1028,9 +935,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Keep the selected-chunk pane from being dragged too far left.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.1.2
         """
         required_attributes = ("_lower_splitter", "_source_group", "_blocks_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -1050,9 +954,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit the Speech Blocks generation request for the selected profile.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         profile_id = self.current_profile_id()
         if profile_id is not None:
@@ -1063,9 +964,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit selected Speech Block audio generation request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         block_id = self.selected_block_id()
         if block_id is not None:
@@ -1076,9 +974,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit selected Speech Block audio playback toggle request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         block_id = self.selected_block_id()
         if block_id is not None:
@@ -1089,9 +984,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit the selected-chunk re-split request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         chunk_id = self.selected_chunk_id()
         if chunk_id is not None:
@@ -1102,9 +994,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Show the editor matching the selected content kind.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-21
-        @version    0.1.0
         """
         is_scene_ambience = (
             str(self._content_kind_combo.currentData() or "") == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
@@ -1119,9 +1008,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit the selected-position Speech Block insertion request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         chunk_id = self.selected_chunk_id()
         if chunk_id is None:
@@ -1133,9 +1019,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit the selected Speech Block deletion request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         block_id = self.selected_block_id()
         if block_id is not None:
@@ -1147,9 +1030,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  row Selected chunk-list row.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
         """
         self._editing = False
         self._speech_block_list.clear()
@@ -1177,9 +1057,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  row Selected speech-block list row.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
         """
         self._editing = False
         blocks_for_chunk = self._blocks_for_current_chunk()
@@ -1205,9 +1082,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Clear the selected Speech Block detail controls.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
         """
         self._current_block_id = None
         self._speech_block_text_edit.clear()
@@ -1223,9 +1097,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Request selected-block editing through the controller.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.1
         """
         block_id = self.selected_block_id()
         if block_id is None:
@@ -1237,9 +1108,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit the selected-block save request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         block_id = self.selected_block_id()
         if block_id is None:
@@ -1275,9 +1143,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Emit the selected-block approval toggle request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
         """
         block_id = self.selected_block_id()
         if block_id is not None:
@@ -1288,9 +1153,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Refresh the selected Speech Block text character counter.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-05
-        @version    0.1.0
         """
         if str(self._content_kind_combo.currentData() or "") == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
             selected_length = len(self._ambient_prompt_edit.toPlainText())
@@ -1306,9 +1168,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return Speech Blocks belonging to the selected source chunk.
         @return     Ordered Speech Blocks for the selected chunk.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         if self._current_chunk_id is None:
             return []
@@ -1319,9 +1178,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the currently selected Speech Block payload.
         @return     Selected block or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         if self._current_block_id is None:
             return None
@@ -1339,9 +1195,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the selected-block approval toggle label key.
         @return     Translation key for the approval toggle button.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-05
-        @version    0.1.0
         """
         selected_block = self._current_display_block()
         if selected_block is not None and bool(selected_block.get("approved", False)):
@@ -1355,9 +1208,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  value Desired item data value.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         index = combo.findData(value)
         combo.setCurrentIndex(0 if index < 0 else index)
@@ -1368,9 +1218,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  speech_block_id Speech Block identifier to restore.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         if speech_block_id is None:
             return
@@ -1385,9 +1232,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  speech_block_id Speech Block identifier.
         @return     Zero-based visible row, or `-1` when not visible.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_id = str(speech_block_id).strip()
         for row, block in enumerate(self._blocks_for_current_chunk()):
@@ -1401,9 +1245,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  speech_block Speech Block payload.
         @return     Zero-based insertion row.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_id = str(speech_block.get("speech_block_id", "")).strip()
         for row, block in enumerate(self._blocks_for_current_chunk()):
@@ -1417,9 +1258,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  chunk_id Source chunk identifier to restore.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         normalized_id = str(chunk_id).strip()
         for index, chunk in enumerate(self._source_chunks):
@@ -1433,9 +1271,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  scroll_position Previous vertical scrollbar value.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.1
         """
         if not isValid(self) or not isValid(self._source_text_edit):
             return
@@ -1454,9 +1289,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  restore_generation Optional latest-restore generation guard.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.2.0
         """
         if (
             not self._is_current_source_text_restore_generation(restore_generation)
@@ -1490,9 +1322,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  restore_generation Optional latest-restore generation guard.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-01
-        @version    0.3.0
         """
         if (
             not self._is_current_source_text_restore_generation(restore_generation)
@@ -1524,9 +1353,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  restore_generation Latest-restore generation guard.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-01
-        @version    0.1.0
         """
         if not self._is_current_source_text_restore_generation(restore_generation) or not isValid(scroll_bar):
             return
@@ -1536,7 +1362,6 @@ class SpeechBlocksPage(QWidget):
             """
             @brief      Restore the guarded scrollbar value.
             @return     `True` when the target range is available.
-            @version    0.1.0
             """
             if not self._is_current_source_text_restore_generation(restore_generation) or not isValid(scroll_bar):
                 return True
@@ -1549,7 +1374,6 @@ class SpeechBlocksPage(QWidget):
             """
             @brief      Disconnect temporary scrollbar range/value guards.
             @return     None.
-            @version    0.1.0
             """
             if not isValid(scroll_bar):
                 return
@@ -1561,7 +1385,6 @@ class SpeechBlocksPage(QWidget):
             """
             @brief      Reapply the guarded scrollbar value after a Qt scrollbar update.
             @return     None.
-            @version    0.1.0
             """
             apply_restore()
 
@@ -1586,9 +1409,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  restore_generation Optional latest-restore generation guard.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-01
-        @version    0.2.0
         """
         saved_text_position = dict(text_position)
         for delay_ms in (
@@ -1610,9 +1430,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  restore_generation Optional restore generation token.
         @return     `True` when the restore may still update review state.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-01
-        @version    0.1.0
         """
         return restore_generation is None or restore_generation == self._source_text_restore_generation
 
@@ -1631,9 +1448,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  restore_generation Optional latest-restore generation guard.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.3.0
         """
         if (
             not self._is_current_source_text_restore_generation(restore_generation)
@@ -1655,9 +1469,6 @@ class SpeechBlocksPage(QWidget):
         @param[in]  scroll_position Requested scroll position.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         bounded_position = max(scroll_bar.minimum(), min(int(scroll_position), scroll_bar.maximum()))
         scroll_bar.setValue(bounded_position)
@@ -1667,9 +1478,6 @@ class SpeechBlocksPage(QWidget):
         @brief      Return the selected audio playback button label key.
         @return     Runtime UI translation key.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         return "audio_blocks.stop_playback" if self._selected_audio_playback_active else "audio_blocks.play_selected"
 
@@ -1680,9 +1488,6 @@ def _block_count_by_chunk(speech_blocks: list[dict[str, object]]) -> dict[str, i
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @return     Mapping from chunk id to block count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     counts: dict[str, int] = {}
     for block in speech_blocks:
@@ -1700,9 +1505,6 @@ def _format_chunk_list_item(source_chunk: dict[str, object], block_count_by_chun
     @param[in]  block_count_by_chunk Mapping from chunk id to block count.
     @return     Human-readable chunk row label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.1
     """
     chunk_id = str(source_chunk.get("chunk_id", ""))
     preview = " ".join(str(source_chunk.get("text", "")).split())
@@ -1716,9 +1518,6 @@ def _format_speech_block_list_item(speech_block: dict[str, object], language: st
     @param[in]  language Runtime UI language code.
     @return     Human-readable speech-block row label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
     """
     warning_marker = "!" if speech_block.get("warning_flags", []) else " "
     approval_marker = "ok" if bool(speech_block.get("approved", False)) else "--"
@@ -1749,9 +1548,6 @@ def _format_warning_label(speech_block: dict[str, object], language: str) -> str
     @param[in]  language Runtime UI language code.
     @return     Warning label text or empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     warning_flags = [str(flag) for flag in speech_block.get("warning_flags", [])]
     if not warning_flags:

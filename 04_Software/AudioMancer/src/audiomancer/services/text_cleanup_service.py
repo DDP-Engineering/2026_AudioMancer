@@ -12,9 +12,6 @@
 @details Owns deterministic analysis, optional bounded adjudication, atomic
          checkpoints, source-only rendering, publication, and manual edits
          through cleanup.json plus clean_text.txt.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-30
-@version 0.8.0
 """
 
 # IMPORTS
@@ -451,9 +448,6 @@ def save_user_cleaned_text(
     @return     Updated completed Cleanup document.
     @exception  ValueError Raised when the edited text is empty.
     @exception  CleanupDocumentError Raised when completed Cleanup is unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-30
-    @version    0.2.0
     """
     root = Path(project_root)
     edited_text = str(cleaned_text).replace("\r\n", "\n").replace("\r", "\n")
@@ -882,9 +876,6 @@ def _realign_whitespace_roles(
     @param[out] current_records Rebuilt runtime records receiving safe roles.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-30
-    @version    0.1.0
     """
     roles_by_text: dict[str, list[str]] = {}
     for record in previous_records:
@@ -1220,9 +1211,6 @@ def _ai_progress_percent(current: int, total: int) -> int:
     @param[in]  total Estimated total number of AI requests.
     @return     Bounded progress percentage between analysis and AI completion.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     bounded_total = max(1, int(total))
     bounded_current = max(0, min(int(current), bounded_total))

@@ -11,9 +11,6 @@
 @brief Focused monofile page-state tests for AI Translation.
 @details Verifies profile selection, derived review state, strict load errors,
          and read-only page-state construction.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-16
-@version 0.5.0
 """
 
 # IMPORTS
@@ -31,7 +28,6 @@ def test_build_ai_translation_profile_state_prefers_default_translation_profile(
     """
     @brief      Verify profile state prefers the enabled translation default.
     @return     None.
-    @version    0.1.0
     """
     profile_state = ai_translation_state_service.build_ai_translation_profile_state(
         {
@@ -52,7 +48,6 @@ def test_build_ai_translation_state_is_read_only(monkeypatch, tmp_path) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version    0.1.0
     """
     project_root, manifest = _create_project(tmp_path, "TranslationStateReadOnly")
     ai_translation_service.write_translation_document(
@@ -68,7 +63,6 @@ def test_build_ai_translation_state_is_read_only(monkeypatch, tmp_path) -> None:
         @param[in]  kwargs Keyword arguments forwarded to the test double.
         @return     None.
         @exception  AssertionError Raised when unexpected translation write.
-        @version    0.1.0
         """
         writes.append((args, kwargs))
         raise AssertionError("Unexpected translation write")
@@ -89,7 +83,6 @@ def test_build_ai_translation_state_derives_counts_and_status(tmp_path) -> None:
     @brief      Verify REQ-FUNC-005 counts and completed status are derived, not persisted.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version    0.1.0
     """
     project_root, manifest = _create_project(tmp_path, "TranslationStateDerived")
     document = _document(ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING)
@@ -118,7 +111,6 @@ def test_build_ai_translation_state_surfaces_incompatible_document(tmp_path) -> 
     @brief      Verify REQ-FUNC-005 incompatible persistence becomes a reset-required UI state.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version    0.1.0
     """
     project_root, manifest = _create_project(tmp_path, "TranslationStateInvalid")
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -140,7 +132,6 @@ def test_translation_summary_requires_canonical_chunk_id_alignment(tmp_path) -> 
     @brief      Verify REQ-FUNC-005 unknown document chunks cannot make canonical input complete.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationStateAlignment")
     document = _document(ai_translation_service.TRANSLATION_STATUS_COMPLETED)
@@ -168,7 +159,6 @@ def _create_project(tmp_path, name: str):
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  name Stable name associated with the requested object.
     @return     Created project root and manifest payload.
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {

@@ -11,9 +11,6 @@
 @brief Runtime mouse-wheel scroll-step helpers for AudioMancer.
 @details Installs one application-wide Qt event filter that applies the
          settings-backed mouse-wheel step count to common scroll panes.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-08
-@version 0.1.0
 """
 
 # IMPORTS
@@ -39,9 +36,6 @@ class ScrollStepEventFilter(QObject):
     """
     @brief      Apply a configured wheel-scroll step count to scroll-area viewports.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
 
     def __init__(self, scroll_steps_per_notch: int, parent: QObject | None = None) -> None:
@@ -51,9 +45,6 @@ class ScrollStepEventFilter(QObject):
         @param[in]  parent Optional Qt parent object.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-08
-        @version    0.1.0
         """
         super().__init__(parent)
         self._scroll_steps_per_notch = config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
@@ -66,9 +57,6 @@ class ScrollStepEventFilter(QObject):
         @param[in]  scroll_steps_per_notch Number of scrollbar single-steps per wheel notch.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-08
-        @version    0.1.0
         """
         if not isinstance(scroll_steps_per_notch, int):
             scroll_steps_per_notch = config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
@@ -84,9 +72,6 @@ class ScrollStepEventFilter(QObject):
         @param[in]  event Qt event payload.
         @return     True when the wheel event was handled.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-08
-        @version    0.1.0
         """
         if event.type() != QEvent.Type.Wheel or not isinstance(watched, QWidget):
             return super().eventFilter(watched, event)
@@ -120,9 +105,6 @@ def install_global_scroll_step_filter(
     @param[in]  scroll_steps_per_notch Number of scrollbar single-steps per wheel notch.
     @return     Installed event filter or `None` when no application exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     if application is None:
         return None
@@ -145,9 +127,6 @@ def _scroll_area_from_viewport(widget: QWidget) -> QAbstractScrollArea | None:
     @param[in]  widget Candidate event target widget.
     @return     Owning scroll area or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     parent_widget = widget.parentWidget()
     if isinstance(parent_widget, QAbstractScrollArea) and parent_widget.viewport() is widget:
@@ -163,9 +142,6 @@ def _scroll_by_notches(scroll_bar: QScrollBar, notch_count: int, scroll_steps_pe
     @param[in]  scroll_steps_per_notch Number of single-steps per wheel notch.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     step_size = max(1, int(scroll_bar.singleStep())) * max(
         config.MIN_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,

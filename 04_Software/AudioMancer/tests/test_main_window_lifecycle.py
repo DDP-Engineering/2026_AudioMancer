@@ -11,9 +11,6 @@
 @brief Qt window tests for the copied AudioMancer main-window shell.
 @details Validates that the DDP_Audiomancer-style toolbar, navigation sidebar,
          and stacked pages are created without workflow functionality.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-10
-@version 1.9.0
 """
 
 # IMPORTS
@@ -55,9 +52,6 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.4.6
     """
     window = MainWindow(
         settings_payload={
@@ -113,9 +107,6 @@ def test_main_window_navigation_is_a_left_vertical_sidebar(qtbot, default_settin
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.3.0
     """
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -138,9 +129,6 @@ def test_main_window_toolbar_shows_audiomancer_wordmark(qtbot, default_settings_
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -159,9 +147,6 @@ def test_main_window_wraps_workflow_pages_in_scroll_areas(qtbot, default_setting
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -185,9 +170,6 @@ def test_main_window_settings_dialogs_scroll(qtbot, default_settings_payload) ->
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -208,9 +190,6 @@ def test_main_window_show_message_does_not_create_status_bar(qtbot, default_sett
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
     """
     window = MainWindow(
         settings_payload={
@@ -238,9 +217,6 @@ def test_misc_prompt_multiline_text_uses_word_wrap(monkeypatch, qtbot, default_s
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.2.0
     """
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -251,9 +227,6 @@ def test_misc_prompt_multiline_text_uses_word_wrap(monkeypatch, qtbot, default_s
         @brief      Inspect the prompt text edit before accepting the dialog.
         @return     Accepted dialog code.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-12
-        @version    0.1.0
         """
         text_edit = dialog.findChild(QPlainTextEdit)
         assert text_edit is not None
@@ -283,9 +256,6 @@ def test_main_window_refreshes_only_current_workflow_page(
     @param[in]  default_settings_payload Default test settings payload fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     calls = {"audio_blocks": 0, "audio_assembly": 0}
 
@@ -294,9 +264,6 @@ def test_main_window_refreshes_only_current_workflow_page(
         @brief      Provide the audio blocks state test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         calls["audio_blocks"] += 1
         return {
@@ -325,9 +292,6 @@ def test_main_window_refreshes_only_current_workflow_page(
         @brief      Provide the audio assembly state test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         calls["audio_assembly"] += 1
         return {
@@ -375,9 +339,6 @@ def test_help_index_resolves_user_guide_source() -> None:
     @brief      Verify the source-tree offline help guide can be resolved.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     resolved_path = misc_ui_controller.resolve_help_index_path("en")
 
@@ -390,9 +351,6 @@ def test_help_index_resolves_romanian_user_guide_source() -> None:
     @brief      Verify the source-tree Romanian offline help guide can be resolved.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     resolved_path = misc_ui_controller.resolve_help_index_path("ro")
 
@@ -406,9 +364,6 @@ def test_help_index_falls_back_to_english_for_missing_language(monkeypatch) -> N
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     missing_path = config.APP_ROOT.parents[1] / "05_SoftwareDocu" / "MissingUserGuide" / "index.html"
     monkeypatch.setattr(
@@ -433,9 +388,6 @@ def test_help_action_opens_resolved_user_guide(qtbot, monkeypatch, default_setti
     @param[in]  default_settings_payload Default test settings payload fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     opened_paths: list[str] = []
     window = MainWindow(settings_payload=default_settings_payload)
@@ -446,9 +398,6 @@ def test_help_action_opens_resolved_user_guide(qtbot, monkeypatch, default_setti
         @brief      Record one requested help URL.
         @param[in]  url Qt URL requested by the Help action.
         @return     True to emulate successful system-browser opening.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         opened_paths.append(url.toLocalFile())
         return True
@@ -468,9 +417,6 @@ def test_help_action_opens_romanian_user_guide(qtbot, monkeypatch, default_setti
     @param[in]  default_settings_payload Default test settings payload fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     opened_paths: list[str] = []
     settings_payload = dict(default_settings_payload)
@@ -483,9 +429,6 @@ def test_help_action_opens_romanian_user_guide(qtbot, monkeypatch, default_setti
         @brief      Record one requested Romanian help URL.
         @param[in]  url Qt URL requested by the Help action.
         @return     True to emulate successful system-browser opening.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         opened_paths.append(url.toLocalFile())
         return True
@@ -503,9 +446,6 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.2
     """
     window = MainWindow(
         settings_payload={
@@ -543,9 +483,6 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.2
     """
     window = MainWindow(
         settings_payload={
@@ -580,9 +517,6 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     persisted_payload = dict(default_settings_payload)
     saved_payloads = []
@@ -592,9 +526,6 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
         @brief      Return the current fake persisted settings payload.
         @return     Copy of the fake persisted settings payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         return dict(persisted_payload)
 
@@ -604,9 +535,6 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
         @param[in]  payload Settings payload to persist.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         saved_payloads.append(dict(payload))
         persisted_payload.update(payload)
@@ -650,9 +578,6 @@ def test_main_window_applies_ai_settings_without_closing(monkeypatch, qtbot, def
     @param[in]  default_settings_payload Default test settings payload fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     persisted_payload = dict(default_settings_payload)
     saved_payloads = []
@@ -661,9 +586,6 @@ def test_main_window_applies_ai_settings_without_closing(monkeypatch, qtbot, def
         """
         @brief      Return the mutable test settings payload.
         @return     Copied persisted settings payload.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-15
-        @version    0.1.0
         """
         return dict(persisted_payload)
 
@@ -672,9 +594,6 @@ def test_main_window_applies_ai_settings_without_closing(monkeypatch, qtbot, def
         @brief      Capture and persist one test settings payload.
         @param[in]  payload Settings payload being saved.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-15
-        @version    0.1.0
         """
         saved_payloads.append(dict(payload))
         persisted_payload.update(payload)
@@ -708,9 +627,6 @@ def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, q
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
 
     monkeypatch.setattr(
@@ -749,9 +665,6 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.2
     """
     project_root, manifest = project_workspace_service.create_project("TtsSaveProject", tmp_path)
     persisted_payload = dict(default_settings_payload)
@@ -762,9 +675,6 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
         """
         @brief      Return the mutable test settings payload.
         @return     Copied persisted settings payload.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         return dict(persisted_payload)
 
@@ -773,9 +683,6 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
         @brief      Capture and persist one test settings payload.
         @param[in]  payload Settings payload being saved.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         saved_payloads.append(dict(payload))
         persisted_payload.update(payload)
@@ -845,9 +752,6 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, defa
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     persisted_payload = dict(default_settings_payload)
     persisted_payload["language"] = "ro"

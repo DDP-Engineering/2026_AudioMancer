@@ -11,9 +11,6 @@
 @brief Character Voices page tests for AudioMancer.
 @details Verifies preview-only Narator Voice behavior, explicit edit mode, and
          bottom status rendering for the Character Voices page.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.5.1
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.1
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -82,9 +76,6 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -135,9 +126,6 @@ def test_character_voices_page_import_button_emits_for_character_targets(qtbot) 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -190,9 +178,6 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-03
-    @version    0.3.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -253,9 +238,6 @@ def test_character_voices_page_batch_button_disables_when_character_targets_cann
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -307,9 +289,6 @@ def test_character_voices_page_editor_payload_includes_preview_text(qtbot) -> No
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -353,9 +332,6 @@ def test_character_voices_page_header_indicators_render_languages_and_assignment
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -399,9 +375,6 @@ def test_character_voices_page_matches_translation_notes_and_narrator_editor_siz
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)

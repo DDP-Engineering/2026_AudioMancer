@@ -12,9 +12,6 @@
 @details Verifies profile selector defaults and Characters page state shaping
          for completed discovery, manual-maintenance enablement, and missing AI
          profile behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-08
-@version 0.4.1
 """
 
 # IMPORTS
@@ -31,9 +28,6 @@ def test_profile_state_prefers_default_character_profile() -> None:
     @brief      Validate profile state prefers default character profile.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     profile_state = character_discovery_state_service.build_character_discovery_profile_state(
         {
@@ -57,9 +51,6 @@ def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> Non
     @brief      Validate build character state exposes manual maintenance flags.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryState")
 
@@ -93,9 +84,6 @@ def test_build_character_state_uses_resolved_discovery_source(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryStateNoDiscoveryEnrichment")
     state = character_discovery_state_service.build_character_discovery_state(
@@ -117,9 +105,6 @@ def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "CharacterDiscoveryNoProfile",
@@ -180,9 +165,6 @@ def _create_project(tmp_path, name: str):
     @param[in]  name Stable name associated with the requested object.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {

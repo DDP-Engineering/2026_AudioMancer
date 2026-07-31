@@ -11,9 +11,6 @@
 @brief Shared TTS generation-budget helpers for AudioMancer.
 @details Resolves a conservative text-splitting budget from cached VoiceWeaver
          model metadata, with configuration fallbacks before runtime generation.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-26
-@version 0.1.0
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def resolve_cached_tts_budget(discovered_models: list[dict[str, object]] | None)
     @param[in]  discovered_models Cached VoiceWeaver discovered-model payloads.
     @return     Budget metadata for prompt guidance and validation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     for model_payload in discovered_models or []:
         if not isinstance(model_payload, dict):
@@ -56,9 +50,6 @@ def resolve_block_target_audio_seconds(settings_payload: dict[str, object] | Non
     @param[in]  settings_payload Optional application settings payload.
     @return     Target duration in generated audio seconds, or zero to follow the model budget.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return float(config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS)
@@ -91,9 +82,6 @@ def apply_block_target_audio_seconds(
     @param[in]  settings_payload Optional application settings payload.
     @return     Budget payload narrowed to the effective block duration.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     target_seconds = resolve_block_target_audio_seconds(settings_payload)
     model_seconds = float(budget_payload.get("split_audio_seconds_budget", 0.0) or 0.0)
@@ -114,9 +102,6 @@ def estimated_safe_word_count(budget_payload: dict[str, object]) -> int:
     @param[in]  budget_payload Resolved TTS budget payload.
     @return     Safe word count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return max(1, int(float(budget_payload.get("split_audio_seconds_budget", 0.0)) * _words_per_audio_second()))
 
@@ -127,9 +112,6 @@ def estimated_word_count(text: str) -> int:
     @param[in]  text Candidate text span.
     @return     Word count estimate.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return len([word for word in str(text).split() if word.strip()])
 
@@ -145,9 +127,6 @@ def estimate_budget_units(text: str, script_name: str | None = None) -> int:
     @param[in]  script_name Optional pre-classified dominant writing script.
     @return     Conservative budget-unit count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     normalized_text = str(text).strip()
     if not normalized_text:
@@ -175,9 +154,6 @@ def _budget_payload(token_budget: int, budget_source: str) -> dict[str, object]:
     @param[in]  budget_source Stable source token.
     @return     Budget payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     audio_seconds_budget = int(token_budget) * _audio_seconds_per_token()
     split_audio_seconds_budget = audio_seconds_budget * _split_safety_factor()
@@ -198,9 +174,6 @@ def _parameter_range_default(value: object) -> dict[str, object]:
     @param[in]  value Candidate generation-parameter range mapping.
     @return     Default parameter mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     if not isinstance(value, dict):
         return {}
@@ -218,9 +191,6 @@ def _positive_int_from_mapping(value: object, field_name: str) -> int | None:
     @param[in]  field_name Field name to read.
     @return     Positive integer or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     if not isinstance(value, dict):
         return None
@@ -236,9 +206,6 @@ def _audio_seconds_per_token() -> float:
     @brief      Return configured audio seconds represented by one generation token.
     @return     Positive seconds-per-token estimate.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return float(config.DEFAULT_TTS_APPROX_AUDIO_SECONDS_PER_TOKEN)
 
@@ -248,9 +215,6 @@ def _split_safety_factor() -> float:
     @brief      Return configured TTS split safety factor.
     @return     Safety factor.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return float(config.DEFAULT_TTS_SPLIT_SAFETY_FACTOR)
 
@@ -260,9 +224,6 @@ def _words_per_audio_second() -> float:
     @brief      Return configured spoken words per generated audio second.
     @return     Words-per-second estimate.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return float(config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND)
 

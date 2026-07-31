@@ -11,9 +11,6 @@
 @brief Focused Qt tests for operator status font roles.
 @details Verifies read-only operator status text editors opt out of
          the book-manipulation text font and instead use the UI-control font.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-15
-@version 0.2.0
 """
 
 # IMPORTS
@@ -54,9 +51,6 @@ def test_operator_status_editors_use_ui_font_role(qtbot, page_factory, editor_na
     @param[in]  editor_name Private editor attribute under test.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.2.0
     """
     page = page_factory()
     qtbot.addWidget(page)

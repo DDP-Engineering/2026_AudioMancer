@@ -11,9 +11,6 @@
 @brief UI package for the AudioMancer application scaffold.
 @details Exposes the DDP_Audiomancer-style main window shell and supporting
          presentational UI widgets used by the initial desktop shell.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.2.1
 """
 
 # IMPORTS

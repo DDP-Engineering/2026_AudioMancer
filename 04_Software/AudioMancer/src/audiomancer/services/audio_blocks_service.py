@@ -14,9 +14,6 @@
          generates one WAV per speech block through the documented VoiceWeaver
          clone-from-prompt endpoint, and persists resumable approval-aware
          `80_audio_blocks` workflow artifacts.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.19.0
 """
 
 # IMPORTS
@@ -136,7 +133,6 @@ VoiceCloneProfilePayload = dict[str, object]
 class AudioBlocksDocumentError(ValueError):
     """
     @brief      Raised when the authoritative single Audio Blocks document is invalid.
-    @version    0.1.0
     """
 
 
@@ -146,9 +142,6 @@ def _validate_audio_blocks_document(payload: object) -> None:
     @param[in]  payload Candidate document payload.
     @return     None.
     @exception  AudioBlocksDocumentError Raised when the payload violates the contract.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     if not isinstance(payload, dict) or set(payload) != set(_DOCUMENT_FIELDS):
         raise AudioBlocksDocumentError("Audio Blocks data has an incompatible root contract.")
@@ -187,9 +180,6 @@ def load_audio_blocks_document(project_root: str | Path) -> AudioBlocksDocumentP
     @param[in]  project_root Active project root folder.
     @return     Document payload, or `None` when missing or incompatible.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     document_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME)
     try:
@@ -215,9 +205,6 @@ def write_audio_blocks_document(
     @param[in]  document Complete Audio Blocks document payload.
     @return     Absolute project-local document path.
     @exception  AudioBlocksDocumentError Raised when the document violates the contract.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     _validate_audio_blocks_document(document)
     write_operation_json_artifact(
@@ -236,9 +223,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @param[in]  project_root Active project root folder.
     @return     Projected operation-state payload or `None` when not started.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     document = load_audio_blocks_document(project_root)
     if document is None:
@@ -253,9 +237,6 @@ def load_audio_blocks_report(project_root: str | Path) -> AudioBlocksReportPaylo
     @param[in]  project_root Active project root folder.
     @return     Projected report payload or `None` when not started.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     document = load_audio_blocks_document(project_root)
     if document is None:
@@ -270,9 +251,6 @@ def load_audio_blocks(project_root: str | Path) -> list[AudioBlockPayload]:
     @param[in]  project_root Active project root folder.
     @return     Ordered Audio Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.5.0
     """
     document = load_audio_blocks_document(project_root)
     if document is None:
@@ -293,9 +271,6 @@ def reconcile_audio_playability(project_root: str | Path) -> bool:
     @param[in]  project_root Active project root folder.
     @return     True when the Audio Blocks artifact was updated.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     resolved_project_root = Path(project_root)
     audio_blocks = load_audio_blocks(resolved_project_root)
@@ -322,9 +297,6 @@ def is_generated(audio_block: dict[str, object]) -> bool:
     @param[in]  audio_block Audio Blocks payload.
     @return     True when the entry is flagged generated.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     return bool(audio_block.get("generated", False))
 
@@ -335,9 +307,6 @@ def audio_can_play(audio_block: dict[str, object]) -> bool:
     @param[in]  audio_block Audio Blocks payload.
     @return     True when the entry is marked playable without filesystem probing.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     return _persisted_audio_can_play(audio_block)
 
@@ -348,9 +317,6 @@ def is_approved(audio_block: dict[str, object]) -> bool:
     @param[in]  audio_block Audio Blocks payload.
     @return     True when the entry is flagged approved.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     return bool(audio_block.get("approved", False))
 
@@ -362,9 +328,6 @@ def load_voice_clone_profiles(project_root: str | Path) -> list[VoiceCloneProfil
     @param[in]  project_root Active project root folder.
     @return     Ordered direct-clone source profile payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.5.0
     """
     clone_path = resolve_operation_path(
         project_root,
@@ -384,9 +347,6 @@ def has_persisted_audio_blocks(project_root: str | Path) -> bool:
     @param[in]  project_root Active project root folder.
     @return     `True` when Audio Blocks artifacts or progress are present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.1
     """
     generated_root = _generated_audio_root(Path(project_root))
     operation_state = load_operation_state(project_root)
@@ -417,9 +377,6 @@ def has_persisted_audio_for_speech_block(project_root: str | Path, speech_block_
     @param[in]  speech_block_id Speech Block identifier to inspect.
     @return     `True` when the selected Speech Block has audio records or files.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     normalized_speech_block_id = str(speech_block_id).strip()
     if not normalized_speech_block_id:
@@ -456,9 +413,6 @@ def start_or_continue_generation(
     @return     Final Audio Blocks report payload.
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.6
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -757,9 +711,6 @@ def start_or_continue_generation(
             @param[in]  active_order_index Current speech-block generation order index.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-05-21
-            @version    0.1.0
             """
             _persist_split_checkpoint(
                 resolved_project_root,
@@ -859,9 +810,6 @@ def approve_audio_block(project_root: str | Path, speech_block_id: str) -> Audio
     @param[in]  speech_block_id Target speech-block identifier.
     @return     Updated Audio Blocks report payload.
     @exception  ValueError Raised when the block is missing or has no generated audio.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     audio_blocks = load_audio_blocks(resolved_project_root)
@@ -890,9 +838,6 @@ def unapprove_audio_block(project_root: str | Path, speech_block_id: str) -> Aud
     @param[in]  speech_block_id Target speech-block identifier.
     @return     Updated Audio Blocks report payload.
     @exception  ValueError Raised when the block is missing or has no generated audio.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     audio_blocks = load_audio_blocks(resolved_project_root)
@@ -920,9 +865,6 @@ def approve_all_audio_blocks(project_root: str | Path) -> AudioBlocksReportPaylo
     @param[in]  project_root Active project root folder.
     @return     Updated Audio Blocks report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     audio_blocks = load_audio_blocks(resolved_project_root)
@@ -943,9 +885,6 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
     @param[in]  changed_chunk_id Re-split source chunk identifier.
     @return     Updated Audio Blocks report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     speech_blocks = speech_blocks_service.sort_speech_blocks(
@@ -1003,9 +942,6 @@ def reset_audio_for_speech_chunk(project_root: str | Path, changed_chunk_id: str
     @param[in]  changed_chunk_id Changed source chunk identifier.
     @return     Updated Audio Blocks report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     return reconcile_after_speech_blocks_resplit(project_root, changed_chunk_id)
 
@@ -1021,9 +957,6 @@ def remove_audio_blocks_for_chunks(
     @param[in]  chunk_ids Source chunk identifiers whose audio must be reset.
     @return     Updated report, if Audio Blocks existed, plus artifact deletion summary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     normalized_chunk_ids = {str(chunk_id).strip() for chunk_id in chunk_ids if str(chunk_id).strip()}
     if not normalized_chunk_ids:
@@ -1061,9 +994,6 @@ def remove_audio_blocks_for_speech_blocks(
     @param[in]  preserve_invalidated_blocks True to keep affected rows with generated-audio fields cleared.
     @return     Updated report, if Audio Blocks existed, plus artifact deletion summary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.4.0
     """
     normalized_speech_block_ids = {
         str(speech_block_id).strip() for speech_block_id in speech_block_ids if str(speech_block_id).strip()
@@ -1137,9 +1067,6 @@ def regenerate_audio_block(
     @return     Updated Audio Blocks report payload.
     @exception  ValueError Raised when the block or its prerequisites are missing.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.4
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -1294,9 +1221,6 @@ def reset_audio_blocks(project_root: str | Path) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.1
     """
     operation_runtime_service.reset_operation_data(
         project_root,
@@ -1320,9 +1244,6 @@ def _resolve_generation_context(
     @param[in]  runtime_settings Runtime connection plus discovered-model settings.
     @return     Validated generation-context payload.
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.5.1
     """
     speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     if not speech_blocks:
@@ -1476,9 +1397,6 @@ def _build_input_fingerprint(
     @param[in]  model_budget Resolved clone-model generation budget.
     @return     Hex-encoded fingerprint string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.2
     """
     fingerprint_payload = {
         "original_language": manifest.get("original_language"),
@@ -1535,9 +1453,6 @@ def _restore_resume_state(
     @param[in]  existing_state Existing operation-state payload.
     @return     Existing blocks, clone profiles, next profile index, and next block index.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if not isinstance(existing_state, dict):
         return [], [], 0, 0
@@ -1564,9 +1479,6 @@ def _requires_manual_reset(existing_state: dict[str, object], input_fingerprint:
     @param[in]  input_fingerprint Current validated input fingerprint.
     @return     `True` when the persisted state cannot be resumed safely.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if not isinstance(existing_state, dict):
         return False
@@ -1587,9 +1499,6 @@ def _resolve_model_budget(
     @param[in]  clone_model_payload Discovered clone-model payload.
     @return     Budget payload including token and audio-seconds limits.
     @exception  ValueError Raised when no positive `max_new_tokens` budget can be resolved.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     budget_source_candidates = (
         ("runtime_effective", _status_effective_model_parameters(status_payload)),
@@ -1618,9 +1527,6 @@ def _status_effective_model_parameters(status_payload: dict[str, object]) -> dic
     @param[in]  status_payload Current normalized VoiceWeaver status payload.
     @return     Effective parameter mapping, or an empty mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     active_model = status_payload.get("active_model", {}) if isinstance(status_payload, dict) else {}
     containers = [status_payload, active_model] if isinstance(active_model, dict) else [status_payload]
@@ -1640,9 +1546,6 @@ def _parameter_range_default(value: object) -> dict[str, object]:
     @param[in]  value Candidate generation-parameter range mapping.
     @return     Default parameter mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if not isinstance(value, dict):
         return {}
@@ -1660,9 +1563,6 @@ def _positive_int_from_mapping(value: object, field_name: str) -> int | None:
     @param[in]  field_name Field name to resolve.
     @return     Positive integer value, or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if not isinstance(value, dict):
         return None
@@ -1679,9 +1579,6 @@ def _runtime_operation_is_busy(status_payload: dict[str, object]) -> bool:
     @param[in]  status_payload Current normalized VoiceWeaver status payload.
     @return     True when the runtime reports a non-terminal operation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     operation_payload = status_payload.get("operation", {}) if isinstance(status_payload, dict) else {}
     if not isinstance(operation_payload, dict):
@@ -1711,9 +1608,6 @@ def _ensure_clone_model_loaded(
     @return     Resolved model-budget payload.
     @exception  RuntimeError Raised when VoiceWeaver fails to load the requested model.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -1779,9 +1673,6 @@ def _ensure_sound_model_loaded(
     @return     None.
     @exception  RuntimeError Raised when VoiceWeaver fails to load the requested model.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     normalized_sound_model_id = str(sound_model_id).strip()
     if not normalized_sound_model_id:
@@ -1842,9 +1733,6 @@ def _prepare_clone_profile(
     @return     Tuple of updated persisted reusable clone-prompt list and one reuse flag.
     @exception  RuntimeError Raised when prompt creation fails or the selected sample metadata is invalid.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.5.0
     """
     normalized_target_id = str(voice_target.get("voice_target_id", "")).strip()
     matching_clone = next(
@@ -1935,9 +1823,6 @@ def _generate_audio_block(
     @return     Updated Audio Blocks payload.
     @exception  RuntimeError Raised when VoiceWeaver does not expose downloadable audio.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.6.0
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -2074,9 +1959,6 @@ def _generate_scene_ambience_audio_block(
     @return     Updated Audio Blocks payload.
     @exception  RuntimeError Raised when VoiceWeaver does not expose downloadable audio.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.1
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -2176,9 +2058,6 @@ def _plan_audio_block_splits(text: str, generation_context: dict[str, object]) -
     @param[in]  generation_context Validated generation-context payload with model budget fields.
     @return     Split plan containing ordered text parts and strategy name.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     normalized_text = _normalize_split_text(text)
     if not normalized_text:
@@ -2203,9 +2082,6 @@ def _pack_text_units(units: list[str], max_words: int) -> list[str]:
     @param[in]  max_words Maximum estimated words per generated part.
     @return     Packed text parts.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     parts: list[str] = []
     current_units: list[str] = []
@@ -2232,9 +2108,6 @@ def _split_by_word_groups(text: str, max_words: int) -> list[str]:
     @param[in]  max_words Maximum words per part.
     @return     Word-group split parts.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     words = text.split()
     return [" ".join(words[index : index + max_words]) for index in range(0, len(words), max_words)] or [""]
@@ -2246,9 +2119,6 @@ def _normalize_split_text(text: str) -> str:
     @param[in]  text Candidate speech-block text.
     @return     Text with collapsed whitespace.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     return re.sub(r"\s+", " ", str(text or "")).strip()
 
@@ -2259,9 +2129,6 @@ def _estimated_word_count(text: str) -> int:
     @param[in]  text Candidate speech text.
     @return     Estimated word count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     return len([word for word in str(text or "").split() if word])
 
@@ -2280,9 +2147,6 @@ def _existing_part_paths(
     @param[in]  force_restart True to ignore persisted part checkpoints.
     @return     Existing part paths in completed order.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.2
     """
     if force_restart or len(split_plan["parts"]) <= 1:
         return []
@@ -2308,9 +2172,6 @@ def _split_plan_fingerprint(split_plan: dict[str, object]) -> str:
     @param[in]  split_plan Split plan payload.
     @return     Hex-encoded split plan fingerprint.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.1
     """
     return hashlib.sha1(  # noqa: S324
         json.dumps(
@@ -2331,9 +2192,6 @@ def _delete_audio_block_artifacts(project_root: Path, audio_block: AudioBlockPay
     @param[in]  audio_block Current Audio Blocks entry.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
     if not speech_block_id:
@@ -2359,9 +2217,6 @@ def _audio_block_matches_invalidation(
     @param[in]  voice_target_ids Affected voice target identifiers.
     @return     True when the block matches either affected identity set.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     return (
         str(audio_block.get("speech_block_id", "")).strip() in speech_block_ids
@@ -2374,9 +2229,6 @@ def _cleared_audio_fields() -> dict[str, object]:
     @brief      Build cleared generated-audio fields for one invalidated Audio Block.
     @return     Cleared Audio Blocks field mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
     """
     return {
         "audio_can_play": False,
@@ -2400,9 +2252,6 @@ def _build_audio_block_fingerprint(
     @param[in]  generation_context Validated Audio Blocks generation context.
     @return     Hex-encoded fingerprint, or `None` when context is unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.1
     """
     if not isinstance(generation_context, dict):
         return None
@@ -2458,9 +2307,6 @@ def _special_block_status(content_kind: str) -> str | None:
     @param[in]  content_kind Speech Block content-kind token.
     @return     Implementation status token or `None` for normal speech blocks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     normalized_kind = str(content_kind).strip()
     if normalized_kind == speech_blocks_service.CONTENT_KIND_PAUSE:
@@ -2479,9 +2325,6 @@ def _metadata_only_summary(special_block_status: str | None) -> str:
     @param[in]  special_block_status Special-block implementation status.
     @return     Operator-readable metadata-only summary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     if special_block_status == _SPECIAL_BLOCK_STATUS_IMPLEMENTED:
         return "Metadata-only pause block; silence is added during Audio Assembly."
@@ -2500,9 +2343,6 @@ def _initialize_audio_blocks(
     @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Initial ordered Audio Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.9.0
     """
     audio_blocks: list[AudioBlockPayload] = []
     for speech_block in speech_blocks_service.sort_speech_blocks(speech_blocks):
@@ -2575,9 +2415,6 @@ def _merge_existing_audio_blocks(
     @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Merged ordered Audio Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.6.0
     """
     existing_by_id = {
         str(block.get("speech_block_id", "")).strip(): _normalize_persisted_audio_block(block)
@@ -2644,9 +2481,6 @@ def _apply_scene_ambience_audio_policy(
     @param[in]  generation_context Optional validated generation context.
     @return     Updated Audio Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.1
     """
     if not generation_context:
         return audio_blocks
@@ -2688,9 +2522,6 @@ def _audio_block_has_reusable_audio(audio_block: AudioBlockPayload, project_root
     @param[in]  project_root Optional active project root for WAV validation.
     @return     True when the entry is generated and its current audio artifact is reusable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.2.0
     """
     if not is_generated(audio_block):
         return False
@@ -2714,9 +2545,6 @@ def _apply_model_budget_to_block(
     @param[in]  generation_context Validated generation-context payload.
     @return     Updated Audio Blocks entry.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     return {
         **dict(audio_block),
@@ -2738,9 +2566,6 @@ def _persist_report_update(
     @param[in]  clone_profiles Optional updated direct-clone source profile list.
     @return     Updated projected report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     document = load_audio_blocks_document(project_root) or _empty_audio_blocks_document()
     checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else {}
@@ -2772,9 +2597,6 @@ def _operation_optional_string(value: object) -> str | None:
     @param[in]  value Candidate persisted value.
     @return     Normalized string or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.1.0
     """
     normalized_value = _optional_string(value)
     if normalized_value is None or operation_runtime_service.is_missing_runtime_value(normalized_value):
@@ -2806,9 +2628,6 @@ def _persist_split_checkpoint(
     @param[in]  next_generation_order_index Optional next generation-order index.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.4.0
     """
     checkpoint_blocks = list(audio_blocks)
     checkpoint_blocks[active_block_index] = _normalize_persisted_audio_block(dict(checkpoint_block))
@@ -2854,9 +2673,6 @@ def _persist_cancelled_state(
     @param[in]  next_split_part_index Next split-part index inside the current block.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     _persist_document(
         project_root,
@@ -2879,9 +2695,6 @@ def _empty_audio_blocks_document() -> AudioBlocksDocumentPayload:
     @brief      Build one empty not-started Audio Blocks document.
     @return     Empty document payload matching the root contract.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     return {
         "status": AUDIO_BLOCKS_STAGE_NOT_STARTED,
@@ -2922,9 +2735,6 @@ def _persist_document(
     @param[in]  total_block_count Optional known Speech Blocks count for projections.
     @return     Projected report payload for the persisted document.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     document: AudioBlocksDocumentPayload = {
         "status": str(status),
@@ -2972,9 +2782,6 @@ def _derived_stage_status(total_block_count: int, audio_blocks: list[AudioBlockP
     @param[in]  audio_blocks Current Audio Blocks payload list.
     @return     Derived Audio Blocks stage token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     generated_block_count = _generated_count(audio_blocks)
     approved_block_count = _approved_count(audio_blocks)
@@ -3001,9 +2808,6 @@ def _projection_counts(
     @param[in]  prompt_count Optional known clone-profile count.
     @return     Tuple of document blocks, total block count, and prompt count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     blocks = [dict(block) for block in document.get("blocks", []) if isinstance(block, dict)]
     resolved_total = (
@@ -3029,9 +2833,6 @@ def _project_audio_blocks_report(
     @param[in]  prompt_count Optional known clone-profile count.
     @return     Projected Audio Blocks report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     blocks, resolved_total, resolved_prompts = _projection_counts(
         project_root,
@@ -3071,9 +2872,6 @@ def _project_operation_state(
     @param[in]  prompt_count Optional known clone-profile count.
     @return     Projected Audio Blocks operation-state payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     blocks, resolved_total, resolved_prompts = _projection_counts(
         project_root,
@@ -3115,9 +2913,6 @@ def _checkpoint_int(checkpoint: object, field_name: str, fallback: int) -> int:
     @param[in]  fallback Fallback value used when the field is absent or invalid.
     @return     Non-negative integer checkpoint value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     if not isinstance(checkpoint, dict):
         return max(int(fallback), 0)
@@ -3137,9 +2932,6 @@ def _voice_target_id_for_block(
     @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Character-voices target identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     if (
         str(voice_assignment_mode).strip() == "same_narrator"
@@ -3159,9 +2951,6 @@ def _voice_source_kind_for_block(
     @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Persisted voice-source kind label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     return (
         "narrator_sample"
@@ -3177,9 +2966,6 @@ def _is_metadata_only_speech_block(speech_block: dict[str, object]) -> bool:
     @param[in]  speech_block Speech Blocks payload.
     @return     True for pause, background-noise, and indication blocks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     return str(speech_block.get("content_kind", "")).strip() in {
         speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
@@ -3194,9 +2980,6 @@ def _speech_block_is_approved(speech_block: dict[str, object]) -> bool:
     @param[in]  speech_block Persisted Speech Blocks payload.
     @return     `True` when the Speech Block approval flag is set.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return bool(speech_block.get("approved", False))
 
@@ -3207,9 +2990,6 @@ def _generated_count(audio_blocks: list[AudioBlockPayload]) -> int:
     @param[in]  audio_blocks Current Audio Blocks payload list.
     @return     Number of entries with generated audio.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     return sum(1 for block in audio_blocks if is_generated(block))
 
@@ -3224,9 +3004,6 @@ def _audio_generation_order_indices(
     @param[in]  generate_scene_ambience_audio True when ambience WAV generation is enabled.
     @return     Ordered list indexes to visit during generation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     if not generate_scene_ambience_audio:
         return list(range(len(audio_blocks)))
@@ -3268,9 +3045,6 @@ def _first_incomplete_generation_order_index(
     @param[in]  project_root Optional active project root for WAV validation.
     @return     Zero-based generation-order position, or order length when complete.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     for order_index, block_index in enumerate(generation_order_indices):
         block = audio_blocks[block_index]
@@ -3288,9 +3062,6 @@ def _approved_count(audio_blocks: list[AudioBlockPayload]) -> int:
     @param[in]  audio_blocks Current Audio Blocks payload list.
     @return     Number of approved entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     return sum(1 for block in audio_blocks if is_approved(block))
 
@@ -3304,9 +3075,6 @@ def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPa
     @param[in]  audio_block Rich in-memory Audio Blocks payload.
     @return     Persisted Audio Blocks entry.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.4.0
     """
     payload: AudioBlockPayload = {
         "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
@@ -3334,9 +3102,6 @@ def _attach_current_speech_block_fields(
     @param[in]  audio_blocks Persisted Audio Blocks payloads.
     @return     Audio Blocks payloads enriched from current Speech Blocks when available.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.1
     """
     speech_blocks_by_id = {
         str(block.get("speech_block_id", "")).strip(): dict(block)
@@ -3400,9 +3165,6 @@ def _attach_derived_audio_path(project_root: Path, audio_block: AudioBlockPayloa
     @param[in]  audio_block Audio Blocks payload enriched from Speech Blocks.
     @return     Audio Blocks payload carrying `audio_relative_path`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
     owns_audio = is_generated(audio_block) and str(audio_block.get("content_kind", "")).strip() not in {
@@ -3421,9 +3183,6 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
     @param[in]  payload Raw persisted document entry.
     @return     Normalized Audio Blocks payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.8.0
     """
     return {
         "speech_block_id": str(payload.get("speech_block_id", "")).strip(),
@@ -3461,9 +3220,6 @@ def _persisted_audio_can_play(audio_block: dict[str, object]) -> bool:
     @param[in]  audio_block Candidate Audio Blocks payload.
     @return     True when the record should be considered playable by state builders.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     if "audio_can_play" in audio_block:
         return bool(audio_block.get("audio_can_play", False))
@@ -3479,9 +3235,6 @@ def _filesystem_audio_can_play(project_root: Path, audio_block: dict[str, object
     @param[in]  audio_block Candidate Audio Blocks payload.
     @return     True when the generated audio entry is playable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     if not is_generated(audio_block):
         return False
@@ -3499,9 +3252,6 @@ def _normalize_voice_clone_profile(payload: dict[str, object]) -> VoiceCloneProf
     @param[in]  payload Raw persisted payload.
     @return     Normalized reusable clone-prompt payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     voice_clone_prompt = payload.get("voice_clone_prompt")
     prompt_format = str(payload.get("prompt_format", "")).strip()
@@ -3534,9 +3284,6 @@ def _clone_profile_matches(
     @param[in]  generation_context Validated generation-context payload.
     @return     `True` when the stored reusable clone prompt can be reused safely.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.4.0
     """
     clone_language = str(clone_profile.get("voice_language", "")).strip()
     sample_language = _voice_target_sample_language(voice_target)
@@ -3559,9 +3306,6 @@ def _voice_target_sample_language(voice_target: dict[str, object]) -> str:
     @param[in]  voice_target Current voice-target payload.
     @return     Canonical language code for clone-prompt sample transcription.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     sample_metadata = voice_target.get("sample_metadata", {})
     if not isinstance(sample_metadata, dict):
@@ -3584,9 +3328,6 @@ def _replace_clone_profile(
     @param[in]  new_profile Normalized direct-clone source profile payload.
     @return     Updated direct-clone source profile payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     normalized_target_id = str(new_profile.get("voice_target_id", "")).strip()
     updated_profiles = [
@@ -3602,9 +3343,6 @@ def _extract_voice_clone_prompt(status_payload: dict[str, object]) -> dict[str, 
     @param[in]  status_payload Final VoiceWeaver status payload.
     @return     Extracted reusable voice clone prompt payload.
     @exception  RuntimeError Raised when the prompt payload is missing or invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     operation_payload = status_payload.get("operation", {})
     if not isinstance(operation_payload, dict):
@@ -3624,9 +3362,6 @@ def _file_sha1(path: Path) -> str:
     @param[in]  path Existing local file path.
     @return     Hex-encoded SHA-1 digest string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     return hashlib.sha1(path.read_bytes()).hexdigest()  # noqa: S324
 
@@ -3637,9 +3372,6 @@ def _active_model_id_from_status(status_payload: dict[str, object]) -> str | Non
     @param[in]  status_payload Current VoiceWeaver status payload.
     @return     Active model identifier or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     active_model = status_payload.get("active_model")
     if isinstance(active_model, dict):
@@ -3657,9 +3389,6 @@ def _resolve_started_at(existing_state: dict[str, object]) -> str:
     @param[in]  existing_state Existing operation-state payload.
     @return     Stable runtime token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
     if not isinstance(resume_checkpoint, dict):
@@ -3676,9 +3405,6 @@ def _resume_checkpoint_field(existing_state: dict[str, object], field_name: str,
     @param[in]  fallback Fallback integer value.
     @return     Resolved integer checkpoint value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if not isinstance(existing_state, dict):
         return fallback
@@ -3699,9 +3425,6 @@ def _metadata_int(existing_state: dict[str, object], field_name: str, fallback: 
     @param[in]  fallback Fallback integer value.
     @return     Resolved integer metadata value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if not isinstance(existing_state, dict):
         return fallback
@@ -3720,9 +3443,6 @@ def _normalize_warning_flags(value: object) -> list[str]:
     @param[in]  value Candidate warning-flag value.
     @return     Ordered warning-flag string list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if not isinstance(value, list):
         return []
@@ -3741,9 +3461,6 @@ def _optional_int(value: object, fallback: int) -> int:
     @param[in]  fallback Fallback value used when normalization fails.
     @return     Normalized integer.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     try:
         return int(value)
@@ -3757,9 +3474,6 @@ def _optional_float(value: object) -> float | None:
     @param[in]  value Candidate floating-point value.
     @return     Normalized non-negative float, or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     try:
         normalized_value = float(value)
@@ -3778,9 +3492,6 @@ def _first_model(
     @param[in]  preferred_model_id Optional exact model identifier to prefer first.
     @return     Preferred runtime model payload or the first fallback entry, or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     if not model_entries:
         return None

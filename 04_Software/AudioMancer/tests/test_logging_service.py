@@ -13,9 +13,6 @@
          per-process log file uniqueness, graceful degradation to console-only
          output, cleanup, formatting, component-level overrides, and optional
          function-trace behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.3.0
 """
 
 # IMPORTS
@@ -40,9 +37,6 @@ def _read_log_lines(log_file_path: Path) -> list[str]:
     @param[in]  log_file_path Path to the generated log file.
     @return     Stripped non-empty log lines.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     return [line.strip() for line in log_file_path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
@@ -57,9 +51,6 @@ def test_initialize_logging_creates_per_run_log_file(tmp_path, monkeypatch) -> N
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "text")
@@ -85,9 +76,6 @@ def test_log_file_name_is_unique_per_process_for_the_same_second(monkeypatch) ->
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     run_timestamp = datetime(2026, 7, 25, 19, 46, 57)
 
@@ -111,9 +99,6 @@ def test_initialize_logging_removes_only_expired_log_files(tmp_path, monkeypatch
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     log_directory = tmp_path / config.APP_LOG_DIRECTORY_NAME
     log_directory.mkdir(parents=True, exist_ok=True)
@@ -145,9 +130,6 @@ def test_get_component_logger_applies_component_level_override(monkeypatch) -> N
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     monkeypatch.setattr(config, "DEFAULT_LOG_LEVEL", "INFO")
     monkeypatch.setattr(config, "DEFAULT_LOG_LEVEL_OVERRIDES", {"main_window": "DEBUG"})
@@ -165,9 +147,6 @@ def test_initialize_logging_uses_json_formatter_when_configured(tmp_path, monkey
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
@@ -191,9 +170,6 @@ def test_trace_function_logs_start_finish_and_duration(tmp_path, monkeypatch) ->
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
@@ -208,9 +184,6 @@ def test_trace_function_logs_start_finish_and_duration(tmp_path, monkeypatch) ->
         @param[in]  value Input integer list.
         @return     Dictionary carrying the observed item count.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         return {"count": len(value)}
 
@@ -234,9 +207,6 @@ def test_trace_function_logs_exception_and_reraises(tmp_path, monkeypatch) -> No
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
@@ -251,9 +221,6 @@ def test_trace_function_logs_exception_and_reraises(tmp_path, monkeypatch) -> No
         @param[in]  payload Error message payload.
         @return     None.
         @exception  RuntimeError Always raised for this test path.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         raise RuntimeError(payload)
 
@@ -276,9 +243,6 @@ def test_trace_function_truncates_long_values(tmp_path, monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "json")
@@ -293,9 +257,6 @@ def test_trace_function_truncates_long_values(tmp_path, monkeypatch) -> None:
         @param[in]  payload Input string payload.
         @return     Echoed payload string.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         return payload
 
@@ -322,9 +283,6 @@ def test_initialize_logging_degrades_to_console_when_log_directory_is_unusable(
     @param[in]  capsys Pytest captured-output fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     blocking_file = tmp_path / "blocking_file"
     blocking_file.write_text("not a directory", encoding="utf-8")
@@ -362,9 +320,6 @@ def test_initialize_logging_degrades_to_console_when_log_file_cannot_be_opened(
     @param[in]  capsys Pytest captured-output fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     monkeypatch.setattr(config, "APP_USER_DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DEFAULT_LOG_FORMAT", "text")
@@ -390,9 +345,6 @@ def test_initialize_logging_survives_unremovable_expired_log_entries(tmp_path, m
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     log_directory = tmp_path / config.APP_LOG_DIRECTORY_NAME
     unremovable_entry = log_directory / "expired.log"

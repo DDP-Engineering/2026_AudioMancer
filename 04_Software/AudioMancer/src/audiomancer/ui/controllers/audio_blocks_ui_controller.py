@@ -12,9 +12,6 @@
 @details Handles Audio Blocks generation confirmations, modal progress
          lifecycle, approval actions, resumable manifest synchronization, and
          targeted downstream invalidation when upstream voice inputs change.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.9.0
 """
 
 # IMPORTS
@@ -57,9 +54,6 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -113,9 +107,6 @@ def handle_reset_generation_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -139,9 +130,6 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -163,9 +151,6 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
     @param[in]  speech_block_id Selected speech-block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.4.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -207,9 +192,6 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
     @param[in]  speech_block_id Selected speech-block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -256,9 +238,6 @@ def handle_selected_playback_toggle_requested(window: "MainWindow", speech_block
     @param[in]  speech_block_id Selected speech-block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._audio_blocks_playback_mode == "selected":
@@ -293,9 +272,6 @@ def handle_audiobook_playback_toggle_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._audio_blocks_playback_mode == "audiobook":
@@ -331,9 +307,6 @@ def handle_playback_state_changed(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     if window._audio_blocks_audio_player.playbackState() != QMediaPlayer.PlaybackState.StoppedState:
         return
@@ -350,9 +323,6 @@ def handle_media_status_changed(window: "MainWindow", media_status: QMediaPlayer
     @param[in]  media_status Current Qt media status.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     if media_status != QMediaPlayer.MediaStatus.EndOfMedia:
         return
@@ -369,9 +339,6 @@ def confirm_single_voice_target_invalidation(window: "MainWindow", language: str
     @param[in]  language Current UI language code.
     @return     True when the upstream mutation may continue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return _confirm_persisted_audio_blocks_invalidation(
         window,
@@ -388,9 +355,6 @@ def confirm_narrator_voice_invalidation(window: "MainWindow", language: str) -> 
     @param[in]  language Current UI language code.
     @return     True when the upstream mutation may continue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return _confirm_persisted_audio_blocks_invalidation(
         window,
@@ -407,9 +371,6 @@ def confirm_global_voice_settings_invalidation(window: "MainWindow", language: s
     @param[in]  language Current UI language code.
     @return     True when the upstream mutation may continue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return _confirm_persisted_audio_blocks_invalidation(
         window,
@@ -434,9 +395,6 @@ def invalidate_audio_blocks_for_voice_targets(
     @param[in]  progress_callback Optional callback accepting percent and translation key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.3.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -484,9 +442,6 @@ def _emit_voice_invalidation_progress(progress_callback, percent: int, message_k
     @param[in]  message_key Runtime UI translation key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if progress_callback is not None:
         progress_callback(percent, message_key)
@@ -498,9 +453,6 @@ def invalidate_all_audio_blocks_after_voice_settings_change(window: "MainWindow"
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return
@@ -535,9 +487,6 @@ def _start_operation(
     @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.5.0
     """
     _stop_audio_blocks_playback(window)
     workflow_controller_service.start_operation(
@@ -585,9 +534,6 @@ def _handle_audio_blocks_success(
     @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.4.0
     """
     _ = result_payload
     _reset_audio_assembly_after_audio_blocks_change(window)
@@ -613,9 +559,6 @@ def _handle_audio_blocks_failure(
     @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     _sync_manifest_from_disk(window)
     _restore_audio_blocks_selection(window, preserved_block_id)
@@ -641,9 +584,6 @@ def _handle_audio_blocks_cancelled(
     @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     _ = message
     _sync_manifest_from_disk(window)
@@ -661,9 +601,6 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     workflow_controller_service.sync_manifest_operation_from_disk(
         window,
@@ -678,9 +615,6 @@ def _reset_audio_blocks_and_downstream(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -705,9 +639,6 @@ def _reset_audio_assembly_after_audio_blocks_change(window: "MainWindow", refres
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -727,9 +658,6 @@ def _sync_manifest_after_selective_audio_invalidation(window: "MainWindow") -> N
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -765,9 +693,6 @@ def _stop_audio_blocks_and_assembly_playback(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     _stop_audio_blocks_playback(window)
     audio_assembly_player = getattr(window, "_audio_assembly_audio_player", None)
@@ -793,9 +718,6 @@ def _confirm_persisted_audio_blocks_invalidation(
     @param[in]  message_key UI message translation key.
     @return     True when no persisted audio exists or the operator confirms.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return True
@@ -820,9 +742,6 @@ def _confirm_audio_approval_change(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the approval change may continue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return True
@@ -843,9 +762,6 @@ def _confirm_selected_audio_block_regeneration(window: "MainWindow", language: s
     @param[in]  language Current UI language code.
     @return     True when regeneration may continue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return _confirm_question(
         window,
@@ -864,9 +780,6 @@ def _confirm_question(window: "MainWindow", language: str, title_key: str, messa
     @param[in]  message_key Translation key for the dialog body.
     @return     True when the operator confirms.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -891,9 +804,6 @@ def _runtime_settings(
     @param[in]  probe_result Normalized VoiceWeaver probe result.
     @return     Audio Blocks runtime-settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     timeout_value = window._settings_payload.get(
         "tts_audio_generation_timeout_seconds",
@@ -940,9 +850,6 @@ def _has_fully_generated_run(
     @param[in]  report Persisted Audio Blocks report or `None`.
     @return     `True` when generation is fully complete even if approvals are pending.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.1
     """
     if not isinstance(report, dict):
         return False
@@ -975,9 +882,6 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator confirms the run.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -998,9 +902,6 @@ def _confirm_scene_ambience_audio_blocks(window: "MainWindow", language: str) ->
     @param[in]  language Current UI language code.
     @return     True when the operator confirms ambience sound generation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1021,9 +922,6 @@ def _confirm_audio_blocks_reset(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator confirms the reset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1044,9 +942,6 @@ def _audio_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str, 
     @param[in]  speech_block_id Speech-block identifier to resolve.
     @return     Audio Blocks payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     if window._current_project_root is None:
         return None
@@ -1078,9 +973,6 @@ def _refresh_audio_blocks_incremental_state(window: "MainWindow", speech_block_i
     @param[in]  speech_block_id Changed Speech Block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -1119,9 +1011,6 @@ def _playable_audio_blocks(window: "MainWindow") -> list[dict[str, object]]:
     @param[in]  window Active main window instance.
     @return     Ordered playable WAV and metadata-only pause Audio Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     if window._current_project_root is None:
         return []
@@ -1138,9 +1027,6 @@ def _audio_blocks_for_playback(window: "MainWindow") -> list[dict[str, object]]:
     @param[in]  window Active main window instance.
     @return     Ordered Audio Blocks payload list for audiobook preview.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return []
@@ -1169,9 +1055,6 @@ def _preview_pause_block_from_speech_block(speech_block: dict[str, object]) -> d
     @param[in]  speech_block Speech Blocks payload.
     @return     Preview-ready pause Audio Block payload, or `None` for non-pause input.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     content_kind = str(speech_block.get("content_kind", "")).strip()
     if content_kind != speech_blocks_service.CONTENT_KIND_PAUSE:
@@ -1208,9 +1091,6 @@ def _is_preview_pause_block(audio_block: dict[str, object] | None) -> bool:
     @param[in]  audio_block Candidate Audio Blocks payload.
     @return     True when the entry is a generated metadata-only pause block.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     if not isinstance(audio_block, dict) or not audio_blocks_service.is_generated(audio_block):
         return False
@@ -1226,9 +1106,6 @@ def _preview_pause_duration_ms(audio_block: dict[str, object]) -> int:
     @param[in]  audio_block Pause Audio Blocks payload.
     @return     Positive pause duration in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     try:
         duration_ms = int(audio_block.get("pause_duration_ms"))
@@ -1244,9 +1121,6 @@ def _audio_path_for_block(window: "MainWindow", audio_block: dict[str, object] |
     @param[in]  audio_block Candidate Audio Blocks payload.
     @return     Existing audio path or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if window._current_project_root is None or not isinstance(audio_block, dict):
         return None
@@ -1269,9 +1143,6 @@ def _playback_start_index(playable_blocks: list[dict[str, object]], selected_blo
     @param[in]  selected_block_id Currently selected speech-block identifier.
     @return     Zero-based playable block index.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     normalized_selected_id = str(selected_block_id or "").strip()
     if not normalized_selected_id:
@@ -1294,9 +1165,6 @@ def _selected_sequence_from_id(selected_block_id: str) -> int | None:
     @param[in]  selected_block_id Currently selected speech-block identifier.
     @return     Sequence index or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     try:
         return int(str(selected_block_id).rsplit("-", maxsplit=1)[-1])
@@ -1311,9 +1179,6 @@ def _play_audio_block_at_index(window: "MainWindow", playback_index: int) -> Non
     @param[in]  playback_index Zero-based playback-list index.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     if playback_index < 0 or playback_index >= len(window._audio_blocks_playback_block_ids):
         _stop_audio_blocks_playback(window)
@@ -1345,9 +1210,6 @@ def _continue_audiobook_after_pause(window: "MainWindow", expected_index: int) -
     @param[in]  expected_index Playback index that scheduled the pause.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     if window._audio_blocks_playback_mode != "audiobook":
         return
@@ -1362,9 +1224,6 @@ def _current_audio_blocks_playback_block_id(window: "MainWindow") -> str | None:
     @param[in]  window Active main window instance.
     @return     Current playback speech-block id, or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     playback_index = int(window._audio_blocks_playback_index)
     if playback_index < 0 or playback_index >= len(window._audio_blocks_playback_block_ids):
@@ -1379,9 +1238,6 @@ def _stop_audio_blocks_playback(window: "MainWindow", preserved_block_id: str | 
     @param[in]  preserved_block_id Optional speech-block id to keep selected.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     window._audio_blocks_playback_mode = None
     window._audio_blocks_playback_block_ids = []
@@ -1401,9 +1257,6 @@ def _set_audio_blocks_busy(window: "MainWindow", is_busy: bool) -> None:
     @param[in]  is_busy True while an Audio Blocks operation is running.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     window._audio_blocks_page.set_busy(is_busy)
     if hasattr(window, "_speech_blocks_page"):
@@ -1417,9 +1270,6 @@ def _set_speech_blocks_selected_audio_playback_active(window: "MainWindow", is_a
     @param[in]  is_active True while selected-block playback is active.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if hasattr(window, "_speech_blocks_page"):
         window._speech_blocks_page.set_selected_audio_playback_active(is_active)
@@ -1432,9 +1282,6 @@ def _restore_audio_blocks_selection(window: "MainWindow", speech_block_id: str |
     @param[in]  speech_block_id Speech-block identifier to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     normalized_block_id = str(speech_block_id or "").strip()
     if normalized_block_id:
@@ -1452,9 +1299,6 @@ def _speech_blocks_review_position(window: "MainWindow") -> dict[str, object] | 
     @param[in]  window Active main window instance.
     @return     Speech Blocks review-position payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     if not hasattr(window, "_speech_blocks_page"):
         return None
@@ -1471,9 +1315,6 @@ def _restore_speech_blocks_review_position(
     @param[in]  review_position Review-position payload to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     if review_position is None or not hasattr(window, "_speech_blocks_page"):
         return
@@ -1486,9 +1327,6 @@ def _stop_other_audio_previews(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     window._narator_voice_audio_player.stop()
     window._character_voices_audio_player.stop()
@@ -1500,9 +1338,6 @@ def current_language_from_window(window: "MainWindow") -> str:
     @param[in]  window Active main window instance.
     @return     Current UI language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     return ui_state_service.current_language_from_settings(window._settings_payload)
 
@@ -1513,9 +1348,6 @@ def _stage_rank(stage_token: str) -> int:
     @param[in]  stage_token Stage token to resolve.
     @return     Zero-based stage order index or `-1` when unsupported.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if stage_token not in config.PROJECT_WORKFLOW_STAGES:
         return -1

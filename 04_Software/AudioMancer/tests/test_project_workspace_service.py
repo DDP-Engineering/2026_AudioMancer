@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer project workspace service.
 @details Verifies project creation, manifest persistence, folder-name
          validation, project-root resolution, and open validation behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.4.0
 """
 
 # IMPORTS
@@ -44,7 +41,6 @@ def _write_audio_blocks_document_fixture(project_root, *, status="completed", sp
     @param[in]  status Document lifecycle status.
     @param[in]  speech_block_id Source Speech Blocks identifier.
     @return     None.
-    @version    0.1.0
     """
     audio_blocks_service.write_audio_blocks_document(
         project_root,
@@ -77,7 +73,6 @@ def _write_speech_blocks_document(project_root, blocks, *, status="completed", k
     @param[in]  kind Source-kind token.
     @param[in]  language Source language code.
     @return     None.
-    @version    0.1.0
     """
     speech_blocks_service.write_speech_blocks_document(
         project_root,
@@ -114,9 +109,6 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -141,9 +133,6 @@ def test_validate_project_name_rejects_unsupported_windows_characters() -> None:
     @brief      Verify unsupported Windows characters are rejected.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     with pytest.raises(ValueError, match="unsupported folder characters"):
         project_workspace_service.validate_project_name("Book:Five")
@@ -154,9 +143,6 @@ def test_validate_project_name_rejects_linux_reserved_name() -> None:
     @brief      Verify Linux-reserved directory names are rejected.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     with pytest.raises(ValueError, match="cannot be '.' or '..'"):
         project_workspace_service.validate_project_name("..")
@@ -167,9 +153,6 @@ def test_validate_project_name_rejects_reserved_windows_device_name() -> None:
     @brief      Verify reserved Windows device names are rejected.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     with pytest.raises(ValueError, match="reserved Windows device name"):
         project_workspace_service.validate_project_name("CON")
@@ -181,9 +164,6 @@ def test_create_project_rejects_non_empty_target_folder(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     target_root = tmp_path / "Book5_CAL_CAL"
     target_root.mkdir()
@@ -214,9 +194,6 @@ def test_open_project_resolves_flat_project_root(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     created_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -240,7 +217,6 @@ def test_open_project_requires_repair_for_malformed_cleanup_quality_metric(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "CorruptCleanupRepair",
@@ -277,7 +253,6 @@ def test_open_project_self_heals_incompatible_chunking_and_downstream(monkeypatc
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkingSelfHeal", tmp_path)
     source_path = project_root / "story.txt"
@@ -356,7 +331,6 @@ def test_open_project_propagates_chunking_io_error_without_reset(monkeypatch, tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("ChunkingIoFailure", tmp_path)
     chunking_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
@@ -367,7 +341,6 @@ def test_open_project_propagates_chunking_io_error_without_reset(monkeypatch, tm
     def _raise_permission_error(_project_root):
         """
         @brief      Raise the compatibility wrapper with an operating-system cause.
-        @version    0.1.0
         """
         try:
             raise PermissionError("chunking read denied")
@@ -391,9 +364,6 @@ def test_open_project_fails_when_manifest_is_missing(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     orphan_folder = tmp_path / "orphan"
     orphan_folder.mkdir()
@@ -408,9 +378,6 @@ def test_open_project_fails_when_required_manifest_field_is_missing(tmp_path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -434,9 +401,6 @@ def test_open_project_accepts_current_required_folder_contract(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -466,9 +430,6 @@ def test_open_project_does_not_require_speech_blocks_folder_for_flat_layout(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -497,9 +458,6 @@ def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> N
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -535,9 +493,6 @@ def test_validate_project_manifest_accepts_structured_source_document() -> None:
     @brief      Verify manifest validation preserves one valid source-document payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["source_document"] = {
@@ -563,9 +518,6 @@ def test_validate_project_manifest_rejects_unsafe_source_document_paths(stored_r
     @param[in]  stored_relative_path Candidate unsafe source-document path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     manifest = project_workspace_service.build_project_manifest("UnsafeSource")
     manifest["source_document"] = {
@@ -587,9 +539,6 @@ def test_open_project_rejects_source_document_symlink_escape(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("SymlinkSource", tmp_path)
     outside_source = tmp_path / "outside.txt"
@@ -618,9 +567,6 @@ def test_validate_project_manifest_normalizes_voice_assignment_mode() -> None:
     @brief      Verify manifest validation normalizes unsupported voice-assignment values to the default.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["voice_assignment_mode"] = "unsupported_mode"
@@ -635,9 +581,6 @@ def test_validate_project_manifest_normalizes_operations_map() -> None:
     @brief      Verify manifest validation fills the required per-operation state entries.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["operations"] = {
@@ -662,9 +605,6 @@ def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "CompactManifestProject",
@@ -712,9 +652,6 @@ def test_repair_manifest_preserves_character_discovery_for_narrator_stage() -> N
     @brief      Verify repaired narrator-stage manifests keep character discovery data intact.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["current_stage"] = "narrator_definition_ready"
@@ -737,9 +674,6 @@ def test_repair_manifest_preserves_character_discovery_for_character_voices_stag
     @brief      Verify repaired character-voices-stage manifests keep character discovery data intact.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["current_stage"] = "character_voices_ready"
@@ -763,9 +697,6 @@ def test_open_project_heals_completed_speech_blocks_manifest_summary(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SpeechHeal", tmp_path)
     _write_speech_blocks_document(
@@ -800,9 +731,6 @@ def test_open_project_heals_audio_blocks_manifest_from_completed_report_with_sta
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioHeal", tmp_path)
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -827,9 +755,6 @@ def test_open_project_does_not_require_repair_when_only_stale_state_warning_rema
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioHealAlreadyApplied", tmp_path)
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -856,9 +781,6 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("NarratorTimestampDrift", tmp_path)
     narrator_profile = narrator_definition_service.create_custom_profile(
@@ -915,9 +837,6 @@ def test_open_project_heals_completed_character_voices_manifest_summary(tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("CharacterVoicesHeal", tmp_path)
     manifest["source_document"] = {
@@ -990,9 +909,6 @@ def test_open_project_does_not_heal_audio_blocks_with_missing_derived_audio(tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioMissingDerived", tmp_path)
     (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME).mkdir()
@@ -1015,9 +931,6 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("StageHeal", tmp_path)
     source_path = project_root / "story.txt"
@@ -1058,9 +971,6 @@ def test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing(t
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("CorruptSpeech", tmp_path)
     manifest["current_stage"] = "speech_blocks_ready"
@@ -1081,9 +991,6 @@ def _operation_state(status: str, current: int, total: int) -> dict[str, object]
     @param[in]  total Total progress count.
     @return     Operation-state fixture payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     completed_at = "2026-04-25T12:01:00+00:00" if status == "completed" else None
     return {
@@ -1105,9 +1012,6 @@ def _write_json(path: Path, payload: object) -> None:
     @param[in]  payload JSON-serializable payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 

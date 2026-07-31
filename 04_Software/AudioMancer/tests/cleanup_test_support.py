@@ -11,9 +11,6 @@
 @brief Shared fixtures for the Cleanup and Chunking quality contract.
 @details Builds source-ledger projects and exact contract assertions without
          depending on production persistence helpers.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.1.0
 """
 
 from __future__ import annotations

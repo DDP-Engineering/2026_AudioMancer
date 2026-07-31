@@ -13,9 +13,6 @@
          application through one centralized string catalog, scale mapping, and
          theme runtime adapter, and resolves settings-backed runtime preferences
          such as the operator completion beep.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.61.0
 """
 
 # ruff: noqa: E501
@@ -2291,9 +2288,6 @@ def translate(key: str, language: str | None) -> str:
     @param[in]  language Target UI language code.
     @return     Translated UI string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.1
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
     return _UI_STRINGS[resolved_language].get(
@@ -2308,9 +2302,6 @@ def get_ui_strings(language: str | None) -> dict[str, str]:
     @param[in]  language Target UI language code.
     @return     Language-specific UI string mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.1
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
     return _UI_STRINGS[resolved_language].copy()
@@ -2323,9 +2314,6 @@ def localized_language_label(language_value: object, ui_language: str | None) ->
     @param[in]  ui_language Active operator UI language code.
     @return     Localized language label, or the original value when it is not a known language.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     normalized_value = str(language_value or "").strip()
     if not normalized_value:
@@ -2359,9 +2347,6 @@ def current_language_from_settings(
     @param[in]  settings_payload Optional persisted settings mapping.
     @return     Current UI language code or the configured default.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return _DEFAULT_LANGUAGE
@@ -2376,9 +2361,6 @@ def completion_beep_enabled_from_settings(
     @param[in]  settings_payload Optional persisted settings mapping.
     @return     True when a finished operation should produce an audible beep.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return False
@@ -2396,9 +2378,6 @@ def operator_status_pane_height(reference_widget: QWidget, line_count: int = 3) 
     @param[in]  line_count Number of text rows the pane should display.
     @return     Fixed pane height in pixels.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.0
     """
     line_height = reference_widget.fontMetrics().lineSpacing()
     document_margin = 4
@@ -2415,9 +2394,6 @@ def _capture_base_font(application: QApplication) -> QFont:
     @param[in]  application Running Qt application instance.
     @return     Current application font.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     global _BASE_FONT_FAMILY, _BASE_FONT_POINT_SIZE
 
@@ -2437,9 +2413,6 @@ def _scaled_point_size(base_point_size: float, ui_text_scale: str | None) -> flo
     @param[in]  ui_text_scale Operator-selected UI text-scale preset.
     @return     Effective scaled point size.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     scale_key = ui_text_scale if ui_text_scale in _UI_SCALE_FACTORS else config.DEFAULT_UI_TEXT_SCALE
     return base_point_size * _UI_SCALE_FACTORS[scale_key]
@@ -2452,9 +2425,6 @@ def _font_stylesheet(font_payload: dict[str, object], base_point_size: float) ->
     @param[in]  base_point_size Unscaled application point size fallback.
     @return     Font declaration lines for a Qt stylesheet block.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.2.0
     """
     declarations: list[str] = []
     font_family = str(font_payload.get("family", "")).strip()
@@ -2474,9 +2444,6 @@ def _theme_colors(theme_payload: dict[str, object]) -> dict[str, str]:
     @param[in]  theme_payload Normalized theme payload.
     @return     Color-role mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     colors = theme_payload.get("colors")
     if isinstance(colors, dict):
@@ -2490,9 +2457,6 @@ def _qcolor(color_value: str) -> QColor:
     @param[in]  color_value Hex RGB color value.
     @return     Qt color object.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     return QColor(color_value)
 
@@ -2503,9 +2467,6 @@ def _readable_foreground(background: QColor) -> QColor:
     @param[in]  background Background color.
     @return     Readable foreground color.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     luminance = (0.299 * background.red()) + (0.587 * background.green()) + (0.114 * background.blue())
     return QColor("#000000" if luminance > 145 else "#FFFFFF")
@@ -2518,9 +2479,6 @@ def _refresh_top_level_widgets(application: QApplication, font: QFont | None = N
     @param[in]  font Optional font to apply to each top-level widget.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     for widget in application.topLevelWidgets():
         if isinstance(widget, QWidget):
@@ -2545,9 +2503,6 @@ def apply_text_scale(
     @param[in]  ui_text_scale Operator-selected text-scale preset.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     if application is None:
         return
@@ -2588,9 +2543,6 @@ def build_theme_stylesheet(theme_payload: dict[str, object], base_point_size: fl
     @param[in]  base_point_size Unscaled application point size used for text editor font fallback.
     @return     Qt stylesheet string.
     @exception  ValueError Raised when the theme payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.5.0
     """
     normalized_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
     colors = _theme_colors(normalized_theme)
@@ -2809,9 +2761,6 @@ def font_size_step_factor(step: object) -> float:
     @param[in]  step Candidate font-size step name.
     @return     Multiplier for a known step, or the 'normal' multiplier otherwise.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     return FONT_SIZE_STEP_FACTORS.get(str(step), FONT_SIZE_STEP_FACTORS[config.DEFAULT_UI_FONT_SIZE_STEP])
 
@@ -2823,9 +2772,6 @@ def resolve_font_point_size(step: object, base_point_size: float) -> float:
     @param[in]  base_point_size Unscaled base font point size.
     @return     Base point size multiplied by the step factor.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     return float(base_point_size) * font_size_step_factor(step)
 
@@ -2846,9 +2792,6 @@ def apply_theme(
     @param[in]  text_font_size_step Text-window (editor) font-size step.
     @return     None.
     @exception  ValueError Raised when the theme payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.4.0
     """
     if application is None:
         return
@@ -2934,9 +2877,6 @@ def apply_language(main_window: QWidget, language: str | None) -> None:
     @param[in]  language Target UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
     if language not in _UI_STRINGS:
@@ -2973,9 +2913,6 @@ def apply_ui_settings(
     @param[in]  settings_payload Persisted application settings payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.2.0
     """
     selected_theme = ui_theme_service.theme_by_id(
         settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID),

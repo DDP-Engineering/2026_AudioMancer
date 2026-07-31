@@ -12,9 +12,6 @@
 @details Builds the approval-aware Audio Blocks page state from persisted
          Speech Blocks, narrator plus character voice samples, current Audio
          Blocks output, and the resumable runtime operation state.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.6.1
 """
 
 # IMPORTS
@@ -50,9 +47,6 @@ def build_audio_blocks_state(
     @param[in]  settings_payload Persisted application settings payload.
     @return     Page-state payload consumed by the Audio Blocks page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.5.2
     """
     if project_root is None or manifest is None:
         return _empty_state(language, settings_payload)
@@ -152,9 +146,6 @@ def _can_start_or_continue_generation(
     @param[in]  stage_status Effective Audio Blocks stage token.
     @return     True when at least one approved Speech Block still lacks generated audio.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.1
     """
     _ = stage_status
     generated_by_speech_block_id = {
@@ -189,9 +180,6 @@ def _scene_ambience_audio_enabled(settings_payload: dict[str, object] | None) ->
     @param[in]  settings_payload Persisted application settings payload.
     @return     True when Scene Ambience audio generation is enabled by default.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     if not isinstance(settings_payload, dict):
         return False
@@ -221,9 +209,6 @@ def build_audio_blocks_notes(
     @param[in]  language Runtime UI language code.
     @return     Ordered Audio Blocks notes for the page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("audio_blocks.note_no_source", language)]
@@ -300,9 +285,6 @@ def _empty_state(language: str, settings_payload: dict[str, object] | None = Non
     @param[in]  settings_payload Persisted application settings payload.
     @return     Empty default page-state payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     return {
         "full_source_text": "",
@@ -341,9 +323,6 @@ def _build_full_source_text(
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @return     Full source text reconstructed from the selected source chunks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     if not chunking_document_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
         project_root,
@@ -371,9 +350,6 @@ def _selected_text_character_limit(
     @param[in]  audio_blocks Current merged Audio Blocks payload list.
     @return     Approximate safe character limit for the active TTS model.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.2.0
     """
     _ = audio_blocks
     discovered_models = []
@@ -399,9 +375,6 @@ def _merge_audio_block_state(
     @param[in]  operation_state Persisted Audio Blocks operation state or `None`.
     @return     Ordered display-model payload list for the Audio Blocks page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.5.1
     """
     audio_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in audio_blocks}
     current_block_id = None
@@ -455,9 +428,6 @@ def _resolve_audio_duration_seconds(
     @param[in]  audio_block Persisted Audio Blocks payload.
     @return     Duration in seconds, or `None` when no measurable duration exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.2.0
     """
     for field_name in ("audio_duration_seconds", "duration_seconds"):
         try:
@@ -483,9 +453,6 @@ def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object
     @param[in]  manifest Active project manifest payload.
     @return     True when original or approved translated source chunks are available.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     selected_voice_language = character_voices_service.load_selected_voice_language(
         project_root,
@@ -514,9 +481,6 @@ def _resolve_persisted_audio_file_name(audio_block: dict[str, object]) -> str:
     @param[in]  audio_block Persisted Audio Blocks payload.
     @return     Display file name, or an empty string when no playable audio is recorded.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     if not audio_blocks_service.audio_can_play(audio_block):
         return ""
@@ -536,9 +500,6 @@ def _resolve_current_block(
     @param[in]  operation_state Persisted Audio Blocks operation state or `None`.
     @return     Preferred current block payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     _ = operation_state
     for block in merged_blocks:
@@ -554,9 +515,6 @@ def _audio_blocks_stage_status(report: dict[str, object] | None, operation_state
     @param[in]  operation_state Persisted Audio Blocks operation state or `None`.
     @return     Effective Audio Blocks stage token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if isinstance(operation_state, dict):
         operation_status = str(operation_state.get("status", "")).strip()

@@ -12,9 +12,6 @@
 @details Provides source-text segmentation for AI context budgets and
          conservative TTS budget-unit estimates outside the orchestration
          service.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.2.0
 """
 
 # IMPORTS
@@ -140,9 +137,6 @@ def build_source_spans(text: str) -> list[dict[str, object]]:
     @param[in]  text Active source chunk or AI-budget segment text.
     @return     Ordered source-span payloads with stable IDs, offsets, exact text, and candidate kind.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     source_text = str(text)
     if not source_text:
@@ -200,9 +194,6 @@ def build_atomic_speech_units(
     @param[in]  source_spans Optional source-span provenance rows.
     @return     Ordered atomic-unit payloads with stable IDs, offsets, exact text, and structural kind.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     source_text = str(text)
     if not source_text:
@@ -245,9 +236,6 @@ def split_text_for_ai_context_budget(text: str, text_budget_tokens: int, boundar
     @param[in]  boundary_index Preferred boundary level index.
     @return     Ordered text spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     source_text = str(text)
     if not source_text:
@@ -286,9 +274,6 @@ def ai_paragraph_spans(text: str) -> list[str]:
     @param[in]  text Source text span.
     @return     Ordered paragraph spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return [match.group(0) for match in re.finditer(r".+?(?:\n\s*\n+|$)", str(text), flags=re.DOTALL) if match.group(0)]
 
@@ -301,9 +286,6 @@ def ai_sentence_spans(text: str) -> list[str]:
     @param[in]  text Source text span.
     @return     Ordered sentence spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     return cleanup_text_analysis_service.sentence_spans(text, include_clause_marks=True)
 
@@ -314,9 +296,6 @@ def ai_word_spans(text: str) -> list[str]:
     @param[in]  text Source text span.
     @return     Ordered word spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return [match.group(0) for match in re.finditer(r"\S+\s*", str(text)) if match.group(0)]
 
@@ -328,9 +307,6 @@ def hard_split_text_for_ai_context_budget(text: str, text_budget_tokens: int) ->
     @param[in]  text_budget_tokens Maximum estimated input tokens for chunk text.
     @return     Ordered text spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     max_characters = max(1, int(text_budget_tokens) * 4)
     return [str(text)[index : index + max_characters] for index in range(0, len(str(text)), max_characters)]
@@ -342,9 +318,6 @@ def _paragraph_ranges(text: str) -> list[tuple[int, int]]:
     @param[in]  text Source text.
     @return     Ordered `(start, end)` ranges.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     source_text = str(text)
     ranges: list[tuple[int, int]] = []
@@ -365,9 +338,6 @@ def _atomic_ranges(text: str) -> list[tuple[int, int, str]]:
     @param[in]  text Source-span text.
     @return     Ordered local `(start, end, structural_kind)` ranges.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     source_text = str(text)
     if not source_text:
@@ -397,9 +367,6 @@ def _span_is_dash_led_dialogue(text: str) -> bool:
     @param[in]  text Candidate source-span text.
     @return     True when the span is dash-led dialogue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     stripped_text = str(text).lstrip()
     return bool(stripped_text) and _is_dialogue_dash_character(stripped_text[0])
@@ -411,9 +378,6 @@ def _dash_atomic_ranges(text: str) -> list[tuple[int, int, str]]:
     @param[in]  text Dash-led source-span text.
     @return     Ordered local `(start, end, structural_kind)` ranges.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     source_text = str(text)
     marker_offsets = [
@@ -447,9 +411,6 @@ def _dash_dialogue_attribution_split_offset(segment_text: str) -> int:
     @param[in]  segment_text One dash-led dialogue segment.
     @return     Split offset, or zero when no inline attribution is visible.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     text = str(segment_text)
     for match in re.finditer(r"[.!?…]\s+", text):
@@ -465,9 +426,6 @@ def _atomic_quote_dialogue_ranges(text: str) -> list[tuple[int, int]]:
     @param[in]  text Source-span text.
     @return     Ordered local `(start, end)` dialogue ranges.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     source_text = str(text)
     ranges: list[tuple[int, int]] = []
@@ -501,9 +459,6 @@ def _quoted_range_looks_like_dialogue(text: str, start_offset: int, end_offset: 
     @param[in]  end_offset Exclusive quote closer offset.
     @return     True when punctuation or nearby attribution supports dialogue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-05
-    @version    0.1.0
     """
     source_text = str(text)
     quoted_text = source_text[int(start_offset) + 1 : max(int(end_offset) - 1, int(start_offset) + 1)].strip()
@@ -523,9 +478,6 @@ def _local_quote_context_before(text: str, start_offset: int) -> str:
     @param[in]  start_offset Quote opener offset.
     @return     Same-sentence prefix near the quote.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-05
-    @version    0.1.0
     """
     source_text = str(text)
     sentence_start = max(
@@ -541,9 +493,6 @@ def _local_quote_context_after(text: str, end_offset: int) -> str:
     @param[in]  end_offset Quote closer-exclusive offset.
     @return     Same-sentence suffix near the quote.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-05
-    @version    0.1.0
     """
     source_text = str(text)
     sentence_ends = [
@@ -561,9 +510,6 @@ def _atomic_context_kind(text: str) -> str:
     @param[in]  text Context text.
     @return     Atomic structural kind.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     stripped_text = str(text).strip()
     if not stripped_text:
@@ -581,9 +527,6 @@ def _coalesce_atomic_ranges(ranges: list[tuple[int, int, str]]) -> list[tuple[in
     @param[in]  ranges Candidate atomic ranges.
     @return     Coalesced ordered ranges.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     coalesced_ranges: list[tuple[int, int, str]] = []
     for start_offset, end_offset, structural_kind in ranges:
@@ -601,9 +544,6 @@ def _looks_like_attribution(text: str) -> bool:
     @param[in]  text Candidate context text.
     @return     True when the text contains a known attribution verb.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     normalized_text = " ".join(str(text).strip().casefold().split())
     if not normalized_text:
@@ -629,9 +569,6 @@ def _append_atomic_unit(
     @param[in]  structural_kind Atomic structural kind.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     if end_offset <= start_offset:
         return
@@ -653,9 +590,6 @@ def _renumber_atomic_units(atomic_units: list[dict[str, object]]) -> list[dict[s
     @param[in]  atomic_units Atomic units in source order.
     @return     New atomic-unit payload list with `uNNN` identifiers.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     renumbered_units: list[dict[str, object]] = []
     for index, unit in enumerate(atomic_units, start=1):
@@ -671,9 +605,6 @@ def _coalesce_atomic_units(atomic_units: list[dict[str, object]]) -> list[dict[s
     @param[in]  atomic_units Candidate atomic units.
     @return     Coalesced atomic units with exact text coverage preserved.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     coalesced_units: list[dict[str, object]] = []
     for atomic_unit in atomic_units:
@@ -708,9 +639,6 @@ def _is_dash_dialogue_paragraph(paragraph: str) -> bool:
     @param[in]  paragraph Paragraph text.
     @return     True when the first non-space character is a dialogue dash.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     stripped_paragraph = str(paragraph).lstrip()
     return bool(stripped_paragraph) and _is_dialogue_dash_character(stripped_paragraph[0])
@@ -722,9 +650,6 @@ def _is_dialogue_dash_character(character: str) -> bool:
     @param[in]  character Candidate character.
     @return     True when the character can introduce dash-led dialogue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     return str(character) in {*_DIALOGUE_DASHES, "\u2013", "\u2014", "\u2015", "\u2e3a", "\u2e3b"}
 
@@ -743,9 +668,6 @@ def _append_dash_dialogue_source_spans(
     @param[in]  paragraph_end Exclusive paragraph end offset.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     paragraph = source_text[paragraph_start:paragraph_end]
     dash_ranges = _dash_dialogue_ranges(paragraph)
@@ -778,9 +700,6 @@ def _dash_dialogue_ranges(paragraph: str) -> list[tuple[int, int]]:
     @param[in]  paragraph Dash-led paragraph text.
     @return     Ordered local `(start, end)` ranges.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     paragraph_text = str(paragraph)
     marker_offsets = [
@@ -816,9 +735,6 @@ def _dash_marker_is_dialogue_boundary(paragraph: str, offset: int, character: st
     @param[in]  character Candidate dash character.
     @return     True when the dash has boundary-like surrounding whitespace.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     if not _is_dialogue_dash_character(character):
         return False
@@ -835,9 +751,6 @@ def _dash_dialogue_has_inline_attribution(paragraph: str) -> bool:
     @param[in]  paragraph Dash-led paragraph or source-span text.
     @return     True when there is text after a sentence terminator inside the dash span.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     stripped_text = str(paragraph).strip()
     if not stripped_text:
@@ -853,9 +766,6 @@ def _dash_dialogue_span_looks_like_attribution(span_text: str) -> bool:
     @param[in]  span_text Dash-led source-span text.
     @return     True when the first spoken token after the dash starts lowercase.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     stripped_text = str(span_text).lstrip()
     if not stripped_text or not _is_dialogue_dash_character(stripped_text[0]):
@@ -878,9 +788,6 @@ def _append_narration_source_spans(
     @param[in]  paragraph_end Exclusive paragraph end offset.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     paragraph = source_text[paragraph_start:paragraph_end]
     sentence_spans = ai_sentence_spans(paragraph)
@@ -903,9 +810,6 @@ def _quote_dialogue_ranges(paragraph: str) -> list[tuple[int, int]]:
     @param[in]  paragraph Paragraph text.
     @return     Ordered `(start, end)` ranges local to the paragraph.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     source_text = str(paragraph)
     ranges: list[tuple[int, int]] = []
@@ -933,9 +837,6 @@ def _quote_opener_is_plausible(text: str, opener_offset: int) -> bool:
     @param[in]  opener_offset Candidate quote offset.
     @return     True when the quote can plausibly begin dialogue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     quote = text[opener_offset]
     if quote not in {"'", '"'}:
@@ -954,9 +855,6 @@ def _extend_through_trailing_dialogue_punctuation(text: str, end_offset: int) ->
     @param[in]  end_offset Offset just after the quote closer.
     @return     Extended end offset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     cursor = int(end_offset)
     while cursor < len(text) and text[cursor] in _DIALOGUE_TRAILING_PUNCTUATION:
@@ -970,9 +868,6 @@ def _candidate_kind_for_context_span(text: str) -> str:
     @param[in]  text Context span text.
     @return     Candidate kind token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     stripped_text = str(text).strip()
     if not stripped_text:
@@ -998,9 +893,6 @@ def _append_source_span(
     @param[in]  candidate_kind Candidate kind token.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     if end_offset <= start_offset:
         return
@@ -1021,9 +913,6 @@ def _renumber_source_spans(spans: list[dict[str, object]]) -> list[dict[str, obj
     @param[in]  spans Source spans in source order.
     @return     New span payload list with `sNNN` identifiers.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     renumbered_spans: list[dict[str, object]] = []
     for index, span in enumerate(spans, start=1):

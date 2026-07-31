@@ -11,9 +11,6 @@
 @brief Narrator profile generation service tests for AudioMancer.
 @details Verifies AI-assisted text-only narrator profile generation source
          selection, validation, persistence, resume, and cancellation contracts.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-11
-@version 0.4.0
 """
 
 # IMPORTS
@@ -61,9 +58,6 @@ def test_narrator_profile_generation_prefers_approved_translation_for_voice_lang
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.2.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -109,9 +103,6 @@ def test_narrator_profile_generation_odd_allocation_appends_without_deleting_exi
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -164,9 +155,6 @@ def test_narrator_profile_generation_adds_operator_prompt_rules(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -209,9 +197,6 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.2.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -261,9 +246,6 @@ def test_narrator_profile_generation_rejects_short_preview_text(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -300,9 +282,6 @@ def test_narrator_profile_generation_rejects_preview_text_below_six_seconds(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -345,9 +324,6 @@ def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-03
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -390,9 +366,6 @@ def test_narrator_profile_generation_merges_token_usage_into_report_and_state(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -436,9 +409,6 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.3.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -477,9 +447,6 @@ def test_narrator_profile_generation_resumes_after_completed_style_window(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -500,9 +467,6 @@ def test_narrator_profile_generation_resumes_after_completed_style_window(
         @brief      Cancel after the first completed style-window response.
         @return     Fake provider response.
         @exception  OperationCancelledError Raised after the first window.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         log_context = dict(kwargs.get("log_context") or {})
         stage_label = str(log_context.get("stage_label", ""))
@@ -540,9 +504,6 @@ def test_narrator_profile_generation_resumes_after_completed_style_window(
         @brief      Return style responses only for unfinished windows, then profiles.
         @return     Fake provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         log_context = dict(kwargs.get("log_context") or {})
         stage_label = str(log_context.get("stage_label", ""))
@@ -590,9 +551,6 @@ def test_narrator_profile_generation_resumes_final_generation_without_reanalyzin
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -611,9 +569,6 @@ def test_narrator_profile_generation_resumes_final_generation_without_reanalyzin
         @brief      Complete style analysis, then cancel the final generation request.
         @return     Fake provider response.
         @exception  OperationCancelledError Raised for final generation.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         stage_label = str(dict(kwargs.get("log_context") or {}).get("stage_label", ""))
         if stage_label == "profile_generation":
@@ -642,9 +597,6 @@ def test_narrator_profile_generation_resumes_final_generation_without_reanalyzin
         @brief      Verify only the final generation call is replayed.
         @return     Fake provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         stage_label = str(dict(kwargs.get("log_context") or {}).get("stage_label", ""))
         resumed_calls.append(stage_label)
@@ -681,9 +633,6 @@ def test_narrator_profile_generation_compacts_style_observations_for_final_promp
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -700,9 +649,6 @@ def test_narrator_profile_generation_compacts_style_observations_for_final_promp
         @brief      Return repeated style observations and capture the compact final prompt.
         @return     Fake provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-12
-        @version    0.1.0
         """
         stage_label = str(dict(kwargs.get("log_context") or {}).get("stage_label", ""))
         if stage_label == "style_window":
@@ -760,9 +706,6 @@ def test_narrator_profile_generation_falls_back_to_clean_text(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -796,9 +739,6 @@ def test_narrator_source_resolution_names_cleanup_json_for_cleanup_metadata(tmp_
     @param[in]  tmp_path Temporary path fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -839,9 +779,6 @@ def test_narrator_profile_generation_completes_in_authoritative_document_only(
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -896,9 +833,6 @@ def test_narrator_profile_generation_cancellation_keeps_compact_resume_in_docume
     @param[in]  mock_prompt_environment Prompt-root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -932,9 +866,6 @@ def _write_narrator_prompts(prompt_root) -> None:
     @param[in]  prompt_root Prompt fixture root.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     (prompt_root / "narrator_profile_style_system.txt").write_text("System prompt.", encoding="utf-8")
     (prompt_root / "narrator_profile_style_window_user.txt").write_text("Analyze:\n{units_block}", encoding="utf-8")
@@ -951,9 +882,6 @@ def _write_chunks(project_root, text: str) -> None:
     @param[in]  text Chunk text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _write_chunk_records(project_root, [text])
 
@@ -965,9 +893,6 @@ def _write_chunk_records(project_root, texts: list[str]) -> None:
     @param[in]  texts Ordered chunk texts.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
@@ -996,9 +921,6 @@ def _write_translation(project_root, text: str, target_language: str) -> None:
     @param[in]  target_language Translation target language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
@@ -1035,9 +957,6 @@ def _chat_json_factory(observed_prompts: list[str], generation_payload: dict[str
     @param[in]  generation_payload Final generation response payload.
     @return     Fake chat_json callable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
 
     def _fake_chat_json(_profile, _system_prompt, user_prompt, **kwargs):
@@ -1045,9 +964,6 @@ def _chat_json_factory(observed_prompts: list[str], generation_payload: dict[str
         @brief      Return deterministic style or profile-generation payloads.
         @return     Fake provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         observed_prompts.append(user_prompt)
         stage_label = dict(kwargs.get("log_context") or {}).get("stage_label")
@@ -1067,9 +983,6 @@ def _style_observation_payload() -> dict[str, object]:
     @brief      Build a valid style-observation payload.
     @return     Fake style-observation payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return {
         "genre": ["literary science fiction"],
@@ -1089,9 +1002,6 @@ def _style_usage_payload() -> dict[str, object]:
     @brief      Build token usage for one fake style request.
     @return     Token usage payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return {"input_tokens": 10, "output_tokens": 4, "total_tokens": 14, "usage_available": True}
 
@@ -1101,9 +1011,6 @@ def _generation_usage_payload() -> dict[str, object]:
     @brief      Build token usage for one fake profile-generation request.
     @return     Token usage payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return {"input_tokens": 20, "output_tokens": 8, "total_tokens": 28, "usage_available": True}
 
@@ -1120,9 +1027,6 @@ def _profiles_payload(
     @param[in]  preview_text Optional preview text override.
     @return     AI payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.2.0
     """
     resolved_genders = genders or tuple("male" if index < count // 2 else "female" for index in range(count))
     profiles = []

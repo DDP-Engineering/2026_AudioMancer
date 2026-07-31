@@ -12,9 +12,6 @@
 @details Verifies Speech Blocks rendering, editable selected-block behavior,
          approval controls, bounded approval navigation, refresh-state
          preservation, translated labels, and generation button enablement.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.8.11
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -101,9 +95,6 @@ def test_speech_blocks_page_chunk_list_uses_one_line_full_preview(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -135,9 +126,6 @@ def test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile(qtbot)
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.2.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -182,9 +170,6 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.2.4
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -258,9 +243,6 @@ def test_speech_blocks_page_enables_selected_audio_controls_for_scene_ambience(q
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -306,9 +288,6 @@ def test_speech_blocks_page_selected_chunk_actions_fill_row_evenly(qtbot) -> Non
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.3.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -339,9 +318,6 @@ def test_speech_blocks_page_selected_chunk_pane_keeps_minimum_width(qtbot) -> No
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -358,9 +334,6 @@ def test_speech_blocks_page_restores_selected_chunk_text_selection(qtbot) -> Non
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -404,9 +377,6 @@ def test_speech_blocks_page_metadata_controls_align_to_list_edges(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.2
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -466,9 +436,6 @@ def test_speech_blocks_page_same_narrator_edit_shows_only_disabled_narrator(qtbo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -519,9 +486,6 @@ def test_speech_blocks_page_insert_delete_buttons_emit_selection(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -581,9 +545,6 @@ def test_speech_blocks_page_insert_enabled_for_empty_selected_chunk(qtbot) -> No
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -618,9 +579,6 @@ def test_speech_blocks_page_list_shows_operation_name_for_metadata_block(qtbot) 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -660,9 +618,6 @@ def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(q
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -748,9 +703,6 @@ def test_speech_blocks_page_edits_scene_ambience_fields(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-21
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -819,9 +771,6 @@ def test_speech_blocks_page_approve_selected_emits_only_selected_block(qtbot) ->
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -883,9 +832,6 @@ def test_speech_blocks_page_approval_button_toggles_label_for_approved_block(qtb
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -936,9 +882,6 @@ def test_speech_blocks_page_advances_visible_block_selection_with_limit(qtbot) -
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -1001,9 +944,6 @@ def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -1101,9 +1041,6 @@ def test_speech_blocks_page_resolves_delete_replacement_from_visible_block_order
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -1164,9 +1101,6 @@ def test_speech_blocks_page_disables_generate_without_source_and_while_busy(qtbo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -1201,9 +1135,6 @@ def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -1224,9 +1155,6 @@ def test_speech_blocks_page_single_item_update_preserves_sibling_items(qtbot) ->
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -1264,9 +1192,6 @@ def _speech_block(speech_block_id: str, text: str, approved: bool) -> dict[str, 
     @param[in]  approved Approval flag.
     @return     Speech Block display payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     return {
         "speech_block_id": speech_block_id,

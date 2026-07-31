@@ -12,9 +12,6 @@
 @details Uses lightweight fakes to verify that the main entrypoint wires the
          Qt application and main window correctly, including when logging
          degraded to console-only output.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.6
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ class _FakeApplication:
     @details    Captures bootstrap interactions without starting the real Qt
                 event loop.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.1
     """
 
     def __init__(self, argv) -> None:
@@ -43,9 +37,6 @@ class _FakeApplication:
         @param[in]  argv Process argument list passed by the bootstrap.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
         self.argv = argv
         self.application_name = None
@@ -57,9 +48,6 @@ class _FakeApplication:
         @param[in]  application_name Application name set by the bootstrap.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
         self.application_name = application_name
 
@@ -69,9 +57,6 @@ class _FakeApplication:
         @param[in]  _window_icon Ignored Qt icon object.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-06
-        @version    0.1.0
         """
         return None
 
@@ -80,9 +65,6 @@ class _FakeApplication:
         @brief      Simulate execution of the Qt event loop.
         @return     Fixed process exit code for assertions.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
         self.exec_called = True
         return 123
@@ -93,9 +75,6 @@ class _FakeMainWindow:
     @brief      Lightweight main-window fake for startup tests.
     @details    Records whether the bootstrap requests the window to be shown.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
 
     def __init__(self) -> None:
@@ -103,9 +82,6 @@ class _FakeMainWindow:
         @brief      Initialize the fake window.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
         self.show_called = False
 
@@ -114,9 +90,6 @@ class _FakeMainWindow:
         @brief      Record that the bootstrap requested the window to be shown.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
         self.show_called = True
 
@@ -130,9 +103,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.4
     """
     created = {}
 
@@ -142,9 +112,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @param[in]  argv Process argument vector.
         @return     Fake application instance.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["application"] = _FakeApplication(argv)
         return created["application"]
@@ -156,9 +123,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @param[in]  kwargs Window-construction keyword arguments.
         @return     Fake main window instance.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["window_settings_payload"] = kwargs.get("settings_payload")
         created["window"] = _FakeMainWindow()
@@ -169,9 +133,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @brief      Record one fake logging bootstrap call.
         @return     Fake log-path marker.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["initialize_logging_called"] = True
         return "fake-log-path"
@@ -181,9 +142,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @brief      Record one fake logging shutdown call.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["shutdown_logging_called"] = True
 
@@ -194,18 +152,12 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @param[in]  level_name Optional requested level override.
         @return     Fake logger instance.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["logger_request"] = (component_name, level_name)
 
         class _FakeLogger:
             """
             @brief      Minimal logger fake used by the bootstrap tests.
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-05
-            @version    0.1.0
             """
 
             def info(self, message, extra=None):
@@ -215,9 +167,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
                 @param[in]  extra Optional structured extras.
                 @return     None.
                 @exception  None
-                @author     Eng. Dan Dumitru Pasare
-                @date       2026-04-05
-                @version    0.1.0
                 """
                 created.setdefault("info_messages", []).append((message, extra))
 
@@ -228,9 +177,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
                 @param[in]  extra Optional structured extras.
                 @return     None.
                 @exception  None
-                @author     Eng. Dan Dumitru Pasare
-                @date       2026-04-05
-                @version    0.1.0
                 """
                 created.setdefault("exception_messages", []).append((message, extra))
 
@@ -241,9 +187,6 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @brief      Return one fake loaded settings payload.
         @return     Loaded settings payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["load_settings_called"] = True
         created["loaded_settings_payload"] = {
@@ -297,9 +240,6 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     created = {}
 
@@ -308,9 +248,6 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @brief      Record one fake logging bootstrap call.
         @return     Fake log-path marker.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["initialize_logging_called"] = True
         return "fake-log-path"
@@ -320,9 +257,6 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @brief      Record one fake logging shutdown call.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["shutdown_logging_called"] = True
 
@@ -333,18 +267,12 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @param[in]  level_name Optional requested level override.
         @return     Fake logger instance.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["logger_request"] = (component_name, level_name)
 
         class _FakeLogger:
             """
             @brief      Minimal logger fake used by the failure-path test.
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-05
-            @version    0.1.0
             """
 
             def info(self, message, extra=None):
@@ -354,9 +282,6 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
                 @param[in]  extra Optional structured extras.
                 @return     None.
                 @exception  None
-                @author     Eng. Dan Dumitru Pasare
-                @date       2026-04-05
-                @version    0.1.0
                 """
                 created.setdefault("info_messages", []).append((message, extra))
 
@@ -367,9 +292,6 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
                 @param[in]  extra Optional structured extras.
                 @return     None.
                 @exception  None
-                @author     Eng. Dan Dumitru Pasare
-                @date       2026-04-05
-                @version    0.1.0
                 """
                 created.setdefault("exception_messages", []).append((message, extra))
 
@@ -380,9 +302,6 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @brief      Return one fake loaded settings payload.
         @return     Loaded settings payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         created["load_settings_called"] = True
         created["loaded_settings_payload"] = {"language": "en"}
@@ -394,9 +313,6 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @param[in]  argv Process argument vector.
         @return     None.
         @exception  RuntimeError Always raised for this test path.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         raise RuntimeError("bootstrap failure")
 
@@ -425,9 +341,6 @@ def test_main_reports_an_unavailable_log_file_when_logging_is_console_only(monke
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     created = {}
 
@@ -436,9 +349,6 @@ def test_main_reports_an_unavailable_log_file_when_logging_is_console_only(monke
         @brief      Report that logging degraded to console output only.
         @return     None, matching a failed log-file creation.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         created["initialize_logging_called"] = True
         return None
@@ -450,18 +360,12 @@ def test_main_reports_an_unavailable_log_file_when_logging_is_console_only(monke
         @param[in]  level_name Optional requested level override.
         @return     Fake logger instance.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         _ = (component_name, level_name)
 
         class _FakeLogger:
             """
             @brief      Minimal logger fake used by the console-only bootstrap test.
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-07-25
-            @version    0.1.0
             """
 
             def info(self, message, extra=None):
@@ -471,9 +375,6 @@ def test_main_reports_an_unavailable_log_file_when_logging_is_console_only(monke
                 @param[in]  extra Optional structured extras.
                 @return     None.
                 @exception  None
-                @author     Eng. Dan Dumitru Pasare
-                @date       2026-07-25
-                @version    0.1.0
                 """
                 created.setdefault("info_messages", []).append((message, extra))
 
@@ -484,9 +385,6 @@ def test_main_reports_an_unavailable_log_file_when_logging_is_console_only(monke
                 @param[in]  extra Optional structured extras.
                 @return     None.
                 @exception  None
-                @author     Eng. Dan Dumitru Pasare
-                @date       2026-07-25
-                @version    0.1.0
                 """
                 created.setdefault("exception_messages", []).append((message, extra))
 
@@ -498,9 +396,6 @@ def test_main_reports_an_unavailable_log_file_when_logging_is_console_only(monke
         @param[in]  argv Process argument vector.
         @return     None.
         @exception  RuntimeError Always raised for this test path.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         _ = argv
         raise RuntimeError("bootstrap failure")

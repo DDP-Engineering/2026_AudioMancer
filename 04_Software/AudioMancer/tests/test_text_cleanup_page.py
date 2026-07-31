@@ -11,9 +11,6 @@
 @brief Qt tests for the unified Cleanup page.
 @details Verifies the single Cleanup action, optional AI profile, and optional
          operator edit, save, and cancel controls.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-27
-@version 0.1.0
 """
 
 # IMPORTS
@@ -29,9 +26,6 @@ def test_page_exposes_one_cleanup_action_with_optional_ai_profile(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)
@@ -55,9 +49,6 @@ def test_page_edit_save_and_cancel_are_optional(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)

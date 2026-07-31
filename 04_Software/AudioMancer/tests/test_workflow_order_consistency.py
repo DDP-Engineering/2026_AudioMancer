@@ -12,9 +12,6 @@
 @details Verifies the runtime, impact, and workspace layers all derive the
          canonical workflow operation order and operation-stage map from the
          shared config definition.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-19
-@version 0.1.0
 """
 
 # IMPORTS
@@ -28,9 +25,6 @@ def test_operation_order_is_single_sourced_from_config() -> None:
     @brief      Verify every layer uses the canonical config operation order.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     canonical = config.WORKFLOW_OPERATION_ORDER
     assert canonical == operation_runtime_service._OPERATION_ORDER
@@ -43,9 +37,6 @@ def test_operation_stage_map_is_single_sourced_from_config() -> None:
     @brief      Verify every layer uses the canonical config operation-stage map.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     canonical = config.OPERATION_STAGE_BY_KIND
     assert canonical == workflow_impact_service.OPERATION_STAGE_BY_KIND
@@ -57,9 +48,6 @@ def test_operation_stage_map_targets_are_valid_workflow_stages() -> None:
     @brief      Verify each promoted stage token is a known workflow stage.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     for operation_kind, stage in config.OPERATION_STAGE_BY_KIND.items():
         assert operation_kind in config.WORKFLOW_OPERATION_ORDER

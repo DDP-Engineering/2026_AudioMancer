@@ -11,9 +11,6 @@
 @brief Audio Assembly UI controller tests for AudioMancer.
 @details Verifies confirmation, settings persistence, threaded dispatch, and
          playback, and reset synchronization for the Audio Assembly controller.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.5.1
 """
 
 # IMPORTS
@@ -36,9 +33,6 @@ def test_audio_assembly_ui_controller_persists_settings_and_starts_threaded_oper
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     observed: dict[str, object] = {}
@@ -85,9 +79,6 @@ def test_audio_assembly_ui_controller_reset_clears_artifacts_and_manifest_summar
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     (window._current_project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME).mkdir()
@@ -114,9 +105,6 @@ def test_audio_assembly_ui_controller_settings_change_resets_only_assembly_outpu
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     audio_block_path = window._current_project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks.wav"
@@ -163,9 +151,6 @@ def test_audio_assembly_ui_controller_stops_active_playback_when_selected_output
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     _write_audio_assembly_report(window._current_project_root)
@@ -186,9 +171,6 @@ def test_audio_assembly_ui_controller_starts_selected_output(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     window = _controller_window(tmp_path)
     output_paths = _write_audio_assembly_report(window._current_project_root)
@@ -209,9 +191,6 @@ def test_audio_assembly_ui_controller_generates_and_plays_scene_mix_preview(monk
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.2.0
     """
     window = _controller_window(tmp_path)
     output_root = window._current_project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "scene_mix_previews"
@@ -287,9 +266,6 @@ def test_audio_assembly_ui_controller_rejects_escaping_output_path(monkeypatch, 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     outside_path = tmp_path / "outside.wav"
@@ -319,9 +295,6 @@ def test_audio_assembly_ui_controller_restarts_clicked_output_from_beginning(tmp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     output_paths = _write_audio_assembly_report(window._current_project_root)
@@ -345,9 +318,6 @@ def test_audio_assembly_ui_controller_updates_playback_progress(tmp_path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     window._audio_assembly_audio_player.duration_ms = 60_000
@@ -366,9 +336,6 @@ def test_audio_assembly_ui_controller_seeks_and_skips_with_clamping(tmp_path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     window._audio_assembly_audio_player.duration_ms = 60_000
@@ -390,9 +357,6 @@ def test_audio_assembly_ui_controller_ignores_startup_stopped_state(tmp_path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     window = _controller_window(tmp_path)
     window._audio_assembly_playback_output_key = "part-0001"
@@ -412,9 +376,6 @@ def _controller_window(tmp_path):
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     Controller-compatible window namespace.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioAssemblyController", tmp_path)
     return SimpleNamespace(
@@ -437,9 +398,6 @@ def _set_project_state(project_root, manifest) -> None:
     @param[in]  manifest Active manifest payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _ = project_root
     _ = manifest
@@ -451,9 +409,6 @@ def _write_audio_assembly_report(project_root) -> dict[str, object]:
     @param[in]  project_root Active project root.
     @return     Mapping from output key to generated output path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     output_root.mkdir(parents=True, exist_ok=True)
@@ -484,9 +439,6 @@ def _output_record(project_root, output_key: str, output_path) -> dict[str, obje
     @param[in]  output_path Generated output path.
     @return     Generated output record.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return {
         "output_key": output_key,
@@ -505,9 +457,6 @@ class _AudioAssemblyPageDouble:
     """
     @brief      Minimal Audio Assembly page test double.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
 
     def __init__(self) -> None:
@@ -515,9 +464,6 @@ class _AudioAssemblyPageDouble:
         @brief      Initialize captured page state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.0
         """
         self.busy = False
         self.playback_active = False
@@ -529,9 +475,6 @@ class _AudioAssemblyPageDouble:
         @param[in]  is_busy Current busy state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self.busy = is_busy
 
@@ -541,9 +484,6 @@ class _AudioAssemblyPageDouble:
         @param[in]  is_active Current playback-active state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self.playback_active = is_active
 
@@ -554,9 +494,6 @@ class _AudioAssemblyPageDouble:
         @param[in]  duration_ms Current playback duration in milliseconds.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         self.playback_progress = (position_ms, duration_ms)
 
@@ -565,9 +502,6 @@ class _AudioAssemblyPlayerDouble:
     """
     @brief      Minimal QMediaPlayer-compatible test double.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
 
     def __init__(self) -> None:
@@ -575,9 +509,6 @@ class _AudioAssemblyPlayerDouble:
         @brief      Initialize captured player state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.0
         """
         self.state = QMediaPlayer.PlaybackState.StoppedState
         self.source = None
@@ -591,9 +522,6 @@ class _AudioAssemblyPlayerDouble:
         @brief      Capture stop requests.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self.stop_count += 1
         self.state = QMediaPlayer.PlaybackState.StoppedState
@@ -604,9 +532,6 @@ class _AudioAssemblyPlayerDouble:
         @param[in]  source Media source URL.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self.source = source
 
@@ -615,9 +540,6 @@ class _AudioAssemblyPlayerDouble:
         @brief      Capture play requests.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self.play_count += 1
         self.state = QMediaPlayer.PlaybackState.PlayingState
@@ -628,9 +550,6 @@ class _AudioAssemblyPlayerDouble:
         @param[in]  position_ms New playback position in milliseconds.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         self.position_ms = int(position_ms)
 
@@ -639,9 +558,6 @@ class _AudioAssemblyPlayerDouble:
         @brief      Return the captured playback position.
         @return     Current playback position in milliseconds.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         return self.position_ms
 
@@ -650,9 +566,6 @@ class _AudioAssemblyPlayerDouble:
         @brief      Return the captured playback duration.
         @return     Current playback duration in milliseconds.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         return self.duration_ms
 
@@ -661,9 +574,6 @@ class _AudioAssemblyPlayerDouble:
         @brief      Return the captured playback state.
         @return     Current playback state.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         return self.state
 

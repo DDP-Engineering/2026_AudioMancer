@@ -12,9 +12,6 @@
 @details Verifies narrator-first target ordering, translation-language
          selection rules, same-narrator shaping, read-only refreshes, and
          missing-sample warnings.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.4.0
 """
 
 # IMPORTS
@@ -38,9 +35,6 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     project_root, manifest = _create_project_with_narrator_and_character(tmp_path, "CharacterVoicesState")
     manifest["original_language"] = "de"
@@ -113,9 +107,6 @@ def test_state_initializes_character_preview_text_from_locked_voice_language(tmp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
@@ -152,9 +143,6 @@ def test_state_same_narrator_mode_disables_character_edit_and_generate(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
@@ -187,9 +175,6 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.1
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
@@ -219,9 +204,6 @@ def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
@@ -246,9 +228,6 @@ def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypa
         @brief      Fail when an unchanged page refresh rewrites the project manifest.
         @return     None.
         @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         raise AssertionError("unchanged Character Voices state refresh saved the manifest")
 
@@ -257,9 +236,6 @@ def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypa
         @brief      Fail when an unchanged page refresh rewrites Character Voices targets.
         @return     None.
         @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         raise AssertionError("unchanged Character Voices state refresh saved targets")
 
@@ -268,9 +244,6 @@ def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypa
         @brief      Fail when an unchanged page refresh rewrites copied sample bytes.
         @return     None.
         @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         raise AssertionError("unchanged Character Voices state refresh copied sample bytes")
 
@@ -300,9 +273,6 @@ def _create_project_with_narrator_and_character(
     @brief      Provide the create project with narrator and character test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -356,9 +326,6 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
     @brief      Provide the minimum qwen models test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return [
         {

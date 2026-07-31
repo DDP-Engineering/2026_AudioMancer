@@ -15,9 +15,6 @@
          terminal operation outcomes are delegated to the shared operation
          runner; only cancellation is handled here, because it also syncs the
          manifest and refreshes project state.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.9.0
 """
 
 # IMPORTS
@@ -53,9 +50,6 @@ def handle_deterministic_chunking_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -108,9 +102,6 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     @param[in]  strategy Selected AI semantic chunking strategy.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.3.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -217,9 +208,6 @@ def handle_save_chunk_requested(window: "MainWindow", chunk_id: str, chunk_text:
     @param[in]  chunk_text Edited selected chunk text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -257,9 +245,6 @@ def handle_insert_chunk_requested(window: "MainWindow", chunk_id: str) -> None:
     @param[in]  chunk_id Selected chunk identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -296,9 +281,6 @@ def handle_delete_chunk_requested(window: "MainWindow", chunk_id: str) -> None:
     @param[in]  chunk_id Selected chunk identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -349,9 +331,6 @@ def start_operation(
     @param[in]  failure_handler Callback invoked with the raised exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.3.0
     """
     operation_runner_controller.start_threaded_operation(
         window,
@@ -373,9 +352,6 @@ def handle_operation_cancelled(window: "MainWindow", message: str) -> None:
     @param[in]  message Operator-facing cancellation message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
     """
     sync_manifest_after_unsuccessful_operation(window)
     if window._current_project_root is not None:
@@ -399,9 +375,6 @@ def handle_chunking_success(window: "MainWindow", result_payload: object) -> Non
     @param[in]  result_payload Successful chunking result payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
     """
     _ = result_payload
     assert window._current_project_root is not None
@@ -439,9 +412,6 @@ def handle_chunking_failure(window: "MainWindow", error: Exception) -> None:
     @param[in]  error Raised chunking exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     sync_manifest_after_unsuccessful_operation(window)
     QMessageBox.warning(
@@ -460,9 +430,6 @@ def sync_manifest_after_unsuccessful_operation(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
     """
     if window._current_manifest is None or window._current_project_root is None:
         return
@@ -487,9 +454,6 @@ def confirm_chunking_rerun(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the rerun reset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     decision = QMessageBox.question(
         window,
@@ -508,9 +472,6 @@ def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the rerun reset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     decision = QMessageBox.question(
         window,
@@ -529,9 +490,6 @@ def prompt_ai_chunking_instructions(window: "MainWindow", language: str) -> str 
     @param[in]  language Runtime UI language code.
     @return     Extra chunking instructions, an empty string, or None when cancelled.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     instructions = misc_ui_controller.prompt_multiline_text(
         window,
@@ -551,9 +509,6 @@ def confirm_chunk_insert(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the insert.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     decision = QMessageBox.question(
         window,
@@ -572,9 +527,6 @@ def confirm_chunk_delete(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the delete.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     decision = QMessageBox.question(
         window,
@@ -591,9 +543,6 @@ def _reset_chunking_and_downstream(window: "MainWindow") -> None:
     @brief      Execute the reset chunking and downstream helper.
     @param[in]  window Value for `window`.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.1
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -617,9 +566,6 @@ def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | 
     @brief      Load the chunking operation state.
     @param[in]  window Value for `window`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return None
@@ -636,9 +582,6 @@ def _resolve_ai_profile(
     @param[in]  settings_payload Payload for `settings_payload`.
     @param[in]  profile_id Profile identifier.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict) or not profile_id:
         return None
@@ -664,9 +607,6 @@ def _resume_ai_strategy(
     @param[in]  window Value for `window`.
     @param[in]  chunking_operation Value for `chunking_operation`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     _ = chunking_operation
     document = chunking_document_service.load_chunking_document(window._current_project_root or "")

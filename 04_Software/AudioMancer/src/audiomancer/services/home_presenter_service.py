@@ -11,9 +11,6 @@
 @brief Home-page presenter helpers for AudioMancer.
 @details Builds workflow-progress and project-summary values used by the Home
          page from manifest data without depending on Qt widgets.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.5.0
 """
 
 # IMPORTS
@@ -49,9 +46,6 @@ def build_stage_statuses(
     @param[in]  language Current UI language code.
     @return     Ordered stage-status entries for the home page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.4.0
     """
     stage_tokens = visible_workflow_stage_tokens()
     if manifest is None:
@@ -99,9 +93,6 @@ def source_document_name(manifest: dict[str, object] | None) -> str | None:
     @param[in]  manifest Active manifest payload or `None`.
     @return     Imported source display name or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if not isinstance(manifest, dict):
         return None
@@ -117,9 +108,6 @@ def optional_manifest_string(value: object) -> str | None:
     @param[in]  value Raw manifest field value.
     @return     Normalized string or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if value in (None, ""):
         return None
@@ -136,9 +124,6 @@ def manifest_operation(
     @param[in]  operation_kind Operation-kind token to resolve.
     @return     Operation payload or an empty default mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if not isinstance(manifest, dict):
         return {}
@@ -159,9 +144,6 @@ def apply_active_operation_status(
     @param[in]  operation_kind Active operation kind or `None`.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     row_index = _OPERATION_TO_WORKFLOW_ROW.get(str(operation_kind or "").strip())
     if row_index is not None and row_index < len(statuses):
@@ -173,9 +155,6 @@ def visible_workflow_stage_tokens() -> tuple[str, ...]:
     @brief      Return the visible workflow stages derived from shared config.
     @return     Ordered stage tokens shown in the home workflow progress list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     return tuple(
         stage_token
@@ -190,9 +169,6 @@ def stage_reached_index(current_stage: str | None) -> int:
     @param[in]  current_stage Current manifest stage token.
     @return     Zero-based reached stage index.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.0
     """
     stage_sequence = config.PROJECT_WORKFLOW_STAGES
     if current_stage not in stage_sequence:
@@ -207,9 +183,6 @@ def _apply_operation_status_overlays(statuses: list[dict[str, str]], manifest: d
     @param[in]  manifest Active manifest payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.3.0
     """
     for operation_kind, row_index in _OPERATION_TO_WORKFLOW_ROW.items():
         if row_index >= len(statuses):
@@ -228,9 +201,6 @@ def _apply_legacy_stage_fallbacks(statuses: list[dict[str, str]], manifest: dict
     @param[in]  manifest Active manifest payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     current_stage = str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
     stage_sequence = config.PROJECT_WORKFLOW_STAGES

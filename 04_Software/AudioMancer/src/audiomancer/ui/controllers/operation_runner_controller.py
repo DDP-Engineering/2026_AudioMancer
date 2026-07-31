@@ -12,9 +12,6 @@
 @details Runs long workflow service calls on a QThread while the Qt UI thread
          owns progress dialogs, cancellation requests, page busy state,
          completion-beep requests, and operation finalization callbacks.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.4.2
 """
 
 # IMPORTS
@@ -41,9 +38,6 @@ class ThreadedOperationWorker(QObject):
     """
     @brief      Execute one long-running workflow operation on a worker thread.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
 
     progress = Signal(object)
@@ -69,9 +63,6 @@ class ThreadedOperationWorker(QObject):
         @param[in]  parent Optional parent object.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         super().__init__(parent)
         self._project_root = project_root
@@ -85,9 +76,6 @@ class ThreadedOperationWorker(QObject):
         @brief      Execute the service callable and emit terminal status.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         try:
             result_payload = self._worker_callable(
@@ -122,9 +110,6 @@ class ThreadedOperationWorker(QObject):
         @param[in]  token_usage Optional token usage payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         self.progress.emit(
             {
@@ -144,9 +129,6 @@ class ThreadedOperationUiBridge(QObject):
                 progress and terminal callbacks never update widgets from the
                 worker thread.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
 
     def __init__(
@@ -168,9 +150,6 @@ class ThreadedOperationUiBridge(QObject):
         @param[in]  parent Optional parent object.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         super().__init__(parent)
         self._window = window
@@ -186,9 +165,6 @@ class ThreadedOperationUiBridge(QObject):
         @param[in]  payload Progress payload emitted by the worker.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         _handle_operation_progress(self._window, payload)
 
@@ -199,9 +175,6 @@ class ThreadedOperationUiBridge(QObject):
         @param[in]  result_payload Worker result payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         _handle_operation_success(self._window, self._success_handler, result_payload)
 
@@ -212,9 +185,6 @@ class ThreadedOperationUiBridge(QObject):
         @param[in]  error Raised operation exception.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         _handle_operation_failure(self._window, self._failure_handler, error)
 
@@ -225,9 +195,6 @@ class ThreadedOperationUiBridge(QObject):
         @param[in]  message Operator-facing cancellation message.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         _handle_operation_cancelled(self._window, self._cancel_handler, message)
 
@@ -237,9 +204,6 @@ class ThreadedOperationUiBridge(QObject):
         @brief      Clear operation state after the worker thread stops.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         _clear_threaded_operation(self._window, self._set_busy)
 
@@ -270,9 +234,6 @@ def start_threaded_operation(
     @param[in]  cancellable True when the progress dialog should expose Cancel.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.1
     """
     if window._active_operation_kind is not None:
         return
@@ -337,9 +298,6 @@ def request_operation_cancel(window: "MainWindow") -> None:
     @param[in]  window Active main window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.3
     """
     if window._active_operation_kind is None:
         return
@@ -358,9 +316,6 @@ def cancel_active_operation_for_shutdown(
     @param[in]  wait_timeout_ms Maximum milliseconds to process shutdown events.
     @return     True when no worker remains active and closing may continue.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if window._active_operation_kind is None:
         return True
@@ -383,9 +338,6 @@ def _handle_operation_progress(window: "MainWindow", payload: object) -> None:
     @param[in]  payload Progress payload emitted by the worker.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if not isinstance(payload, dict):
         return
@@ -405,9 +357,6 @@ def _handle_operation_success(window: "MainWindow", success_handler, result_payl
     @param[in]  result_payload Worker result payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     if window._operation_progress_dialog is not None:
         misc_ui_controller.update_progress_dialog(
@@ -428,9 +377,6 @@ def _handle_operation_failure(window: "MainWindow", failure_handler, error: obje
     @param[in]  error Raised operation exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     misc_ui_controller.update_progress_dialog(window, 100, str(error))
     misc_ui_controller.fail_progress_dialog(window, str(error))
@@ -448,9 +394,6 @@ def _handle_operation_cancelled(window: "MainWindow", cancel_handler, message: s
     @param[in]  message Operator-facing cancellation message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     misc_ui_controller.update_progress_dialog(window, 100, message)
     misc_ui_controller.fail_progress_dialog(window, message)
@@ -464,9 +407,6 @@ def _clear_threaded_operation(window: "MainWindow", set_busy) -> None:
     @param[in]  set_busy Callback accepting one boolean busy state.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.2
     """
     set_busy(False)
     home_page = getattr(window, "_home_page", None)
@@ -492,9 +432,6 @@ def _refresh_home_active_operation_status(window: "MainWindow") -> None:
     @param[in]  window Active main window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     home_page = getattr(window, "_home_page", None)
     if home_page is None:
@@ -517,9 +454,6 @@ def _wait_for_threaded_operation_shutdown(
     @param[in]  wait_timeout_ms Maximum wait budget in milliseconds.
     @return     True when the operation stopped before the timeout.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     deadline = time.monotonic() + max(0, wait_timeout_ms) / 1000
     event_flags = QEventLoop.ProcessEventsFlag.AllEvents
@@ -545,9 +479,6 @@ def _set_project_switching_enabled(window: "MainWindow", is_enabled: bool) -> No
     @param[in]  is_enabled True when New/Open Project actions may be used.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     for action_name in ("_action_new_project", "_action_open_project"):
         action = getattr(window, action_name, None)

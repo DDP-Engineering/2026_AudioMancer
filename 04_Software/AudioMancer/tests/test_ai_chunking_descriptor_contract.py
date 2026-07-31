@@ -12,9 +12,6 @@
 @details Verifies REQ-FUNC-065 tolerant anchored descriptor validation, fallback
          behavior, cursor advancement, final closure, reporting, and checkpoint
          resume.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.4.0
 """
 
 # IMPORTS
@@ -89,7 +86,6 @@ def _prepare_project(tmp_path, monkeypatch, paragraph_count: int = 6):
     """
     @brief      Create a chunking-ready project with deterministic paragraph windows.
     @return     Project root and mutable manifest payload.
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -127,7 +123,6 @@ def test_descriptor_schema_contains_only_the_approved_fields() -> None:
     """
     @brief      Verify S-0001 and REQ-FUNC-065 expose only the strict chunks contract.
     @return     None.
-    @version    0.1.0
     """
     schema = ai_chunking_service._build_response_schema()
 
@@ -150,7 +145,6 @@ def test_descriptor_anchor_uses_first_eight_normalized_words(paragraph_text, exp
     """
     @brief      Verify S-0001 and REQ-FUNC-065 use whole short text or exactly eight words.
     @return     None.
-    @version    0.1.0
     """
     assert ai_chunking_service._paragraph_start_anchor(paragraph_text) == expected_anchor
 
@@ -159,7 +153,6 @@ def test_descriptor_validation_accepts_five_consecutive_normalized_anchor_words(
     """
     @brief      Verify S-0005 and REQ-FUNC-065 accept five normalized prefix words.
     @return     None.
-    @version    0.2.0
     """
     records = _records("“It is a truth universally acknowledged, that a single person exists.”")
     payload = {"chunks": [_descriptor(1, "IT is a truth universally", 1)]}
@@ -174,7 +167,6 @@ def test_descriptor_validation_requires_complete_short_paragraph_anchor() -> Non
     """
     @brief      Verify S-0005 and REQ-FUNC-065 require every short-anchor word.
     @return     None.
-    @version    0.2.0
     """
     records = _records("Mr. Bennet replied.")
 
@@ -197,7 +189,6 @@ def test_descriptor_validation_accepts_exact_punctuation_only_scene_separator() 
     """
     @brief      Cover S-0011 and REQ-FUNC-bd7cd503 descriptor validation.
     @return     None.
-    @version    0.2.0
     """
     records = _records("* * *")
     payload = {"chunks": [_descriptor(1, "* * *", 1)]}
@@ -212,7 +203,6 @@ def test_descriptor_validation_rejects_nonconsecutive_anchor_matches() -> None:
     """
     @brief      Verify S-0005 and REQ-FUNC-065 require one five-word matching run.
     @return     None.
-    @version    0.2.0
     """
     records = _records("One two three four five six seven eight nine.")
     payload = {"chunks": [_descriptor(1, "One two wrong four five six wrong eight", 1)]}
@@ -227,7 +217,6 @@ def test_chunking_prompt_demonstrates_exactly_eight_anchor_words() -> None:
     """
     @brief      Verify S-0005 and REQ-FUNC-065 show one unambiguous long anchor.
     @return     None.
-    @version    0.1.0
     """
     prompt = ai_chunking_service._render_chunking_user_prompt(
         {
@@ -244,7 +233,6 @@ def test_descriptor_validation_accepts_consecutive_multi_chunk_ranges() -> None:
     """
     @brief      Verify S-0001 and REQ-FUNC-065 accept consecutive descriptor spans.
     @return     None.
-    @version    0.2.0
     """
     records = _records(
         "Alpha one two three four five six seven eight nine.",
@@ -295,7 +283,6 @@ def test_descriptor_validation_returns_valid_prefix_for_incomplete_response(
     """
     @brief      Verify S-0004 returns the valid prefix and marks invalid responses incomplete.
     @return     None.
-    @version    0.2.0
     """
     records = _records("Alpha short.", "Bravo short.", "Charlie short.")
 
@@ -313,7 +300,6 @@ def test_valid_non_final_split_advances_from_the_last_break_and_closes_final_rem
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version    0.1.0
     """
     project_root, manifest = _prepare_project(tmp_path, monkeypatch)
     responses = iter(
@@ -328,7 +314,6 @@ def test_valid_non_final_split_advances_from_the_last_break_and_closes_final_rem
         """
         @brief      Capture prompts and verify structured-output arguments.
         @return     Next queued fake provider response.
-        @version    0.1.0
         """
         prompts.append(user_prompt)
         assert kwargs["response_schema_name"] == "text_chunk_descriptors"
@@ -357,7 +342,6 @@ def test_empty_non_final_response_commits_one_fallback_window_and_reports_it(tmp
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version    0.1.0
     """
     project_root, manifest = _prepare_project(tmp_path, monkeypatch)
     responses = iter([_response([]), _response([])])
@@ -395,7 +379,6 @@ def test_invalid_non_final_response_commits_valid_prefix_and_retries_the_tail(
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version    0.1.0
     """
     project_root, manifest = _prepare_project(tmp_path, monkeypatch)
     responses = iter(
@@ -415,7 +398,6 @@ def test_invalid_non_final_response_commits_valid_prefix_and_retries_the_tail(
         """
         @brief      Capture one prompt and return the next fake provider response.
         @return     Next queued fake provider response.
-        @version    0.1.0
         """
         prompts.append(user_prompt)
         return next(responses)
@@ -531,7 +513,6 @@ def test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usag
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version    0.1.0
     """
     project_root, manifest = _prepare_project(tmp_path, monkeypatch)
     responses = iter(
@@ -545,7 +526,6 @@ def test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usag
         """
         @brief      Return one descriptor response and then simulate cancellation.
         @return     Next queued fake provider response.
-        @version    0.1.0
         """
         response = next(responses)
         if isinstance(response, Exception):

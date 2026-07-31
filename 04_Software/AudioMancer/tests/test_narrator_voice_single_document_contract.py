@@ -12,9 +12,6 @@
 @details Verifies the strict document, canonical sample ownership, selected
          profile resolution, lifecycle cleanup, and export behavior required by
          the current Narrator Voice contracts.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-21
-@version 0.1.0
 """
 
 # IMPORTS
@@ -47,9 +44,6 @@ def test_default_document_has_exact_contract(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -81,9 +75,6 @@ def test_malformed_current_document_is_preserved_and_reported(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -103,9 +94,6 @@ def test_profile_sample_and_selection_use_only_document_and_canonical_wav(tmp_pa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -151,9 +139,6 @@ def test_character_voice_readiness_uses_selected_profile_resolution(tmp_path, mo
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     selected_path = tmp_path / "audio_narator_profile_contract.wav"
     selected_path.write_bytes(b"RIFF-current-selected-profile")
@@ -177,9 +162,6 @@ def test_narrator_reset_removes_current_artifacts(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     current_paths = (
         tmp_path / "narrator_voice.json",
@@ -200,9 +182,6 @@ def test_narrator_export_uses_authoritative_document_and_profile_wav(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     profile = narrator_definition_service.create_custom_profile(
         tmp_path,

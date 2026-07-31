@@ -12,9 +12,6 @@
 @details Handles character-voices target inspection, prompt maintenance, Qwen3-
          backed character sample generation, narrator or character preview
          playback, and page-entry narrator-sample warnings.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 1.12.0
 """
 
 # IMPORTS
@@ -54,9 +51,6 @@ def handle_page_activated(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -86,9 +80,6 @@ def handle_selection_change_requested(window: "MainWindow", target_id: object) -
     @param[in]  target_id Requested character-voices target identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     normalized_target_id = None if target_id in (None, "") else str(target_id)
     window._character_voices_inspected_target_id = normalized_target_id
@@ -102,9 +93,6 @@ def handle_import_sample_requested(window: "MainWindow", target_id: str) -> None
     @param[in]  target_id Requested character-voices target identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -186,9 +174,6 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     @param[in]  target_id Selected character-voices target identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -219,9 +204,6 @@ def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str,
     @param[in]  target_payload Updated character-voices target payload from the page.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -267,9 +249,6 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
     @param[in]  target_id Requested character-voices target identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -352,9 +331,6 @@ def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -435,9 +411,6 @@ def _handle_generate_missing_samples_success(
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.2.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
@@ -473,9 +446,6 @@ def _handle_generate_sample_success(
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
@@ -501,9 +471,6 @@ def _handle_generate_sample_failure(window: "MainWindow", error: Exception, curr
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     window._settings_payload = settings_service.load_settings()
     if window._current_project_root is not None:
@@ -526,9 +493,6 @@ def _handle_generate_sample_cancelled(window: "MainWindow", message: str, curren
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _ = message
     window._settings_payload = settings_service.load_settings()
@@ -544,9 +508,6 @@ def handle_preview_toggle_requested(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._character_voices_page._preview_active:  # noqa: SLF001
@@ -586,9 +547,6 @@ def handle_preview_playback_state_changed(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     if window._character_voices_audio_player.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
         window._character_voices_page.set_preview_active(False)
@@ -615,9 +573,6 @@ def _generate_and_store_sample(
     @param[in]  progress_callback Optional threaded-runner progress callback.
     @param[in]  cancel_requested Optional cooperative cancellation callback.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
     """
     _emit_sample_progress(
         progress_callback,
@@ -769,9 +724,6 @@ def _generate_and_store_character_samples(
     @param[in]  cancel_requested Optional cooperative cancellation callback.
     @return     Batch result summary.
     @exception  OperationCancelledError Raised when cancellation is requested between targets.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.1.0
     """
     total_count = len(target_payloads)
     if total_count == 0:
@@ -810,9 +762,6 @@ def _generate_and_store_character_samples(
             @param[in]  current_target_index Bound one-based target index.
             @param[in]  current_batch_message Bound batch target message.
             @return     None.
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-05-01
-            @version    0.1.0
             """
             _emit_batch_sample_progress(
                 progress_callback,
@@ -863,9 +812,6 @@ def _emit_batch_sample_progress(
     @param[in]  detail_message Current per-target stage text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.1.0
     """
     if progress_callback is None or total_count <= 0:
         return
@@ -886,9 +832,6 @@ def _update_generation_progress(
     @param[in]  status_payload Payload for `status_payload`.
     @param[in]  stage_text Progress stage text.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     operation_payload = status_payload.get("operation", {})
     if not isinstance(operation_payload, dict):
@@ -909,9 +852,6 @@ def _update_load_progress(
     @param[in]  status_payload Payload for `status_payload`.
     @param[in]  stage_text Progress stage text.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     operation_payload = status_payload.get("operation", {})
     if not isinstance(operation_payload, dict):
@@ -929,9 +869,6 @@ def _emit_sample_progress(progress_callback, percent: int, message: str) -> None
     @param[in]  message Current operator-facing status text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if progress_callback is not None:
         progress_callback(0, 100, percent, message)
@@ -942,9 +879,6 @@ def _active_model_id_from_status(status_payload: dict[str, object]) -> str | Non
     @brief      Execute the active model id from status helper.
     @param[in]  status_payload Payload for `status_payload`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
     """
     return tts_runtime_ui_support.active_model_id_from_status(status_payload)
 
@@ -954,9 +888,6 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
     @brief      Synchronize the manifest stage.
     @param[in]  window Value for `window`.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -1003,9 +934,6 @@ def _stop_preview_playback(window: "MainWindow") -> None:
     @brief      Execute the stop preview playback helper.
     @param[in]  window Value for `window`.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     window._character_voices_audio_player.stop()
     window._character_voices_audio_player.setSource(QUrl())
@@ -1018,9 +946,6 @@ def _confirm_prompt_edit(window: "MainWindow", language: str) -> bool:
     @param[in]  window Value for `window`.
     @param[in]  language Language code.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1039,9 +964,6 @@ def _confirm_generate_sample(window: "MainWindow", language: str, target_id: str
     @param[in]  language Language code.
     @param[in]  target_id Target identifier.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     has_existing_sample = window._current_project_root is not None and character_voices_service.has_target_sample(
         window._current_project_root,
@@ -1076,9 +998,6 @@ def _current_character_import_preview_text(
     @param[in]  voice_language Selected voice language.
     @return     Initial sample transcript text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     if str(window._character_voices_page.current_target_id() or "").strip() == str(target_id).strip():
         return str(window._character_voices_page.current_editor_payload().get("preview_text", "") or "").strip()
@@ -1093,9 +1012,6 @@ def _show_voice_sample_import_error(window: "MainWindow", error: ValueError, lan
     @param[in]  language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     message_key = {
         "unsupported_file_type": "voice_sample_import.error_unsupported_file_type",
@@ -1123,9 +1039,6 @@ def _confirm_generate_missing_samples(window: "MainWindow", language: str, sampl
     @param[in]  sample_count Number of samples that will be generated.
     @return     True when the operator confirms the batch run.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1145,9 +1058,6 @@ def _current_character_target_payloads(window: "MainWindow") -> list[dict[str, o
     @param[in]  window Main application window.
     @return     Ordered list of character target payloads allowed to generate samples.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.2.0
     """
     return [
         dict(target_payload)

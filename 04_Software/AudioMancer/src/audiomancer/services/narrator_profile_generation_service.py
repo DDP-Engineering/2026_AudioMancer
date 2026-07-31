@@ -12,9 +12,6 @@
 @details Analyzes the current book text with one configured AI profile, appends
          editable narrator voice-designer prompts and preview text, and stores
          resumable attempt state in the authoritative Narrator Voice document.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-11
-@version 1.0.0
 """
 
 # IMPORTS
@@ -115,9 +112,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @param[in]  project_root Active project root folder.
     @return     Derived operation-state payload or `None` before an AI attempt.
     @exception  narrator_definition_service.NarratorVoiceDocumentContractError Raised for invalid data.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    1.0.0
     """
     document = narrator_definition_service.load_narrator_voice_document(project_root)
     if document["status"] == narrator_definition_service.NARRATOR_VOICE_STATUS_NOT_STARTED:
@@ -166,9 +160,6 @@ def generate_narrator_profiles(
     @return     Persisted narrator profile generation report.
     @exception  ValueError Raised on invalid input, missing source text, or invalid AI output.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.4.0
     """
     _ = manifest
     resolved_project_root = Path(project_root)
@@ -268,9 +259,6 @@ def generate_narrator_profiles(
         @param[in]  status Terminal interrupted status to persist.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         _write_operation_state(
             state_path,
@@ -492,9 +480,6 @@ def _normalized_profile_count(profile_count: int) -> int:
     @param[in]  profile_count Candidate requested profile count.
     @return     Profile count inside the supported range.
     @exception  ValueError Raised when the requested count is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     try:
         requested_count = int(profile_count)
@@ -513,9 +498,6 @@ def _gender_allocation(profile_count: int) -> dict[str, object]:
     @param[in]  profile_count Requested narrator profile count.
     @return     Gender-allocation metadata payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     male_count = profile_count // 2
     female_count = profile_count // 2
@@ -543,9 +525,6 @@ def _resolve_source_units(
     @param[in]  voice_language Selected audiobook voice language code.
     @return     Source units, source token, and backing artifact path.
     @exception  ValueError Raised when no readable book text exists.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     translated_units = _approved_translation_units(project_root, voice_language)
     if translated_units:
@@ -575,9 +554,6 @@ def _approved_translation_units(project_root: Path, voice_language: str) -> list
     @param[in]  voice_language Selected audiobook voice language code.
     @return     Ordered translated source units or an empty list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     document = ai_translation_service.load_translation_document(project_root)
     if document is None:
@@ -603,9 +579,6 @@ def _canonical_chunk_units(project_root: Path) -> list[SourceUnitPayload]:
     @param[in]  project_root Active project root folder.
     @return     Ordered source units or an empty list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     chunks = sorted(
         chunking_document_service.load_chunks(project_root),
@@ -625,9 +598,6 @@ def _cleaned_metadata_units(project_root: Path) -> list[SourceUnitPayload]:
     @param[in]  project_root Active project root folder.
     @return     Ordered source units or an empty list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.2.1
     """
     metadata_payload = cleanup_metadata_service.load_cleanup_metadata(project_root)
     if not isinstance(metadata_payload, dict):
@@ -647,9 +617,6 @@ def _paragraph_units(records: list[dict[str, object]]) -> list[SourceUnitPayload
     @param[in]  records Cleaned paragraph records.
     @return     Ordered source units.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     units = []
     for index, record in enumerate(records, start=1):
@@ -667,9 +634,6 @@ def _source_unit(unit_id: str, sequence_index: int, text: str) -> SourceUnitPayl
     @param[in]  text Source unit text.
     @return     Source-unit payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return {
         "unit_id": str(unit_id).strip() or f"unit-{sequence_index:04d}",
@@ -690,9 +654,6 @@ def _build_budget_metadata(
     @param[in]  additional_profile_instructions Optional operator-supplied profile-generation rules.
     @return     Context-budget metadata.
     @exception  ValueError Raised when too little input room remains.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     style_prompt_shell = _render_narrator_profile_prompt(
         "narrator_profile_style_window_user",
@@ -745,9 +706,6 @@ def _render_narrator_profile_prompt(prompt_name: str, variables: dict[str, objec
     @param[in]  variables Prompt variables.
     @return     Rendered narrator-profile prompt.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     template = prompt_template_service.load_prompt(prompt_name)
     placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
@@ -776,9 +734,6 @@ def _resolve_additional_profile_instructions(
     @param[in]  existing_state Existing narrator-definition operation state.
     @return     Normalized operator profile-generation instructions.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if additional_profile_instructions is not None:
         return _normalized_additional_profile_instructions(additional_profile_instructions)
@@ -802,9 +757,6 @@ def _normalized_additional_profile_instructions(value: object) -> str:
     @param[in]  value Candidate instruction text.
     @return     Trimmed instruction text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if value is None:
         return ""
@@ -818,9 +770,6 @@ def _append_additional_profile_instructions(prompt_text: str, additional_profile
     @param[in]  additional_profile_instructions Normalized operator rules.
     @return     Prompt text with an additional-rules section.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if not additional_profile_instructions:
         return prompt_text
@@ -836,9 +785,6 @@ def _compute_prompt_fingerprint(prompt_text: str) -> str:
     @param[in]  prompt_text Operator prompt-rule text.
     @return     SHA-256 fingerprint for the prompt-rule text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
@@ -853,9 +799,6 @@ def _build_source_windows(
     @param[in]  budget_metadata Context-budget metadata.
     @return     Ordered source windows.
     @exception  ValueError Raised when one source unit cannot fit the request budget.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if not source_units:
         return []
@@ -894,9 +837,6 @@ def _build_units_block(source_units: list[SourceUnitPayload]) -> str:
     @param[in]  source_units Ordered source units.
     @return     Prompt-ready unit block.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     blocks = []
     for unit in source_units:
@@ -919,9 +859,6 @@ def _normalize_style_observation(payload: object, window_index: int) -> dict[str
     @param[in]  window_index One-based style window index.
     @return     Compact observation payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     response_payload = dict(payload) if isinstance(payload, dict) else {}
     return {
@@ -936,9 +873,6 @@ def _build_style_observation_summary(observations: list[dict[str, object]]) -> d
     @param[in]  observations Per-window style observations from the first AI pass.
     @return     Compact style summary safe for the final profile-generation prompt.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     summarized_fields: dict[str, object] = {}
     unique_term_counts: dict[str, int] = {}
@@ -965,9 +899,6 @@ def _rank_style_terms(observations: list[dict[str, object]], field_name: str) ->
     @param[in]  field_name Observation field to summarize.
     @return     Ranked term payloads with original display value and count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     term_counts: dict[str, int] = {}
     term_display_values: dict[str, str] = {}
@@ -1000,9 +931,6 @@ def _normalized_style_term(term: object) -> str:
     @param[in]  term Candidate style term.
     @return     Lowercase normalized style key.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     return " ".join(str(term or "").casefold().strip(" \t\r\n.,;:!?").split())
 
@@ -1023,9 +951,6 @@ def _validated_generated_profiles(
     @param[in]  preview_text_character_limit Maximum accepted preview text characters.
     @return     Validated generated profile payloads.
     @exception  ValueError Raised when the AI response does not satisfy the contract.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.3.0
     """
     raw_profiles = response_payload.get("profiles", [])
     if not isinstance(raw_profiles, list) or len(raw_profiles) != requested_count:
@@ -1095,9 +1020,6 @@ def _minimum_preview_word_count() -> int:
     @brief      Estimate the minimum preview-text word count for useful Qwen TTS references.
     @return     Minimum preview word count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return max(
         1,
@@ -1113,9 +1035,6 @@ def _maximum_preview_word_count() -> int:
     @brief      Return the bounded maximum accepted narrator preview word estimate.
     @return     Maximum accepted preview word estimate.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-03
-    @version    0.1.0
     """
     return _NARRATOR_PREVIEW_TARGET_MAX_WORDS + _NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE
 
@@ -1130,9 +1049,6 @@ def _build_model_settings(
     @param[in]  budget_metadata Context-budget metadata.
     @return     Model settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return {
         "profile_id": str(ai_profile_payload.get("id", "")).strip(),
@@ -1171,9 +1087,6 @@ def _restore_resume_state(
     @param[in]  additional_profile_instructions_fingerprint Operator instruction fingerprint.
     @return     Resume metadata with `resume_compatible` flag.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     _ = project_root
     fallback = _empty_resume_state()
@@ -1220,9 +1133,6 @@ def _empty_resume_state() -> dict[str, object]:
     @brief      Build the default no-resume payload.
     @return     Resume metadata indicating a fresh run.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return {
         "resume_compatible": False,
@@ -1239,9 +1149,6 @@ def _restore_style_observations(value: object) -> list[dict[str, object]]:
     @param[in]  value Candidate style-observation list.
     @return     Dictionary-only style observations.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if not isinstance(value, list):
         return []
@@ -1254,9 +1161,6 @@ def _restore_token_usage(existing_state: dict[str, object]) -> dict[str, object]
     @param[in]  existing_state Persisted operation-state payload.
     @return     Normalized token-usage payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     metadata = existing_state.get("metadata", {})
     if not isinstance(metadata, dict):
@@ -1271,9 +1175,6 @@ def _is_valid_gender_allocation(gender_allocation: dict[str, object], requested_
     @param[in]  requested_count Requested profile count.
     @return     True when the payload is structurally compatible.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     try:
         male_count = int(gender_allocation.get("male", 0) or 0)
@@ -1346,9 +1247,6 @@ def _write_operation_state(
     @param[in]  additional_profile_instructions Optional operator-supplied profile-generation rules.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.3.0
     """
     _ = state_path
     _ = input_path
@@ -1403,9 +1301,6 @@ def _build_resume_fingerprint(
     """
     @brief      Build the complete deterministic AI resume identity.
     @return     SHA-256 fingerprint covering source, language, provider settings, budget, count, and instructions.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
     """
     fingerprint_payload = {
         "source": source_token,
@@ -1436,9 +1331,6 @@ def _build_input_fingerprint(
     @param[in]  voice_language Selected audiobook voice language.
     @return     SHA-256 fingerprint.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     digest = hashlib.sha256()
     digest.update(str(source_token).encode("utf-8"))
@@ -1462,9 +1354,6 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     @param[in]  started_at Operation start timestamp.
     @return     Absolute transaction log path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     return project_root / config.ai_transaction_log_file_name("narrator_profiles", timestamp_token)
@@ -1476,9 +1365,6 @@ def _string_list(value: object) -> list[str]:
     @param[in]  value Candidate AI response field.
     @return     List of non-empty strings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if isinstance(value, list):
         return [str(item).strip() for item in value if str(item).strip()]
@@ -1492,9 +1378,6 @@ def _contains_audio_generation_request(prompt_text: str) -> bool:
     @param[in]  prompt_text Generated profile prompt text.
     @return     True when the prompt text contains an audio-generation instruction.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     normalized_prompt = prompt_text.casefold()
     blocked_phrases = (

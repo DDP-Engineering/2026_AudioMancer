@@ -11,9 +11,6 @@
 @brief Audio Blocks workflow page for AudioMancer.
 @details Provides resumable per-speech-block audio generation, approval, and
          review controls for the Audio Blocks workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.5.8
 """
 
 # IMPORTS
@@ -48,9 +45,6 @@ class AudioBlocksPage(QWidget):
     @brief      Display the Audio Blocks workflow surface.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
 
     start_generation_requested = Signal()
@@ -67,9 +61,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.5.8
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -219,9 +210,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.3.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -232,9 +220,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  is_active True when a project is currently open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.2.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -282,9 +267,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  selected_text_character_limit Approximate selected speech text limit in characters.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.4.2
         """
         self._speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks)
         self._stage_status = stage_status
@@ -334,9 +316,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  audio_block Updated Audio Blocks display payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_id = str(audio_block.get("speech_block_id", "")).strip()
         if not normalized_id:
@@ -379,9 +358,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  can_reset Optional reset enablement flag.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         _ = progress_current
         _ = progress_total
@@ -399,9 +375,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  is_busy True while the page is busy.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.2.0
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -412,9 +385,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  is_active True while selected-block playback is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
         """
         self._selected_playback_active = is_active
         if is_active:
@@ -427,9 +397,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  is_active True while audiobook playback is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         self._audiobook_playback_active = is_active
         if is_active:
@@ -441,9 +408,6 @@ class AudioBlocksPage(QWidget):
         @brief      Return the identifier of the currently selected speech block.
         @return     Selected speech-block id or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.2.0
         """
         return self._current_block_id
 
@@ -452,9 +416,6 @@ class AudioBlocksPage(QWidget):
         @brief      Return whether Scene Ambience Audio generation is enabled.
         @return     True when Scene Ambience blocks should be rendered to WAV.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         return bool(self._scene_ambience_audio_combo.currentData())
 
@@ -464,9 +425,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  speech_block_id Speech-block identifier to select.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         normalized_block_id = str(speech_block_id).strip()
         for row, speech_block in enumerate(self._speech_blocks):
@@ -480,9 +438,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  speech_block_id Speech Block identifier.
         @return     Zero-based visible row, or `-1` when not visible.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         normalized_block_id = str(speech_block_id).strip()
         for row, speech_block in enumerate(self._speech_blocks):
@@ -495,9 +450,6 @@ class AudioBlocksPage(QWidget):
         @brief      Move the Audio Blocks selection to the next pending generated row when possible.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.0
         """
         current_row = self._speech_block_list.currentRow()
         if current_row < 0:
@@ -519,9 +471,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  language Runtime UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.1.1
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_blocks.title', language)}</h2>")
@@ -551,9 +500,6 @@ class AudioBlocksPage(QWidget):
         @brief      Refresh Scene Ambience Audio selector labels for the active UI language.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         current_value = self.scene_ambience_audio_enabled()
         self._scene_ambience_audio_combo.blockSignals(True)
@@ -587,9 +533,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  enabled New Scene Ambience Audio enablement value.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         self._scene_ambience_audio_combo.blockSignals(True)
         self._scene_ambience_audio_combo.setCurrentIndex(1 if enabled else 0)
@@ -600,9 +543,6 @@ class AudioBlocksPage(QWidget):
         @brief      Track Scene Ambience Audio selector state changes.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         self._scene_ambience_audio_enabled = self.scene_ambience_audio_enabled()
 
@@ -611,9 +551,6 @@ class AudioBlocksPage(QWidget):
         @brief      Apply the current Audio Blocks page button and widget states.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.3.0
         """
         selected_block = self._current_display_block()
         self._start_button.setEnabled(self._project_active and not self._busy and self._can_start_or_continue)
@@ -654,9 +591,6 @@ class AudioBlocksPage(QWidget):
         @brief      Set Audio Blocks splitter pane minimums to one quarter of their splitter spans.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.3.0
         """
         required_attributes = ("_main_splitter", "_source_group", "_right_splitter", "_blocks_group", "_detail_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -677,9 +611,6 @@ class AudioBlocksPage(QWidget):
         @brief      Resolve the selected-block playback button translation key.
         @return     Translation key for the current selected-block playback state.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         return "audio_blocks.stop_playback" if self._selected_playback_active else "audio_blocks.play_selected"
 
@@ -688,9 +619,6 @@ class AudioBlocksPage(QWidget):
         @brief      Resolve the audiobook playback button translation key.
         @return     Translation key for the current audiobook playback state.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         return "audio_blocks.stop_audiobook" if self._audiobook_playback_active else "audio_blocks.play_audiobook"
 
@@ -699,9 +627,6 @@ class AudioBlocksPage(QWidget):
         @brief      Resolve the selected-block approval toggle button translation key.
         @return     Translation key for the current selected-block approval state.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-05
-        @version    0.2.0
         """
         selected_block = self._current_display_block()
         if selected_block is not None and audio_blocks_service.is_approved(selected_block):
@@ -714,9 +639,6 @@ class AudioBlocksPage(QWidget):
         @param[in]  row Selected speech-block list row.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.3.0
         """
         if row < 0 or row >= len(self._speech_blocks):
             self._current_block_id = None
@@ -752,9 +674,6 @@ class AudioBlocksPage(QWidget):
         @brief      Return the display-model payload for the selected speech block.
         @return     Selected display-block payload or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.1.0
         """
         if self._current_block_id is None:
             return None
@@ -772,9 +691,6 @@ class AudioBlocksPage(QWidget):
         @brief      Emit the regenerate-selected signal for the active speech block.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.1.0
         """
         speech_block_id = self.selected_block_id()
         if speech_block_id is not None:
@@ -785,9 +701,6 @@ class AudioBlocksPage(QWidget):
         @brief      Emit the approve-selected signal for the active speech block.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.1.0
         """
         speech_block_id = self.selected_block_id()
         if speech_block_id is not None:
@@ -798,9 +711,6 @@ class AudioBlocksPage(QWidget):
         @brief      Emit the selected playback toggle signal for the active speech block.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         speech_block_id = self.selected_block_id()
         if speech_block_id is not None:
@@ -811,9 +721,6 @@ class AudioBlocksPage(QWidget):
         @brief      Refresh the selected Speech Block text character counter.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-05
-        @version    0.1.0
         """
         selected_length = len(self._block_text_edit.toPlainText())
         if self._selected_text_character_limit <= 0:
@@ -829,9 +736,6 @@ def _format_audio_block_list_item(audio_block: dict[str, object], language: str)
     @param[in]  language Runtime UI language code.
     @return     Human-readable Audio Blocks list row label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.4.0
     """
     approval_label = ui_state_service.translate(
         "audio_blocks.marker_approved"
@@ -859,9 +763,6 @@ def _format_duration_label(duration_seconds: object, language: str) -> str:
     @param[in]  language Runtime UI language code.
     @return     Human-readable duration label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     try:
         duration_value = float(duration_seconds)

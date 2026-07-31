@@ -12,9 +12,6 @@
 @details Builds Speech Blocks report payloads, warning summaries, source input
          artifact paths, and resumable operation-state payloads outside the
          orchestration service.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.4.0
 """
 
 # IMPORTS
@@ -68,9 +65,6 @@ def rebuild_report(
     @param[in]  updated_at Ignored legacy report timestamp override.
     @return     Rebuilt Speech Blocks report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     _ = warning_records
     _ = updated_at
@@ -110,9 +104,6 @@ def approved_block_count(speech_blocks: list[SpeechBlockPayload]) -> int:
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @return     Number of approved Speech Blocks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return sum(1 for block in speech_blocks if bool(block.get("approved", False)))
 
@@ -123,9 +114,6 @@ def warning_records_from_blocks(speech_blocks: list[SpeechBlockPayload]) -> list
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @return     Ordered report warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     records: list[dict[str, object]] = []
     for block in speech_blocks:
@@ -178,9 +166,6 @@ def build_operation_state(
     @param[in]  budget_metadata Optional context-budget metadata.
     @return     Persisted operation-state payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     _ = warning_records
     _ = started_at
@@ -233,9 +218,6 @@ def source_chunks_input_path(project_root: Path, source_kind: str) -> Path:
     @param[in]  source_kind Active source-kind token.
     @return     Absolute project-local source artifact path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if str(source_kind).strip() == "translated":
         return project_root / config.TRANSLATED_CHUNKS_FILE_NAME

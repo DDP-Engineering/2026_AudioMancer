@@ -11,9 +11,6 @@
 @brief Focused tests for shared workflow controller helpers.
 @details Verifies the worker-visible cancellation path and enabled AI profile
          resolution.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.2.0
 """
 
 # IMPORTS
@@ -31,9 +28,6 @@ def test_request_operation_cancel_sets_worker_visible_event() -> None:
     @brief      Verify cancellation flips the worker-visible cancel event, not just a flag.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     cancel_event = Event()
     window = SimpleNamespace(
@@ -58,9 +52,6 @@ def test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles() -> No
     @brief      Verify shared AI profile resolution returns only enabled matching profiles.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     settings_payload = {
         "llm_profiles": [
@@ -83,9 +74,6 @@ def test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window
     @brief      Verify persisted operation state becomes the active manifest summary.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-19
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("WorkflowSync", tmp_path)
     show_project_state = Mock()

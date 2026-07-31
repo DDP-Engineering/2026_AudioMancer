@@ -12,9 +12,6 @@
 @details Provides project-local character voice prompt inspection, explicit
          voice-language selection, per-character sample generation, and local
          sample preview controls for the Character Voices workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.6.2
 """
 
 # IMPORTS
@@ -41,9 +38,6 @@ class CharacterVoicesPage(QWidget):
     """
     @brief      Display the Character Voices workflow page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
 
     selection_change_requested = Signal(object)
@@ -60,9 +54,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    1.1.3
         """
         super().__init__(parent)
         self._project_active = False
@@ -202,9 +193,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -215,9 +203,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  is_active True when one project is currently loaded.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -228,9 +213,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  is_busy True while one blocking controller task is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -241,9 +223,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  is_active True while local preview playback is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
         """
         self._preview_active = is_active
         self._apply_control_state()
@@ -293,9 +272,6 @@ class CharacterVoicesPage(QWidget):
             @param[in]  missing_narrator_sample True when the selected narrator sample is missing.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-20
-        @version    1.6.0
         """
         _ = notes
         _ = missing_narrator_sample
@@ -325,9 +301,6 @@ class CharacterVoicesPage(QWidget):
             @brief      Enter explicit prompt edit mode for the currently inspected voice target.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-20
-        @version    1.1.1
         """
         if not self._can_edit_prompt:
             return
@@ -342,9 +315,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  target_id Selected character-voices target identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.1.1
         """
         self._current_target_id = target_id
         target_payload = self._current_target()
@@ -370,9 +340,6 @@ class CharacterVoicesPage(QWidget):
             @brief      Read the currently selected character-voices target identifier.
             @return     The selected character-voices target identifier or `None`.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-20
-        @version    1.1.0
         """
         return self._current_target_id
 
@@ -381,9 +348,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Read the currently selected character-voices voice language code.
         @return     The selected character-voices voice language code.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.3.0
         """
         return self._selected_voice_language
 
@@ -392,9 +356,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Build one character-voices target payload from the current editor values.
         @return     Character-voices target payload derived from the editor widgets.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.1.0
         """
         current_target = self._current_target() or {}
         return {
@@ -413,9 +374,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Indicate whether the page is in explicit prompt edit mode.
         @return     `True` when the prompt editor is unlocked.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
         """
         return self._edit_mode
 
@@ -424,9 +382,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Indicate whether the editable character-voices prompt has unsaved changes.
         @return     `True` when the active editor state differs from the saved target payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
         """
         return self._dirty
 
@@ -436,9 +391,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    1.1.1
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('character_voices.title', language)}</h2>")
@@ -465,9 +417,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Apply the control state.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.4.1
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = (
@@ -521,9 +470,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Set Character Voices main pane minimum widths from the main splitter width.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.2.0
         """
         required_attributes = ("_main_splitter", "_targets_group", "_editor_container")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -538,9 +484,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Resolve the preview label key.
         @return     Helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         return "character_voices.stop_preview" if self._preview_active else "character_voices.preview"
 
@@ -549,9 +492,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Execute the refresh target list helper.
         @param[in]  current_target_id Currently selected target identifier.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._target_list.blockSignals(True)
         self._target_list.clear()
@@ -570,9 +510,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  language_entries Value for `language_entries`.
         @param[in]  selected_voice_language Value for `selected_voice_language`.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.2.0
         """
         display_label = str(selected_voice_language or "").strip()
         for label, value in language_entries:
@@ -589,9 +526,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  prompt_text Text value for `prompt_text`.
         @param[in]  preview_text Text value for `preview_text`.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._loading_state = True
         self._prompt_edit.setPlainText(prompt_text)
@@ -604,9 +538,6 @@ class CharacterVoicesPage(QWidget):
         @param[in]  original_language Value for `original_language`.
         @param[in]  translated_language Value for `translated_language`.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._original_language = str(original_language)
         self._translated_language = str(translated_language)
@@ -621,9 +552,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Return the current original language text.
         @return     Resolved helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         return self._original_language_value_label.text().strip()
 
@@ -631,9 +559,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Return the current translated language text.
         @return     Resolved helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         return self._translated_language_value_label.text().strip()
 
@@ -642,9 +567,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Build the boxed language-indicator title from one translated label template.
         @param[in]  translation_key Translation key for the formatted language label.
         @return     Group-box title without the trailing value placeholder.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         translated_label = ui_state_service.translate(translation_key, self._ui_language)
         title = translated_label.split("{language_label}", maxsplit=1)[0]
@@ -654,9 +576,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Return the current target.
         @return     Resolved helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         return next(
             (
@@ -672,9 +591,6 @@ class CharacterVoicesPage(QWidget):
         @brief      Handle the target selection changed.
         @param[in]  row Selected row index.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._loading_state or row < 0 or row >= len(self._targets):
             return
@@ -687,9 +603,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Handle the editor changed.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._loading_state or not self._edit_mode:
             return
@@ -700,9 +613,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Emit the import sample request.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-15
-        @version    0.1.0
         """
         if self._current_target_id is not None:
             self.import_sample_requested.emit(self._current_target_id)
@@ -711,9 +621,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Emit the edit prompt.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._current_target_id is not None:
             self.edit_prompt_requested.emit(self._current_target_id)
@@ -722,9 +629,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Emit the save prompt.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self.save_prompt_requested.emit(self.current_editor_payload())
 
@@ -732,9 +636,6 @@ class CharacterVoicesPage(QWidget):
         """
         @brief      Emit the generate sample.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._current_target_id is not None:
             self.generate_sample_requested.emit(self._current_target_id)
@@ -746,9 +647,6 @@ def _format_target_list_item(target_payload: dict[str, object], language: str) -
     @param[in]  target_payload Payload for `target_payload`.
     @param[in]  language Runtime UI language code.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     sample_key = (
         "character_voices.sample_present"
@@ -765,9 +663,6 @@ def _has_generatable_character_targets(targets: list[dict[str, object]]) -> bool
     @param[in]  targets Current Character Voices target payload list.
     @return     True when at least one current character target can generate a sample.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.2.0
     """
     return any(
         str(target.get("target_kind", "")).strip() == "character" and bool(target.get("can_generate_sample", False))

@@ -12,9 +12,6 @@
 @details Provides final WAV audiobook composition settings, progress display,
          generated-output inspection, Scene Ambience mix previews, and local
          playback controls.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.4.0
 """
 
 # IMPORTS
@@ -44,9 +41,6 @@ class AudioAssemblyPage(QWidget):
     """
     @brief      Display the Audio Assembly workflow surface.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
 
     generate_requested = Signal(dict)
@@ -65,9 +59,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.4.5
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -212,9 +203,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  is_active True when a project is currently open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -224,9 +212,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Mark and refresh the operator status editor for the UI-control font.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-15
-        @version    0.1.0
         """
         self._status_edit.setProperty(
             ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
@@ -242,9 +227,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  is_busy True while one worker operation is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -255,9 +237,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  is_active True while a generated file is playing.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self._playback_active = is_active
         self._apply_control_state()
@@ -269,9 +248,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  duration_ms Current media duration in milliseconds.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         resolved_duration = max(0, int(duration_ms))
         resolved_position = max(0, min(int(position_ms), resolved_duration)) if resolved_duration > 0 else 0
@@ -325,9 +301,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  can_play_scene_mix Controller-resolved preview playback enablement.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.4.0
         """
         self._loading_state = True
         self._stage_status = stage_status
@@ -378,9 +351,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Return the currently selected generated-output key.
         @return     Selected output key or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.1
         """
         row = self._output_list.currentRow()
         if row < 0 or row >= len(self._outputs):
@@ -392,9 +362,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Return the currently selected Scene Ambience mix key.
         @return     Selected Scene Ambience mix key or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.1.0
         """
         row = self._scene_mix_list.currentRow()
         if row < 0 or row >= len(self._scene_mix_groups):
@@ -407,9 +374,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  row Generated-output list row.
         @return     Output key or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         if row < 0 or row >= len(self._outputs):
             return None
@@ -420,9 +384,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Return the settings payload currently selected in the UI.
         @return     Current Audio Assembly settings payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         return audio_assembly_service.normalize_audio_assembly_settings(
             {
@@ -441,9 +402,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  language Runtime UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.4.1
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_assembly.title', language)}</h2>")
@@ -491,9 +449,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Emit the current Audio Assembly settings for generation.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self.generate_requested.emit(self.current_settings_payload())
 
@@ -502,9 +457,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Emit playback toggle for the selected generated output.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         output_key = self.selected_output_key()
         if output_key:
@@ -515,9 +467,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Emit Scene Ambience mix generation for the selected group.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.1.0
         """
         group_key = self.selected_scene_mix_key()
         if group_key:
@@ -528,9 +477,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Emit Scene Ambience mix playback for the selected group.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.1.0
         """
         group_key = self.selected_scene_mix_key()
         if group_key:
@@ -542,9 +488,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  item Double-clicked list item.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         output_key = self.output_key_for_row(self._output_list.row(item))
         if output_key:
@@ -556,9 +499,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  position_ms Requested absolute playback position.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         if not self._updating_playback_slider:
             self.playback_seek_requested.emit(max(0, int(position_ms)))
@@ -568,9 +508,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Emit the final seek position after slider release.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         if not self._updating_playback_slider:
             self.playback_seek_requested.emit(max(0, int(self._playback_slider.value())))
@@ -580,9 +517,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Persist UI setting changes and refresh dependent controls.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.1
         """
         self._max_duration_spin.setEnabled(
             self._output_mode_combo.currentData() == audio_assembly_service.OUTPUT_MODE_TIME_LIMIT
@@ -597,9 +531,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  *_args Optional Qt signal arguments.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         if not self._loading_state and not self._playback_active:
             self.set_playback_progress(0, _selected_output_duration_ms(self._outputs, self._output_list.currentRow()))
@@ -611,9 +542,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  *_args Optional Qt signal arguments.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.1.0
         """
         if not self._loading_state and not self._playback_active:
             self.set_playback_progress(
@@ -628,9 +556,6 @@ class AudioAssemblyPage(QWidget):
         @param[in]  *_args Optional Qt signal arguments.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.0
         """
         self._max_duration_spin.setEnabled(
             self._project_active
@@ -688,9 +613,6 @@ class AudioAssemblyPage(QWidget):
         @brief      Return the currently selected Scene Ambience mix group.
         @return     Selected group record or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-25
-        @version    0.1.0
         """
         row = self._scene_mix_list.currentRow()
         if row < 0 or row >= len(self._scene_mix_groups):
@@ -726,9 +648,6 @@ def _format_output_item(output: dict[str, object], language: str) -> str:
     @param[in]  language Runtime UI language code.
     @return     Display text for the output list row.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     duration_seconds = int(float(output.get("duration_seconds", 0.0) or 0.0))
     minutes = duration_seconds // 60
@@ -747,9 +666,6 @@ def _format_scene_mix_item(group: dict[str, object], language: str) -> str:
     @param[in]  language Runtime UI language code.
     @return     Display text for the scene mix row.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     duration_seconds = int(float(group.get("duration_seconds", 0.0) or 0.0))
     minutes = duration_seconds // 60
@@ -776,9 +692,6 @@ def _selected_output_duration_ms(outputs: list[dict[str, object]], selected_inde
     @param[in]  selected_index Current selected output index.
     @return     Non-negative selected output duration in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     if selected_index < 0 or selected_index >= len(outputs):
         return 0
@@ -792,9 +705,6 @@ def _selected_scene_mix_duration_ms(groups: list[dict[str, object]], selected_in
     @param[in]  selected_index Current selected group index.
     @return     Non-negative selected group duration in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if selected_index < 0 or selected_index >= len(groups):
         return 0
@@ -807,9 +717,6 @@ def _format_playback_time(position_ms: int) -> str:
     @param[in]  position_ms Playback position in milliseconds.
     @return     Display time in `MM:SS` or `HH:MM:SS` format.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     total_seconds = max(0, int(position_ms) // 1000)
     hours = total_seconds // 3600

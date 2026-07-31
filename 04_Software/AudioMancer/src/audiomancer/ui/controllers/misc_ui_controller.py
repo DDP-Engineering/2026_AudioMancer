@@ -12,9 +12,6 @@
 @details Hosts cross-window UI helpers such as status messages, help/about
          dialogs, the common modal progress popup, the operator completion
          beep, and title-bar helpers.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.9.0
 """
 
 # IMPORTS
@@ -79,9 +76,6 @@ def show_message(
     @param[in]  timeout_ms Legacy timeout in milliseconds.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.4.0
     """
     _ = window
     _ = message
@@ -96,9 +90,6 @@ def play_completion_beep(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     settings_payload = getattr(window, "_settings_payload", None)
     if ui_state_service.completion_beep_enabled_from_settings(settings_payload):
@@ -111,9 +102,6 @@ def show_help(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     help_index_path = resolve_help_index_path(current_language)
@@ -138,9 +126,6 @@ def resolve_help_index_path(language: str | None = None) -> Path | None:
     @param[in]  language Preferred UI language code.
     @return     Existing help index path or `None` when unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     candidate_languages = [language or config.DEFAULT_LANGUAGE]
     if config.DEFAULT_LANGUAGE not in candidate_languages:
@@ -158,9 +143,6 @@ def show_about_dialog(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     build_about_dialog(window).exec()
 
@@ -179,9 +161,6 @@ def prompt_multiline_text(
     @param[in]  initial_text Initial text box value.
     @return     Entered text, or None when cancelled.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     dialog = QDialog(window)
     dialog.setWindowTitle(title)
@@ -216,9 +195,6 @@ def build_about_dialog(window: "MainWindow") -> QDialog:
     @param[in]  window Active main window shell.
     @return     Configured Qt dialog instance.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     dialog = QDialog(window)
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
@@ -277,9 +253,6 @@ def current_application_version() -> str:
     @brief      Resolve the current application version from project metadata.
     @return     Current application version string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.1
     """
     if PYPROJECT_PATH.is_file():
         payload = tomllib.loads(PYPROJECT_PATH.read_text(encoding="utf-8"))
@@ -310,9 +283,6 @@ def create_progress_dialog(
     @param[in]  cancellable True when the cancel button should be available.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
     window._operation_progress_dialog = OperationProgressDialog(window)
     window._operation_progress_dialog.cancel_requested.connect(cancel_callback)
@@ -336,9 +306,6 @@ def update_progress_dialog(
     @param[in]  message Current operator-facing status message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.1
     """
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.update_progress(
@@ -353,9 +320,6 @@ def process_pending_ui_events() -> None:
     @brief      Flush pending Qt events so modal progress interactions remain responsive.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     QApplication.processEvents()
 
@@ -366,9 +330,6 @@ def finish_progress_dialog(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.finish()
@@ -381,9 +342,6 @@ def fail_progress_dialog(window: "MainWindow", message: str) -> None:
     @param[in]  message Operator-facing failure message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.fail(message)
@@ -395,9 +353,6 @@ def clear_progress_dialog(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.deleteLater()
@@ -410,9 +365,6 @@ def load_about_license_text(language: str) -> str:
     @param[in]  language Target UI language code.
     @return     Combined operator-facing license text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     main_license_path, addendum_path = resolve_license_paths(language)
     return read_text_file(main_license_path) + "\n\n" + "=" * 78 + "\n\n" + read_text_file(addendum_path)
@@ -424,9 +376,6 @@ def resolve_license_paths(language: str) -> tuple[Path, Path]:
     @param[in]  language Target UI language code.
     @return     Tuple of main-license path and addendum-license path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     localized_pair = LICENSE_TRANSLATED_PATHS.get(language)
     if localized_pair is None:
@@ -443,9 +392,6 @@ def read_text_file(path: Path) -> str:
     @param[in]  path Absolute file path to read.
     @return     Decoded text or a fallback message when unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if not path.exists():
         return f"File not found: {path}"
@@ -458,9 +404,6 @@ def build_window_title(context: str | None = None) -> str:
     @param[in]  context Optional trailing window-specific context.
     @return     Formatted title-bar text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     title = f"{config.APP_NAME} | {TAGLINE_TEXT}"
     if context:
@@ -477,9 +420,6 @@ def _candidate_help_index_paths(language: str | None) -> list[Path]:
     @param[in]  language Preferred UI language code.
     @return     Candidate help index paths in runtime precedence order.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.1
     """
     resolved_language = language if language in config.APP_HELP_INDEX_RELATIVE_PATHS else config.DEFAULT_LANGUAGE
     packaged_relative_path = config.APP_HELP_INDEX_RELATIVE_PATHS[resolved_language]

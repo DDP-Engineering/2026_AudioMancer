@@ -12,9 +12,6 @@
 @details Handles character-discovery start or continue, reset, guarded manual
          add or edit or save or delete actions, and modal progress lifecycle
          for the Characters page.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.18.0
 """
 
 # IMPORTS
@@ -50,9 +47,6 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
     @param[in]  profile_id Requested AI profile identifier from the page.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if not _resolve_unsaved_changes(window):
@@ -121,9 +115,6 @@ def handle_reset_discovery_requested(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if not _resolve_unsaved_changes(window):
@@ -153,9 +144,6 @@ def handle_add_character_requested(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -188,9 +176,6 @@ def handle_edit_character_requested(window: "MainWindow", character_id: str) -> 
     @param[in]  character_id Requested character identifier from the page.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.3.0
     """
     _ = character_id
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
@@ -215,9 +200,6 @@ def handle_save_character_requested(
     @return     `True` when the character was saved successfully.
     @exception  ValueError Propagated from manual-name validation helpers.
     @exception  RuntimeError Raised when could not persist the new manual character profile.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -309,9 +291,6 @@ def handle_delete_character_requested(window: "MainWindow", character_id: str) -
     @param[in]  character_id Target persisted character identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -360,9 +339,6 @@ def handle_selection_change_requested(
     @param[in]  target_character_id Requested target character identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     page = window._characters_page
     if not page.is_dirty():
@@ -396,9 +372,6 @@ def _start_character_save_progress(
     @param[in]  show_progress True to show progress.
     @return     Progress update callback or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if not show_progress or window._operation_progress_dialog is not None:
         return None
@@ -418,7 +391,6 @@ def _start_character_save_progress(
         @param[in]  percent Progress percentage displayed to the operator.
         @param[in]  message_key Translation key for the progress message.
         @return     None.
-        @version    0.1.0
         """
         misc_ui_controller.update_progress_dialog(
             window,
@@ -438,9 +410,6 @@ def _update_character_save_progress(progress_callback, percent: int, message_key
     @param[in]  message_key Runtime UI translation key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if progress_callback is not None:
         progress_callback(percent, message_key)
@@ -452,9 +421,6 @@ def _finish_character_save_progress(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     misc_ui_controller.update_progress_dialog(
         window,
@@ -484,9 +450,6 @@ def _start_operation(
     @param[in]  worker_callable Callable performing the background operation.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.3.0
     """
     workflow_controller_service.start_operation(
         window,
@@ -508,9 +471,6 @@ def _handle_discovery_success(window: "MainWindow", result_payload: object) -> N
     @param[in]  result_payload Worker result payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     assert isinstance(result_payload, dict)
     _sync_manifest_after_discovery(window, result_payload)
@@ -530,9 +490,6 @@ def _handle_discovery_failure(window: "MainWindow", error: Exception) -> None:
     @param[in]  error Raised operation exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _sync_manifest_from_disk(window)
     QMessageBox.warning(
@@ -552,9 +509,6 @@ def _handle_discovery_cancelled(window: "MainWindow", message: str) -> None:
     @param[in]  message Cancellation message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _ = message
     _sync_manifest_from_disk(window)
@@ -577,9 +531,6 @@ def _sync_manifest_after_discovery(
     @param[in]  report Final character-discovery report payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     _ = report
     assert window._current_project_root is not None
@@ -611,9 +562,6 @@ def _sync_manifest_after_character_add(
     @param[in]  progress_callback Optional synchronous progress updater.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -640,9 +588,6 @@ def _sync_manifest_after_character_edit(
     @param[in]  progress_callback Optional synchronous progress updater.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.3.0
     """
     if (
         window._current_project_root is None
@@ -688,9 +633,6 @@ def _sync_manifest_after_character_delete(window: "MainWindow", character_id: st
     @param[in]  character_id Deleted character identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -726,9 +668,6 @@ def _save_refreshed_manual_manifest(
     @param[in]  reset_audio_assembly True to mark Audio Assembly not started.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -766,9 +705,6 @@ def _sync_character_voice_plan(project_root: str) -> None:
     @param[in]  project_root Active project root.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     profiles = narrator_definition_service.load_profiles(project_root)
     selected_state = narrator_definition_service.load_selected_profile_state(project_root)
@@ -795,9 +731,6 @@ def _voice_definition_source_changed(
     @param[in]  updated_profile Updated profile payload.
     @return     True when identity, sex/gender, age, voice prompt text, or preview text changed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.5.0
     """
     if not isinstance(previous_profile, dict) or not isinstance(updated_profile, dict):
         return False
@@ -826,9 +759,6 @@ def _character_profile_by_id(
     @param[in]  character_id Stable character identifier.
     @return     Matching profile payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     normalized_character_id = str(character_id).strip()
     return next(
@@ -847,9 +777,6 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
     """
     workflow_controller_service.sync_manifest_operation_from_disk(
         window,
@@ -865,9 +792,6 @@ def _resolve_unsaved_changes(window: "MainWindow") -> bool:
     @param[in]  window Main application window.
     @return     `True` when the action may continue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     page = window._characters_page
     if not page.is_dirty():
@@ -889,9 +813,6 @@ def _save_current_draft(window: "MainWindow") -> bool:
     @param[in]  window Main application window.
     @return     `True` when no draft exists or save succeeded.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     draft_payload = window._characters_page.current_draft_payload()
     if draft_payload is None:
@@ -906,9 +827,6 @@ def _prompt_unsaved_changes(window: "MainWindow", language: str) -> str:
     @param[in]  language Runtime UI language code.
     @return     Decision token: `save`, `discard`, or `cancel`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     message_box = QMessageBox(window)
     message_box.setIcon(QMessageBox.Icon.Question)
@@ -942,9 +860,6 @@ def _confirm_add_character(window: "MainWindow", language: str) -> bool:
     @param[in]  language Runtime UI language code.
     @return     `True` when the add was confirmed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     decision = QMessageBox.question(
         window,
@@ -963,9 +878,6 @@ def _confirm_edit_character(window: "MainWindow", language: str) -> bool:
     @param[in]  language Runtime UI language code.
     @return     `True` when the edit was confirmed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     decision = QMessageBox.question(
         window,
@@ -984,9 +896,6 @@ def _confirm_delete_character(window: "MainWindow", language: str) -> bool:
     @param[in]  language Runtime UI language code.
     @return     `True` when deletion was confirmed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     decision = QMessageBox.question(
         window,
@@ -1010,9 +919,6 @@ def _show_name_validation_error(
     @param[in]  error_code Stable validation error token.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     message_key = (
         "project.error_duplicate_character_name"
@@ -1036,9 +942,6 @@ def _build_manual_draft_profile(
     @param[in]  canonical_name Validated new canonical name.
     @return     Unsaved draft payload with synthetic manual evidence.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
     base_slug = _draft_slug(canonical_name)
@@ -1076,9 +979,6 @@ def _draft_slug(canonical_name: str) -> str:
     @param[in]  canonical_name Manual character canonical name.
     @return     Lowercase slug string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     return "".join(character if character.isalnum() else "_" for character in canonical_name.casefold()).strip("_")
 
@@ -1089,9 +989,6 @@ def _optional_character_id(value: object) -> str | None:
     @param[in]  value Candidate identifier value from Qt signals.
     @return     String identifier or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     if value in (None, ""):
         return None
@@ -1104,9 +1001,6 @@ def _has_previous_character_discovery_state(window: "MainWindow") -> bool:
     @param[in]  window Main application window.
     @return     `True` when state, report, or profiles already exist.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return False
@@ -1120,9 +1014,6 @@ def prompt_ai_character_discovery_instructions(window: "MainWindow", language: s
     @param[in]  language Runtime UI language code.
     @return     Extra Character Discovery instructions, an empty string, or None when cancelled.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     instructions = misc_ui_controller.prompt_multiline_text(
         window,
@@ -1141,9 +1032,6 @@ def _is_resuming_character_discovery(window: "MainWindow") -> bool:
     @param[in]  window Active main window instance.
     @return     True when a running, failed, or cancelled AI Character Discovery operation is present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.1
     """
     if window._current_project_root is None:
         return False
@@ -1174,9 +1062,6 @@ def _resolve_ai_profile(
     @param[in]  selected_profile_id Requested profile identifier.
     @return     Matching enabled profile payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, selected_profile_id)
 
@@ -1187,9 +1072,6 @@ def _has_chunking_output(project_root: str | None) -> bool:
     @param[in]  project_root Active project root path.
     @return     `True` when chunk output can be loaded from disk.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     if not project_root:
         return False

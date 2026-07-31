@@ -13,9 +13,6 @@
          decide semantic chunk boundaries over ordered paragraphs, checkpoints
          validated descriptor prefixes in one strict `chunks_text.json`, and keeps AI
          transaction logs separate from the durable Chunking contract.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.14.0
 """
 
 # IMPORTS
@@ -99,9 +96,6 @@ def chunk_text(
     @exception  ValueError Raised on missing profile data or unusable cleaned text.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @exception  IncompatibleChunkingDocumentError Raised when cleaned text changed; reset Chunking first.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.2.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -405,9 +399,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @param[in]  project_root Active project root folder.
     @return     Persisted chunking operation-state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     document = chunking_document_service.load_chunking_document(project_root)
     return None if document is None else chunking_document_service.derive_operation_state(document)
@@ -421,9 +412,6 @@ def _compute_prompt_fingerprint(prompt_text: str) -> str:
     @brief      Compute a stable fingerprint for operator-supplied prompt rules.
     @param[in]  prompt_text Operator prompt-rule text.
     @return     SHA-256 fingerprint for the prompt-rule text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
@@ -439,9 +427,6 @@ def _build_windows(
     @param[in]  semantic_strategy Value for `semantic_strategy`.
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.4.0
     """
     _ = semantic_strategy
     text_budget = int(budget_metadata["text_budget_tokens"])
@@ -485,9 +470,6 @@ def _build_windows_from_index(
     @param[in]  semantic_strategy Value for `semantic_strategy`.
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Absolute-index window payloads for the remaining text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
     """
     resolved_start_index = max(0, min(int(start_index), len(paragraph_records)))
     if resolved_start_index >= len(paragraph_records):
@@ -522,9 +504,6 @@ def _build_budget_metadata(
     @param[in]  chunking_context_mode Optional AI chunking context mode token.
     @return     Context-budget metadata used for request-window construction.
     @exception  ValueError Raised when context and output settings leave too little input room.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.3.1
     """
     prompt_user_shell = _render_chunking_user_prompt(
         {
@@ -570,9 +549,6 @@ def _render_chunking_user_prompt(variables: dict[str, object]) -> str:
     @brief      Render the AI chunking user prompt with optional operator rules.
     @param[in]  variables Prompt variables.
     @return     Rendered AI chunking user prompt.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     template = prompt_template_service.load_prompt("text_chunking_user")
     placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
@@ -596,9 +572,6 @@ def _normalized_additional_chunking_instructions(value: object) -> str:
     @brief      Normalize optional operator chunking rules for prompt insertion and state storage.
     @param[in]  value Candidate instruction text.
     @return     Trimmed instruction text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     if value is None:
         return ""
@@ -611,9 +584,6 @@ def _append_additional_chunking_instructions(prompt_text: str, additional_chunki
     @param[in]  prompt_text Rendered prompt template text.
     @param[in]  additional_chunking_instructions Normalized operator rules.
     @return     Prompt text with an additional-rules section.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     if not additional_chunking_instructions:
         return prompt_text
@@ -626,9 +596,6 @@ def _estimate_text_tokens(text: str) -> int:
     @param[in]  text Value for `text`.
     @return     Estimated token count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     return ai_budget_service.estimate_text_tokens(text)
 
@@ -639,9 +606,6 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
     @param[in]  cleaned_text Text value for `cleaned_text`.
     @param[in]  project_root Active project root folder.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     records = deterministic_chunking_service._build_paragraph_records(cleaned_text, project_root)
     for index, record in enumerate(records, start=1):
@@ -655,9 +619,6 @@ def _build_response_schema() -> dict[str, object]:
     @brief      Build the strict AI chunk descriptor response schema.
     @return     Provider structured-output schema.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     return {
         "type": "object",
@@ -691,9 +652,6 @@ def _paragraph_start_anchor(paragraph_text: str) -> str:
     @param[in]  paragraph_text Canonical paragraph text.
     @return     First eight normalized words, or the whole shorter paragraph.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     return " ".join(str(paragraph_text).split()[:_ANCHOR_WORD_LIMIT])
 
@@ -704,9 +662,6 @@ def _normalized_anchor_words(anchor_text: str) -> list[str]:
     @param[in]  anchor_text Source or model-returned anchor text.
     @return     Up to eight case-folded compatibility-normalized words without punctuation.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    0.1.0
     """
     normalized_text = unicodedata.normalize("NFKC", str(anchor_text)).casefold()
     normalized_words: list[str] = []
@@ -725,9 +680,6 @@ def _normalized_complete_anchor(anchor_text: str) -> str:
     @param[in]  anchor_text Source or model-returned anchor text.
     @return     Compatibility-normalized, case-folded, whitespace-collapsed anchor.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     normalized_text = unicodedata.normalize("NFKC", str(anchor_text)).casefold()
     return " ".join(normalized_text.split())
@@ -740,9 +692,6 @@ def _start_anchor_matches(paragraph_text: str, returned_anchor: str) -> bool:
     @param[in]  returned_anchor Model-returned start anchor.
     @return     True for an exact punctuation anchor, a complete short match, or a five-word run.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    0.2.0
     """
     expected_words = _normalized_anchor_words(_paragraph_start_anchor(paragraph_text))
     returned_words = _normalized_anchor_words(returned_anchor)
@@ -781,9 +730,6 @@ def _validate_chunk_descriptor_prefix(
     @param[in]  window_end_index Zero-based absolute last paragraph index.
     @return     Validated absolute prefix ranges and whole-response validity.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     if set(response_payload) != {"chunks"}:
         return [], False
@@ -829,9 +775,6 @@ def _is_structural_boundary_record(record: dict[str, object]) -> bool:
     @param[in]  record Canonical Cleanup paragraph record.
     @return     True when deterministic fallback must preserve this boundary.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     role = str(record.get("role") or "body")
     if role == "heading":
@@ -845,9 +788,6 @@ def _effective_cleanup_role(record: dict[str, object]) -> str:
     @param[in]  record Canonical Cleanup paragraph record.
     @return     Stored role or a recovered raw scene-separator role.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     role = str(record.get("role") or "body")
     if not _is_narratable_record(record):
@@ -867,9 +807,6 @@ def _deterministic_structural_fallback_ranges(
     @param[in]  window_end_index Zero-based inclusive last paragraph index.
     @return     Consecutive ranges that preserve headings and scene separators.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     structural_indices = [
         index
@@ -916,9 +853,6 @@ def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
     @brief      Build the units block.
     @param[in]  paragraph_records Value for `paragraph_records`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     blocks: list[str] = []
     for index, record in enumerate(paragraph_records):
@@ -943,9 +877,6 @@ def _build_chunk_from_range(
     @param[in]  sequence_index One-based canonical chunk sequence number.
     @return     Canonical chunk payload.
     @exception  ValueError Raised when the selected range is empty or invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.2.0
     """
     selected_records = paragraph_records[start_index : end_index + 1]
     if not selected_records:
@@ -1038,9 +969,6 @@ def _append_chunks_from_ranges(
     @param[in]  semantic_strategy Selected semantic strategy.
     @return     None.
     @exception  ValueError Raised when a range is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     for range_payload in ranges:
         narratable_ranges = _narratable_subranges(
@@ -1065,9 +993,6 @@ def _merged_warning_flags(paragraph_records: list[dict[str, object]]) -> list[st
     @brief      Merge cleanup warning flags across selected paragraph records.
     @param[in]  paragraph_records Paragraph records in one AI chunk span.
     @return     Ordered unique warning flags.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     flags: list[str] = []
     for record in paragraph_records:
@@ -1083,9 +1008,6 @@ def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
     @brief      Execute the chapter count from chunks helper.
     @param[in]  chunks Value for `chunks`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return deterministic_chunking_service._chapter_count_from_chunks(chunks)
 
@@ -1096,9 +1018,6 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     @param[in]  project_root Active project root folder.
     @param[in]  started_at Value for `started_at`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     candidate = build_operation_output_path(
@@ -1123,9 +1042,6 @@ def _document_token_usage(payload: object) -> dict[str, object]:
     @param[in] payload Provider-normalized cumulative usage.
     @return Exact Chunking document usage payload.
     @exception None
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-20
-    @version 0.1.0
     """
     if not isinstance(payload, dict) or not bool(payload.get("usage_available", False)):
         return chunking_document_service.empty_token_usage()

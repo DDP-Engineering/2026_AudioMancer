@@ -13,9 +13,6 @@
          overlapping chunk windows, persists compact voice-ready profiles in the
          `40_character_discovery` workflow artifacts, and maintains resumable AI
          operation state.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.19.0
 """
 
 # IMPORTS
@@ -208,9 +205,6 @@ def build_character_voice_definition_prompt(character_profile: dict[str, object]
     @param[in]  character_profile Character profile payload with identity, sex/gender, age, and voice prompt fields.
     @return     Stable English voice-definition prompt paragraph.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    2.1.0
     """
     normalized_profile = _normalized_character_profile_core(character_profile)
     stored_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
@@ -231,9 +225,6 @@ def regenerate_character_voice_definition(profile_payload: dict[str, object]) ->
     @param[in]  profile_payload Character profile payload.
     @return     Updated compact character profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    2.1.0
     """
     normalized_profile = _normalize_character_profile(profile_payload)
     updated_profile = dict(normalized_profile)
@@ -248,9 +239,6 @@ def load_input_chunks(project_root: str | Path) -> list[dict[str, object]]:
     @param[in]  project_root Active project root folder.
     @return     Ordered chunk payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.3.0
     """
     input_chunks, _source = _resolve_discovery_input_chunks(Path(project_root))
     return input_chunks
@@ -278,9 +266,6 @@ def start_or_continue_discovery(
     @return     Final character-discovery report payload.
     @exception  ValueError Raised on missing chunking input or invalid profile data.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.6.1
     """
     resolved_project_root = Path(project_root)
     source_chunks, source_metadata = _resolve_discovery_input_chunks(resolved_project_root)
@@ -713,9 +698,6 @@ def add_character_profile(
     @param[in]  canonical_name Validated canonical character name.
     @return     Updated ordered character profile payload list.
     @exception  ValueError Raised when the name is invalid or duplicated.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    1.1.0
     """
     resolved_project_root = Path(project_root)
     existing_profiles = load_character_profiles(resolved_project_root)
@@ -740,9 +722,6 @@ def validate_manual_character_name(
     @param[in]  exclude_character_id Optional character id ignored during duplicate checks.
     @return     Normalized stripped character name.
     @exception  ValueError Raised when the name is invalid or already exists.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.1
     """
     normalized_name = str(candidate_name or "").strip()
     if not normalized_name or not any(char.isalnum() for char in normalized_name):
@@ -775,9 +754,6 @@ def update_character_profile(
     @param[in]  profile_payload Updated profile payload.
     @return     Updated ordered character profile payload list.
     @exception  ValueError Raised when the profile id is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    1.0.0
     """
     resolved_project_root = Path(project_root)
     selected_profile_id = str(profile_payload.get("character_id", "")).strip()
@@ -821,9 +797,6 @@ def delete_character_profile(
     @param[in]  character_id Selected character profile identifier.
     @return     Updated ordered character profile payload list.
     @exception  ValueError Raised when the character id is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     selected_character_id = str(character_id).strip()
@@ -848,9 +821,6 @@ def reset_character_discovery(project_root: str | Path) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     reset_operation_data(
         project_root,
@@ -1109,9 +1079,6 @@ def drop_character_evidence_for_chunks(
     @param[in]  chunk_ids Source chunk identifiers whose evidence is stale.
     @return     Number of evidence records removed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     normalized_chunk_ids = {str(chunk_id).strip() for chunk_id in chunk_ids if str(chunk_id).strip()}
     if not normalized_chunk_ids:
@@ -1157,9 +1124,6 @@ def _write_character_profiles(
     @param[in]  profiles Ordered character profile payload list.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.4.1
     """
     document = load_character_document(project_root)
     if document is None:
@@ -1191,9 +1155,6 @@ def _build_manual_character_profile(
     @param[in]  canonical_name Validated canonical character name.
     @return     New manual character profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    1.2.0
     """
     return regenerate_character_voice_definition(
         {
@@ -1230,9 +1191,6 @@ def _next_manual_character_id(
     @param[in]  canonical_name Validated canonical character name.
     @return     Unique character identifier string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     base_slug = _slugify_character_id(canonical_name, len(existing_profiles) + 1)
     existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
@@ -1250,9 +1208,6 @@ def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, 
     @param[in]  project_root Active project root folder.
     @return     Ordered discovery chunks plus the input-source token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.3.0
     """
     original_chunks = sorted(
         chunking_document_service.load_chunks(project_root),
@@ -1337,9 +1292,6 @@ def _discovery_chunk_from_source(
     @param[in]  chapter_label Runtime chapter context carried from ordered chunk text.
     @return     Discovery chunk payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.3.0
     """
     discovery_chunk = dict(source_chunk)
     text = str(discovery_chunk.get("text", "")).strip()
@@ -1360,9 +1312,6 @@ def _build_input_fingerprint(
     @brief      Build the input fingerprint.
     @param[in]  source_chunks Value for `source_chunks`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     digest = hashlib.sha256()
     digest.update(str(source_kind).encode("utf-8"))
@@ -1387,9 +1336,6 @@ def _detect_dialogue_spans(text: str) -> list[dict[str, object]]:
     @param[in]  text Discovery input text.
     @return     Ordered dialogue-span payloads.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     spans: list[dict[str, object]] = []
     normalized_text = str(text)
@@ -1448,9 +1394,6 @@ def _dialogue_span_payload(
     @param[in]  sequence_index One-based span sequence index.
     @return     Dialogue-span payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     return {
         "dialogue_span_id": f"dialogue-{sequence_index:03d}",
@@ -1476,9 +1419,6 @@ def _build_chunk_windows(
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
     @exception  ValueError Raised when one source chunk cannot fit inside the request budget.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.3.0
     """
     if not source_chunks:
         return []
@@ -1527,9 +1467,6 @@ def _build_budget_metadata(
     @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
     @return     Context-budget metadata used for windowing and synthesis guards.
     @exception  ValueError Raised when context and output settings leave too little input room.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.3.0
     """
     discovery_prompt_shell = _append_additional_character_discovery_instructions(
         prompt_template_service.render_prompt(
@@ -1601,9 +1538,6 @@ def _resolve_additional_character_discovery_instructions(
     @param[in]  existing_state Existing Character Discovery operation state.
     @return     Normalized operator Character Discovery instructions.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     is_resumable_status = str(existing_state.get("status", "")) in {
         "running",
@@ -1625,9 +1559,6 @@ def _normalized_additional_character_discovery_instructions(value: object) -> st
     @param[in]  value Candidate instruction text.
     @return     Trimmed instruction text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if value is None:
         return ""
@@ -1641,9 +1572,6 @@ def _append_additional_character_discovery_instructions(prompt_text: str, instru
     @param[in]  instructions Normalized operator rules.
     @return     Prompt text with the optional rule section appended.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     normalized_instructions = _normalized_additional_character_discovery_instructions(instructions)
     if not normalized_instructions:
@@ -1659,9 +1587,6 @@ def _estimate_text_tokens(text: str) -> int:
     @param[in]  text Value for `text`.
     @return     Estimated token count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.1
     """
     return ai_budget_service.estimate_text_tokens(text)
 
@@ -1671,9 +1596,6 @@ def _build_units_block(window_records: list[dict[str, object]]) -> str:
     @brief      Build the units block.
     @param[in]  window_records Value for `window_records`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     blocks: list[str] = []
     for chunk in window_records:
@@ -1711,9 +1633,6 @@ def _restore_resume_state(
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  source_chunks Current source chunk records.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.7.1
     """
     if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
         return 0, 0, [], [], [], [], None
@@ -1775,9 +1694,6 @@ def _next_chunk_index_after_window(
     @param[in]  source_chunks Current source chunk records.
     @param[in]  window_records Completed discovery window records.
     @return     Source chunk index immediately after the completed window.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
     """
     if not window_records:
         return 0
@@ -1801,9 +1717,6 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
     @brief      Restore the token usage.
     @param[in]  existing_state Value for `existing_state`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     return token_usage_service.restore_token_usage(existing_state.get("token_usage"))
 
@@ -1813,9 +1726,6 @@ def _restore_mapping_list(payload: object) -> list[dict[str, object]]:
     @brief      Restore the mapping list.
     @param[in]  payload Optional payload processed by the helper.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if not isinstance(payload, list):
         return []
@@ -1833,9 +1743,6 @@ def _resolve_log_path(
     @param[in]  run_token Runtime token used only for deriving a new log filename.
     @param[in]  log_relative_path Path for `log_relative_path`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     if log_relative_path not in (None, ""):
         resolved_log_path = project_root / Path(str(log_relative_path)).name
@@ -1884,9 +1791,6 @@ def _write_operation_state(
     @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
     @param[in]  checkpoint Value for `checkpoint`.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.8.0
     """
     _ = (
         progress_current,
@@ -1978,9 +1882,6 @@ def _normalize_window_candidates(
     @param[in]  payload Optional payload processed by the helper.
     @param[in]  chunk_map Value for `chunk_map`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.5.0
     """
     if not isinstance(payload, list):
         return []
@@ -2017,9 +1918,6 @@ def _normalize_string_list(payload: object) -> list[str]:
     @brief      Normalize the string list.
     @param[in]  payload Optional payload processed by the helper.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if isinstance(payload, str):
         items = [item.strip() for item in payload.split(",")]
@@ -2043,9 +1941,6 @@ def _normalize_evidence(
     @param[in]  payload Optional payload processed by the helper.
     @param[in]  chunk_map Value for `chunk_map`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
     """
     if not isinstance(payload, list):
         return []
@@ -2091,9 +1986,6 @@ def _dialogue_span_excerpt(source_chunk: dict[str, object], dialogue_span_id: st
     @param[in]  dialogue_span_id Dialogue span identifier.
     @return     Span excerpt or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
     """
     for dialogue_span in list(source_chunk.get("dialogue_spans", [])):
         if not isinstance(dialogue_span, dict):
@@ -2119,9 +2011,6 @@ def _normalize_evidence_confidence(
     @param[in]  reason Evidence reason.
     @return     Evidence confidence token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     confidence = str(raw_confidence or "").strip().casefold()
     if confidence in {EVIDENCE_CONFIDENCE_HIGH, EVIDENCE_CONFIDENCE_MEDIUM, EVIDENCE_CONFIDENCE_LOW}:
@@ -2142,9 +2031,6 @@ def _merge_character_candidates(
     @brief      Merge the character candidates.
     @param[in]  candidates Value for `candidates`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     merged, _rejected = _merge_character_candidates_with_rejections(candidates)
     return merged
@@ -2158,9 +2044,6 @@ def _merge_character_candidates_with_rejections(
     @param[in]  candidates Candidate payload list.
     @return     Accepted merged candidates and rejected candidate diagnostics.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     merged = [_merge_candidate_identity_group(group) for group in _group_character_candidates_by_identity(candidates)]
     accepted: list[dict[str, object]] = []
@@ -2188,9 +2071,6 @@ def _group_character_candidates_by_identity(candidates: list[dict[str, object]])
     @param[in]  candidates Candidate payload list.
     @return     Identity groups.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.1
     """
     groups: list[list[dict[str, object]]] = []
     group_index_by_alias_key: dict[str, int] = {}
@@ -2218,9 +2098,6 @@ def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> 
     @param[in]  identity_group Candidates believed to represent the same character.
     @return     Merged candidate payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
     """
     target: dict[str, object] = {}
     alias_keys: set[str] = set()
@@ -2254,9 +2131,6 @@ def _rejected_candidate_payload(candidate: dict[str, object], reason: str) -> di
     @param[in]  reason Rejection reason token.
     @return     Rejected-candidate diagnostic payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     evidence = _restore_evidence(candidate.get("evidence", []))
     return {
@@ -2275,9 +2149,6 @@ def _merge_demographic_field(target: dict[str, object], candidate: dict[str, obj
     @param[in]  field_prefix Demographic prefix, for example `gender` or `age`.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     hint_field = f"{field_prefix}_hint"
     confidence_field = f"{field_prefix}_confidence"
@@ -2305,9 +2176,6 @@ def _merge_confidence_field(target: dict[str, object], candidate: dict[str, obje
     @param[in]  field_name Confidence field to merge.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     existing_value = str(target.get(field_name, "")).strip()
     candidate_value = str(candidate.get(field_name, "")).strip()
@@ -2325,9 +2193,6 @@ def _normalize_demographic_confidence(value: object) -> str:
     @param[in]  value Candidate confidence value.
     @return     Supported confidence token or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     confidence = str(value or "").strip().casefold()
     return confidence if confidence in DEMOGRAPHIC_CONFIDENCE_VALUES else ""
@@ -2340,9 +2205,6 @@ def _demographic_confidence_for_hint(hint: object, confidence: object) -> str:
     @param[in]  confidence Candidate confidence value.
     @return     Supported confidence token or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     if not str(hint or "").strip():
         return ""
@@ -2355,9 +2217,6 @@ def _demographic_confidence_rank(value: object) -> int:
     @param[in]  value Candidate confidence value.
     @return     Numeric rank where larger is stronger.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     return {
         "": 0,
@@ -2372,9 +2231,6 @@ def _restore_evidence(payload: object) -> list[dict[str, object]]:
     @brief      Restore the evidence.
     @param[in]  payload Optional payload processed by the helper.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if not isinstance(payload, list):
         return []
@@ -2388,9 +2244,6 @@ def _dedupe_evidence(
     @brief      Execute the dedupe evidence helper.
     @param[in]  evidence_items Value for `evidence_items`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     deduped: list[dict[str, object]] = []
     seen: set[tuple[str, int, str]] = set()
@@ -2424,9 +2277,6 @@ def _budgeted_synthesis_candidate_payload(
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Candidate payload safe to serialize into the synthesis prompt.
     @exception  ValueError Raised when even the minimum candidate payload exceeds the synthesis budget.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     evidence_items = _rank_synthesis_evidence(_restore_evidence(candidate.get("evidence", [])))
     max_evidence_items = max(1, int(budget_metadata["synthesis_max_evidence_items"]))
@@ -2459,9 +2309,6 @@ def _synthesis_candidate_payload(
     @param[in]  evidence_items Selected evidence payloads.
     @return     Compact synthesis input payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.4.0
     """
     return {
         "character_id": str(candidate.get("character_id", "")).strip(),
@@ -2489,9 +2336,6 @@ def _rank_synthesis_evidence(evidence_items: list[dict[str, object]]) -> list[di
     @param[in]  evidence_items Full merged evidence payload list.
     @return     Ordered evidence list, preferring direct dialogue and early source order.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     confidence_rank = {
         EVIDENCE_CONFIDENCE_HIGH: 0,
@@ -2514,9 +2358,6 @@ def _compact_synthesis_evidence(evidence_item: dict[str, object]) -> dict[str, o
     @param[in]  evidence_item Normalized evidence item.
     @return     Compact evidence payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     return {
         "chunk_id": str(evidence_item.get("chunk_id", "")).strip(),
@@ -2537,9 +2378,6 @@ def _build_profile_from_synthesis(
     @param[in]  response_payload Payload for `response_payload`.
     @param[in]  candidate Value for `candidate`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.5.0
     """
     gender_hint = str(response_payload.get("gender_hint", candidate.get("gender_hint", ""))).strip()
     age_hint = str(response_payload.get("age_hint", candidate.get("age_hint", ""))).strip()
@@ -2579,9 +2417,6 @@ def _normalize_character_profile(profile_payload: dict[str, object]) -> Characte
     @param[in]  profile_payload Raw or partial character profile payload.
     @return     Normalized persisted profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    2.3.0
     """
     normalized_profile = _normalized_character_profile_core(profile_payload)
     normalized_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
@@ -2598,9 +2433,6 @@ def _normalize_review_status(raw_status: object) -> str:
     @param[in]  raw_status Raw review status.
     @return     Supported review-status token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     review_status = str(raw_status or "").strip().casefold()
     if review_status in CHARACTER_REVIEW_STATUSES:
@@ -2614,9 +2446,6 @@ def _edited_review_status(existing_profile: dict[str, object]) -> str:
     @param[in]  existing_profile Existing normalized character profile.
     @return     Updated review-status token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     existing_status = _normalize_review_status(existing_profile.get("review_status", ""))
     if existing_status == CHARACTER_REVIEW_STATUS_MANUAL:
@@ -2630,9 +2459,6 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
     @param[in]  profile_payload Raw or partial character profile payload.
     @return     Core normalized profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    2.3.0
     """
     gender_hint = str(profile_payload.get("gender_hint", "")).strip()
     age_hint = str(profile_payload.get("age_hint", "")).strip()
@@ -2668,9 +2494,6 @@ def _build_character_preview_text(
     @param[in]  candidate Merged character candidate payload.
     @return     Preview text meeting the configured minimum duration estimate, or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     response_preview_text = _normalized_character_preview_text(response_payload.get(CHARACTER_PREVIEW_TEXT_FIELD, ""))
     if _is_valid_character_preview_text(response_preview_text) and _preview_text_supported_by_evidence(
@@ -2687,9 +2510,6 @@ def _candidate_preview_text(candidate: dict[str, object]) -> str:
     @param[in]  candidate Merged character candidate payload.
     @return     Preview text meeting the configured minimum duration estimate, or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     fragments: list[str] = []
     preview_limit = max(1, int(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
@@ -2718,9 +2538,6 @@ def _preview_text_supported_by_evidence(preview_text: str, candidate: dict[str, 
     @param[in]  candidate Merged character candidate payload.
     @return     True when the normalized preview appears in the normalized spoken evidence text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     normalized_preview_text = _normalized_preview_support_text(preview_text)
     if not normalized_preview_text:
@@ -2740,9 +2557,6 @@ def _spoken_preview_fragment(text: str) -> str:
     @param[in]  text Source dialogue excerpt.
     @return     Excerpt with surrounding dialogue delimiters removed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     normalized_text = " ".join(str(text).split()).strip()
     normalized_text = normalized_text.strip("\"'\u201c\u201d\u2018\u2019\u00ab\u00bb\u300c\u300d\u300e\u300f")
@@ -2756,9 +2570,6 @@ def _normalized_preview_support_text(text: str) -> str:
     @param[in]  text Candidate text.
     @return     Lowercase alphanumeric support-check text with normalized spacing.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     return " ".join(re.sub(r"[^\w\s]", " ", str(text).casefold(), flags=re.UNICODE).split())
 
@@ -2769,9 +2580,6 @@ def _normalized_character_preview_text(preview_text: object) -> str:
     @param[in]  preview_text Candidate preview text.
     @return     Single-line preview text capped to the configured character limit.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     normalized_text = " ".join(str(preview_text or "").split()).strip()
     preview_limit = max(1, int(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
@@ -2786,9 +2594,6 @@ def _is_valid_character_preview_text(preview_text: str) -> bool:
     @param[in]  preview_text Candidate preview text.
     @return     True when the text is long enough and inside the preview character limit.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     normalized_text = _normalized_character_preview_text(preview_text)
     if not normalized_text:
@@ -2801,9 +2606,6 @@ def _minimum_character_preview_word_count() -> int:
     @brief      Estimate the minimum character-preview word count for useful Qwen TTS references.
     @return     Minimum preview word count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     return max(
         1,
@@ -2819,9 +2621,6 @@ def _character_voice_gender_instruction(profile_payload: dict[str, object]) -> s
     @brief      Build explicit sex/gender guidance for one character voice prompt.
     @param[in]  profile_payload Character profile payload.
     @return     Sex/gender instruction text without the field label.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
     """
     gender_hint = str(profile_payload.get("gender_hint", "")).strip()
     if gender_hint:
@@ -2845,9 +2644,6 @@ def _character_voice_age_instruction(profile_payload: dict[str, object]) -> str:
     @brief      Build explicit age-domain guidance for one character voice prompt.
     @param[in]  profile_payload Character profile payload.
     @return     Age-domain instruction text without the field label.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.2.0
     """
     age_hint = str(profile_payload.get("age_hint", "")).strip()
     if age_hint:
@@ -2869,9 +2665,6 @@ def _ensure_character_voice_prompt_instructions(prompt_text: str, profile_payloa
     @param[in]  prompt_text Candidate voice-definition prompt.
     @param[in]  profile_payload Character profile payload.
     @return     Prompt text containing explicit sex/gender and age-domain guidance.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     prompt_with_gender = _ensure_character_voice_prompt_gender_instruction(prompt_text, profile_payload)
     return _ensure_character_voice_prompt_age_instruction(prompt_with_gender, profile_payload)
@@ -2883,9 +2676,6 @@ def _ensure_character_voice_prompt_gender_instruction(prompt_text: str, profile_
     @param[in]  prompt_text Candidate voice-definition prompt.
     @param[in]  profile_payload Character profile payload.
     @return     Prompt text containing explicit sex/gender guidance.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).strip()
     if _prompt_has_explicit_gender_instruction(normalized_prompt):
@@ -2899,9 +2689,6 @@ def _ensure_character_voice_prompt_age_instruction(prompt_text: str, profile_pay
     @param[in]  prompt_text Candidate voice-definition prompt.
     @param[in]  profile_payload Character profile payload.
     @return     Prompt text containing explicit age-domain guidance.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).strip()
     if _prompt_has_explicit_age_instruction(normalized_prompt):
@@ -2914,9 +2701,6 @@ def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
     @brief      Return whether a prompt already carries explicit sex/gender guidance.
     @param[in]  prompt_text Candidate voice-definition prompt.
     @return     True when explicit sex or gender guidance is already present.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).casefold()
     return bool(
@@ -2930,9 +2714,6 @@ def _prompt_has_explicit_age_instruction(prompt_text: str) -> bool:
     @brief      Return whether a prompt already carries explicit age-domain guidance.
     @param[in]  prompt_text Candidate voice-definition prompt.
     @return     True when explicit age-domain guidance is already present.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).casefold()
     return bool(re.search(r"\b(age domain|age hint|age)\s*:", normalized_prompt))
@@ -2943,9 +2724,6 @@ def _normalize_identity(value: str) -> str:
     @brief      Normalize the identity.
     @param[in]  value Candidate value.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return re.sub(r"[^a-z0-9]+", "", value.casefold())
 
@@ -2956,9 +2734,6 @@ def _slugify_character_id(name: str, fallback_index: int) -> str:
     @param[in]  name Value for `name`.
     @param[in]  fallback_index Value for `fallback_index`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     slug = re.sub(r"[^a-z0-9]+", "_", name.casefold()).strip("_")
     return slug or f"character_{fallback_index:04d}"
@@ -2969,9 +2744,6 @@ def _candidate_sort_key(candidate: dict[str, object]) -> tuple[int, str]:
     @brief      Execute the candidate sort key helper.
     @param[in]  candidate Value for `candidate`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     evidence = _restore_evidence(candidate.get("evidence", []))
     if not evidence:
@@ -2987,9 +2759,6 @@ def _profile_sort_key(profile: CharacterProfilePayload) -> tuple[int, str]:
     @brief      Execute the profile sort key helper.
     @param[in]  profile Value for `profile`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     evidence = _restore_evidence(profile.get("evidence", []))
     if not evidence:
@@ -3005,9 +2774,6 @@ def _candidate_has_spoken_dialogue(candidate: dict[str, object]) -> bool:
     @brief      Execute the candidate has spoken dialogue helper.
     @param[in]  candidate Value for `candidate`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     if bool(candidate.get("has_dialogue_evidence")):
         return True
@@ -3023,9 +2789,6 @@ def _evidence_has_direct_dialogue(evidence: dict[str, object]) -> bool:
     @param[in]  evidence Evidence payload.
     @return     True when the evidence is anchored to dialogue without depending on natural-language keywords.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     if str(evidence.get("dialogue_span_id", "")).strip():
         return True
@@ -3041,9 +2804,6 @@ def _text_contains_dialogue_markers(text: str) -> bool:
     @brief      Execute the text contains dialogue markers helper.
     @param[in]  text Value for `text`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     normalized = text.strip()
     if not normalized:
@@ -3058,9 +2818,6 @@ def _reason_mentions_dialogue(reason: str) -> bool:
     @brief      Execute the reason mentions dialogue helper.
     @param[in]  reason Value for `reason`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     lowered = reason.casefold()
     return any(
@@ -3094,9 +2851,6 @@ def _excerpt_text(text: str, limit: int = 180) -> str:
     @param[in]  text Value for `text`.
     @param[in]  limit Value for `limit`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     normalized = " ".join(text.split())
     if len(normalized) <= limit:

@@ -12,9 +12,6 @@
 @details Presents runtime language, completion beep, scroll steps, a built-in theme
          selector, and two font-size step selectors (interface controls and text
          windows). Colour/custom-theme editing has been intentionally removed.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.12.0
 """
 
 # IMPORTS
@@ -52,9 +49,6 @@ class SettingsPage(QWidget):
     @details    Exposes language, completion beep, scroll steps, a built-in theme
                 selector, and independent interface/text font-size step selectors.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.12.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -63,9 +57,6 @@ class SettingsPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.12.0
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
@@ -161,9 +152,6 @@ class SettingsPage(QWidget):
         @brief      Build a combo box populated with the seven font-size steps.
         @return     Configured font-size step combo box.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         combo = QComboBox(self)
         for step in config.UI_FONT_SIZE_STEPS:
@@ -177,9 +165,6 @@ class SettingsPage(QWidget):
         @param[in]  theme_id Candidate theme identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         index = self._theme_combo.findData(theme_id)
         if index < 0:
@@ -193,9 +178,6 @@ class SettingsPage(QWidget):
         @param[in]  step Candidate font-size step.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         index = combo.findData(step)
         if index < 0:
@@ -207,9 +189,6 @@ class SettingsPage(QWidget):
         @brief      Update the preview widgets with the selected theme colours and font sizes.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         theme_payload = ui_theme_service.theme_by_id(self._theme_combo.currentData(), [])
         try:
@@ -235,9 +214,6 @@ class SettingsPage(QWidget):
         @param[in]  settings_payload Combined application settings payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.5.0
         """
         self._language_combo.setCurrentText(str(settings_payload.get("language", config.DEFAULT_LANGUAGE)))
         self._completion_beep_checkbox.setChecked(
@@ -268,9 +244,6 @@ class SettingsPage(QWidget):
         @param[in]  existing_settings_payload Existing application settings.
         @return     Merged settings payload containing settings-page changes.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.5.0
         """
         merged_settings = dict(existing_settings_payload)
         merged_settings.pop("ui_text_scale", None)
@@ -292,9 +265,6 @@ class SettingsPage(QWidget):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.5.0
         """
         self._current_language = language
         self._language_label.setText(ui_state_service.translate("settings.language", language))

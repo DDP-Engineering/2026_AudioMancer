@@ -12,9 +12,6 @@
 @details Verifies custom Qwen Voice Designer narrator profiles, simplified TTS plan
          persistence, edit-side sample invalidation, and fixed-capability
          generation resolution.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 3.12.0
 """
 
 # IMPORTS
@@ -35,9 +32,6 @@ def test_narrator_service_starts_without_predefined_profiles(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorSeedProject", tmp_path)
 
@@ -54,9 +48,6 @@ def test_narrator_service_rejects_torn_authoritative_document_without_replacing_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorTornProfileProject", tmp_path)
     document_path = project_root / config.NARRATOR_VOICE_FILE_NAME
@@ -74,9 +65,6 @@ def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorEditProject", tmp_path)
     profile = narrator_definition_service.create_custom_profile(
@@ -116,9 +104,6 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.5.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorSampleProject", tmp_path)
     profile = narrator_definition_service.create_custom_profile(
@@ -174,9 +159,6 @@ def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorImportedSampleProject", tmp_path)
     source_sample = tmp_path / "source_voice.wav"
@@ -220,9 +202,6 @@ def test_narrator_service_reports_selected_sample_metadata_when_canonical_wav_is
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorTornSelectedSampleProject", tmp_path)
     profile = narrator_definition_service.create_custom_profile(
@@ -264,9 +243,6 @@ def test_narrator_service_store_profile_sample_preserves_other_profile_samples(t
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorMultiSampleProject", tmp_path)
     first_profile = narrator_definition_service.create_custom_profile(
@@ -346,9 +322,6 @@ def _write_import_test_wav(path: Path) -> None:
     @param[in]  path Output path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_rate = 16_000
     frame_count = int(sample_rate * 3.2)
@@ -366,9 +339,6 @@ def test_narrator_service_profile_sample_path_uses_stored_audio_path_after_renam
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorRenamedSampleProject", tmp_path)
     profile = narrator_definition_service.create_custom_profile(
@@ -419,9 +389,6 @@ def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorPlanProject", tmp_path)
 
@@ -446,9 +413,6 @@ def test_narrator_service_profile_generation_request_requires_minimum_qwen_capab
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.0.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorGenerationProject", tmp_path)
     custom_profile = narrator_definition_service.create_custom_profile(
@@ -496,9 +460,6 @@ def test_narrator_service_normalizes_language_labels_to_runtime_codes(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.1
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorLanguageProject", tmp_path)
 

@@ -11,9 +11,6 @@
 @brief Focused tests for atomic file persistence helpers.
 @details Verifies JSON files are replaced atomically and that replacement
          failures preserve the last complete payload.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -34,9 +31,6 @@ def test_write_json_atomic_replaces_file_with_valid_json(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     target_path = tmp_path / "settings.json"
     target_path.write_text('{"version": 1}\n', encoding="utf-8")
@@ -53,9 +47,6 @@ def test_write_json_atomic_failed_replace_leaves_previous_json_intact(tmp_path, 
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     target_path = tmp_path / "project.json"
     original_payload = {"project_id": "before", "status": "complete"}
@@ -68,9 +59,6 @@ def test_write_json_atomic_failed_replace_leaves_previous_json_intact(tmp_path, 
         @param[in]  destination_path Final destination path passed to replacement.
         @return     None.
         @exception  OSError Always raised to simulate failed replacement.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         _ = source_path
         _ = destination_path

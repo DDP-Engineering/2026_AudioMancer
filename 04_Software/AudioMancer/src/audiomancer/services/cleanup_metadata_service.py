@@ -11,9 +11,6 @@
 @brief Paragraph-offset readers for the single Cleanup document.
 @details Reconstructs paragraph text from clean_text.txt offsets stored in
          cleanup.json; it does not create or read a metadata sidecar.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.6.0
 """
 
 from __future__ import annotations

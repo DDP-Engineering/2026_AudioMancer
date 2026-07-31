@@ -12,9 +12,6 @@
 @details Handles narrator profile inspection, AI text-only profile suggestion
          generation, explicit narrator selection, Qwen3-backed sample generation,
          sample preview playback, and project-local narrator profile editing.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-18
-@version 3.21.0
 """
 
 # IMPORTS
@@ -58,9 +55,6 @@ def handle_selection_change_requested(window: "MainWindow", target_profile_id: o
     @param[in]  target_profile_id Requested narrator-profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.5.0
     """
     profile_id = None if target_profile_id in (None, "") else str(target_profile_id)
     window._narator_voice_inspected_profile_id = profile_id
@@ -82,9 +76,6 @@ def handle_create_profile_requested(
     @param[in]  profile_payload Current editor payload used as the custom-profile base.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -128,9 +119,6 @@ def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None
     @param[in]  profile_id Selected narrator-profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -199,9 +187,6 @@ def handle_save_profile_requested(
     @param[in]  profile_payload Updated narrator-profile payload from the page.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.6.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -261,9 +246,6 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
     @param[in]  profile_id Target narrator-profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -319,9 +301,6 @@ def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> No
     @param[in]  profile_id Requested narrator-profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -374,9 +353,6 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     @param[in]  profile_id Requested narrator-profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -468,9 +444,6 @@ def handle_import_sample_requested(window: "MainWindow", profile_id: str) -> Non
     @param[in]  profile_id Requested narrator-profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -541,9 +514,6 @@ def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) ->
     @param[in]  profile_id Selected enabled AI profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -617,9 +587,6 @@ def _handle_generate_profiles_success(window: "MainWindow", result_payload: obje
     @param[in]  result_payload Successful generation report payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     report_payload = dict(result_payload) if isinstance(result_payload, dict) else {}
@@ -651,9 +618,6 @@ def _handle_generate_profiles_failure(window: "MainWindow", error: Exception, cu
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if window._current_project_root is not None:
         window.show_project_state(
@@ -675,9 +639,6 @@ def _handle_generate_profiles_cancelled(window: "MainWindow", message: str, curr
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     _ = message
     if window._current_project_root is not None:
@@ -707,9 +668,6 @@ def _handle_generate_sample_success(
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.5.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
@@ -767,9 +725,6 @@ def _handle_import_sample_success(
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     window._settings_payload = settings_service.load_settings()
     window._narator_voice_inspected_profile_id = profile_id
@@ -818,9 +773,6 @@ def _handle_generate_sample_failure(window: "MainWindow", error: Exception, curr
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     window._settings_payload = settings_service.load_settings()
     if window._current_project_root is not None:
@@ -843,9 +795,6 @@ def _handle_generate_sample_cancelled(window: "MainWindow", message: str, curren
     @param[in]  current_language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _ = message
     window._settings_payload = settings_service.load_settings()
@@ -861,9 +810,6 @@ def handle_preview_toggle_requested(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.0.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._narator_voice_page._preview_active:  # noqa: SLF001
@@ -896,9 +842,6 @@ def handle_preview_playback_state_changed(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.1.0
     """
     if window._narator_voice_audio_player.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
         window._narator_voice_page.set_preview_active(False)
@@ -918,9 +861,6 @@ def _start_narator_voice_change_progress(
     @param[in]  operation_name_key Runtime UI key for the progress title.
     @return     Progress update callback or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if not show_progress:
         return None
@@ -946,7 +886,6 @@ def _start_narator_voice_change_progress(
     def _update(percent: int, message_key: str) -> None:
         """
         @brief      Update the active non-cancellable narrator-change progress dialog.
-        @version    1.0.0
         """
         misc_ui_controller.update_progress_dialog(
             window,
@@ -966,9 +905,6 @@ def _update_narator_voice_change_progress(progress_callback, percent: int, messa
     @param[in]  message_key Runtime UI translation key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if progress_callback is not None:
         progress_callback(percent, message_key)
@@ -980,9 +916,6 @@ def _finish_narator_voice_change_progress(window: "MainWindow") -> None:
     @param[in]  window Main application window.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     misc_ui_controller.update_progress_dialog(
         window,
@@ -1018,9 +951,6 @@ def _generate_and_store_sample(
     @param[in]  cancel_requested Optional cooperative cancellation callback.
     @return     None.
     @exception  RuntimeError Raised when VoiceWeaver fails or does not expose downloadable audio.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.5.0
     """
     _emit_sample_progress(
         progress_callback,
@@ -1171,9 +1101,6 @@ def _limited_preview_text(preview_text: object, settings_payload: dict[str, obje
     @param[in]  settings_payload Current application settings payload.
     @return     Preview text capped at the configured character limit.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     try:
         character_limit = int(
@@ -1198,9 +1125,6 @@ def _update_generation_progress(
     @param[in]  status_payload Payload for `status_payload`.
     @param[in]  stage_text Progress stage text.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     operation_payload = status_payload.get("operation", {})
     if not isinstance(operation_payload, dict):
@@ -1221,9 +1145,6 @@ def _update_load_progress(
     @param[in]  status_payload Payload for `status_payload`.
     @param[in]  stage_text Progress stage text.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     operation_payload = status_payload.get("operation", {})
     if not isinstance(operation_payload, dict):
@@ -1241,9 +1162,6 @@ def _emit_sample_progress(progress_callback, percent: int, message: str) -> None
     @param[in]  message Current operator-facing status text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if progress_callback is not None:
         progress_callback(0, 100, percent, message)
@@ -1254,9 +1172,6 @@ def _active_model_id_from_status(status_payload: dict[str, object]) -> str | Non
     @brief      Execute the active model id from status helper.
     @param[in]  status_payload Payload for `status_payload`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
     """
     return tts_runtime_ui_support.active_model_id_from_status(status_payload)
 
@@ -1273,9 +1188,6 @@ def _sync_manifest_summary(
     @param[in]  selected_language Selected narrator language label.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    2.0.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -1318,9 +1230,6 @@ def _stop_preview_playback(window: "MainWindow") -> None:
     @brief      Execute the stop preview playback helper.
     @param[in]  window Value for `window`.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     window._narator_voice_audio_player.stop()
     window._narator_voice_audio_player.setSource(QUrl())
@@ -1333,9 +1242,6 @@ def _confirm_delete_profile(window: "MainWindow", language: str) -> bool:
     @param[in]  window Value for `window`.
     @param[in]  language Language code.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1353,9 +1259,6 @@ def _confirm_profile_edit(window: "MainWindow", language: str) -> bool:
     @param[in]  window Value for `window`.
     @param[in]  language Language code.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1374,9 +1277,6 @@ def _confirm_generate_sample(window: "MainWindow", language: str, profile_id: st
     @param[in]  language Language code.
     @param[in]  profile_id Profile identifier.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     has_existing_sample = window._current_project_root is not None and narrator_definition_service.has_profile_sample(
         window._current_project_root, profile_id
@@ -1408,9 +1308,6 @@ def _current_narrator_import_preview_text(
     @param[in]  profile_id Imported profile identifier.
     @return     Initial sample transcript text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     if str(window._narator_voice_page.current_profile_id() or "").strip() == str(profile_id).strip():
         return str(window._narator_voice_page.current_editor_payload().get("preview_text", "") or "").strip()
@@ -1425,9 +1322,6 @@ def _show_voice_sample_import_error(window: "MainWindow", error: ValueError, lan
     @param[in]  language Current UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     message_key = {
         "unsupported_file_type": "voice_sample_import.error_unsupported_file_type",
@@ -1454,9 +1348,6 @@ def _confirm_generate_profiles(window: "MainWindow", language: str) -> bool:
     @param[in]  language Runtime UI language code.
     @return     True when the operator accepts token-consuming AI work.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1477,9 +1368,6 @@ def prompt_ai_narrator_profile_instructions(window: "MainWindow", language: str)
     @param[in]  language Runtime UI language code.
     @return     Extra narrator profile instructions, an empty string, or None when cancelled.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     instructions = misc_ui_controller.prompt_multiline_text(
         window,
@@ -1498,9 +1386,6 @@ def _is_resuming_profile_generation(window: "MainWindow") -> bool:
     @param[in]  window Main application window.
     @return     True when a compatible unfinished operation may reuse saved prompt rules.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return False
@@ -1524,9 +1409,6 @@ def _preview_text_character_limit(settings_payload: dict[str, object] | None) ->
     @param[in]  settings_payload Current application settings payload.
     @return     Positive preview text character limit.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
@@ -1549,9 +1431,6 @@ def _show_name_validation_error(window: "MainWindow", language: str, error_code:
     @param[in]  language Language code.
     @param[in]  error_code Value for `error_code`.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     message_key = (
         "narator_voice.error_duplicate_profile_name"
@@ -1571,9 +1450,6 @@ def _selected_profile_id(window: "MainWindow") -> str | None:
     @param[in]  window Main application window.
     @return     Selected narrator-profile identifier or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return None

@@ -12,9 +12,6 @@
 @details Implements the sidebar-driven Qt shell while delegating page/window
          behavior to dedicated UI controllers and page-specific state services
          so the window remains a thin coordinator.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-23
-@version 1.48.0
 """
 
 # IMPORTS
@@ -120,9 +117,6 @@ class MainWindow(QMainWindow):
                 dedicated UI controllers plus page-specific state services.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.13.0
     """
 
     PAGE_ORDER = (
@@ -149,9 +143,6 @@ class MainWindow(QMainWindow):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.22.0
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -244,9 +235,6 @@ class MainWindow(QMainWindow):
         @param[in]  page_id Registered page identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    0.5.0
         """
         page = self._page_registry.get(page_id)
         if page is None:
@@ -269,9 +257,6 @@ class MainWindow(QMainWindow):
         @param[in]  is_active True when a project is open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.6.2
         """
         for page_id, _label in self.PAGE_ORDER:
             enabled = is_active or page_id == "home"
@@ -294,9 +279,6 @@ class MainWindow(QMainWindow):
         @param[in]  manifest Active project manifest or `None`.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-16
-        @version    0.11.1
         """
         current_language = self.refresh_project_summary(project_root, manifest)
         self._refresh_current_page_state(project_root, manifest, current_language)
@@ -312,9 +294,6 @@ class MainWindow(QMainWindow):
         @param[in]  manifest Active project manifest or `None`.
         @return     Current UI language code.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -362,9 +341,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.2.0
         """
         if self._current_page_id == "text_cleanup":
             self._text_cleanup_page.set_project_active(project_root is not None)
@@ -416,9 +392,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.2.0
         """
         self._text_chunking_page.set_project_active(project_root is not None)
         self._text_chunking_page.set_ai_profiles(
@@ -446,9 +419,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         self._ai_translation_page.set_project_active(project_root is not None)
         translation_state = ai_translation_state_service.build_ai_translation_state(
@@ -478,9 +448,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         self._characters_page.set_project_active(project_root is not None)
         character_state = character_discovery_state_service.build_character_discovery_state(
@@ -510,9 +477,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.2.1
         """
         self._narator_voice_page.set_project_active(project_root is not None)
         self._narator_voice_page.set_ai_profiles(
@@ -544,9 +508,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.1
         """
         self._character_voices_page.set_project_active(project_root is not None)
         self._character_voices_page.set_character_voices_state(
@@ -573,9 +534,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         self._speech_blocks_page.set_project_active(project_root is not None)
         speech_blocks_state = speech_blocks_state_service.build_speech_blocks_state(
@@ -605,9 +563,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         self._audio_blocks_page.set_project_active(project_root is not None)
         self._audio_blocks_page.set_audio_blocks_state(
@@ -632,9 +587,6 @@ class MainWindow(QMainWindow):
         @param[in]  current_language Current UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         self._audio_assembly_page.set_project_active(project_root is not None)
         self._audio_assembly_page.set_audio_assembly_state(
@@ -650,9 +602,6 @@ class MainWindow(QMainWindow):
         @brief      Show the static settings dialog.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         settings_ui_controller.show_settings_dialog(self)
 
@@ -661,9 +610,6 @@ class MainWindow(QMainWindow):
         @brief      Show the static AI settings dialog.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         ai_settings_ui_controller.show_ai_settings_dialog(self)
 
@@ -672,9 +618,6 @@ class MainWindow(QMainWindow):
         @brief      Show the static TTS settings dialog.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-16
-        @version    0.1.0
         """
         tts_settings_ui_controller.show_tts_settings_dialog(self)
 
@@ -683,9 +626,6 @@ class MainWindow(QMainWindow):
         @brief      Build and show the About dialog.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         misc_ui_controller.show_about_dialog(self)
 
@@ -696,9 +636,6 @@ class MainWindow(QMainWindow):
         @param[in]  timeout_ms Legacy timeout in milliseconds.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
         """
         misc_ui_controller.show_message(self, message, timeout_ms)
 
@@ -710,9 +647,6 @@ class MainWindow(QMainWindow):
         @param[in]  accent Accent color for the "Mancer" half.
         @return     Rich-text HTML string.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         return (
             "<span style=\"font-family:Georgia,'Times New Roman',serif; font-size:13pt; font-weight:600;\">"
@@ -724,9 +658,6 @@ class MainWindow(QMainWindow):
         @brief      Build the source-matched main toolbar.
         @return     Configured Qt toolbar.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-16
-        @version    0.4.1
         """
         toolbar = QToolBar("Main Toolbar", self)
         self._app_wordmark = QLabel(self)
@@ -772,9 +703,6 @@ class MainWindow(QMainWindow):
         @param[in]  page Page widget to wrap.
         @return     Scroll area hosting the page.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         scroll_area = QScrollArea(self)
         scroll_area.setWidgetResizable(True)
@@ -787,9 +715,6 @@ class MainWindow(QMainWindow):
         @brief      Build and register the stacked shell pages.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.22.2
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -1169,9 +1094,6 @@ class MainWindow(QMainWindow):
         @brief      Build static shell dialogs for the copied window.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.6.6
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
 
@@ -1238,9 +1160,6 @@ class MainWindow(QMainWindow):
         @brief      Apply persisted runtime UI settings to the current shell.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.4.0
         """
         settings_ui_controller.apply_current_ui_settings(self)
 
@@ -1250,9 +1169,6 @@ class MainWindow(QMainWindow):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         settings_ui_controller.apply_language(self, language)
 
@@ -1262,9 +1178,6 @@ class MainWindow(QMainWindow):
         @param[in]  theme_payload Runtime UI theme payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-14
-        @version    0.1.0
         """
         for widget in self._page_registry.values():
             if hasattr(widget, "apply_theme"):
@@ -1287,9 +1200,6 @@ class MainWindow(QMainWindow):
         @param[in]  manifest Loaded active project manifest.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.1
         """
         home_ui_controller.activate_project(self, project_root, manifest)
 
@@ -1300,9 +1210,6 @@ class MainWindow(QMainWindow):
                     playback UI state before the next manifest is displayed.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-28
-        @version    0.2.0
         """
         for attr_name in (
             "_narator_voice_audio_player",
@@ -1340,9 +1247,6 @@ class MainWindow(QMainWindow):
         @param[in]  page_id Registered page identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         if self._current_project_root is None or self._current_manifest is None:
             return
@@ -1354,9 +1258,6 @@ class MainWindow(QMainWindow):
         @brief      Build the About dialog for the AudioMancer shell.
         @return     Configured Qt dialog instance.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         return misc_ui_controller.build_about_dialog(self)
 
@@ -1366,9 +1267,6 @@ class MainWindow(QMainWindow):
         @param[in]  event Qt close event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.2.0
         """
         if not operation_runner_controller.cancel_active_operation_for_shutdown(
             self,

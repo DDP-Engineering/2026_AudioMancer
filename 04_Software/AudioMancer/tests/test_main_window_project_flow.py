@@ -11,9 +11,6 @@
 @brief Qt window tests for the copied AudioMancer main-window shell.
 @details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
          pages are created without workflow functionality.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.8.1
 """
 
 # IMPORTS
@@ -48,9 +45,6 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.2
     """
 
     monkeypatch.setattr(
@@ -92,9 +86,6 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.1
     """
     project_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -130,7 +121,6 @@ def test_main_window_shows_message_after_chunking_self_heal(
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("RecoveredChunkingUi", tmp_path)
     monkeypatch.setattr(
@@ -195,7 +185,6 @@ def test_main_window_shows_chunking_recovery_before_follow_up_repair(
     @param[in]  expected_open Whether the repaired project should be activated.
     @return     None.
     @exception  None
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("RecoveredThenRepair", tmp_path)
     open_result = {
@@ -266,9 +255,6 @@ def test_main_window_clears_audio_players_when_switching_projects(qtbot, tmp_pat
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
     """
     first_root, first_manifest = project_workspace_service.create_project("PlaybackSwitchOne", tmp_path)
     second_root, second_manifest = project_workspace_service.create_project("PlaybackSwitchTwo", tmp_path)
@@ -326,9 +312,6 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.1
     """
     project_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -375,9 +358,6 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("PageStateProject", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -422,9 +402,6 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "RerunProject",
@@ -487,9 +464,6 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ResumeWindowProject",
@@ -536,9 +510,6 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
         @brief      Record one resumed extraction call and return a minimal report.
         @return     Final extraction metadata payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.0
         """
         extract_calls.append(args)
         extracted_text = "Story body\n"
@@ -592,9 +563,6 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
         @param[in]  _failure_handler Failure callback unused by the successful test path.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-27
-        @version    0.1.0
         """
         success_handler(
             worker(
@@ -619,9 +587,6 @@ def test_main_window_exposes_modal_progress_dialog_and_cancel_signal(qtbot, defa
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     window = MainWindow(
         settings_payload={
@@ -658,9 +623,6 @@ def test_main_window_progress_dialog_shows_token_usage(qtbot, default_settings_p
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     window = MainWindow(
         settings_payload={
@@ -700,9 +662,6 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SynchronousProgressProject", tmp_path)
     source_path = project_root / "story.txt"
@@ -737,9 +696,6 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
         @brief      Provide the worker callable test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         progress_callback(0, 1, 0, "Starting...")
         assert cancel_requested() is False
@@ -772,9 +728,6 @@ def test_main_window_loads_narrator_definition_state_into_narator_voice_page(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "NarratorWindowProject",
@@ -837,9 +790,6 @@ def test_main_window_prevents_reimport_when_source_is_locked(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -883,9 +833,6 @@ def test_main_window_offers_repair_and_opens_repaired_project(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -933,9 +880,6 @@ def test_main_window_opens_confirmed_manifest_healing_repair(
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SpeechRepair", tmp_path)
     speech_blocks_service.write_speech_blocks_document(
@@ -1012,9 +956,6 @@ def test_main_window_declined_manifest_repair_leaves_project_unopened(
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("DeclineRepair", tmp_path)
     manifest["current_stage"] = "broken_stage"
@@ -1049,9 +990,6 @@ def _operation_state(status: str, current: int, total: int) -> dict[str, object]
     @param[in]  total Total progress count.
     @return     Operation-state fixture payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return {
         "folder_relative_path": ".",
@@ -1073,9 +1011,6 @@ def _write_json(path, payload: object) -> None:
     @param[in]  payload JSON-serializable payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 

@@ -12,9 +12,6 @@
 @details Handles Speech Blocks generation confirmations, modal progress
          lifecycle, resumable run synchronization, and manifest updates for the
          Speech Blocks workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.8.11
 """
 
 # IMPORTS
@@ -47,9 +44,6 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
     @param[in]  profile_id Selected enabled AI profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.4.3
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -116,9 +110,6 @@ def handle_reset_generation_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -142,9 +133,6 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.3.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -165,9 +153,6 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
     @param[in]  speech_block_id Selected Speech Block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.5.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -217,9 +202,6 @@ def handle_insert_block_requested(window: "MainWindow", chunk_id: str, after_spe
     @param[in]  after_speech_block_id Optional selected Speech Block after which to insert.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -258,9 +240,6 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
     @param[in]  speech_block_id Selected Speech Block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -296,9 +275,6 @@ def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
     @param[in]  speech_block_id Selected Speech Block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.4
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -345,9 +321,6 @@ def handle_save_block_requested(
     @param[in]  edit_payload Edited Speech Block text or Scene Ambience field payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.4.5
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -400,9 +373,6 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @param[in]  chunk_id Selected source chunk identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.3.3
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -466,9 +436,6 @@ def _start_operation(
     @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.1
     """
     workflow_controller_service.start_operation(
         window,
@@ -505,9 +472,6 @@ def _handle_speech_blocks_success(
     @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     _ = result_payload
     _sync_manifest_after_speech_blocks_update(window)
@@ -530,9 +494,6 @@ def _handle_speech_blocks_failure(window: "MainWindow", error: Exception) -> Non
     @param[in]  error Raised operation exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _sync_manifest_from_disk(window)
     QMessageBox.warning(
@@ -549,9 +510,6 @@ def _handle_speech_blocks_cancelled(window: "MainWindow", message: str) -> None:
     @param[in]  message Cancellation message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _ = message
     _sync_manifest_from_disk(window)
@@ -567,9 +525,6 @@ def _sync_manifest_after_speech_blocks_update(window: "MainWindow", refresh_page
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.1
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -603,9 +558,6 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     workflow_controller_service.sync_manifest_operation_from_disk(
         window,
@@ -621,9 +573,6 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     @param[in]  profile_id Requested profile identifier.
     @return     Resolved profile payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
 
@@ -634,9 +583,6 @@ def _scene_ambience_enabled_from_settings(settings_payload: dict[str, object] | 
     @param[in]  settings_payload Persisted application settings payload.
     @return     True when the configured placement is not `none`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-21
-    @version    0.2.0
     """
     if not isinstance(settings_payload, dict):
         return False
@@ -650,9 +596,6 @@ def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -674,9 +617,6 @@ def _speech_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str,
     @param[in]  speech_block_id Selected Speech Block identifier.
     @return     Selected Speech Block payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return None
@@ -703,9 +643,6 @@ def _speech_block_display_payload(
     @param[in]  clear_audio True when downstream audio state was invalidated.
     @return     Page display payload for one Speech Block row.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     display_block = {**dict(previous_block or {}), **dict(updated_block)}
     if clear_audio:
@@ -726,9 +663,6 @@ def _refresh_speech_blocks_review_summary(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -765,9 +699,6 @@ def _source_text_position(window: "MainWindow") -> dict[str, object]:
     @param[in]  window Active main window instance.
     @return     Source text position payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if hasattr(window._speech_blocks_page, "source_text_position"):
         return dict(window._speech_blocks_page.source_text_position())
@@ -782,9 +713,6 @@ def _speech_blocks_review_position(window: "MainWindow") -> dict[str, object] | 
     @param[in]  window Active main window instance.
     @return     Review-position payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     page = getattr(window, "_speech_blocks_page", None)
     if page is None or not hasattr(page, "review_position"):
@@ -799,9 +727,6 @@ def _restore_source_text_position(window: "MainWindow", text_position: dict[str,
     @param[in]  text_position Source text position payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if hasattr(window._speech_blocks_page, "restore_source_text_position"):
         window._speech_blocks_page.restore_source_text_position(text_position)
@@ -825,9 +750,6 @@ def _speech_block_audio_fields_changed(
     @param[in]  edit_payload Requested speech text or Scene Ambience field payload.
     @return     True when the Audio Block for this Speech Block must reset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if str(content_kind).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
         payload = edit_payload if isinstance(edit_payload, dict) else {"sound_prompt": str(edit_payload)}
@@ -863,9 +785,6 @@ def _reset_audio_block_after_speech_block_change(
     @param[in]  speech_block_id Changed Speech Block identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     if window._current_project_root is None or not str(speech_block_id).strip():
         return
@@ -884,9 +803,6 @@ def _reset_audio_assembly_after_speech_blocks_change(window: "MainWindow", refre
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     if window._current_project_root is None:
         return
@@ -901,9 +817,6 @@ def _stop_audio_playback_before_selective_reset(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     audio_player = getattr(window, "_audio_blocks_audio_player", None)
     if audio_player is not None:
@@ -920,9 +833,6 @@ def _reset_audio_blocks_after_speech_chunk_change(window: "MainWindow", chunk_id
     @param[in]  chunk_id Changed source chunk identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.3.0
     """
     if window._current_project_root is None or not chunk_id:
         return
@@ -939,9 +849,6 @@ def _reconcile_audio_blocks_after_resplit(window: "MainWindow", changed_chunk_id
     @param[in]  changed_chunk_id Re-split source chunk identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     if window._current_project_root is None:
         return
@@ -954,9 +861,6 @@ def _reset_downstream_after_speech_blocks_structure_change(window: "MainWindow")
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -990,9 +894,6 @@ def _sync_audio_blocks_manifest_summary(window: "MainWindow", refresh_page: bool
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -1045,9 +946,6 @@ def _speech_blocks_manifest_operation_summary(
     @param[in]  report Persisted Speech Blocks report payload.
     @return     Compact manifest operation summary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     summary = project_workspace_service.project_manifest_operation_summary("speech_blocks", operation_state)
     if not isinstance(report, dict):
@@ -1070,9 +968,6 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator confirms the run.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1093,9 +988,6 @@ def _confirm_scene_ambience_speech_blocks(window: "MainWindow", language: str) -
     @param[in]  language Current UI language code.
     @return     True when the operator confirms scene ambience analysis.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1116,9 +1008,6 @@ def prompt_ai_speech_blocks_instructions(window: "MainWindow", language: str) ->
     @param[in]  language Runtime UI language code.
     @return     Extra Speech Blocks instructions, an empty string, or None when cancelled.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     instructions = misc_ui_controller.prompt_multiline_text(
         window,
@@ -1137,9 +1026,6 @@ def _is_resuming_speech_blocks_generation(window: "MainWindow") -> bool:
     @param[in]  window Active main window instance.
     @return     True when a running or failed AI Speech Blocks operation is present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return False
@@ -1159,9 +1045,6 @@ def _confirm_speech_blocks_reset(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the rerun reset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     return (
         QMessageBox.question(
@@ -1187,9 +1070,6 @@ def _confirm_speech_block_audio_reset_if_needed(
     @param[in]  language Current UI language code.
     @return     True when the operation may continue.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None or not str(speech_block_id).strip():
         return True
@@ -1217,9 +1097,6 @@ def _confirm_speech_block_sequence_change(window: "MainWindow", language: str) -
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the sequence change.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1240,9 +1117,6 @@ def _confirm_speech_blocks_resplit(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the selected-chunk re-split.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1263,9 +1137,6 @@ def _confirm_delete_speech_block(window: "MainWindow", language: str) -> bool:
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the deletion.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -1285,9 +1156,6 @@ def _stage_rank(stage: str) -> int:
     @param[in]  stage Workflow stage token.
     @return     Zero-based workflow rank or -1 for unknown stages.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     try:
         return config.PROJECT_WORKFLOW_STAGES.index(stage)
@@ -1301,9 +1169,6 @@ def current_language_from_window(window: "MainWindow") -> str:
     @param[in]  window Active main window instance.
     @return     Current UI language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return ui_state_service.current_language_from_settings(window._settings_payload)
 
@@ -1315,9 +1180,6 @@ def _translated_source_error_message(error_text: str, language: str) -> str:
     @param[in]  language Current UI language code.
     @return     Translated operator-facing error message.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if error_text == "Run text chunking before starting Speech Blocks.":
         return ui_state_service.translate("project.error_missing_chunk_artifact", language)

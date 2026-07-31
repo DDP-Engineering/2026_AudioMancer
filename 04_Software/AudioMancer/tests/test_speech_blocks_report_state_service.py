@@ -11,9 +11,6 @@
 @brief Focused tests for Speech Blocks report and state shaping helpers.
 @details Verifies extracted report, warning, source-path, and operation-state
          payload construction behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -29,9 +26,6 @@ def test_rebuild_report_reflects_stage_counts_and_warnings() -> None:
     @brief      Verify report shaping derives status, counts, warnings, and token usage.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     speech_blocks = [
         {
@@ -74,9 +68,6 @@ def test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint(tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root = tmp_path / "Project"
     project_root.mkdir()
@@ -127,9 +118,6 @@ def test_source_chunks_input_path_selects_original_or_translated(tmp_path: Path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert speech_blocks_report_state_service.source_chunks_input_path(tmp_path, "original") == (
         tmp_path / config.CHUNK_ARTIFACT_FILE_NAME

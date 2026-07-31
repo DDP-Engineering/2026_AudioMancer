@@ -12,9 +12,6 @@
 @details Normalizes backend-reported token usage, merges cumulative usage
          across multiple AI requests, and restores persisted usage payloads
          from step-local reports or operation-state metadata.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.1.0
 """
 
 # IMPORTS
@@ -29,9 +26,6 @@ def empty_token_usage() -> TokenUsagePayload:
     @brief      Build the canonical empty token-usage payload.
     @return     Token-usage payload with unavailable counters.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     return {
         "input_tokens": None,
@@ -47,9 +41,6 @@ def normalize_provider_usage(response_payload: dict[str, object]) -> TokenUsageP
     @param[in]  response_payload Raw provider response payload.
     @return     Canonical token-usage payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     raw_usage = response_payload.get("usage")
     if not isinstance(raw_usage, dict):
@@ -73,9 +64,6 @@ def coerce_token_usage(payload: object) -> TokenUsagePayload:
     @param[in]  payload Candidate persisted token-usage payload.
     @return     Canonical token-usage payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     if not isinstance(payload, dict):
         return empty_token_usage()
@@ -105,9 +93,6 @@ def merge_token_usage(
     @param[in]  increment_usage Additional token-usage payload to add.
     @return     Summed token-usage payload or one canonical unavailable payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     normalized_base = coerce_token_usage(base_usage)
     normalized_increment = coerce_token_usage(increment_usage)
@@ -139,9 +124,6 @@ def restore_token_usage(*payloads: object) -> TokenUsagePayload:
     @param[in]  payloads Ordered candidate token-usage payloads.
     @return     First valid token-usage payload or one unavailable payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     for payload in payloads:
         normalized = coerce_token_usage(payload)
@@ -161,9 +143,6 @@ def _sum_usage_field(
     @param[in]  increment_usage Value for `increment_usage`.
     @param[in]  field_name Value for `field_name`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     total = 0
     has_value = False
@@ -183,9 +162,6 @@ def _optional_non_negative_int(value: Any) -> int | None:
     @brief      Resolve the optional non negative int.
     @param[in]  value Candidate value.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if isinstance(value, bool):
         return None

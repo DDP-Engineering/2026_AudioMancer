@@ -10,9 +10,6 @@
 @file chunking_test_support.py
 @brief Shared strict Chunking-document fixtures for AudioMancer tests.
 @details Builds compact, exact root-object fixtures without production-service coupling.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.2.0
 """
 
 # IMPORTS
@@ -54,7 +51,6 @@ def write_chunking_document(
     @param[in]  next_paragraph Absolute index of the next paragraph awaiting processing.
     @param[in]  context_window_fallback_count Number of context-window fallback retries.
     @return     Resolved filesystem path.
-    @version 0.1.0
     """
     document = build_chunking_document(
         chunks,
@@ -102,7 +98,6 @@ def build_chunking_document(
     @param[in]  next_paragraph Absolute index of the next paragraph awaiting processing.
     @param[in]  context_window_fallback_count Number of context-window fallback retries.
     @return     Constructed chunking document.
-    @version 0.1.0
     """
     normalized_chunks = [_normalize_chunk(item, index) for index, item in enumerate(chunks, start=1)]
     inferred_mode = mode or _inferred_mode(chunks)
@@ -138,7 +133,6 @@ def read_chunking_document(document_root: str | Path) -> dict[str, object]:
     @param[in]  document_root Candidate root object of the strict chunking document.
     @return     Loaded chunking document.
     @exception  AssertionError Raised when expected a strict Chunking document fixture.
-    @version 0.1.0
     """
     payload = json.loads((Path(document_root) / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -219,7 +213,6 @@ def _normalize_chunk(item: dict[str, object], sequence_index: int) -> dict[str, 
     @param[in]  item Candidate list item being validated.
     @param[in]  sequence_index Expected zero-based canonical sequence position.
     @return     Normalized chunk.
-    @version 0.1.0
     """
     return {
         "chunk_id": str(item.get("chunk_id", f"chunk-{sequence_index:04d}")),
@@ -238,7 +231,6 @@ def _inferred_mode(chunks: list[dict[str, object]]) -> str:
     @brief Infer a valid document-level mode from optional compact fixture metadata.
     @param[in]  chunks Ordered canonical chunk payloads.
     @return     Inferred strict chunking mode token.
-    @version 0.1.0
     """
     if chunks and chunks[0].get("chunking_mode") == "ai_assisted":
         return "ai_assisted"

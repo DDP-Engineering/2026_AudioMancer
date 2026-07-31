@@ -11,9 +11,6 @@
 @brief Focused coverage for app-owned English and Romanian UI text bindings.
 @details Verifies the localization gaps found by the complete window/page/dialog
          audit without launching the full application test suite.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -53,9 +50,6 @@ def test_settings_page_localizes_all_visible_text_and_preserves_option_data(qtbo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
@@ -89,9 +83,6 @@ def test_each_persistent_page_localizes_audited_visible_text(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     ai_settings_page = _romanian_page(qtbot, AiSettingsPage)
     assert _combo_labels(ai_settings_page._default_strategy_combo) == ["Paragraf", "Semnificatie", "Scena"]
@@ -196,9 +187,6 @@ def test_app_owned_dialog_calls_do_not_embed_operator_facing_literals() -> None:
     @details    Covers S-0007 and REQ-UX-aa109e16-4c45-4fb8-886c-008ade7260eb.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     findings: list[str] = []
     for source_path in sorted(_UI_ROOT.rglob("*.py")):
@@ -219,9 +207,6 @@ def test_runtime_language_change_refreshes_current_project_page(monkeypatch, tmp
     @param[in]  tmp_path Temporary active project root.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     refresh_current_page = Mock()
     apply_ui_settings = Mock()
@@ -254,7 +239,6 @@ def _romanian_page(qtbot, page_type):
     @param[in]  page_type Page class to instantiate.
     @return     Instantiated page using the Romanian catalog.
     @exception  None
-    @version    0.1.0
     """
     page = page_type()
     qtbot.addWidget(page)
@@ -274,7 +258,6 @@ def _dialog_literal_findings(source_path: Path, call: ast.Call) -> list[str]:
     @param[in]  call Parsed Python call node.
     @return     Human-readable source locations and literal values.
     @exception  None
-    @version    0.1.0
     """
     if not isinstance(call.func, ast.Attribute) or not isinstance(call.func.value, ast.Name):
         return []
@@ -310,7 +293,6 @@ def _operation_literal_findings(source_path: Path, call: ast.Call) -> list[str]:
     @param[in]  call Parsed Python call node.
     @return     Human-readable source locations and literal values.
     @exception  None
-    @version    0.1.0
     """
     function_name = ""
     if isinstance(call.func, ast.Name):

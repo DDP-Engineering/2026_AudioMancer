@@ -13,9 +13,6 @@
          self-heals missing or invalid values, seeds a fresh settings file from
          the packaged scaffold, and saves the normalized settings file to the
          resolved writable data root.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.11.0
 """
 
 # IMPORTS
@@ -79,9 +76,6 @@ def _optional_profile_id(value: object) -> str | None:
     @param[in]  value Candidate optional profile id value.
     @return     Normalized profile id or None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.1
     """
     if value in (None, ""):
         return None
@@ -94,9 +88,6 @@ def _is_valid_http_url(value: str) -> bool:
     @param[in]  value Candidate URL string.
     @return     True when the string exposes an HTTP(S) scheme and network location.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     parsed_value = parse.urlparse(str(value).strip())
     return parsed_value.scheme in {"http", "https"} and bool(parsed_value.netloc)
@@ -120,9 +111,6 @@ def _log_settings_repair(
     @param[in]  repair_tracker Optional mutable repair tracker toggled when one repair occurs.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.3.0
     """
     if repair_tracker is not None:
         repair_tracker.append(True)
@@ -142,9 +130,6 @@ def _write_settings_file(settings_payload: dict[str, Any]) -> None:
     @param[in]  settings_payload Validated settings payload to persist.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.1
     """
     settings_path = config.APP_SETTINGS_PATH
     settings_path.parent.mkdir(parents=True, exist_ok=True)
@@ -160,9 +145,6 @@ def _seed_settings_payload() -> tuple[dict[str, Any], str]:
                 defaults. The packaged file is only ever read.
     @return     Tuple of seed payload and a human-readable seed-source label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     default_settings_path = config.APP_DEFAULT_SETTINGS_PATH
     if default_settings_path == config.APP_SETTINGS_PATH:
@@ -192,9 +174,6 @@ def _validate_llm_profile(
     @param[in]  repair_tracker Optional mutable repair tracker toggled when one repair occurs.
     @return     Validated LLM profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.3.0
     """
     if not isinstance(candidate_profile, dict):
         _log_settings_repair(
@@ -358,9 +337,6 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     @param[in]  settings_payload Candidate settings payload.
     @return     Tuple containing the normalized settings payload and a repair flag.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.3
     """
     repairs_made: list[bool] = []
     defaults = build_default_settings()
@@ -655,9 +631,6 @@ def _normalize_string_list(value: object) -> list[str]:
     @param[in]  value Candidate list payload.
     @return     Normalized string list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if not isinstance(value, list):
         return []
@@ -670,9 +643,6 @@ def _normalize_tts_generation_modes(value: object) -> list[str]:
     @param[in]  value Candidate generation-mode list payload.
     @return     Normalized generation-mode list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     mode_aliases = {
         "base": "clone",
@@ -692,9 +662,6 @@ def _normalize_tts_runtime_model(candidate_model: object) -> dict[str, object] |
     @param[in]  candidate_model Candidate discovered-model payload.
     @return     Normalized model payload or None when invalid.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    0.2.0
     """
     if not isinstance(candidate_model, dict):
         return None
@@ -727,9 +694,6 @@ def _normalize_tts_runtime_models(candidate_models: object) -> list[dict[str, ob
     @param[in]  candidate_models Candidate discovered-model list payload.
     @return     Normalized discovered-model list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if not isinstance(candidate_models, list):
         return []
@@ -747,9 +711,6 @@ def _normalize_tts_device_diagnostics(candidate_payload: object) -> dict[str, ob
     @param[in]  candidate_payload Candidate device-diagnostics payload.
     @return     Normalized diagnostics payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if not isinstance(candidate_payload, dict):
         return {}
@@ -772,9 +733,6 @@ def build_default_settings() -> dict[str, Any]:
     @brief      Build the default application settings payload.
     @return     Default settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.7.3
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -820,9 +778,6 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @param[in]  settings_payload Candidate settings payload.
     @return     Validated and normalized settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.6.0
     """
     return _validate_settings_internal(settings_payload)[0]
 
@@ -834,9 +789,6 @@ def save_settings(settings_payload: dict[str, Any]) -> None:
     @param[in]  settings_payload Candidate settings payload to persist.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.1
     """
     validated_settings = validate_settings(settings_payload)
     _write_settings_file(validated_settings)
@@ -852,9 +804,6 @@ def ensure_settings_file() -> dict[str, Any]:
     @brief      Ensure the app settings file exists and contains valid settings.
     @return     Validated settings payload currently persisted on disk.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     settings_path = config.APP_SETTINGS_PATH
     if not settings_path.exists():
@@ -874,9 +823,6 @@ def load_settings() -> dict[str, Any]:
     @brief      Load, validate, and self-heal the persisted app settings.
     @return     Validated application settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.2.0
     """
     settings_path = config.APP_SETTINGS_PATH
     if not settings_path.exists():

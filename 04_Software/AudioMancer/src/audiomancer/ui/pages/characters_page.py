@@ -13,9 +13,6 @@
          explicit edit mode, compact voice-profile editing, and source-evidence
          preview plus a status window for discovered and manually added
          speaking characters.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-08
-@version 0.8.9
 """
 
 # IMPORTS
@@ -53,9 +50,6 @@ class CharactersPage(QWidget):
     """
     @brief      Display the Character Discovery workflow page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.6.0
     """
 
     start_discovery_requested = Signal(str)
@@ -72,9 +66,6 @@ class CharactersPage(QWidget):
             @param[in]  parent Optional parent widget.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-06-09
-        @version    0.8.9
         """
         super().__init__(parent)
         self._project_active = False
@@ -310,9 +301,6 @@ class CharactersPage(QWidget):
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.4.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -323,9 +311,6 @@ class CharactersPage(QWidget):
         @param[in]  is_active True when one project is currently loaded.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -341,9 +326,6 @@ class CharactersPage(QWidget):
         @param[in]  selected_profile_id Preferred selected profile identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         self._profile_combo.blockSignals(True)
         self._profile_combo.clear()
@@ -396,9 +378,6 @@ class CharactersPage(QWidget):
             @param[in]  dirty Unused dirty flag from the state service.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-08
-        @version    0.6.0
         """
         del character_count
         del can_save
@@ -439,9 +418,6 @@ class CharactersPage(QWidget):
         @param[in]  is_busy True while discovery work is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -451,9 +427,6 @@ class CharactersPage(QWidget):
         @brief      Read the currently selected AI profile identifier.
         @return     The selected profile identifier or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         value = self._profile_combo.currentData()
         return None if value in (None, "") else str(value)
@@ -463,9 +436,6 @@ class CharactersPage(QWidget):
         @brief      Read the currently selected character identifier.
         @return     The active character identifier or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         return self._current_character_id
 
@@ -474,9 +444,6 @@ class CharactersPage(QWidget):
         @brief      Return one detached copy of the current editable draft.
         @return     Draft payload copy or `None` when no draft exists.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         if self._draft_profile is None:
             return None
@@ -487,9 +454,6 @@ class CharactersPage(QWidget):
         @brief      Indicate whether the current draft has unsaved changes.
         @return     `True` when the active draft differs from persisted data.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         return self._dirty
 
@@ -498,9 +462,6 @@ class CharactersPage(QWidget):
         @brief      Indicate whether the page is editing a newly added character.
         @return     `True` when the page is in add mode.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         return self._mode == CHARACTER_PAGE_MODE_ADD
 
@@ -509,9 +470,6 @@ class CharactersPage(QWidget):
         @brief      Indicate whether the page is editing one persisted character.
         @return     `True` when the page is in edit mode.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         return self._mode == CHARACTER_PAGE_MODE_EDIT
 
@@ -520,9 +478,6 @@ class CharactersPage(QWidget):
             @brief      Enter guarded edit mode for the selected persisted profile.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-08
-        @version    0.4.0
         """
         profile = self._current_profile()
         if profile is None:
@@ -540,9 +495,6 @@ class CharactersPage(QWidget):
             @param[in]  draft_profile New manual profile draft payload.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-08
-        @version    0.3.0
         """
         self._mode = CHARACTER_PAGE_MODE_ADD
         self._dirty = True
@@ -565,9 +517,6 @@ class CharactersPage(QWidget):
             @param[in]  character_id Target character identifier or `None`.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-08
-        @version    0.3.0
         """
         if character_id is None:
             self._current_character_id = None
@@ -602,9 +551,6 @@ class CharactersPage(QWidget):
         @brief      Reapply the current selection after a cancelled guard action.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         self._select_list_row(_row_for_character_id(self._profiles, self._current_character_id))
 
@@ -613,9 +559,6 @@ class CharactersPage(QWidget):
         @brief      Discard the active draft and restore view mode.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.3.0
         """
         current_character_id = self._current_character_id
         if self._mode == CHARACTER_PAGE_MODE_ADD and current_character_id is not None:
@@ -642,9 +585,6 @@ class CharactersPage(QWidget):
         @param[in]  language Runtime UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.5.2
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('characters.title', language)}</h2>")
         self._ui_language = language
@@ -683,9 +623,6 @@ class CharactersPage(QWidget):
         @brief      Keep Gender Confidence and Age Confidence controls column-aligned.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.1.0
         """
         confidence_label_width = max(
             self._gender_confidence_label.sizeHint().width(),
@@ -702,9 +639,6 @@ class CharactersPage(QWidget):
         @param[in]  editor Evidence preview editor receiving the context menu.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         editor.customContextMenuRequested.connect(
@@ -718,9 +652,6 @@ class CharactersPage(QWidget):
         @param[in]  position Local menu position inside the editor.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         menu = editor.createStandardContextMenu()
         menu.addSeparator()
@@ -741,9 +672,6 @@ class CharactersPage(QWidget):
         @param[in]  editor Evidence preview editor that should be searched.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         search_text, accepted = QInputDialog.getText(
             self,
@@ -763,9 +691,6 @@ class CharactersPage(QWidget):
         @param[in]  editor Evidence preview editor that should be searched.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         search_text = self._evidence_find_text_by_editor_id.get(id(editor), "")
         if not search_text:
@@ -782,9 +707,6 @@ class CharactersPage(QWidget):
         @param[in]  search_text Text to find.
         @return     True when one match was selected.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         if editor.find(search_text):
             return True
@@ -799,9 +721,6 @@ class CharactersPage(QWidget):
         @param[in]  search_text Text that was not found in the evidence preview.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         QMessageBox.information(
             self,
@@ -814,9 +733,6 @@ class CharactersPage(QWidget):
         @brief      Recompute widget enablement from the current page state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.4.0
         """
         ai_selector_enabled = (
             self._project_active and not self._busy and self._can_start and self._mode == CHARACTER_PAGE_MODE_VIEW
@@ -871,9 +787,6 @@ class CharactersPage(QWidget):
         @brief      Set each Characters page splitter pane minimum to one quarter of its splitter span.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.5.0
         """
         required_attributes = ("_main_splitter", "_left_splitter", "_list_group", "_editor_group", "_evidence_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -894,9 +807,6 @@ class CharactersPage(QWidget):
         @brief      Keep each Evidence splitter pane at least twenty percent of the available Evidence height.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.2.0
         """
         required_attributes = ("_evidence_splitter", "_evidence_list", "_evidence_preview")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -915,9 +825,6 @@ class CharactersPage(QWidget):
         @param[in]  *_args Optional Qt signal arguments.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         if self._clamping_evidence_splitter:
             return
@@ -952,9 +859,6 @@ class CharactersPage(QWidget):
         @brief      Match the Character List group height to the current action-button stack.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         if not hasattr(self, "_character_actions_widget"):
             return
@@ -974,9 +878,6 @@ class CharactersPage(QWidget):
         @brief      Emit the start-discovery request for the selected AI profile.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         profile_id = self.current_profile_id()
         if profile_id is not None:
@@ -987,9 +888,6 @@ class CharactersPage(QWidget):
         @brief      Emit an edit request for the selected character.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         if self._current_character_id is not None:
             self.edit_character_requested.emit(self._current_character_id)
@@ -999,9 +897,6 @@ class CharactersPage(QWidget):
         @brief      Emit one save request for the active draft payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
         """
         if self._mode == CHARACTER_PAGE_MODE_EDIT and not self._dirty:
             self.discard_changes()
@@ -1015,9 +910,6 @@ class CharactersPage(QWidget):
         @brief      Emit a delete request for the selected character.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         if self._current_character_id is not None:
             self.delete_character_requested.emit(self._current_character_id)
@@ -1028,9 +920,6 @@ class CharactersPage(QWidget):
         @param[in]  row Newly selected list row index.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
         """
         if self._selection_guard or self._loading_profile:
             return
@@ -1046,9 +935,6 @@ class CharactersPage(QWidget):
         @brief      Rebuild the active draft and dirty-state after editor changes.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
         """
         if self._loading_profile:
             return
@@ -1074,9 +960,6 @@ class CharactersPage(QWidget):
         @param[in]  profile Character profile payload to display.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.5.0
         """
         self._loading_profile = True
         self._canonical_name_edit.setText(str(profile.get("canonical_name", "")))
@@ -1101,9 +984,6 @@ class CharactersPage(QWidget):
         @brief      Clear the editor and evidence widgets when no profile is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.5.0
         """
         self._loading_profile = True
         self._canonical_name_edit.clear()
@@ -1124,9 +1004,6 @@ class CharactersPage(QWidget):
         @param[in]  row Selected evidence-row index.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
         """
         profile = self._active_profile()
         if profile is None:
@@ -1149,9 +1026,6 @@ class CharactersPage(QWidget):
         @param[in]  row Target list row index.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         self._selection_guard = True
         self._character_list.setCurrentRow(row)
@@ -1163,9 +1037,6 @@ class CharactersPage(QWidget):
         @param[in]  preferred_character_id Character identifier to select afterwards.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
         """
         self._selection_guard = True
         self._character_list.clear()
@@ -1188,9 +1059,6 @@ class CharactersPage(QWidget):
         @brief      Normalize one editable draft payload from the UI widgets.
         @return     The normalized character profile payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.8.0
         """
         base_profile = self._active_profile() or {}
         draft_profile = {
@@ -1213,9 +1081,6 @@ class CharactersPage(QWidget):
         @brief      Resolve the persisted profile matching the current selection.
         @return     The persisted profile payload or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.1.0
         """
         if self._current_character_id is None:
             return None
@@ -1233,9 +1098,6 @@ class CharactersPage(QWidget):
         @brief      Resolve the currently displayed profile, preferring the draft copy.
         @return     Active draft or persisted profile payload, or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
         """
         if (
             self._mode in {CHARACTER_PAGE_MODE_ADD, CHARACTER_PAGE_MODE_EDIT}
@@ -1256,9 +1118,6 @@ def _row_for_character_id(
     @param[in]  character_id Target character identifier or `None`.
     @return     Matching row index or `-1`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     if character_id is None:
         return -1
@@ -1274,9 +1133,6 @@ def _profile_sort_key(profile: dict[str, object]) -> tuple[int, str]:
     @param[in]  profile Character profile payload.
     @return     Sort key based on first evidence order and canonical name.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     evidence = list(profile.get("evidence", []))
     if not evidence:
@@ -1293,9 +1149,6 @@ def _format_profile_item(profile: dict[str, object]) -> str:
     @param[in]  profile Character profile payload.
     @return     Display label for the character list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     canonical_name = str(profile.get("canonical_name", "")).strip()
     return canonical_name
@@ -1311,9 +1164,6 @@ def _profiles_equal(
     @param[in]  right_profile Second profile payload or `None`.
     @return     `True` when all editable fields are equal.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.5.0
     """
     if left_profile is None or right_profile is None:
         return left_profile is right_profile
@@ -1339,9 +1189,6 @@ def _normalize_page_profile(profile: dict[str, object]) -> dict[str, object]:
     @param[in]  profile Raw or partial character profile payload.
     @return     Normalized page profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    2.3.0
     """
     normalized_profile = dict(profile)
     normalized_profile.setdefault("aliases", [])

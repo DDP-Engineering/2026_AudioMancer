@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer Character Voices persistence helpers.
 @details Verifies deterministic prompt derivation, selected voice-language
          persistence, atomic sample writes, and narrator-copy sample sync behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.9.0
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ def test_build_character_default_prompt_uses_compact_character_profile() -> None
     @brief      Verify the default character voice prompt uses the compact persisted profile.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    2.1.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
@@ -53,9 +47,6 @@ def test_build_character_default_prompt_prefers_character_owned_voice_definition
     @brief      Verify Character Voices prompt defaults preserve character-owned prompts and add sex/gender.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    1.2.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
@@ -80,9 +71,6 @@ def test_build_character_default_prompt_prevents_male_default_when_gender_is_unk
     @brief      Verify every character prompt carries explicit non-male-default guidance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
@@ -100,9 +88,6 @@ def test_build_character_default_prompt_prevents_young_default_when_age_is_unkno
     @brief      Verify every character prompt carries explicit unknown-age guidance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
@@ -120,9 +105,6 @@ def test_build_character_default_prompt_preserves_existing_age_instruction() -> 
     @brief      Verify default prompt backfill does not duplicate explicit age-domain guidance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
@@ -141,9 +123,6 @@ def test_selected_voice_language_persists(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("CharacterVoicesLanguage", tmp_path)
 
@@ -160,9 +139,6 @@ def test_character_voices_targets_use_atomic_json_writer(monkeypatch, tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("CharacterVoicesAtomicJson", tmp_path)
     character_voices_service.ensure_character_voices_files(project_root)
@@ -174,9 +150,6 @@ def test_character_voices_targets_use_atomic_json_writer(monkeypatch, tmp_path) 
         @param[in]  target_path Candidate JSON target path.
         @param[in]  payload JSON payload.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         observed_paths.append(Path(target_path))
         Path(target_path).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -202,9 +175,6 @@ def test_preview_text_covers_qwen3_tts_languages_with_chinese() -> None:
     @brief      Verify deterministic preview text exists for every supported voice language.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
     """
     for language_code in ("en", "ro", "ja", "ko", "zh", "de", "fr", "ru", "pt", "es", "it"):
         assert character_voices_service.preview_text_for_language(language_code)
@@ -216,9 +186,6 @@ def test_save_target_prompt_persists_preview_text(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesPreviewSave")
     voice_targets = character_voices_service.sync_voice_plan(
@@ -251,9 +218,6 @@ def test_import_target_sample_persists_character_sample_metadata(tmp_path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesImport")
     source_sample = tmp_path / "alice_voice.wav"
@@ -293,9 +257,6 @@ def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesAtomicBytes")
     target_payload = character_voices_service.sync_voice_plan(
@@ -314,9 +275,6 @@ def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -
         @param[in]  target_path Final sample path.
         @param[in]  payload Complete WAV payload.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         observed_payloads.append(bytes(payload))
         Path(target_path).write_bytes(payload)
@@ -345,9 +303,6 @@ def test_sync_voice_plan_uses_character_discovery_preview_text(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesDiscoveryPreview")
     discovered_preview_text = (
@@ -379,9 +334,6 @@ def test_sync_voice_plan_refreshes_unedited_prompt_with_explicit_gender(tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesGenderSync")
     old_prompt = "Give Ayla a steady adult voice with medium pitch and clear articulation."
@@ -425,9 +377,6 @@ def test_same_narrator_sync_copies_selected_narrator_sample_to_each_character(tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesCopy")
     character_targets = [
@@ -466,9 +415,6 @@ def test_same_narrator_sync_skips_unchanged_copied_samples(monkeypatch, tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesCopySteady")
     character_targets = [
@@ -487,9 +433,6 @@ def test_same_narrator_sync_skips_unchanged_copied_samples(monkeypatch, tmp_path
         @brief      Fail when an unchanged same-narrator sync rewrites WAV bytes.
         @return     None.
         @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         raise AssertionError("unchanged same-narrator sync rewrote audio")
 
@@ -498,9 +441,6 @@ def test_same_narrator_sync_skips_unchanged_copied_samples(monkeypatch, tmp_path
         @brief      Fail when an unchanged same-narrator sync rewrites target JSON.
         @return     None.
         @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         raise AssertionError("unchanged same-narrator sync rewrote metadata")
 
@@ -515,9 +455,6 @@ def _create_project_with_selected_narrator(tmp_path, name: str):
     @brief      Provide the create project with selected narrator test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -558,9 +495,6 @@ def _write_import_test_wav(path: Path) -> None:
     @param[in]  path Output path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_rate = 16_000
     frame_count = int(sample_rate * 3.2)

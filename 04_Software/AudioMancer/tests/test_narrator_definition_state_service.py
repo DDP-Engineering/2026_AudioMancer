@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer narrator-definition state service.
 @details Verifies language display shaping, selection enablement, and bottom
          status-line composition for the simplified narrator workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 3.6.0
 """
 
 # IMPORTS
@@ -34,9 +31,6 @@ def test_narrator_state_service_uses_original_language_and_no_default_selection(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.3.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateProject")
     manifest["original_language"] = "Italian"
@@ -78,9 +72,6 @@ def test_narrator_state_service_marks_unsampled_custom_profile_selectable(tmp_pa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.2.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateCustomProject")
     custom_profile = narrator_definition_service.create_custom_profile(
@@ -116,9 +107,6 @@ def test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_st
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateStaleRuntimeProject")
     custom_profile = narrator_definition_service.create_custom_profile(
@@ -150,9 +138,6 @@ def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateStatusProject")
     profile = narrator_definition_service.create_custom_profile(
@@ -198,9 +183,6 @@ def _create_project(tmp_path, name: str):
     @brief      Provide the create project test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -220,9 +202,6 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
     @brief      Provide the minimum qwen models test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return [
         {

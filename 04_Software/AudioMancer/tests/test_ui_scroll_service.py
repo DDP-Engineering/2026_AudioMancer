@@ -11,9 +11,6 @@
 @brief Focused tests for the runtime UI scroll service.
 @details Verifies configured mouse-wheel steps are applied to common Qt scroll
          panes through the application-wide event filter.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-08
-@version 0.1.0
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def test_scroll_step_filter_moves_scroll_pane_by_configured_steps(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     application = QApplication.instance()
     assert application is not None
@@ -63,9 +57,6 @@ def test_scroll_step_filter_ignores_non_scroll_area_widgets(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     application = QApplication.instance()
     assert application is not None
@@ -89,9 +80,6 @@ def _wheel_event(angle_delta_y: int) -> QWheelEvent:
     @param[in]  angle_delta_y Vertical angle delta in Qt wheel units.
     @return     Wheel event instance.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     position = QPointF(8.0, 8.0)
     return QWheelEvent(

@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer UI theme service.
 @details Verifies built-in theme contracts, custom theme validation, import
          normalization, and resilient collection handling.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-13
-@version 0.5.0
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ def test_built_in_themes_validate_and_are_deep_copied() -> None:
     @brief      Verify built-in themes satisfy the schema and cannot be mutated through callers.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.3.0
     """
     built_in_themes = ui_theme_service.built_in_themes()
 
@@ -69,9 +63,6 @@ def test_validate_theme_payload_rejects_invalid_color_values() -> None:
     @brief      Verify malformed color values fail validation clearly.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     theme_payload = copy.deepcopy(ui_theme_service.built_in_themes()[0])
     theme_payload["built_in"] = False
@@ -89,9 +80,6 @@ def test_validate_theme_payload_fills_missing_color_roles_from_classic_light() -
     @brief      Verify omitted custom roles fall back to classic light/default font values.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     theme_payload = {
         "schema_version": 1,
@@ -118,9 +106,6 @@ def test_validate_theme_payload_accepts_distinct_text_font() -> None:
     @brief      Verify custom themes can persist text-window font settings separately from UI controls.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     theme_payload = {
         "schema_version": 1,
@@ -143,9 +128,6 @@ def test_import_theme_payload_makes_duplicate_ids_unique() -> None:
     @brief      Verify imported theme ids are suffixed when they already exist.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     existing_theme = ui_theme_service.import_theme_payload(
         {
@@ -177,9 +159,6 @@ def test_import_theme_payload_strips_built_in_flag_and_generates_missing_id() ->
     @brief      Verify imports cannot inject built-in state and can derive an id from the display name.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     imported_theme = ui_theme_service.import_theme_payload(
         {
@@ -201,9 +180,6 @@ def test_normalize_theme_collection_returns_empty_for_malformed_root_payload() -
     @brief      Verify malformed theme collections self-heal to an empty custom collection.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     assert ui_theme_service.normalize_theme_collection({"bad": "root"}) == []
     assert ui_theme_service.normalize_theme_collection(None) == []
@@ -214,9 +190,6 @@ def test_theme_by_id_returns_default_for_missing_theme_id() -> None:
     @brief      Verify unresolved theme ids fall back to the default built-in theme.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     resolved_theme = ui_theme_service.theme_by_id("missing_theme", [])
 
@@ -229,9 +202,6 @@ def test_duplicate_and_export_theme_payloads_are_custom_payloads() -> None:
     @brief      Verify duplicate and export helpers return custom-safe payloads.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     duplicated_theme = ui_theme_service.duplicate_theme(ui_theme_service.built_in_themes()[0], "Classic Copy")
     exported_theme = ui_theme_service.export_theme_payload(ui_theme_service.built_in_themes()[0])
@@ -248,9 +218,6 @@ def test_exported_built_in_theme_imports_as_custom_copy_with_unique_id() -> None
     @brief      Verify exported built-ins round-trip as custom themes with safe ids.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     exported_theme = ui_theme_service.export_theme_payload(ui_theme_service.built_in_themes()[0])
 
@@ -296,9 +263,6 @@ def _theme_with_id(theme_id: str) -> dict[str, object]:
     @param[in]  theme_id Target built-in theme identifier.
     @return     Matching built-in theme payload.
     @exception  StopIteration Raised when no built-in theme has the id.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     return next(theme for theme in ui_theme_service.built_in_themes() if theme["theme_id"] == theme_id)
 
@@ -309,9 +273,6 @@ def test_audiomancer_dark_theme_has_brand_roles() -> None:
     @details    Covers REQ-UX-fe3699e9-a737-44a0-8e69-ffc490d54bfc / SPEC-THEME-DARK.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     dark_theme = _theme_with_id("audiomancer_dark")
 
@@ -326,9 +287,6 @@ def test_audiomancer_parchment_theme_has_brand_roles() -> None:
     @details    Covers REQ-UX-5e28b833-8917-4f9b-9733-f438e6400a7e / SPEC-THEME-PARCHMENT.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     parchment_theme = _theme_with_id("audiomancer_parchment")
 
@@ -344,9 +302,6 @@ def test_default_theme_id_is_audiomancer_dark() -> None:
                 REQ-UX-ce3d3202 fallback-follows-default contract green.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert ui_theme_service.default_theme_id() == "audiomancer_dark"
 
@@ -418,9 +373,6 @@ def test_midnight_studio_theme_has_expected_roles() -> None:
     @details    Covers REQ-UX-4753a4bf-c1bd-4f0d-bbb6-6d37c211be11 / SPEC-THEME-CATALOG-EXT.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     midnight_theme = _theme_with_id("midnight_studio")
 
@@ -435,9 +387,6 @@ def test_ember_night_theme_has_expected_roles() -> None:
     @details    Covers REQ-UX-8150637a-c287-48d5-ab3d-86f1dc1c0718 / SPEC-THEME-CATALOG-EXT.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     ember_theme = _theme_with_id("ember_night")
 
@@ -454,9 +403,6 @@ def test_nordic_slate_theme_has_expected_roles() -> None:
                 2.46:1 against this panel background.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     nordic_theme = _theme_with_id("nordic_slate")
 
@@ -471,9 +417,6 @@ def test_ink_and_paper_theme_has_expected_roles() -> None:
     @details    Covers REQ-UX-c212b647-1a89-497c-872e-33543fec0a4b / SPEC-THEME-CATALOG-EXT.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     ink_theme = _theme_with_id("ink_and_paper")
 
@@ -489,9 +432,6 @@ def test_new_catalog_themes_use_the_default_font_payload() -> None:
                 for the added themes exactly as they do for every existing built-in theme.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     default_font = {"family": "", "point_size": None, "scale": "normal"}
 

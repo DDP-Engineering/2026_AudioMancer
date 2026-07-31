@@ -12,9 +12,6 @@
 @details Builds Character Voices page state from persisted narrator selection,
          character-discovery artifacts, translation approval state, character-
          voices targets, and cached VoiceWeaver runtime discovery data.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.6.0
 """
 
 # IMPORTS
@@ -51,9 +48,6 @@ def build_character_voices_state(
     @param[in]  initialize_defaults True when opening the page may create default voice target metadata.
     @return     Page-state payload consumed by the Character Voices page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.5.0
     """
     if project_root is None or manifest is None:
         return {
@@ -207,9 +201,6 @@ def _empty_project_state(manifest: dict[str, object], language: str) -> dict[str
     @param[in]  language Runtime UI language code.
     @return     Page-state payload without creating character voice metadata files.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     selected_voice_language = narrator_definition_service.narrator_language_code(
         manifest.get("target_language", manifest.get("selected_voice_language")),
@@ -279,9 +270,6 @@ def build_character_voices_notes(
     @param[in]  language Runtime UI language code.
     @return     Ordered Character Voices notes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("character_voices.note_no_source", language)]
@@ -333,9 +321,6 @@ def build_status_lines(
     @param[in]  language Runtime UI language code.
     @return     Ordered status-window lines.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     target_count = len(target_entries)
     sample_count = sum(1 for target in target_entries if bool(target.get("has_sample", False)))
@@ -380,9 +365,6 @@ def _build_target_entry(
     @param[in]  discovered_models Value for `discovered_models`.
     @param[in]  language Language code.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
     """
     target_kind = str(target_payload.get("target_kind", "")).strip()
     target_id = str(target_payload.get("target_id", "")).strip()
@@ -471,9 +453,6 @@ def _resolve_current_target(
     @param[in]  target_entries Value for `target_entries`.
     @param[in]  inspected_target_id Identifier for `inspected_target_id`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     normalized_inspected_target_id = str(inspected_target_id or "").strip()
     if normalized_inspected_target_id:
@@ -494,9 +473,6 @@ def _voice_language_state(
     @param[in]  manifest Active project manifest payload.
     @param[in]  language Language code.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     try:
         translation_document = ai_translation_service.load_translation_document(project_root)
@@ -533,9 +509,6 @@ def _translation_exists(manifest: dict[str, object]) -> bool:
     @brief      Execute the translation exists helper.
     @param[in]  manifest Active project manifest payload.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     current_stage = str(manifest.get("current_stage", "")).strip()
     return current_stage in {
@@ -555,9 +528,6 @@ def _assignment_mode_label(assignment_mode: str, language: str) -> str:
     @param[in]  assignment_mode Value for `assignment_mode`.
     @param[in]  language Language code.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return ui_state_service.translate(
         "character_voices.assignment_same_narrator"

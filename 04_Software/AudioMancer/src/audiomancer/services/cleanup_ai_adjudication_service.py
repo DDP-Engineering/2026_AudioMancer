@@ -12,9 +12,6 @@
 @details Uses context-tiered batches, recursive budget splitting, one retry,
          deterministic per-batch fallback, and a blind verifier only when a
          primary answer disagrees with the deterministic prior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.2.0
 """
 
 from __future__ import annotations

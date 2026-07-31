@@ -11,9 +11,6 @@
 @brief Focused tests for imported voice sample validation.
 @details Verifies WAV type, duration, and silence checks before imported
          narrator or character samples enter project storage.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-15
-@version 0.1.0
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def test_validate_imported_wav_sample_accepts_valid_sample(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_path = tmp_path / "valid.wav"
     _write_test_wav(sample_path, duration_seconds=3.2, amplitude=4000)
@@ -53,9 +47,6 @@ def test_validate_imported_wav_sample_rejects_short_sample(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_path = tmp_path / "short.wav"
     _write_test_wav(sample_path, duration_seconds=1.0, amplitude=4000)
@@ -70,9 +61,6 @@ def test_validate_imported_wav_sample_rejects_silent_sample(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_path = tmp_path / "silent.wav"
     _write_test_wav(sample_path, duration_seconds=3.2, amplitude=0)
@@ -87,9 +75,6 @@ def test_validate_imported_wav_sample_rejects_non_wav(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_path = tmp_path / "sample.mp3"
     sample_path.write_bytes(b"not a wav")
@@ -104,9 +89,6 @@ def test_validate_imported_wav_sample_rejects_unreadable_wav(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_path = tmp_path / "broken.wav"
     sample_path.write_bytes(b"not a wav")
@@ -123,9 +105,6 @@ def _write_test_wav(path: Path, duration_seconds: float, amplitude: int) -> None
     @param[in]  amplitude Constant signed PCM amplitude.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     sample_rate = 16_000
     frame_count = int(sample_rate * duration_seconds)

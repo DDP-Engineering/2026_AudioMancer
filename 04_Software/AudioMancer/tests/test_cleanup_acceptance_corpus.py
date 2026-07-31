@@ -12,9 +12,6 @@
 @details Measures boundary classification, output projection, page-transition
          coverage, and zero introduced fusion without exposing oracle metrics
          in runtime metadata.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.1.0
 """
 
 from __future__ import annotations

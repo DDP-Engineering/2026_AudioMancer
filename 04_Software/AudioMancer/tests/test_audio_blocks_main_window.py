@@ -11,9 +11,6 @@
 @brief Main-window Audio Blocks integration tests for AudioMancer.
 @details Verifies the real Audio Blocks page is loaded and refreshed from
          persisted `80_audio_blocks` artifacts.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.2.2
 """
 
 # IMPORTS
@@ -40,9 +37,6 @@ def test_main_window_loads_audio_blocks_state_into_real_page(qtbot, tmp_path, de
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksWindowProject")
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -65,9 +59,6 @@ def _create_project(tmp_path, name: str):
     @param[in]  name Project display name.
     @return     Tuple containing project root and loaded manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {

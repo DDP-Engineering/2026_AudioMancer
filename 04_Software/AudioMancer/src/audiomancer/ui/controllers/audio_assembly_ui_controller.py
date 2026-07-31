@@ -13,9 +13,6 @@
          threaded operation lifecycle, Scene Ambience mix previews,
          generated-output playback, and manifest synchronization for the Audio
          Assembly workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.6.1
 """
 
 # IMPORTS
@@ -48,9 +45,6 @@ def handle_settings_changed(window: "MainWindow", settings: dict[str, object]) -
     @param[in]  settings Candidate Audio Assembly settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -65,9 +59,6 @@ def handle_generate_requested(window: "MainWindow", settings: dict[str, object])
     @param[in]  settings Candidate Audio Assembly settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -111,9 +102,6 @@ def handle_reset_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -136,9 +124,6 @@ def handle_playback_toggle_requested(window: "MainWindow", output_key: str) -> N
     @param[in]  output_key Selected output key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if _is_audio_assembly_playback_active(window):
@@ -154,9 +139,6 @@ def handle_playback_restart_requested(window: "MainWindow", output_key: str) -> 
     @param[in]  output_key Selected output key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if _is_audio_assembly_playback_active(window):
@@ -171,9 +153,6 @@ def handle_scene_mix_generate_requested(window: "MainWindow", group_key: str) ->
     @param[in]  group_key Selected Scene Ambience mix key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -213,9 +192,6 @@ def handle_scene_mix_playback_toggle_requested(window: "MainWindow", group_key: 
     @param[in]  group_key Selected Scene Ambience mix key.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if _is_audio_assembly_playback_active(window):
@@ -232,9 +208,6 @@ def _start_audio_assembly_playback(window: "MainWindow", output_key: str, curren
     @param[in]  current_language Runtime UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     normalized_output_key = str(output_key).strip()
     if window._current_project_root is None:
@@ -269,9 +242,6 @@ def _start_scene_mix_playback(window: "MainWindow", group_key: str, current_lang
     @param[in]  current_language Runtime UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     normalized_group_key = str(group_key).strip()
     if window._current_project_root is None:
@@ -304,9 +274,6 @@ def handle_playback_state_changed(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     if bool(getattr(window, "_audio_assembly_playback_starting", False)):
         return
@@ -324,9 +291,6 @@ def handle_playback_position_changed(window: "MainWindow", position_ms: int) -> 
     @param[in]  position_ms Current media position in milliseconds.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     player = getattr(window, "_audio_assembly_audio_player", None)
     page = getattr(window, "_audio_assembly_page", None)
@@ -342,9 +306,6 @@ def handle_playback_duration_changed(window: "MainWindow", duration_ms: int) -> 
     @param[in]  duration_ms Current media duration in milliseconds.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     player = getattr(window, "_audio_assembly_audio_player", None)
     page = getattr(window, "_audio_assembly_page", None)
@@ -360,9 +321,6 @@ def handle_playback_seek_requested(window: "MainWindow", position_ms: int) -> No
     @param[in]  position_ms Requested playback position in milliseconds.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     player = getattr(window, "_audio_assembly_audio_player", None)
     if player is None:
@@ -377,9 +335,6 @@ def handle_playback_skip_requested(window: "MainWindow", delta_ms: int) -> None:
     @param[in]  delta_ms Requested relative offset in milliseconds.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     player = getattr(window, "_audio_assembly_audio_player", None)
     if player is None:
@@ -394,9 +349,6 @@ def _handle_success(window: "MainWindow", result_payload: object) -> None:
     @param[in]  result_payload Worker result payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _ = result_payload
     _sync_manifest_after_audio_assembly_update(window)
@@ -413,9 +365,6 @@ def _handle_scene_mix_success(window: "MainWindow", result_payload: object) -> N
     @param[in]  result_payload Worker result payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-27
-    @version    0.1.0
     """
     _ = result_payload
     if window._current_project_root is None:
@@ -437,9 +386,6 @@ def _handle_failure(window: "MainWindow", error: Exception) -> None:
     @param[in]  error Raised worker exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _sync_manifest_from_disk(window)
     QMessageBox.warning(
@@ -456,9 +402,6 @@ def _handle_cancelled(window: "MainWindow", message: str) -> None:
     @param[in]  message Cancellation message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _ = message
     _sync_manifest_from_disk(window)
@@ -474,9 +417,6 @@ def _sync_manifest_after_audio_assembly_update(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -511,9 +451,6 @@ def _sync_manifest_after_audio_assembly_reset(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -537,9 +474,6 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -567,9 +501,6 @@ def _save_audio_assembly_settings(window: "MainWindow", settings: dict[str, obje
     @param[in]  language Current UI language code.
     @return     True when settings were saved or unchanged.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return False
@@ -636,9 +567,6 @@ def _confirm_audio_assembly_settings_change(window: "MainWindow", language: str)
     @param[in]  language Current UI language code.
     @return     True when settings may be saved and assembly outputs reset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return (
         QMessageBox.question(
@@ -659,9 +587,6 @@ def _scene_mix_by_key(window: "MainWindow", group_key: str) -> dict[str, object]
     @param[in]  group_key Scene Ambience mix group key.
     @return     Group record or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return None
@@ -683,9 +608,6 @@ def _scene_mix_audio_path(window: "MainWindow", group_record: dict[str, object] 
     @param[in]  group_record Optional Scene Ambience mix record.
     @return     Absolute audio path or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     return _project_audio_path_from_record(window, group_record)
 
@@ -697,9 +619,6 @@ def _output_by_key(window: "MainWindow", output_key: str) -> dict[str, object] |
     @param[in]  output_key Output key to locate.
     @return     Output record or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if window._current_project_root is None:
         return None
@@ -721,9 +640,6 @@ def _output_audio_path(window: "MainWindow", output_record: dict[str, object] | 
     @param[in]  output_record Optional generated-output record.
     @return     Absolute audio path or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     return _project_audio_path_from_record(window, output_record)
 
@@ -735,9 +651,6 @@ def _project_audio_path_from_record(window: "MainWindow", record: dict[str, obje
     @param[in]  record Optional record containing `audio_relative_path`.
     @return     Existing absolute path or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if window._current_project_root is None or not isinstance(record, dict):
         return None
@@ -757,9 +670,6 @@ def _stop_audio_assembly_playback(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     window._audio_assembly_playback_starting = False
     duration_ms = 0
@@ -779,9 +689,6 @@ def _is_audio_assembly_playback_active(window: "MainWindow") -> bool:
     @param[in]  window Active main window instance.
     @return     True when playback is starting, playing, paused, or tracked as active.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if bool(getattr(window, "_audio_assembly_playback_starting", False)):
         return True
@@ -797,9 +704,6 @@ def _stop_other_audio_previews(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     for attr_name in (
         "_narator_voice_audio_player",
@@ -817,9 +721,6 @@ def current_language_from_window(window: "MainWindow") -> str:
     @param[in]  window Active main window instance.
     @return     Runtime language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return ui_state_service.current_language_from_settings(window._settings_payload)
 
@@ -830,9 +731,6 @@ def _stage_rank(stage: str) -> int:
     @param[in]  stage Workflow stage token.
     @return     Zero-based stage rank or zero for unknown stages.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     stages = (
         "project_created",
@@ -859,9 +757,6 @@ def _output_duration_ms(output_record: dict[str, object] | None) -> int:
     @param[in]  output_record Optional generated-output record.
     @return     Non-negative duration in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     if not isinstance(output_record, dict):
         return 0
@@ -874,9 +769,6 @@ def _media_position_ms(player) -> int:
     @param[in]  player Media player object or compatible test double.
     @return     Non-negative playback position in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     position = getattr(player, "position", None)
     return max(0, int(position())) if callable(position) else 0
@@ -888,9 +780,6 @@ def _media_duration_ms(player) -> int:
     @param[in]  player Media player object or compatible test double.
     @return     Non-negative media duration in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     duration = getattr(player, "duration", None)
     return max(0, int(duration())) if callable(duration) else 0
@@ -903,9 +792,6 @@ def _clamped_position_ms(position_ms: int, duration_ms: int) -> int:
     @param[in]  duration_ms Media duration in milliseconds.
     @return     Playback position constrained to the media duration.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     resolved_duration = max(0, int(duration_ms))
     if resolved_duration <= 0:

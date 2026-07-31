@@ -11,9 +11,6 @@
 @brief Red-first checks for the approved Cleanup quality contract.
 @details Covers the strict two-artifact contract, typed boundaries, protected
          roles, fusion safety, script eligibility, resume, and manual edits.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.4.0
 """
 
 from __future__ import annotations
@@ -408,9 +405,6 @@ def test_cleanup_supported_languages_are_exactly_the_approved_eight() -> None:
     @details    Covers S-0001 and REQ-FUNC-b86a4cb0-a3a5-475d-aaa9-b6cb51aa1ed8.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     assert config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES == ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
 

@@ -11,9 +11,6 @@
 @brief Focused orchestration checks for the approved Cleanup operation.
 @details Covers progress, status-copy, source projection, and whitespace role
          realignment through deterministic Chunking.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.4.0
 """
 
 # IMPORTS
@@ -38,7 +35,6 @@ from cleanup_test_support import build_ledger, build_project
 def test_cleanup_without_ai_reports_monotonic_phase_progress(tmp_path) -> None:
     """
     @brief      Cover monotonic Cleanup progress without AI.
-    @version    0.1.0
     """
     canonical_text, ledger = build_ledger(["A wrapped line", "continues safely."])
     project_root, manifest = build_project(tmp_path, "ProgressWithoutAi", canonical_text, ledger)
@@ -64,7 +60,6 @@ def test_cleanup_without_ai_reports_monotonic_phase_progress(tmp_path) -> None:
 def test_renderer_rejects_unknown_unit_actions() -> None:
     """
     @brief      Cover rejection of unknown unit actions.
-    @version    0.1.0
     """
     canonical_text, ledger = build_ledger(["Source text."])
 
@@ -86,7 +81,6 @@ def test_renderer_rejects_unknown_unit_actions() -> None:
 def test_completed_cleanup_reports_only_runtime_quality_metrics(tmp_path) -> None:
     """
     @brief      Cover the production-only Cleanup quality metric contract.
-    @version    0.1.0
     """
     canonical_text, ledger = build_ledger(["A paragraph ends here."])
     project_root, manifest = build_project(tmp_path, "RuntimeMetrics", canonical_text, ledger)
@@ -106,7 +100,6 @@ def test_whitespace_merge_split_preserves_narratable_prose(tmp_path) -> None:
     @details    Covers S-0001 through S-0006,
                 REQ-FUNC-807c56f0-12b7-42e9-bd8f-0d562c903e70, and
                 REQ-FUNC-376f4f7a-a9e4-4653-845b-edbba25cf170.
-    @version    0.1.0
     """
     source_paragraphs = [
         "Opening one.",
@@ -181,7 +174,6 @@ def test_whitespace_role_realign_falls_back_for_ambiguous_content(tmp_path) -> N
     @brief      Cover classifier-only fallback for ambiguous normalized content.
     @details    Covers S-0005 and
                 REQ-FUNC-807c56f0-12b7-42e9-bd8f-0d562c903e70.
-    @version    0.1.0
     """
     canonical_text, ledger = build_ledger(
         ["CHAPTER TWO", "CHAPTER TWO", "Narration."],
@@ -213,7 +205,6 @@ def test_whitespace_role_realign_falls_back_for_ambiguous_content(tmp_path) -> N
 def test_whitespace_realign_failure_records_diagnostic(tmp_path, caplog) -> None:
     """
     @brief      Cover S-0001 and REQ-FUNC-1179da33-b65d-4192-a875-353a38c37ab7.
-    @version    0.1.0
     """
     canonical_text, ledger = build_ledger(["Alpha  beta."])
     project_root, manifest = build_project(

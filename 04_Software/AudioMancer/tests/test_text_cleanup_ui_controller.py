@@ -11,9 +11,6 @@
 @brief Controller tests for the single Cleanup command.
 @details Verifies threaded-runner argument ownership and optional AI profile
          forwarding from the Cleanup page controller.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-27
-@version 0.1.0
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ def test_extraction_controller_leaves_project_arguments_for_threaded_runner(monk
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     captured: dict[str, object] = {}
     window = SimpleNamespace(
@@ -56,9 +50,6 @@ def test_extraction_controller_leaves_project_arguments_for_threaded_runner(monk
         @param[in]  _failure Failure callback unused by this helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-27
-        @version    0.1.0
         """
         captured["kind"] = operation_kind
         captured["worker"] = worker
@@ -80,9 +71,6 @@ def test_cleanup_controller_passes_optional_selected_profile(monkeypatch, tmp_pa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     captured: dict[str, object] = {}
     window = SimpleNamespace(
@@ -120,9 +108,6 @@ def test_cleanup_controller_passes_optional_selected_profile(monkeypatch, tmp_pa
         @param[in]  _failure Failure callback unused by this helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-27
-        @version    0.1.0
         """
         captured["kind"] = operation_kind
         captured["worker"] = worker

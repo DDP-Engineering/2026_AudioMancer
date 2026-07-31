@@ -12,9 +12,6 @@
 @details Builds text and structural offsets in one pass so Cleanup can apply
          source-referenced operations without asking an AI model to reproduce
          story text.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-27
-@version 0.1.0
 """
 
 from __future__ import annotations

@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer deterministic chunking service.
 @details Verifies runtime artifact naming, paragraph chunk generation, chapter
          counting, and resumable cancellation state for deterministic chunking.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.5.0
 """
 
 # IMPORTS
@@ -40,9 +37,6 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkProject", tmp_path)
     source_path = project_root / "story.pdf"
@@ -114,9 +108,6 @@ def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ChunkCompactManifest",
@@ -149,9 +140,6 @@ def test_chunking_prefers_cleanup_document_paragraph_records(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkMetadata", tmp_path)
     source_path = project_root / "story.txt"
@@ -201,9 +189,6 @@ def test_chunking_rejects_missing_cleanup_document(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkNoMetadata", tmp_path)
     source_path = project_root / "story.txt"
@@ -231,9 +216,6 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkCancel", tmp_path)
     source_path = project_root / "story.txt"
@@ -255,9 +237,6 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
         @brief      Request cancellation before processing the second paragraph.
         @return     True after one paragraph has been processed.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-29
-        @version    0.2.0
         """
         cancel_checks["count"] += 1
         return cancel_checks["count"] >= 2
@@ -283,9 +262,6 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.2.0
     """
     project_root, manifest = _create_ready_chunking_project(
         tmp_path,
@@ -299,9 +275,6 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
         @brief      Fail when deterministic chunking falls back to full chapter rescans.
         @return     None.
         @exception  AssertionError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         raise AssertionError("deterministic chunking should use incremental chapter counts")
 
@@ -336,9 +309,6 @@ def test_chunking_checkpoint_pairs_are_resume_consistent(tmp_path, monkeypatch) 
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     project_root, manifest = _create_ready_chunking_project(
         tmp_path,
@@ -376,9 +346,6 @@ def test_chunking_throttles_non_terminal_progress_updates(tmp_path, monkeypatch)
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     project_root, manifest = _create_ready_chunking_project(
         tmp_path,
@@ -405,9 +372,6 @@ def test_chunking_persists_one_cancelled_terminal_document(tmp_path, monkeypatch
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     project_root, manifest = _create_ready_chunking_project(
         tmp_path,
@@ -451,9 +415,6 @@ def test_chunking_persists_one_failed_terminal_document(tmp_path, monkeypatch) -
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     project_root, manifest = _create_ready_chunking_project(
         tmp_path,
@@ -495,9 +456,6 @@ def test_incremental_chapter_count_matches_full_scan() -> None:
     @brief      Verify REQ-NFR-015 incremental chapter counting preserves full-scan semantics.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     chunks = [
         {"text": "Chapter I\nOpening."},
@@ -519,9 +477,6 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkResume", tmp_path)
     source_path = project_root / "story.txt"
@@ -559,9 +514,6 @@ def test_load_chunks_returns_empty_for_malformed_artifact(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("ChunkMalformed", tmp_path)
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("{not-json", encoding="utf-8")
@@ -576,9 +528,6 @@ def test_chunking_rejects_empty_cleaned_text(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkEmpty", tmp_path)
     source_path = project_root / "story.txt"
@@ -610,9 +559,6 @@ def _create_ready_chunking_project(
     @param[in]  cleaned_text Canonical text consumed by deterministic Chunking.
     @return     Project root and mutable manifest pair.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
     source_path = project_root / "story.txt"

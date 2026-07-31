@@ -11,9 +11,6 @@
 @brief Focused tests for shared TTS generation-budget helpers.
 @details Verifies the conservative fallback budget, script-aware budget-unit
          estimates, and the operator narration block target.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-26
-@version 0.1.0
 """
 
 # IMPORTS
@@ -29,9 +26,6 @@ def test_fallback_budget_matches_the_voiceweaver_clone_cap() -> None:
                 plan blocks the runtime silently truncates.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     budget = tts_budget_service.resolve_cached_tts_budget(None)
 
@@ -46,9 +40,6 @@ def test_discovered_model_budget_overrides_the_fallback() -> None:
     @brief      Verify a probed model's reported token budget wins over the configured fallback.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     budget = tts_budget_service.resolve_cached_tts_budget([{"default_model_parameters": {"max_new_tokens": 2048}}])
 
@@ -61,9 +52,6 @@ def test_budget_units_use_characters_for_space_free_scripts() -> None:
     @brief      Verify CJK text is budgeted by characters rather than by meaningless word counts.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     japanese_text = "彼は笑った。彼女は黙っていた。それから彼は出て行った。"
 
@@ -78,9 +66,6 @@ def test_budget_units_stay_word_paced_for_latin_script() -> None:
     @brief      Verify spaced text keeps a word-paced estimate.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     assert tts_budget_service.estimate_budget_units("") == 0
     assert tts_budget_service.estimate_budget_units("one two three") == 3
@@ -91,9 +76,6 @@ def test_operator_target_only_ever_shortens_the_model_budget() -> None:
     @brief      Verify the block target narrows the budget but can never exceed the model limit.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     model_budget = tts_budget_service.resolve_cached_tts_budget(None)
     model_seconds = float(model_budget["split_audio_seconds_budget"])
@@ -118,9 +100,6 @@ def test_automatic_target_leaves_the_model_budget_untouched() -> None:
     @brief      Verify a zero target means "follow the model budget".
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     model_budget = tts_budget_service.resolve_cached_tts_budget(None)
 
@@ -139,9 +118,6 @@ def test_invalid_or_out_of_range_targets_are_clamped() -> None:
     @brief      Verify malformed and out-of-range operator targets never break budget resolution.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     assert tts_budget_service.resolve_block_target_audio_seconds(None) == 0.0
     assert tts_budget_service.resolve_block_target_audio_seconds({"speech_block_target_audio_seconds": "abc"}) == 0.0

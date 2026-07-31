@@ -11,9 +11,6 @@
 @brief Format-specific SourceEvent adapters used by Text Extraction.
 @details Preserves native structure when available and emits one common event
          stream consumed by CanonicalDocumentBuilder.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-27
-@version 0.1.0
 """
 
 from __future__ import annotations

@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer source import service.
 @details Verifies source-format acceptance, rejection, copy behavior, and
          collision-safe storage naming under one project workspace.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.1
 """
 
 # IMPORTS
@@ -45,9 +42,6 @@ def test_import_source_accepts_supported_formats(tmp_path, suffix: str, file_typ
     @param[in]  file_type Expected normalized file-type token.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -67,9 +61,6 @@ def test_import_source_rejects_unsupported_doc_format(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -86,9 +77,6 @@ def test_import_source_copies_file_and_records_metadata(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -109,9 +97,6 @@ def test_import_source_avoids_name_collisions(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -131,9 +116,6 @@ def test_import_source_replaces_previous_project_source_file(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -159,9 +141,6 @@ def test_import_source_rejects_previous_source_traversal_path(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()

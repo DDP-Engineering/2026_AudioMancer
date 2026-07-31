@@ -11,9 +11,6 @@
 @brief Red-first contract tests for the authoritative Chunking document.
 @details Covers S-0001 through S-0007 and the linked functional and data
          requirements for exact persistence, resume, projections, and routing.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-29
-@version 0.4.0
 """
 
 # IMPORTS
@@ -88,7 +85,6 @@ def test_document_api_round_trips_exact_contract_and_returns_defensive_chunks(tm
     @brief Verify S-0001, REQ-FUNC-048, and REQ-DATA-001 strict document persistence.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     service = _chunking_document_service()
     document = _valid_document(
@@ -181,7 +177,6 @@ def test_document_api_rejects_incompatible_root_and_chunk_shapes(
     @param[in]  case_name Stable name identifying the parametrized contract case.
     @param[in]  payload_factory Factory producing the candidate payload under test.
     @return     None.
-    @version 0.1.0
     """
     service = _chunking_document_service()
     payload = payload_factory()
@@ -199,7 +194,6 @@ def test_deterministic_chunking_commits_one_document_without_persisted_progress(
     @brief Verify S-0001/S-0002 and REQ-FUNC-048/049 deterministic completion.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     project_root, manifest = _create_chunk_ready_project(
         tmp_path,
@@ -231,7 +225,6 @@ def test_deterministic_cancellation_preserves_committed_chunks_and_next_paragrap
     @brief Verify S-0003/S-0005 and REQ-FUNC-3a22db38/REQ-FUNC-bdc31247 cancellation.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.2.0
     """
     project_root, manifest = _create_chunk_ready_project(
         tmp_path,
@@ -244,7 +237,6 @@ def test_deterministic_cancellation_preserves_committed_chunks_and_next_paragrap
         """
         @brief Request cancellation before processing the second paragraph.
         @return     True after one paragraph has been processed.
-        @version 0.2.0
         """
         cancel_checks["count"] += 1
         return cancel_checks["count"] >= 2
@@ -269,7 +261,6 @@ def test_ai_chunking_persists_minimal_document_and_separate_log(tmp_path, monkey
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version 0.1.0
     """
     project_root, manifest = _create_chunk_ready_project(
         tmp_path,
@@ -318,7 +309,6 @@ def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tm
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version 0.1.0
     """
     source_text = "Paragraph one.\n\nParagraph two.\n\nParagraph three.\n"
     project_root, manifest = _create_chunk_ready_project(tmp_path, "AiResumeDocument", source_text)
@@ -349,7 +339,6 @@ def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tm
         @param[in]  user_prompt Rendered user prompt inspected by the test double.
         @param[in]  _kwargs Ignored keyword arguments accepted by the test double.
         @return     Controlled AI chat response payload.
-        @version 0.1.0
         """
         captured["profile_id"] = profile["id"]
         captured["prompt"] = user_prompt
@@ -388,7 +377,6 @@ def test_manual_mutations_preserve_document_origin_and_set_manual_adjusted(tmp_p
     @brief Verify S-0004 and REQ-FUNC-051 atomic manual mutation semantics.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     source_text = "First chunk.\n\nSecond chunk.\n"
     project_root, manifest = _create_chunk_ready_project(tmp_path, "ManualDocumentMutation", source_text)
@@ -435,7 +423,6 @@ def test_chunking_default_state_is_not_created_and_reset_deletes_all_owned_artif
     @brief Verify S-0005 and REQ-FUNC-052 page-open and Reset Chunking behavior.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     assert operation_runtime_service.ensure_default_operation_state(tmp_path, "chunking") is None
     _write_document(tmp_path, _valid_document([_chunk("chunk-0001", 1, "Text")]))
@@ -456,7 +443,6 @@ def test_project_completion_evidence_uses_only_the_authoritative_document(tmp_pa
     @brief Verify S-0005 and REQ-FUNC-052 manifest evidence derives from one document.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     document = _valid_document(
         [_chunk("chunk-0001", 1, "Chapter I\nText")],
@@ -477,7 +463,6 @@ def test_downstream_consumers_use_shared_document_reader() -> None:
     """
     @brief Verify S-0006, REQ-FUNC-053, and REQ-DATA-001 production routing.
     @return     None.
-    @version 0.1.0
     """
     consumer_module_names = (
         "audiomancer.services.ai_translation_service",
@@ -498,7 +483,6 @@ def test_text_chunking_state_projects_resumable_document_without_durable_progres
     @brief Verify S-0007 and REQ-FUNC-054 UI state derives from the document.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     source_text = "Paragraph one.\n\nParagraph two.\n"
     project_root, manifest = _create_chunk_ready_project(tmp_path, "ChunkingUiDocument", source_text)
@@ -618,7 +602,6 @@ def _write_document(project_root: Path, document: dict[str, object]) -> Path:
     @param[in]  project_root Active project root folder.
     @param[in]  document Authoritative operation document payload.
     @return     Resolved filesystem path.
-    @version 0.1.0
     """
     path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
     path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -630,7 +613,6 @@ def _read_document(project_root: Path) -> dict[str, object]:
     @brief Read one raw document fixture for persisted-shape assertions.
     @param[in]  project_root Active project root folder.
     @return     Loaded document.
-    @version 0.1.0
     """
     payload = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert isinstance(payload, dict)
@@ -644,7 +626,6 @@ def _create_chunk_ready_project(tmp_path, name: str, source_text: str):
     @param[in]  name Stable name associated with the requested object.
     @param[in]  source_text Canonical source text processed by the callable.
     @return     Created chunk ready project.
-    @version 0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     source_path = project_root / "story.txt"
@@ -669,7 +650,6 @@ def _configure_chunking_prompts(tmp_path, monkeypatch) -> None:
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version 0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir(exist_ok=True)
@@ -687,7 +667,6 @@ def _profile(profile_id: str, *, context_window: int) -> dict[str, object]:
     @param[in]  profile_id Stable AI profile identifier.
     @param[in]  context_window Configured AI context-window size under test.
     @return     Validated AI profile payload used by the contract tests.
-    @version 0.1.0
     """
     return {
         "id": profile_id,

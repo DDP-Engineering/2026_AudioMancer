@@ -10,9 +10,6 @@
 @file __main__.py
 @brief Module entrypoint for launching AudioMancer with python -m.
 @details Delegates process startup to the application main entrypoint.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.0
 """
 
 # IMPORTS

@@ -11,9 +11,6 @@
 @brief State projection tests for the unified Cleanup page.
 @details Verifies structural-extraction readiness, completed Cleanup state,
          manual edits, and optional compatible AI profiles.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-27
-@version 0.1.0
 """
 
 # IMPORTS
@@ -35,9 +32,6 @@ def test_cleanup_state_requires_structural_extraction(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     project_root, manifest = _extracted_project(tmp_path, "StateProject")
 
@@ -55,9 +49,6 @@ def test_cleanup_state_exposes_runtime_quality_and_manual_save(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     project_root, manifest = _extracted_project(tmp_path, "CompletedState")
     document = text_cleanup_service.clean_text(project_root, manifest)
@@ -79,9 +70,6 @@ def test_ai_profile_state_keeps_profile_optional() -> None:
     @brief      Verify Cleanup profile state keeps AI optional and excludes disabled profiles.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     state = text_cleanup_state_service.build_ai_cleanup_profile_state(
         {
@@ -107,9 +95,6 @@ def _extracted_project(tmp_path, name):
     @param[in]  name Project display name.
     @return     Project-root and manifest tuple.
     @exception  OSError Raised when fixture files cannot be written.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     source_path = project_root / "story.txt"

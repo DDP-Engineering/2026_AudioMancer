@@ -11,9 +11,6 @@
 @brief Speech Blocks normalization helpers.
 @details Provides reusable Speech Blocks content-kind, operation-row, warning,
          text, and identifier normalization outside the orchestration service.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.3.0
 """
 
 # IMPORTS
@@ -57,9 +54,6 @@ def block_text_key(text: str) -> str:
     @param[in]  text Candidate text.
     @return     Matching key.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return " ".join(text.strip().split()).casefold()
 
@@ -71,9 +65,6 @@ def append_warning_flag(warning_flags: list[str], warning_flag: str) -> None:
     @param[in]  warning_flag Warning flag token.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if warning_flag not in warning_flags:
         warning_flags.append(warning_flag)
@@ -85,9 +76,6 @@ def speech_block_warning_reason(warning_flag: str) -> str:
     @param[in]  warning_flag Warning flag token.
     @return     Human-readable warning reason.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.1
     """
     return {
         "ambiguous_speaker": "Speaker attribution was ambiguous and fell back to narrator.",
@@ -120,9 +108,6 @@ def normalize_block_text(text: str, content_kind: str) -> str:
     @param[in]  content_kind Block content-kind token.
     @return     Persisted block text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if content_kind != CONTENT_KIND_DIALOGUE:
         return str(text).strip()
@@ -144,9 +129,6 @@ def normalize_content_kind(value: object) -> str:
     @param[in]  value Candidate content-kind value.
     @return     Supported content-kind token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized = str(value).strip().casefold().replace(" ", "_").replace("-", "_")
     if normalized in SPEECH_BLOCK_CONTENT_KINDS:
@@ -160,9 +142,6 @@ def is_operation_content_kind(content_kind: str) -> bool:
     @param[in]  content_kind Normalized content-kind token.
     @return     True for metadata-only operation content kinds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return str(content_kind).strip() in {
         CONTENT_KIND_SCENE_AMBIENCE,
@@ -177,9 +156,6 @@ def operation_speaker_entry(content_kind: str) -> dict[str, object]:
     @param[in]  content_kind Normalized operation content-kind token.
     @return     Speaker-like operation entry used by JSON and list rendering.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_content_kind = normalize_content_kind(content_kind)
     return {
@@ -195,9 +171,6 @@ def operation_display_name(content_kind: str) -> str:
     @param[in]  content_kind Normalized operation content-kind token.
     @return     Operator-facing operation name.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return {
         CONTENT_KIND_SCENE_AMBIENCE: "Scene Ambience",
@@ -213,9 +186,6 @@ def speech_block_id(chunk_id: str, sequence_index: int) -> str:
     @param[in]  sequence_index Chunk-local Speech Block sequence index.
     @return     Stable Speech Block identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     chunk_number = chunk_order_from_id(chunk_id)
     return f"{chunk_number:04d}-{max(int(sequence_index), 0):06d}"
@@ -227,9 +197,6 @@ def chunk_order_from_id(chunk_id: str) -> int:
     @param[in]  chunk_id Source chunk identifier.
     @return     Positive chunk-order value or zero when no digits are present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     digits = "".join(character for character in str(chunk_id) if character.isdigit())
     return int(digits[-4:] or "0")
@@ -241,9 +208,6 @@ def normalize_warning_flags(value: object) -> list[str]:
     @param[in]  value Candidate warning-flag value.
     @return     Ordered warning-flag string list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if not isinstance(value, list):
         return []
@@ -263,9 +227,6 @@ class SourceSpan:
     @param[in]  start_offset Inclusive character offset in the source chunk.
     @param[in]  end_offset Exclusive character offset in the source chunk.
     @param[in]  text Exact source text covered by the span.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
 
     source_span_id: str
@@ -284,9 +245,6 @@ class AtomicSpeechUnit:
     @param[in]  end_offset Exclusive character offset in the source chunk.
     @param[in]  text Exact source text covered by the unit.
     @param[in]  structural_kind Atomic structure: dialogue, attribution, narration, separator, or mixed.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
 
     atomic_unit_id: str
@@ -306,9 +264,6 @@ class SpeechBlockModelSelection:
     @param[in]  content_kind Requested Speech Blocks content kind.
     @param[in]  confidence Model confidence token.
     @param[in]  warning_flags Model warning flags.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
 
     source_span_ids: tuple[str, ...]
@@ -325,9 +280,6 @@ class SpeechBlockSelectionValidationResult:
     @param[in]  ai_blocks Reconstructed AI-block-like payloads.
     @param[in]  warning_flag Blocking warning flag when validation failed.
     @param[in]  reason Human-readable validation detail.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
 
     ai_blocks: tuple[dict[str, object], ...]
@@ -340,9 +292,6 @@ class SpeechBlockSelectionValidationResult:
         @brief      Return whether validation produced reconstructed blocks.
         @return     True when the model selection can be persisted.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-01
-        @version    0.1.0
         """
         return not self.warning_flag
 
@@ -357,9 +306,6 @@ def source_span_selection_contract_requested(
     @param[in]  candidate_blocks Raw model block candidates.
     @return     True when app-owned source spans are present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     _ = candidate_blocks
     return "source_spans" in source_chunk
@@ -385,9 +331,6 @@ def normalize_source_span_selection_chunk_blocks(
     @param[in]  require_confidence True when the active response contract requires confidence.
     @return     Tuple of normalized chunk blocks and warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     chunk_text = str(source_chunk.get("text", ""))
@@ -497,9 +440,6 @@ def source_span_response_requires_confidence(response_payload: dict[str, object]
     @param[in]  response_payload Raw model response payload.
     @return     True for the new `blocks` contract, false for legacy `speech_blocks` fixtures.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     return "blocks" in response_payload or "speech_blocks" not in response_payload
 
@@ -510,9 +450,6 @@ def source_span_candidate_blocks(response_payload: dict[str, object]) -> list[ob
     @param[in]  response_payload Raw model response payload.
     @return     Candidate block list or an empty list for malformed roots.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     candidate_blocks = response_payload.get("speech_blocks", response_payload.get("blocks", []))
     if not isinstance(candidate_blocks, list):
@@ -530,9 +467,6 @@ def parse_source_spans(
     @param[in]  chunk_text Exact source chunk text.
     @return     Tuple of source spans and an error string when invalid.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.1
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     raw_spans = source_chunk.get("source_spans", [])
@@ -588,9 +522,6 @@ def parse_atomic_units(
     @param[in]  chunk_text Exact source chunk text.
     @return     Tuple of atomic units and an error string when invalid.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     raw_units = source_chunk.get("atomic_units", [])
     if not isinstance(raw_units, list) or not raw_units:
@@ -654,9 +585,6 @@ def validate_atomic_unit_model_selections(
     @param[in]  require_confidence True when missing confidence should invalidate the selection.
     @return     Validation result with reconstructed blocks or a fallback reason.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     unit_by_id = {atomic_unit.atomic_unit_id: atomic_unit for atomic_unit in atomic_units}
     selectable_unit_ids = {
@@ -804,9 +732,6 @@ def selectable_atomic_unit(atomic_unit: AtomicSpeechUnit) -> bool:
     @param[in]  atomic_unit Parsed deterministic atomic unit.
     @return     True for speakable units; False for separator-only or whitespace-only provenance.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     return atomic_unit.structural_kind.strip().casefold() != "separator" and bool(atomic_unit.text.strip())
 
@@ -825,9 +750,6 @@ def validate_source_span_model_selections(
     @param[in]  require_confidence True when missing confidence should invalidate the selection.
     @return     Validation result with reconstructed blocks or a fallback reason.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     span_by_id = {source_span.source_span_id: source_span for source_span in source_spans}
     used_span_ids: set[str] = set()
@@ -933,9 +855,6 @@ def speech_block_model_selection(candidate_block: dict[str, object]) -> SpeechBl
     @param[in]  candidate_block Raw model block payload.
     @return     Parsed model selection.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     raw_source_span_ids = candidate_block.get("source_span_ids")
     source_span_ids: tuple[str, ...] = ()
@@ -967,9 +886,6 @@ def strict_speaker_entry(
     @param[in]  speaker_catalog Allowed speaker catalog.
     @return     Speaker entry when exact, otherwise None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     if is_operation_content_kind(content_kind):
         return operation_speaker_entry(content_kind)
@@ -1007,9 +923,6 @@ def source_span_selection_fallback(
     @param[in]  validation_reason Human-readable validation detail.
     @return     Tuple of one narrator block and warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     normalized_warning_flag = str(warning_flag).strip() or "source_span_selection_invalid"
     reason = f"{normalized_warning_flag}: {validation_reason or speech_block_warning_reason(normalized_warning_flag)}"
@@ -1043,9 +956,6 @@ def warning_entries_from_ai_blocks(
     @param[in]  ai_blocks AI-block-like payloads.
     @return     Human-readable warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     warning_entries: list[dict[str, object]] = []
     for ai_block in ai_blocks:
@@ -1062,9 +972,6 @@ def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> 
     @param[in]  settings_payload Optional application settings payload.
     @return     TTS budget payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     discovered_models = []
     if isinstance(settings_payload, dict):
@@ -1097,9 +1004,6 @@ def normalize_direct_block_chunk_blocks(
     @param[in]  tts_budget Optional TTS budget metadata.
     @return     Tuple of normalized chunk blocks and warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     chunk_text = str(source_chunk.get("text", ""))
@@ -1168,9 +1072,6 @@ def direct_aligned_ai_block(
     @param[in]  narrator_only True when all speech uses narrator voice.
     @return     AI block ready for final payload building.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     aligned_candidate = dict(candidate_block)
     aligned_candidate["source_text"] = source_text
@@ -1199,9 +1100,6 @@ def direct_source_gap_block(source_text: str) -> dict[str, object]:
     @param[in]  source_text Exact missed source text.
     @return     AI-block-like narrator review payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     return {
         "speaker_kind": SPEAKER_KIND_NARRATOR,
@@ -1232,9 +1130,6 @@ def normalize_chunk_blocks(
     @param[in]  tts_budget Optional narrator-only TTS budget metadata.
     @return     Tuple of normalized chunk blocks and warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     narrator_only = str(voice_assignment_mode).strip() == "same_narrator"
     candidate_blocks = response_payload.get("speech_blocks", response_payload.get("blocks", []))
@@ -1289,9 +1184,6 @@ def build_speech_block_payload(
     @param[in]  source_text Exact source text span represented by this block.
     @return     Persisted Speech Blocks payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     normalized_content_kind = normalize_content_kind(content_kind)
     normalized_warning_flags = normalize_warning_flags(warning_flags)
@@ -1335,9 +1227,6 @@ def normalize_ai_block(
     @param[in]  narrator_only True when the project uses one narrator voice for all text.
     @return     Normalized AI block with resolved speaker metadata.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     content_kind = normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
     if narrator_only and not is_operation_content_kind(content_kind):
@@ -1397,9 +1286,6 @@ def validate_narrator_only_budget(
     @param[in]  tts_budget Optional TTS budget metadata.
     @return     Human-readable warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     budget_payload = tts_budget or resolve_narrator_only_budget(None)
     safe_word_count = int(budget_payload.get("safe_word_count", 0) or 0)
@@ -1436,9 +1322,6 @@ def split_over_budget_ai_blocks(
     @param[in]  tts_budget Optional TTS budget metadata.
     @return     Tuple of split AI blocks and human-readable warning entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     safe_word_count = safe_tts_word_count(tts_budget)
     if safe_word_count <= 0:
@@ -1504,9 +1387,6 @@ def split_text_for_tts_budget(
     @param[in]  boundary_index Preferred boundary level index.
     @return     Tuple of split text spans and whether a hard fallback was used.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_text = str(text).strip()
     if not normalized_text:
@@ -1543,9 +1423,6 @@ def split_paragraph_spans(text: str) -> list[str]:
     @param[in]  text Text span to split.
     @return     Non-empty paragraph spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return [part.strip() for part in re.split(r"\n\s*\n+", str(text)) if part.strip()]
 
@@ -1556,9 +1433,6 @@ def split_sentence_spans(text: str) -> list[str]:
     @param[in]  text Text span to split.
     @return     Non-empty sentence-like spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_text = str(text).strip()
     sentence_parts = [
@@ -1577,9 +1451,6 @@ def pack_tts_split_parts(parts: list[str], content_kind: str, safe_word_count: i
     @param[in]  safe_word_count Maximum estimated budget units per part.
     @return     Packed split spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     packed_parts: list[str] = []
     current_part = ""
@@ -1607,9 +1478,6 @@ def hard_split_text_for_tts_budget(text: str, content_kind: str, safe_word_count
     @param[in]  safe_word_count Maximum estimated budget units per part.
     @return     Hard-split text spans.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     word_spans = re.findall(r"\S+", str(text))
     if len(word_spans) <= 1:
@@ -1647,9 +1515,6 @@ def hard_split_text_by_characters(text: str, safe_word_count: int) -> list[str]:
     @param[in]  safe_word_count Maximum estimated budget units per part.
     @return     Character chunks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_text = str(text).strip()
     max_characters = max(1, int(safe_word_count) * 6)
@@ -1666,9 +1531,6 @@ def safe_tts_word_count(tts_budget: dict[str, object] | None) -> int:
     @param[in]  tts_budget Optional TTS budget metadata.
     @return     Positive safe word count or zero when unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     budget_payload = tts_budget or resolve_narrator_only_budget(None)
     return max(0, int(budget_payload.get("safe_word_count", 0) or 0))
@@ -1680,9 +1542,6 @@ def tts_budget_unit_count(text: str) -> int:
     @param[in]  text Candidate text span.
     @return     Conservative budget-unit count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return tts_budget_service.estimate_budget_units(text)
 
@@ -1697,9 +1556,6 @@ def resolve_speaker_entry(
     @param[in]  speaker_catalog Allowed speaker catalog.
     @return     Speaker entry and ambiguity flag.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_request = speaker_match_key(requested_speaker_id)
     if not normalized_request:
@@ -1733,9 +1589,6 @@ def speaker_match_key(value: str) -> str:
     @param[in]  value Candidate speaker id or display name.
     @return     Normalized speaker matching key.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return " ".join(str(value).strip().replace("_", " ").replace("-", " ").casefold().split())
 

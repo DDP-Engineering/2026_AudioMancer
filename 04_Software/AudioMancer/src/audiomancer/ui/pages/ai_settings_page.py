@@ -12,9 +12,6 @@
 @details Renders the operator-facing AI settings dialog and exposes load/build
          helpers so the main window can coordinate persistence through the
          settings service.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-23
-@version 0.9.5
 """
 
 # IMPORTS
@@ -84,9 +81,6 @@ class AiSettingsPage(QWidget):
     """
     @brief      Display and edit AI settings for AudioMancer.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.7.1
     """
 
     def __init__(self, parent=None) -> None:
@@ -95,9 +89,6 @@ class AiSettingsPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.8.5
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
@@ -308,9 +299,6 @@ class AiSettingsPage(QWidget):
         @param[in]  settings_payload Combined application settings payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.4.1
         """
         source_profiles = settings_payload.get("llm_profiles", [])
         if not isinstance(source_profiles, list):
@@ -374,9 +362,6 @@ class AiSettingsPage(QWidget):
         @param[in]  existing_settings_payload Existing application settings.
         @return     Merged settings payload containing AI settings changes.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.4.1
         """
         self._sync_editor_to_current_profile()
         merged_settings = copy.deepcopy(existing_settings_payload)
@@ -408,9 +393,6 @@ class AiSettingsPage(QWidget):
         @brief      Build one payload snapshot from the selected profile editor.
         @return     Copy of the selected profile payload or None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.3.0
         """
         self._sync_editor_to_current_profile()
         current_profile = self._current_profile()
@@ -424,9 +406,6 @@ class AiSettingsPage(QWidget):
         @param[in]  probe_result Normalized backend probe result payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         current_profile = self._current_profile()
         if current_profile is None:
@@ -475,9 +454,6 @@ class AiSettingsPage(QWidget):
         @param[in]  label Initial operator-facing profile label.
         @return     Default profile payload ready for insertion.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         profile = copy.deepcopy(_DEFAULT_PROFILE_TEMPLATE)
         profile["id"] = self._generate_profile_id()
@@ -492,9 +468,6 @@ class AiSettingsPage(QWidget):
         @brief      Generate one stable-looking unique profile identifier.
         @return     Generated profile identifier string.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         return f"llm_profile_{uuid4().hex[:12]}"
 
@@ -508,9 +481,6 @@ class AiSettingsPage(QWidget):
         @param[in]  profile Target profile payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-26
-        @version    0.2.0
         """
         selected_model_name = str(profile.get("model_name", "")).strip()
         discovered_options = self._discovered_model_options.get(str(profile["id"]), [])
@@ -543,9 +513,6 @@ class AiSettingsPage(QWidget):
         @brief      Rebuild the profile-list widget from the in-memory payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         current_profile_id = self._current_profile_id()
         self._profile_list.blockSignals(True)
@@ -566,9 +533,6 @@ class AiSettingsPage(QWidget):
         @brief      Rebuild the default-profile selectors from enabled profiles.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.3.0
         """
         current_cleanup = self._optional_combo_value(self._default_cleanup_combo)
         current_chunking = self._optional_combo_value(self._default_chunking_combo)
@@ -606,9 +570,6 @@ class AiSettingsPage(QWidget):
         @param[in]  row Selected profile-list row index.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         if self._loading_profile:
             return
@@ -622,9 +583,6 @@ class AiSettingsPage(QWidget):
         @param[in]  profile Source profile payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         self._loading_profile = True
         self._load_model_options_for_profile(profile)
@@ -646,9 +604,6 @@ class AiSettingsPage(QWidget):
         @brief      Copy the current editor state back into the selected profile.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         current_profile = self._current_profile()
         if current_profile is None or self._loading_profile:
@@ -673,9 +628,6 @@ class AiSettingsPage(QWidget):
         @param[in]  _value Ignored current model text.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         if self._loading_profile or self._suspend_override_tracking:
             return
@@ -689,9 +641,6 @@ class AiSettingsPage(QWidget):
         @param[in]  _value Ignored current numeric value.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         if self._loading_profile or self._suspend_override_tracking:
             return
@@ -704,9 +653,6 @@ class AiSettingsPage(QWidget):
         @brief      Return the currently selected profile payload when available.
         @return     Selected profile payload or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         row = self._profile_list.currentRow()
         if row < 0 or row >= len(self._profiles):
@@ -718,9 +664,6 @@ class AiSettingsPage(QWidget):
         @brief      Return the identifier of the selected profile-list item.
         @return     Selected profile identifier or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         current_item = self._profile_list.currentItem()
         if current_item is None:
@@ -735,9 +678,6 @@ class AiSettingsPage(QWidget):
         @param[in]  value Desired stored value.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         index = combo.findData(value)
         combo.setCurrentIndex(0 if index < 0 else index)
@@ -748,9 +688,6 @@ class AiSettingsPage(QWidget):
         @param[in]  combo Source combo box.
         @return     Selected string value or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         value = combo.currentData()
         return None if value in (None, "") else str(value)
@@ -761,9 +698,6 @@ class AiSettingsPage(QWidget):
         @param[in]  language Active UI language.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-17
-        @version    0.1.0
         """
         current_mode = self._optional_combo_value(self._default_context_mode_combo)
         self._default_context_mode_combo.blockSignals(True)
@@ -791,9 +725,6 @@ class AiSettingsPage(QWidget):
         @brief      Append one new editable profile to the in-memory list.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         self._sync_editor_to_current_profile()
         self._profiles.append(self._create_default_profile(f"AI Profile {len(self._profiles) + 1}"))
@@ -806,9 +737,6 @@ class AiSettingsPage(QWidget):
         @brief      Remove the selected profile and repair dependent selectors.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.3.0
         """
         row = self._profile_list.currentRow()
         if row < 0 or len(self._profiles) <= 1:
@@ -842,9 +770,6 @@ class AiSettingsPage(QWidget):
         @param[in]  event Event delivered to the object.
         @return     True when the event was handled locally.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-26
-        @version    0.2.0
         """
         if (
             watched is self._model_combo.lineEdit()
@@ -862,9 +787,6 @@ class AiSettingsPage(QWidget):
         @brief      Drop down the model list unless it is already open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-26
-        @version    0.1.0
         """
         if self._model_combo.isEnabled() and not self._model_combo.view().isVisible():
             self._model_combo.showPopup()
@@ -875,9 +797,6 @@ class AiSettingsPage(QWidget):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.6.2
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>")

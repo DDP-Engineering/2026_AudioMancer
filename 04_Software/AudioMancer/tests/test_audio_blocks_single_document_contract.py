@@ -17,9 +17,6 @@
          REQ-FUNC-170ed96e, REQ-FUNC-a4c87ddc, REQ-FUNC-e18bb65f,
          REQ-FUNC-e9a6688e, REQ-FUNC-df8987d1, REQ-FUNC-39146520,
          REQ-FUNC-cf8803d2, and REQ-FUNC-65813be2.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-26
-@version 0.1.0
 """
 
 # IMPORTS
@@ -138,9 +135,6 @@ def test_document_round_trips_and_writes_only_one_artifact(tmp_path: Path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -160,9 +154,6 @@ def test_persisted_block_carries_only_the_contracted_field_set(tmp_path: Path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -180,9 +171,6 @@ def test_split_fields_are_persisted_only_for_split_blocks(tmp_path: Path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -205,9 +193,6 @@ def test_generated_audio_path_is_derived_from_speech_block_id(tmp_path: Path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -225,9 +210,6 @@ def test_split_part_paths_are_derived_from_speech_block_id(tmp_path: Path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -246,9 +228,6 @@ def test_load_report_projection_matches_recomputed_counts(tmp_path: Path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -274,9 +253,6 @@ def test_load_operation_state_projection_exposes_checkpoint(tmp_path: Path) -> N
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -304,9 +280,6 @@ def test_non_object_document_is_treated_as_absent(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -330,9 +303,6 @@ def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -354,9 +324,6 @@ def test_reset_removes_document(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()

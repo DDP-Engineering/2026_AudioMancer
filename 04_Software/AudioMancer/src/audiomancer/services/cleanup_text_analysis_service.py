@@ -13,9 +13,6 @@
          chapter-label detection, language detection, and dialogue formatting
          shared by deterministic and AI-assisted cleanup so both pipelines use
          one consistent implementation.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.5.0
 """
 
 # IMPORTS
@@ -99,9 +96,6 @@ def is_scene_separator_artifact(
     @param[in]  role Optional Cleanup paragraph role.
     @return     True when Chunking must treat the paragraph as a hard boundary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-29
-    @version    0.1.0
     """
     normalized_role = str(role or "body").strip().casefold()
     if normalized_role == "scene_separator":
@@ -120,9 +114,6 @@ def normalize_text_line(line: str) -> str:
     @param[in]  line Source line.
     @return     NFKC-normalized line with collapsed whitespace.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     normalized = unicodedata.normalize("NFKC", str(line))
     return _WHITESPACE_PATTERN.sub(" ", normalized).strip()
@@ -134,9 +125,6 @@ def normalized_compare_key(line: str) -> str:
     @param[in]  line Source line.
     @return     Stable normalized comparison key.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return normalize_text_line(line).casefold()
 
@@ -147,9 +135,6 @@ def normalized_header_footer_key(line: str) -> str:
     @param[in]  line Candidate page-edge line.
     @return     Conservative comparison key or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     normalized = normalize_text_line(line)
     for pattern in _HEADER_FOOTER_PAGE_AFFIX_PATTERNS:
@@ -168,9 +153,6 @@ def classify_text_script(text: str) -> str:
     @param[in]  text Source text fragment.
     @return     One of `latin`, `cyrillic`, `cjk`, `hangul`, `mixed`, or `unknown`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     counts = {"latin": 0, "cyrillic": 0, "cjk": 0, "hangul": 0}
     for character in text:
@@ -192,9 +174,6 @@ def has_sentence_terminal(text: str) -> bool:
     @param[in]  text Source line.
     @return     True when the line has a sentence-terminal suffix.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     normalized = normalize_text_line(text)
     while normalized and normalized[-1] in _CLOSING_SENTENCE_MARKS:
@@ -215,9 +194,6 @@ def sentence_spans(text: str, include_clause_marks: bool = False) -> list[str]:
     @param[in]  include_clause_marks True to also break on clause marks such as `;` and `:`.
     @return     Ordered spans whose concatenation equals the input.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = str(text)
     if not source_text:
@@ -264,9 +240,6 @@ def detect_language(text: str) -> str | None:
     @param[in]  text Source text sample.
     @return     Detected language code or `None` when unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.1
     """
     sample = normalize_text_line(text)
     if len(sample) < 20:
@@ -283,9 +256,6 @@ def detect_chapter_label(paragraph_text: str) -> str | None:
     @param[in]  paragraph_text Candidate paragraph text.
     @return     Matched chapter label or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
     """
     normalized = normalize_text_line(paragraph_text)
     if len(normalized) > 100:
@@ -305,9 +275,6 @@ def _has_semantic_text(text: str) -> bool:
     @param[in]  text Candidate text.
     @return     True when alphabetic or CJK/Hangul characters are present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     return any(character.isalpha() or _script_name_for_character(character) in {"cjk", "hangul"} for character in text)
 
@@ -318,9 +285,6 @@ def _script_name_for_character(character: str) -> str:
     @param[in]  character Single character to classify.
     @return     Script group name or `unknown`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     codepoint = ord(character)
     if 0x0041 <= codepoint <= 0x024F or 0x1E00 <= codepoint <= 0x1EFF:

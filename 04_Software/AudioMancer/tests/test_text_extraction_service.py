@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer text extraction service.
 @details Verifies self-contained extraction artifacts, resumable state, and
          deterministic text extraction for the supported source formats.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.2.0
 """
 
 # IMPORTS
@@ -42,9 +39,6 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -112,9 +106,6 @@ def test_extract_text_supports_document_formats(
     @param[in]  builder_name Fixture-builder token for the format.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         f"Project_{file_type}",
@@ -145,9 +136,6 @@ def test_extract_text_reports_pdf_warnings_and_total_pages(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "PdfProject",
@@ -172,9 +160,6 @@ def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "EmptyPdfProject",
@@ -198,9 +183,6 @@ def test_extract_text_splits_rtf_into_multiple_progress_units(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "RtfProgressProject",
@@ -226,9 +208,6 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "EpubProgressProject",
@@ -262,9 +241,6 @@ def test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "MisnamedBinaryDocProject",
@@ -287,9 +263,6 @@ def test_extract_text_restarts_unfinished_docx_extraction(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ResumeProject",
@@ -328,9 +301,6 @@ def test_extract_text_persists_cancelled_progress_and_restarts(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-27
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("CancelledExtraction", tmp_path)
     source_path = project_root / "story.docx"
@@ -406,9 +376,6 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project(
         "ResetProject",
@@ -453,9 +420,6 @@ def _build_source_document(source_path: Path, file_type: str) -> dict[str, objec
     @param[in]  file_type Persisted source-type token.
     @return     Source-document payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     return {
         "original_name": source_path.name,
@@ -472,9 +436,6 @@ def _write_markdown_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     path.write_text("# Story\n\nParagraph", encoding="utf-8")
 
@@ -485,9 +446,6 @@ def _write_rtf_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     path.write_text(r"{\rtf1\ansi Story paragraph}", encoding="utf-8")
 
@@ -499,9 +457,6 @@ def _write_docx_source(path: Path, paragraphs: list[str] | None = None) -> None:
     @param[in]  paragraphs Optional paragraph list.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     document = Document()
     for paragraph in paragraphs or ["Story paragraph"]:
@@ -515,9 +470,6 @@ def _write_odt_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     document = OpenDocumentText()
     document.text.addElement(P(text="Story paragraph"))
@@ -530,9 +482,6 @@ def _write_epub_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     book = epub.EpubBook()
     book.set_identifier("test-book")
@@ -555,9 +504,6 @@ def _write_pdf_source(path: Path, page_texts: list[str]) -> None:
     @param[in]  page_texts Ordered page-text payloads.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     document = fitz.open()
     for page_text in page_texts:

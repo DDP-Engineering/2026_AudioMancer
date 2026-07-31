@@ -11,9 +11,6 @@
 @brief Whole-project ZIP snapshot service for AudioMancer.
 @details Creates complete external ZIP snapshots of active project folders
          without registering the archive as a project runtime artifact.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.3.2
 """
 
 # IMPORTS
@@ -52,9 +49,6 @@ def default_snapshot_file_name(
     @param[in]  timestamp Optional timestamp override for deterministic tests.
     @return     Filesystem-safe ZIP file name.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     snapshot_timestamp = timestamp or datetime.now()
     project_name = str(
@@ -72,9 +66,6 @@ def ensure_snapshot_extension(snapshot_path: str | Path) -> Path:
     @param[in]  snapshot_path Candidate save-file path.
     @return     Path with the required snapshot extension.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     resolved_path = Path(snapshot_path)
     if resolved_path.suffix.lower() == SNAPSHOT_EXTENSION:
@@ -89,9 +80,6 @@ def is_path_inside_project(project_root: str | Path, snapshot_path: str | Path) 
     @param[in]  snapshot_path Candidate ZIP destination path.
     @return     True when the destination equals or sits below the project root.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     return operation_runtime_service.is_path_inside_project(project_root, snapshot_path)
 
@@ -112,9 +100,6 @@ def create_project_snapshot(
     @exception  FileNotFoundError Raised when the project root does not exist.
     @exception  ValueError Raised when the destination is inside the project root.
     @exception  OSError Raised when ZIP creation or replacement fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.1
     """
     resolved_project_root = Path(project_root).resolve()
     if not resolved_project_root.is_dir():
@@ -181,9 +166,6 @@ def _iter_project_files(project_root: Path) -> Iterator[Path]:
     @param[in]  project_root Resolved active project root.
     @return     Iterator over regular non-symlink files in stable path order.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     for current_root, directory_names, file_names in os.walk(project_root, followlinks=False):
         directory_names[:] = sorted(
@@ -203,9 +185,6 @@ def _is_ai_transaction_log(file_path: Path) -> bool:
     @param[in]  file_path Candidate project file path.
     @return     True when the file follows the configured AI log naming pattern.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     file_name = file_path.name
     return file_name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) and file_name.endswith(
@@ -219,9 +198,6 @@ def _raise_if_cancelled(cancel_requested) -> None:
     @param[in]  cancel_requested Optional cancellation predicate.
     @return     None.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if cancel_requested is not None and bool(cancel_requested()):
         raise operation_runtime_service.OperationCancelledError("Project ZIP export cancelled.")
@@ -233,9 +209,6 @@ def _safe_file_stem(value: str) -> str:
     @param[in]  value Raw project name.
     @return     Filesystem-safe file stem.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.2.0
     """
     return operation_runtime_service.safe_file_stem(value)
 

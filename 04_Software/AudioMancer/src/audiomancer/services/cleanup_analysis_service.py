@@ -12,9 +12,6 @@
 @details Resolves unit roles before classifying every source-ledger boundary,
          records conservative priors, and exposes only low/medium-confidence
          boundaries to optional LLM adjudication.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-28
-@version 0.3.0
 """
 
 from __future__ import annotations

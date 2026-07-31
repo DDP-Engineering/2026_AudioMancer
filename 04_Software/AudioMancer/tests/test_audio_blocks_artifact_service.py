@@ -11,9 +11,6 @@
 @brief Focused tests for Audio Blocks artifact helpers.
 @details Verifies generated-audio naming and WAV validation outside the large
          Audio Blocks orchestration service.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.2.0
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def test_audio_blocks_artifact_paths_are_deterministic(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     speaker_name = audio_blocks_artifact_service.normalize_speaker_name(" Maria-Elena ÃˆËœtefan!? ")
     audio_path = audio_blocks_artifact_service.audio_artifact_path(tmp_path, "0007-000003")
@@ -55,9 +49,6 @@ def test_audio_blocks_artifact_wav_validation_and_stitching(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     first_part = tmp_path / "part1.wav"
     second_part = tmp_path / "part2.wav"
@@ -84,9 +75,6 @@ def _write_wav(path: Path, frame_count: int) -> None:
     @param[in]  frame_count Number of silent frames to write.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)

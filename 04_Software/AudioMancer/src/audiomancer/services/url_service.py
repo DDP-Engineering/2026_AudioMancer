@@ -11,9 +11,6 @@
 @brief Shared URL normalization helpers for AudioMancer service clients.
 @details Joins configured HTTP base URLs and REST endpoint paths without
          duplicating trailing-slash and version-prefix handling.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -36,9 +33,6 @@ def join_endpoint_url(
     @param[in]  collapse_duplicate_version True to avoid `/v1/v1/...` joins.
     @return     Fully joined URL string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     parsed_url = parse.urlparse(str(base_url or "").strip())
     normalized_path = parsed_url.path.rstrip("/")
@@ -59,9 +53,6 @@ def remove_trailing_endpoint(base_url: str, endpoint: str) -> str:
     @param[in]  endpoint Endpoint suffix to remove.
     @return     URL string with the trailing endpoint path removed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     parsed_url = parse.urlparse(str(base_url or "").strip())
     normalized_path = parsed_url.path.rstrip("/")
@@ -77,9 +68,6 @@ def _normalized_endpoint_path(endpoint: str) -> str:
     @param[in]  endpoint Candidate endpoint path.
     @return     Normalized endpoint path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     endpoint_path = str(endpoint or "").strip().rstrip("/")
     if not endpoint_path.startswith("/"):

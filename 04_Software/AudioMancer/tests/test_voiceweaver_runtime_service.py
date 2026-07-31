@@ -11,9 +11,6 @@
 @brief Focused tests for the VoiceWeaver runtime probe service.
 @details Verifies probe normalization, failure mapping, and capability-matrix
          derivation for the TTS Settings and Narrator runtime-awareness flow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.5.0
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.1.0
     """
 
     def _fake_read_json(url, headers, timeout_seconds):
@@ -40,9 +34,6 @@ def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
         @brief      Provide the fake read json test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         assert timeout_seconds == config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS
         if url == "http://127.0.0.1:8059/v1/health":
@@ -93,9 +84,6 @@ def test_probe_runtime_maps_auth_failures(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.1.0
     """
 
     def _fake_read_json(*_args, **_kwargs):
@@ -103,9 +91,6 @@ def test_probe_runtime_maps_auth_failures(monkeypatch) -> None:
         @brief      Provide the fake read json test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         raise error.HTTPError(url="", code=401, msg="Unauthorized", hdrs=None, fp=None)
 
@@ -123,9 +108,6 @@ def test_probe_runtime_rejects_invalid_models_payload(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
 
     def _fake_read_json(url, headers, timeout_seconds):
@@ -133,9 +115,6 @@ def test_probe_runtime_rejects_invalid_models_payload(monkeypatch) -> None:
         @brief      Provide the fake read json test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         _ = headers
         _ = timeout_seconds
@@ -158,9 +137,6 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
     @brief      Verify unhealthy models do not count toward realizable capabilities.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     capability_matrix = voiceweaver_runtime_service.build_capability_matrix(
         [
@@ -200,9 +176,6 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.2.0
     """
     observed_calls: list[tuple[str, str, dict[str, object] | None, int]] = []
 
@@ -211,9 +184,6 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
         @brief      Provide the fake post json endpoint test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         observed_calls.append((str(base_url), str(endpoint), payload, int(timeout_seconds)))
         _ = runtime_api_key
@@ -251,9 +221,6 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     observed_multipart_calls: list[tuple[str, str, dict[str, object], str, str, bytes, int]] = []
     observed_json_calls: list[tuple[str, str, dict[str, object], int]] = []
@@ -273,9 +240,6 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
         @brief      Provide the fake send multipart request test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         observed_multipart_calls.append(
             (
@@ -297,9 +261,6 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
         @brief      Provide the fake post json endpoint test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         _ = runtime_api_key
         observed_json_calls.append((str(base_url), str(endpoint), dict(payload or {}), int(timeout_seconds)))
@@ -362,9 +323,6 @@ def test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contra
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     observed_json_calls: list[tuple[str, str, dict[str, object], int]] = []
     observed_byte_urls: list[str] = []
@@ -374,9 +332,6 @@ def test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contra
         @brief      Provide the fake post json endpoint test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         _ = runtime_api_key
         observed_json_calls.append((str(base_url), str(endpoint), dict(payload or {}), int(timeout_seconds)))
@@ -387,9 +342,6 @@ def test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contra
         @brief      Provide the fake read bytes test helper.
         @return     Fake WAV bytes.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         _ = headers
         _ = timeout_seconds
@@ -437,9 +389,6 @@ def test_voiceweaver_runtime_service_direct_clone_omits_romanian_language(monkey
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     observed_form_fields: list[dict[str, object]] = []
 
@@ -458,9 +407,6 @@ def test_voiceweaver_runtime_service_direct_clone_omits_romanian_language(monkey
         @brief      Provide the fake send multipart request test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         _ = method
         _ = url
@@ -495,9 +441,6 @@ def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surfa
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     observed_json_requests: list[tuple[str, str, str, int]] = []
     observed_no_content_requests: list[tuple[str, str, str, int]] = []
@@ -507,9 +450,6 @@ def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surfa
         @brief      Provide the fake request json endpoint test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         observed_json_requests.append((str(base_url), str(runtime_api_key), str(endpoint), int(timeout_seconds)))
         return {"endpoint": endpoint}
@@ -519,9 +459,6 @@ def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surfa
         @brief      Provide the fake post json endpoint test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         observed_json_requests.append((str(base_url), str(runtime_api_key), str(endpoint), int(timeout_seconds)))
         _ = payload
@@ -534,9 +471,6 @@ def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surfa
         @brief      Provide the fake request without json response test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         observed_no_content_requests.append(
             (str(base_url), str(runtime_api_key), f"{method} {endpoint}", int(timeout_seconds))
@@ -584,9 +518,6 @@ def test_endpoint_url_avoids_duplicate_v1_suffix() -> None:
     @brief      Verify VoiceWeaver endpoint normalization avoids duplicate `/v1` path segments.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     assert (
         voiceweaver_runtime_service._endpoint_url("http://127.0.0.1:8059/v1", "/v1/status")  # noqa: SLF001
@@ -600,9 +531,6 @@ def test_wait_for_terminal_operation_stops_before_status_read_when_cancelled(mon
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     status_reads = {"count": 0}
 
@@ -611,9 +539,6 @@ def test_wait_for_terminal_operation_stops_before_status_read_when_cancelled(mon
         @brief      Provide the fake read status test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         status_reads["count"] = int(status_reads["count"]) + 1
         return {"operation": {"status": "running"}}
