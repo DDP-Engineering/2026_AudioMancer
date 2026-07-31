@@ -1,5 +1,5 @@
 ---
-description: Run the agentic workflow delivery preflight
+description: Run AEGIS deterministic verification before delivery
 ---
 
 <!--
@@ -14,16 +14,18 @@ and active rule counts:
 
 ```powershell
 node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py config validate --json
-node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py config show --effective --json
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py config show --json
 ```
 
-Then run the project-local delivery preflight command:
+Then run deterministic verification and inspect delivery state:
 
 ```powershell
-node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py delivery-preflight
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py verify run
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py delivery show
 ```
 
-If the operator supplies an existing run ID, append `--run-id <id>` and use the
+If the operator supplies an existing run ID, append `--run <id>` and use the
 same selection for the report. Distinguish AEGIS policy from Qwen host safety.
-Report pass or fail with the blocking findings. Do not push, merge, publish, or
-create a pull request unless preflight passes and the human explicitly approves.
+Report pass or fail with every gate state and blocking finding. Do not push,
+merge, publish, or create a pull request unless AEGIS delivery is closed and the
+human separately approves.

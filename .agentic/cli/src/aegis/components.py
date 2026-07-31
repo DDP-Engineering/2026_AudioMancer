@@ -11,9 +11,6 @@
 @brief Component manifest loading and audit helpers.
 @details Provides the approved component and bundle contract for adoption runs,
 using the shared repository path-matching policy for component ownership.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.4.0
 """
 
 # IMPORTS
@@ -26,6 +23,7 @@ from typing import Any
 import tomllib
 
 from .config import WorkflowConfig
+from .errors import CommandInputError
 from .paths import matches_pattern
 
 
@@ -46,9 +44,6 @@ BASELINE_ORDER = {
 class Component:
     """
     @brief      Represent an approved component boundary.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     name: str
     paths: list[str] = field(default_factory=list)
@@ -63,9 +58,6 @@ class Component:
 class ComponentBundle:
     """
     @brief      Represent an approved component bundle.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     name: str
     components: list[str] = field(default_factory=list)
@@ -78,9 +70,6 @@ class ComponentBundle:
 class ComponentManifest:
     """
     @brief      Represent the loaded component manifest contract.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     components: dict[str, Component] = field(default_factory=dict)
     bundles: dict[str, ComponentBundle] = field(default_factory=dict)
@@ -90,9 +79,6 @@ class ComponentManifest:
 class ComponentIssue:
     """
     @brief      Represent a component manifest audit issue.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.2.0
     """
     code: str
     message: str
@@ -106,9 +92,6 @@ class ComponentIssue:
         @brief      Convert a component issue to a serializable dictionary.
         @return     Dictionary representation of the issue.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-22
-        @version    0.1.0
         """
         return asdict(self)
 
@@ -121,15 +104,17 @@ def load_components(repo_root: Path, manifest_path: str) -> ComponentManifest:
     @param[in]  repo_root Repository root.
     @param[in]  manifest_path Repository-relative manifest path.
     @return     Loaded component manifest, or an empty manifest when missing.
-    @exception  tomllib.TOMLDecodeError Raised when the manifest TOML is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.2.0
+    @exception  CommandInputError If the manifest TOML is invalid.
     """
     path = repo_root / manifest_path
     if not path.exists():
         return ComponentManifest()
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError, UnicodeError) as exc:
+        raise CommandInputError(
+            f"cannot load component manifest {manifest_path}: {exc}"
+        ) from exc
     component_data = data.get("components", {})
     bundle_data = data.get("bundles", {})
 
@@ -154,9 +139,6 @@ def component_for_path(manifest: ComponentManifest, repo_relative_path: str) -> 
     @param[in]  repo_relative_path Repository-relative file path.
     @return     Matching component, or None when no component pattern matches.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.2.0
     """
     normalized = _normalize_path(repo_relative_path)
     for component in manifest.components.values():
@@ -172,9 +154,6 @@ def has_usable_baseline(status: str, minimum: str) -> bool:
     @param[in]  minimum Minimum adoption status accepted as usable.
     @return     True when status meets or exceeds the requested minimum.
     @exception  ValueError If the required completion level is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.2.0
     """
     if minimum not in BASELINE_ORDER:
         raise ValueError(f"Unsupported baseline completion level: {minimum}")
@@ -192,10 +171,7 @@ def audit_components(
     @param[in]  config Validated workflow configuration.
     @param[in]  manifest_path Optional repository-relative manifest path override.
     @return     List of component manifest audit issues.
-    @exception  tomllib.TOMLDecodeError Raised when the manifest TOML is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.2.0
+    @exception  CommandInputError If the manifest TOML is invalid.
     """
     resolved_manifest_path = (
         config.component_manifest if manifest_path is None else manifest_path
@@ -266,12 +242,11 @@ def audit_local_scope(
     @param[in]  config Validated workflow configuration.
     @param[in]  minimum Optional minimum adoption status override.
     @return     Blocking component scope issues.
-    @exception  tomllib.TOMLDecodeError Raised when the manifest TOML is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.2.0
+    @exception  CommandInputError If the manifest TOML is invalid.
     """
-    resolved_minimum = minimum or config.adoption_default_completion_level
+    resolved_minimum = (
+        minimum or config.component_baseline_guard.minimum_completion_level
+    )
     if resolved_minimum is None:
         return []
     manifest = load_components(repo_root, config.component_manifest)
@@ -310,9 +285,6 @@ def _component_from_data(name: str, values: dict[str, Any]) -> Component:
     @param[in]  values Component TOML table values.
     @return     Component model.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     return Component(
         name=name,
@@ -332,9 +304,6 @@ def _bundle_from_data(name: str, values: dict[str, Any]) -> ComponentBundle:
     @param[in]  values Bundle TOML table values.
     @return     Component bundle model.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     return ComponentBundle(
         name=name,
@@ -351,9 +320,6 @@ def _normalize_list(value: Any) -> list[str]:
     @param[in]  value Manifest value.
     @return     String list with normalized path separators.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     if not isinstance(value, list):
         return []
@@ -368,9 +334,6 @@ def _component_has_bundle_baseline(manifest: ComponentManifest, component_name: 
     @param[in]  minimum Minimum adoption status accepted as usable.
     @return     True when an approved bundle satisfies the baseline contract.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     for bundle in manifest.bundles.values():
         if not bundle.approved or component_name not in bundle.components:
@@ -392,9 +355,6 @@ def _normalize_path(value: str) -> str:
     @param[in]  value Path text.
     @return     Path using forward slashes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     return value.replace("\\", "/").strip()
 

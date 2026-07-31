@@ -9,7 +9,8 @@
 """
 @file gates.py
 @brief Gate execution helpers for workflow validation commands.
-@details Provides reusable implementation behavior for the standalone AEGIS system.
+@details Executes build, typecheck, lint, test, and security in deterministic
+         order. Disabled groups are reported as disabled and never as passed.
 @details Simple-command argv splitting (0.2.0, code-review follow-up) now uses
          a `shlex.shlex` lexer instead of `shlex.split(..., posix=os.name !=
          "nt")`: the previous non-POSIX mode on Windows only grouped a quoted
@@ -21,9 +22,9 @@
          non-zero) and a timeout (`subprocess.TimeoutExpired`, both modes)
          are synthesized into failed `CompletedProcess` results (exit 127 and
          124 respectively), so they end as recorded failing gate evidence.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.5.0
+@details Gate subprocesses (1.2.0) execute without the run-scoped graph lock.
+         The graph transaction is reacquired only to verify the captured stage,
+         allocate evidence identifiers, and publish the collected results.
 """
 
 # IMPORTS
@@ -34,9 +35,18 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from .config import WorkflowConfig
-from .models import Evidence
-from .store import add_evidence, append_journal, load_graph, save_graph
+from .config import GATE_ORDER, WorkflowConfig
+from .models import Evidence, Graph
+from .store import (
+    GraphConflictError,
+    add_evidence,
+    append_journal,
+    graph_transaction,
+    load_graph,
+    next_evidence_id,
+    save_graph,
+)
+from .waivers import Blocker, active_waiver, state_digests
 
 # PUBLIC API
 
@@ -49,41 +59,82 @@ def run_gates(
     timeout: int = 300,
 ) -> int:
     """
-    @brief      Run gates workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
+    @brief      Execute the selected gate groups in order and persist gate
+                evidence.
+    @param[in]  repo_root Repository root the gate commands run in.
     @param[in]  run_id Already resolved run ID selected by CLI orchestration.
     @param[in]  config Validated workflow configuration.
-    @param[in]  names Input value used by the workflow helper.
-    @param[in]  timeout Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @param[in]  names Gate group names to run; defaults to all gates in
+                `GATE_ORDER` when omitted.
+    @param[in]  timeout Per-command timeout in seconds.
+    @return     Aggregate exit code: 0 when no unwaived gate failure remains,
+                otherwise the last unwaived failing command's return code
+                encountered in gate order.
     @exception  ValueError If a requested gate name is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.4.0
+    @exception  GraphConflictError If the graph's captured stage advanced
+                before the collected evidence could be published.
     """
-    unknown = sorted(set(names or ()) - {"test", "lint"})
+    unknown = sorted(set(names or ()) - set(GATE_ORDER))
     if unknown:
         raise ValueError(
-            f"Unknown gate name(s): {', '.join(unknown)}. Expected test or lint."
+            f"Unknown gate name(s): {', '.join(unknown)}. "
+            f"Expected one or more of {', '.join(GATE_ORDER)}."
         )
     graph = load_graph(repo_root, run_id)
-    selected = names or list(config.gate_commands)
-    if not selected:
-        append_journal(repo_root, graph.run_id, "gates.skipped", {"reason": "no gates configured"})
-        return 0
-
-    exit_code = 0
+    captured_stage = graph.stage
+    captured_record = graph.stage_records.get(captured_stage)
+    captured_revision = (
+        (captured_record.revision, captured_record.digest)
+        if captured_record is not None
+        else None
+    )
+    selected = [name for name in GATE_ORDER if not names or name in names]
+    plan: list[tuple[str, str | None]] = []
     for name in selected:
-        commands = config.gate_commands.get(name, [])
-        for command in commands:
-            result = _run_command(repo_root, command, timeout)
+        group = getattr(config.gates, name)
+        if group.mode == "disabled":
+            plan.append((name, None))
+        else:
+            plan.extend((name, command) for command in group.commands)
+
+    completed: list[
+        tuple[str, str | None, subprocess.CompletedProcess[str] | None]
+    ] = []
+    for name, command in plan:
+        if command is None:
+            completed.append((name, None, None))
+            continue
+        result = _run_command(repo_root, command, timeout)
+        completed.append((name, command, result))
+
+    with graph_transaction(repo_root, graph):
+        current_record = graph.stage_records.get(captured_stage)
+        current_revision = (
+            (current_record.revision, current_record.digest)
+            if current_record is not None
+            else None
+        )
+        if graph.stage != captured_stage or current_revision != captured_revision:
+            raise GraphConflictError(graph.run_id)
+        for name, command, result in completed:
+            if command is None:
+                append_journal(
+                    repo_root,
+                    graph.run_id,
+                    "gate.disabled",
+                    {"gate": name, "status": "disabled"},
+                )
+                continue
+            assert result is not None
             evidence = Evidence(
-                id=f"E-{len(graph.evidence) + 1:04d}",
+                id=next_evidence_id(graph),
                 kind="gate",
                 result="pass" if result.returncode == 0 else "fail",
                 summary=f"{name}: {command}",
                 command=command,
                 stage=graph.stage,
+                gate_name=name,
+                exit_status=result.returncode,
             )
             graph = add_evidence(repo_root, graph, evidence)
             append_journal(
@@ -98,10 +149,71 @@ def run_gates(
                     "stderr_tail": result.stderr[-4000:],
                 },
             )
-            if result.returncode != 0:
+        save_graph(repo_root, graph)
+        blockers = {
+            blocker.id: blocker
+            for blocker in gate_failure_blockers(graph, config, selected)
+        }
+        exit_code = 0
+        for name, _command, result in completed:
+            if result is None or result.returncode == 0:
+                continue
+            blocker = blockers.get(f"gate:{name}")
+            if blocker is None or active_waiver(graph, blocker) is None:
                 exit_code = result.returncode
-    save_graph(repo_root, graph)
     return exit_code
+
+
+def gate_failure_blockers(
+    graph: Graph,
+    config: WorkflowConfig,
+    names: list[str] | None = None,
+) -> list[Blocker]:
+    """
+    @brief Return exact waiver targets for enforced gates with active failures.
+    @param[in] graph Authoritative run graph containing gate evidence.
+    @param[in] config Validated gate policy and command definitions.
+    @param[in] names Optional gate-name selection.
+    @return Deterministically ordered failing-gate blocker records.
+    """
+    selected = [name for name in GATE_ORDER if not names or name in names]
+    blockers: list[Blocker] = []
+    for name in selected:
+        group = getattr(config.gates, name)
+        if group.mode != "enforce":
+            continue
+        failures = sorted(
+            {
+                (
+                    item.command or "",
+                    item.exit_status,
+                    item.failure_kind or "",
+                )
+                for item in graph.evidence
+                if item.kind == "gate"
+                and item.gate_name == name
+                and item.status == "active"
+                and item.result == "fail"
+            },
+            key=lambda item: (item[0], item[1] if item[1] is not None else -1, item[2]),
+        )
+        if not failures:
+            continue
+        blockers.append(
+            Blocker(
+                id=f"gate:{name}",
+                description=f"{name} gate has active failing evidence",
+                state_digests=state_digests(
+                    f"gate:{name}",
+                    {
+                        "mode": group.mode,
+                        "commands": list(group.commands),
+                        "failures": failures,
+                    },
+                ),
+            )
+        )
+    return blockers
 
 
 # HELPER FUNCTIONS
@@ -109,17 +221,16 @@ def run_gates(
 
 def _run_command(repo_root: Path, command: str, timeout: int) -> subprocess.CompletedProcess[str]:
     """
-    @brief      Run command workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  command Input value used by the workflow helper.
-    @param[in]  timeout Input value used by the workflow helper.
+    @brief      Run one gate command, synthesizing a failed result rather
+                than raising.
+    @param[in]  repo_root Working directory the command runs in.
+    @param[in]  command Configured gate command text (simple argv or shell
+                string).
+    @param[in]  timeout Per-command timeout in seconds.
     @return     Completed process, synthesized as a failure (exit 127 for an
                 unlaunchable executable, 124 for a timeout) when the command
                 could not run to completion.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.2.0
     """
     argv = _argv_for_simple_command(repo_root, command)
     try:
@@ -148,7 +259,7 @@ def _run_command(repo_root: Path, command: str, timeout: int) -> subprocess.Comp
         )
     except subprocess.TimeoutExpired as exc:
         return _failed_process(command, 124, exc)
-    except (FileNotFoundError, NotADirectoryError, PermissionError, OSError) as exc:
+    except OSError as exc:
         return _failed_process(command, 127, exc)
 
 
@@ -163,9 +274,6 @@ def _failed_process(command: str, returncode: int, exc: BaseException) -> subpro
                 on the normal evidence path: the caller records a failing gate
                 with this stderr tail instead of crashing with a traceback.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.1.0
     """
     return subprocess.CompletedProcess(
         args=command,
@@ -177,14 +285,14 @@ def _failed_process(command: str, returncode: int, exc: BaseException) -> subpro
 
 def _argv_for_simple_command(repo_root: Path, command: str) -> list[str] | None:
     """
-    @brief      Handle argv for simple command workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  command Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Split a command into argv for direct exec, or signal that
+                shell mode is required.
+    @param[in]  repo_root Repository root used to resolve a relative
+                executable path.
+    @param[in]  command Configured gate command text.
+    @return     Argv list for direct subprocess exec, or `None` when the
+                command contains shell metacharacters or cannot be split.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     if any(token in command for token in ("&&", "||", "|", ">", "<", ";")):
         return None
@@ -205,8 +313,9 @@ def _argv_for_simple_command(repo_root: Path, command: str) -> list[str] | None:
 def _shlex_split_preserving_backslashes(command: str) -> list[str]:
     """
     @brief      Split a command string into argv, quote-aware on every platform.
-    @param[in]  command Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @param[in]  command Gate command text to split into argv tokens.
+    @return     Argv tokens with quote-grouping applied and backslashes
+                preserved literally.
     @details    `shlex.split(command, posix=os.name != "nt")` used to pick
                 POSIX vs. non-POSIX mode by platform: non-POSIX mode on
                 Windows preserves literal backslashes (so ``C:\\Users\\x``
@@ -222,9 +331,6 @@ def _shlex_split_preserving_backslashes(command: str) -> list[str]:
                 grouping, with ``escape`` cleared so backslashes are always
                 passed through literally, on every platform.
     @exception  ValueError Raised when the command has unbalanced quoting.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.1.0
     """
     lexer = shlex.shlex(command, posix=True)
     lexer.whitespace_split = True

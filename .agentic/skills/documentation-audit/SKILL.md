@@ -16,7 +16,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Use this workflow:
 
 1. Read `AGENTS.md`, then run `<workflow> config validate --json` and
-   `<workflow> config show --effective --json`. Report the effective write,
+   `<workflow> config show --json`. Report the effective write,
    protected-read/path, scope, secret, gate, coverage, and delivery modes and
    active rule counts; state the selected run when graph state is needed and
    distinguish AEGIS policy from external platform safety.

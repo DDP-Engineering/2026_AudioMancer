@@ -1,6 +1,6 @@
 ---
 name: agentic-development
-description: Manual agentic development workflow for implementing features, fixing bugs, or changing behavior with requirement/spec creation, clarification asks, red-before-green checks, implementation, validation, and evidence capture. Use when the user asks to implement a feature, fix a defect, change behavior, add tests for a planned change, or continue an agentic development run.
+description: File-first AEGIS workflow for full feature, fix, and change runs across intake, alignment, requirement, design, check, implementation, validation, and delivery, plus proportional four-stage quick runs for small fixes and changes.
 ---
 
 <!--
@@ -10,102 +10,111 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-
 # Agentic Development
 
-Run a manual, gate-by-gate development workflow. The human stays in control.
-Complete one stage, summarize evidence, and stop with exact next prompt options.
+For the purpose of the workflow and its vocabulary, read
+`.agentic/documents/WHY_AEGIS.md` and `.agentic/documents/GLOSSARY.md` before
+starting an unfamiliar run. Use `.agentic/documents/INVARIANTS.md` when
+verification reports an `INV-*` result.
 
-This file is a thin router. Load only the reference module for the stage you are
-in, so a session — including a fresh one resuming an existing run — carries just
-the guidance that stage needs rather than the whole workflow.
+Use AEGIS as an eight-stage, file-first full lifecycle:
 
-## Ground Rules
+`intake → alignment → requirement → design → check → implementation → validation → delivery`
 
-- Before repository inspection or edits, run `<workflow> config validate --json`
-  and `<workflow> config show --effective --json`. Report the effective write,
-  protected-read/path, scope, secret, gate, coverage, and delivery modes and
-  active rule counts. State the selected worktree run or explicit `--run-id`.
-- Treat validated `.agentic/workflow.toml` as the only AEGIS repository-policy
-  source. Do not infer defaults from code or adapters. External host safety and
-  approval controls remain separate and always apply.
-- Treat `.agentic/requirements/` as the durable project contract.
-- Use `<workflow>` in the modules as the project-local workflow runner:
-  `.\.agentic\tools\run.ps1` on Windows or `bash .agentic/tools/run.sh` on POSIX
-  shells. If the optional local install was run, the installed `.agentic/.venv`
-  executable may also be used.
-- Before any `add-spec` call, complete the Intent Alignment stage with
-  `<workflow> alignment`. If there are questions, include recommended responses
-  that state what the agent will assume in an automated flow. If the decision is
-  `pause`, stop in alignment and ask for human answers before requirement work.
-- Keep requirements/spec edits, check/test edits, source edits, validation, and
-  delivery as separate manual gates. Complete one gate at a time.
-- Use `$write-component-documentation` when a new component is created or when an
-  existing component's behavior, contracts, responsibilities, data formats,
-  dependencies, or workflow integration materially change.
-- Before behavior-changing work, inspect `.agentic/components.toml` when it
-  exists. If the target component is below `baseline-usable`, stop and ask the
-  human to run `$agentic-adoption` or approve a component adoption slice before
-  implementation.
-- Use `$python-codestyle-audit` after Python implementation changes when the
-  repository has Python style requirements or audit tooling.
-- Do not skip red-before-green evidence for new or changed checks.
-- Do not edit tests during implementation unless the human explicitly routes back
-  to the check stage.
-- Use `<workflow> set-stage <stage> --reason "<reason>"` for human-approved
-  routing back to requirement or check gates.
-- Use `<workflow> supersede-evidence --id <old-evidence-id> --by <new-evidence-id> --reason "<reason>"`
-  when a later passing rerun proves a late failure was external or stale.
-- Stop after each stage and report using the stop format below.
+The human approves every transition. Host plan mode may support discussion but
+does not replace the imported design or `stage close` approval journal.
 
-## Session Resume
+## Bootstrap
 
-When you continue an existing run in a fresh session (a new agent with no prior
-chat context), reconstruct state before acting:
+1. Run `<workflow> config validate --json`.
+2. Run `<workflow> config show --json`.
+3. Start or resume:
 
-1. Run the mandatory bootstrap (`<workflow> config validate --json` and
-   `<workflow> config show --effective --json`).
-2. Run `<workflow> resume` to load the current stage and computed next stage, the
-   intent and recorded alignment, spec items, checks, recent evidence, and the
-   run's cited requirements with their `spec_ref`.
-3. Open each `spec_ref` file for the concrete data structures, interface formats,
-   dialog text, and worked examples that pin the work.
-4. Load the reference module for the reported stage and continue there. Do not
-   redo earlier stages that already have recorded artifacts unless the human
-   routes back with `set-stage`.
+   ```text
+   <workflow> run start <feature|fix|change>
+   <workflow> run start <fix|change> --quick
+   <workflow> run resume
+   ```
 
-## Stage Modules
+4. Open the returned artifact. Do not encode statements, paths, decisions, or
+   evidence in CLI flags.
 
-The seven-stage required order is Intake, Intent Alignment, Requirement, Check,
-Implementation, Validation, Delivery. Load only the module for the current stage:
+When the human describes a genuinely small fix, offer the route explicitly:
+`small scope - suggest: aegis run start fix --quick`. A quick run is valid only
+for `fix` and `change`, and its real lifecycle is intake, implementation,
+validation, and delivery, with an explicit human close at every transition.
 
-| Stage | Module |
+At intake close AEGIS journals alignment, requirement, design, and check as
+`bypassed` by run type. Treat that as its own visible state, never as passed or
+waived. The absent-stage invariants and audits report `not-applicable`; intake,
+changed-path and evidence capture, enabled gates, secrets and working-tree
+review, scope analysis, delivery reporting, and the four human closes remain
+real. If scope grows, restart a full run and carry the recorded context forward.
+
+For quick implementation, follow `aegis evidence prepare add`, apply the
+manual-evidence form, and copy its CLI-minted active ID into the implementation
+form's `linked_check_evidence` before `stage apply`. Do not invent or reuse a
+superseded or other-stage evidence ID.
+
+## Stage Lifecycle
+
+For every stage:
+
+```text
+<workflow> stage prepare
+# edit the generated TOML/Markdown
+<workflow> stage apply
+# show the imported state and request explicit human approval
+<workflow> stage close
+```
+
+Use `stage add` for another atomic requirement or check in a full run. `stage apply` imports
+the complete collection only after every file validates. Access changes and
+human-approved earlier routing belong in the generated control section.
+
+Load only the current reference:
+
+| Stage | Reference |
 | --- | --- |
-| `intake` | `reference/intake.md` |
-| `alignment` | `reference/alignment.md` |
-| `requirement` | `reference/requirement.md` |
-| `check` | `reference/check.md` |
-| `implementation` | `reference/implementation.md` |
-| `validation` | `reference/validation.md` |
-| `delivery` | invoke the `agentic-delivery` skill |
+| intake | `reference/intake.md` |
+| alignment | `reference/alignment.md` |
+| requirement | `reference/requirement.md` |
+| design | `reference/design.md` |
+| check | `reference/check.md` |
+| implementation | `reference/implementation.md` |
+| validation | `reference/validation.md` |
+| delivery | `$agentic-delivery` |
 
-Each module lists the actions and the stop condition for that stage. The
-`requirement` module also carries the requirement-stage review checklist.
+## Non-Negotiable Rules
 
-## Required Stop Format
+- Requirements define observable contracts; design owns internal structures,
+  boundaries, algorithms, compatibility choices, and implementation sequence.
+- A full fix needs a reproducing red check before implementation. For a quick
+  fix, red-before-green is explicitly `not-applicable`, never passed.
+- Record red and green check evidence through the configured external or managed
+  path. Never invent IDs; AEGIS generates them.
+- Do not edit check artifacts during implementation. Route back through a stage
+  control form when the contract or check is wrong.
+- Run deterministic verification before interpretive diff review.
+- `stage close` at delivery completes AEGIS state only. It does not push,
+  publish, merge, or create a pull request.
+- For an eligible process blocker, offer the human the exact ID reported by
+  `<workflow> waive list`. Only after explicit approval, record one run-local
+  waiver with `<workflow> waive add <blocker-id> --reason "<reason>"`.
+- Never treat a waiver as a pass. Preserve the failure as `WAIVED` with its
+  reason and timestamp. Schema, graph, persistence-lock, and stale-update
+  integrity failures are not waiver targets.
+- Never treat a quick-run bypass as a waiver or a pass. Preserve `bypassed` in
+  status, validation, and delivery reporting.
 
-End each stage with:
+## Stop Format
 
 ```text
 Stage: <stage>
-Artifacts changed: <paths or none>
-Evidence: <ids and short results>
-Invariant status: <pass/fail summary>
-Traceability status: <audit/impact summary>
-Documentation status: <component docs/audit summary>
-Needs human: <questions or approval needed>
-Next prompt options:
-- Continue to <next stage>
-- Revise <specific artifact>
-- Abort or park this run
+Artifact: <path>
+Imported revision: <number>
+Evidence: <ids and results>
+Blockers: <none or exact blockers>
+Needs human: approve close, revise artifact, route earlier, add a recorded waiver for <blocker-id> where offered, or abort
+Next command: <exact command>
 ```

@@ -1,6 +1,6 @@
 ---
 name: regression-traceability
-description: Audit durable requirements traceability, map changed files to existing requirements and linked tests, detect uncovered modules, manage coverage waivers, and decide focused versus full regression. Use when starting a new feature or bug fix in a repo with prior workflow history, changing existing files, reviewing regression risk, or preparing delivery.
+description: Map changes to durable requirements and checks, reproduce regressions red-before-green, cover contract variants, and choose focused or full deterministic regression.
 ---
 
 <!--
@@ -10,45 +10,26 @@ Commercial use requires a separate commercial license.
 See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-
 # Regression Traceability
 
-Use this skill to preserve old behavior before changing code.
+1. Run `<workflow> config validate --json` and
+   `<workflow> config show --json`.
+2. Run `aegis verify traceability`, `aegis verify coverage`, and
+   `aegis verify impact [paths-file]`.
+3. Treat impacted requirements as observable contracts. Mutate them only
+   through requirement-stage forms after human approval.
+4. For a fix, reproduce the exact failure as red evidence before
+   implementation. Assert observable responses, errors, state transitions, and
+   cleanup, not implementation details.
+5. Identify applicable production/mock/sandbox, feature-flag, role, platform,
+   and persistence-adapter variants. Add parity checks where variants promise
+   the same contract.
+6. Cover response shape, stale-state cleanup, rollback, errors, boundaries,
+   concurrency, and idempotency where applicable.
+7. Run linked checks first. Run full regression for shared or cross-cutting
+   changes, untraced paths, or paths where impact recommends it.
+8. Run `aegis verify run` before the human interprets the diff.
 
-This skill audits requirements and regression risk. Component documentation in
-`.agentic/knowledge/components/` complements this process, but it does not
-replace durable requirement snapshots, linked tests, or explicit manual verification.
-
-## Procedure
-
-1. Read `AGENTS.md` and `.agentic/requirements/README.md`. Run
-   `<workflow> config validate --json` and
-   `<workflow> config show --effective --json`; report write,
-   protected-read/path, scope, secret, gate, coverage, and delivery modes,
-   active rule counts, external safety boundaries, and the selected run when a
-   graph-dependent command is used.
-2. Run:
-
-   ```powershell
-   .\.agentic\tools\run.ps1 audit traceability
-   .\.agentic\tools\run.ps1 audit coverage
-   ```
-
-3. If planned or changed files are known, run:
-
-   ```powershell
-   .\.agentic\tools\run.ps1 impact <files>
-   ```
-
-   If not known, run impact after the first scoped file list is available.
-4. Treat impacted requirement snapshots as existing contracts. Do not change them
-   unless the human approves a requirement revision.
-5. Run linked tests reported by impact analysis. If impact reports untraced
-   coverable files, run full regression and author missing requirements/checks.
-6. For pre-existing legacy files, add waivers only with human approval and keep
-   them in `.agentic/requirements/coverage_waivers.txt`.
-7. Before delivery, rerun impact and both traceability audits directly from
-   canonical TOML snapshots. There is no generated registry or registry audit.
-
-Report impacted requirements, linked tests, untraced files, waivers touched,
-commands run, and remaining audit findings.
+Report impacted requirements, variants, linked checks, untraced paths,
+regression selection, commands/evidence, and remaining findings. Do not invent
+security commands, coverage targets, timers, or a second verification workflow.

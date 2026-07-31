@@ -11,9 +11,8 @@
 @brief Requirement snapshot, coverage, impact, and traceability helpers.
 @details Builds all reverse mappings in memory from canonical UUID-backed TOML
          snapshots and never persists a generated registry or cache.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-22
-@version 0.7.0
+@details Same-requirement updates serialize their complete read/validate/write
+         transaction and publish with a source-digest precondition.
 """
 
 # IMPORTS
@@ -28,7 +27,10 @@ from typing import Any
 
 from .config import WorkflowConfig
 from .paths import matches_pattern
+from .persistence import locked
 from .requirement_store import (
+    CATEGORY_IDENTITIES,
+    VALID_STATUS,
     RequirementRecord,
     RequirementValidationError,
     create_requirement_record,
@@ -37,6 +39,8 @@ from .requirement_store import (
     manual_verification,
     normalize_linked_test,
     normalize_repository_path,
+    requirement_lock_path,
+    requirement_source_digest,
     utc_timestamp,
     validate_requirement_record,
     write_requirement_record,
@@ -50,9 +54,6 @@ from .working_tree import _git_status
 class AuditIssue:
     """
     @brief Represent one deterministic traceability or coverage finding.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
     """
 
     code: str
@@ -64,9 +65,6 @@ class AuditIssue:
         """
         @brief Return a JSON-compatible finding.
         @return Finding fields in stable order.
-        @author Eng. Dan Dumitru Pasare
-        @date 2026-07-22
-        @version 0.2.0
         """
         return {
             "code": self.code,
@@ -80,9 +78,6 @@ class AuditIssue:
 class RequirementIndex:
     """
     @brief Hold non-persisted requirement reverse mappings.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.1.0
     """
 
     by_id: dict[str, RequirementRecord]
@@ -102,9 +97,6 @@ def load_all_requirements(
     @param[in] config Already validated workflow configuration.
     @return Records sorted by ID and source path.
     @exception RequirementValidationError If a snapshot is malformed.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.3.0
     """
     return load_all_requirement_records(repo_root, config)
 
@@ -115,9 +107,6 @@ def build_requirement_index(records: list[RequirementRecord]) -> RequirementInde
     @param[in] records Canonical validated requirement records.
     @return Non-persisted reverse index.
     @exception RequirementValidationError If a requirement ID is duplicated.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.1.0
     """
     by_id: dict[str, RequirementRecord] = {}
     test_sets: dict[str, set[str]] = {}
@@ -151,9 +140,8 @@ def load_requirement_index(
     @param[in] repo_root Repository root.
     @param[in] config Already validated workflow configuration.
     @return Deterministic in-memory index.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
+    @exception RequirementValidationError If a snapshot is malformed or a
+               requirement ID is duplicated.
     """
     return build_requirement_index(
         load_all_requirement_records(repo_root, config)
@@ -178,9 +166,6 @@ def create_requirement(
     @brief Create one independent Planned requirement snapshot.
     @return Newly persisted UUID-backed record.
     @exception ValueError If fields, linked tests, or the spec reference are invalid.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-25
-    @version 0.3.0
     """
     tests = linked_tests or []
     _require_resolvable_tests(repo_root, tests, config)
@@ -209,9 +194,7 @@ def show_requirement(
     @param[in] requirement_id Canonical UUID-backed requirement ID.
     @param[in] config Validated workflow configuration.
     @return Matching current record.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
+    @exception RequirementValidationError If the ID is invalid, absent, or duplicated.
     """
     return find_requirement_record(repo_root, requirement_id, config)
 
@@ -227,27 +210,14 @@ def list_requirements(
     @brief List current snapshots with optional exact category and status filters.
     @return Matching records ordered by ID.
     @exception ValueError If a filter value is unsupported.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
     """
     records = load_all_requirement_records(repo_root, config)
     if category is not None:
-        categories = {
-            "functional",
-            "ux",
-            "non_functional",
-            "security",
-            "data_privacy",
-            "platform",
-            "release",
-            "testing",
-        }
-        if category not in categories:
+        if category not in CATEGORY_IDENTITIES:
             raise ValueError(f"Unsupported requirement category: {category}")
         records = [record for record in records if record.category == category]
     if status is not None:
-        if status not in {"Planned", "Active", "Retired"}:
+        if status not in VALID_STATUS:
             raise ValueError(f"Unsupported requirement status: {status}")
         records = [record for record in records if record.status == status]
     return records
@@ -275,9 +245,6 @@ def update_requirement(
     @brief Atomically apply scalar patches and complete collection replacements.
     @return Resulting complete current record.
     @exception ValueError If options conflict, no update is supplied, or validation fails.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-25
-    @version 0.3.0
     """
     if linked_tests is not None and clear_linked_tests:
         raise ValueError("linked_tests and clear_linked_tests are mutually exclusive")
@@ -291,44 +258,65 @@ def update_requirement(
     ) or clear_linked_tests or clear_affected_paths or clear_spec_ref
     if not supplied:
         raise ValueError("At least one requirement update option is required.")
-    current = find_requirement_record(repo_root, requirement_id, config)
-    new_tests = (
-        tuple()
-        if clear_linked_tests
-        else tuple(linked_tests)
-        if linked_tests is not None
-        else current.linked_tests
-    )
-    new_paths = (
-        tuple()
-        if clear_affected_paths
-        else tuple(affected_paths)
-        if affected_paths is not None
-        else current.affected_paths
-    )
-    new_spec_ref = (
-        ""
-        if clear_spec_ref
-        else spec_ref
-        if spec_ref is not None
-        else current.spec_ref
-    )
-    candidate = replace(
-        current,
-        status=status if status is not None else current.status,
-        priority=priority if priority is not None else current.priority,
-        requirement=requirement if requirement is not None else current.requirement,
-        rationale=rationale if rationale is not None else current.rationale,
-        verification=verification if verification is not None else current.verification,
-        spec_ref=new_spec_ref,
-        linked_tests=new_tests,
-        affected_paths=new_paths,
-        last_updated=timestamp or utc_timestamp(),
-    )
-    normalized = validate_requirement_record(candidate, config)
-    _require_resolvable_tests(repo_root, list(normalized.linked_tests), config)
-    _require_existing_spec(repo_root, normalized.spec_ref)
-    return write_requirement_record(repo_root, normalized, config)
+    with locked(requirement_lock_path(repo_root, requirement_id)):
+        current = find_requirement_record(repo_root, requirement_id, config)
+        source_digest = requirement_source_digest(repo_root, current)
+        new_tests = (
+            tuple()
+            if clear_linked_tests
+            else tuple(linked_tests)
+            if linked_tests is not None
+            else current.linked_tests
+        )
+        new_paths = (
+            tuple()
+            if clear_affected_paths
+            else tuple(affected_paths)
+            if affected_paths is not None
+            else current.affected_paths
+        )
+        new_spec_ref = (
+            ""
+            if clear_spec_ref
+            else spec_ref
+            if spec_ref is not None
+            else current.spec_ref
+        )
+        candidate = replace(
+            current,
+            status=status if status is not None else current.status,
+            priority=priority if priority is not None else current.priority,
+            requirement=(
+                requirement
+                if requirement is not None
+                else current.requirement
+            ),
+            rationale=(
+                rationale if rationale is not None else current.rationale
+            ),
+            verification=(
+                verification
+                if verification is not None
+                else current.verification
+            ),
+            spec_ref=new_spec_ref,
+            linked_tests=new_tests,
+            affected_paths=new_paths,
+            last_updated=timestamp or utc_timestamp(),
+        )
+        normalized = validate_requirement_record(candidate, config)
+        _require_resolvable_tests(
+            repo_root,
+            list(normalized.linked_tests),
+            config,
+        )
+        _require_existing_spec(repo_root, normalized.spec_ref)
+        return write_requirement_record(
+            repo_root,
+            normalized,
+            config,
+            expected_digest=source_digest,
+        )
 
 
 def activate_requirement(
@@ -344,9 +332,6 @@ def activate_requirement(
     @brief Activate a record while replacing its complete linked-test set.
     @return Persisted Active snapshot.
     @exception ValueError If verification or any selector is invalid.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.4.0
     """
     if not linked_tests and not manual_verification(verification.strip()):
         raise ValueError(
@@ -370,16 +355,16 @@ def audit_traceability(
     """
     @brief Validate current linked tests and Active verification contracts.
     @return Deterministically ordered findings.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.3.0
+    @exception RequirementValidationError If a snapshot is malformed or a
+               requirement ID is duplicated.
     """
     index = load_requirement_index(repo_root, config)
     issues: list[AuditIssue] = []
+    cache: dict[str, tuple[bool, str]] = {}
     for record in index.by_id.values():
         unresolved: list[tuple[str, str]] = []
         for selector in record.linked_tests:
-            resolved, reason = resolve_test(repo_root, selector, config)
+            resolved, reason = resolve_test(repo_root, selector, config, cache)
             if not resolved:
                 unresolved.append((selector, reason))
                 issues.append(
@@ -423,9 +408,8 @@ def audit_coverage(
     """
     @brief Check configured coverable files against live current snapshots.
     @return Coverage and stale-waiver findings ordered by path.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.3.0
+    @exception RequirementValidationError If a snapshot is malformed or a
+               requirement ID is duplicated.
     """
     if config.coverage.mode == "disabled":
         return []
@@ -434,8 +418,9 @@ def audit_coverage(
     waivers = load_waivers(repo_root, config)
     coverable = iter_coverable_files(repo_root, config)
     issues: list[AuditIssue] = []
+    cache: dict[str, tuple[bool, str]] = {}
     for relative_path in coverable:
-        covered = _is_covered(repo_root, records, relative_path, config)
+        covered = _is_covered(repo_root, records, relative_path, config, cache)
         waived = relative_path in waivers
         if not covered and not waived:
             issues.append(
@@ -474,9 +459,10 @@ def impact(
     """
     @brief Map changed paths to live requirement snapshots and current tests.
     @return One deterministic impact object per normalized candidate path.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.3.0
+    @exception RequirementValidationError If a snapshot is malformed or a
+               requirement ID is duplicated.
+    @exception ValueError If a candidate path is empty, escaping, absolute,
+               or otherwise malformed.
     """
     records = load_all_requirement_records(repo_root, config)
     build_requirement_index(records)
@@ -488,6 +474,7 @@ def impact(
     candidates = files if files is not None else _git_working_set(repo_root)
     report: list[dict[str, Any]] = []
     seen: set[str] = set()
+    cache: dict[str, tuple[bool, str]] = {}
     for file_path in candidates:
         relative_path = normalize_repository_path(file_path, allow_glob=False)
         if relative_path in seen:
@@ -499,7 +486,7 @@ def impact(
             {
                 "file": relative_path,
                 "uncovered": relative_path in coverable
-                and not _is_covered(repo_root, records, relative_path, config),
+                and not _is_covered(repo_root, records, relative_path, config, cache),
                 "requirements": [record.to_dict() for record in related],
                 "linked_tests": linked_tests,
                 "full_regression_recommended": relative_path in coverable and not related,
@@ -514,9 +501,6 @@ def records_touching_file(
     """
     @brief Match one path through the shared repository glob semantics.
     @return Matching records ordered by ID.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.1.0
     """
     normalized = normalize_repository_path(relative_path, allow_glob=False)
     return sorted(
@@ -530,14 +514,30 @@ def records_touching_file(
 
 
 def resolve_test(
-    repo_root: Path, test_id: str, config: WorkflowConfig
+    repo_root: Path,
+    test_id: str,
+    config: WorkflowConfig,
+    cache: dict[str, tuple[bool, str]] | None = None,
 ) -> tuple[bool, str]:
     """
     @brief Resolve an exact linked-test selector against current source.
+    @param[in] cache Optional per-invocation memo keyed by selector; audits
+               pass one so repeated selectors do not re-read test files.
     @return ``(True, "resolved")`` or an actionable failure reason.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
+    """
+    if cache is not None and test_id in cache:
+        return cache[test_id]
+    result = _resolve_test_uncached(repo_root, test_id, config)
+    if cache is not None:
+        cache[test_id] = result
+    return result
+
+
+def _resolve_test_uncached(
+    repo_root: Path, test_id: str, config: WorkflowConfig
+) -> tuple[bool, str]:
+    """
+    @brief Resolve one selector by reading the test file from disk.
     """
     try:
         normalized = normalize_linked_test(test_id, config.test_roots)
@@ -564,9 +564,7 @@ def load_waivers(repo_root: Path, config: WorkflowConfig) -> list[str]:
     """
     @brief Load and normalize the current coverage-waiver snapshot.
     @return Sorted duplicate-free waived paths.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
+    @exception ValueError If a waiver line is empty, escaping, absolute, or malformed.
     """
     values: set[str] = set()
     for root_name in config.requirement_roots:
@@ -584,15 +582,12 @@ def iter_coverable_files(repo_root: Path, config: WorkflowConfig) -> list[str]:
     """
     @brief Enumerate configured source files subject to coverage policy.
     @return Sorted repository-relative file paths.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.2.0
     """
     if config.coverage.mode == "disabled":
         return []
     extensions = set(config.source_extensions)
     found: list[str] = []
-    for root_name in config.coverable_roots:
+    for root_name in config.coverage.coverable_roots:
         root = repo_root / root_name
         if not root.exists():
             continue
@@ -602,7 +597,7 @@ def iter_coverable_files(repo_root: Path, config: WorkflowConfig) -> list[str]:
             relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
             if any(
                 fnmatchcase(path.name, pattern) or matches_pattern(relative, pattern)
-                for pattern in config.coverable_exclude
+                for pattern in config.coverage.exclude
             ):
                 continue
             found.append(relative)
@@ -639,12 +634,18 @@ def _is_covered(
     records: list[RequirementRecord],
     relative_path: str,
     config: WorkflowConfig,
+    cache: dict[str, tuple[bool, str]] | None = None,
 ) -> bool:
-    """@brief Check for an Active matching record with a current resolvable test."""
+    """
+    @brief Check for an Active matching record with a current resolvable test.
+    """
     return any(
         record.status == "Active"
         and record.linked_tests
-        and all(resolve_test(repo_root, selector, config)[0] for selector in record.linked_tests)
+        and all(
+            resolve_test(repo_root, selector, config, cache)[0]
+            for selector in record.linked_tests
+        )
         for record in records_touching_file(records, relative_path)
     )
 

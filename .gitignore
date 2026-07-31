@@ -56,6 +56,19 @@ dist/
 
 # Codex local state
 .codex/local/
+.claude/settings.local.json
+
+# Per-worktree AEGIS runtime state
+.agentic/.workspace/
+
+# WAEGIS transactional rollback state
+.agentic/.waegis-transactions/
+
+# Optional local RepoWise runtimes and indexes
+.agentic/tools/repowise/
+.repowise/
+.agentic/integrations/repowise-runtime.json
+.agentic/integrations/repowise-receipt.json
 
 # Delivery outputs
 07_Delivery/.build_*/

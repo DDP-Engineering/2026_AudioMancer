@@ -7,205 +7,210 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # AGENTS.md
 
-Guidance for Codex and other AI agents in this repository.
+This repository uses AEGIS 2.1, a human-approved, file-first engineering
+workflow. Treat `.agentic/workflow.toml` as the only AEGIS policy source.
 
-## Agentic Development Workflow
+New to AEGIS? Read `.agentic/documents/WHY_AEGIS.md` first, then use
+`.agentic/documents/GLOSSARY.md` and `.agentic/documents/INVARIANTS.md` as
+references. When integrating another branch's AEGIS state, follow
+`.agentic/documents/MERGE_AND_REBASE.md` before resolving or validating it.
 
-This repository uses a manual, human-steered agentic development workflow.
-When the user asks to implement a feature, fix a bug, or change behavior:
+## Mandatory Bootstrap
 
-1. Start or resume an `.agentic` run.
-2. Complete the `alignment` Intent Alignment stage before requirement/spec work
-   when enabled.
-3. Complete only one workflow gate at a time.
-4. Keep intent/spec, checks/tests, source implementation, validation, and
-   delivery as separate steps.
-5. Stop after each gate with a concise summary and next prompt options.
-
-Use the project-local wrappers when available:
-
-```text
-.\.agentic\tools\run.ps1 <command>
-bash .agentic/tools/run.sh <command>
-```
-
-If the workflow package is installed in the active environment, `aegis`
-or `python -m aegis` may also be used.
-
-Examples below use `<workflow>` for the selected project-local or installed
-workflow command.
-
-## Mandatory Workflow Bootstrap
-
-Before inspecting or changing repository files:
+Before repository work:
 
 1. Run `<workflow> config validate --json`.
-2. Run `<workflow> config show --effective --json`.
-3. Report the effective write-access, protected-read/path, scope, secret,
-   gate, coverage, and delivery modes and their active rule counts.
-4. State whether the work uses the worktree-local selected run or an explicit
-   `--run-id <existing-run-id>`.
-5. Follow configured AEGIS repository restrictions and separately respect all
-   external platform, host, sandbox, approval, and operating-system controls.
+2. Run `<workflow> config show --json`.
+3. Report the captured interface policy, five gate modes, guardrails,
+   traceability policy, quick changed-path policy, and selected run.
+4. Use `--run <run-id>` only when an operation must pin a run explicitly.
 
-Missing or invalid `.agentic/workflow.toml` is an actionable configuration
-error. Do not infer policy, continue with defaults, or copy policy from an
-adapter. The validated file is the only AEGIS repository-policy source.
+Do not infer fallback policy when configuration is missing or invalid. AEGIS
+policy supplements host, sandbox, approval, and operating-system controls.
 
-## Pi Adapter
+`<workflow>` means the project-local wrapper:
 
-Under [Pi](https://pi.dev), this `AGENTS.md` contract applies unchanged (Pi reads
-it natively). The `.pi/` directory is a thin adapter that bridges Pi tool events
-to the same `.agentic/hooks/` guards used by the Codex and Claude adapters, so
-write-zone, secret, delivery-preflight, protected-read, and evidence rules hold
-identically. `<workflow>` still means the project-local runner under
-`.agentic/tools/`. Shared skills are invoked as `/skill:<name>` (for example
-`/skill:agentic-development`). Project-local Pi resources load only after the
-project is trusted; see `.pi/README.md`.
+```text
+.\.agentic\tools\run.ps1
+bash .agentic/tools/run.sh
+```
 
-## OpenCode Adapter
+An installed `aegis` or `python -m aegis` is also valid.
 
-Under [OpenCode](https://opencode.ai), this `AGENTS.md` contract applies
-unchanged. The project root `opencode.json` points OpenCode at this file and the
-workflow CLI reference, and sets the default primary agent to
-`aegis` for TUI, `opencode run`, desktop, and GitHub Action usage.
-The `.opencode/` directory provides that workflow agent, native skill wrappers,
-command prompts, and a local plugin that bridges OpenCode tool events to the
-same `.agentic/hooks/` guards used by the Codex, Claude Code, and Pi adapters.
-`<workflow>` still means the project-local runner under `.agentic/tools/`.
-Shared skills are loaded with OpenCode's native `skill` tool (for example
-`agentic-development`). Start OpenCode from the repository root so the project
-config, agent, skills, commands, and plugin load together; see
-`.opencode/README.md`.
+## Standard Lifecycle
 
-## Qwen Code Adapter
+The full-run order is:
 
-Under [Qwen Code](https://github.com/QwenLM/qwen-code), this `AGENTS.md` contract
-applies unchanged. The `.qwen/settings.json` file sets `context.fileName` to
-`["AGENTS.md", "QWEN.md"]` so `AGENTS.md` loads first and stays authoritative, and
-its native `PreToolUse`/`PostToolUse` command hooks call the same `.agentic/hooks/`
-guards used by the Codex, Claude Code, Pi, and OpenCode adapters, so write-zone,
-secret, delivery-preflight, protected-read, and evidence rules hold identically.
-`<workflow>` still means the project-local runner under `.agentic/tools/`. Shared
-skills are model-invoked or selected from Qwen's `/skills` picker (for example
-`agentic-development`), and `.qwen/commands/` exposes `/workflow-status`,
-`/workflow-preflight`, and `/workflow-report`. Start Qwen Code from the repository
-root so the project settings, skills, and commands load together, and trust the
-project on first start; see `.qwen/README.md`.
+`intake → alignment → requirement → design → check → implementation → validation → delivery`
 
-## Durable Requirements Contract
+The `alignment` and `design` stages are distinct: alignment establishes the
+problem contract; design establishes the approved solution.
 
-- Long-lived requirements live under `.agentic/requirements/`, one complete
-  TOML snapshot per UUIDv4-backed requirement.
-- The active run graph under `.agentic/runs/` records one workflow run; the
-  requirement snapshots describe durable current project behavior.
-- Every behavior change starts by checking impact against existing requirement
-  snapshots before implementation code is written.
-- Search with `requirement list` before creating a requirement so semantically
-  duplicate contracts are not introduced.
-- Create requirements with `<workflow> requirement create ...`; use the
-  returned `REQ-<CATEGORY>-<uuid>` ID and never invent or renumber IDs.
-- New requirement snapshots start as `Planned` and become `Active` only when a
-  linked test exists and passes, or when an explicit manual verification method
-  is documented.
-- Update the same snapshot and preserve its ID when the same behavioral
-  contract changes. Replace the complete linked-test and affected-path sets
-  with `requirement update`; do not retain renamed or stale associations.
-- Activate a proven snapshot with
-  `<workflow> requirement activate [--run-id <run-id>] --id <requirement-id> --linked-test <test-id> --verification "<method>"`.
-- Link each active requirement to exact test identifiers when practical.
-- Keep the `requirement` sentence atomic and put concrete detail (data
-  structures, interface formats, dialog text, worked examples) in a companion
-  spec file named by the optional `spec_ref`. When `spec_ref` is set the file
-  must exist; a deleted target is reported as `REQ-SPEC-MISSING` by the
-  traceability audit. `feature` and `change` work should carry a `spec_ref`.
-- When adding or changing tests, cite relevant requirement IDs in comments,
-  docstrings, or test names where practical.
-- New source files under configured `coverable_roots` need a file-level
-  requirement snapshot naming the file in `affected_paths` and a linked test,
-  unless the file is listed in `.agentic/requirements/coverage_waivers.txt`.
-- Waivers are a legacy baseline only. Remove stale waivers once a module is
-  covered or deleted.
-- Run traceability, coverage, and impact directly from canonical snapshots.
-  There is no registry sync, registry audit, or generated traceability cache.
-- Treat concurrent edits to the same requirement TOML file as a semantic
-  conflict that requires reconciliation.
+Start with `<workflow> run start <feature|fix|change>` or resume with
+`<workflow> run resume`. Open the returned artifact.
 
-## Worktree-Local Run Selection
+Every stage follows:
 
-- The active pointer is `.agentic/.workspace/state/current_run`; the entire
-  `.agentic/.workspace/` tree is ignored local state and must never be staged.
-- One pointer belongs to one Git worktree. Never copy it between worktrees.
-- Use `--run-id <existing-run-id>` when automation must pin a particular run.
-  Explicit selection does not change the worktree pointer.
-- Treat `RUN-POINTER-*` and `RUN-ID-NOT-FOUND` messages as setup instructions.
-  Never guess a run ID or edit a graph to bypass resolution.
+```text
+<workflow> stage prepare
+# edit generated TOML and referenced Markdown
+<workflow> stage apply
+# review imported state and ask for explicit human approval
+<workflow> stage close
+```
+
+Use `stage add` only for additional atomic requirements or checks. The CLI
+generates all durable IDs. Statements, scope, access changes, routing decisions,
+requirements, checks, design, and evidence belong in generated forms, not flags.
+
+`stage close` is the authoritative approval boundary. Host plan mode may help
+the design conversation but cannot approve AEGIS state.
+
+## Proportional Quick Lifecycle
+
+When the human describes a genuinely small fix or change, offer the
+proportional route explicitly:
+`small scope - suggest: aegis run start fix --quick`. Use `change --quick` for
+a small non-fix behavior change. The quick modifier is invalid for feature and
+adoption runs.
+
+A quick run retains four real stages and an explicit human close at each one:
+
+`intake -> implementation -> validation -> delivery`
+
+Closing intake journals one `run.stages_bypassed` record that marks alignment,
+requirement, design, and check as `bypassed` by the quick run type. Run status,
+the validation summary, and `report.md` repeat that state; bypassed never means
+passed or waived.
+
+Because a quick run has no requirement, check, or design collection stage,
+INV-1, INV-2, INV-3 (red-before-green), INV-8, and INV-10, plus the standalone
+traceability and coverage audits, report `not-applicable` for the quick run.
+Intake, implementation changed paths and evidence, enabled gates, secrets and
+working-tree review, scope analysis, validation, delivery reporting, and all
+four human closes still execute normally.
+
+At quick implementation, follow the returned `aegis evidence prepare add`
+command, complete and apply the manual-evidence form, and place its CLI-minted
+active ID in `linked_check_evidence` before applying the implementation form.
+Invented, missing, superseded, or other-stage evidence does not satisfy close.
+
+Quick runs cannot route into a bypassed stage. If scope grows, preserve the
+recorded context and restart as a full run with `aegis run start <fix|change>`.
+The optional `[quick.changed_paths]` policy can emit this guidance after
+implementation closes when the unique changed-path count exceeds `max_paths`.
+Its modes are `disabled` and `advise`; absence means `disabled` with a retained
+default threshold of 10, and an advisory never blocks or changes the run.
+
+## Stage Contracts
+
+- The alignment, requirement, design, and check contracts below apply only
+  when those stages are present in the selected run profile.
+- Intake captures intent, scope hints, and access mode.
+- Alignment captures understanding, scope, assumptions, observable acceptance
+  criteria, questions and recommendations, risks, and planned paths.
+- Requirements define atomic externally observable contracts. Internal
+  structures, algorithms, boundaries, and sequencing belong in design.
+- Design is authoritative in `.agentic/runs/<run-id>/design.md`; it must cite
+  unchanged requirement snapshots and record an explicit selected option.
+- Checks cite requirement IDs and assert observable behavior. A fix requires
+  reproducing red evidence before implementation.
+- Implementation follows the approved design and records changed paths,
+  documentation effects, and linked evidence in its form.
+- Validation runs `<workflow> verify run` before interpretive diff review.
+  Successful validation closure activates green Planned requirements.
+- Delivery records the final handoff decision. Closing it completes AEGIS state
+  but never pushes, publishes, merges, or creates a pull request.
+
+## Check and Evidence Policy
+
+The prepared stage captures `interface.check_execution`.
+
+- External mode: `<workflow> check prepare`, run commands externally, complete
+  `evidence.toml`, then `<workflow> check record`.
+- Managed mode: `<workflow> check run [<check-id>...]`.
+- Manual evidence: `<workflow> evidence prepare <add|supersede>`, edit the
+  generated form, then `<workflow> evidence apply`.
+
+Never use the command path for the other mode. Never fabricate IDs.
+
+## Verification
+
+`<workflow> verify run` performs impact analysis, enabled deterministic gates,
+invariants, traceability, coverage, and working-tree review, then writes the
+validation summary.
+
+Gate order is build, typecheck, lint, test, security. Each group is independently
+`disabled` or `enforce`; disabled means disabled, never passed. Security executes
+only explicitly configured deterministic tooling and is not an authoritative
+security-assurance claim.
+
+An exact active waiver neutralizes only its named blocker for the selected run
+and current digest-pinned state. The underlying check still failed: summaries
+and reports must show `WAIVED`, with the reason and timestamp, never `passed`.
+
+Run linked checks first. Use full regression for shared, cross-cutting, or
+untraced changes. Cover relevant variants, response shapes, stale-state cleanup,
+rollback, errors, boundaries, concurrency, and idempotency.
+
+## Recorded Waivers
+
+When a process blocker should be overcome once, show the human the exact
+blocker ID from `<workflow> waive list` and offer:
+
+```text
+<workflow> waive add <blocker-id> --reason "<human-approved reason>"
+```
+
+Adding a waiver is an explicit human approval act, like `stage close`. Do not
+invoke it autonomously. Reasons are mandatory; IDs are exact and CLI-discovered;
+there are no wildcard, bulk, or force forms. Waivers belong to one run, are
+minted and journaled by AEGIS, and become stale when their digest-pinned blocker
+state changes.
+
+Structural integrity failures are never waiver targets: malformed or
+closed-schema state, persistence-lock conflicts, and stale-update conflicts
+must be corrected or retried. A waiver does not skip importing a stage or
+create a shortened lifecycle; only the declared quick profile shortens one.
+
+## Adoption
+
+Adoption retains its ordered stages but uses the same
+`prepare → apply → close` lifecycle:
+
+`adoption-intake → adoption-alignment → repo-discovery → component-map → component-adoption → baseline-review → adoption-delivery`
+
+Adoption does not change application behavior. Use the `agentic-adoption` skill
+for stage-specific guidance.
+
+## Repository State
+
+- Durable requirement snapshots live under `.agentic/requirements/`.
+- The worktree-local run pointer is
+  `.agentic/.workspace/state/current_run`; never stage `.agentic/.workspace/`.
+- Transient forms follow the retention captured at stage preparation.
+  `design.md`, requirement snapshots/specifications, graph state, evidence,
+  journals, validation summaries, and delivery reports remain durable.
+- Route earlier or request access changes only through the current form control
+  section with a rationale. Routing to requirement or design invalidates design
+  approval.
 
 ## Component Documentation Contract
 
-- New software components require a new or updated component document under
-  `.agentic/knowledge/components/`.
-- Material changes to a component's behavior, contracts, responsibilities, data
-  formats, dependencies, or workflow integration require updating the matching
-  `.agentic/knowledge/components/*.md` document in the same change.
-- Component documents must follow
-  `.agentic/knowledge/components/component_template.md`.
-- When adding a new component page, update
-  `.agentic/knowledge/components/index.md` in the same change.
-- Component documentation complements requirements and tests. It does not
-  replace durable requirement snapshots or linked verification.
+Add or update `.agentic/knowledge/components/*.md` when a component is new or
+its responsibilities, boundaries, interfaces, data, dependencies, or workflow
+integration materially change. Follow the component template and update the
+component index. Component documents complement requirements, design, and
+checks; they replace none of them.
 
-## Required Order
-
-1. Intake: classify request and inspect likely implementation impact.
-2. Intent Alignment: record understanding, scope, acceptance, risk, and open
-   questions with recommended responses when automated flow is acceptable; pause
-   when policy or risk requires human input.
-3. Requirement: create or update minimal spec items and durable requirement snapshots.
-4. Check: create checks/tests that cite spec/requirement IDs and fail first.
-5. Implementation: edit source and required component documentation until
-   checks pass.
-6. Validation: run deterministic gates, documentation review, and read-only
-   review.
-7. Delivery: run preflight and ask before PR/push/merge.
-
-## Safety Rules
-
-- Do not commit secrets, tokens, keys, `.env` files, or credential stores.
-- Do not weaken or delete tests to make implementation pass.
-- Do not edit specs during implementation unless the human routes back to the
-  requirement stage with `<workflow> set-stage requirement --reason "<reason>"`.
-- Do not edit tests during implementation unless the human routes back to the
-  check stage with `<workflow> set-stage check --reason "<reason>"`.
-- If a late failing evidence entry is proven to be an environment, command, or
-  operator issue, record the passing rerun and use
-  `<workflow> supersede-evidence --id <old-evidence-id> --by <new-evidence-id> --reason "<reason>"`.
-- Record Intent Alignment with
-  `<workflow> alignment --source "<ref>" --understanding "<text>" --scope "<scope>" --acceptance "<criterion>" --risk low|medium|high --decision proceed|pause --reason "<reason>"`.
-  When questions exist, include `--recommended-response "<answer to assume>"`
-  for each question if automated continuation is acceptable. Use `proceed` only
-  when `.agentic/workflow.toml` policy allows it; otherwise stop in alignment
-  and ask for human answers or risk approval.
-- Treat arbitrary untracked human files as advisory delivery context unless
-  they match protected paths, configured working-tree blockers, or secret
-  patterns.
-- Do not push, create a PR, merge, or publish until delivery preflight passes
-  and the human explicitly approves that action.
-- Do not report work complete while `<workflow> audit traceability` or
-  `<workflow> audit coverage` has blocking findings.
-
-## Stage Stop Format
-
-End each workflow gate with:
+## Stop Format
 
 ```text
 Stage: <stage>
-Artifacts changed: <paths or none>
-Evidence: <ids and short results>
-Invariant status: <pass/fail summary>
-Needs human: <questions or approval needed>
-Next prompt options:
-- Continue to <next stage>
-- Revise <specific artifact>
-- Abort or park this run
+Artifact: <path or none>
+Imported revision: <number or none>
+Evidence: <ids/results or none>
+Blockers: <none or exact blockers>
+Needs human: approve close, revise, route earlier, add a recorded waiver for <blocker-id> where offered, or abort
+Next command: <exact command>
 ```

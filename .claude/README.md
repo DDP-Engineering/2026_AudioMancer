@@ -21,9 +21,9 @@ Contents:
 - `agents/` - optional Claude Code subagent notes for workflow roles.
 
 Before repository work, run the project-local `config validate --json` and
-`config show --effective --json` commands. Report write, protected-read/path,
+`config show --json` commands. Report write, protected-read/path,
 scope, secret, gate, coverage, and delivery modes and active rule counts, plus
-the selected worktree run or explicit `--run-id`. AEGIS policy comes only from
+the selected worktree run or explicit `--run`. AEGIS policy comes only from
 the validated file; Claude host approvals remain separate.
 
 The hook configuration calls the generic scripts under `.agentic/hooks/`.

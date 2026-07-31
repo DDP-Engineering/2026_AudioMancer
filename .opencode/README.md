@@ -25,7 +25,7 @@ Start OpenCode from the repository root so it can find:
 This is a safety requirement, not only a convenience. A host that locates its
 project config relative to the launch directory finds none of the above when
 started in a subdirectory, so the guard plugin is never registered and every
-guard is silently absent for that session — tool calls are not blocked, they are
+guard is silently absent for that session â€” tool calls are not blocked, they are
 never inspected, and nothing reports it. See
 [`../.agentic/hooks/README.md`](../.agentic/hooks/README.md) for why this cannot
 be fixed by changing how the hooks are addressed.
@@ -61,9 +61,9 @@ bash .agentic/tools/run.sh <command>
 ```
 
 Before repository work, run `<workflow> config validate --json` and
-`<workflow> config show --effective --json`. Report write,
+`<workflow> config show --json`. Report write,
 protected-read/path, scope, secret, gate, coverage, and delivery modes and
-active rule counts, plus the selected worktree run or explicit `--run-id`.
+active rule counts, plus the selected worktree run or explicit `--run`.
 AEGIS policy comes only from the validated file; OpenCode platform permissions
 remain separate.
 

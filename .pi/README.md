@@ -17,9 +17,9 @@ source for gate order, requirements, documentation rules, safety rules, and stop
 format. Pi reads `AGENTS.md` natively.
 
 Before repository work, run the project-local `config validate --json` and
-`config show --effective --json` commands. Report write, protected-read/path,
+`config show --json` commands. Report write, protected-read/path,
 scope, secret, gate, coverage, and delivery modes and active rule counts, plus
-the selected worktree run or explicit `--run-id`. AEGIS policy comes only from
+the selected worktree run or explicit `--run`. AEGIS policy comes only from
 the validated file; Pi trust and host controls remain separate.
 
 ## Contents
@@ -67,7 +67,7 @@ Read, write, secret, and delivery rules come only from the validated
 - **Python runtime.** Set `AEGIS_PYTHON` to pin an interpreter. Otherwise the
   bridge uses the runtime registered by packaged WAEGIS, then the first system
   launcher that actually resolves on `PATH` (`py -3` then `python` on Windows,
-  `python3` then `python` elsewhere) — the same ordered list the Codex, Claude
+  `python3` then `python` elsewhere) â€” the same ordered list the Codex, Claude
   Code, and Qwen Code launcher uses. If no interpreter can be run, the guard
   **blocks** with an actionable reason rather than allowing the call: the
   shared hooks always exit 0 and answer on stdout, so silence is never an
@@ -82,7 +82,7 @@ Read, write, secret, and delivery rules come only from the validated
   `.agentic/`. Pi resolves project-local resources from the current working
   directory; started in a subdirectory it finds no `.pi/`, so the guard
   extension is never registered and every guard is silently absent for that
-  session — tool calls are not blocked, they are never inspected. Declining
+  session â€” tool calls are not blocked, they are never inspected. Declining
   trust has the same effect and is at least visible; this one is not. See
   [`../.agentic/hooks/README.md`](../.agentic/hooks/README.md).
 

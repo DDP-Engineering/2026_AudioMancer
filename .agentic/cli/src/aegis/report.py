@@ -9,11 +9,13 @@
 """
 @file report.py
 @brief Markdown report rendering for workflow runs.
-@details Renders persisted workflow evidence, including optional failure
-classifications, for generated projects.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-22
-@version 0.7.0
+@details Renders schema-3 stage state, durable requirements, solution design,
+         checks, evidence, verification records, and adoption baseline data.
+@details Waived failures remain visibly failed and render as ``WAIVED`` with
+         their human reason and timestamp.
+@details Quick runs render requirement-backed state explicitly as not
+         applicable without loading absent-stage storage; bypass is never
+         reported as a successful check or before human intake closure.
 """
 
 # IMPORTS
@@ -25,9 +27,20 @@ from pathlib import Path
 
 from .components import audit_local_scope, load_components
 from .config import WorkflowConfig
+from .gates import gate_failure_blockers
 from .invariants import evaluate
-from .models import Graph
+from .models import Graph, Waiver
+from .requirement_store import load_all_requirement_records
 from .requirements import audit_coverage, audit_traceability
+from .stage_forms import next_command
+from .stage_schema import run_stage_spec
+from .waiver_targets import (
+    audit_issue_blocker,
+    collect_waiver_targets,
+    waiver_record_statuses,
+)
+from .waivers import active_waiver
+from .verification import quick_bypass_committed, validation_summary_path
 
 # PUBLIC API
 
@@ -37,27 +50,37 @@ def render_report(
 ) -> str:
     """
     @brief      Render a complete Markdown report for the active workflow graph.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
+    @param[in]  repo_root Repository root the report reads run and component
+                data from.
+    @param[in]  graph Active workflow graph the report describes.
     @param[in]  config Validated workflow configuration.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.7.0
+    @return     Complete Markdown report text.
+    @exception  CommandInputError If the adoption baseline section's component
+                manifest TOML is invalid.
     """
+    stage_spec = run_stage_spec(graph)
+    quick = bool(stage_spec.bypassed_stages)
+    bypass_committed = quick_bypass_committed(graph)
     results = evaluate(repo_root, graph, config)
-    traceability_issues = audit_traceability(repo_root, config)
-    coverage_issues = audit_coverage(repo_root, config)
+    traceability_issues = [] if quick else audit_traceability(repo_root, config)
+    coverage_issues = [] if quick else audit_coverage(repo_root, config)
+    gate_blockers = {
+        blocker.id: blocker
+        for blocker in gate_failure_blockers(graph, config)
+    }
     lines = [
         f"# AEGIS Report: {graph.run_id}",
         "",
         f"- Stage: `{graph.stage}`",
         f"- Access mode: `{graph.access_mode}`",
         f"- Intent: `{graph.intent.id}` {graph.intent.kind} - {graph.intent.statement}",
-        "",
-        "## Intent Alignment",
     ]
+    if bypass_committed:
+        lines.append(
+            "- Quick run - stages bypassed: "
+            + ", ".join(stage_spec.bypassed_stages)
+        )
+    lines.extend(["", "## Intent Alignment"])
     if graph.alignment:
         alignment = graph.alignment
         lines.append(f"- Source: {alignment.source}")
@@ -79,19 +102,62 @@ def render_report(
 
     lines.extend([
         "",
-        "## Spec Items",
+        "## Stage Lifecycle",
     ])
-    if graph.spec_items:
-        for item in graph.spec_items:
-            lines.append(f"- `{item.id}` [{item.tag}] {item.status}: {item.statement}")
+    if graph.stage_records:
+        for stage, record in graph.stage_records.items():
+            lines.append(
+                f"- `{stage}` revision {record.revision}: `{record.status}`; "
+                f"retention `{record.retention}`; check execution "
+                f"`{record.check_execution}`"
+            )
+    else:
+        lines.append("- No stage records.")
+
+    lines.extend(["", "## Requirements"])
+    requirements = (
+        []
+        if quick
+        else load_all_requirement_records(repo_root, config)
+    )
+    if quick:
+        lines.append("- NOT APPLICABLE: Not applicable - quick run.")
+    elif requirements:
+        for requirement in requirements:
+            lines.append(
+                f"- `{requirement.id}` {requirement.status}: "
+                f"{requirement.requirement}"
+            )
+    else:
+        lines.append("- None recorded.")
+
+    lines.extend(["", "## Solution Design"])
+    if graph.design:
+        design = graph.design
+        lines.extend(
+            [
+                f"- Revision: {design.revision}",
+                f"- Status: `{design.status}`",
+                f"- Approval: `{design.approval}`",
+                f"- Document: `{design.document_path}`",
+                f"- Selected option: {design.selected_option or 'none'}",
+                "- Cited requirements: "
+                + (", ".join(f"`{item}`" for item in design.requirement_digests) or "none"),
+                "- Open questions: "
+                + ("; ".join(design.open_questions) or "none"),
+            ]
+        )
     else:
         lines.append("- None recorded.")
 
     lines.extend(["", "## Checks"])
     if graph.checks:
         for check in graph.checks:
-            cites = ", ".join(check.cites_spec)
-            lines.append(f"- `{check.id}` {check.state}; cites {cites}")
+            cites = ", ".join(check.cites_requirement)
+            lines.append(
+                f"- `{check.id}` {check.state}; requirements {cites}; "
+                f"command `{check.command}`"
+            )
     else:
         lines.append("- None recorded.")
 
@@ -99,48 +165,110 @@ def render_report(
     if graph.evidence:
         for item in graph.evidence:
             failure_kind = f" ({item.failure_kind})" if item.failure_kind else ""
+            gate_blocker = (
+                gate_blockers.get(f"gate:{item.gate_name}")
+                if item.gate_name
+                else None
+            )
+            waiver = (
+                active_waiver(graph, gate_blocker)
+                if item.kind == "gate"
+                and item.result == "fail"
+                and gate_blocker is not None
+                else None
+            )
+            waiver_text = f"; {_waiver_text(waiver)}" if waiver else ""
             lines.append(
-                f"- `{item.id}` {item.kind}/{item.result}{failure_kind}: {item.summary}"
+                f"- `{item.id}` {item.kind}/{item.result}{failure_kind}: "
+                f"{item.summary}{waiver_text}"
             )
     else:
         lines.append("- None recorded.")
 
     lines.extend(["", "## Invariants"])
     for item in results:
-        marker = "PASS" if item.holds else "FAIL"
-        lines.append(f"- `{item.id}` {marker} ({item.policy}): {item.message}")
+        if item.status == "not-applicable":
+            marker = "NOT APPLICABLE"
+        elif item.holds:
+            marker = "PASS"
+        elif item.waived:
+            marker = "WAIVED"
+        else:
+            marker = "FAIL"
+        waiver_text = (
+            " " + "; ".join(_waiver_text(waiver) for waiver in item.waivers)
+            if item.waived
+            else ""
+        )
+        lines.append(
+            f"- `{item.id}` {marker} ({item.effective_policy}): "
+            f"{item.message}{waiver_text}"
+        )
 
     lines.extend(["", "## Traceability Audits"])
-    if not traceability_issues and not coverage_issues:
+    if quick:
+        lines.append("- NOT APPLICABLE: Not applicable - quick run.")
+    elif not traceability_issues and not coverage_issues:
         lines.append("- PASS: live traceability and coverage audits have no findings.")
     for issue in traceability_issues:
-        lines.append(f"- `{issue.code}` {issue.message}")
+        waiver = active_waiver(
+            graph,
+            audit_issue_blocker("traceability", issue),
+        )
+        marker = " WAIVED" if waiver else ""
+        suffix = f" {_waiver_text(waiver)}" if waiver else ""
+        lines.append(f"- `{issue.code}`{marker} {issue.message}{suffix}")
     for issue in coverage_issues:
-        lines.append(f"- `{issue.code}` {issue.message}")
+        waiver = active_waiver(
+            graph,
+            audit_issue_blocker("coverage", issue),
+        )
+        marker = " WAIVED" if waiver else ""
+        suffix = f" {_waiver_text(waiver)}" if waiver else ""
+        lines.append(f"- `{issue.code}`{marker} {issue.message}{suffix}")
+
+    validation_path = validation_summary_path(repo_root, graph)
+    lines.extend(["", "## Deterministic Verification"])
+    if validation_path.is_file():
+        lines.append(
+            f"- Validation summary: "
+            f"`{validation_path.relative_to(repo_root).as_posix()}`"
+        )
+    else:
+        lines.append("- Not yet run. Use `aegis verify run` during validation.")
+
+    if graph.waivers:
+        lines.extend(["", "## Waivers"])
+        targets = collect_waiver_targets(repo_root, graph, config)
+        for item in waiver_record_statuses(graph, targets):
+            marker = "WAIVED" if item["status"] == "active" else item["status"].upper()
+            lines.append(
+                f"- `{item['blocker_id']}` {marker} by `{item['id']}` at "
+                f"`{item['created_at']}`: {item['reason']}"
+            )
 
     adoption_lines = _render_adoption_baseline(repo_root, graph, config)
     if adoption_lines:
         lines.extend(["", *adoption_lines])
 
-    lines.extend(["", "## Next Prompts"])
-    lines.append("- Continue the next manual gate after reviewing the report.")
-    lines.append("- Ask the agent to create or update missing artifacts named above.")
-    lines.append("- When ready for delivery, prompt: `Create PR for this agentic workflow run`.")
+    lines.extend(["", "## Handoff"])
+    lines.append(f"- Next command: `{next_command(graph, repo_root)}`")
+    lines.append(
+        "- Delivery closure records the human handoff decision only; it does "
+        "not push, publish, merge, or create a pull request."
+    )
     lines.append("")
     return "\n".join(lines)
 
 
 def write_report(repo_root: Path, graph: Graph, rendered: str) -> Path:
     """
-    @brief      Write report workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
+    @brief      Write the rendered report to its run-local file.
+    @param[in]  repo_root Repository root the run directory is under.
+    @param[in]  graph Workflow graph identifying the run.
     @param[in]  rendered Complete report text rendered with the operation config.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.2.0
+    @return     Path of the written report file.
+    @exception  OSError If the report file cannot be written.
     """
     path = repo_root / ".agentic" / "runs" / graph.run_id / "report.md"
     path.write_text(rendered, encoding="utf-8")
@@ -148,6 +276,18 @@ def write_report(repo_root: Path, graph: Graph, rendered: str) -> Path:
 
 
 # HELPER FUNCTIONS
+
+
+def _waiver_text(waiver: Waiver) -> str:
+    """
+    @brief Render the reason and timestamp for one active waiver.
+    @param[in] waiver Human-approved waiver record.
+    @return Concise Markdown-safe waiver description.
+    """
+    return (
+        f"WAIVED by `{waiver.id}` at `{waiver.created_at}`: "
+        f"{waiver.reason}"
+    )
 
 
 def _render_adoption_baseline(
@@ -159,10 +299,8 @@ def _render_adoption_baseline(
     @param[in]  graph Workflow graph.
     @param[in]  config Validated workflow configuration.
     @return     Markdown lines for the adoption section, or an empty list.
-    @exception  tomllib.TOMLDecodeError Raised when component TOML is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.2.0
+    @exception  CommandInputError Raised when the component manifest TOML is
+                invalid.
     """
     manifest = load_components(repo_root, config.component_manifest)
     if graph.intent.kind != "adoption" and not manifest.components:
@@ -171,7 +309,8 @@ def _render_adoption_baseline(
     lines = [
         "## Adoption Baseline",
         f"- Component manifest: `{config.component_manifest}`",
-        f"- Minimum baseline: `{config.adoption_default_completion_level}`",
+        "- Minimum baseline: "
+        f"`{config.component_baseline_guard.minimum_completion_level}`",
         f"- Adoption report root: `{config.adoption_report_root}`",
         "",
         "### Component Status Counts",
@@ -198,7 +337,7 @@ def _render_adoption_baseline(
             repo_root,
             touched_paths,
             config,
-            config.adoption_default_completion_level,
+            config.component_baseline_guard.minimum_completion_level,
         )
         if issues:
             for issue in issues:
@@ -216,9 +355,6 @@ def _touched_paths(graph: Graph) -> list[str]:
     @param[in]  graph Workflow graph.
     @return     Sorted unique repository-relative paths.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     return sorted({path for unit in graph.change_units for path in unit.touched_paths})
 

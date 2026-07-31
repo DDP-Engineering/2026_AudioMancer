@@ -16,7 +16,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Use this workflow:
 
 1. Read `AGENTS.md`, then run `<workflow> config validate --json` and
-   `<workflow> config show --effective --json`. Report the effective write,
+   `<workflow> config show --json`. Report the effective write,
    protected-read/path, scope, secret, gate, coverage, and delivery modes and
    active rule counts; state the selected run when graph state is needed and
    distinguish AEGIS policy from external platform safety.
@@ -36,11 +36,13 @@ Use this workflow:
    - module-level documentation tags required by the repository
    - meaningful section markers required by the repository
    - public or non-trivial callable docstrings
-   - local version tags when the repository requires them
-5. When changing callable implementation or documentation, update any
-   repository-required callable-local version metadata.
-6. When adding or removing a function, class, or documented nested helper,
-   update any repository-required module-level version metadata.
+5. Docstrings carry no authorship or version tags — no `@author`, `@date`, or
+   `@version` at module, function, class, or nested-helper level; git records
+   both authoritatively. `@brief`, `@param`, `@return`, `@exception`, and
+   `@details` remain the house style. Drop any `@author`, `@date`, or
+   `@version` tag on sight when touching a docstring for another reason.
+6. Versioning is project-level only; do not add or update per-callable or
+   per-file version metadata in docstrings.
 7. Validate changed Python files with the repository's configured commands.
    Prefer focused commands first, for example:
 

@@ -8,13 +8,13 @@
 # -----------------------------------------------------------------------------
 """
 @file delivery_preflight.py
-@brief Pre-tool hook invoking delivery preflight for configured commands.
+@brief Pre-tool hook enforcing deterministic verification and closed delivery.
 @details Command fragments come only from validated
          ``guardrails.delivery.command_patterns``. Disabled policy has no
          implicit publish commands, and configuration errors deny pre-tool use.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-22
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -36,7 +36,7 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-22
-    @version    0.3.0
+    @version    0.4.0
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PreToolUse":
@@ -64,8 +64,45 @@ def main() -> int:
         return deny(
             "Agentic workflow launcher not found. Expected .agentic/tools/run_aegis.py."
         )
-    result = subprocess.run(
-        [sys.executable, str(launcher), "delivery-preflight"],
+    verification = _run_aegis(repo_root, launcher, "verify", "run", "--json")
+    if verification.returncode != 0:
+        detail = (verification.stderr or verification.stdout).strip()
+        reason = (
+            "Deterministic verification failed. Resolve every blocking result "
+            "before publishing."
+        )
+        if detail:
+            reason = f"{reason}\n{detail}"
+        return deny(reason)
+    delivery = _run_aegis(repo_root, launcher, "delivery", "show", "--json")
+    try:
+        state = json.loads(delivery.stdout)
+    except json.JSONDecodeError:
+        state = {}
+    if delivery.returncode != 0 or state.get("complete") is not True:
+        detail = (delivery.stderr or delivery.stdout).strip()
+        reason = "AEGIS delivery is not closed. Complete the delivery stage before publishing."
+        if detail:
+            reason = f"{reason}\n{detail}"
+        return deny(reason)
+    return 0
+
+
+def _run_aegis(
+    repo_root: Path,
+    launcher: Path,
+    *args: str,
+) -> subprocess.CompletedProcess[str]:
+    """
+    @brief Run one grouped AEGIS command for the outward-action guard.
+    @param[in] repo_root Repository root.
+    @param[in] launcher Project-local AEGIS launcher.
+    @param[in] args Grouped AEGIS arguments.
+    @return Captured process result.
+    @version 0.1.0
+    """
+    return subprocess.run(
+        [sys.executable, str(launcher), *args],
         cwd=repo_root,
         text=True,
         encoding="utf-8",
@@ -73,13 +110,6 @@ def main() -> int:
         capture_output=True,
         check=False,
     )
-    if result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()
-        reason = "Delivery preflight failed. Resolve blocking invariants before publishing."
-        if detail:
-            reason = f"{reason}\n{detail}"
-        return deny(reason)
-    return 0
 
 
 def deny(message: str) -> int:

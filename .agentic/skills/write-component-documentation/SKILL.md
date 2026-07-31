@@ -18,7 +18,7 @@ component document after a material implementation change.
 
 Before repository inspection or edits, read `AGENTS.md`, run
 `<workflow> config validate --json` and
-`<workflow> config show --effective --json`, and report the effective write,
+`<workflow> config show --json`, and report the effective write,
 protected-read/path, scope, secret, gate, coverage, and delivery modes and
 active rule counts. State the selected run when graph state is needed and
 distinguish AEGIS repository policy from external platform safety.

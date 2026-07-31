@@ -8,14 +8,11 @@
 # -----------------------------------------------------------------------------
 """
 @file config.py
-@brief Strict schema-version-2 workflow configuration parser.
+@brief Strict schema-version-3 workflow configuration parser.
 @details Treats `.agentic/workflow.toml` as the only repository-policy source,
          validates it deterministically, and exposes immutable typed records.
          Missing, malformed, incomplete, and inconsistent configuration is an
          actionable error; no repository paths, patterns, or modes are inferred.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-22
-@version 1.0.2
 """
 
 # IMPORTS
@@ -27,15 +24,17 @@ import json
 from pathlib import Path
 import re
 from types import MappingProxyType
-from typing import Any, Mapping, NoReturn
+from collections.abc import Mapping
+from typing import Any, NoReturn
 import tomllib
 
 from .models import ALL_STAGES
 
 # CONSTANTS
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 CONFIG_RELATIVE_PATH = Path(".agentic") / "workflow.toml"
+GATE_ORDER = ("build", "typecheck", "lint", "test", "security")
 RISK_LEVELS = ("low", "medium", "high")
 COMPLETION_LEVELS = (
     "unknown",
@@ -44,6 +43,7 @@ COMPLETION_LEVELS = (
     "baseline-usable",
     "baseline-strict",
 )
+DEFAULT_QUICK_CHANGED_PATHS_MAX = 10
 
 _TOP_LEVEL_KEYS = (
     "schema_version",
@@ -57,6 +57,8 @@ _TOP_LEVEL_KEYS = (
     "traceability",
     "adoption",
     "alignment",
+    "quick",
+    "interface",
     "gates",
     "guardrails",
 )
@@ -74,9 +76,6 @@ class ConfigurationError(ValueError):
     @param[in] expected Human-readable expected value or shape.
     @param[in] message Concise description of the failure.
     @param[in] remediation Concrete repair instruction for an agent or operator.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 0.1.0
     """
 
     def __init__(
@@ -100,9 +99,6 @@ class ConfigurationError(ValueError):
         @param[in]  message Failure description.
         @param[in]  remediation Concrete repair instruction.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-22
-        @version    0.1.0
         """
         super().__init__(message)
         self.code = code
@@ -117,9 +113,6 @@ class ConfigurationError(ValueError):
         """
         @brief      Render the stable text error contract.
         @return     Error code and message followed by remediation.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-22
-        @version    0.1.0
         """
         return f"{self.code}: {self.message}\n{self.remediation}"
 
@@ -127,9 +120,6 @@ class ConfigurationError(ValueError):
         """
         @brief      Serialize the error for JSON-capable callers.
         @return     Stable configuration-error field mapping.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-22
-        @version    0.1.0
         """
         return {
             "code": self.code,
@@ -193,12 +183,30 @@ class CoveragePolicy:
 
 
 @dataclass(frozen=True)
-class GatePolicy:
-    """@brief Immutable validation-gate policy."""
+class InterfacePolicy:
+    """@brief Immutable stage-form and check-execution interface policy."""
+
+    stage_form_retention: str
+    check_execution: str
+
+
+@dataclass(frozen=True)
+class GateGroupPolicy:
+    """@brief Immutable mode and commands for one deterministic gate group."""
 
     mode: str
-    test: tuple[str, ...]
-    lint: tuple[str, ...]
+    commands: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class GatePolicy:
+    """@brief Immutable independently configurable deterministic gate groups."""
+
+    build: GateGroupPolicy
+    typecheck: GateGroupPolicy
+    lint: GateGroupPolicy
+    test: GateGroupPolicy
+    security: GateGroupPolicy
 
 
 @dataclass(frozen=True)
@@ -225,15 +233,20 @@ class DeliveryPolicy:
 
 
 @dataclass(frozen=True)
+class QuickChangedPathsPolicy:
+    """@brief Immutable proportional-run changed-path advisory policy."""
+
+    mode: str
+    max_paths: int
+
+
+@dataclass(frozen=True)
 class WorkflowConfig:
     """
-    @brief Complete immutable schema-version-2 workflow configuration.
-    @details Every field is required from the validated TOML document. The
-             compatibility properties expose legacy flat consumer names while
-             sourcing their values exclusively from explicit policy records.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-22
-    @version 1.0.0
+    @brief Complete immutable schema-version-3 workflow configuration.
+    @details Every field is required from the validated TOML document. Consumers
+             use the schema-3 nested policy records directly; no schema-2 flat
+             property aliases are exposed.
     """
 
     schema_version: int
@@ -258,6 +271,8 @@ class WorkflowConfig:
     alignment_risk_threshold: str
     alignment_allow_recommended_responses: bool
     alignment_protected_scope: RuleSetPolicy
+    quick_changed_paths: QuickChangedPathsPolicy
+    interface: InterfacePolicy
     gates: GatePolicy
     secrets: RuleSetPolicy
     protected_paths: ProtectedPathPolicy
@@ -266,63 +281,11 @@ class WorkflowConfig:
     scope: ScopePolicy
     delivery: DeliveryPolicy
 
-    @property
-    def coverable_roots(self) -> tuple[str, ...]:
-        """@brief Return explicitly configured coverage roots."""
-        return self.coverage.coverable_roots
-
-    @property
-    def coverable_exclude(self) -> tuple[str, ...]:
-        """@brief Return explicitly configured coverage exclusions."""
-        return self.coverage.exclude
-
-    @property
-    def gate_commands(self) -> Mapping[str, tuple[str, ...]]:
-        """
-        @brief      Return gate groups only when gate execution is enforced.
-        @return     Immutable configured gate groups or an empty mapping.
-        @version    1.0.1
-        """
-        if self.gates.mode == "disabled":
-            return MappingProxyType({})
-        return MappingProxyType({"test": self.gates.test, "lint": self.gates.lint})
-
-    @property
-    def secret_patterns(self) -> tuple[str, ...]:
-        """@brief Return explicitly configured secret patterns."""
-        return self.secrets.patterns
-
-    @property
-    def working_tree_blocked_patterns(self) -> tuple[str, ...]:
-        """@brief Return explicitly configured working-tree patterns."""
-        return self.working_tree.blocked_patterns
-
-    @property
-    def write_zones(self) -> Mapping[str, tuple[str, ...]]:
-        """@brief Return explicitly configured stage write zones."""
-        return self.write_access.stages
-
-    @property
-    def alignment_protected_scope_patterns(self) -> tuple[str, ...]:
-        """@brief Return explicitly configured protected alignment patterns."""
-        return self.alignment_protected_scope.patterns
-
-    @property
-    def adoption_behavior_changes_allowed(self) -> bool:
-        """@brief Report whether adoption source changes are unrestricted."""
-        return self.adoption_source_changes.mode == "unrestricted"
-
-    @property
-    def adoption_default_completion_level(self) -> str | None:
-        """@brief Return the enforced baseline threshold, when enabled."""
-        return self.component_baseline_guard.minimum_completion_level
-
-
 # HELPER FUNCTIONS
 
 
 class _Parser:
-    """@brief Deterministic schema-version-2 document parser."""
+    """@brief Deterministic schema-version-3 document parser."""
 
     def __init__(self, repo_root: Path, path: Path, data: dict[str, Any]) -> None:
         self.repo_root = repo_root
@@ -330,7 +293,9 @@ class _Parser:
         self.data = data
 
     def parse(self) -> WorkflowConfig:
-        """@brief Validate the complete document and build its immutable model."""
+        """
+        @brief Validate the complete document and build its immutable model.
+        """
         self._closed(self.data, "", _TOP_LEVEL_KEYS)
         self._schema_version()
 
@@ -457,7 +422,9 @@ class _Parser:
             "alignment.allow_recommended_responses",
         )
         protected_scope = self._alignment_scope(alignment, alignment_enabled)
+        quick_changed_paths = self._quick_changed_paths()
 
+        interface = self._interface_policy()
         gates = self._gate_policy()
         guardrails = self._table(
             self.data,
@@ -508,6 +475,8 @@ class _Parser:
             alignment_risk_threshold=risk_threshold,
             alignment_allow_recommended_responses=recommended_responses,
             alignment_protected_scope=protected_scope,
+            quick_changed_paths=quick_changed_paths,
+            interface=interface,
             gates=gates,
             secrets=secrets,
             protected_paths=protected_paths,
@@ -516,6 +485,47 @@ class _Parser:
             scope=scope,
             delivery=delivery,
         )
+
+    def _quick_changed_paths(self) -> QuickChangedPathsPolicy:
+        """
+        @brief Parse the optional proportional-run changed-path advisory.
+        @return Validated explicit policy, or disabled when the table is absent.
+        """
+        if "quick" not in self.data:
+            return QuickChangedPathsPolicy(
+                mode="disabled",
+                max_paths=DEFAULT_QUICK_CHANGED_PATHS_MAX,
+            )
+        quick = self._table(
+            self.data,
+            "quick",
+            "quick",
+            ("changed_paths",),
+        )
+        changed_paths = self._table(
+            quick,
+            "changed_paths",
+            "quick.changed_paths",
+            ("mode", "max_paths"),
+        )
+        mode = self._choice(
+            changed_paths,
+            "mode",
+            "quick.changed_paths.mode",
+            ("disabled", "advise"),
+        )
+        max_paths = self._integer(
+            changed_paths,
+            "max_paths",
+            "quick.changed_paths.max_paths",
+        )
+        if max_paths <= 0:
+            self._rule_invalid(
+                "quick.changed_paths.max_paths",
+                max_paths,
+                "an integer greater than zero",
+            )
+        return QuickChangedPathsPolicy(mode=mode, max_paths=max_paths)
 
     def _schema_version(self) -> None:
         value = self.data.get("schema_version")
@@ -526,12 +536,16 @@ class _Parser:
                 value,
                 SCHEMA_VERSION,
                 "schema_version is missing, has the wrong type, or is unsupported.",
-                'Set `schema_version = 2` at the top of .agentic/workflow.toml.',
+                'Set `schema_version = 3` at the top of .agentic/workflow.toml. '
+                "AEGIS does not migrate schema-version-2 configurations.",
             )
 
     def _baseline_guard(
         self, components: dict[str, Any], manifest: str
     ) -> BaselineGuardPolicy:
+        """
+        @brief Parse and validate the component baseline-guard policy.
+        """
         table = self._table(
             components,
             "baseline_guard",
@@ -581,9 +595,12 @@ class _Parser:
             )
         try:
             parsed = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, tomllib.TOMLDecodeError):
+        except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
             self._rule_invalid(
-                "components.manifest", manifest, "a valid readable TOML manifest"
+                "components.manifest",
+                manifest,
+                "a valid readable TOML manifest "
+                f"({type(exc).__name__}: {exc})",
             )
         if not isinstance(parsed, dict):
             self._rule_invalid("components.manifest", manifest, "a TOML table document")
@@ -652,22 +669,47 @@ class _Parser:
             )
         return policy
 
-    def _gate_policy(self) -> GatePolicy:
+    def _interface_policy(self) -> InterfacePolicy:
+        """@brief Parse the required file-first workspace interface policy."""
         table = self._table(
-            self.data, "gates", "gates", ("mode", "test", "lint")
+            self.data,
+            "interface",
+            "interface",
+            ("stage_form_retention", "check_execution"),
         )
-        mode = self._choice(table, "mode", "gates.mode", ("disabled", "enforce"))
-        test = self._commands(table, "test", "gates.test")
-        lint = self._commands(table, "lint", "gates.lint")
-        if mode == "disabled" and (test or lint):
-            self._inconsistent(
-                "gates", {"test": list(test), "lint": list(lint)}, "empty command lists"
+        retention = self._choice(
+            table,
+            "stage_form_retention",
+            "interface.stage_form_retention",
+            ("versioned", "latest", "discard"),
+        )
+        execution = self._choice(
+            table,
+            "check_execution",
+            "interface.check_execution",
+            ("external", "managed"),
+        )
+        return InterfacePolicy(retention, execution)
+
+    def _gate_policy(self) -> GatePolicy:
+        """@brief Parse all five independent deterministic gate groups."""
+        table = self._table(self.data, "gates", "gates", GATE_ORDER)
+        groups: dict[str, GateGroupPolicy] = {}
+        for name in GATE_ORDER:
+            key_path = f"gates.{name}"
+            group = self._table(table, name, key_path, ("mode", "commands"))
+            mode = self._choice(
+                group, "mode", f"{key_path}.mode", ("disabled", "enforce")
             )
-        if mode == "enforce" and not (test or lint):
-            self._inconsistent(
-                "gates", {"test": [], "lint": []}, "at least one configured command"
-            )
-        return GatePolicy(mode, test, lint)
+            commands = self._commands(group, "commands", f"{key_path}.commands")
+            if mode == "enforce" and not commands:
+                self._inconsistent(
+                    key_path,
+                    {"mode": mode, "commands": []},
+                    "at least one command when mode is enforce",
+                )
+            groups[name] = GateGroupPolicy(mode, commands)
+        return GatePolicy(**groups)
 
     def _rule_policy(
         self,
@@ -1069,7 +1111,7 @@ class _Parser:
             key_path,
             received,
             expected,
-            f"{key_path or 'workflow.toml'} has the wrong type or is not part of schema 2.",
+            f"{key_path or 'workflow.toml'} has the wrong type or is not part of schema 3.",
             f"Replace {key_path or 'the document'} with {expected}, then run `aegis config validate`.",
         )
 
@@ -1125,11 +1167,8 @@ def load_config(repo_root: Path) -> WorkflowConfig:
     """
     @brief      Load and strictly validate `.agentic/workflow.toml`.
     @param[in]  repo_root Repository root containing `.agentic`.
-    @return     Complete immutable schema-version-2 configuration.
+    @return     Complete immutable schema-version-3 configuration.
     @exception  ConfigurationError If the file is unavailable or invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    1.0.0
     """
     root = repo_root.resolve()
     path = root / CONFIG_RELATIVE_PATH
@@ -1142,7 +1181,7 @@ def load_config(repo_root: Path) -> WorkflowConfig:
             expected="a readable regular .agentic/workflow.toml file",
             message="Required workflow configuration is missing or is not a readable file.",
             remediation=(
-                "Create .agentic/workflow.toml from the complete schema-version-2 template, "
+                "Create .agentic/workflow.toml from the complete schema-version-3 template, "
                 "then run `aegis config validate`."
             ),
         )
@@ -1172,7 +1211,7 @@ def load_config(repo_root: Path) -> WorkflowConfig:
             expected="valid TOML",
             message=".agentic/workflow.toml is not valid TOML.",
             remediation=(
-                "Repair the TOML syntax using the shipped schema-version-2 template, "
+                "Repair the TOML syntax using the shipped schema-version-3 template, "
                 "then run `aegis config validate`."
             ),
         ) from None
@@ -1184,9 +1223,6 @@ def effective_config_dict(config: WorkflowConfig) -> dict[str, object]:
     @brief      Serialize the complete normalized effective configuration.
     @param[in]  config Validated workflow configuration.
     @return     Deterministically ordered JSON-compatible mapping.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
     """
 
     def policy(mode: str, **rules: object) -> dict[str, object]:
@@ -1195,7 +1231,6 @@ def effective_config_dict(config: WorkflowConfig) -> dict[str, object]:
         @param[in]  mode Explicit policy mode.
         @param[in]  rules JSON-compatible rule collections and scalar details.
         @return     Policy mapping with a recursively counted active rule total.
-        @version    0.2.0
         """
         active_count = sum(
             len(value)
@@ -1251,11 +1286,23 @@ def effective_config_dict(config: WorkflowConfig) -> dict[str, object]:
                 patterns=list(config.alignment_protected_scope.patterns),
             ),
         },
-        "gates": policy(
-            config.gates.mode,
-            test=list(config.gates.test),
-            lint=list(config.gates.lint),
-        ),
+        "quick": {
+            "changed_paths": policy(
+                config.quick_changed_paths.mode,
+                max_paths=config.quick_changed_paths.max_paths,
+            ),
+        },
+        "interface": {
+            "stage_form_retention": config.interface.stage_form_retention,
+            "check_execution": config.interface.check_execution,
+        },
+        "gates": {
+            name: policy(
+                getattr(config.gates, name).mode,
+                commands=list(getattr(config.gates, name).commands),
+            )
+            for name in GATE_ORDER
+        },
         "guardrails": {
             "secrets": policy(config.secrets.mode, patterns=list(config.secrets.patterns)),
             "protected_paths": policy(
@@ -1284,9 +1331,6 @@ def configuration_error_json(error: ConfigurationError) -> str:
     @brief      Render one configuration error as deterministic JSON.
     @param[in]  error Typed configuration failure.
     @return     Pretty-printed JSON object with one trailing newline omitted.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     return json.dumps(error.to_dict(), indent=2, ensure_ascii=False)
 

@@ -16,9 +16,9 @@ format. `settings.json` sets `context.fileName` to `["AGENTS.md", "QWEN.md"]` so
 Qwen loads `AGENTS.md` first and treats `QWEN.md` only as the adapter note.
 
 Before repository work, run the project-local `config validate --json` and
-`config show --effective --json` commands. Report write, protected-read/path,
+`config show --json` commands. Report write, protected-read/path,
 scope, secret, gate, coverage, and delivery modes and active rule counts, plus
-the selected worktree run or explicit `--run-id`. AEGIS policy comes only from
+the selected worktree run or explicit `--run`. AEGIS policy comes only from
 the validated file; Qwen trust and host controls remain separate.
 
 ## Contents
@@ -76,7 +76,7 @@ the same write identifiers because it is reused byte-for-byte across adapters.
 
 - **Python runtime.** Hooks use `AEGIS_PYTHON`, the packaged-WAEGIS registered
   runtime, then the first system launcher that actually resolves on `PATH`
-  (`py -3` then `python` on Windows, `python3` then `python` elsewhere) — the
+  (`py -3` then `python` on Windows, `python3` then `python` elsewhere) â€” the
   same ordered list the Codex and Claude Code adapters use. If no interpreter
   can be run, the guard **blocks** with an actionable reason rather than
   allowing the call: the shared hooks always exit 0 and answer on stdout, so

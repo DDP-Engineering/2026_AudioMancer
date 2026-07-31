@@ -20,25 +20,43 @@
          closing a gap where a secret in a staged-but-never-committed file in a
          repository with no `HEAD` yet slipped past both `git diff HEAD` and the
          untracked-file listing.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-24
-@version 0.7.0
+@details INV-10 blocks check and later standard stages unless the authoritative
+         solution design remains approved and digest-stable.
+@details Blocking invariant failures can carry exact run-local waiver metadata
+         while retaining ``holds = false``; structural validation and
+         persistence failures occur outside invariant evaluation.
+@details Quick runs render collapsed requirement, check, and design invariants
+         as an explicit not-applicable state rather than a successful result,
+         without loading storage owned by those absent stages.
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from hashlib import sha256
 import re
 import subprocess
 from pathlib import Path
+from typing import Any, Literal
 
 from .components import audit_local_scope
 from .config import WorkflowConfig
-from .models import Graph
+from .gates import gate_failure_blockers
+from .models import STAGES, Graph, Waiver
 from .paths import contained_relative_path, matches_pattern
+from .requirement_store import RequirementRecord
 from .requirements import load_requirement_index
+from .stage_schema import run_stage_spec
+from .waivers import (
+    Blocker,
+    active_waiver,
+    current_file_digest,
+    red_before_green_blocker,
+    state_digests,
+    waiver_metadata,
+)
 from .working_tree import MAX_SECRET_SCAN_BYTES
 
 # DATA MODELS / TYPEDEFINITIONS
@@ -47,16 +65,73 @@ from .working_tree import MAX_SECRET_SCAN_BYTES
 @dataclass
 class InvariantResult:
     """
-    @brief      Represent InvariantResult data used by the workflow.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
+    @brief      One evaluated (or not-applicable) invariant outcome, including
+                any inherited waiver state.
     """
     id: str
     name: str
-    holds: bool
+    holds: bool | None
     policy: str
     message: str
+    status: Literal["evaluated", "not-applicable"] = field(
+        default="evaluated", repr=False
+    )
+    state_digests: dict[str, str] = field(default_factory=dict, repr=False)
+    waivers: tuple[Waiver, ...] = field(default_factory=tuple, repr=False)
+    waiver_eligible: bool | None = field(default=None, repr=False)
+
+    @property
+    def can_waive(self) -> bool:
+        """
+        @brief Return effective process-waiver eligibility.
+        @return Explicit eligibility, or the legacy blocking-policy default.
+        @details The separate field preserves zero-waiver serialized policy
+                 bytes while allowing legacy INV-7 failures to use the new
+                 process-waiver mechanism.
+        """
+        if self.waiver_eligible is not None:
+            return self.waiver_eligible
+        return self.policy == "blocking"
+
+    @property
+    def effective_policy(self) -> str:
+        """
+        @brief Render a non-contradictory policy for an actively waived result.
+        @return ``blocking`` for an eligible waived legacy result, else policy.
+        """
+        if self.waived and self.can_waive:
+            return "blocking"
+        return self.policy
+
+    @property
+    def waived(self) -> bool:
+        """
+        @brief Return whether exact active waivers neutralize this failure.
+        @return ``True`` only for a failed result covered by waiver records.
+        """
+        return self.holds is False and bool(self.waivers)
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        @brief Serialize the established result shape plus active waiver data.
+        @return JSON-compatible invariant result.
+        @details Ordinary results retain their byte-compatible five-key shape.
+        """
+        payload: dict[str, Any] = {
+            "id": self.id,
+            "name": self.name,
+            "holds": self.holds,
+            "policy": self.effective_policy,
+            "message": self.message,
+        }
+        if self.status == "not-applicable":
+            payload["status"] = self.status
+        if self.waived:
+            payload["waived"] = True
+            payload["waivers"] = [
+                waiver_metadata(waiver) for waiver in self.waivers
+            ]
+        return payload
 
 
 # PUBLIC API
@@ -66,106 +141,279 @@ def evaluate(
     repo_root: Path, graph: Graph, config: WorkflowConfig
 ) -> list[InvariantResult]:
     """
-    @brief      Evaluate workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.3.0
+    @brief      Evaluate all ten AEGIS invariants against the current graph.
+    @param[in]  repo_root Repository root.
+    @param[in]  graph Active workflow graph to evaluate.
+    @param[in]  config Validated workflow configuration.
+    @return     One result per invariant, in fixed INV-1..INV-10 order, with
+                any eligible failure's inherited waiver already attached.
+    @exception  StageOperationError If the graph's kind/profile/stage do not
+                match a declared run-stage schema.
+    @exception  RequirementValidationError If a requirement snapshot is
+                malformed or a requirement ID is duplicated (full runs only).
     """
-    return [
-        _coverage(graph),
-        _citation(graph),
-        _red_before_green(graph),
-        _no_regression(graph),
+    quick = bool(run_stage_spec(graph).bypassed_stages)
+    # Full runs load the requirement index once for the four consumers. Quick
+    # runs do not own requirement collection, so malformed or absent
+    # requirement storage cannot turn their honest N/A results into a crash.
+    requirements = (
+        {}
+        if quick
+        else load_requirement_index(repo_root, config).by_id
+    )
+    results = [
+        (
+            _quick_not_applicable("INV-1", "Coverage")
+            if quick
+            else _coverage(requirements, graph)
+        ),
+        (
+            _quick_not_applicable("INV-2", "Citation")
+            if quick
+            else _citation(requirements, graph)
+        ),
+        (
+            _quick_not_applicable("INV-3", "Red-before-green")
+            if quick
+            else _red_before_green(graph)
+        ),
+        _no_regression(graph, config),
         _in_scope(repo_root, graph, config),
         _evidence(graph),
         _clean_secrets(repo_root, config),
-        _green_requirements_active(repo_root, graph, config),
+        (
+            _quick_not_applicable("INV-8", "Green requirements active")
+            if quick
+            else _green_requirements_active(requirements, graph)
+        ),
         _component_baseline_scope(repo_root, graph, config),
+        (
+            _quick_not_applicable("INV-10", "Solution design")
+            if quick
+            else _solution_design(repo_root, graph, requirements)
+        ),
     ]
+    for result in results:
+        if result.holds is not False or not result.can_waive:
+            continue
+        if not result.state_digests:
+            result.state_digests = state_digests(
+                f"invariant:{result.id}",
+                {"id": result.id, "message": result.message},
+            )
+        if result.waivers:
+            continue
+        waiver = active_waiver(
+            graph,
+            Blocker(result.id, result.message, result.state_digests),
+        )
+        if waiver is not None:
+            result.waivers = (waiver,)
+    return results
 
 
 def blocking_failures(results: list[InvariantResult]) -> list[InvariantResult]:
     """
-    @brief      Collect blocking failures workflow behavior.
-    @param[in]  results Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Select the failed, unwaived results that must block the run.
+    @param[in]  results Invariant results from `evaluate`.
+    @return     Results whose policy is blocking or non-waivable, that failed,
+                and that carry no covering waiver.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
-    return [item for item in results if item.policy in {"blocking", "non-waivable"} and not item.holds]
+    return [
+        item
+        for item in results
+        if item.policy in {"blocking", "non-waivable"}
+        and item.holds is False
+        and not item.waived
+    ]
 
 
 # HELPER FUNCTIONS
 
 
-def _coverage(graph: Graph) -> InvariantResult:
+def _quick_not_applicable(invariant_id: str, name: str) -> InvariantResult:
     """
-    @brief      Handle coverage workflow behavior.
-    @param[in]  graph Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief Render one collapsed quick-run invariant as its own honest state.
+    @param[in] invariant_id Stable invariant identifier.
+    @param[in] name Human-readable invariant name.
+    @return Non-blocking not-applicable result that is neither pass nor fail.
+    """
+    return InvariantResult(
+        invariant_id,
+        name,
+        None,
+        "not-applicable",
+        "Not applicable - quick run.",
+        status="not-applicable",
+    )
+
+
+def _digest_differs(path: Path, expected: str) -> bool:
+    """
+    @brief      Report whether a file is absent, unreadable, or digest-changed.
+    @details    An unreadable file counts as changed so a permission error
+                becomes a failed invariant rather than aborting the whole
+                ``evaluate`` pass.
+    @param[in]  path File whose content digest to compare.
+    @param[in]  expected Expected SHA-256 hex digest.
+    @return     ``True`` when the digest cannot be confirmed to match.
+    """
+    try:
+        return not path.is_file() or sha256(path.read_bytes()).hexdigest() != expected
+    except OSError:
+        return True
+
+
+def _unique_waivers(waivers: list[Waiver]) -> tuple[Waiver, ...]:
+    """
+    @brief De-duplicate inherited waiver records without changing their order.
+    @param[in] waivers Matching waiver records.
+    @return First occurrence of each waiver identity.
+    """
+    seen: set[str] = set()
+    unique: list[Waiver] = []
+    for waiver in waivers:
+        if waiver.id in seen:
+            continue
+        seen.add(waiver.id)
+        unique.append(waiver)
+    return tuple(unique)
+
+
+def _solution_design_state_digests(
+    repo_root: Path,
+    graph: Graph,
+    requirements: dict[str, RequirementRecord],
+) -> dict[str, str]:
+    """
+    @brief Capture current design and cited-requirement content for INV-10.
+    @param[in] repo_root Repository root.
+    @param[in] graph Active graph with the pinned design proposal.
+    @param[in] requirements Current validated requirement records.
+    @return Named current digests, including stable absence/error sentinels.
+    """
+    design = graph.design
+    digests = state_digests(
+        "invariant:INV-10:approval",
+        {
+            "design": (
+                {
+                    "revision": design.revision,
+                    "status": design.status,
+                    "approval": design.approval,
+                    "document_path": design.document_path,
+                    "document_digest": design.document_digest,
+                    "requirement_digests": design.requirement_digests,
+                }
+                if design
+                else None
+            )
+        },
+    )
+    if not design:
+        digests["invariant:INV-10:design-file"] = "missing-design-record"
+        return digests
+    digests[f"file:{design.document_path}"] = current_file_digest(
+        repo_root / design.document_path
+    )
+    for requirement_id in sorted(design.requirement_digests):
+        record = requirements.get(requirement_id)
+        if record is None or record.source_file is None:
+            digests[f"requirement:{requirement_id}"] = "missing"
+            continue
+        source = str(record.source_file)
+        digests[f"requirement:{requirement_id}:{source}"] = current_file_digest(
+            repo_root / source
+        )
+    return digests
+
+
+def _coverage(
+    requirements: dict[str, RequirementRecord],
+    graph: Graph,
+) -> InvariantResult:
+    """
+    @brief      INV-1: every non-Retired requirement must be cited by a check.
+    @param[in]  requirements Pre-loaded requirement records by identity.
+    @param[in]  graph Active workflow graph whose checks are inspected.
+    @return     Pass when no non-Retired requirement is uncited.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
-    accepted = [item for item in graph.spec_items if item.status in {"accepted", "realized"}]
-    covered_ids = {spec for check in graph.checks for spec in check.cites_spec}
-    missing = [item.id for item in accepted if item.id not in covered_ids]
+    covered_ids = {
+        requirement_id
+        for check in graph.checks
+        for requirement_id in check.cites_requirement
+    }
+    missing = [
+        item.id
+        for item in requirements.values()
+        if item.status != "Retired" and item.id not in covered_ids
+    ]
     return InvariantResult(
         "INV-1",
         "Coverage",
         not missing,
         "blocking",
-        "All accepted/realized spec items have checks." if not missing else f"Missing checks for: {', '.join(missing)}",
+        "All non-retired requirements have checks."
+        if not missing
+        else f"Missing checks for: {', '.join(missing)}",
     )
 
 
-def _citation(graph: Graph) -> InvariantResult:
+def _citation(
+    requirements: dict[str, RequirementRecord],
+    graph: Graph,
+) -> InvariantResult:
     """
-    @brief      Handle citation workflow behavior.
-    @param[in]  graph Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      INV-2: every check must cite at least one existing requirement.
+    @param[in]  requirements Pre-loaded requirement records by identity.
+    @param[in]  graph Active workflow graph whose checks are inspected.
+    @return     Pass when every check cites only known requirement IDs.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
-    spec_ids = {item.id for item in graph.spec_items}
+    requirement_ids = set(requirements)
     bad = [
         check.id
         for check in graph.checks
-        if not check.cites_spec or any(spec not in spec_ids for spec in check.cites_spec)
+        if not check.cites_requirement
+        or any(
+            requirement_id not in requirement_ids
+            for requirement_id in check.cites_requirement
+        )
     ]
     return InvariantResult(
         "INV-2",
         "Citation",
         not bad,
         "blocking",
-        "All checks cite existing spec items." if not bad else f"Bad check citations: {', '.join(bad)}",
+        "All checks cite existing requirements."
+        if not bad
+        else f"Bad check citations: {', '.join(bad)}",
     )
 
 
 def _red_before_green(graph: Graph) -> InvariantResult:
     """
-    @brief      Handle red before green workflow behavior.
-    @param[in]  graph Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      INV-3: every green check must have prior recorded red evidence.
+    @param[in]  graph Active workflow graph whose checks are inspected.
+    @return     Pass when no green check lacks red evidence, else fail with
+                any matching per-check waivers already attached.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     missing = [
         check.id
         for check in graph.checks
         if check.state == "green" and not check.red_evidence
+    ]
+    blockers = [
+        red_before_green_blocker(graph, check_id)
+        for check_id in missing
+    ]
+    inherited = [
+        waiver
+        for blocker in blockers
+        if (waiver := active_waiver(graph, blocker)) is not None
     ]
     return InvariantResult(
         "INV-3",
@@ -173,50 +421,113 @@ def _red_before_green(graph: Graph) -> InvariantResult:
         not missing,
         "blocking",
         "Green checks have prior red evidence." if not missing else f"Missing red evidence for: {', '.join(missing)}",
+        state_digests=state_digests(
+            "invariant:INV-3",
+            {
+                "missing": missing,
+                "blocker_states": [
+                    blocker.state_digests for blocker in blockers
+                ],
+            },
+        ),
+        waivers=(
+            _unique_waivers(inherited)
+            if missing and len(inherited) == len(blockers)
+            else ()
+        ),
     )
 
 
-def _no_regression(graph: Graph) -> InvariantResult:
+def _no_regression(
+    graph: Graph,
+    config: WorkflowConfig,
+) -> InvariantResult:
     """
-    @brief      Handle no regression workflow behavior.
-    @param[in]  graph Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      INV-4: no unwaived failing gate/test-run evidence may remain
+                on implementation, validation, or delivery stage evidence.
+    @param[in]  graph Active workflow graph whose evidence is inspected.
+    @param[in]  config Validated gate policy.
+    @return     Pass when no such failure is uncovered by an active waiver.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
-    failed_gates = [
-        item.id
+    failed_evidence = [
+        item
         for item in graph.evidence
         if item.kind in {"gate", "test-run"} and item.stage in {"implementation", "validation", "delivery"} and item.result == "fail"
         and item.status != "superseded"
     ]
+    gate_blockers = {
+        blocker.id: blocker
+        for blocker in gate_failure_blockers(graph, config)
+    }
+    inherited: list[Waiver] = []
+    uncovered = False
+    for item in failed_evidence:
+        blocker = (
+            gate_blockers.get(f"gate:{item.gate_name}")
+            if item.kind == "gate" and item.gate_name
+            else None
+        )
+        waiver = active_waiver(graph, blocker) if blocker else None
+        if waiver is None:
+            uncovered = True
+        else:
+            inherited.append(waiver)
+    failed_gates = [item.id for item in failed_evidence]
     return InvariantResult(
         "INV-4",
         "No regression",
         not failed_gates,
         "blocking",
         "No failing implementation/validation/delivery gate evidence." if not failed_gates else f"Failing gate evidence: {', '.join(failed_gates)}",
+        state_digests=state_digests(
+            "invariant:INV-4",
+            {
+                "failures": sorted(
+                    {
+                        (
+                            item.kind,
+                            item.gate_name or "",
+                            item.check_id or "",
+                            item.command or "",
+                            item.exit_status,
+                            item.failure_kind or "",
+                        )
+                        for item in failed_evidence
+                    },
+                    key=lambda item: (
+                        item[0],
+                        item[1],
+                        item[2],
+                        item[3],
+                        item[4] if item[4] is not None else -1,
+                        item[5],
+                    ),
+                )
+            },
+        ),
+        waivers=(
+            _unique_waivers(inherited)
+            if failed_evidence and not uncovered
+            else ()
+        ),
     )
 
 
-def _green_requirements_active(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantResult:
+def _green_requirements_active(
+    requirements: dict[str, RequirementRecord], graph: Graph
+) -> InvariantResult:
     """
-    @brief      Handle green requirements active workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
-    @param[in]  cfg Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      INV-8: requirements cited by a green check must exist and be
+                Active, not Planned, Retired, or otherwise inactive.
+    @param[in]  requirements Pre-loaded requirement records by identity.
+    @param[in]  graph Active workflow graph whose checks are inspected.
+    @return     Pass when every green-cited requirement exists and is Active.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     cited = sorted({req_id for check in graph.checks if check.state == "green" for req_id in check.cites_requirement})
     if not cited:
         return InvariantResult("INV-8", "Green requirements active", True, "blocking", "No green checks cite durable requirements.")
-    requirements = load_requirement_index(repo_root, cfg).by_id
     missing = [req_id for req_id in cited if req_id not in requirements]
     planned = [
         req_id
@@ -234,6 +545,62 @@ def _green_requirements_active(repo_root: Path, graph: Graph, cfg: WorkflowConfi
     return InvariantResult("INV-8", "Green requirements active", False, "blocking", "; ".join(parts))
 
 
+def _solution_design(
+    repo_root: Path,
+    graph: Graph,
+    requirements: dict[str, RequirementRecord],
+) -> InvariantResult:
+    """
+    @brief      Enforce approved digest-stable solution design from check onward.
+    @param[in]  repo_root Repository root.
+    @param[in]  graph Active workflow graph.
+    @param[in]  requirements Pre-loaded requirement records by identity.
+    @return     INV-10 evaluation result.
+    """
+    if graph.stage not in STAGES or STAGES.index(graph.stage) < STAGES.index("check"):
+        return InvariantResult(
+            "INV-10",
+            "Solution design",
+            True,
+            "blocking",
+            "Solution-design approval is not yet required.",
+        )
+    design = graph.design
+    digest_state = _solution_design_state_digests(
+        repo_root,
+        graph,
+        requirements,
+    )
+    if not design or design.status != "approved" or design.approval != "human":
+        return InvariantResult(
+            "INV-10",
+            "Solution design",
+            False,
+            "blocking",
+            "Check and later stages require explicit human design approval.",
+            state_digests=digest_state,
+        )
+    failures: list[str] = []
+    document = repo_root / design.document_path
+    if _digest_differs(document, design.document_digest):
+        failures.append("design.md digest changed")
+    for requirement_id, digest in design.requirement_digests.items():
+        record = requirements.get(requirement_id)
+        path = repo_root / str(record.source_file) if record else None
+        if record is None or path is None or _digest_differs(path, digest):
+            failures.append(f"{requirement_id} snapshot changed")
+    return InvariantResult(
+        "INV-10",
+        "Solution design",
+        not failures,
+        "blocking",
+        "Approved solution design and cited requirements are digest-stable."
+        if not failures
+        else "; ".join(failures),
+        state_digests=digest_state,
+    )
+
+
 def _component_baseline_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantResult:
     """
     @brief      Verify behavior-changing runs only touch baseline-ready components.
@@ -241,10 +608,7 @@ def _component_baseline_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig
     @param[in]  graph Workflow graph to evaluate.
     @param[in]  cfg Workflow configuration.
     @return     Component baseline scope invariant result.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.2.0
+    @exception  CommandInputError If the component manifest TOML is invalid.
     """
     if cfg.component_baseline_guard.mode == "disabled":
         return InvariantResult(
@@ -281,23 +645,22 @@ def _component_baseline_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig
 
 def _in_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantResult:
     """
-    @brief      Handle in scope workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
-    @param[in]  cfg Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      INV-5: touched paths must fall within configured scope roots.
+    @param[in]  repo_root Repository root.
+    @param[in]  graph Active workflow graph whose change units are inspected.
+    @param[in]  cfg Validated workflow configuration.
+    @return     Pass when every touched path is inside an allowed root;
+                blocking or advisory severity depending on `cfg.scope.mode`.
     @details    A recorded path that escapes the repository root is reported as
                 its own finding instead of raising. Recording is validated at
                 the CLI boundary, but a graph written before that validation —
                 or edited by hand — must still be evaluable: an exception here
-                propagates out of `evaluate` and takes `status`, `invariants`,
-                `report`, and `delivery-preflight` down with it, leaving the run
-                unusable until the graph is repaired by hand. An escaping path
+                propagates out of `evaluate` and takes `run status`,
+                `verify invariants`, `delivery report`, and the outward-action
+                guard down with it, leaving the run unusable until the graph is
+                repaired by hand. An escaping path
                 is never inside a configured root, so it fails the invariant.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-23
-    @version    0.3.0
     """
     severity = "blocking" if cfg.scope.mode == "enforce" else "advisory"
     if cfg.scope.mode == "unrestricted":
@@ -337,13 +700,10 @@ def _in_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantRe
 
 def _evidence(graph: Graph) -> InvariantResult:
     """
-    @brief      Handle evidence workflow behavior.
-    @param[in]  graph Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      INV-6: the run must have at least one recorded evidence item.
+    @param[in]  graph Active workflow graph whose evidence is inspected.
+    @return     Pass when `graph.evidence` is non-empty.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     has_evidence = bool(graph.evidence)
     return InvariantResult(
@@ -357,10 +717,11 @@ def _evidence(graph: Graph) -> InvariantResult:
 
 def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
     """
-    @brief      Handle clean secrets workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  cfg Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      INV-7: no configured secret pattern may match pending changes.
+    @param[in]  repo_root Repository root.
+    @param[in]  cfg Validated workflow configuration.
+    @return     Pass when no configured secret pattern matches; a git-access
+                failure while scanning is reported as a fail, not raised.
     @details    Scans `git diff HEAD` (staged and unstaged changes against the
                 last commit) plus the content of untracked files, not just the
                 unstaged working-tree diff: a secret dropped into a newly
@@ -374,9 +735,6 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
                 covers exactly that gap and is a harmless superset of `git diff
                 HEAD` once a `HEAD` exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.4.0
     """
     if cfg.secrets.mode == "disabled":
         return InvariantResult(
@@ -385,10 +743,18 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
             True,
             "non-waivable",
             "Secret scanning is disabled by workflow.toml.",
+            waiver_eligible=True,
         )
-    patterns = cfg.secret_patterns
+    patterns = cfg.secrets.patterns
     if not patterns:
-        return InvariantResult("INV-7", "Clean secrets", True, "non-waivable", "No secret patterns configured.")
+        return InvariantResult(
+            "INV-7",
+            "Clean secrets",
+            True,
+            "non-waivable",
+            "No secret patterns configured.",
+            waiver_eligible=True,
+        )
     try:
         text = (
             _tracked_changes_text(repo_root)
@@ -398,30 +764,48 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
             + _untracked_files_text(repo_root)
         )
     except (OSError, subprocess.TimeoutExpired):
-        return InvariantResult("INV-7", "Clean secrets", False, "non-waivable", "Could not inspect git diff for secrets.")
+        return InvariantResult(
+            "INV-7",
+            "Clean secrets",
+            False,
+            "non-waivable",
+            "Could not inspect git diff for secrets.",
+            waiver_eligible=True,
+        )
     matches = []
+    matched_sites: dict[str, list[str]] = {}
     for pattern in patterns:
-        if re.search(pattern, text):
+        found = sorted(item.group(0) for item in re.finditer(pattern, text))
+        if found:
             matches.append(pattern)
-    return InvariantResult(
+            matched_sites[pattern] = found
+    result = InvariantResult(
         "INV-7",
         "Clean secrets",
         not matches,
         "non-waivable",
         "No configured secret pattern found in diff or untracked files." if not matches else f"Secret pattern matched: {', '.join(matches)}",
+        waiver_eligible=True,
     )
+    if matches:
+        # Pin any waiver to the exact matched secret values, not just the
+        # message text: a NEW secret matching an already-waived pattern must
+        # stale the waiver rather than ride it silently, while unrelated
+        # working-tree churn leaves an accepted waiver active.
+        result.state_digests = state_digests(
+            "invariant:INV-7",
+            {"id": "INV-7", "matched_sites": matched_sites},
+        )
+    return result
 
 
 def _tracked_changes_text(repo_root: Path) -> str:
     """
     @brief      Return staged and unstaged changes against HEAD as diff text.
-    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  repo_root Repository the diff is read for.
     @return     Combined `git diff HEAD` text.
     @exception  OSError Raised when Git cannot be invoked.
     @exception  subprocess.TimeoutExpired Raised when Git does not finish in time.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.1.0
     """
     return subprocess.run(
         ["git", "diff", "--no-ext-diff", "HEAD"],
@@ -447,9 +831,6 @@ def _staged_changes_text(repo_root: Path) -> str:
                 but never wrong.
     @exception  OSError Raised when Git cannot be invoked.
     @exception  subprocess.TimeoutExpired Raised when Git does not finish in time.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     return subprocess.run(
         ["git", "diff", "--no-ext-diff", "--cached"],
@@ -466,7 +847,7 @@ def _staged_changes_text(repo_root: Path) -> str:
 def _untracked_files_text(repo_root: Path) -> str:
     """
     @brief      Return the concatenated content of untracked, non-ignored files.
-    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  repo_root Repository the untracked-file listing is read for.
     @return     Concatenated file content, best-effort.
     @details    A brand-new file has no HEAD to diff against, so its content
                 would never appear in `git diff HEAD`; this reads it directly.
@@ -474,9 +855,6 @@ def _untracked_files_text(repo_root: Path) -> str:
                 than read in full.
     @exception  OSError Raised when Git cannot be invoked.
     @exception  subprocess.TimeoutExpired Raised when Git does not finish in time.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.1.0
     """
     listing = subprocess.run(
         ["git", "ls-files", "--others", "--exclude-standard"],
@@ -501,13 +879,11 @@ def _untracked_files_text(repo_root: Path) -> str:
 
 def _root_patterns(roots: list[str]) -> list[str]:
     """
-    @brief      Handle root patterns workflow behavior.
-    @param[in]  roots Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Expand configured scope roots into glob patterns.
+    @param[in]  roots Repository-relative roots or glob patterns.
+    @return     One pattern per root: unchanged if already a glob, else
+                suffixed with `/**` to match the whole subtree.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     patterns = []
     for root in roots:

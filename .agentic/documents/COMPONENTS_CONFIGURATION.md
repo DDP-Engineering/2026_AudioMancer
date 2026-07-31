@@ -38,8 +38,8 @@ Commands that read the manifest include:
 - `<workflow> adoption component-status`
 - `<workflow> adoption scope-check <path>`
 - `<workflow> adoption baseline`
-- `<workflow> invariants`
-- `<workflow> delivery-preflight`
+- `<workflow> verify invariants`
+- `<workflow> verify working-tree`
 
 ## File Shape
 

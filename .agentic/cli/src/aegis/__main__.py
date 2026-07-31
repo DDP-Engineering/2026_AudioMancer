@@ -10,9 +10,6 @@
 @file __main__.py
 @brief Module entry point for the agentic workflow CLI.
 @details Mirrors the packaged CLI implementation shipped into generated projects.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.1.0
 """
 
 # IMPORTS

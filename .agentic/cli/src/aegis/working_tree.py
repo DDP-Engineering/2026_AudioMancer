@@ -18,9 +18,6 @@
 @details `_git_status` (0.5.0, code-review follow-up) only splits an entry on
          `" -> "` when the status code marks a rename or copy (`R`/`C`), so a
          file whose own name contains that sequence is no longer misparsed.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-24
-@version 0.5.0
 """
 
 # IMPORTS
@@ -48,21 +45,22 @@ def audit_working_tree(
     graph: Any | None = None,
 ) -> dict[str, Any]:
     """
-    @brief      Audit working tree workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  config Input value used by the workflow helper.
+    @brief      Audit the working tree against protected/blocked/secret path
+                policy and adoption source-change restrictions.
+    @param[in]  repo_root Repository root whose Git working tree is audited.
+    @param[in]  config Validated workflow configuration providing protected-
+                path, working-tree, secrets, and adoption-source policy.
     @param[in]  graph Active workflow graph when delivery preflight needs
                 run-kind-specific checks.
-    @return     Result produced by the workflow helper.
+    @return     Dict with `entries` (raw Git status entries), `untracked`
+                (entries with `??` status), and `blocking_findings` (list of
+                code/path/message records).
     @details    An unreadable working tree is a blocking finding, not a pass
                 (0.4.0). The audit's whole job is to prove nothing blocking is
                 present, and it cannot prove that from a status it never got —
                 so a Git that failed or is missing has to fail closed, the same
                 way an unavailable guard hook blocks rather than allows.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-23
-    @version    0.4.0
     """
     entries, status_error = _git_status(repo_root)
     findings = []
@@ -93,9 +91,9 @@ def audit_working_tree(
             and _matches_any(path, config.protected_paths.patterns)
         ):
             findings.append(_finding("protected-path", path, "Protected path is present in the working tree."))
-        if _matches_any(path, config.working_tree_blocked_patterns):
+        if _matches_any(path, config.working_tree.blocked_patterns):
             findings.append(_finding("blocked-pattern", path, "Path matches a configured working-tree blocker."))
-        secret = _secret_match(repo_root / path, config.secret_patterns)
+        secret = _secret_match(repo_root / path, config.secrets.patterns)
         if secret:
             findings.append(_finding("secret-pattern", path, f"Configured secret pattern matched: {secret}"))
     return {
@@ -125,9 +123,6 @@ def _git_status(repo_root: Path) -> tuple[list[dict[str, str]], str | None]:
                 an answer, so both come back as an error for the caller to turn
                 into a blocking finding.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-23
-    @version    0.2.0
     """
     try:
         result = subprocess.run(
@@ -178,17 +173,15 @@ _GIT_QUOTE_ESCAPES = {"\\": "\\", '"': '"', "n": "\n", "t": "\t", "a": "\a", "b"
 def _unquote_git_path(path: str) -> str:
     """
     @brief      Undo Git's C-style quoting of a porcelain status path.
-    @param[in]  path Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @param[in]  path Git porcelain status path field, possibly C-style-quoted.
+    @return     Path with Git's quoting and escape sequences resolved back to
+                raw text.
     @details    `-c core.quotepath=false` (set on the `git status` call above)
                 covers the common non-ASCII-filename case, but Git still
                 quotes paths containing a literal double quote or backslash
                 regardless of that setting, so this remains a second,
                 defense-in-depth layer for those remaining cases.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.1.0
     """
     if len(path) < 2 or path[0] != '"' or path[-1] != '"':
         return path
@@ -217,14 +210,12 @@ def _unquote_git_path(path: str) -> str:
 
 def _secret_match(path: Path, patterns: list[str]) -> str | None:
     """
-    @brief      Handle secret match workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  patterns Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Scan a file's content for a configured secret pattern.
+    @param[in]  path Filesystem path of the changed file to scan.
+    @param[in]  patterns Configured secret-detection regex patterns.
+    @return     The first pattern that matched the file's content, or `None`
+                when the file is unreadable, too large, or has no match.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     if not patterns or not path.exists() or not path.is_file():
         return None
@@ -242,29 +233,23 @@ def _secret_match(path: Path, patterns: list[str]) -> str | None:
 
 def _finding(code: str, path: str, message: str) -> dict[str, str]:
     """
-    @brief      Handle finding workflow behavior.
-    @param[in]  code Input value used by the workflow helper.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  message Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Build one blocking-finding record.
+    @param[in]  code Short machine-readable finding identifier.
+    @param[in]  path Repository-relative path the finding applies to.
+    @param[in]  message Human-readable explanation of the finding.
+    @return     The `code`/`path`/`message` finding record.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return {"code": code, "path": path, "message": message}
 
 
 def _matches_any(path: str, patterns: list[str]) -> bool:
     """
-    @brief      Match matches any workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  patterns Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Check whether a path matches any of the given glob patterns.
+    @param[in]  path Repo-relative path to test.
+    @param[in]  patterns Glob patterns to test against.
+    @return     True when at least one pattern matches the path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return any(matches_pattern(path, pattern) for pattern in patterns)
 
@@ -277,13 +262,10 @@ def _is_blocked_adoption_source_change(path: str, config: WorkflowConfig, graph:
     @param[in]  graph Active workflow graph when available.
     @return     True when an adoption run touches application source.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     if graph is None or getattr(getattr(graph, "intent", None), "kind", None) != "adoption":
         return False
-    if config.adoption_behavior_changes_allowed:
+    if config.adoption_source_changes.mode == "unrestricted":
         return False
     normalized = path.replace("\\", "/").strip("/")
     return any(_path_is_under_root(normalized, root) for root in config.source_roots)
@@ -295,9 +277,6 @@ def _entry_paths(entry: dict[str, str]) -> list[str]:
     @param[in]  entry Git status entry.
     @return     Paths that should be checked for policy findings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     paths = [entry["path"]]
     previous_path = entry.get("previous_path")
@@ -313,9 +292,6 @@ def _path_is_under_root(path: str, root: str) -> bool:
     @param[in]  root Repository-relative root.
     @return     True when the path belongs to the root tree.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-22
-    @version    0.1.0
     """
     normalized_root = root.replace("\\", "/").strip("/")
     return path == normalized_root or path.startswith(f"{normalized_root}/")

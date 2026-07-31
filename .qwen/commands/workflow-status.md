@@ -13,17 +13,17 @@ First validate and inspect repository policy:
 
 ```powershell
 node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py config validate --json
-node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py config show --effective --json
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py config show --json
 ```
 
 Report all effective restriction modes and active rule counts. Then run the
 project-local workflow status command and summarize the selected run:
 
 ```powershell
-node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py status
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py run status
 ```
 
-If the operator supplies an existing run ID, append `--run-id <id>` instead of
+If the operator supplies an existing run ID, append `--run <id>` instead of
 using the worktree pointer. Report the selection source, current stage,
-invariant status, and clear next prompt options. Distinguish AEGIS policy from
+readiness blockers, evidence, and exact next command. Distinguish AEGIS policy from
 Qwen host safety.

@@ -10,15 +10,12 @@
 @file __init__.py
 @brief Package marker for the agentic workflow module.
 @details Mirrors the packaged CLI implementation shipped into generated projects.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.1.0
 """
 
 # IMPORTS
 
 # CONSTANTS
 
-__version__ = "1.4.1"
+__version__ = "2.1.0"
 
 # END OF FILE

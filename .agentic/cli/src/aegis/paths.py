@@ -19,9 +19,6 @@
          code-review follow-up): no production caller used it, and every policy
          consumer composes ``relative_to_root``/``contained_relative_path`` with
          ``matches_pattern`` directly.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-24
-@version 0.5.0
 """
 
 # IMPORTS
@@ -38,14 +35,12 @@ from pathlib import Path
 
 def relative_to_root(path: str | Path, root: Path) -> str:
     """
-    @brief      Handle relative to root workflow behavior.
-    @param[in]  path Input value used by the workflow helper.
-    @param[in]  root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief      Return the repo-relative POSIX form of a path, refusing any
+                candidate that resolves outside the workspace root.
+    @param[in]  path Repository-relative or absolute candidate path.
+    @param[in]  root Workspace root the candidate must resolve inside.
+    @return     Normalized POSIX repo-relative path.
+    @exception  ValueError If the resolved candidate escapes ``root``.
     """
     candidate = Path(path)
     if not candidate.is_absolute():
@@ -72,9 +67,6 @@ def contained_relative_path(path: str | Path, root: Path) -> str | None:
                 an operator error worth refusing immediately, and this function
                 when classifying data already on disk.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-23
-    @version    0.1.0
     """
     try:
         return relative_to_root(path, root)
@@ -106,9 +98,6 @@ def matches_pattern(path: str, pattern: str) -> bool:
                 its own, so this function's own ``os.name`` check is the
                 only source of case-folding.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-18
-    @version    0.3.0
     """
     normalized_path = path.replace("\\", "/")
     normalized_pattern = pattern.replace("\\", "/").rstrip("/")

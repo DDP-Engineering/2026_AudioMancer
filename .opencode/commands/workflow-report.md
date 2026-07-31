@@ -14,10 +14,10 @@ Validate and inspect policy first, reporting all effective restriction modes
 and active rule counts. Then run the project-local workflow report command:
 
 ```powershell
-node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py report
+node .agentic/tools/run_hook.mjs .agentic/tools/run_aegis.py delivery report
 ```
 
-If the operator supplies an existing run ID, append `--run-id <id>`. Report
+If the operator supplies an existing run ID, append `--run <id>`. Report
 whether selection was explicit or worktree-local and distinguish AEGIS policy
 from OpenCode host safety.
 

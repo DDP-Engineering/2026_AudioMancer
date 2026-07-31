@@ -125,12 +125,12 @@ payloads, and worked acceptance examples the behavior depends on.
 
 Every non-Retired requirement (`Planned` or `Active`) needs resolvable exact
 test selectors or an explicit `Manual: <method>` / `Inspection: <method>`
-verification; the traceability audit reports any that have neither and delivery
-preflight blocks on it. Retired requirements are exempt. Current snapshots do
-not contain revision history, parent IDs, supersession chains, or previous
-wording.
+verification. `aegis verify traceability` reports missing links and validation
+closure blocks until linked checks and evidence are green. Retired requirements
+are exempt.
 
-Use requirement create/show/list/update/activate commands instead of inventing
-IDs or editing a shared index. Traceability, coverage, and impact read these
-files directly and build reverse mappings only in memory. Concurrent changes
-to the same TOML file are a semantic conflict that must be reconciled.
+Create or revise requirements only through requirement-stage forms. Use
+`aegis stage add` for another item and `aegis stage apply` for atomic
+publication; AEGIS creates each durable ID and companion spec. The public
+`aegis requirement list/show` commands are read-only. Successful validation
+closure activates eligible Planned snapshots automatically.

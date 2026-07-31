@@ -1,28 +1,12 @@
-<!--
-Copyright (c) 2026 DDP Engineering
-This software is licensed under the PolyForm Noncommercial License 1.0.0.
-Commercial use requires a separate commercial license.
-See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
--->
+<!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 
 # Stage: Intake
 
-Load this module only while in the `intake` stage.
+Run `<workflow> run start <feature|fix|change>` when no run exists, or
+`<workflow> run resume`. Open the generated intake form and capture the
+statement, scope hints, access mode, summary, and unresolved questions.
 
-- Classify the request as `feature`, `fix`, or `change`.
-- Run `<workflow> start --kind <kind> --statement "<request>"` if no active run
-  exists.
-- For automation that must pin an existing run, pass `--run-id <existing-run-id>`
-  to each graph-dependent command. Never copy
-  `.agentic/.workspace/state/current_run` between worktrees or stage
-  `.agentic/.workspace/`.
-- Run `<workflow> audit traceability` and `<workflow> audit coverage` to
-  understand existing traceability debt.
-- Run `<workflow> impact <planned-files>` when likely files are known; otherwise
-  inspect likely source areas and run impact after files are touched.
-- Inspect configured source/test/spec roots.
-- Ask clarification questions when behavior, scope, or acceptance criteria are
-  ambiguous.
-- Run `<workflow> next` to enter `alignment` when alignment is enabled by
-  `.agentic/workflow.toml`.
-- Stop after the intent is clear.
+Use `<workflow> verify traceability`, `verify coverage`, or `verify impact
+[paths-file]` only when early inspection will clarify existing debt or likely
+scope. Apply the form atomically, review the imported intent, and ask the human
+to close the stage.

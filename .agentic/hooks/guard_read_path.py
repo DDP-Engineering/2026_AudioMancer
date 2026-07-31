@@ -9,7 +9,7 @@
 """
 @file guard_read_path.py
 @brief Pre-tool hook enforcing configured protected-read policy.
-@details Loads the canonical schema-version-2 workflow model and applies only
+@details Loads the canonical schema-version-3 workflow model and applies only
          ``guardrails.protected_paths`` patterns configured for ``read``.
          The hook contains no native repository denylist or fallback policy.
 @details Covers the search and listing tools as well as the single-file read

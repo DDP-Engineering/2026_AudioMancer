@@ -11,7 +11,7 @@ build-backend = "setuptools.build_meta"
 # Project metadata for the optional local install under `.agentic/.venv`.
 [project]
 name = "aegis"
-version = "1.4.1"
+version = "2.1.0"
 description = "Agentic Engineering Governance & Integrity System"
 requires-python = ">=3.11"
 dependencies = []

@@ -14,9 +14,9 @@ source for gate order, requirements, documentation rules, safety rules, and stop
 format.
 
 Before repository work, run the project-local `config validate --json` and
-`config show --effective --json` commands. Report write, protected-read/path,
+`config show --json` commands. Report write, protected-read/path,
 scope, secret, gate, coverage, and delivery modes and active rule counts, plus
-the selected worktree run or explicit `--run-id`. AEGIS policy comes only from
+the selected worktree run or explicit `--run`. AEGIS policy comes only from
 the validated file; Codex trust and host approvals remain separate.
 
 ## Contents
@@ -70,7 +70,7 @@ failure, and `tests/test_scaffold.py` blocks the mistake at the source.
 
 - **Python runtime.** Hooks use `AEGIS_PYTHON`, the packaged-WAEGIS registered
   runtime, then the first system launcher that actually resolves on `PATH`
-  (`py -3` then `python` on Windows, `python3` then `python` elsewhere) — the
+  (`py -3` then `python` on Windows, `python3` then `python` elsewhere) â€” the
   same ordered list the Claude Code and Qwen Code adapters use. If no
   interpreter can be run, the guard **blocks** with an actionable reason rather
   than allowing the call.
@@ -81,14 +81,14 @@ failure, and `tests/test_scaffold.py` blocks the mistake at the source.
   [`../.agentic/hooks/README.md`](../.agentic/hooks/README.md).
 - **Project trust.** Codex loads project-local config, hooks, and exec policies
   only for a trusted project. Until the project is trusted, `.codex/` is skipped
-  entirely and no guard is registered — while skills still load, so the session
+  entirely and no guard is registered â€” while skills still load, so the session
   looks healthy. Trust the project when Codex prompts, or add it under
   `[projects]` in the Codex home `config.toml`.
 - **Hook review.** In a trusted project a newly seen hook is registered but does
   not run until it is reviewed in the `/hooks` panel, which reports
   `N hooks need review before they can run.` Hook trust is keyed to this file's
-  content hash, so any change to `hooks.json` — including an AEGIS payload
-  upgrade — returns the hooks to `review required` and stops them running until
+  content hash, so any change to `hooks.json` â€” including an AEGIS payload
+  upgrade â€” returns the hooks to `review required` and stops them running until
   re-reviewed.
 - **Launch directory.** Start Codex from the repository root, the directory
   holding `.agentic/`. Started in a subdirectory, the project configuration is
@@ -106,7 +106,7 @@ load together:
 codex
 ```
 
-Then confirm the guards are actually live — the four gates above all fail open,
+Then confirm the guards are actually live â€” the four gates above all fail open,
 so a disabled session is indistinguishable from a healthy one until something
 is checked. Open `/hooks` and verify the AEGIS entries are listed and trusted,
 then ask the agent to read a path covered by an enforced

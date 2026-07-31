@@ -33,24 +33,48 @@
          graph has been saved successfully.
 @details ``resolve_run_id`` and ``load_graph`` (0.1.0) implement the strict
          explicit-first active-run contract with typed, actionable failures.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.6.0
+@details Graph mutations now reload under a repository/run-scoped OS lock,
+         reject stale direct saves, publish through atomic sibling replacement,
+         and serialize crash-safe journal replacement.
+@details Human-approved blocker waivers are minted and journaled inside the
+         same serialized graph-mutation boundary as other durable run state.
 """
 
 # IMPORTS
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from functools import wraps
+from hashlib import sha256
 import json
-import os
+import os  # noqa: F401 - retained for the established fault-injection seam
 from pathlib import Path
 import re
+from typing import Any, Callable, Concatenate, Iterator, ParamSpec, TypeVar
 from uuid import uuid4
 
-from .models import ADOPTION_STAGES, AccessMode, Evidence, Graph, Intent, RunKind, Stage, now_iso
+from .models import (
+    AccessMode,
+    Evidence,
+    Graph,
+    Intent,
+    RunKind,
+    RunProfile,
+    Stage,
+    Waiver,
+    now_iso,
+)
+from .stage_schema import RUN_STAGE_SCHEMAS, StageOperationError, run_stage_spec
+from .persistence import (
+    PersistenceError,
+    atomic_write_bytes,
+    atomic_write_text,
+    locked,
+    scoped_lock_path,
+)
 
 # CONSTANTS
 
@@ -66,6 +90,8 @@ RUN_ID_PATTERN = re.compile(
     r"(?P<timestamp>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6}Z)-"
     r"[0-9a-f]{8}$"
 )
+_GRAPH_PARAMETERS = ParamSpec("_GRAPH_PARAMETERS")
+_GRAPH_RESULT = TypeVar("_GRAPH_RESULT")
 
 # DATA MODELS / TYPEDEFINITIONS
 
@@ -79,9 +105,6 @@ class RunResolutionError(Exception):
     @param[in]  run_id Valid-shaped candidate run ID, when available.
     @param[in]  message Human-readable failure description.
     @param[in]  remediation Concrete corrective action for an agent.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
     """
 
     code: str
@@ -94,9 +117,6 @@ class RunResolutionError(Exception):
         """
         @brief      Render the stable text error contract.
         @return     Error code, message, and remediation.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-22
-        @version    0.1.0
         """
         return f"{self.code}: {self.message}\n{self.remediation}"
 
@@ -104,9 +124,6 @@ class RunResolutionError(Exception):
         """
         @brief      Serialize the stable run-resolution fields.
         @return     JSON-compatible error mapping.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-22
-        @version    0.1.0
         """
         return {
             "code": self.code,
@@ -115,6 +132,25 @@ class RunResolutionError(Exception):
             "message": self.message,
             "remediation": self.remediation,
         }
+
+
+class GraphConflictError(PersistenceError):
+    """
+    @brief Reject a stale in-memory graph before it can overwrite newer state.
+    """
+
+    code = "GRAPH-STALE-UPDATE"
+
+    def __init__(self, run_id: str) -> None:
+        """
+        @brief Initialize an actionable stale-graph conflict.
+        @param[in] run_id Conflicting run identity.
+        """
+        self.run_id = run_id
+        super().__init__(
+            f"{self.code}: graph {run_id} changed after it was loaded. "
+            "Reload the run and retry the operation."
+        )
 
 # PUBLIC API
 
@@ -136,9 +172,6 @@ def repo_root_from(path: Path | None = None) -> Path:
     @exception  SystemExit Raised by the safety-net guard when the resolved
                 root is itself named ``.agentic`` or nested inside one (only
                 reachable for paths that do not exist on disk).
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.3.0
     """
     candidate = (path or Path.cwd()).resolve()
     root = _discover_root(candidate)
@@ -161,9 +194,6 @@ def _discover_root(candidate: Path) -> Path:
                 file. With no marker anywhere upward the candidate itself is
                 returned, preserving the greenfield ``start`` behavior.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.1.0
     """
     directories = (candidate, *candidate.parents)
     for directory in directories:
@@ -190,9 +220,6 @@ def _reject_nested_agentic_root(root: Path) -> None:
                 ``.agentic/.agentic/...`` layer.
     @exception  SystemExit Raised when ``root`` matches or contains an
                 ``.agentic`` path segment.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.2.0
     """
     if root.name == AGENTIC_DIR or AGENTIC_DIR in root.parts:
         raise SystemExit(
@@ -204,26 +231,20 @@ def _reject_nested_agentic_root(root: Path) -> None:
 
 def agentic_root(repo_root: Path) -> Path:
     """
-    @brief      Resolve agentic root workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Return the repository's `.agentic` directory path.
+    @param[in]  repo_root Repository root.
+    @return     `.agentic` path; not created by this call.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return repo_root / AGENTIC_DIR
 
 
 def runs_root(repo_root: Path) -> Path:
     """
-    @brief      Handle runs root workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Return the `.agentic/runs` directory path.
+    @param[in]  repo_root Repository root.
+    @return     `.agentic/runs` path; not created by this call.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return agentic_root(repo_root) / RUNS_DIR
 
@@ -233,9 +254,6 @@ def workspace_root(repo_root: Path) -> Path:
     @brief      Return the ignored, worktree-local AEGIS workspace root.
     @param[in]  repo_root Repository root.
     @return     `.agentic/.workspace` path without creating it.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     return agentic_root(repo_root) / WORKSPACE_DIR
 
@@ -245,9 +263,6 @@ def workspace_state_root(repo_root: Path) -> Path:
     @brief      Return the worktree-local state directory.
     @param[in]  repo_root Repository root.
     @return     `.agentic/.workspace/state` path without creating it.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     return workspace_root(repo_root) / WORKSPACE_STATE_DIR
 
@@ -258,64 +273,49 @@ def current_run_path(repo_root: Path) -> Path:
     @param[in]  repo_root Repository root.
     @return     `.agentic/.workspace/state/current_run` path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
     """
     return workspace_state_root(repo_root) / CURRENT_RUN
 
 
 def new_run_id(kind: str) -> str:
     """
-    @brief      Create new run id workflow behavior.
-    @param[in]  kind Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Generate a new run ID as `<kind>-<UTC-timestamp>-<8-hex-suffix>`.
+    @param[in]  kind Run kind prefix (feature/fix/change/adoption).
+    @return     New run ID matching `RUN_ID_PATTERN`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return f"{kind}-{now_iso().replace(':', '').replace('+0000', 'Z')}-{uuid4().hex[:8]}"
 
 
 def run_dir(repo_root: Path, run_id: str) -> Path:
     """
-    @brief      Run dir workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  run_id Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Return one run's directory path.
+    @param[in]  repo_root Repository root.
+    @param[in]  run_id Run identity.
+    @return     `.agentic/runs/<run_id>` path; not created by this call.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return runs_root(repo_root) / run_id
 
 
 def graph_path(repo_root: Path, run_id: str) -> Path:
     """
-    @brief      Resolve graph path workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  run_id Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Return one run's `graph.json` path.
+    @param[in]  repo_root Repository root.
+    @param[in]  run_id Run identity.
+    @return     `.agentic/runs/<run_id>/graph.json` path; not created by this call.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return run_dir(repo_root, run_id) / GRAPH_FILE
 
 
 def journal_path(repo_root: Path, run_id: str) -> Path:
     """
-    @brief      Resolve journal path workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  run_id Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
+    @brief      Return one run's `journal.jsonl` path.
+    @param[in]  repo_root Repository root.
+    @param[in]  run_id Run identity.
+    @return     `.agentic/runs/<run_id>/journal.jsonl` path; not created by this call.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     return run_dir(repo_root, run_id) / JOURNAL_FILE
 
@@ -328,24 +328,10 @@ def write_current_run(repo_root: Path, run_id: str) -> None:
     @return     None.
     @exception  RunResolutionError If `run_id` is malformed.
     @exception  OSError If the state directory or pointer cannot be written.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
     """
     if not _is_valid_run_id(run_id):
         raise _explicit_run_error(None, received=run_id)
-    state_root = workspace_state_root(repo_root)
-    state_root.mkdir(parents=True, exist_ok=True)
-    destination = current_run_path(repo_root)
-    temporary = destination.with_name(f".{CURRENT_RUN}.{uuid4().hex}.tmp")
-    try:
-        with temporary.open("xb") as handle:
-            handle.write(f"{run_id}\n".encode("utf-8"))
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, destination)
-    finally:
-        temporary.unlink(missing_ok=True)
+    atomic_write_text(current_run_path(repo_root), f"{run_id}\n")
 
 
 def resolve_run_id(repo_root: Path, explicit_run_id: str | None = None) -> str:
@@ -357,9 +343,8 @@ def resolve_run_id(repo_root: Path, explicit_run_id: str | None = None) -> str:
     @return     Validated run ID whose graph is readable and internally
                 consistent.
     @exception  RunResolutionError If the selection or graph is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
+    @exception  StageOperationError If the loaded graph's kind/profile/stage
+                state conflicts with its lifecycle schema.
     """
     if explicit_run_id is not None:
         if not _is_valid_run_id(explicit_run_id):
@@ -376,8 +361,8 @@ def resolve_run_id(repo_root: Path, explicit_run_id: str | None = None) -> str:
             run_id=None,
             message="No active AEGIS run is selected for this worktree.",
             remediation=(
-                "Start one with `aegis start ...` or rerun this command with "
-                "`--run-id <existing-run-id>`.\n"
+                "Start one with `aegis run start <kind>` or rerun this command "
+                "with `--run <existing-run-id>`.\n"
                 f"Expected pointer: {pointer_relative}"
             ),
         )
@@ -402,9 +387,6 @@ def _pointer_relative_path() -> str:
     """
     @brief      Return the stable repository-relative pointer path.
     @return     POSIX-form pointer path used in errors and JSON.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     return f"{AGENTIC_DIR}/{WORKSPACE_DIR}/{WORKSPACE_STATE_DIR}/{CURRENT_RUN}"
 
@@ -414,9 +396,6 @@ def _is_valid_run_id(run_id: str) -> bool:
     @brief      Validate the lexical and real-UTC run-ID contract.
     @param[in]  run_id Candidate run ID.
     @return     `True` only for a canonical supported run ID.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     match = RUN_ID_PATTERN.fullmatch(run_id)
     if match is None:
@@ -432,9 +411,6 @@ def _invalid_pointer_error() -> RunResolutionError:
     """
     @brief      Build the stable malformed-pointer error.
     @return     `RUN-POINTER-INVALID` error.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     pointer_relative = _pointer_relative_path()
     return RunResolutionError(
@@ -460,9 +436,6 @@ def _explicit_run_error(
     @param[in]  received Original malformed value, when no valid candidate is
                 available for the serialized `run_id` field.
     @return     `RUN-ID-NOT-FOUND` error.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
     """
     display = run_id if run_id is not None else (received or "<invalid-run-id>")
     return RunResolutionError(
@@ -485,9 +458,6 @@ def _stale_pointer_error(run_id: str) -> RunResolutionError:
     @brief      Build the stable stale-pointer error.
     @param[in]  run_id Valid-shaped workspace selection.
     @return     `RUN-POINTER-STALE` error.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     return RunResolutionError(
         code="RUN-POINTER-STALE",
@@ -498,7 +468,7 @@ def _stale_pointer_error(run_id: str) -> RunResolutionError:
             f"{run_id}/{GRAPH_FILE} is missing or invalid."
         ),
         remediation=(
-            "Start a new run or pass `--run-id <existing-run-id>` explicitly."
+            "Start a new run or pass `--run <existing-run-id>` explicitly."
         ),
     )
 
@@ -512,9 +482,7 @@ def _load_selected_graph(repo_root: Path, run_id: str, *, explicit: bool) -> Gra
     @return     Parsed, internally consistent graph.
     @exception  RunResolutionError If containment, I/O, JSON, model parsing,
                 or graph identity validation fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
+    @exception  StageOperationError If lifecycle kind/profile state conflicts.
     """
     error = _explicit_run_error(run_id) if explicit else _stale_pointer_error(run_id)
     root = runs_root(repo_root).resolve()
@@ -527,10 +495,14 @@ def _load_selected_graph(repo_root: Path, run_id: str, *, explicit: bool) -> Gra
     if not resolved.is_file():
         raise error
     try:
-        payload = json.loads(resolved.read_text(encoding="utf-8"))
+        raw = resolved.read_bytes()
+        payload = json.loads(raw.decode("utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("graph JSON must be an object")
         graph = Graph.from_dict(payload)
+        run_stage_spec(graph)
+    except StageOperationError:
+        raise
     except (
         AttributeError,
         OSError,
@@ -539,10 +511,13 @@ def _load_selected_graph(repo_root: Path, run_id: str, *, explicit: bool) -> Gra
         KeyError,
         TypeError,
         ValueError,
-    ):
-        raise error from None
+    ) as exc:
+        error.add_note(f"cause: {type(exc).__name__}: {exc}")
+        raise error from exc
     if graph.run_id != run_id:
         raise error
+    graph._source_digest = sha256(raw).hexdigest()
+    graph._source_state_digest = sha256(_serialize_graph(graph)).hexdigest()
     return graph
 
 
@@ -552,46 +527,60 @@ def init_graph(
     statement: str,
     access_mode: AccessMode = "standard",
     scope_hint: list[str] | None = None,
+    profile: RunProfile = "full",
 ) -> Graph:
     """
-    @brief      Handle init graph workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  kind Input value used by the workflow helper.
-    @param[in]  statement Input value used by the workflow helper.
-    @param[in]  access_mode Input value used by the workflow helper.
+    @brief      Create, persist, and select a new run's initial graph.
+    @param[in]  repo_root Repository root.
+    @param[in]  kind Run kind.
+    @param[in]  statement Intent statement text.
+    @param[in]  access_mode Initial access mode.
     @param[in]  scope_hint Optional extra roots accepted by the scope advisory.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-20
-    @version    0.4.0
+    @param[in]  profile Full or proportional quick lifecycle profile.
+    @return     Newly persisted graph, already selected as this worktree's
+                active run.
+    @exception  StageOperationError If the kind/profile pair is unsupported.
+    @exception  OSError If the run directory, graph, or journal cannot be
+                written.
     """
     run_id = new_run_id(kind)
-    starting_stage: Stage = ADOPTION_STAGES[0] if kind == "adoption" else "intake"
+    try:
+        lifecycle = RUN_STAGE_SCHEMAS[(kind, profile)]
+    except (KeyError, TypeError):
+        raise StageOperationError(
+            f"run kind/profile mismatch: kind {kind!r} cannot use "
+            f"profile {profile!r}"
+        ) from None
+    starting_stage: Stage = lifecycle.stages[0]
     graph = Graph(
         run_id=run_id,
         stage=starting_stage,
         intent=Intent(
-            id="I-0001",
+            id=f"I-{uuid4()}",
             kind=kind,
             statement=statement,
             scope_hint=list(scope_hint or []),
         ),
+        profile=profile,
         access_mode=access_mode,
     )
+    run_stage_spec(graph)
     run_dir(repo_root, run_id).mkdir(parents=True, exist_ok=True)
     save_graph(repo_root, graph)
     write_current_run(repo_root, run_id)
+    started = {
+        "kind": kind,
+        "statement": statement,
+        "access_mode": access_mode,
+        "scope_hint": graph.intent.scope_hint,
+    }
+    if profile == "quick":
+        started["profile"] = profile
     append_journal(
         repo_root,
         run_id,
         "run.started",
-        {
-            "kind": kind,
-            "statement": statement,
-            "access_mode": access_mode,
-            "scope_hint": graph.intent.scope_hint,
-        },
+        started,
     )
     return graph
 
@@ -603,11 +592,10 @@ def load_graph(repo_root: Path, run_id: str) -> Graph:
     @param[in]  run_id Explicit, previously resolved run ID.
     @return     Parsed graph whose internal run ID matches `run_id`.
     @exception  RunResolutionError If the ID or graph is invalid.
+    @exception  StageOperationError If the loaded graph's kind/profile/stage
+                state conflicts with its lifecycle schema.
     @note       Call :func:`resolve_run_id` before this function when a command
                 may use the workspace pointer.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
     """
     if not _is_valid_run_id(run_id):
         raise _explicit_run_error(None, received=run_id)
@@ -616,72 +604,457 @@ def load_graph(repo_root: Path, run_id: str) -> Graph:
 
 def save_graph(repo_root: Path, graph: Graph) -> None:
     """
-    @brief      Save graph workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Atomically publish a graph unless its loaded source is stale.
+    @param[in] repo_root Repository root.
+    @param[in,out] graph Complete graph carrying its last loaded digest.
+    @return None.
+    @exception GraphConflictError If a newer graph is already on disk.
+    @exception OSError If persistence or replacement fails.
     """
     path = graph_path(repo_root, graph.run_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(graph.to_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    content = _serialize_graph(graph)
+    with locked(run_lock_path(repo_root, graph.run_id)):
+        expected = getattr(graph, "_source_digest", None)
+        if path.is_file() and expected is not None:
+            current = sha256(path.read_bytes()).hexdigest()
+            if current != expected:
+                raise GraphConflictError(graph.run_id)
+        atomic_write_bytes(path, content)
+        graph._source_digest = sha256(content).hexdigest()
+        graph._source_state_digest = sha256(content).hexdigest()
 
 
-def append_journal(repo_root: Path, run_id: str, event: str, data: dict) -> None:
+def append_journal(
+    repo_root: Path,
+    run_id: str,
+    event: str,
+    data: dict[str, Any],
+) -> None:
     """
-    @brief      Append journal workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  run_id Input value used by the workflow helper.
-    @param[in]  event Input value used by the workflow helper.
-    @param[in]  data Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief Serialize one complete UTF-8 JSON line through atomic replacement.
+    @param[in] repo_root Repository root.
+    @param[in] run_id Run identity selecting the journal.
+    @param[in] event Stable event name.
+    @param[in] data JSON-compatible event data.
+    @return None.
+    @exception PersistenceError If the existing journal ends in a partial line.
+    @exception OSError If persistence or replacement fails.
     """
     path = journal_path(repo_root, run_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    entry = {"time": now_iso(), "event": event, "data": data}
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, sort_keys=True) + "\n")
+    with locked(journal_lock_path(repo_root, run_id)):
+        existing = _read_complete_journal(path)
+        atomic_write_bytes(path, existing + _journal_line(event, data))
 
 
+def save_graph_with_journal_events(
+    repo_root: Path,
+    graph: Graph,
+    events: list[tuple[str, dict[str, Any]]],
+) -> None:
+    """
+    @brief Publish one graph transition and its journal records as one unit.
+    @details The caller must hold the serialized run mutation boundary. If
+             journal publication fails after graph replacement, the previous
+             graph bytes are restored before the error propagates.
+    @param[in] repo_root Repository root.
+    @param[in,out] graph Mutated graph to publish.
+    @param[in] events Ordered non-empty journal event/data pairs.
+    @return None.
+    @exception ValueError If an event envelope is invalid.
+    @exception PersistenceError If graph or journal integrity is invalid.
+    @exception OSError If durable publication fails.
+    """
+    if not events or any(
+        not isinstance(event, str)
+        or not event.strip()
+        or not isinstance(data, dict)
+        for event, data in events
+    ):
+        raise ValueError("journal events must contain names and object data")
+    journal = journal_path(repo_root, graph.run_id)
+    persisted = graph_path(repo_root, graph.run_id)
+    with locked(journal_lock_path(repo_root, graph.run_id)):
+        existing_journal = _read_complete_journal(journal)
+        try:
+            previous_graph = persisted.read_bytes()
+        except FileNotFoundError as exc:
+            raise PersistenceError(
+                f"run graph is missing before journaled publication: {persisted}"
+            ) from exc
+        journal_content = existing_journal + b"".join(
+            _journal_line(event, data) for event, data in events
+        )
+        intended_graph = _serialize_graph(graph)
+        graph_published = False
+        try:
+            save_graph(repo_root, graph)
+            graph_published = True
+            atomic_write_bytes(journal, journal_content)
+        except BaseException as original:
+            try:
+                graph_published = (
+                    persisted.is_file()
+                    and persisted.read_bytes() == intended_graph
+                )
+            except OSError as inspection_error:
+                original.add_note(
+                    "journaled graph publication could not be inspected: "
+                    f"{type(inspection_error).__name__}: {inspection_error}"
+                )
+            journal_published = False
+            try:
+                journal_published = (
+                    journal.is_file()
+                    and journal.read_bytes() == journal_content
+                )
+            except OSError as inspection_error:
+                original.add_note(
+                    "journal event publication could not be inspected: "
+                    f"{type(inspection_error).__name__}: {inspection_error}"
+                )
+            if graph_published and not journal_published:
+                try:
+                    atomic_write_bytes(persisted, previous_graph)
+                except (OSError, PersistenceError) as rollback_error:
+                    original.add_note(
+                        "graph rollback failed after journal event publication "
+                        f"failed: {type(rollback_error).__name__}: "
+                        f"{rollback_error}"
+                    )
+            raise
+
+
+def run_lock_path(repo_root: Path, run_id: str) -> Path:
+    """
+    @brief Return the repository/run-scoped graph mutation lock.
+    @param[in] repo_root Repository root.
+    @param[in] run_id Run identity.
+    @return Worktree-local persistent lock path.
+    """
+    return scoped_lock_path(repo_root, "runs", run_id)
+
+
+def journal_lock_path(repo_root: Path, run_id: str) -> Path:
+    """
+    @brief Return the repository/run-scoped journal append lock.
+    @param[in] repo_root Repository root.
+    @param[in] run_id Run identity.
+    @return Worktree-local persistent lock path.
+    """
+    return scoped_lock_path(repo_root, "journals", run_id)
+
+
+def next_evidence_id(graph: Graph, offset: int = 0) -> str:
+    """
+    @brief Allocate the next collision-safe monotonic evidence identifier.
+    @param[in] graph Authoritative graph held by the current run transaction.
+    @param[in] offset Additional identifier offset for a validated batch.
+    @return Existing-compatible `E-NNNN` identifier.
+    """
+    numbers = [
+        int(item.id[2:])
+        for item in graph.evidence
+        if re.fullmatch(r"E-[0-9]+", item.id)
+    ]
+    number = max(numbers, default=0) + offset + 1
+    identifiers = {item.id for item in graph.evidence}
+    candidate = f"E-{number:04d}"
+    while candidate in identifiers:
+        number += 1
+        candidate = f"E-{number:04d}"
+    return candidate
+
+
+@contextmanager
+def graph_transaction(repo_root: Path, graph: Graph) -> Iterator[Graph]:
+    """
+    @brief Reload and hold the authoritative graph for one complete mutation.
+    @param[in] repo_root Repository root.
+    @param[in,out] graph Caller graph refreshed in place under the run lock.
+    @return Iterator yielding the refreshed graph.
+    @exception RunResolutionError If the authoritative graph is invalid.
+    @exception GraphConflictError If the caller's in-memory graph was already
+               mutated relative to its loaded source and the on-disk graph has
+               also advanced, so the conflict cannot be silently healed by a
+               reload.
+    """
+    with locked(run_lock_path(repo_root, graph.run_id)) as lock:
+        persisted = graph_path(repo_root, graph.run_id)
+        if not lock.reentrant and persisted.is_file():
+            current_digest = sha256(persisted.read_bytes()).hexdigest()
+            expected_digest = getattr(graph, "_source_digest", None)
+            if expected_digest != current_digest:
+                source_state_digest = getattr(
+                    graph,
+                    "_source_state_digest",
+                    None,
+                )
+                current_state_digest = sha256(
+                    _serialize_graph(graph)
+                ).hexdigest()
+                if (
+                    source_state_digest is not None
+                    and current_state_digest != source_state_digest
+                ):
+                    raise GraphConflictError(graph.run_id)
+                _replace_graph_state(
+                    graph,
+                    _load_selected_graph(
+                        repo_root,
+                        graph.run_id,
+                        explicit=True,
+                    ),
+                )
+        try:
+            yield graph
+        except BaseException as original:
+            if not lock.reentrant:
+                try:
+                    _replace_graph_state(
+                        graph,
+                        _load_selected_graph(
+                            repo_root,
+                            graph.run_id,
+                            explicit=True,
+                        ),
+                    )
+                except (OSError, RunResolutionError, ValueError) as reload_error:
+                    original.add_note(
+                        "graph rollback reload failed; the in-memory graph may"
+                        " retain the aborted mutation:"
+                        f" {type(reload_error).__name__}: {reload_error}"
+                    )
+            raise
+
+
+def serialized_graph_mutation(
+    function: Callable[
+        Concatenate[Path, Graph, _GRAPH_PARAMETERS],
+        _GRAPH_RESULT,
+    ],
+) -> Callable[
+    Concatenate[Path, Graph, _GRAPH_PARAMETERS],
+    _GRAPH_RESULT,
+]:
+    """
+    @brief Decorate a graph mutator with authoritative reload and run locking.
+    @param[in] function Mutator whose first arguments are repository and graph.
+    @return Wrapped mutator with the same public signature.
+    """
+    @wraps(function)
+    def wrapper(
+        repo_root: Path,
+        graph: Graph,
+        *args: _GRAPH_PARAMETERS.args,
+        **kwargs: _GRAPH_PARAMETERS.kwargs,
+    ) -> _GRAPH_RESULT:
+        """
+        @brief Run one graph mutation inside its serialized transaction.
+        """
+        with graph_transaction(repo_root, graph):
+            return function(repo_root, graph, *args, **kwargs)
+
+    return wrapper
+
+
+@serialized_graph_mutation
 def add_evidence(repo_root: Path, graph: Graph, evidence: Evidence) -> Graph:
     """
-    @brief      Add evidence workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
-    @param[in]  evidence Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief      Append one evidence record and persist it with a journal event.
+    @param[in]  repo_root Repository root.
+    @param[in,out] graph Active run graph refreshed under its mutation lock
+                (decorator).
+    @param[in]  evidence Evidence record to append; its ID must be unique on
+                the graph.
+    @return     Mutated graph.
+    @exception  PersistenceError If the evidence ID already exists on the graph.
+    @exception  GraphConflictError If the graph changed underneath this
+                mutation.
+    @exception  OSError If persistence fails.
     """
+    if any(item.id == evidence.id for item in graph.evidence):
+        raise PersistenceError(
+            f"evidence identifier already exists: {evidence.id}"
+        )
     graph.evidence.append(evidence)
     save_graph(repo_root, graph)
-    append_journal(repo_root, graph.run_id, "evidence.recorded", evidence.__dict__)
+    append_journal(repo_root, graph.run_id, "evidence.recorded", asdict(evidence))
     return graph
 
 
+@serialized_graph_mutation
+def add_waiver(
+    repo_root: Path,
+    graph: Graph,
+    blocker_id: str,
+    reason: str,
+    state_digests: dict[str, str],
+    *,
+    expected_source_digest: str | None = None,
+) -> Waiver:
+    """
+    @brief Persist one human-approved waiver for exact current blocker state.
+    @param[in] repo_root Repository root.
+    @param[in,out] graph Active run graph refreshed under its mutation lock.
+    @param[in] blocker_id Concrete named blocker identity.
+    @param[in] reason Mandatory human approval reason.
+    @param[in] state_digests Exact state captured when approval was given.
+    @param[in] expected_source_digest Graph digest used to discover the target.
+    @return Newly minted run-local waiver record.
+    @exception ValueError If the blocker, reason, or digest mapping is invalid.
+    @exception GraphConflictError If target discovery used an older graph.
+    @exception PersistenceError If journal integrity prevents a complete record.
+    @exception OSError If persistence fails.
+    """
+    if (
+        expected_source_digest is not None
+        and getattr(graph, "_source_digest", None) != expected_source_digest
+    ):
+        raise GraphConflictError(graph.run_id)
+    if not isinstance(blocker_id, str):
+        raise ValueError("blocker ID must be a string")
+    if not isinstance(reason, str):
+        raise ValueError("waiver reason must be a string")
+    normalized_blocker_id = blocker_id.strip()
+    normalized_reason = reason.strip()
+    if not normalized_blocker_id:
+        raise ValueError("blocker ID must be non-empty")
+    if not normalized_reason:
+        raise ValueError("waiver reason must be non-empty")
+    if not isinstance(state_digests, dict) or any(
+        not isinstance(namespace, str) or not isinstance(digest, str)
+        for namespace, digest in state_digests.items()
+    ):
+        raise ValueError("waiver state digests must map strings to strings")
+    if any(
+        item.blocker_id == normalized_blocker_id
+        and item.state_digests == state_digests
+        for item in graph.waivers
+    ):
+        raise ValueError(
+            f"blocker already has an active waiver: {normalized_blocker_id}"
+        )
+    journal = journal_path(repo_root, graph.run_id)
+    with locked(journal_lock_path(repo_root, graph.run_id)):
+        existing_journal = _read_complete_journal(journal)
+        _validate_journal_records(journal, existing_journal)
+        existing_ids = {item.id for item in graph.waivers}
+        waiver_id = f"WVR-{uuid4()}"
+        while waiver_id in existing_ids:
+            waiver_id = f"WVR-{uuid4()}"
+        waiver = Waiver(
+            id=waiver_id,
+            blocker_id=normalized_blocker_id,
+            reason=normalized_reason,
+            state_digests=dict(state_digests),
+        )
+        journal_content = existing_journal + _journal_line(
+            "waiver.added",
+            asdict(waiver),
+        )
+        graph.waivers.append(waiver)
+        graph_published = False
+        try:
+            save_graph(repo_root, graph)
+            graph_published = True
+            atomic_write_bytes(journal, journal_content)
+        except BaseException as original:
+            journal_published = False
+            try:
+                journal_published = (
+                    journal.is_file()
+                    and journal.read_bytes() == journal_content
+                )
+            except OSError as inspection_error:
+                original.add_note(
+                    "waiver journal publication could not be inspected: "
+                    f"{type(inspection_error).__name__}: {inspection_error}"
+                )
+            if graph_published and not journal_published:
+                graph.waivers.pop()
+                try:
+                    save_graph(repo_root, graph)
+                except (OSError, PersistenceError) as rollback_error:
+                    original.add_note(
+                        "waiver graph rollback failed after journal publication "
+                        f"failed: {type(rollback_error).__name__}: "
+                        f"{rollback_error}"
+                    )
+            raise
+        return waiver
+
+
+def _read_complete_journal(path: Path) -> bytes:
+    """
+    @brief Read a journal only when its final JSON Lines record is complete.
+    @param[in] path Journal path.
+    @return Existing bytes, or an empty byte string when the file is absent.
+    @exception PersistenceError If the journal ends in a partial record.
+    """
+    existing = path.read_bytes() if path.is_file() else b""
+    if existing and not existing.endswith(b"\n"):
+        raise PersistenceError(
+            f"journal {path} ends with an incomplete record; "
+            "restore a valid journal before appending"
+        )
+    return existing
+
+
+def _journal_line(event: str, data: dict[str, Any]) -> bytes:
+    """
+    @brief Serialize one timestamped journal event as a complete JSON line.
+    @param[in] event Stable event name.
+    @param[in] data JSON-compatible event data.
+    @return Sorted UTF-8 JSON followed by one newline.
+    """
+    entry = {"time": now_iso(), "event": event, "data": data}
+    return (json.dumps(entry, sort_keys=True) + "\n").encode("utf-8")
+
+
+def _validate_journal_records(path: Path, content: bytes) -> None:
+    """
+    @brief Validate every existing journal line before recording a waiver.
+    @param[in] path Journal path used in actionable integrity errors.
+    @param[in] content Complete newline-terminated journal bytes.
+    @return None.
+    @exception PersistenceError If JSON or the event envelope is malformed.
+    """
+    for line_number, line in enumerate(content.splitlines(), start=1):
+        try:
+            entry = json.loads(line)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise PersistenceError(
+                f"journal {path} record {line_number} is not valid JSON; "
+                "restore a valid journal before adding a waiver"
+            ) from exc
+        if (
+            not isinstance(entry, dict)
+            or set(entry) != {"time", "event", "data"}
+            or not isinstance(entry["time"], str)
+            or not entry["time"].strip()
+            or not isinstance(entry["event"], str)
+            or not entry["event"].strip()
+            or not isinstance(entry["data"], dict)
+        ):
+            raise PersistenceError(
+                f"journal {path} record {line_number} has an invalid event "
+                "envelope; restore a valid journal before adding a waiver"
+            )
+
+
+@serialized_graph_mutation
 def set_stage(repo_root: Path, graph: Graph, stage: Stage) -> Graph:
     """
-    @brief      Set stage workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
-    @param[in]  stage Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief      Set the graph's current stage and persist it with a
+                `stage.set` journal event.
+    @param[in]  repo_root Repository root.
+    @param[in,out] graph Active run graph refreshed under its mutation lock
+                (decorator).
+    @param[in]  stage New stage value.
+    @return     Mutated graph.
+    @exception  GraphConflictError If the graph changed underneath this
+                mutation.
+    @exception  OSError If persistence fails.
     """
     graph.stage = stage
     save_graph(repo_root, graph)
@@ -689,6 +1062,7 @@ def set_stage(repo_root: Path, graph: Graph, stage: Stage) -> Graph:
     return graph
 
 
+@serialized_graph_mutation
 def set_access_mode(
     repo_root: Path,
     graph: Graph,
@@ -696,16 +1070,17 @@ def set_access_mode(
     reason: str,
 ) -> Graph:
     """
-    @brief      Set access mode workflow behavior.
-    @param[in]  repo_root Input value used by the workflow helper.
-    @param[in]  graph Input value used by the workflow helper.
-    @param[in]  access_mode Input value used by the workflow helper.
-    @param[in]  reason Input value used by the workflow helper.
-    @return     Result produced by the workflow helper.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
+    @brief      Set the graph's access mode and persist it with an
+                `access_mode.set` journal event.
+    @param[in]  repo_root Repository root.
+    @param[in,out] graph Active run graph refreshed under its mutation lock
+                (decorator).
+    @param[in]  access_mode New access mode.
+    @param[in]  reason Human-readable reason recorded in the journal event.
+    @return     Mutated graph.
+    @exception  GraphConflictError If the graph changed underneath this
+                mutation.
+    @exception  OSError If persistence fails.
     """
     graph.access_mode = access_mode
     save_graph(repo_root, graph)
@@ -716,6 +1091,28 @@ def set_access_mode(
         {"access_mode": access_mode, "reason": reason},
     )
     return graph
+
+
+def _replace_graph_state(target: Graph, source: Graph) -> None:
+    """
+    @brief Refresh one caller-held graph object without changing its identity.
+    @param[in,out] target Graph instance retained by the caller.
+    @param[in] source Newly loaded authoritative graph.
+    @return None.
+    """
+    target.__dict__.clear()
+    target.__dict__.update(source.__dict__)
+
+
+def _serialize_graph(graph: Graph) -> bytes:
+    """
+    @brief Serialize one graph using the canonical persisted JSON format.
+    @param[in] graph Complete graph state.
+    @return UTF-8 bytes ending in one newline.
+    """
+    return (
+        json.dumps(graph.to_dict(), indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
 
 
 # END OF FILE
