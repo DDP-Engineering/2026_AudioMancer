@@ -3,9 +3,9 @@ id = "REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5"
 category = "platform"
 status = "Active"
 priority = "Must"
-requirement = "No AudioMancer source module shall depend on the audioop standard-library module removed in Python 3.13."
-rationale = "audioop has no stdlib replacement, so any remaining import makes Audio Assembly and Scene Mix fail at import time on Python 3.13."
-verification = "Automated: source tree scanned for audioop imports; also confirmed by importing audio_assembly_service on Python 3.13."
+requirement = "AudioMancer shall provide its PCM conversion through the internal codec and remain importable on every supported Python interpreter."
+rationale = "Audio Assembly and Scene Mix must use dependencies available across the declared interpreter range."
+verification = "Automated: source tree dependency scan and Audio Assembly import coverage on supported interpreters."
 spec_ref = ".agentic/specs/python_interpreter_range.spec.md"
 
 affected_paths = [
@@ -14,7 +14,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_sources_do_not_import_audioop",
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_sources_use_internal_pcm_codec",
 ]
 
 created_on = "2026-07-25T13:12:55Z"

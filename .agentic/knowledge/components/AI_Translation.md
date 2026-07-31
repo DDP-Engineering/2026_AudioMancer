@@ -44,8 +44,7 @@ parallel contract.
 ## 6. Data Contracts
 
 Canonical source chunks are loaded through `chunking_document_service`; an
-incompatible Chunking document is rejected and is never recovered from legacy
-report/state sidecars.
+incompatible Chunking document is rejected.
 
 The document contains target language, status, usage/budget/instructions, and
 ordered `{chunk_id, translated_text, approved}` records. Chunk IDs must match

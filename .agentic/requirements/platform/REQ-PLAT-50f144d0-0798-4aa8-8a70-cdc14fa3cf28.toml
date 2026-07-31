@@ -4,7 +4,7 @@ category = "platform"
 status = "Active"
 priority = "Must"
 requirement = "The AudioMancer package shall declare its supported interpreter range as Python 3.12 up to but excluding 3.14."
-rationale = "The range must admit Python 3.13 once the audioop blocker is gone, while keeping 3.14 an explicit future decision rather than an accident."
+rationale = "The declared range covers the validated 3.12 and 3.13 interpreters while keeping 3.14 an explicit future compatibility decision."
 verification = "Automated: pyproject requires-python parsed and asserted equal to >=3.12,<3.14."
 spec_ref = ".agentic/specs/python_interpreter_range.spec.md"
 

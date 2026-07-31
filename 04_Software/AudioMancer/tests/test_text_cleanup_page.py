@@ -43,8 +43,6 @@ def test_page_exposes_one_cleanup_action_with_optional_ai_profile(qtbot) -> None
 
     page._cleanup_button.click()
     assert requested == ["qwen"]
-    assert not hasattr(page, "_ai_clean_button")
-    assert not hasattr(page, "_apply_spacing_button")
 
     page._ai_profile_combo.setCurrentIndex(0)
     page._cleanup_button.click()

@@ -3,9 +3,9 @@ id = "REQ-FUNC-a4d7fcde-ced6-44f2-8655-5db52d2e3053"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "reset_speech_blocks shall remove the single speech_blocks.json document and any residual legacy speech_blocks_report.json and speech_blocks_state.json files so the operator can regenerate cleanly."
-rationale = "Operators regenerating after the format change must not be left with stale legacy artifacts."
-verification = "Reset removes document and legacy files."
+requirement = "reset_speech_blocks shall remove the authoritative speech_blocks.json document so the operator can regenerate cleanly."
+rationale = "Reset must clear the current Speech Blocks state completely."
+verification = "Reset removes the authoritative document."
 spec_ref = ""
 
 affected_paths = [
@@ -13,7 +13,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_reset_removes_document_and_residual_legacy_files",
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_reset_removes_document",
 ]
 
 created_on = "2026-07-24T17:27:54Z"

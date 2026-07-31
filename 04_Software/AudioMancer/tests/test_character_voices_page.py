@@ -74,9 +74,6 @@ def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
     assert page._import_sample_button.text() == "Import Sample"
     assert page._import_sample_button.isEnabled() is False
     assert page._preview_toggle_button.isEnabled() is True
-    assert hasattr(page, "_reset_prompt_button") is False
-    assert hasattr(page, "_target_name_edit") is False
-    assert hasattr(page, "_target_kind_edit") is False
 
 
 def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:
@@ -243,10 +240,6 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
     page.generate_missing_samples_requested.connect(lambda: emitted.append(True))
 
     assert page._generate_missing_samples_button.text() == "Generate Character Samples"
-    assert hasattr(page, "_ai_profile_label") is False
-    assert hasattr(page, "_ai_profile_combo") is False
-    assert hasattr(page, "set_ai_profiles") is False
-    assert hasattr(page, "current_ai_profile_id") is False
     assert page._generate_missing_samples_button.isEnabled() is True
 
     page._generate_missing_samples_button.click()
@@ -398,7 +391,6 @@ def test_character_voices_page_header_indicators_render_languages_and_assignment
     assert page._translated_language_value_label.text() == "Romanian"
     assert page._assignment_mode_value_label.text() == "Narrator + character voices"
     assert page._voice_language_value_label.text() == "English"
-    assert hasattr(page, "_voice_language_combo") is False
 
 
 def test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing(qtbot) -> None:

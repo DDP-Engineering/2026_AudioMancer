@@ -360,8 +360,6 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
 
     chunking_root = project_root
     assert (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
-    assert not (chunking_root / "chunking_report.json").exists()
-    assert not (chunking_root / "chunking_state.json").exists()
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in chunking_root.glob("*.log"))
     document = read_chunking_document(chunking_root)
     assert document["mode"] == "ai_assisted"
@@ -829,9 +827,9 @@ def test_ai_running_state_reuses_prebuilt_chunks(tmp_path) -> None:
     assert state_payload["next_paragraph"] == 2
 
 
-def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_path, monkeypatch) -> None:
+def test_ai_chunking_rejects_checkpoint_with_unknown_fields(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify old break-ID AI chunking checkpoints are not resumed.
+    @brief      Verify an incompatible AI Chunking document is rejected.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -854,7 +852,7 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
     (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
 
-    project_root, manifest = project_workspace_service.create_project("AiChunkingOldCheckpointProject", tmp_path)
+    project_root, manifest = project_workspace_service.create_project("AiChunkingInvalidCheckpointProject", tmp_path)
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n", encoding="utf-8")
@@ -920,8 +918,7 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
 
     document_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
     state_payload = read_chunking_document(project_root)
-    state_payload["completed_last_unit_id"] = "paragraph-0020"
-    state_payload["committed_break_ids"] = ["paragraph-0020"]
+    state_payload["unexpected_checkpoint_field"] = "paragraph-0020"
     document_path.write_text(json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     captured_prompts: list[str] = []

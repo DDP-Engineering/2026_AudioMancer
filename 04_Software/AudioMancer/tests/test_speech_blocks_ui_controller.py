@@ -929,7 +929,6 @@ def _settings_payload() -> dict[str, object]:
     """
     return {
         "language": "en",
-        "ui_text_scale": "normal",
         "play_completion_beep": False,
         "llm_profiles": [
             {

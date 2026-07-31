@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Workflow impact shall delete only exact affected in-project audio artifacts resolved from speech_block_id, skipping unsafe paths."
-rationale = "The persisted audio path fields the impact scan previously read no longer exist, so it resolves artifacts by derivation."
+rationale = "Artifact derivation from stable speech_block_id values keeps impact deletion exact and safe."
 verification = "Automated: 3 linked pytest selector(s)."
 spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 

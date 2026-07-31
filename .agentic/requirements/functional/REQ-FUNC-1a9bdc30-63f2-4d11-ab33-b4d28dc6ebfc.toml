@@ -3,7 +3,7 @@ id = "REQ-FUNC-1a9bdc30-63f2-4d11-ab33-b4d28dc6ebfc"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Text extraction shall reject a misnamed legacy document carrying an RTF extension."
+requirement = "Text extraction shall reject a misnamed binary Word document carrying an RTF extension."
 rationale = "Mislabeled sources must fail rather than extract incorrectly."
 verification = "Automated: 1 linked pytest selector(s)."
 spec_ref = ""
@@ -13,7 +13,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension",
 ]
 
 created_on = "2026-07-24T19:52:27Z"

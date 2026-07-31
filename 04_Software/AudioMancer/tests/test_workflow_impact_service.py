@@ -306,9 +306,9 @@ def test_workflow_impact_resets_audio_assembly_outputs_only(tmp_path) -> None:
     assert audio_block_path.is_file()
 
 
-def test_workflow_impact_rejects_legacy_cleanup_without_source_ledger(tmp_path) -> None:
+def test_workflow_impact_rejects_cleanup_without_source_ledger(tmp_path) -> None:
     """
-    @brief      Verify manifest refresh rejects legacy Cleanup artifacts without a source ledger.
+    @brief      Verify manifest refresh rejects Cleanup artifacts without a source ledger.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -342,9 +342,6 @@ def test_workflow_impact_rejects_legacy_cleanup_without_source_ledger(tmp_path) 
             "page_count": None,
         },
     )
-    _write_json(project_root / "cleanup_state.json", _operation_state("completed", 1, 1))
-    _write_json(project_root / "cleanup_report.json", {"warning_count": 0})
-
     with pytest.raises(ValueError, match="could not be refreshed"):
         workflow_impact_service.refresh_manifest_from_artifacts(project_root)
 

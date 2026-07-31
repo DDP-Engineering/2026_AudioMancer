@@ -13,7 +13,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_join_without_space_is_invalid_everywhere",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_rejects_unsupported_boundary_choice",
   "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
 ]
 

@@ -14,7 +14,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_component_documentation_describes_the_new_contract",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_component_documentation_describes_current_contract",
 ]
 
 created_on = "2026-07-24T19:52:27Z"

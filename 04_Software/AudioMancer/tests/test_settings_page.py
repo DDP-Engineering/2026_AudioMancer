@@ -9,8 +9,8 @@
 """
 @file test_settings_page.py
 @brief Focused tests for the simplified AudioMancer settings (Appearance) page.
-@details Verifies theme selection, interface/text font-size step selectors, merged
-         settings output, and the removal of the color/custom-theme editor.
+@details Verifies theme selection, interface/text font-size step selectors, and
+         merged settings output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
 @version 0.8.0
@@ -92,7 +92,6 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     rebuilt = page.build_settings(existing_settings)
 
     assert rebuilt["language"] == "en"
-    assert "ui_text_scale" not in rebuilt
     assert rebuilt["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert rebuilt["play_completion_beep"] is False
     assert rebuilt["ui_scroll_steps_per_wheel_notch"] == 2

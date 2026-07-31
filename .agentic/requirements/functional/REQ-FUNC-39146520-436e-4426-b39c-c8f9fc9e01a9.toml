@@ -3,9 +3,9 @@ id = "REQ-FUNC-39146520-436e-4426-b39c-c8f9fc9e01a9"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "A legacy list-format audio_blocks.json or a missing document shall be treated as not-started, and no legacy report or state file shall be read."
-rationale = "The consolidation is an intentional hard break; silently reading pre-change artifacts would resurrect the format being removed."
-verification = "Automated contract test: a legacy list payload reads as not-started and no legacy report or state file is read."
+requirement = "A non-object audio_blocks.json or a missing document shall be treated as not-started."
+rationale = "Only a document matching the current root contract can represent Audio Blocks state."
+verification = "Automated contract test: a non-object payload reads as not-started."
 spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 
 affected_paths = [
@@ -13,7 +13,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_legacy_list_artifact_is_treated_as_absent",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_non_object_document_is_treated_as_absent",
 ]
 
 created_on = "2026-07-25T21:09:15Z"

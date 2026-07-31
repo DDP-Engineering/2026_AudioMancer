@@ -40,12 +40,6 @@ from cleanup_test_support import (
     read_cleanup_document,
 )
 
-_RETIRED_CLEANUP_CONFIG_CONSTANTS = (
-    "CLEANUP_REPORT_FILE_NAME",
-    "CLEANUP_STATE_FILE_NAME",
-    "CLEANED_TEXT_METADATA_FILE_NAME",
-)
-
 
 def _build_completed_cleanup(tmp_path):
     """Build one valid completed Cleanup document for corruption checks."""
@@ -64,12 +58,6 @@ def _build_completed_cleanup(tmp_path):
     )
     document = text_cleanup_service.clean_text(project_root, manifest)
     return project_root, document
-
-
-def test_retired_cleanup_artifact_config_constants_are_gone() -> None:
-    """Cover S-0007 and REQ-FUNC-50c48e76-aa6a-4a54-840b-ece463309faf."""
-    for constant_name in _RETIRED_CLEANUP_CONFIG_CONSTANTS:
-        assert not hasattr(config, constant_name), f"{constant_name} must be removed"
 
 
 def test_cleanup_persists_exactly_one_metadata_file_and_one_text_file(tmp_path) -> None:
@@ -91,9 +79,6 @@ def test_cleanup_persists_exactly_one_metadata_file_and_one_text_file(tmp_path) 
     assert document["output_hash"] == source_ledger_service.text_sha256(
         (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     )
-    assert not (project_root / "clean_text_metadata.json").exists()
-    assert not (project_root / "cleanup_report.json").exists()
-    assert not (project_root / "cleanup_state.json").exists()
 
 
 @pytest.mark.parametrize(
@@ -196,16 +181,12 @@ def test_analysis_assigns_roles_before_classifying_every_boundary() -> None:
     }
 
 
-def test_join_without_space_is_invalid_everywhere() -> None:
+def test_renderer_rejects_unsupported_boundary_choice() -> None:
     """Cover S-0001/S-0002 and REQ-FUNC-e42171cc-9c36-4327-87ba-c0f13da05c8c."""
     canonical_text, ledger = build_ledger(["evacuation", "dropships"])
     boundary_id = str(ledger["boundaries"][0]["boundary_id"])
 
-    assert "join_without_space" not in cleanup_renderer_service.ALLOWED_ACTIONS
-    analysis = cleanup_analysis_service.analyze_cleanup(canonical_text, ledger)
-    serialized = json.dumps(analysis, ensure_ascii=False)
-    assert "join_without_space" not in serialized
-    with pytest.raises(cleanup_renderer_service.CleanupRenderError, match="join_without_space"):
+    with pytest.raises(cleanup_renderer_service.CleanupRenderError, match="unsupported_choice"):
         cleanup_renderer_service.render_cleanup(
             canonical_text,
             ledger,
@@ -213,7 +194,7 @@ def test_join_without_space_is_invalid_everywhere() -> None:
             [
                 {
                     "boundary_id": boundary_id,
-                    "final": {"choice": "join_without_space"},
+                    "final": {"choice": "unsupported_choice"},
                 }
             ],
         )

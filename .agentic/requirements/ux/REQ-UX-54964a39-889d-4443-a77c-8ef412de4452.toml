@@ -3,9 +3,9 @@ id = "REQ-UX-54964a39-889d-4443-a77c-8ef412de4452"
 category = "ux"
 status = "Active"
 priority = "Must"
-requirement = "The Text Cleanup page shall retain its existing profile selector, Cleanup and Reset actions, two previews, Edit/Save/Cancel controls, progress dialog, and status pane without adding another control surface."
-rationale = "The new quality and resume behavior must not complicate the established Cleanup UI."
-verification = "Existing Cleanup page controls remain unchanged."
+requirement = "The Text Cleanup page shall expose a profile selector, Cleanup and Reset actions, two previews, Edit/Save/Cancel controls, a progress dialog, and a status pane."
+rationale = "Operators need one coherent Cleanup surface for quality review, resume, and manual editing."
+verification = "The Cleanup page exposes the contracted controls and interactions."
 spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [

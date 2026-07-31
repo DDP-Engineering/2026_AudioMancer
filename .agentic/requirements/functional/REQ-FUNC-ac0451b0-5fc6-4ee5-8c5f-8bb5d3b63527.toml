@@ -3,9 +3,9 @@ id = "REQ-FUNC-ac0451b0-5fc6-4ee5-8c5f-8bb5d3b63527"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "A legacy list-format speech_blocks.json or a missing document shall be treated as not-started: load_speech_blocks_document() shall return None and no legacy report or state file shall be read or converted."
-rationale = "Reset-and-regenerate migration avoids tolerant legacy readers; non-conforming artifacts must present as not-started."
-verification = "Legacy list/corrupt artifact yields None."
+requirement = "A non-object speech_blocks.json or a missing document shall be treated as not-started: load_speech_blocks_document() shall return None."
+rationale = "Only a document matching the current root contract can represent Speech Blocks state."
+verification = "A non-object document yields None."
 spec_ref = ""
 
 affected_paths = [
@@ -13,7 +13,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_legacy_list_artifact_is_treated_as_absent",
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_non_object_document_is_treated_as_absent",
 ]
 
 created_on = "2026-07-24T17:27:53Z"

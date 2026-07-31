@@ -3,7 +3,7 @@ id = "REQ-FUNC-959aa297-9637-4bd1-9727-9b1cc1cab077"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "AI chunking shall checkpoint window progress, preserve committed chunks on resume, and restart on legacy or changed checkpoints."
+requirement = "AI chunking shall checkpoint window progress, preserve committed chunks on resume, restart on changed checkpoints, and reject incompatible checkpoint shapes."
 rationale = "Resume must continue safely without dropping committed chunks."
 verification = "Automated: 6 linked pytest selector(s)."
 spec_ref = ""
@@ -14,10 +14,9 @@ affected_paths = [
 
 linked_tests = [
   "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage",
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_old_break_id_checkpoint_restarts_from_paragraph_one",
   "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_resumes_from_saved_window_checkpoint",
   "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_running_state_reuses_prebuilt_chunks",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields",
+  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_rejects_checkpoint_with_unknown_fields",
   "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_continues_resume_when_budget_metadata_changes",
 ]
 

@@ -182,7 +182,6 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
         "default_speech_blocks_profile_id": "profile_a",
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": "profile_a",
-        "ui_text_scale": "normal",
     }
 
     page.load_settings(settings_payload)

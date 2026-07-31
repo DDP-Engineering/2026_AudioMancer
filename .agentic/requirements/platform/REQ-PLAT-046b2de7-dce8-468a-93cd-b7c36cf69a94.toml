@@ -33,7 +33,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_creates_default_file_when_missing",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_preserves_valid_scroll_steps",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_invalid_scroll_steps",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_migrates_missing_theme_fields_and_removes_legacy_text_scale",
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_seeds_missing_theme_fields",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_keeps_valid_selected_custom_theme",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_invalid_selected_theme_id_to_default",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_drops_invalid_custom_themes",

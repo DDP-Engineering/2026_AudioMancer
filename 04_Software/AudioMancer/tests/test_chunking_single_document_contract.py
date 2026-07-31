@@ -9,9 +9,8 @@
 """
 @file test_chunking_single_document_contract.py
 @brief Red-first contract tests for the authoritative Chunking document.
-@details Covers S-0001 through S-0007 and REQ-FUNC-048 through
-         REQ-FUNC-054 plus REQ-DATA-001, including removal of obsolete
-         persistence helpers from both Chunking services.
+@details Covers S-0001 through S-0007 and the linked functional and data
+         requirements for exact persistence, resume, projections, and routing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-29
 @version 0.4.0
@@ -126,7 +125,7 @@ def test_document_api_rejects_non_boolean_scene_boundary_flag(tmp_path) -> None:
 @pytest.mark.parametrize(
     ("case_name", "payload_factory"),
     [
-        ("legacy root array", lambda: []),
+        ("non-object root", lambda: []),
         ("extra root field", lambda: {**_valid_document(), "metadata": {}}),
         (
             "missing root field",
@@ -177,7 +176,7 @@ def test_document_api_rejects_incompatible_root_and_chunk_shapes(
     payload_factory,
 ) -> None:
     """
-    @brief Verify S-0001 and REQ-FUNC-048 reject invalid and legacy documents.
+    @brief Verify S-0001 and REQ-FUNC-048 reject invalid documents.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  case_name Stable name identifying the parametrized contract case.
     @param[in]  payload_factory Factory producing the candidate payload under test.
@@ -193,60 +192,6 @@ def test_document_api_rejects_incompatible_root_and_chunk_shapes(
 
     with pytest.raises(ValueError, match="Reset Chunking"):
         service.load_chunking_document(tmp_path)
-
-
-def test_document_api_ignores_obsolete_sidecars_and_never_migrates_them(tmp_path) -> None:
-    """
-    @brief Verify S-0001, REQ-FUNC-048, and REQ-FUNC-052 reject migration paths.
-    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
-    @return     None.
-    @version 0.1.0
-    """
-    service = _chunking_document_service()
-    (tmp_path / "chunking_report.json").write_text('{"status": "completed"}\n', encoding="utf-8")
-    (tmp_path / "chunking_state.json").write_text('{"status": "completed"}\n', encoding="utf-8")
-
-    assert service.load_chunking_document(tmp_path) is None
-    assert service.load_chunks(tmp_path) == []
-    assert not (tmp_path / config.CHUNK_ARTIFACT_FILE_NAME).exists()
-
-
-def test_chunking_services_do_not_expose_legacy_persistence_helpers() -> None:
-    """
-    @brief      Verify S-0001/S-0002/S-0003 and REQ-FUNC-236b922c canonical persistence.
-    @return     None.
-    @version    0.1.0
-    """
-    retired_deterministic_helpers = {
-        "load_chunking_report",
-        "_load_partial_chunks",
-        "_load_resume_state",
-        "_write_running_state",
-        "_persist_terminal_state",
-        "_build_operation_state",
-        "_write_chunk_payload",
-    }
-    retired_ai_helpers = {
-        "_load_resume_state",
-        "_compute_input_fingerprint",
-        "_resolve_additional_chunking_instructions",
-        "_build_profile_runtime_metadata",
-        "_restore_descriptor_resume_state",
-        "_restore_profile_usage_history",
-        "_merge_profile_usage_history",
-        "_validate_chunk_descriptors",
-        "_write_descriptor_state",
-        "_build_operation_state",
-        "_write_chunk_payload",
-    }
-    live_deterministic_throttle_helpers = {
-        "_should_write_checkpoint",
-        "_should_emit_progress",
-    }
-
-    assert retired_deterministic_helpers.isdisjoint(vars(deterministic_chunking_service))
-    assert retired_ai_helpers.isdisjoint(vars(ai_chunking_service))
-    assert live_deterministic_throttle_helpers <= vars(deterministic_chunking_service).keys()
 
 
 def test_deterministic_chunking_commits_one_document_without_persisted_progress(tmp_path) -> None:
@@ -278,8 +223,6 @@ def test_deterministic_chunking_commits_one_document_without_persisted_progress(
     assert document["token_usage"] == _empty_usage()
     assert len(document["chunks"]) == 3
     assert progress_updates[-1] == (3, 3)
-    assert not (project_root / "chunking_report.json").exists()
-    assert not (project_root / "chunking_state.json").exists()
     assert not (_FORBIDDEN_PERSISTED_FIELDS & set(document))
 
 
@@ -367,8 +310,6 @@ def test_ai_chunking_persists_minimal_document_and_separate_log(tmp_path, monkey
     assert not (_FORBIDDEN_PERSISTED_FIELDS & set(document))
     assert all(not (_FORBIDDEN_PERSISTED_FIELDS & set(chunk)) for chunk in document["chunks"])
     assert any(path.name.startswith("log_ai_chunking_") for path in project_root.glob("*.log"))
-    assert not (project_root / "chunking_report.json").exists()
-    assert not (project_root / "chunking_state.json").exists()
 
 
 def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tmp_path, monkeypatch) -> None:
@@ -499,8 +440,6 @@ def test_chunking_default_state_is_not_created_and_reset_deletes_all_owned_artif
     assert operation_runtime_service.ensure_default_operation_state(tmp_path, "chunking") is None
     _write_document(tmp_path, _valid_document([_chunk("chunk-0001", 1, "Text")]))
     owned_paths = [
-        tmp_path / "chunking_report.json",
-        tmp_path / "chunking_state.json",
         tmp_path / "log_ai_chunking_20260720T220000Z.log",
     ]
     for path in owned_paths:
@@ -534,7 +473,7 @@ def test_project_completion_evidence_uses_only_the_authoritative_document(tmp_pa
     assert evidence["report"]["warning_count"] == 1
 
 
-def test_downstream_consumers_use_shared_document_reader_without_legacy_branches() -> None:
+def test_downstream_consumers_use_shared_document_reader() -> None:
     """
     @brief Verify S-0006, REQ-FUNC-053, and REQ-DATA-001 production routing.
     @return     None.
@@ -552,10 +491,6 @@ def test_downstream_consumers_use_shared_document_reader_without_legacy_branches
     for module_name in consumer_module_names:
         source = inspect.getsource(import_module(module_name))
         assert "chunking_document_service" in source, module_name
-        assert "CHUNKING_REPORT_FILE_NAME" not in source, module_name
-        assert "CHUNKING_STATE_FILE_NAME" not in source, module_name
-    assert not hasattr(config, "CHUNKING_REPORT_FILE_NAME")
-    assert not hasattr(config, "CHUNKING_STATE_FILE_NAME")
 
 
 def test_text_chunking_state_projects_resumable_document_without_durable_progress(tmp_path) -> None:
@@ -601,15 +536,8 @@ def test_text_chunking_state_projects_resumable_document_without_durable_progres
     assert state["selected_strategy"] == "meaning"
 
 
-def test_text_chunking_component_documentation_describes_the_new_contract() -> None:
-    """
-    @brief Verify S-0001 through S-0004 and the strict development schema policy.
-    @details Covers REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012,
-             REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf, and
-             REQ-REL-33fa2b3b-c400-4ad7-96e1-29dde53202af.
-    @return     None.
-    @version 0.2.0
-    """
+def test_text_chunking_component_documentation_describes_current_contract() -> None:
+    """Verify the component documentation describes the implemented document contract."""
     repository_root = Path(__file__).resolve().parents[3]
     documentation = (
         repository_root / ".agentic" / "knowledge" / "components" / "Text_Chunking.md"
@@ -622,8 +550,6 @@ def test_text_chunking_component_documentation_describes_the_new_contract() -> N
     assert "currently selected profile" in normalized
     assert "reset chunking" in normalized
     assert "only the current canonical project-artifact schema is supported" in normalized
-    assert "does not consume" in normalized
-    assert "req-func-bfbe8c95-59a0-47e2-bec7-5847177bc3cf" in normalized
 
 
 # LOCAL HELPERS

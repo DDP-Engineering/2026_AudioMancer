@@ -63,7 +63,7 @@ def test_import_source_accepts_supported_formats(tmp_path, suffix: str, file_typ
 
 def test_import_source_rejects_unsupported_doc_format(tmp_path) -> None:
     """
-    @brief      Verify legacy `.doc` files are rejected.
+    @brief      Verify unsupported binary `.doc` files are rejected.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -73,7 +73,7 @@ def test_import_source_rejects_unsupported_doc_format(tmp_path) -> None:
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
-    source_path = tmp_path / "legacy.doc"
+    source_path = tmp_path / "unsupported.doc"
     source_path.write_text("sample", encoding="utf-8")
 
     with pytest.raises(ValueError, match="Unsupported source format"):

@@ -60,7 +60,6 @@ def test_home_ui_controller_creates_and_activates_project(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,

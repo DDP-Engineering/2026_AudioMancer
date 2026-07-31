@@ -56,10 +56,8 @@ samples use `source_kind = "imported"`. AI cancellation/failure retains compact
 resume state and unchanged profiles. Success appends validated profiles and
 clears resume atomically. AI log paths and raw responses are never persisted.
 
-Removed narrator persistence artifacts have no reader, migration, repair,
-rename, or deletion behavior. Character Voices retains its own current
-`characters_voice.json` contract, including `copied_narrator` target samples in
-same-narrator mode.
+Character Voices retains its own `characters_voice.json` contract, including
+`copied_narrator` target samples in same-narrator mode.
 
 ## 7. Workflow Integration
 
@@ -103,4 +101,4 @@ naturalness or suitability, so operators must audition and approve samples.
 Automated tests cannot judge naturalness, cultural suitability,
 intelligibility, legal usability, or character fit. Operators must audition and
 approve samples. Malformed current narrator documents intentionally require
-operator action; there is no automatic repair or legacy import.
+operator action.

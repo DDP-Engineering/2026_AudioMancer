@@ -9,9 +9,8 @@
 """
 @file test_cleanup_service.py
 @brief Focused orchestration checks for the approved Cleanup operation.
-@details Retains progress, status-copy, and source-projection coverage while
-         replacing the obsolete versioned document and sidecar assumptions;
-         covers whitespace role realignment through deterministic Chunking.
+@details Covers progress, status-copy, source projection, and whitespace role
+         realignment through deterministic Chunking.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-28
 @version 0.4.0
@@ -62,9 +61,9 @@ def test_cleanup_without_ai_reports_monotonic_phase_progress(tmp_path) -> None:
     assert any("estimated" in item[3] and "AI requests" in item[3] for item in progress)
 
 
-def test_renderer_rejects_replacement_text_and_unknown_actions() -> None:
+def test_renderer_rejects_unknown_unit_actions() -> None:
     """
-    @brief      Cover rejection of replacement text and unknown actions.
+    @brief      Cover rejection of unknown unit actions.
     @version    0.1.0
     """
     canonical_text, ledger = build_ledger(["Source text."])
@@ -76,9 +75,8 @@ def test_renderer_rejects_replacement_text_and_unknown_actions() -> None:
             [
                 {
                     "operation_id": "op-000001",
-                    "action": "replace_text",
+                    "action": "unsupported_action",
                     "target_id": "u-000001",
-                    "replacement": "Invented text.",
                 }
             ],
             [],

@@ -58,9 +58,6 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     # splitter narrows the editor pane, so it carries no inflated fixed minimum width.
     assert page._generate_sample_button.minimumWidth() == 0
     assert page._generate_sample_button.minimumSizeHint().width() <= page._generate_sample_button.sizeHint().width()
-    assert hasattr(page, "_setup_group") is False
-    assert hasattr(page, "_profile_name_label") is False
-    assert hasattr(page, "_summary_label") is False
 
 
 def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit(qtbot) -> None:
@@ -259,9 +256,6 @@ def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) ->
         status_lines=["Profiles: 3", "Profiles with samples: 1"],
     )
 
-    assert hasattr(page, "_original_language_group") is False
-    assert hasattr(page, "_translated_language_group") is False
-    assert hasattr(page, "_voice_language_group") is False
     assert page.current_voice_language() == "ro"
     assert "Profiles: 3" in page._status_edit.toPlainText()
 

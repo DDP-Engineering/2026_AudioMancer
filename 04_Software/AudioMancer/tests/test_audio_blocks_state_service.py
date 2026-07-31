@@ -38,9 +38,8 @@ from chunking_test_support import build_chunking_document
 def test_scene_ambience_audio_selector_follows_the_placement_setting(tmp_path) -> None:
     """
     @brief      Verify the Audio Blocks ambience selector defaults from Scene Ambience Placement.
-    @details    Placement owns ambience enablement for the whole pipeline. The selector used to
-                read a settings key that had been deprecated and is now stripped on save, so it
-                was permanently off no matter what TTS Settings asked for.
+    @details    Placement owns ambience enablement for the whole pipeline, so the selector
+                follows that value directly.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None

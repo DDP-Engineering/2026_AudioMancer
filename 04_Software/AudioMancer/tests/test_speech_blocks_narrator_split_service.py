@@ -111,8 +111,7 @@ def test_multi_sentence_quotation_is_never_split_open() -> None:
 def test_sentence_boundary_inside_an_open_quote_is_not_used() -> None:
     """
     @brief      Verify a sentence end inside a quotation is never promoted to a block boundary.
-    @details    Ported from the retired boundary-candidate contract, which covered
-                SB-NARRATOR-QUOTE-001 and REQ-FUNC-055.
+    @details    Covers the current deterministic same-narrator segmentation contract.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare

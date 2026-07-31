@@ -55,9 +55,9 @@ by `resolve_user_data_root()`, owns everything the application writes: the activ
 it writable and it is not the PyInstaller `_MEIPASS` extraction folder, and
 otherwise the per-user OS location (`%LOCALAPPDATA%` on Windows,
 `~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share`
-elsewhere). Portable and source-tree layouts therefore keep data beside the
-application exactly as before, while an installation into a non-writable prefix
-such as `C:\Program Files` or `/opt` no longer fails. See
+elsewhere). Portable and source-tree layouts keep data beside the application,
+while installations under non-writable prefixes such as `C:\Program Files` or
+`/opt` use the per-user location. See
 `.agentic/specs/user_data_location.spec.md`.
 
 ## 4. Dependencies

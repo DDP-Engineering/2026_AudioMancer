@@ -78,8 +78,7 @@ Characters contain exactly `character_id`, `canonical_name`, `aliases`,
 
 The file is absent before the first run. Persisted statuses are `running`,
 `cancelled`, `failed`, and `completed`. Invalid JSON, arrays, extra root fields,
-or incompatible nested records are rejected. There is no migration or fallback
-reader.
+or incompatible nested records are rejected by the strict document reader.
 
 ## 7. Workflow Integration
 

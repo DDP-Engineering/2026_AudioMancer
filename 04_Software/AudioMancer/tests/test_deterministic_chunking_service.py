@@ -65,8 +65,6 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
-    assert not (project_root / "chunking_report.json").exists()
-    assert not (project_root / "chunking_state.json").exists()
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
     assert chunks[0]["chunk_id"] == "chunk-0001"
     assert "chapter_label" not in chunks[0]

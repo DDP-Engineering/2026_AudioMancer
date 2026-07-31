@@ -4,7 +4,7 @@ category = "ux"
 status = "Active"
 priority = "Must"
 requirement = "The Settings page shall present a theme selector listing the built-in themes, load the persisted ui_theme_id into it, and write the chosen theme id back into the built settings payload."
-rationale = "Operators need to pick among the few built-in themes without a full theme editor."
+rationale = "Operators need a simple selector for the supported built-in themes."
 verification = "uv run pytest -q (passed)"
 spec_ref = ""
 

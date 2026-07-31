@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Audio-block resume shall continue from the checkpoint persisted in the single Audio Blocks document and reject invalid or escaping part checkpoints."
-rationale = "The resume checkpoint moves from the removed state artifact into document.checkpoint without losing its guards."
+rationale = "The authoritative document checkpoint must preserve all guards needed for safe resume."
 verification = "Automated: 3 linked pytest selector(s)."
 spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 

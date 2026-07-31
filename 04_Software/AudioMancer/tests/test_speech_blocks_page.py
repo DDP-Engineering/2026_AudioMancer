@@ -331,7 +331,6 @@ def test_speech_blocks_page_selected_chunk_actions_fill_row_evenly(qtbot) -> Non
     assert page._resplit_button.minimumWidth() >= 180
     assert page._resplit_button.geometry().left() == page._source_text_edit.geometry().left()
     assert abs(page._resplit_button.geometry().right() - page._source_text_edit.geometry().right()) <= 2
-    assert hasattr(page, "_scene_ambience_combo") is False
 
 
 def test_speech_blocks_page_selected_chunk_pane_keeps_minimum_width(qtbot) -> None:

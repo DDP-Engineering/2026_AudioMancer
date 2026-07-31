@@ -34,24 +34,22 @@ Artifact helpers own safe names/paths and WAV inspection. The main service coord
 ## 6. Data Contracts
 
 Chunk-source readiness is derived through the shared strict Chunking document
-reader; stale legacy sidecars cannot make Audio Blocks appear ready.
+reader.
 
 All operation metadata lives in a single authoritative `audio_blocks.json`
 document with a fixed root field set (`status`, `voice_language`,
-`input_fingerprint`, `checkpoint`, `blocks`). No `audio_blocks_report.json` or
-`audio_blocks_state.json` is written; `load_audio_blocks_report()` and
-`load_operation_state()` are projections over that document, so their consumers
-are unaffected. A missing document, a legacy list payload, or any root-contract
-violation reads as not-started, and no legacy sidecar is consulted. The
+`input_fingerprint`, `checkpoint`, `blocks`). `load_audio_blocks_report()` and
+`load_operation_state()` are projections over that document. A missing
+document, a non-object payload, or any root-contract violation reads as
+not-started. The
 `voice_clone_profiles.json` cache stays a separate artifact because it holds
 large per-voice model prompts that would otherwise be rewritten on every
 per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 
 - Generated audio paths are a pure function of `speech_block_id`
   (`audio_blocks/<speech_block_id>.wav`, parts under `audio_blocks/parts/`).
-  Because the name depends only on the block's stable primary key, no path is
-  persisted and no artifact is ever renamed or remapped. WAV format/metadata
-  must still pass validation before downstream assembly.
+  The name depends only on the block's stable primary key. WAV format/metadata
+  must pass validation before downstream assembly.
 - Runtime progress is persisted in `document.checkpoint` (`run_token`,
   `current_phase`, `current_block_id`, `next_speech_block_index`,
   `next_split_part_index`) for truthful resume rather than inferred from a

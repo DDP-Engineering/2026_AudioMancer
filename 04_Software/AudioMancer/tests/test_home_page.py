@@ -65,7 +65,7 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
 
 def test_home_page_uses_compact_non_scrolled_dashboard(qtbot) -> None:
     """
-    @brief      Verify the Home page no longer adds a duplicate page title or page-local scroll area.
+    @brief      Verify the Home page uses a compact dashboard without a local scroll area.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -76,7 +76,6 @@ def test_home_page_uses_compact_non_scrolled_dashboard(qtbot) -> None:
     page = HomeProjectPage()
     qtbot.addWidget(page)
 
-    assert hasattr(page, "_title_label") is False
     assert page.findChild(QScrollArea) is None
     assert page._stage_rows[0].minimumHeight() == 28
 

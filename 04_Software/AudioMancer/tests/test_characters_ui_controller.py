@@ -625,7 +625,6 @@ def _build_window(qtbot, project_root):
     """
     settings_payload = {
         "language": "en",
-        "ui_text_scale": "normal",
         "play_completion_beep": False,
         "llm_profiles": [
             {

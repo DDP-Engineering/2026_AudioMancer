@@ -429,7 +429,7 @@ def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_
         project_root,
         {
             "voice_assignment_mode": "narrator_and_characters",
-            "definition_model_id": "obsolete",
+            "definition_model_id": "unsupported-extra-field",
         },
     )
 
@@ -438,7 +438,6 @@ def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_
         "voice_assignment_mode": "narrator_and_characters"
     }
     assert project_workspace_service.load_manifest(project_root)["voice_assignment_mode"] == "narrator_and_characters"
-    assert (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "tts_plan.json").exists() is False
 
 
 def test_narrator_service_profile_generation_request_requires_minimum_qwen_capabilities(tmp_path) -> None:

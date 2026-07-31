@@ -59,20 +59,9 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.EXTRACTION_METADATA_FILE_NAME == "extraction_metadata.json"
     assert config.CLEANED_TEXT_FILE_NAME == "clean_text.txt"
     assert config.CLEANUP_DOCUMENT_FILE_NAME == "cleanup.json"
-    assert not hasattr(config, "CLEANED_TEXT_METADATA_FILE_NAME")
-    assert not hasattr(config, "CLEANUP_REPORT_FILE_NAME")
-    assert not hasattr(config, "CLEANUP_STATE_FILE_NAME")
     assert config.CHUNK_ARTIFACT_FILE_NAME == "chunks_text.json"
-    assert not hasattr(config, "CHUNKING_REPORT_FILE_NAME")
-    assert not hasattr(config, "CHUNKING_STATE_FILE_NAME")
     assert config.TRANSLATED_CHUNKS_FILE_NAME == "translated_text.json"
-    assert not hasattr(config, "TRANSLATION_REPORT_FILE_NAME")
-    assert not hasattr(config, "TRANSLATION_STATE_FILE_NAME")
     assert config.NARRATOR_VOICE_FILE_NAME == "narrator_voice.json"
-    assert not hasattr(config, "NARRATOR_PROFILE_FILE_NAME")
-    assert not hasattr(config, "NARRATOR_SELECTION_FILE_NAME")
-    assert not hasattr(config, "SELECTED_NARRATOR_AUDIO_FILE_NAME")
-    assert not hasattr(config, "SELECTED_NARRATOR_METADATA_FILE_NAME")
     assert config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512

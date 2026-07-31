@@ -387,9 +387,6 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
 
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / "cleanup_state.json").exists() is False
-    assert (project_root / "chunking_state.json").exists() is False
-    assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists() is False
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
@@ -397,14 +394,10 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     window.set_current_page("text_cleanup")
 
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / "cleanup_state.json").exists() is False
-    assert (project_root / "cleanup_report.json").exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
 
     window.set_current_page("text_chunking")
 
-    assert (project_root / "chunking_state.json").exists() is False
-    assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists() is False
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
@@ -633,7 +626,6 @@ def test_main_window_exposes_modal_progress_dialog_and_cancel_signal(qtbot, defa
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -673,7 +665,6 @@ def test_main_window_progress_dialog_shows_token_usage(qtbot, default_settings_p
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -728,7 +719,6 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,

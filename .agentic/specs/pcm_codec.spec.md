@@ -7,8 +7,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Spec: Internal PCM Codec
 
-Companion specification for the internal PCM conversion requirements that replace
-the removed stdlib `audioop` module.
+Companion specification for AudioMancer's internal PCM conversion requirements.
 
 - Requirements: the `pcm_codec` functional set (sample-width conversion, channel
   conversion, stateful rate conversion, rejection and boundary behavior) and the
@@ -19,21 +18,18 @@ the removed stdlib `audioop` module.
 
 The codec performs uncompressed linear PCM conversions that Audio Assembly and
 Scene Mix need when a source WAV does not already match the target parameters.
-It replaces `audioop.lin2lin`, `audioop.ratecv`, `audioop.tomono` and
-`audioop.tostereo` with pure-stdlib equivalents.
 
-The governing rule is **bit-exact behavioral preservation**: for every input the
-application can produce, each codec function returns bytes identical to the
-`audioop` function it replaces. Where `audioop` semantics differ from WAV
-convention, `audioop` semantics win, because the goal is portability without an
-audio change.
+The governing rule is **bit-exact deterministic behavior**: for every supported
+input, each codec function returns the bytes specified below. The optional
+`audioop` differential oracle verifies those semantics on interpreters where
+that reference implementation is available.
 
 Two consequences of that rule are deliberate and must not be "fixed" here:
 
 - All sample widths are treated as **signed**, including width 1. WAV stores
-  8-bit PCM as unsigned, but `audioop` reads it signed, so the codec does too.
+  8-bit PCM as unsigned, but the codec contract interprets it as signed.
 - Sample-width conversion is a pure arithmetic **bit shift**, not a rescale with
-  rounding, so it matches `audioop.lin2lin` exactly.
+  rounding.
 
 Samples are little-endian, matching the `wave` module's PCM payload.
 
@@ -55,7 +51,7 @@ Samples are little-endian, matching the `wave` module's PCM payload.
 
 ## Data Structures
 
-Rate-conversion state, interchangeable with `audioop.ratecv` state:
+Rate-conversion state:
 
 ```text
 state := None | (d, ((prev_0, cur_0), (prev_1, cur_1), ...))
@@ -91,20 +87,20 @@ SUPPORTED_SAMPLE_WIDTHS: tuple[int, ...] = (1, 2, 3, 4)
 
 convert_sample_width(frame_data: bytes, sample_width: int,
                      target_sample_width: int) -> bytes
-    Mirrors audioop.lin2lin.
+    Converts between supported sample widths by arithmetic shift.
 
 mono_to_stereo(frame_data: bytes, sample_width: int,
                left_factor: float = 1.0, right_factor: float = 1.0) -> bytes
-    Mirrors audioop.tostereo.
+    Duplicates mono samples into clipped left and right channels.
 
 stereo_to_mono(frame_data: bytes, sample_width: int,
                left_factor: float = 0.5, right_factor: float = 0.5) -> bytes
-    Mirrors audioop.tomono.
+    Mixes stereo samples into a clipped mono channel.
 
 convert_frame_rate(frame_data: bytes, sample_width: int, channels: int,
                    source_rate: int, target_rate: int,
                    state: object | None) -> tuple[bytes, object]
-    Mirrors audioop.ratecv with weightA=1, weightB=0.
+    Performs stateful linear-interpolation resampling.
 
 Raises ValueError on an unsupported sample width, a non-positive channel count,
 or a non-positive sample rate.
@@ -112,7 +108,7 @@ or a non-positive sample rate.
 
 ### Rate-conversion algorithm
 
-Reproduces `audioop.ratecv` exactly:
+The rate converter applies this algorithm:
 
 1. Divide `source_rate` and `target_rate` by their greatest common divisor.
 2. With no incoming state, set `d = -target_rate` and all channel samples to 0.
@@ -128,8 +124,7 @@ division. This distinction is load-bearing for negative samples.
 
 ### Channel-mixing arithmetic
 
-Both channel functions compute in floating point, then clip and floor exactly as
-`audioop` does:
+Both channel functions compute in floating point, then clip and floor:
 
 ```text
 value = left * left_factor + right * right_factor
@@ -138,13 +133,13 @@ elif value < minval + 1:  value = minval
 value = floor(value)
 ```
 
-The `minval + 1.0` comparison is `audioop`'s own boundary rule and is
-reproduced verbatim rather than simplified to `value < minval`.
+The `minval + 1.0` comparison is part of the byte-level boundary contract and
+must not be simplified to `value < minval`.
 
 ## Examples
 
-Measured against real `audioop` on Python 3.12. These are the acceptance
-examples the differential test generalizes.
+These golden examples define acceptance behavior and are generalized by the
+differential test.
 
 | Input | Expected result |
 | --- | --- |
@@ -166,18 +161,18 @@ mono and stereo still raises `RuntimeError` from
 
 ## Acceptance
 
-- [ ] No module under `04_Software/AudioMancer/src` imports `audioop`.
+- [ ] Application source uses `pcm_codec` for PCM conversion.
 - [ ] The codec exposes sample-width, channel and stateful rate conversion for
       widths 1, 2, 3 and 4.
-- [ ] Sample-width conversion is byte-identical to `audioop.lin2lin` for every
-      ordered width pair drawn from `{1,2,3,4}`.
-- [ ] Rate conversion returns bytes and state byte-identical to
-      `audioop.ratecv`, including a chunked stream where state carries across
-      calls.
-- [ ] Mono-to-stereo matches `audioop.tostereo(data, width, 1.0, 1.0)` and
-      stereo-to-mono matches `audioop.tomono(data, width, 0.5, 0.5)`.
+- [ ] Sample-width conversion matches the golden and optional differential
+      oracle for every ordered width pair drawn from `{1,2,3,4}`.
+- [ ] Rate conversion matches the golden and optional differential oracle,
+      including a chunked stream where state carries across calls.
+- [ ] Mono-to-stereo and stereo-to-mono match the specified clipping and floor
+      arithmetic.
 - [ ] An unsupported sample width raises `ValueError`.
 - [ ] Empty input returns empty output and a usable rate-conversion state.
 - [ ] Unsupported channel conversion still raises `RuntimeError` with the
       existing Audio Assembly message.
-- [ ] The differential parity test skips cleanly when `audioop` is unavailable.
+- [ ] The optional differential parity test skips cleanly when its reference
+      oracle is unavailable.

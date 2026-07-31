@@ -307,9 +307,6 @@ def test_open_project_self_heals_incompatible_chunking_and_downstream(monkeypatc
 
     reset_file_names = (
         config.CHUNK_ARTIFACT_FILE_NAME,
-        "chunking_checkpoint.json",
-        "chunking_state.json",
-        "chunking_report.json",
         config.TRANSLATED_CHUNKS_FILE_NAME,
         config.CHARACTERS_DOCUMENT_FILE_NAME,
         config.NARRATOR_VOICE_FILE_NAME,
@@ -405,26 +402,6 @@ def test_open_project_fails_when_manifest_is_missing(tmp_path) -> None:
         project_workspace_service.open_project(orphan_folder)
 
 
-def test_open_project_rejects_legacy_numbered_layout(tmp_path) -> None:
-    """
-    @brief      Verify opening fails when legacy numbered workflow folders are present.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    project_root, _manifest = project_workspace_service.create_project(
-        "Book5_CAL_CAL",
-        tmp_path,
-    )
-    (project_root / "50_narrator_definition").mkdir()
-
-    with pytest.raises(ValueError, match="unsupported legacy numbered runtime layout"):
-        project_workspace_service.open_project(project_root)
-
-
 def test_open_project_fails_when_required_manifest_field_is_missing(tmp_path) -> None:
     """
     @brief      Verify opening fails when minimal manifest metadata is incomplete.
@@ -448,33 +425,6 @@ def test_open_project_fails_when_required_manifest_field_is_missing(tmp_path) ->
     )
 
     with pytest.raises(ValueError, match="display_name"):
-        project_workspace_service.open_project(project_root)
-
-
-def test_open_project_rejects_legacy_downstream_folder_layout(
-    tmp_path,
-) -> None:
-    """
-    @brief      Verify numbered downstream folders are rejected instead of repaired.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
-    """
-    project_root, manifest = project_workspace_service.create_project(
-        "Book5_CAL_CAL",
-        tmp_path,
-    )
-    manifest["current_stage"] = "narrator_definition_ready"
-    manifest["narrator_profile_name"] = "Warm Storyteller"
-    manifest["narrator_language"] = "English"
-    project_workspace_service.save_manifest(manifest, project_root)
-    (project_root / "30_translation").mkdir()
-    (project_root / "30_translation" / "artifact.txt").write_text("old-data", encoding="utf-8")
-
-    with pytest.raises(ValueError, match="unsupported legacy numbered runtime layout"):
         project_workspace_service.open_project(project_root)
 
 
@@ -757,41 +707,6 @@ def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_
     assert "resume_checkpoint" not in translation_operation
 
 
-def test_validate_project_manifest_accepts_legacy_detailed_operation_payloads() -> None:
-    """
-    @brief      Verify legacy manifests with detailed operation payloads still validate successfully.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
-    """
-    manifest = project_workspace_service.build_project_manifest("LegacyManifest")
-    manifest["operations"]["cleanup"] = {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": "completed",
-        "input_paths": [config.EXTRACTED_TEXT_FILE_NAME],
-        "output_paths": [config.CLEANED_TEXT_FILE_NAME],
-        "artifact_paths": ["cleanup_report.json"],
-        "progress_current": 3,
-        "progress_total": 3,
-        "mode": "ai_assisted",
-        "started_at": "2026-04-11T10:00:00+00:00",
-        "completed_at": "2026-04-11T10:10:00+00:00",
-        "updated_at": "2026-04-11T10:10:00+00:00",
-        "warning_count": 1,
-        "metadata": {"warning_details": [{"kind": "detail"}]},
-        "resume_checkpoint": {"completed_window_count": 3},
-    }
-
-    validated = project_workspace_service.validate_project_manifest(manifest)
-
-    assert validated["operations"]["cleanup"]["status"] == "completed"
-    assert validated["operations"]["cleanup"]["mode"] == "ai_assisted"
-    assert validated["operations"]["cleanup"]["warning_count"] == 1
-    assert "metadata" not in validated["operations"]["cleanup"]
-
-
 def test_repair_manifest_preserves_character_discovery_for_narrator_stage() -> None:
     """
     @brief      Verify repaired narrator-stage manifests keep character discovery data intact.
@@ -1070,9 +985,8 @@ def test_open_project_heals_completed_character_voices_manifest_summary(tmp_path
 def test_open_project_does_not_heal_audio_blocks_with_missing_derived_audio(tmp_path) -> None:
     """
     @brief      Verify a missing derived WAV cannot prove Audio Blocks completion.
-    @details    Generated audio paths are derived from `speech_block_id`, so a
-                traversal path is no longer expressible; the remaining failure
-                mode is a document claiming audio that is not on disk.
+    @details    Generated audio paths derive from `speech_block_id`; completion
+                still requires the claimed audio to exist on disk.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -1131,53 +1045,11 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
             "page_count": None,
         },
     )
-    _write_json(project_root / "cleanup_state.json", _operation_state("completed", 1, 1))
-    _write_json(project_root / "cleanup_report.json", {"warning_count": 0})
-
     open_result = project_workspace_service.open_project(project_root)
 
     assert open_result["status"] == "repair_required"
     assert open_result["corrupted_step"] == "extraction"
     assert open_result["changes"] == []
-
-
-def test_open_project_requires_destructive_reset_for_legacy_extraction(tmp_path) -> None:
-    """
-    @brief      Verify legacy Extraction sidecars are never migrated or consumed.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @version    0.1.0
-    """
-    project_root, manifest = project_workspace_service.create_project("LegacyExtractionReset", tmp_path)
-    source_path = project_root / "story.txt"
-    source_path.write_text("Story", encoding="utf-8")
-    manifest["source_document"] = {
-        "original_name": "story.txt",
-        "stored_relative_path": "story.txt",
-        "file_type": "txt",
-        "imported_at": "2026-04-25T12:00:00+00:00",
-        "size_bytes": source_path.stat().st_size,
-    }
-    project_workspace_service.save_manifest(manifest, project_root)
-    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Legacy text", encoding="utf-8")
-    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Downstream", encoding="utf-8")
-
-    repair_request = project_workspace_service.open_project(project_root)
-
-    assert repair_request["status"] == "repair_required"
-    assert repair_request["corrupted_step"] == "extraction"
-    assert repair_request["metadata_only"] is False
-
-    repaired = project_workspace_service.repair_project(repair_request)
-
-    assert repaired["manifest"]["current_stage"] == "source_selected"
-    assert "extraction_warning_count" not in repaired["manifest"]
-    assert "extraction" not in repaired["manifest"]["operations"]
-    assert source_path.is_file()
-    assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).exists() is False
-    assert (project_root / "extraction_report.json").exists() is False
-    assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
 
 
 def test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing(tmp_path) -> None:

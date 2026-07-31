@@ -626,7 +626,6 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
 
     assert saved_payloads
     assert persisted_payload["language"] == "ro"
-    assert "ui_text_scale" not in persisted_payload
     assert persisted_payload["ui_theme_id"] == "warm_reading"
     assert persisted_payload["play_completion_beep"] is True
     assert window._settings_dialog.isVisible() is True

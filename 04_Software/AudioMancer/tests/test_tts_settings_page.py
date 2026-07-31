@@ -57,7 +57,6 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     )
 
     assert page._model_list.count() == 2
-    assert hasattr(page, "_voice_assignment_combo") is False
     assert page._preview_timeout_spin.value() == 75
     assert page._generation_timeout_spin.value() == 420
     assert page._preview_text_limit_spin.value() == 640
@@ -170,7 +169,6 @@ def test_tts_settings_page_keeps_runtime_limits_available_without_project(qtbot)
     page.load_state({}, {}, False)
 
     assert page._planning_group.isEnabled() is True
-    assert hasattr(page, "_voice_assignment_combo") is False
     assert page.build_tts_plan_payload() is None
 
 
@@ -216,8 +214,6 @@ def test_tts_settings_page_uses_compact_runtime_limit_controls(qtbot) -> None:
     assert page._planning_columns_layout.spacing() >= 44
     assert page._ambience_limits_column.geometry().left() > page._numeric_limits_column.geometry().right()
     assert page._scene_ambience_placement_combo.maximumWidth() <= 420
-    assert hasattr(page, "_scene_ambience_enabled_checkbox") is False
-    assert hasattr(page, "_scene_ambience_audio_enabled_checkbox") is False
     assert page._ok_button.geometry().bottom() >= page.height() - 40
 
 

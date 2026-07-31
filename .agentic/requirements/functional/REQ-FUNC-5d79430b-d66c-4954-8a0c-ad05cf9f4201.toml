@@ -3,8 +3,8 @@ id = "REQ-FUNC-5d79430b-d66c-4954-8a0c-ad05cf9f4201"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Project completion healing, manifest projection, Narrator Voice export, snapshots, reset, and preservation shall derive narrator state from `narrator_voice.json` plus canonical profile WAVs; export the authoritative document and valid profile samples; exclude narrator AI logs from snapshots; delete the authoritative document, canonical profile WAV pattern, and actual narrator-profile log pattern only when narrator definition is in reset scope; preserve them when requested; and neither inspect nor delete removed-contract artifacts."
-rationale = "Project lifecycle operations must remain accurate and scoped while treating obsolete files as out-of-contract data rather than migration or cleanup inputs."
+requirement = "Project completion healing, manifest projection, Narrator Voice export, snapshots, reset, and preservation shall derive narrator state from `narrator_voice.json` plus canonical profile WAVs; export the authoritative document and valid profile samples; exclude narrator AI logs from snapshots; delete the authoritative document, canonical profile WAV pattern, and narrator-profile logs only when narrator definition is in reset scope; and preserve them when requested."
+rationale = "Project lifecycle operations must remain accurate and scoped to the authoritative narrator artifacts."
 verification = "Reset and lifecycle current-artifact scoping test passes; export companion test passes."
 spec_ref = ""
 
@@ -17,7 +17,8 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_reset_removes_current_artifacts_but_preserves_removed_contract_files",
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_reset_removes_current_artifacts",
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_export_uses_authoritative_document_and_profile_wav",
 ]
 
 created_on = "2026-07-21T13:27:00Z"

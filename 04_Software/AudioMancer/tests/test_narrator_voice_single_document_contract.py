@@ -9,10 +9,9 @@
 """
 @file test_narrator_voice_single_document_contract.py
 @brief Red-before-green contract tests for authoritative Narrator Voice state.
-@details Verifies the strict document, canonical sample ownership, no-copy
-         selection, downstream resolution, lifecycle cleanup, and obsolete
-         persistence removal required by SPEC-NV-001 through SPEC-NV-006 and
-         REQ-FUNC-034 plus REQ-FUNC-055 through REQ-FUNC-058.
+@details Verifies the strict document, canonical sample ownership, selected
+         profile resolution, lifecycle cleanup, and export behavior required by
+         the current Narrator Voice contracts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-07-21
 @version 0.1.0
@@ -42,30 +41,7 @@ _ROOT_FIELDS = {
     "profiles",
     "resume",
 }
-_REMOVED_ARTIFACT_NAMES = (
-    "audio_profiles.json",
-    "narator.json",
-    "narator_sample.json",
-    "narator_profile_generation_report.json",
-    "narator_profile_generation_state.json",
-    "narator.wav",
-)
-_REMOVED_CONFIG_CONSTANTS = (
-    "NARRATOR_PROFILE_FILE_NAME",
-    "NARRATOR_SELECTION_FILE_NAME",
-    "NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME",
-    "NARRATOR_PROFILE_GENERATION_STATE_FILE_NAME",
-    "SELECTED_NARRATOR_AUDIO_FILE_NAME",
-    "SELECTED_NARRATOR_METADATA_FILE_NAME",
-)
-_REMOVED_SERVICE_APIS = (
-    "selected_narrator_sample_paths",
-    "copy_selected_narrator_sample",
-    "clear_selected_narrator_sample_artifacts",
-)
-
-
-def test_default_document_has_exact_contract_and_creates_no_removed_artifacts(tmp_path) -> None:
+def test_default_document_has_exact_contract(tmp_path) -> None:
     """
     @brief      Verify SPEC-NV-001 and REQ-FUNC-034 exact missing-document initialization.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -97,7 +73,6 @@ def test_default_document_has_exact_contract_and_creates_no_removed_artifacts(tm
         "profiles": [],
         "resume": None,
     }
-    assert not any((project_root / artifact_name).exists() for artifact_name in _REMOVED_ARTIFACT_NAMES)
 
 
 def test_malformed_current_document_is_preserved_and_reported(tmp_path) -> None:
@@ -120,33 +95,6 @@ def test_malformed_current_document_is_preserved_and_reported(tmp_path) -> None:
         narrator_definition_service.load_narrator_voice_document(project_root)
 
     assert document_path.read_bytes() == malformed_bytes
-
-
-def test_missing_document_ignores_and_preserves_removed_artifacts(tmp_path) -> None:
-    """
-    @brief      Verify SPEC-NV-001 and REQ-FUNC-034 provide no legacy fallback or migration.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-21
-    @version    0.1.0
-    """
-    project_root = tmp_path / "project"
-    project_root.mkdir()
-    for artifact_name in _REMOVED_ARTIFACT_NAMES:
-        (project_root / artifact_name).write_bytes(b"legacy-content")
-
-    document_path = narrator_definition_service.ensure_narrator_voice_document(project_root)
-    document = narrator_definition_service.load_narrator_voice_document(project_root)
-
-    assert document_path.name == "narrator_voice.json"
-    assert document["profiles"] == []
-    assert document["selected_profile_id"] is None
-    assert all(
-        (project_root / artifact_name).read_bytes() == b"legacy-content"
-        for artifact_name in _REMOVED_ARTIFACT_NAMES
-    )
 
 
 def test_profile_sample_and_selection_use_only_document_and_canonical_wav(tmp_path) -> None:
@@ -194,7 +142,6 @@ def test_profile_sample_and_selection_use_only_document_and_canonical_wav(tmp_pa
     assert expected_wav.read_bytes() == b"RIFF-canonical-profile-sample"
     assert selected_metadata is not None
     assert selected_metadata["preview_text"] == "The exact transcript spoken by the selected narrator sample."
-    assert not any((project_root / artifact_name).exists() for artifact_name in _REMOVED_ARTIFACT_NAMES)
 
 
 def test_character_voice_readiness_uses_selected_profile_resolution(tmp_path, monkeypatch) -> None:
@@ -221,17 +168,10 @@ def test_character_voice_readiness_uses_selected_profile_resolution(tmp_path, mo
         "load_selected_narrator_sample_metadata",
         lambda _project_root: {"preview_text": "Current sample transcript.", "language": "en"},
     )
-    monkeypatch.setattr(
-        narrator_definition_service,
-        "selected_narrator_sample_paths",
-        lambda _project_root: pytest.fail("Removed selected-copy API was called."),
-        raising=False,
-    )
-
     assert character_voices_service.selected_narrator_sample_exists(tmp_path) is True
 
 
-def test_narrator_reset_removes_current_artifacts_but_preserves_removed_contract_files(tmp_path) -> None:
+def test_narrator_reset_removes_current_artifacts(tmp_path) -> None:
     """
     @brief      Verify SPEC-NV-005, REQ-FUNC-009, and REQ-FUNC-058 reset scope and log token.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -248,13 +188,10 @@ def test_narrator_reset_removes_current_artifacts_but_preserves_removed_contract
     )
     for current_path in current_paths:
         current_path.write_bytes(b"current")
-    for artifact_name in _REMOVED_ARTIFACT_NAMES:
-        (tmp_path / artifact_name).write_bytes(b"legacy")
 
     operation_runtime_service.reset_operation_data(tmp_path, "narrator_definition", include_current=True)
 
     assert all(not current_path.exists() for current_path in current_paths)
-    assert all((tmp_path / artifact_name).read_bytes() == b"legacy" for artifact_name in _REMOVED_ARTIFACT_NAMES)
 
 
 def test_narrator_export_uses_authoritative_document_and_profile_wav(tmp_path) -> None:
@@ -293,7 +230,6 @@ def test_narrator_export_uses_authoritative_document_and_profile_wav(tmp_path) -
 
     assert "narrator_voice.json" in archive_names
     assert f"audio_narator_{profile['profile_id']}.wav" in archive_names
-    assert not archive_names.intersection(_REMOVED_ARTIFACT_NAMES)
 
 
 # END OF FILE

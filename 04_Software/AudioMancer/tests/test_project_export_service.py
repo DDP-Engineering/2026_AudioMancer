@@ -417,19 +417,6 @@ def _build_export_project(tmp_path):
         encoding="utf-8",
     )
     _write_json(
-        project_root / "cleanup_report.json",
-        {
-            "cleanup_mode": "deterministic",
-            "paragraph_count": 2,
-            "removed_line_count": 1,
-            "detected_chapter_count": 0,
-            "detected_language": "ro",
-            "warnings": ["No explicit chapter headings."],
-        },
-    )
-    _write_json(project_root / "cleanup_state.json", {"status": "completed", "warning_count": 1})
-
-    _write_json(
         project_root / config.CHUNK_ARTIFACT_FILE_NAME,
         build_chunking_document(
             [

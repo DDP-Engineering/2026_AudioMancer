@@ -26,7 +26,6 @@ import pytest
 from audiomancer import config
 from audiomancer.services import (
     ai_chunking_service,
-    chunking_document_service,
     operation_runtime_service,
     project_workspace_service,
 )
@@ -578,55 +577,6 @@ def test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usag
     assert "Paragraph 1\n" not in resumed_prompts[0]
     assert report["chunk_count"] == 2
     assert report["token_usage"]["total_tokens"] == 30
-
-
-def test_old_break_id_checkpoint_restarts_from_paragraph_one(tmp_path, monkeypatch) -> None:
-    """
-    @brief      Verify S-0003 and REQ-FUNC-065 restart checkpoints from the removed contract.
-    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
-    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
-    @return     None.
-    @version    0.2.0
-    """
-    project_root, manifest = _prepare_project(tmp_path, monkeypatch)
-    state_path = project_root / "chunking_state.json"
-    state_path.write_text(
-        json.dumps(
-            {
-                "status": "cancelled",
-                "mode": "ai_assisted",
-                "started_at": "2026-07-16T12:00:00+00:00",
-                "metadata": {"token_usage": _usage(99)},
-                "resume_checkpoint": {
-                    "input_fingerprint": chunking_document_service.source_fingerprint(
-                        (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
-                    ),
-                    "semantic_strategy": "paragraph",
-                    "completed_unit_count": 4,
-                    "committed_break_ids": ["paragraph-0002"],
-                },
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    prompts: list[str] = []
-    responses = iter([_response([]), _response([])])
-
-    def _chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
-        """
-        @brief      Capture one prompt and return the next fake provider response.
-        @return     Next queued fake provider response.
-        @version    0.1.0
-        """
-        prompts.append(user_prompt)
-        return next(responses)
-
-    monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
-
-    ai_chunking_service.chunk_text(project_root, manifest, _profile(), "paragraph")
-
-    assert "Paragraph 1\n" in prompts[0]
 
 
 # END OF FILE

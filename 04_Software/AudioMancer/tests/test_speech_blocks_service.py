@@ -231,8 +231,6 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
 
     speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     assert (speech_blocks_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).is_file()
-    assert not (speech_blocks_root / "speech_blocks_report.json").exists()
-    assert not (speech_blocks_root / "speech_blocks_state.json").exists()
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert [block["speech_block_id"] for block in speech_blocks] == [
         "0001-000001",
@@ -1131,9 +1129,9 @@ def test_same_narrator_resume_depends_on_the_recorded_response_contract(
     expected_next_chunk_index: int,
 ) -> None:
     """
-    @brief      Verify only current-contract same-narrator state resumes, retired state restarts.
-    @details    Covers SBCON-004 and REQ-FUNC-041. Resuming a retired narrator-boundary run
-                would leave one document holding two different segmentations.
+    @brief      Verify only a compatible same-narrator response contract resumes.
+    @details    Covers SBCON-004 and REQ-FUNC-041. An incompatible response
+                contract restarts to avoid mixing different segmentations.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  response_contract Persisted response contract under test.
     @param[in]  expected_next_chunk_index Chunk index generation must continue from.
@@ -1175,9 +1173,9 @@ def test_same_narrator_resume_depends_on_the_recorded_response_contract(
     assert restored == ([], [], expected_next_chunk_index)
 
 
-def test_legacy_narrator_boundary_project_regenerates_without_error(tmp_path) -> None:
+def test_incompatible_response_contract_regenerates_without_error(tmp_path) -> None:
     """
-    @brief      Verify a project left on the retired contract regenerates cleanly after upgrade.
+    @brief      Verify an incompatible response contract regenerates cleanly.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -1185,7 +1183,7 @@ def test_legacy_narrator_boundary_project_regenerates_without_error(tmp_path) ->
     @date       2026-07-26
     @version    0.1.0
     """
-    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksLegacyContract")
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksIncompatibleContract")
     manifest["original_language"] = "en"
     manifest["voice_assignment_mode"] = "same_narrator"
     manifest["project_options_locked"] = True

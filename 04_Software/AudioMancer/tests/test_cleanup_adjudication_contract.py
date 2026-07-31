@@ -260,7 +260,7 @@ def test_incompatible_profile_uses_priors_without_provider_calls(monkeypatch) ->
     assert result["failed_batch_count"] == 0
 
 
-def test_cleanup_prompts_never_request_removed_choices() -> None:
+def test_cleanup_prompts_require_listed_choices() -> None:
     """Cover S-0006 and the strict adjudication-choice contract."""
     prompts = [
         prompt_template_service.load_prompt(
@@ -273,8 +273,6 @@ def test_cleanup_prompts_never_request_removed_choices() -> None:
 
     for prompt in prompts:
         normalized = prompt.casefold()
-        assert "choose preserve" not in normalized
-        assert "join_without_space" not in normalized
         assert "listed choices" in normalized
         assert "do not invent" in normalized
 

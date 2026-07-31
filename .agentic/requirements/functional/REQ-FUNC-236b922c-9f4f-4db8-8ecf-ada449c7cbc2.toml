@@ -4,8 +4,8 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Text Chunking services shall persist operation state exclusively through the canonical chunks_text.json document API."
-rationale = "Obsolete checkpoint, report, and state sidecars are out of contract and must not be read, written, rebuilt, or migrated by runtime services."
-verification = "Focused Chunking regression set passes (108 tests), proving canonical-only persistence and absence of legacy service helpers."
+rationale = "A single document API keeps Chunking persistence, resume state, and projections consistent."
+verification = "Automated contract coverage verifies canonical document round-trips and deterministic and AI Chunking persistence."
 spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [
@@ -15,8 +15,9 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_chunking_services_do_not_expose_legacy_persistence_helpers",
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_ignores_obsolete_sidecars_and_never_migrates_them",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_round_trips_exact_contract_and_returns_defensive_chunks",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_chunking_persists_minimal_document_and_separate_log",
 ]
 
 created_on = "2026-07-24T19:52:27Z"

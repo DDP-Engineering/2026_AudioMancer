@@ -75,7 +75,6 @@ The strict `chunks_text.json` field set is unchanged.
 
 ### Source consistency
 
-- The Translation artifact comment says `Reset-only legacy names`.
 - `validate_project_name` aligns its `@version` tag with the other tags.
 - `_apply_ai_result` and `_can_reuse_analysis` have the required two blank
   lines between module-level definitions.
@@ -96,5 +95,5 @@ The strict `chunks_text.json` field set is unchanged.
 ## Acceptance
 
 - [ ] Behavior items 1-5 have focused regression tests.
-- [ ] Source consistency items 6-7 pass inspection, Ruff, and a BOM byte scan.
+- [ ] Source consistency items pass inspection, Ruff, and a BOM byte scan.
 - [ ] Full pytest is not run; the owner performs the final application test.

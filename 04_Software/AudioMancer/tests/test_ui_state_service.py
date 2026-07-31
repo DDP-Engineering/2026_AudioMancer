@@ -572,7 +572,8 @@ def test_apply_ui_settings_falls_back_to_default_theme_for_missing_theme_id(qtbo
     original_stylesheet = application.styleSheet()
     settings_payload = {
         "language": config.DEFAULT_LANGUAGE,
-        "ui_text_scale": config.DEFAULT_UI_TEXT_SCALE,
+        "ui_font_size_step": config.DEFAULT_UI_FONT_SIZE_STEP,
+        "text_font_size_step": config.DEFAULT_TEXT_FONT_SIZE_STEP,
         "ui_theme_id": "missing_theme",
         "ui_themes": [_custom_theme()],
     }

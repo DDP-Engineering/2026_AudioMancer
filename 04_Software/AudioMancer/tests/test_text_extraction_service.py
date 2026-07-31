@@ -86,8 +86,6 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     ledger = source_ledger_service.load_source_ledger(project_root)
     assert ledger["canonical_text"]["length_codepoints"] == 24
     assert [unit["unit_id"] for unit in ledger["units"]] == ["u-000001", "u-000002"]
-    assert (project_root / "extraction_report.json").exists() is False
-    assert (project_root / "extraction_state.json").exists() is False
 
 
 @pytest.mark.parametrize(
@@ -258,9 +256,9 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
     assert metadata["progress_total"] >= 2
 
 
-def test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension(tmp_path) -> None:
+def test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension(tmp_path) -> None:
     """
-    @brief      Verify misnamed legacy Word containers do not pass through the RTF extractor.
+    @brief      Verify misnamed binary Word containers do not pass through the RTF extractor.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -269,14 +267,14 @@ def test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension(tmp_path) -
     @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
-        "LegacyDocProject",
+        "MisnamedBinaryDocProject",
         tmp_path,
     )
-    source_path = project_root / "legacy.rtf"
+    source_path = project_root / "misnamed-binary-doc.rtf"
     source_path.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 64)
     manifest["source_document"] = _build_source_document(source_path, "rtf")
 
-    with pytest.raises(ValueError, match="legacy Word \\.doc container"):
+    with pytest.raises(ValueError, match="Word \\.doc container"):
         text_extraction_service.extract_text(project_root, manifest)
     metadata = text_extraction_service.load_extraction_metadata(project_root)
     assert metadata is not None
@@ -393,15 +391,6 @@ def test_load_extraction_metadata_rejects_incompatible_schema(tmp_path, payload_
         text_extraction_service.load_extraction_metadata(project_root)
 
 
-def test_load_extraction_metadata_rejects_legacy_sidecars(tmp_path) -> None:
-    """Verify old report/state artifacts require a destructive extraction reset."""
-    project_root, _manifest = project_workspace_service.create_project("LegacyExtraction", tmp_path)
-    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
-
-    with pytest.raises(text_extraction_service.ExtractionMetadataError, match="Legacy extraction sidecars"):
-        text_extraction_service.load_extraction_metadata(project_root)
-
-
 def test_load_extraction_metadata_rejects_invalid_json(tmp_path) -> None:
     """Verify malformed metadata JSON requires a destructive extraction reset."""
     project_root, _manifest = project_workspace_service.create_project("InvalidExtractionJson", tmp_path)
@@ -443,8 +432,6 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
         ),
         encoding="utf-8",
     )
-    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
-    (project_root / "extraction_state.json").write_text("{}", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("cleanup", encoding="utf-8")
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / "operator_note.txt").write_text("keep", encoding="utf-8")
@@ -455,8 +442,6 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
     assert (project_root / "operator_note.txt").is_file()
     assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).exists() is False
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / "extraction_report.json").exists() is False
-    assert (project_root / "extraction_state.json").exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
 

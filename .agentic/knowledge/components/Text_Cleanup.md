@@ -107,15 +107,9 @@ Cleanup writes:
 - `clean_text.txt`
 - optional `ai_cleanup_*.log` transaction logs
 
-The log is operational diagnostics, not Cleanup state. Cleanup has no report,
-state, clean-text metadata, schema-version, compatibility, or migration
-sidecar. The current unversioned contract is the only accepted contract.
-
-`config` therefore defines no constant for `cleanup_report.json`,
-`cleanup_state.json`, or `clean_text_metadata.json`. Reset still deletes those
-three names as bare string literals so pre-hard-break project folders are cleaned, and
-`test_retired_cleanup_artifact_config_constants_are_gone` keeps the constants
-from returning.
+The log is operational diagnostics, not Cleanup state. `cleanup.json` is the
+authoritative metadata source, `clean_text.txt` is the text output, and reset
+clears Cleanup-owned artifacts.
 
 ## 6. Data Contracts
 
@@ -138,7 +132,6 @@ Boundary choices are restricted to:
 - `join_preserving_hyphen`
 - `document_end`
 
-`join_without_space`, `preserve`, and replacement-text actions do not exist.
 Every unit has exactly one role and every source boundary has exactly one
 decision. Unknown or duplicate targets, unsupported roles/choices, oversized
 artifact removals, empty output, removal of every unit on a page, and new

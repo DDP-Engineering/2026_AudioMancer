@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Audio Blocks resume shall read run_token, current_phase, current_block_id, next_speech_block_index, and next_split_part_index from document.checkpoint so block-level and split-part-level progress both continue."
-rationale = "The checkpoint is the only unique content the removed state artifact held, and it must survive the consolidation intact."
+rationale = "The checkpoint must retain every field needed to resume block-level and split-part generation safely."
 verification = "Automated contract test: the projected resume checkpoint exposes run_token, current_phase, current_block_id, next_speech_block_index and next_split_part_index."
 spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 

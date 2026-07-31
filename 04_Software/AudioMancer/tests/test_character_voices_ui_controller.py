@@ -945,7 +945,6 @@ def _default_settings_payload() -> dict[str, object]:
     """
     return {
         "language": "en",
-        "ui_text_scale": "normal",
         "play_completion_beep": False,
         "llm_profiles": [],
         "default_ai_cleanup_profile_id": None,

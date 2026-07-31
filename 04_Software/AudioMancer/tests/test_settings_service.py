@@ -55,7 +55,6 @@ def test_build_default_settings_includes_theme_and_scroll_fields() -> None:
     """
     default_settings = settings_service.build_default_settings()
 
-    assert "ui_text_scale" not in default_settings
     assert default_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert default_settings["ui_themes"] == []
     assert default_settings["ui_scroll_steps_per_wheel_notch"] == config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
@@ -134,7 +133,6 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
 
     invalid_settings = settings_service.build_default_settings()
     invalid_settings["language"] = "fr"
-    invalid_settings["ui_text_scale"] = "gigantic"
     invalid_settings["default_ai_chunking_strategy"] = "invalid"
     invalid_settings["ui_theme_id"] = "missing_theme"
     invalid_settings["ui_themes"] = [
@@ -161,7 +159,6 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     defaults = settings_service.build_default_settings()
 
     assert loaded_settings["language"] == defaults["language"]
-    assert "ui_text_scale" not in loaded_settings
     assert loaded_settings["ui_theme_id"] == defaults["ui_theme_id"]
     assert loaded_settings["ui_themes"] == defaults["ui_themes"]
     assert loaded_settings["default_ai_cleanup_profile_id"] == defaults["default_ai_cleanup_profile_id"]
@@ -222,9 +219,9 @@ def test_validate_settings_repairs_invalid_scroll_steps() -> None:
         assert validated_settings["ui_scroll_steps_per_wheel_notch"] == config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
 
 
-def test_load_settings_migrates_missing_theme_fields_and_removes_legacy_text_scale(tmp_path, monkeypatch) -> None:
+def test_load_settings_seeds_missing_theme_fields(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify old settings gain theme fields while removing legacy ui_text_scale.
+    @brief      Verify settings missing theme fields gain current defaults.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -237,15 +234,13 @@ def test_load_settings_migrates_missing_theme_fields_and_removes_legacy_text_sca
     monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
     monkeypatch.setattr(config, "APP_ROOT", tmp_path)
 
-    old_settings = settings_service.build_default_settings()
-    old_settings["ui_text_scale"] = "large"
-    old_settings.pop("ui_theme_id")
-    old_settings.pop("ui_themes")
-    settings_path.write_text(json.dumps(old_settings, indent=2), encoding="utf-8")
+    incomplete_settings = settings_service.build_default_settings()
+    incomplete_settings.pop("ui_theme_id")
+    incomplete_settings.pop("ui_themes")
+    settings_path.write_text(json.dumps(incomplete_settings, indent=2), encoding="utf-8")
 
     loaded_settings = settings_service.load_settings()
 
-    assert "ui_text_scale" not in loaded_settings
     assert loaded_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert loaded_settings["ui_themes"] == []
     assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
@@ -279,9 +274,6 @@ def test_validate_settings_keeps_valid_selected_custom_theme() -> None:
 
     assert validated_settings["ui_theme_id"] == "reading_theme"
     assert validated_settings["ui_themes"] == [custom_theme]
-    assert "ui_text_scale" not in validated_settings
-
-
 def test_validate_settings_repairs_invalid_selected_theme_id_to_default() -> None:
     """
     @brief      Verify missing selected theme ids are repaired to the default theme.
@@ -751,9 +743,9 @@ def test_default_settings_include_font_size_steps() -> None:
     assert defaults["text_font_size_step"] == "normal"
 
 
-def test_validate_settings_repairs_and_migrates_font_size_steps() -> None:
+def test_validate_settings_repairs_font_size_steps() -> None:
     """
-    @brief      Verify invalid font-size steps repair to normal and legacy ui_text_scale migrates.
+    @brief      Verify invalid font-size steps repair to normal.
     @details    Covers REQ-PLAT-46bbf1c0-5b82-45b8-a4e2-27748b1f5aeb / SPEC-FONT-VALIDATE.
     @return     None.
     @exception  None.
@@ -764,11 +756,6 @@ def test_validate_settings_repairs_and_migrates_font_size_steps() -> None:
     repaired = settings_service.validate_settings({"ui_font_size_step": "gigantic", "text_font_size_step": 5})
     assert repaired["ui_font_size_step"] == "normal"
     assert repaired["text_font_size_step"] == "normal"
-
-    migrated = settings_service.validate_settings({"ui_text_scale": "very_large"})
-    assert "ui_text_scale" not in migrated
-    assert migrated["ui_font_size_step"] == "very_large"
-    assert migrated["text_font_size_step"] == "very_large"
 
 
 def test_ensure_settings_file_seeds_from_the_bundled_default(tmp_path, monkeypatch) -> None:

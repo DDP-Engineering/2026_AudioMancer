@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Text Cleanup state shall require structural extraction and expose terminal warning plus optional operator-edit state from authoritative artifacts."
-rationale = "The page must show truthful readiness and review state without legacy sidecars."
+rationale = "The page must show truthful readiness and review state from authoritative Cleanup artifacts."
 verification = "Cleanup state readiness, runtime quality, and manual-save tests pass."
 spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 

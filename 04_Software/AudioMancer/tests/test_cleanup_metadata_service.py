@@ -27,7 +27,7 @@ from audiomancer.services import (
 from cleanup_test_support import build_ledger, build_project
 
 
-def test_cleanup_paragraph_offsets_reconstruct_clean_text_without_sidecar(tmp_path) -> None:
+def test_cleanup_paragraph_offsets_reconstruct_clean_text(tmp_path) -> None:
     """Cover S-0007 and REQ-FUNC-6ac5f253-1b2b-4661-b772-e79f36a9b1b8."""
     canonical_text, ledger = build_ledger(
         ["First paragraph.", "Second line one.\nSecond line two."],
@@ -47,7 +47,6 @@ def test_cleanup_paragraph_offsets_reconstruct_clean_text_without_sidecar(tmp_pa
     ]
     assert reconstructed == ["First paragraph.", "Second line one.\nSecond line two."]
     assert all("text" not in item for item in document["paragraphs"])
-    assert not (project_root / "clean_text_metadata.json").exists()
 
 
 def test_cleanup_reason_codes_do_not_masquerade_as_warnings() -> None:

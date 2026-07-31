@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Project lifecycle shall derive Chunking completion and manifest summaries only from a strict, completed, non-empty Chunking document."
-rationale = "Manifest healing must never claim Chunking completion from obsolete, partial, empty, or structurally invalid persistence."
+rationale = "Manifest healing must never claim Chunking completion from partial, empty, incompatible, or structurally invalid persistence."
 verification = "Automated completion-evidence test derives state only from the authoritative strict document."
 spec_ref = ""
 

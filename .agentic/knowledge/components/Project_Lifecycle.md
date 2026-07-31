@@ -59,7 +59,7 @@ The implementation boundary is:
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py`
 
 `project_workspace_service` builds and validates the manifest, resolves a
-selected root or child path, rejects unsupported legacy layouts, proposes
+selected root or child path, rejects invalid project layouts, proposes
 metadata-only repairs from artifact evidence, and saves compact operation
 summaries. `import_service.import_source` validates and copies the selected
 source, removes only a safely resolved previous project copy, and returns the
@@ -149,8 +149,7 @@ Narrator completion evidence and exports are projections of the strict
 `narrator_voice.json` document. The selected profile's language, inline sample
 metadata, and canonical `audio_narator_<profile_id>.wav` are resolved at read
 time. Narrator reset owns only the current document, canonical profile WAVs,
-and `log_ai_narrator_profiles_*.log`; project repair never imports or rewrites
-removed narrator persistence artifacts. Project snapshots include the document
+and `log_ai_narrator_profiles_*.log`. Project snapshots include the document
 and WAVs while excluding AI transaction logs.
 
 The root manifest contains project identity and timestamps, `current_stage`,
@@ -172,7 +171,7 @@ which clears domain artifacts and operation summaries together.
 Project-relative paths must be relative, contain no parent traversal, and
 resolve inside the active project even when symlinks are present. New projects
 use a flat root, with generated audio permitted under `audio_blocks/` and final
-assembly output under `audiobook/`; numbered legacy workflow folders are not
+assembly output under `audiobook/`; unsupported numbered workflow folders are not
 accepted.
 Creation accepts an absent target or an empty target directory. A non-empty
 directory raises `FileExistsError`; an existing file raises `FileExistsError`

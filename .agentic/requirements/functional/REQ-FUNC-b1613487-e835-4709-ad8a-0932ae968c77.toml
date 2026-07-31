@@ -16,7 +16,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_merge_character_candidates_keeps_role_speaker_candidate",
   "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_merge_character_candidates_keeps_strongest_demographic_confidence",
   "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_merge_character_candidates_reports_rejected_non_dialogue_candidates",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_group_character_candidates_matches_legacy_first_match_order",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_group_character_candidates_preserves_first_match_order",
 ]
 
 created_on = "2026-07-19T16:32:00Z"

@@ -72,30 +72,6 @@ def test_narrator_state_service_uses_original_language_and_no_default_selection(
     assert state["can_select"] is False
 
 
-def test_narrator_state_service_ignores_legacy_cleanup_report_language(tmp_path) -> None:
-    """
-    @brief      Verify narrator state ignores a legacy Cleanup report when the manifest language is empty.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.5.0
-    """
-    project_root, manifest = _create_project(tmp_path, "NarratorStateCleanupLanguageProject")
-    cleanup_report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "cleanup_report.json"
-    cleanup_report_path.parent.mkdir(parents=True, exist_ok=True)
-    cleanup_report_path.write_text(
-        json.dumps({"detected_language": "it"}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-
-    state = narrator_definition_state_service.build_narrator_definition_state(project_root, manifest, "en")
-
-    assert state["effective_language"] == "en"
-    assert state["selected_voice_language"] == "en"
-
-
 def test_narrator_state_service_marks_unsampled_custom_profile_selectable(tmp_path) -> None:
     """
     @brief      Verify an unsampled inspected profile can be selected when it is not already selected.

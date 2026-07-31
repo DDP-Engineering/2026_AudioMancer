@@ -88,9 +88,8 @@ usage. Selective invalidation identifies blocks by stable identity fields, not
 display sequence numbers. Artifact collection/deletion rejects paths outside
 the active project and requires exact affected identities where appropriate.
 
-Chunking reset owns `chunks_text.json`, the obsolete
-`chunking_checkpoint.json`, `chunking_report.json`, `chunking_state.json`, and
-matching `log_ai_chunking_*.log` files. When reset begins at Chunking with
+Chunking reset owns `chunks_text.json` and matching
+`log_ai_chunking_*.log` files. When reset begins at Chunking with
 `include_current=True`, the same allowlisted deletion proceeds through every
 configured downstream operation; Extraction and Cleanup artifacts are outside
 that scope.
@@ -120,7 +119,7 @@ Primary automated coverage:
 
 - `test_operation_runtime_service.py` covers progress, common state/artifact
   IO, malformed/missing data handling, path containment, default state, and
-  reset preservation, including obsolete Chunking checkpoint deletion.
+  reset preservation.
 - `test_workflow_impact_service.py` and `test_workflow_order_consistency.py`
   cover ordering, stable identity, full/selective reset, safe artifact deletion,
   assembly reset, and manifest refresh.

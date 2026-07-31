@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Audio-block artifact operations shall delete only project-relative artifacts and treat empty generated subfolders as non-data."
-rationale = "Artifact remapping no longer exists because derived names cannot drift, so only the project-relative deletion guard remains."
+rationale = "Derived artifact names are stable, and deletion must remain confined to safe project-relative paths."
 verification = "Automated: 3 linked pytest selector(s)."
 spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 

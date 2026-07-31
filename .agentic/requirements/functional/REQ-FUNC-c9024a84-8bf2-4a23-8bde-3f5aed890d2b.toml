@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Narrator profile source resolution shall return cleanup.json as the backing artifact path whenever its analysis units are resolved from Cleanup metadata."
-rationale = "The resolver must name the artifact it actually read; Cleanup builds those units from cleanup.json and clean_text.txt, and the retired clean_text_metadata.json is never written. The returned path is currently unused by the caller, so this is a naming-truth contract rather than a persisted-state contract."
+rationale = "The resolver must name the authoritative Cleanup artifact that supplied the analysis units."
 verification = "Automated test: the source resolver returns the cleanup.json path and the cleaned-metadata source token for a project holding only Cleanup artifacts."
 spec_ref = ""
 

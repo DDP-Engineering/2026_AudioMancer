@@ -23,8 +23,8 @@ rather than rediscovering document structure from plain text.
   document.
 - Count bare Roman-numeral headings only when they are valid uppercase Roman
   values; ordinary words and invalid numeral strings remain paragraph text.
-- Support only the current canonical project-artifact schema during
-  development; reject older Chunking shapes without defaults or migration.
+- Accept only the exact current canonical project-artifact schema and reject
+  incomplete or incompatible Chunking documents.
 - Bound deterministic running-document checkpoints by processed-paragraph and
   monotonic-time intervals while always persisting terminal lifecycle state.
 - Run AI-assisted semantic chunking with validated paragraph descriptors,
@@ -83,11 +83,8 @@ profile, optional instructions/context mode, and user chunk-edit requests.
 The sole durable Chunking output is `chunks_text.json`. Operation summaries,
 progress, budget details, provider/model settings, and AI log paths are
 runtime-only projections. AI transaction logs remain separate diagnostics.
-The deterministic and AI services do not contain runtime readers, writers, or
-builders for legacy Chunking sidecars.
-Reset also owns the obsolete `chunking_checkpoint.json`,
-`chunking_report.json`, and `chunking_state.json` names so incompatible derived
-state cannot survive explicit or automatic recovery.
+Reset clears Chunking-owned derived state so incompatible data cannot survive
+explicit or automatic recovery.
 A manual edit, insert, or delete atomically rewrites the canonical document
 and manifest, synchronizes affected translations, removes affected character
 evidence, Speech Blocks, and Audio Blocks, then resets Audio Assembly.
@@ -125,18 +122,14 @@ Cleanup analysis, deterministic Chunking, and the canonical report projection:
 it uses uppercase standard subtractive grammar and rejects lowercase or invalid
 forms such as `civil`, `mix`, `did`, `IIII`, and `IC`.
 
-While AudioMancer remains in development,
-only the current canonical project-artifact schema is supported. Schema
-corrections are intentionally breaking. A chunk that omits
-`starts_after_scene_separator`, a legacy root array, and every other old-shaped
-document are incompatible; the loader does not detect, default, normalize, or
-migrate them. Runtime services never read, write, rebuild, or migrate obsolete
-`chunking_checkpoint.json`, `chunking_report.json`, or `chunking_state.json`
-sidecars. Strict direct loads raise `IncompatibleChunkingDocumentError`.
+Only the current canonical project-artifact schema is supported. A chunk that
+omits `starts_after_scene_separator`, a non-object root, or any other invalid
+shape is incompatible. Strict direct loads raise
+`IncompatibleChunkingDocumentError`.
 During project open, Project Lifecycle handles a content-caused incompatibility
 by resetting Chunking and downstream derived artifacts, retrying validation
 once, and marking the open result for a post-activation operator message. This
-accepted development-phase reset preserves Source, Extraction, and Cleanup.
+bounded reset preserves Source, Extraction, and Cleanup.
 Filesystem read errors remain fatal and cause no reset.
 The explicit Reset Chunking action uses the same scoped artifact ownership.
 
@@ -171,8 +164,8 @@ Manual operations resequence `sequence_index` without changing surviving
 an empty `chunk-####` next to its selected anchor with no inferred scene
 boundary. Text edits preserve the selected chunk's boundary flag. Deleting a
 marked chunk transfers the flag to the next surviving chunk when one exists.
-They preserve unrelated root metadata and set `manual_adjusted` without adding
-sidecars.
+They preserve unrelated root metadata and set `manual_adjusted` in the
+authoritative document.
 
 ## 7. Workflow Integration
 
@@ -224,12 +217,3 @@ prefixes; responses with no valid prefix use deterministic structural
 fallback and may still produce a larger window chunk when no explicit
 structure exists. Token budgeting is estimated by AI Runtime. Operator review
 remains available for semantic corrections.
-
-`starts_after_scene_separator` has no current audible consumer. Requirement
-`REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf` keeps that limitation visible
-in this component contract. Separately planned runtime requirement
-`REQ-FUNC-ca5357e1-f690-4254-981b-d803fe5fb385` reserves a configurable Audio
-Assembly scene-transition pause. It remains Planned until an owner-approved
-follow-up defines pause duration and its interaction with ordinary inter-chunk
-silence and scene ambience; this component does not present that future
-behavior as implemented.

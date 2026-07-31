@@ -18,9 +18,7 @@ PDF and TXT use deterministic layout/text evidence; only contradictory or
 low-confidence cases may be adjudicated by an optional LLM.
 
 The durable Cleanup state is one `cleanup.json`. It is both checkpoint and final
-metadata. `clean_text.txt` is the only Cleanup text output. No report, state,
-paragraph-metadata sidecar, schema version, migration, or compatibility branch
-is retained.
+metadata. `clean_text.txt` is the Cleanup text output.
 
 Cleanup remains usable without an LLM. Provider incompatibility, insufficient
 context, invalid structured output, and exhausted batch retries apply the
@@ -30,36 +28,19 @@ Chunking consumes completed Cleanup paragraphs, roles, confidence, and
 provenance from `cleanup.json`. Semantic structure takes precedence over target
 chunk-size balance.
 
-## Canonical generation naming
+## Current schema validation
 
-AudioMancer uses one hard-break implementation and one canonical persisted
-schema. Active source, tests, fixtures, support modules, specifications,
-requirements, logs, and current documentation use unversioned names. No
-product-generation label distinguishes the current contract.
-
-Strict validation remains authoritative. Corrupt, incomplete, or old-shaped
-data is rejected through the same generic validation paths; removing
-generation-specific compatibility assets does not relax the canonical schema.
-
-### Development-phase schema compatibility
-
-While AudioMancer is in development, only the current canonical project-artifact
-schema is supported. Schema corrections are intentionally breaking: loaders do
-not detect, default, normalize, or migrate fields from older persisted shapes.
-Project artifacts created by an earlier schema are not compatibility targets.
+Cleanup and Chunking accept only their current canonical project-artifact
+schemas. Corrupt, incomplete, or incompatible data is rejected through strict
+validation.
 
 For Chunking, every chunk must contain the complete current field set. A
 `chunks_text.json` document that omits `starts_after_scene_separator` is
-incompatible even when every older field is otherwise valid. A direct load
+incompatible even when its remaining fields are valid. A direct load
 raises `IncompatibleChunkingDocumentError`. During project open, the existing
 bounded recovery resets Chunking and all downstream derived operation data,
 retries validation once, and preserves Source, Extraction, and Cleanup. This
-destructive derived-state reset is an accepted development-phase migration
-cost, not a request to add a compatibility branch.
-
-Version tokens remain only when they are part of a real current contract, such
-as an external API route, an artifact-format token, semantic source metadata, a
-release/dependency identifier, or historical changelog material.
+bounded reset prevents incompatible derived data from being treated as current.
 
 ## Supported domain
 
@@ -158,8 +139,7 @@ Roles are `body`, `heading`, `scene_separator`, `list_item`, `verse`,
 
 Boundary choices are `join_with_space`, `set_paragraph_break`,
 `set_semantic_line_break`, `dehyphenate`, `join_preserving_hyphen`, and
-`document_end`. `join_without_space`, generic `preserve`, and replacement text
-are invalid.
+`document_end`. Any other boundary choice is invalid.
 
 ### ParagraphRecord
 
@@ -417,27 +397,17 @@ collapse to one leading marker, and a trailing separator with no following
 narration emits no chunk. The narratable chunk retains its content role and is
 never relabeled `scene_separator`.
 
-The field currently preserves structural truth only. Translation, character
-discovery, Speech Blocks, Audio Blocks, and Audio Assembly do not consume it in
-this contract. Issue #35 intentionally leaves those runtime behaviors
-unchanged. Requirement `REQ-FUNC-bfbe8c95-59a0-47e2-bec7-5847177bc3cf`
-keeps that implemented limitation visible in the component contract.
-Separately planned runtime requirement
-`REQ-FUNC-ca5357e1-f690-4254-981b-d803fe5fb385` defines a configurable
-scene-transition pause consumer; it must receive a dedicated owner-approved
-design for pause duration and interaction with ordinary inter-chunk silence and
-scene ambience before activation.
+The field preserves the structural boundary for inspection and subsequent
+manual Chunking edits.
 
 Manual text edits preserve the selected chunk's leading scene marker. A newly
 inserted chunk defaults to `false`. When a chunk whose marker is `true` is
 deleted, the marker transfers to the next surviving chunk when one exists so
 that deletion does not silently erase the structural boundary.
 
-The Chunking services persist operation state only through the canonical
-`chunks_text.json` document API. They do not read, write, rebuild, or migrate
-the obsolete checkpoint, report, or state sidecars. Obsolete filenames remain
-owned only by Reset Chunking so explicit or automatic recovery can delete
-stale derived artifacts without interpreting them.
+The Chunking services persist operation state through the canonical
+`chunks_text.json` document API. Reset Chunking clears the operation's owned
+derived artifacts without interpreting them as current state.
 
 Deterministic Chunking keeps the canonical document recoverable without
 rewriting it after every paragraph:
@@ -505,7 +475,7 @@ but they are non-narratable at Chunking materialization:
 | three aligned short verse lines | semantic line breaks inside one stanza |
 | provider batch fails twice | affected boundaries use priors; next batch runs |
 | resume with a different 32K model | deterministic analysis retained; all AI answers regenerated |
-| `status=paused` with an old output file | Chunking rejects the output |
+| `status=paused` with an output file | Chunking rejects the incomplete state |
 | lexical manual correction | minimal `user_edited` structure; downstream invalidated |
 | completed checkpoint with missing or hash-invalid output | deterministic rerender without an LLM request |
 | whitespace-only edit cannot locate one retained source unit | edit persists; logger and Cleanup document record incomplete realignment |

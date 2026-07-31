@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Text Chunking shall use one strict root-object chunks_text.json document with exactly the approved current document and chunk fields."
-rationale = "A single exact schema prevents divergent result, report, and resume state; during development every schema correction is intentionally breaking and older shapes are not compatibility targets."
+rationale = "A single exact schema keeps persisted result and resume state consistent and makes incompatible data fail explicitly."
 verification = "Focused strict-document round-trip and incompatible-shape tests verify exact current fields and Reset Chunking guidance."
 spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 

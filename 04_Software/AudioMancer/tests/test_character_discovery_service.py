@@ -398,7 +398,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
 
 
-def test_character_discovery_strictly_rejects_malformed_and_old_root_payloads(tmp_path) -> None:
+def test_character_discovery_strictly_rejects_malformed_and_invalid_root_payloads(tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-012 malformed Character Discovery artifacts degrade to missing data.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -1156,9 +1156,9 @@ def test_merge_character_candidates_reports_rejected_non_dialogue_candidates() -
     ]
 
 
-def test_group_character_candidates_matches_legacy_first_match_order() -> None:
+def test_group_character_candidates_preserves_first_match_order() -> None:
     """
-    @brief      Verify REQ-NFR-017 indexed identity grouping preserves legacy first-match semantics.
+    @brief      Verify REQ-NFR-017 indexed identity grouping preserves first-match semantics.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -1173,10 +1173,10 @@ def test_group_character_candidates_matches_legacy_first_match_order() -> None:
         {"canonical_name": "Cara", "aliases": ["C"]},
     ]
 
-    legacy_groups = _legacy_group_character_candidates_by_identity(candidates)
+    reference_groups = _reference_group_character_candidates_by_identity(candidates)
     indexed_groups = character_discovery_service._group_character_candidates_by_identity(candidates)  # noqa: SLF001
 
-    assert indexed_groups == legacy_groups
+    assert indexed_groups == reference_groups
     assert [[str(candidate["canonical_name"]) for candidate in group] for group in indexed_groups] == [
         ["Alice", "Bridge", "Beatrice"],
         ["Beth"],
@@ -1513,13 +1513,13 @@ def _synthesis_response_payload() -> dict[str, object]:
     }
 
 
-def _legacy_group_character_candidates_by_identity(
+def _reference_group_character_candidates_by_identity(
     candidates: list[dict[str, object]],
 ) -> list[list[dict[str, object]]]:
     """
-    @brief      Preserve the prior identity-grouping algorithm for equivalence tests.
+    @brief      Provide a simple identity-grouping reference for equivalence tests.
     @param[in]  candidates Candidate payload list.
-    @return     Identity groups from the legacy scan algorithm.
+    @return     Identity groups from the reference scan algorithm.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-11

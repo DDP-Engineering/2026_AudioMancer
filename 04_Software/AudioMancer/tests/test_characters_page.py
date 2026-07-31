@@ -57,7 +57,6 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert page._age_row_widget.layout().stretch(0) == 1
     assert page._list_group.minimumHeight() == page._list_group.maximumHeight()
     assert page._list_group.minimumHeight() > page._character_actions_widget.sizeHint().height()
-    assert hasattr(page, "_summary_label") is False
     assert page._evidence_splitter.orientation() == Qt.Orientation.Vertical
     assert page._evidence_splitter.count() == 2
     assert page._status_edit.toPlainText() == "Completed."

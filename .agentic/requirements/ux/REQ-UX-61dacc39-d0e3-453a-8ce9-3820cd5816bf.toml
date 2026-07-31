@@ -4,7 +4,7 @@ category = "ux"
 status = "Active"
 priority = "Must"
 requirement = "Text Cleanup shall report monotonic progress plus AI workload estimates through the existing progress dialog and reserve 100 percent for validated publication."
-rationale = "Long local inference must remain observable without adding UI elements or implying completion before output validation."
+rationale = "Long local inference must remain observable, and completion must not be shown before output validation."
 verification = "Monotonic progress and workload estimate test passes."
 spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 

@@ -14,7 +14,7 @@ affected_paths = [
 
 linked_tests = [
   "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_renderer_rejects_replacement_text_and_unknown_actions",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_renderer_rejects_unknown_unit_actions",
 ]
 
 created_on = "2026-07-27T17:59:17Z"

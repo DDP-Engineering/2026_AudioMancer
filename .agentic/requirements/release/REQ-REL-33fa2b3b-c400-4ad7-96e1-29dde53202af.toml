@@ -3,9 +3,9 @@ id = "REQ-REL-33fa2b3b-c400-4ad7-96e1-29dde53202af"
 category = "release"
 status = "Active"
 priority = "Must"
-requirement = "Development builds shall not migrate obsolete Chunking document schemas."
-rationale = "AudioMancer is not yet subject to a project-artifact compatibility promise; every schema correction may intentionally invalidate derived artifacts produced by an older development build."
-verification = "Focused strict-schema and component-contract run passed on 2026-07-30: 11 passed; obsolete Chunking shapes remain rejected without migration."
+requirement = "Development builds shall accept only Chunking documents that match the current strict schema."
+rationale = "Strict schema validation prevents incomplete or incompatible derived data from being treated as current Chunking state."
+verification = "Focused strict-schema and component-contract run passed on 2026-07-30: 11 passed; incompatible Chunking shapes are rejected."
 spec_ref = ".agentic/specs/cleanup_chunking.spec.md"
 
 affected_paths = [

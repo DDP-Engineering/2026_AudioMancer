@@ -4,7 +4,7 @@ category = "functional"
 status = "Active"
 priority = "Must"
 requirement = "Each persisted Audio Block entry shall carry only speech_block_id, voice_target_id, generated, approved, audio_can_play, audio_duration_seconds, and generation_fingerprint, plus split_part_count and split_plan_fingerprint only when the block was split."
-rationale = "Every other former field duplicated Speech Blocks data, was constant per run, or was never read back, so persisting it invited drift between two sources of truth."
+rationale = "The exact minimal field set prevents drift between Audio Blocks state and authoritative Speech Blocks data."
 verification = "Automated contract test: persisted blocks carry exactly the seven contract fields, plus the two split fields only when split_part_count > 1."
 spec_ref = ".agentic/specs/audio_blocks_document.spec.md"
 

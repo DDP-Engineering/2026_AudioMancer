@@ -308,7 +308,7 @@ def test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_
 
 def test_audio_assembly_service_missing_pause_duration_uses_default(tmp_path) -> None:
     """
-    @brief      Verify pause duration no longer falls back to parsing older pause text.
+    @brief      Verify a missing pause duration uses the configured default.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -435,9 +435,8 @@ def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> Non
 def test_audio_assembly_service_rejects_escaping_audio_block_path(tmp_path, monkeypatch, path_kind: str) -> None:
     """
     @brief      Verify composition refuses Audio Block paths resolving outside the project root.
-    @details    The persisted document no longer stores a path, so the escaping
-                path is injected at the load seam to keep the composition-level
-                containment guard covered.
+    @details    The escaping path is injected at the load seam to keep the
+                composition-level containment guard covered.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  path_kind Escaping path form under test.

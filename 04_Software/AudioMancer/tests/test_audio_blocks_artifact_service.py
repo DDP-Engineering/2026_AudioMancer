@@ -41,7 +41,7 @@ def test_audio_blocks_artifact_paths_are_deterministic(tmp_path) -> None:
     audio_path = audio_blocks_artifact_service.audio_artifact_path(tmp_path, "0007-000003")
     part_path = audio_blocks_artifact_service.audio_part_artifact_path(tmp_path, "0007-000003", 0)
 
-    # Speaker normalization survives for display only; it no longer reaches artifact names.
+    # Speaker normalization is display-only; stable block IDs derive artifact names.
     assert speaker_name == "maria_elena_stefan"
     generated_root = tmp_path / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     assert audio_path == generated_root / "0007-000003.wav"

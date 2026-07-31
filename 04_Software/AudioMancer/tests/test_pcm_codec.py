@@ -9,10 +9,9 @@
 """
 @file test_pcm_codec.py
 @brief Internal PCM codec tests for AudioMancer.
-@details Verifies the stdlib-only PCM conversions that replace the audioop
-         module removed in Python 3.13. Golden cases pin the measured audioop
-         semantics on every interpreter; differential cases compare byte-for-byte
-         against real audioop and skip where it no longer exists.
+@details Verifies the internal PCM conversions used by Audio Assembly. Golden
+         cases pin the specified semantics on every interpreter; differential
+         cases use audioop as a reference oracle where it is available.
          Covers S-WIDTH, S-CHANNELS, S-RATE, S-PARITY, S-SIGNED, S-REJECT,
          S-EMPTY, S-PIN and S-SKIP.
 @author Eng. Dan Dumitru Pasare
@@ -31,9 +30,9 @@ import pytest
 
 from audiomancer.services import audio_assembly_service, pcm_codec
 
-# The reference implementation only exists up to Python 3.12. Everything below
-# that is guarded by `requires_audioop` still runs there, which is what proves
-# the replacement is behaviour-preserving. See REQ-TEST-29d60d25-64ce-49bb-ac6d-24764f80eb37.
+# The optional reference implementation is available on Python 3.12. Everything
+# guarded by `requires_audioop` runs there as an additional differential oracle.
+# See REQ-TEST-29d60d25-64ce-49bb-ac6d-24764f80eb37.
 try:  # pragma: no cover - import guard depends on interpreter version
     import audioop
 except ImportError:  # pragma: no cover - Python 3.13 and newer
@@ -41,7 +40,7 @@ except ImportError:  # pragma: no cover - Python 3.13 and newer
 
 requires_audioop = pytest.mark.skipif(
     audioop is None,
-    reason="audioop reference implementation is unavailable on this interpreter (removed in Python 3.13)",
+    reason="audioop reference implementation is unavailable on this interpreter",
 )
 
 _SAMPLE_WIDTHS = (1, 2, 3, 4)
@@ -327,7 +326,7 @@ def test_audio_assembly_rejects_unsupported_channel_conversion() -> None:
         audio_assembly_service._convert_wav_channels(b"\x00\x00" * 6, 2, 3, 2)
 
 
-# DIFFERENTIAL PARITY - the oracle comparison against the implementation being replaced.
+# DIFFERENTIAL PARITY - optional oracle comparisons.
 
 
 @requires_audioop
@@ -435,14 +434,13 @@ def test_pcm_codec_chunked_rate_conversion_is_byte_identical_to_audioop() -> Non
 # PLATFORM CONTRACTS.
 
 
-def test_audiomancer_sources_do_not_import_audioop() -> None:
+def test_audiomancer_sources_use_internal_pcm_codec() -> None:
     """
-    @brief      Verify no source module imports the removed audioop module.
+    @brief      Verify source modules use the internal PCM codec.
     @return     None.
     @exception  None
-    @details    Covers REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5. audioop has
-                no stdlib replacement, so any surviving import breaks Audio
-                Assembly at import time on Python 3.13.
+    @details    Covers REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5 and keeps
+                Audio Assembly importable throughout the supported interpreter range.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-25
     @version    0.1.0

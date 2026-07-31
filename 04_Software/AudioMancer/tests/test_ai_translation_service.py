@@ -279,7 +279,7 @@ def test_translation_document_writes_once_per_completed_chunk_and_review_action(
     assert len(writes) == 1
 
 
-def test_invalid_or_legacy_translation_document_is_rejected_without_overwrite(tmp_path) -> None:
+def test_invalid_translation_document_is_rejected_without_overwrite(tmp_path) -> None:
     """
     @brief      Verify REQ-NFR-016 incompatible data is rejected and left untouched.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
@@ -288,13 +288,13 @@ def test_invalid_or_legacy_translation_document_is_rejected_without_overwrite(tm
     """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationStrictLoad")
     translation_path = project_root / config.TRANSLATED_CHUNKS_FILE_NAME
-    legacy_text = json.dumps([{"chunk_id": "chunk-0001", "translated_text": "Legacy"}]) + "\n"
-    translation_path.write_text(legacy_text, encoding="utf-8")
+    invalid_text = json.dumps([{"chunk_id": "chunk-0001", "translated_text": "Invalid root"}]) + "\n"
+    translation_path.write_text(invalid_text, encoding="utf-8")
 
     with pytest.raises(ai_translation_service.TranslationDocumentError, match="Reset Translation"):
         ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
 
-    assert translation_path.read_text(encoding="utf-8") == legacy_text
+    assert translation_path.read_text(encoding="utf-8") == invalid_text
 
 
 def test_translation_budget_reserves_output_and_rejects_insufficient_input() -> None:

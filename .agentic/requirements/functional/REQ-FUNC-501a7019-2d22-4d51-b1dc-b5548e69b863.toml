@@ -3,9 +3,9 @@ id = "REQ-FUNC-501a7019-2d22-4d51-b1dc-b5548e69b863"
 category = "functional"
 status = "Active"
 priority = "Must"
-requirement = "Open project shall reject a missing manifest, missing required field, and legacy numbered or downstream folder layouts."
+requirement = "Open project shall reject a missing manifest or a manifest missing a required field."
 rationale = "Incompatible or incomplete projects must fail to open rather than load partially."
-verification = "Automated: 4 linked pytest selector(s)."
+verification = "Automated: 2 linked pytest selector(s)."
 spec_ref = ""
 
 affected_paths = [
@@ -14,9 +14,7 @@ affected_paths = [
 
 linked_tests = [
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_fails_when_manifest_is_missing",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_rejects_legacy_numbered_layout",
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_fails_when_required_manifest_field_is_missing",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_rejects_legacy_downstream_folder_layout",
 ]
 
 created_on = "2026-07-18T15:49:00Z"

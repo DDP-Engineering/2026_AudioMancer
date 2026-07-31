@@ -15,7 +15,7 @@ affected_paths = [
 ]
 
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_cleanup_prompts_never_request_removed_choices",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_cleanup_prompts_require_listed_choices",
   "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_matching_primary_and_verifier_may_override_prior",
   "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_verifier_disagreement_keeps_deterministic_prior",
 ]

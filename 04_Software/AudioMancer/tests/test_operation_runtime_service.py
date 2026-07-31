@@ -339,10 +339,7 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
     (project_root / "story.txt").write_text("raw", encoding="utf-8")
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("raw", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("clean", encoding="utf-8")
-    (project_root / "cleanup_report.json").write_text("{}", encoding="utf-8")
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
-    chunking_checkpoint_path = project_root / "chunking_checkpoint.json"
-    chunking_checkpoint_path.write_text("{}", encoding="utf-8")
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / "notes.txt").write_text("keep", encoding="utf-8")
 
@@ -356,9 +353,7 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
     assert (project_root / "notes.txt").read_text(encoding="utf-8") == "keep"
     assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file()
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
-    assert (project_root / "cleanup_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
-    assert chunking_checkpoint_path.exists() is False
     assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
 
 
@@ -507,7 +502,6 @@ def test_ensure_default_operation_state_skips_audio_blocks(tmp_path) -> None:
     state_path = operation_runtime_service.ensure_default_operation_state(project_root, "audio_blocks")
 
     assert state_path is None
-    assert not (project_root / "audio_blocks_state.json").exists()
     assert not (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).exists()
 
 

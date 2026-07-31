@@ -60,7 +60,6 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -183,7 +182,6 @@ def test_text_chunking_ui_controller_chunk_request_uses_controller_start(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -246,7 +244,6 @@ def test_text_chunking_ui_controller_completed_rerun_requires_confirmation(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -308,7 +305,6 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [
                 {
@@ -406,7 +402,6 @@ def test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmatio
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [
                 {
@@ -505,7 +500,6 @@ def test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [
                 {
@@ -608,7 +602,6 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
