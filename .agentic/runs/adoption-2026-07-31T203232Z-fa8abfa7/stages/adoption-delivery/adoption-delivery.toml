@@ -1,0 +1,15 @@
+schema_version = 3
+run_id = "adoption-2026-07-31T203232Z-fa8abfa7"
+stage = "adoption-delivery"
+revision = 2
+preflight = "adoption baseline handoff: 14 manifest components; traceability and coverage audits have no issues; INV-1 and gate:test are neutralized only by the human-approved active waivers WVR-5628987d-18cc-4f78-ac3a-a3ca59ca10f4 and WVR-416bcd13-f1c8-44fc-99e2-bc7e3cd88d2e; lint is recorded as passed in E-0005; the full configured pytest command completed externally in 1,099.02 seconds with 1,198 passed, 1 skipped, 1 deselected, and 1 warning."
+report = ".agentic/reports/adoption/adoption-2026-07-31T203232Z-fa8abfa7-delivery.md"
+decision = "approved"
+
+[control]
+requested_access_mode = ""
+access_rationale = ""
+route_to = ""
+route_rationale = ""
+summary = "AEGIS 2.1 adoption baseline handoff is prepared for AudioMancer. The pcm-codec component is documented and mapped, giving the manifest 14 components. No AudioMancer runtime behavior, application source, tests, prompts, or packaging changed. Follow-up items: the verifier's 300-second test timeout remains waived for this run; historical requirements still lack durable check records under the recorded INV-1 waiver; RepoWise remains advisory and stale; the worktree contains a large untracked pytest temporary tree whose deletion was denied; and archived AEGIS 1.4.1 audit evidence is shown as deleted by the worktree review but was not changed by this adoption run. No commit, publication, push, pull request, merge, or delivery action is authorized or performed."
+unresolved_questions = []

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
-  "generated_at": "2026-08-01T10:06:54+00:00",
+  "generated_at": "2026-08-01T17:00:07+00:00",
   "sequence": [
     "impact",
     "gates",
@@ -14,168 +14,15 @@
     "mode": "full",
     "linked_tests_first": [],
     "full_regression_reasons": [
-      "untraced changed paths",
-      "cross-cutting change set"
+      "untraced changed paths"
     ],
     "untraced_paths": [
-      ".agentic/components.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/graph.json",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/journal.jsonl",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/adoption-alignment.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/adoption-alignment.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/digest.json",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/component-adoption.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/component-adoption.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/digest.json",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/component-map.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/component-map.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/digest.json",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/component-map.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/digest.json",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/repo-discovery.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/digest.json",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/repo-discovery.toml",
-      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/validation-summary.json",
-      "opencode.json"
+      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/journal.jsonl"
     ]
   },
   "impact": [
     {
-      "file": ".agentic/components.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/graph.json",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
       "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/journal.jsonl",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/adoption-alignment.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": "opencode.json",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/adoption-alignment.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/digest.json",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/component-adoption.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/component-adoption.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/digest.json",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/component-map.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/component-map.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/digest.json",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/component-map.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/digest.json",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/repo-discovery.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/digest.json",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/repo-discovery.toml",
-      "uncovered": false,
-      "requirements": [],
-      "linked_tests": [],
-      "full_regression_recommended": false
-    },
-    {
-      "file": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/validation-summary.json",
       "uncovered": false,
       "requirements": [],
       "linked_tests": [],
@@ -286,8 +133,412 @@
   "working_tree": {
     "entries": [
       {
-        "status": " M",
-        "path": ".agentic/components.toml"
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/README.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/archive-sha256.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/install-manifest-aegis-1.4.1.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-18T145821Z-782116f8/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-18T145821Z-782116f8/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-18T145821Z-782116f8/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-18T175206Z-8c75de9d/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-18T175206Z-8c75de9d/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-18T175206Z-8c75de9d/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-19T065150Z-75c3e115/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-19T065150Z-75c3e115/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/adoption-2026-07-19T065150Z-75c3e115/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-21T113425Z-e58424f6/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-21T113425Z-e58424f6/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-21T113425Z-e58424f6/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-24T172051Z-28b92d85/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-24T172051Z-28b92d85/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-24T172051Z-28b92d85/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-24T193941Z-5b1fccaa/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-24T193941Z-5b1fccaa/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-24T221615Z-5d6214f5/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-24T221615Z-5d6214f5/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-25T130520Z-2cadaaf2/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-25T130520Z-2cadaaf2/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-25T210233Z-85db204e/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-25T210233Z-85db204e/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-25T210233Z-85db204e/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-28T194954Z-762fe256/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-28T194954Z-762fe256/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-28T194954Z-762fe256/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-29T123056Z-fa16e595/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-29T123056Z-fa16e595/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T100620Z-7d1af41e/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T100620Z-7d1af41e/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T100620Z-7d1af41e/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T124322Z-0745c025/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T124322Z-0745c025/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T124322Z-0745c025/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T140745Z-7b258e5b/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T140745Z-7b258e5b/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T140745Z-7b258e5b/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T151836Z-14af6a0e/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T151836Z-14af6a0e/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T151836Z-14af6a0e/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T172841Z-8e97639c/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T172841Z-8e97639c/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T172841Z-8e97639c/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T185300Z-6e3b0aa6/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T185300Z-6e3b0aa6/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/change-2026-07-30T185300Z-6e3b0aa6/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/feature-2026-07-20T191136Z-8198c638/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/feature-2026-07-20T191136Z-8198c638/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/feature-2026-07-20T191136Z-8198c638/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/feature-2026-07-25T071943Z-bb1e9ec6/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/feature-2026-07-25T071943Z-bb1e9ec6/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/feature-2026-07-26T211338Z-a60d161a/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/feature-2026-07-26T211338Z-a60d161a/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T151844Z-85bc2369/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T151844Z-85bc2369/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T161440Z-253b00dd/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T161440Z-253b00dd/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T175752Z-78600c96/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T175752Z-78600c96/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T191739Z-e0ad3043/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T191739Z-e0ad3043/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T193055Z-24670039/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T193055Z-24670039/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T194317Z-9c6ffd41/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T194317Z-9c6ffd41/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T194657Z-1bae87ea/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T194657Z-1bae87ea/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T195003Z-5b49731a/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-25T195003Z-5b49731a/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-26T213228Z-5a960a44/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-26T213228Z-5a960a44/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-27T055430Z-9c75efb6/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-27T055430Z-9c75efb6/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-27T154435Z-c6ae8afc/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-27T154435Z-c6ae8afc/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-27T154435Z-c6ae8afc/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T085353Z-39a9e5ae/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T085353Z-39a9e5ae/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T085353Z-39a9e5ae/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T145841Z-25a673df/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T145841Z-25a673df/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T145841Z-25a673df/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T162105Z-0229dd62/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T162105Z-0229dd62/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T162105Z-0229dd62/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T170424Z-df860981/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T170424Z-df860981/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T170424Z-df860981/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T194433Z-6f46aeb8/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T194433Z-6f46aeb8/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-29T194433Z-6f46aeb8/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-30T055421Z-c57c7706/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-30T055421Z-c57c7706/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-30T055421Z-c57c7706/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-30T114422Z-b091e110/graph.json"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-30T114422Z-b091e110/journal.jsonl"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/runs-schema-2/fix-2026-07-30T114422Z-b091e110/report.md"
+      },
+      {
+        "status": " D",
+        "path": ".agentic/legacy/aegis-1.4.1/workflow-schema-2.toml"
       },
       {
         "status": " M",
@@ -296,138 +547,9 @@
       {
         "status": " M",
         "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/journal.jsonl"
-      },
-      {
-        "status": " M",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/adoption-alignment.toml"
-      },
-      {
-        "status": " M",
-        "path": "opencode.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/adoption-alignment.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/component-adoption.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/component-adoption.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/component-map.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/component-map.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/component-map.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/repo-discovery.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/repo-discovery.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/validation-summary.json"
       }
     ],
-    "untracked": [
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/adoption-alignment.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/component-adoption.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/component-adoption.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/component-map.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/component-map.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/component-map.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/revisions/0002/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/repo-discovery.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/digest.json"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/revisions/0001/repo-discovery.toml"
-      },
-      {
-        "status": "??",
-        "path": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/validation-summary.json"
-      }
-    ],
+    "untracked": [],
     "blocking_findings": []
   },
   "human_diff_review": "pending"
