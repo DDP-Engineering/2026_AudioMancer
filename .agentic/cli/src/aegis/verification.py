@@ -32,7 +32,7 @@ from typing import Any
 
 from .config import GATE_ORDER, WorkflowConfig
 from .errors import CommandInputError
-from .gates import DEFAULT_GATE_TIMEOUT_SECONDS, gate_failure_blockers, run_gates
+from .gates import gate_failure_blockers, run_gates
 from .invariants import blocking_failures, evaluate
 from .models import Graph, now_iso
 from .persistence import atomic_write_text
@@ -71,14 +71,12 @@ def run_verification(
     repo_root: Path,
     graph: Graph,
     config: WorkflowConfig,
-    timeout: int = DEFAULT_GATE_TIMEOUT_SECONDS,
 ) -> tuple[dict[str, Any], int]:
     """
     @brief      Execute the complete deterministic verification sequence.
     @param[in]  repo_root Repository root.
     @param[in]  graph Active workflow graph.
     @param[in]  config Validated workspace configuration.
-    @param[in]  timeout Per-command gate timeout.
     @return     Validation summary and aggregate exit code.
     """
     stage_spec = run_stage_spec(graph)
@@ -94,7 +92,6 @@ def run_verification(
         graph.run_id,
         config,
         list(GATE_ORDER),
-        timeout,
     )
     graph = load_graph(repo_root, graph.run_id)
     stage_spec = run_stage_spec(graph)

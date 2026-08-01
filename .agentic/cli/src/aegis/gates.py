@@ -48,11 +48,6 @@ from .store import (
 )
 from .waivers import Blocker, active_waiver, state_digests
 
-# CONSTANTS
-
-# @brief Default per-command timeout, in seconds, for gate/check subprocesses.
-DEFAULT_GATE_TIMEOUT_SECONDS = 1800
-
 # PUBLIC API
 
 
@@ -61,17 +56,17 @@ def run_gates(
     run_id: str,
     config: WorkflowConfig,
     names: list[str] | None = None,
-    timeout: int = DEFAULT_GATE_TIMEOUT_SECONDS,
 ) -> int:
     """
     @brief      Execute the selected gate groups in order and persist gate
                 evidence.
     @param[in]  repo_root Repository root the gate commands run in.
     @param[in]  run_id Already resolved run ID selected by CLI orchestration.
-    @param[in]  config Validated workflow configuration.
+    @param[in]  config Validated workflow configuration. Each gate group's own
+                `timeout` (defaulting to `DEFAULT_GATE_TIMEOUT_SECONDS` when
+                unconfigured) applies to every command in that group.
     @param[in]  names Gate group names to run; defaults to all gates in
                 `GATE_ORDER` when omitted.
-    @param[in]  timeout Per-command timeout in seconds.
     @return     Aggregate exit code: 0 when no unwaived gate failure remains,
                 otherwise the last unwaived failing command's return code
                 encountered in gate order.
@@ -94,22 +89,24 @@ def run_gates(
         else None
     )
     selected = [name for name in GATE_ORDER if not names or name in names]
-    plan: list[tuple[str, str | None]] = []
+    plan: list[tuple[str, str | None, int]] = []
     for name in selected:
         group = getattr(config.gates, name)
         if group.mode == "disabled":
-            plan.append((name, None))
+            plan.append((name, None, group.timeout))
         else:
-            plan.extend((name, command) for command in group.commands)
+            plan.extend(
+                (name, command, group.timeout) for command in group.commands
+            )
 
     completed: list[
         tuple[str, str | None, subprocess.CompletedProcess[str] | None]
     ] = []
-    for name, command in plan:
+    for name, command, gate_timeout in plan:
         if command is None:
             completed.append((name, None, None))
             continue
-        result = _run_command(repo_root, command, timeout)
+        result = _run_command(repo_root, command, gate_timeout)
         completed.append((name, command, result))
 
     with graph_transaction(repo_root, graph):

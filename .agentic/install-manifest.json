@@ -27,8 +27,8 @@
       "size": 3225
     },
     ".agentic/cli/src/aegis/check_execution.py": {
-      "sha256": "4a0ea825a1371f2e51faa92aa0aacb77115bade3e6799c10f67827d65485930e",
-      "size": 15505
+      "sha256": "4a2796f5eade5ab85ea32aa1d500d42f6f815c17fc13a978b04cda2e665c3d0e",
+      "size": 15524
     },
     ".agentic/cli/src/aegis/cli.py": {
       "sha256": "c9c993221aa75fd1a9c4da2d4b363e943243f04b7a4a2d277c274d4363aa01b5",
@@ -39,8 +39,8 @@
       "size": 12376
     },
     ".agentic/cli/src/aegis/config.py": {
-      "sha256": "a3fcbf14b58b43ee063fd237e9a114ab7c0f3ff0c2bb7293dd062ea3928aacff",
-      "size": 50597
+      "sha256": "3ed0333a00c9c10cc0e0a990424cbaddcbed3c3ef50fe4cb998ac4def14ff7e9",
+      "size": 51298
     },
     ".agentic/cli/src/aegis/errors.py": {
       "sha256": "86a77e85f1f3327eec479ea49ca917e75ad605211758bdeb8df9716fa43cafbe",
@@ -51,8 +51,8 @@
       "size": 9081
     },
     ".agentic/cli/src/aegis/gates.py": {
-      "sha256": "3ece657a28a4f24158fa4b68c90ede6fdd57f81a8e62e8d3c8c7840faa49ba95",
-      "size": 13597
+      "sha256": "ee71e41fee9a54c72f4dde183dcf374d746e7e373de7d7aa9d9038a1ff3d4b7a",
+      "size": 13616
     },
     ".agentic/cli/src/aegis/invariants.py": {
       "sha256": "4bd45e42b37939d7b3ab6a89979c1a017a9dab71b4e84edb9b4baec761f5d98d",
@@ -99,8 +99,8 @@
       "size": 45210
     },
     ".agentic/cli/src/aegis/verification.py": {
-      "sha256": "0ceb4e8770d16f4b06f6959cb5c63950a71ec4ec44ad86781b0843006d5bd968",
-      "size": 11972
+      "sha256": "f2d883075ae0a57dd7796b2e84edb8ba0a44ddc6eac8d292e88a4c5b509743b0",
+      "size": 11826
     },
     ".agentic/cli/src/aegis/waiver_targets.py": {
       "sha256": "4efd2cf986fb7dc93a76e627a2c85bbec4065d524d000b577dfea6fe29691857",
@@ -155,8 +155,8 @@
       "size": 3289
     },
     ".agentic/documents/WORKFLOW_CONFIGURATION.md": {
-      "sha256": "67842daa7f9adb94841d219997319af2b163256c2f84af244c836a27b3696e2c",
-      "size": 4939
+      "sha256": "fcda0e12c90a24e7bf203d641e4691e7d56655e4408d3cb9f28a71dfc82ada5d",
+      "size": 5222
     },
     ".agentic/hooks/README.md": {
       "sha256": "ff393af869202b689ec9c13b95adb286c7648bd86e72f07609ba2822a3fc9800",
@@ -601,7 +601,7 @@
     ".gitignore",
     "CHANGELOG.md"
   ],
-  "payload_digest": "f3c0df7cab869c12b0aaedfcc29f54d1c93573152a91adcdb9056d360ec2dd1f",
+  "payload_digest": "da43bc91f917366342f21f242d2b8cb889998eee6b9b1c72929aa23f5cf8912f",
   "configuration": {
     "answers": {
       "alignment_enabled": true,

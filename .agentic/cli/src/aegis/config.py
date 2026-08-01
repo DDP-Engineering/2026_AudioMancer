@@ -47,6 +47,7 @@ COMPLETION_LEVELS = (
     "baseline-strict",
 )
 DEFAULT_QUICK_CHANGED_PATHS_MAX = 10
+DEFAULT_GATE_TIMEOUT_SECONDS = 1800
 
 _TOP_LEVEL_KEYS = (
     "schema_version",
@@ -195,10 +196,12 @@ class InterfacePolicy:
 
 @dataclass(frozen=True)
 class GateGroupPolicy:
-    """@brief Immutable mode and commands for one deterministic gate group."""
+    """@brief Immutable mode, commands, and per-command timeout for one
+    deterministic gate group."""
 
     mode: str
     commands: tuple[str, ...]
+    timeout: int
 
 
 @dataclass(frozen=True)
@@ -803,7 +806,13 @@ class _Parser:
         groups: dict[str, GateGroupPolicy] = {}
         for name in GATE_ORDER:
             key_path = f"gates.{name}"
-            group = self._table(table, name, key_path, ("mode", "commands"))
+            group = self._table(
+                table,
+                name,
+                key_path,
+                ("mode", "commands", "timeout"),
+                conditional=("timeout",),
+            )
             mode = self._choice(
                 group, "mode", f"{key_path}.mode", ("disabled", "enforce")
             )
@@ -814,7 +823,17 @@ class _Parser:
                     {"mode": mode, "commands": []},
                     "at least one command when mode is enforce",
                 )
-            groups[name] = GateGroupPolicy(mode, commands)
+            if "timeout" in group:
+                timeout = self._integer(group, "timeout", f"{key_path}.timeout")
+                if timeout <= 0:
+                    self._rule_invalid(
+                        f"{key_path}.timeout",
+                        timeout,
+                        "an integer greater than zero",
+                    )
+            else:
+                timeout = DEFAULT_GATE_TIMEOUT_SECONDS
+            groups[name] = GateGroupPolicy(mode, commands, timeout)
         return GatePolicy(**groups)
 
     def _rule_policy(
@@ -1390,6 +1409,7 @@ def effective_config_dict(config: WorkflowConfig) -> dict[str, object]:
             name: policy(
                 getattr(config.gates, name).mode,
                 commands=list(getattr(config.gates, name).commands),
+                timeout=getattr(config.gates, name).timeout,
             )
             for name in GATE_ORDER
         },

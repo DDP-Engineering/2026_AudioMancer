@@ -119,6 +119,11 @@ Enforced groups require at least one command. Execution order is build,
 typecheck, lint, test, security. Security commands must be explicit and provide
 tool evidence only—not a general security assurance.
 
+Each group also accepts an optional `timeout` (an integer number of seconds,
+applied per command in that group). Omitting it defaults to
+`DEFAULT_GATE_TIMEOUT_SECONDS` (1800). A configured value must be a positive
+integer; zero or negative values are rejected at `config validate`.
+
 All remaining source, tests, requirements, documentation, component,
 traceability, adoption, alignment, and guardrail tables remain required. Use
 `<workflow> config show --json` to inspect the normalized effective policy.
