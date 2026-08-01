@@ -163,7 +163,12 @@ INV-3; quick runs do not collect checks, so INV-3 is `not-applicable` there.
 
 An optional, separate repository-discovery integration. AEGIS reads normalized
 RepoWise artifacts during adoption discovery but neither imports RepoWise
-Python code nor executes its CLI.
+Python code nor executes its CLI. Its deployment is one of three portability
+states: `source-only` (not configured), `external-runtime` (linked to a
+machine-level installation outside the repository), or
+`offline-bundled-runtime` (a gitignored runtime installed beneath
+`.agentic/tools/repowise/<version>/<platform>` by WAEGIS Complete). See
+[REPOWISE_INTEGRATION.md](REPOWISE_INTEGRATION.md).
 
 ## Requirement snapshot
 

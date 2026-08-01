@@ -546,101 +546,163 @@ def _verify_command(
     @brief Execute one deterministic verification action.
     """
     if args.action == "run":
-        summary, code = run_verification(root, graph, config)
-        return (
-            _payload(
-                graph,
-                validation_summary_path(root, graph).relative_to(root).as_posix(),
-                next_command(graph, root),
-                verification=summary,
-            ),
-            code,
-        )
+        return _verify_run(root, graph, config)
     if args.action == "status":
-        summary = read_validation_summary(root, graph)
+        return _verify_status(root, graph)
+    if args.action == "gates":
+        return _verify_gates(root, graph, config, args)
+    if args.action == "invariants":
+        return _verify_invariants(root, graph, config)
+    if args.action in {"traceability", "coverage"}:
+        return _verify_audit(root, graph, config, args)
+    if args.action == "impact":
+        return _verify_impact(root, graph, config, args)
+    return _verify_working_tree(root, graph, config)
+
+
+def _verify_run(
+    root: Path,
+    graph: Graph,
+    config: WorkflowConfig,
+) -> tuple[dict[str, Any], int]:
+    """@brief Execute the complete deterministic verification sequence."""
+    summary, code = run_verification(root, graph, config)
+    return (
+        _payload(
+            graph,
+            validation_summary_path(root, graph).relative_to(root).as_posix(),
+            next_command(graph, root),
+            verification=summary,
+        ),
+        code,
+    )
+
+
+def _verify_status(root: Path, graph: Graph) -> tuple[dict[str, Any], int]:
+    """@brief Report the durable validation summary without re-running it."""
+    summary = read_validation_summary(root, graph)
+    return (
+        _payload(
+            graph,
+            validation_summary_path(root, graph).relative_to(root).as_posix(),
+            next_command(graph, root),
+            verification=summary,
+        ),
+        0,
+    )
+
+
+def _verify_gates(
+    root: Path,
+    graph: Graph,
+    config: WorkflowConfig,
+    args: argparse.Namespace,
+) -> tuple[dict[str, Any], int]:
+    """@brief Execute the selected (or complete) gate set and report modes."""
+    code = run_gates(root, graph.run_id, config, args.gate_names or None)
+    graph = load_graph(root, graph.run_id)
+    modes = {
+        name: getattr(config.gates, name).mode
+        for name in (args.gate_names or GATE_ORDER)
+    }
+    waived_gates = [
+        blocker_to_dict(blocker, graph)
+        for blocker in gate_failure_blockers(
+            graph,
+            config,
+            args.gate_names or None,
+        )
+        if active_waiver(graph, blocker) is not None
+    ]
+    details: dict[str, Any] = {"gates": modes}
+    if waived_gates:
+        details["waived_gates"] = waived_gates
+    return (
+        _payload(graph, "none", next_command(graph, root), **details),
+        1 if code else 0,
+    )
+
+
+def _verify_invariants(
+    root: Path,
+    graph: Graph,
+    config: WorkflowConfig,
+) -> tuple[dict[str, Any], int]:
+    """@brief Evaluate every configured invariant and report blocking failures."""
+    results = evaluate(root, graph, config)
+    return (
+        _payload(
+            graph,
+            "none",
+            next_command(graph, root),
+            invariants=[item.to_dict() for item in results],
+        ),
+        1 if blocking_failures(results) else 0,
+    )
+
+
+def _verify_audit(
+    root: Path,
+    graph: Graph,
+    config: WorkflowConfig,
+    args: argparse.Namespace,
+) -> tuple[dict[str, Any], int]:
+    """@brief Run the traceability or coverage audit, skipping quick runs."""
+    if graph.profile == "quick":
         return (
             _payload(
                 graph,
-                validation_summary_path(root, graph).relative_to(root).as_posix(),
+                "none",
                 next_command(graph, root),
-                verification=summary,
+                audit_status="not-applicable",
+                issues=[
+                    {
+                        "status": "not-applicable",
+                        "message": "Not applicable - quick run.",
+                    }
+                ],
             ),
             0,
         )
-    if args.action == "gates":
-        code = run_gates(root, graph.run_id, config, args.gate_names or None)
-        graph = load_graph(root, graph.run_id)
-        modes = {
-            name: getattr(config.gates, name).mode
-            for name in (args.gate_names or GATE_ORDER)
-        }
-        waived_gates = [
-            blocker_to_dict(blocker, graph)
-            for blocker in gate_failure_blockers(
-                graph,
-                config,
-                args.gate_names or None,
-            )
-            if active_waiver(graph, blocker) is not None
-        ]
-        details: dict[str, Any] = {"gates": modes}
-        if waived_gates:
-            details["waived_gates"] = waived_gates
-        return (
-            _payload(graph, "none", next_command(graph, root), **details),
-            1 if code else 0,
-        )
-    if args.action == "invariants":
-        results = evaluate(root, graph, config)
-        return (
-            _payload(
-                graph,
-                "none",
-                next_command(graph, root),
-                invariants=[item.to_dict() for item in results],
-            ),
-            1 if blocking_failures(results) else 0,
-        )
-    if args.action in {"traceability", "coverage"}:
-        if graph.profile == "quick":
-            return (
-                _payload(
-                    graph,
-                    "none",
-                    next_command(graph, root),
-                    audit_status="not-applicable",
-                    issues=[
-                        {
-                            "status": "not-applicable",
-                            "message": "Not applicable - quick run.",
-                        }
-                    ],
-                ),
-                0,
-            )
-        issues = (
-            audit_traceability(root, config)
-            if args.action == "traceability"
-            else audit_coverage(root, config)
-        )
-        serialized, blockers = annotate_audit_issues(
-            args.action,
-            issues,
+    issues = (
+        audit_traceability(root, config)
+        if args.action == "traceability"
+        else audit_coverage(root, config)
+    )
+    serialized, blockers = annotate_audit_issues(
+        args.action,
+        issues,
+        graph,
+    )
+    return (
+        _payload(
             graph,
-        )
-        return (
-            _payload(
-                graph,
-                "none",
-                next_command(graph, root),
-                issues=serialized,
-            ),
-            1 if blockers else 0,
-        )
-    if args.action == "impact":
-        paths = _read_paths_file(root, args.paths_file) if args.paths_file else None
-        report = impact(root, paths, config=config)
-        return _payload(graph, "none", next_command(graph, root), impact=report), 0
+            "none",
+            next_command(graph, root),
+            issues=serialized,
+        ),
+        1 if blockers else 0,
+    )
+
+
+def _verify_impact(
+    root: Path,
+    graph: Graph,
+    config: WorkflowConfig,
+    args: argparse.Namespace,
+) -> tuple[dict[str, Any], int]:
+    """@brief Report the change-impact set for the configured or given paths."""
+    paths = _read_paths_file(root, args.paths_file) if args.paths_file else None
+    report = impact(root, paths, config=config)
+    return _payload(graph, "none", next_command(graph, root), impact=report), 0
+
+
+def _verify_working_tree(
+    root: Path,
+    graph: Graph,
+    config: WorkflowConfig,
+) -> tuple[dict[str, Any], int]:
+    """@brief Audit the working tree against the configured write policy."""
     report, blockers = annotate_working_tree(
         audit_working_tree(root, config, graph),
         graph,

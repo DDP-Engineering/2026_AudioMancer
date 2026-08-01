@@ -253,32 +253,31 @@
     },
     "baseline-review": {
       "access_rationale": "",
-      "applied_at": "2026-08-01T10:08:31+00:00",
+      "applied_at": "2026-08-01T13:06:33+00:00",
       "artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml",
       "check_execution": "external",
       "closed_at": null,
-      "digest": "69a499dfd8c421d86616c1e0f7ba9ca49a1290ab68061721def1b816426214e9",
+      "digest": "c24be82a941e1f36bc421cefc2c68a5798996fda12c23d843c46e330d3daacb2",
       "payload": {
         "accepted_legacy_risks": [
           "pcm-codec remains characterized rather than baseline-usable because end-to-end audible-quality assessment belongs to audio-assembly and is outside this non-behavioral adoption slice."
         ],
         "blocking_gaps": [
           "INV-1: the selected adoption run lacks AEGIS check records for the repository's historical requirements; waiver inventory identifies INV-1 as eligible.",
-          "gate:lint: the configured uv command cannot execute because uv cannot query the Python interpreter (Windows Access is denied); waiver inventory identifies gate:lint as eligible.",
-          "gate:test: the configured uv command cannot execute for the same uv Python-interpreter access failure; waiver inventory identifies gate:test as eligible."
+          "gate:test: after dependency synchronization, the configured command starts successfully with a workspace-safe pytest base path and a temporary uv cache, but the complete suite did not finish within the 15-minute execution window (it reached 42%); the active gate result remains failed until a complete run is recorded."
         ],
         "control": {
           "access_rationale": "",
           "requested_access_mode": "",
           "route_rationale": "",
           "route_to": "",
-          "summary": "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. Baseline verification is blocked by INV-1 and by unable-to-start lint/test gates in the current environment. No runtime behavior changed and no waiver was added.",
+          "summary": "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. The configured lint command passes after dependency synchronization. Baseline verification remains blocked by INV-1 and an incomplete full test gate: the repaired test command started and reached 42% before the 15-minute execution window expired. No runtime behavior changed and no waiver was added.",
           "unresolved_questions": []
         },
         "decision": "pending",
         "follow_up_gaps": [
           "RepoWise remains advisory and stale: its knowledge-graph digest, receipt HEAD, receipt working-tree fingerprint, and state digest do not match.",
-          "The default uv cache path is also unusable in this environment because a file occupies the expected cache directory."
+          "The default uv cache path is unavailable to the current sandbox, so verification requires an accessible per-process UV_CACHE_DIR. The user completed dependency synchronization in a normal Windows session."
         ],
         "reviewed_components": [
           "app-shell",
@@ -296,20 +295,20 @@
           "audio-assembly",
           "pcm-codec"
         ],
-        "revision": 1,
+        "revision": 2,
         "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
         "schema_version": 3,
         "stage": "baseline-review"
       },
-      "prepared_at": "2026-08-01T10:06:00+00:00",
+      "prepared_at": "2026-08-01T13:06:00+00:00",
       "requested_access_mode": "",
       "retention": "versioned",
-      "revision": 1,
+      "revision": 2,
       "route_rationale": "",
       "route_to": "",
       "stage": "baseline-review",
       "status": "applied",
-      "summary": "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. Baseline verification is blocked by INV-1 and by unable-to-start lint/test gates in the current environment. No runtime behavior changed and no waiver was added.",
+      "summary": "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. The configured lint command passes after dependency synchronization. Baseline verification remains blocked by INV-1 and an incomplete full test gate: the repaired test command started and reached 42% before the 15-minute execution window expired. No runtime behavior changed and no waiver was added.",
       "unresolved_questions": []
     },
     "component-adoption": {

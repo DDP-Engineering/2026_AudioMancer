@@ -3,7 +3,7 @@
   "product": "aegis",
   "payload_version": "2.1.0",
   "installed_at": "2026-07-31T20:09:39Z",
-  "installed_by": "waegis 1.1.0",
+  "installed_by": "waegis 1.2.0",
   "mode": "adopt",
   "files": {
     ".agentic/LICENSE.txt": {
@@ -22,45 +22,49 @@
       "sha256": "c2ae0930ed68402abdc64ba9bafb303db4958436e887b3119dc1f3858fb5d831",
       "size": 779
     },
+    ".agentic/cli/src/aegis/_form_io.py": {
+      "sha256": "eec909a07d926bd480c472e8391b0162a1ba96d912f45c73b0727593426877c8",
+      "size": 3225
+    },
     ".agentic/cli/src/aegis/check_execution.py": {
-      "sha256": "a491a4a01467d1c40ed0ed39b2ade2015e1f9d40a7199757b8dad929eb56af37",
-      "size": 16649
+      "sha256": "4a0ea825a1371f2e51faa92aa0aacb77115bade3e6799c10f67827d65485930e",
+      "size": 15505
     },
     ".agentic/cli/src/aegis/cli.py": {
-      "sha256": "14169cc864dc72d148c8d0e6f4b4626f44b95bd2add4ef8de5c0543672864372",
-      "size": 28627
+      "sha256": "c9c993221aa75fd1a9c4da2d4b363e943243f04b7a4a2d277c274d4363aa01b5",
+      "size": 30061
     },
     ".agentic/cli/src/aegis/components.py": {
       "sha256": "1bddd6ba69054c56ebb35ab0f8996973e5e2f23da8416e7ce2eae7b84c3331fe",
       "size": 12376
     },
     ".agentic/cli/src/aegis/config.py": {
-      "sha256": "4e349eb3a179b82543b2a7d27a08d17112ea821d43a72c62926e6def8e16a0a9",
-      "size": 47281
+      "sha256": "a3fcbf14b58b43ee063fd237e9a114ab7c0f3ff0c2bb7293dd062ea3928aacff",
+      "size": 50597
     },
     ".agentic/cli/src/aegis/errors.py": {
       "sha256": "86a77e85f1f3327eec479ea49ca917e75ad605211758bdeb8df9716fa43cafbe",
       "size": 1199
     },
     ".agentic/cli/src/aegis/evidence_forms.py": {
-      "sha256": "a20dc1acd9f0635d56258d8fb5f21964f5d77595edee05e467cd66109a44c6c9",
-      "size": 10285
+      "sha256": "9f032db68db92a8acf754f58848e413abeb71ea01a085d51778560125bf17b67",
+      "size": 9081
     },
     ".agentic/cli/src/aegis/gates.py": {
-      "sha256": "8f75280a1d7c139d18eebc01e9dda13214fb6a4338d87edaba9041909af3a5b2",
-      "size": 13443
+      "sha256": "6edbe965a0267a74a94b7cc7d60963081c771e41df05d6182feb49f2853cb807",
+      "size": 13596
     },
     ".agentic/cli/src/aegis/invariants.py": {
       "sha256": "4bd45e42b37939d7b3ab6a89979c1a017a9dab71b4e84edb9b4baec761f5d98d",
       "size": 33588
     },
     ".agentic/cli/src/aegis/models.py": {
-      "sha256": "396e1e9aa6ab5ee77c61adc12310a22dbc5ba0b7a7b0fc8b57b04aed250e7e1b",
-      "size": 13917
+      "sha256": "94659793a7037cf48f63af9e66988254b91109c7d10593c9b6dc9c11ac53d8e6",
+      "size": 14169
     },
     ".agentic/cli/src/aegis/paths.py": {
-      "sha256": "241ac62fadeef7eb338c3841855f88f4e2d908e57086b12e8a6f42f4dc58a35e",
-      "size": 5224
+      "sha256": "3337285c81b34cea5afa16e8736f6a2aefeb81e9e880ff0fc0e13810893f7d7d",
+      "size": 8537
     },
     ".agentic/cli/src/aegis/persistence.py": {
       "sha256": "d810c45e2c9218139a3f9fa6b56f8c24416442d08fa0d1176259ae0b902a476b",
@@ -71,32 +75,32 @@
       "size": 13801
     },
     ".agentic/cli/src/aegis/repowise.py": {
-      "sha256": "e51073750da0d368714ec0774ea96912feee1a313468bba3d284f69f00976aba",
-      "size": 22079
+      "sha256": "cc8f93c2a73bbc90d11d3f88660b9e238e2b95fbaff27820cc47ac2144ce7735",
+      "size": 25288
     },
     ".agentic/cli/src/aegis/requirement_store.py": {
-      "sha256": "cfbda260c2c42059683b00d5265f7a9db07656f1b9fbf49c441f573343de86f4",
-      "size": 34345
+      "sha256": "c6f987ab26d60dbceb5aa10c6a639cf0429ab9f1806e9cace61356b78c2ef3ad",
+      "size": 33650
     },
     ".agentic/cli/src/aegis/requirements.py": {
-      "sha256": "a4394b43496bbf5fcacd142bf53ea8b2ac30e90a014e994c14eba9615c3458f0",
-      "size": 24676
+      "sha256": "04044fafee3b0fab4b4c3bcfcbb1635112330bf51b8593a16cfa5997ac0a34e8",
+      "size": 26072
     },
     ".agentic/cli/src/aegis/stage_forms.py": {
-      "sha256": "08da7544534a437d3f9451ddd8c297cab58e73a8f680e97099b33c9fc0ac3d68",
-      "size": 76142
+      "sha256": "53c96068f322f5a6c61f6cec38f926b328b2315b5dd7de297fd14f34ecf66a47",
+      "size": 75962
     },
     ".agentic/cli/src/aegis/stage_schema.py": {
       "sha256": "a6e092359c356db41136b3a4bda92e3c20cc96f8b6c219ac5fe2d582d135140c",
       "size": 10115
     },
     ".agentic/cli/src/aegis/store.py": {
-      "sha256": "a7df443b415796b357df58bffe596c026b810305cbcb1c496a1f6a2fc5f3e8f7",
-      "size": 42277
+      "sha256": "62e4ddab7a95d2e9386f22200729a65838901a8a5c950ad7ee6a39eb0b38950d",
+      "size": 45210
     },
     ".agentic/cli/src/aegis/verification.py": {
-      "sha256": "0749c1a8a10f95922e40648ceeb18a3bc441927f40ced9cec7d426aa5119593c",
-      "size": 11917
+      "sha256": "0ceb4e8770d16f4b06f6959cb5c63950a71ec4ec44ad86781b0843006d5bd968",
+      "size": 11972
     },
     ".agentic/cli/src/aegis/waiver_targets.py": {
       "sha256": "4efd2cf986fb7dc93a76e627a2c85bbec4065d524d000b577dfea6fe29691857",
@@ -119,8 +123,8 @@
       "size": 10040
     },
     ".agentic/documents/GLOSSARY.md": {
-      "sha256": "7d87f26c586b813de6c08f413381eeeeb25b756c08a65c57adb9ed856a492549",
-      "size": 9357
+      "sha256": "b1d35c0bf411b6f7777be09eeda8af2a66380ce9c25e5518356638d65b693d60",
+      "size": 9717
     },
     ".agentic/documents/How_To_Start_A_New_Project.md": {
       "sha256": "84b212de659771316498aa1ac50ebd6e10f9f5c63d18ed6dcf4dde43591f6421",
@@ -147,8 +151,8 @@
       "size": 3896
     },
     ".agentic/documents/REPOWISE_INTEGRATION.md": {
-      "sha256": "42dd14842b6a99f564e0effb37cc7029d4f5453ce499e6a7d03bf12945d240c4",
-      "size": 3363
+      "sha256": "3740a0dd95957153732cb2293caed09d9d0a89ceb709e4b49b75bcfa3b793992",
+      "size": 4061
     },
     ".agentic/documents/WHY_AEGIS.md": {
       "sha256": "849c266f68607ff486bd27385c11264337d7767c48eec3f0683638ec38ad40d8",
@@ -597,7 +601,7 @@
     ".gitignore",
     "CHANGELOG.md"
   ],
-  "payload_digest": "7cde5bb7b53932c1d478bc085de071a328251e6018cabce85bfce522f123815e",
+  "payload_digest": "8e3f584b1442b051d54f0cdc94959729f140e7c5985b426e3e2424daa2ae4458",
   "configuration": {
     "answers": {
       "alignment_enabled": true,
@@ -671,7 +675,7 @@
         "adoption-delivery": []
       }
     },
-    "generator_version": "1.1.0",
+    "generator_version": "1.2.0",
     "generated_files": {
       ".agentic/workflow.toml": {
         "sha256": "0a6d119fed902f926e78237b7526ac1cd0d95fc93deb3b944d3e40e20b12cfc9"

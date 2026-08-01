@@ -19,16 +19,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
-from types import MappingProxyType
-from collections.abc import Mapping
-from typing import Any, NoReturn
 import tomllib
+from types import MappingProxyType
+from typing import Any, NoReturn
 
 from .models import ALL_STAGES
+from .paths import RepositoryPathError
+from .paths import normalize_repository_path as _normalize_repository_path
+from .paths import validate_glob as _validate_glob_syntax
 
 # CONSTANTS
 
@@ -299,158 +302,42 @@ class _Parser:
         self._closed(self.data, "", _TOP_LEVEL_KEYS)
         self._schema_version()
 
-        source = self._table(self.data, "source", "source", ("roots",))
-        source_roots = self._paths(source, "roots", "source.roots", non_empty=True)
-
-        tests = self._table(self.data, "tests", "tests", ("roots",))
-        test_roots = self._paths(tests, "roots", "tests.roots", non_empty=True)
-
-        requirements = self._table(
-            self.data, "requirements", "requirements", ("roots",)
+        source_roots, test_roots, requirement_roots = (
+            self._parse_source_tests_requirements()
         )
-        requirement_roots = self._paths(
-            requirements, "roots", "requirements.roots", non_empty=True
-        )
-
-        documentation = self._table(
-            self.data,
-            "documentation",
-            "documentation",
-            ("roots", "component_template"),
-        )
-        documentation_roots = self._paths(
-            documentation, "roots", "documentation.roots", non_empty=True
-        )
-        component_template = self._path(
-            documentation,
-            "component_template",
-            "documentation.component_template",
-        )
-
-        components = self._table(
-            self.data,
-            "components",
-            "components",
-            ("manifest", "baseline_guard"),
-        )
-        component_manifest = self._path(components, "manifest", "components.manifest")
-        baseline = self._baseline_guard(components, component_manifest)
-
-        knowledge = self._table(self.data, "knowledge", "knowledge", ("roots",))
-        knowledge_roots = self._paths(
-            knowledge, "roots", "knowledge.roots", non_empty=True
-        )
-
-        reports = self._table(
-            self.data, "reports", "reports", ("adoption_root",)
-        )
-        adoption_report_root = self._path(
-            reports, "adoption_root", "reports.adoption_root"
-        )
-
-        traceability = self._table(
-            self.data,
-            "traceability",
-            "traceability",
-            ("language", "source_extensions", "test_file_patterns", "coverage"),
-        )
-        language = self._string(traceability, "language", "traceability.language")
-        source_extensions = self._strings(
-            traceability,
-            "source_extensions",
-            "traceability.source_extensions",
-            non_empty=True,
-        )
-        test_file_patterns = self._globs(
-            traceability,
-            "test_file_patterns",
-            "traceability.test_file_patterns",
-            non_empty=True,
-        )
-        coverage = self._coverage(traceability)
-
-        adoption = self._table(
-            self.data,
-            "adoption",
-            "adoption",
-            ("allow_component_bundles", "max_bundle_components", "source_changes"),
-        )
-        allow_bundles = self._boolean(
-            adoption, "allow_component_bundles", "adoption.allow_component_bundles"
-        )
-        max_bundle_components = self._integer(
-            adoption, "max_bundle_components", "adoption.max_bundle_components"
-        )
-        if max_bundle_components <= 0:
-            self._fail(
-                "CONFIG-RULE-INVALID",
-                "adoption.max_bundle_components",
-                max_bundle_components,
-                "an integer greater than zero",
-                "[adoption].max_bundle_components must be greater than zero.",
-            )
-        source_changes = self._source_changes(adoption)
-
-        alignment = self._table(
-            self.data,
-            "alignment",
-            "alignment",
-            (
-                "enabled",
-                "pause_on_open_questions",
-                "risk_threshold",
-                "allow_recommended_responses",
-                "protected_scope",
-            ),
-        )
-        alignment_enabled = self._boolean(alignment, "enabled", "alignment.enabled")
-        pause_on_questions = self._boolean(
-            alignment,
-            "pause_on_open_questions",
-            "alignment.pause_on_open_questions",
-        )
-        risk_threshold = self._choice(
-            alignment,
-            "risk_threshold",
-            "alignment.risk_threshold",
-            RISK_LEVELS,
-            "CONFIG-RULE-INVALID",
-        )
-        recommended_responses = self._boolean(
-            alignment,
-            "allow_recommended_responses",
-            "alignment.allow_recommended_responses",
-        )
-        protected_scope = self._alignment_scope(alignment, alignment_enabled)
+        (
+            documentation_roots,
+            component_template,
+            component_manifest,
+            baseline,
+        ) = self._parse_documentation_components()
+        knowledge_roots, adoption_report_root = self._parse_knowledge_reports()
+        (
+            language,
+            source_extensions,
+            test_file_patterns,
+            coverage,
+        ) = self._parse_traceability()
+        allow_bundles, max_bundle_components, source_changes = self._parse_adoption()
+        (
+            alignment_enabled,
+            pause_on_questions,
+            risk_threshold,
+            recommended_responses,
+            protected_scope,
+        ) = self._parse_alignment()
         quick_changed_paths = self._quick_changed_paths()
 
         interface = self._interface_policy()
         gates = self._gate_policy()
-        guardrails = self._table(
-            self.data,
-            "guardrails",
-            "guardrails",
-            (
-                "secrets",
-                "protected_paths",
-                "working_tree",
-                "write_access",
-                "scope",
-                "delivery",
-            ),
-        )
-        secrets = self._rule_policy(
-            guardrails,
-            "secrets",
-            "guardrails.secrets",
-            ("disabled", "enforce"),
-            regex=True,
-        )
-        protected_paths = self._protected_paths(guardrails)
-        working_tree = self._working_tree(guardrails)
-        write_access = self._write_access(guardrails)
-        scope = self._scope(guardrails)
-        delivery = self._delivery(guardrails)
+        (
+            secrets,
+            protected_paths,
+            working_tree,
+            write_access,
+            scope,
+            delivery,
+        ) = self._parse_guardrails()
 
         return WorkflowConfig(
             schema_version=SCHEMA_VERSION,
@@ -485,6 +372,225 @@ class _Parser:
             scope=scope,
             delivery=delivery,
         )
+
+    def _parse_source_tests_requirements(
+        self,
+    ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+        """
+        @brief Parse the required source/test/requirement root lists.
+        @return `(source_roots, test_roots, requirement_roots)`.
+        """
+        source = self._table(self.data, "source", "source", ("roots",))
+        source_roots = self._paths(source, "roots", "source.roots", non_empty=True)
+
+        tests = self._table(self.data, "tests", "tests", ("roots",))
+        test_roots = self._paths(tests, "roots", "tests.roots", non_empty=True)
+
+        requirements = self._table(
+            self.data, "requirements", "requirements", ("roots",)
+        )
+        requirement_roots = self._paths(
+            requirements, "roots", "requirements.roots", non_empty=True
+        )
+        return source_roots, test_roots, requirement_roots
+
+    def _parse_documentation_components(
+        self,
+    ) -> tuple[tuple[str, ...], str, str, BaselineGuardPolicy]:
+        """
+        @brief Parse documentation roots/template and the component manifest.
+        @return `(documentation_roots, component_template, component_manifest,
+                 baseline)`.
+        """
+        documentation = self._table(
+            self.data,
+            "documentation",
+            "documentation",
+            ("roots", "component_template"),
+        )
+        documentation_roots = self._paths(
+            documentation, "roots", "documentation.roots", non_empty=True
+        )
+        component_template = self._path(
+            documentation,
+            "component_template",
+            "documentation.component_template",
+        )
+
+        components = self._table(
+            self.data,
+            "components",
+            "components",
+            ("manifest", "baseline_guard"),
+        )
+        component_manifest = self._path(components, "manifest", "components.manifest")
+        baseline = self._baseline_guard(components, component_manifest)
+        return documentation_roots, component_template, component_manifest, baseline
+
+    def _parse_knowledge_reports(self) -> tuple[tuple[str, ...], str]:
+        """
+        @brief Parse knowledge roots and the adoption report root.
+        @return `(knowledge_roots, adoption_report_root)`.
+        """
+        knowledge = self._table(self.data, "knowledge", "knowledge", ("roots",))
+        knowledge_roots = self._paths(
+            knowledge, "roots", "knowledge.roots", non_empty=True
+        )
+
+        reports = self._table(
+            self.data, "reports", "reports", ("adoption_root",)
+        )
+        adoption_report_root = self._path(
+            reports, "adoption_root", "reports.adoption_root"
+        )
+        return knowledge_roots, adoption_report_root
+
+    def _parse_traceability(
+        self,
+    ) -> tuple[str, tuple[str, ...], tuple[str, ...], CoveragePolicy]:
+        """
+        @brief Parse the traceability language, source/test patterns, and coverage.
+        @return `(language, source_extensions, test_file_patterns, coverage)`.
+        """
+        traceability = self._table(
+            self.data,
+            "traceability",
+            "traceability",
+            ("language", "source_extensions", "test_file_patterns", "coverage"),
+        )
+        language = self._string(traceability, "language", "traceability.language")
+        source_extensions = self._strings(
+            traceability,
+            "source_extensions",
+            "traceability.source_extensions",
+            non_empty=True,
+        )
+        test_file_patterns = self._globs(
+            traceability,
+            "test_file_patterns",
+            "traceability.test_file_patterns",
+            non_empty=True,
+        )
+        coverage = self._coverage(traceability)
+        return language, source_extensions, test_file_patterns, coverage
+
+    def _parse_adoption(self) -> tuple[bool, int, SourceChangePolicy]:
+        """
+        @brief Parse the adoption bundle policy and source-change mode.
+        @return `(allow_component_bundles, max_bundle_components, source_changes)`.
+        """
+        adoption = self._table(
+            self.data,
+            "adoption",
+            "adoption",
+            ("allow_component_bundles", "max_bundle_components", "source_changes"),
+        )
+        allow_bundles = self._boolean(
+            adoption, "allow_component_bundles", "adoption.allow_component_bundles"
+        )
+        max_bundle_components = self._integer(
+            adoption, "max_bundle_components", "adoption.max_bundle_components"
+        )
+        if max_bundle_components <= 0:
+            self._fail(
+                "CONFIG-RULE-INVALID",
+                "adoption.max_bundle_components",
+                max_bundle_components,
+                "an integer greater than zero",
+                "[adoption].max_bundle_components must be greater than zero.",
+            )
+        source_changes = self._source_changes(adoption)
+        return allow_bundles, max_bundle_components, source_changes
+
+    def _parse_alignment(
+        self,
+    ) -> tuple[bool, bool, str, bool, RuleSetPolicy]:
+        """
+        @brief Parse the intent-alignment policy, including its protected scope.
+        @return `(alignment_enabled, pause_on_open_questions, risk_threshold,
+                 allow_recommended_responses, protected_scope)`.
+        """
+        alignment = self._table(
+            self.data,
+            "alignment",
+            "alignment",
+            (
+                "enabled",
+                "pause_on_open_questions",
+                "risk_threshold",
+                "allow_recommended_responses",
+                "protected_scope",
+            ),
+        )
+        alignment_enabled = self._boolean(alignment, "enabled", "alignment.enabled")
+        pause_on_questions = self._boolean(
+            alignment,
+            "pause_on_open_questions",
+            "alignment.pause_on_open_questions",
+        )
+        risk_threshold = self._choice(
+            alignment,
+            "risk_threshold",
+            "alignment.risk_threshold",
+            RISK_LEVELS,
+            "CONFIG-RULE-INVALID",
+        )
+        recommended_responses = self._boolean(
+            alignment,
+            "allow_recommended_responses",
+            "alignment.allow_recommended_responses",
+        )
+        protected_scope = self._alignment_scope(alignment, alignment_enabled)
+        return (
+            alignment_enabled,
+            pause_on_questions,
+            risk_threshold,
+            recommended_responses,
+            protected_scope,
+        )
+
+    def _parse_guardrails(
+        self,
+    ) -> tuple[
+        RuleSetPolicy,
+        ProtectedPathPolicy,
+        WorkingTreePolicy,
+        WriteAccessPolicy,
+        ScopePolicy,
+        DeliveryPolicy,
+    ]:
+        """
+        @brief Parse the guardrails table (secrets, paths, tree, access, scope,
+               delivery).
+        @return `(secrets, protected_paths, working_tree, write_access, scope,
+                 delivery)`.
+        """
+        guardrails = self._table(
+            self.data,
+            "guardrails",
+            "guardrails",
+            (
+                "secrets",
+                "protected_paths",
+                "working_tree",
+                "write_access",
+                "scope",
+                "delivery",
+            ),
+        )
+        secrets = self._rule_policy(
+            guardrails,
+            "secrets",
+            "guardrails.secrets",
+            ("disabled", "enforce"),
+            regex=True,
+        )
+        protected_paths = self._protected_paths(guardrails)
+        working_tree = self._working_tree(guardrails)
+        write_access = self._write_access(guardrails)
+        scope = self._scope(guardrails)
+        delivery = self._delivery(guardrails)
+        return secrets, protected_paths, working_tree, write_access, scope, delivery
 
     def _quick_changed_paths(self) -> QuickChangedPathsPolicy:
         """
@@ -1064,33 +1170,17 @@ class _Parser:
     def _normalize_path(
         self, value: str, key_path: str, *, allow_glob: bool = False
     ) -> str:
-        normalized = value.replace("\\", "/")
-        while normalized.startswith("./"):
-            normalized = normalized[2:]
-        normalized = re.sub(r"/{2,}", "/", normalized).rstrip("/")
-        if (
-            not normalized
-            or normalized.startswith(("/", "~"))
-            or re.match(r"^[A-Za-z]:", normalized)
-            or ".." in normalized.split("/")
-        ):
+        try:
+            return _normalize_repository_path(value, allow_glob=allow_glob)
+        except RepositoryPathError as exc:
+            if exc.reason == "has-globs":
+                self._rule_invalid(key_path, value, "a repository-relative path without globs")
             self._rule_invalid(key_path, value, "a repository-relative path without `..`")
-        if not allow_glob and any(char in normalized for char in "*?[]"):
-            self._rule_invalid(key_path, value, "a repository-relative path without globs")
-        return normalized
 
     def _validate_glob(self, value: str, key_path: str) -> None:
-        depth = 0
-        for char in value:
-            if char == "[":
-                if depth:
-                    self._rule_invalid(key_path, value, "a glob with balanced bracket expressions")
-                depth = 1
-            elif char == "]":
-                if not depth:
-                    self._rule_invalid(key_path, value, "a glob with balanced bracket expressions")
-                depth = 0
-        if depth:
+        try:
+            _validate_glob_syntax(value)
+        except RepositoryPathError:
             self._rule_invalid(key_path, value, "a glob with balanced bracket expressions")
 
     def _missing_key(self, key_path: str, remediation: str) -> NoReturn:

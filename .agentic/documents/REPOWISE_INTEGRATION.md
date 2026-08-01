@@ -70,18 +70,31 @@ profile, AEGIS consumes only structural graph data.
 
 ## Offline Delivery
 
-WAEGIS Core has no RepoWise payload and defaults the integration to disabled.
-WAEGIS Complete can install its pinned RepoWise 0.37.0 runtime under:
+A deployment's RepoWise portability is exactly one of three states:
 
-```text
-.agentic/tools/repowise/0.37.0/<platform>/
-```
+- `source-only` — the integration is disabled; no RepoWise runtime or link
+  exists. A Git clone is fully self-contained.
+- `external-runtime` — the deployment links a machine-level external RepoWise
+  installation. The command is not part of the repository, so a fresh clone on
+  another machine must re-link its own external RepoWise before the
+  integration can run there.
+- `offline-bundled-runtime` — WAEGIS Complete installed a pinned RepoWise
+  0.37.0 runtime under:
 
-The directory is excluded from normal Git and RepoWise discovery. Target
-installation/indexing does not invoke pip, uv, package registries, GitHub,
-telemetry, editor/agent setup, or update services. A failed index leaves the
-AEGIS installation and RepoWise configuration intact and reports its log plus
-the exact resume command.
+  ```text
+  .agentic/tools/repowise/0.37.0/<platform>/
+  ```
+
+  That directory is excluded from normal Git and RepoWise discovery, so a Git
+  clone is **not** self-contained for this state: only a delivered working
+  directory (the runtime files present on disk) or a fresh run of the WAEGIS
+  Complete installer restores the runtime.
+
+WAEGIS Core has no RepoWise payload and defaults the integration to
+`source-only`. Target installation/indexing does not invoke pip, uv, package
+registries, GitHub, telemetry, editor/agent setup, or update services. A
+failed index leaves the AEGIS installation and RepoWise configuration intact
+and reports its log plus the exact resume command.
 
 RepoWise is licensed separately under AGPL-3.0-or-later. Complete distributions
 must retain its exact corresponding source, notices, SBOM, provenance, and

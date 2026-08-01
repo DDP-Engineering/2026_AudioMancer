@@ -360,11 +360,7 @@ def resolve_run_id(repo_root: Path, explicit_run_id: str | None = None) -> str:
             pointer_path=pointer_relative,
             run_id=None,
             message="No active AEGIS run is selected for this worktree.",
-            remediation=(
-                "Start one with `aegis run start <kind>` or rerun this command "
-                "with `--run <existing-run-id>`.\n"
-                f"Expected pointer: {pointer_relative}"
-            ),
+            remediation=_pointer_missing_remediation(repo_root, pointer_relative),
         )
     try:
         raw = pointer.read_bytes()
@@ -389,6 +385,72 @@ def _pointer_relative_path() -> str:
     @return     POSIX-form pointer path used in errors and JSON.
     """
     return f"{AGENTIC_DIR}/{WORKSPACE_DIR}/{WORKSPACE_STATE_DIR}/{CURRENT_RUN}"
+
+
+def _discoverable_runs(repo_root: Path) -> list[tuple[str, bool]]:
+    """
+    @brief      List the runs a lost worktree pointer could be restored to.
+    @details    The pointer is worktree-local and deliberately ignored by Git,
+                while `.agentic/runs/` is durable — so whenever the pointer is
+                gone the runs themselves are almost always still there, and the
+                operator only needs to be told which ones. Reading is
+                deliberately tolerant: this feeds a diagnostic message, so an
+                unreadable or malformed `graph.json` is reported as a run that
+                exists rather than allowed to mask the runs beside it.
+    @param[in]  repo_root Repository root.
+    @return     `(run_id, complete)` pairs sorted by run ID; unreadable graphs
+                are reported as incomplete. Empty when no runs are discoverable.
+    @exception  None All filesystem and decoding failures are absorbed.
+    """
+    try:
+        entries = sorted(runs_root(repo_root).iterdir())
+    except OSError:
+        return []
+    runs: list[tuple[str, bool]] = []
+    for entry in entries:
+        if not _is_valid_run_id(entry.name):
+            continue
+        complete = False
+        try:
+            document = json.loads((entry / GRAPH_FILE).read_text(encoding="utf-8"))
+            complete = bool(document.get("complete", False))
+        except (OSError, UnicodeError, ValueError):
+            complete = False
+        runs.append((entry.name, complete))
+    return runs
+
+
+def _pointer_missing_remediation(repo_root: Path, pointer_relative: str) -> str:
+    """
+    @brief      Build the actionable RUN-POINTER-MISSING guidance (DPT-F08).
+    @details    The deployment test lost the pointer once while the run itself
+                was intact, and the message named neither the surviving run nor
+                `aegis run select` — the one command that recovers it — so the
+                operator had to know the run ID already. The recovery path is
+                now stated: the exact command when a single incomplete run makes
+                the choice unambiguous, otherwise the candidates to choose from.
+    @param[in]  repo_root Repository root.
+    @param[in]  pointer_relative Repository-relative pointer path.
+    @return     Multi-line remediation text.
+    @exception  None
+    """
+    runs = _discoverable_runs(repo_root)
+    incomplete = [run_id for run_id, complete in runs if not complete]
+    lines: list[str] = []
+    if len(incomplete) == 1:
+        lines.append(f"Restore it with `aegis run select {incomplete[0]}`.")
+    elif runs:
+        lines.append("Select one of the runs already in this repository:")
+        lines.extend(
+            f"  aegis run select {run_id}" + ("  (complete)" if complete else "")
+            for run_id, complete in runs
+        )
+    lines.append(
+        "Start one with `aegis run start <kind>` or rerun this command "
+        "with `--run <existing-run-id>`."
+    )
+    lines.append(f"Expected pointer: {pointer_relative}")
+    return "\n".join(lines)
 
 
 def _is_valid_run_id(run_id: str) -> bool:

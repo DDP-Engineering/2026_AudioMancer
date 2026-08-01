@@ -33,6 +33,9 @@ import uuid
 from typing import Any, Callable
 
 from .config import WorkflowConfig
+from .paths import RepositoryPathError
+from .paths import normalize_repository_path as _normalize_repository_path
+from .paths import validate_glob as _validate_glob_syntax
 from .persistence import (
     atomic_write_text,
     create_temporary_text,
@@ -220,19 +223,7 @@ def normalize_repository_path(value: str, *, allow_glob: bool) -> str:
     """
     if not isinstance(value, str):
         raise ValueError("must be a string")
-    normalized = value.strip().replace("\\", "/")
-    while normalized.startswith("./"):
-        normalized = normalized[2:]
-    normalized = re.sub(r"/{2,}", "/", normalized).rstrip("/")
-    if (
-        not normalized
-        or normalized.startswith(("/", "~"))
-        or re.match(r"^[A-Za-z]:", normalized)
-        or ".." in normalized.split("/")
-    ):
-        raise ValueError("must be a repository-relative path without `..`")
-    if not allow_glob and any(char in normalized for char in "*?[]"):
-        raise ValueError("must not contain glob syntax")
+    normalized = _normalize_repository_path(value.strip(), allow_glob=allow_glob)
     if allow_glob:
         _validate_glob(normalized)
     return normalized
@@ -833,18 +824,7 @@ def _parse_timestamp(value: str, source: str, key: str) -> datetime:
 
 def _validate_glob(value: str) -> None:
     """@brief Reject nested or unbalanced glob bracket expressions."""
-    depth = 0
-    for char in value:
-        if char == "[":
-            if depth:
-                raise ValueError("glob bracket expressions must be balanced")
-            depth = 1
-        elif char == "]":
-            if not depth:
-                raise ValueError("glob bracket expressions must be balanced")
-            depth = 0
-    if depth:
-        raise ValueError("glob bracket expressions must be balanced")
+    _validate_glob_syntax(value)
 
 
 def _render_array(name: str, values: tuple[str, ...]) -> list[str]:

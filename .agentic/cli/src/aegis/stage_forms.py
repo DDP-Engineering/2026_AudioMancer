@@ -29,6 +29,7 @@ import tomllib
 import uuid
 from typing import Any
 
+from ._form_io import read_string_field as _string
 from .config import GATE_ORDER, WorkflowConfig, load_config
 from .models import (
     STAGES,
@@ -50,7 +51,7 @@ from .requirement_store import (
     publish_requirement_records,
     utc_timestamp,
 )
-from .requirements import update_requirement
+from .requirements import RequirementPatch, update_requirement
 from .repowise import inspect_repowise
 from .store import (
     append_journal,
@@ -1791,9 +1792,8 @@ def _activate_green_requirements(
         update_requirement(
             repo_root,
             requirement.id,
-            status="Active",
             config=config,
-            timestamp=utc_timestamp(),
+            patch=RequirementPatch(status="Active", timestamp=utc_timestamp()),
         )
         append_journal(
             repo_root,
@@ -2039,14 +2039,6 @@ def _render_stage_field(field: StageFieldSpec, value: Any) -> str:
     if field.kind == "bool":
         return "true" if value else "false"
     return _q(value)
-
-
-def _string(data: dict[str, Any], key: str, path: Path) -> str:
-    """@brief Read one string field."""
-    value = data.get(key)
-    if not isinstance(value, str):
-        raise StageOperationError(f"{path}: {key} must be a string")
-    return value.strip()
 
 
 def _nonempty(data: dict[str, Any], key: str, path: Path) -> str:

@@ -48,6 +48,11 @@ from .store import (
 )
 from .waivers import Blocker, active_waiver, state_digests
 
+# CONSTANTS
+
+# @brief Default per-command timeout, in seconds, for gate/check subprocesses.
+DEFAULT_GATE_TIMEOUT_SECONDS = 300
+
 # PUBLIC API
 
 
@@ -56,7 +61,7 @@ def run_gates(
     run_id: str,
     config: WorkflowConfig,
     names: list[str] | None = None,
-    timeout: int = 300,
+    timeout: int = DEFAULT_GATE_TIMEOUT_SECONDS,
 ) -> int:
     """
     @brief      Execute the selected gate groups in order and persist gate

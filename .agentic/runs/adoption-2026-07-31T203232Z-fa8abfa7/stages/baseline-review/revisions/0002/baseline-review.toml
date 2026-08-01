@@ -1,0 +1,17 @@
+schema_version = 3
+run_id = "adoption-2026-07-31T203232Z-fa8abfa7"
+stage = "baseline-review"
+revision = 2
+reviewed_components = ["app-shell", "platform-settings-ui", "project-lifecycle", "operation-orchestration", "ai-runtime", "text-cleanup", "text-chunking", "ai-translation", "character-discovery", "voice-profiles", "speech-blocks", "tts-audio-blocks", "audio-assembly", "pcm-codec"]
+blocking_gaps = ["INV-1: the selected adoption run lacks AEGIS check records for the repository's historical requirements; waiver inventory identifies INV-1 as eligible.", "gate:test: after dependency synchronization, the configured command starts successfully with a workspace-safe pytest base path and a temporary uv cache, but the complete suite did not finish within the 15-minute execution window (it reached 42%); the active gate result remains failed until a complete run is recorded."]
+follow_up_gaps = ["RepoWise remains advisory and stale: its knowledge-graph digest, receipt HEAD, receipt working-tree fingerprint, and state digest do not match.", "The default uv cache path is unavailable to the current sandbox, so verification requires an accessible per-process UV_CACHE_DIR. The user completed dependency synchronization in a normal Windows session."]
+accepted_legacy_risks = ["pcm-codec remains characterized rather than baseline-usable because end-to-end audible-quality assessment belongs to audio-assembly and is outside this non-behavioral adoption slice."]
+decision = "pending"
+
+[control]
+requested_access_mode = ""
+access_rationale = ""
+route_to = ""
+route_rationale = ""
+summary = "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. The configured lint command passes after dependency synchronization. Baseline verification remains blocked by INV-1 and an incomplete full test gate: the repaired test command started and reached 42% before the 15-minute execution window expired. No runtime behavior changed and no waiver was added."
+unresolved_questions = []

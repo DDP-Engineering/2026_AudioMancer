@@ -354,6 +354,12 @@ class Graph:
             raise ValueError(
                 "graph record does not match schema 3: waivers must be a list"
             )
+        stage_records_data = data["stage_records"]
+        if not isinstance(stage_records_data, dict):
+            raise ValueError(
+                "graph record does not match schema 3: "
+                "stage_records must be an object"
+            )
         try:
             return cls(
                 run_id=data["run_id"],
@@ -372,7 +378,7 @@ class Graph:
                 decisions=[Decision(**item) for item in data["decisions"]],
                 stage_records={
                     name: StageRecord(**record)
-                    for name, record in data["stage_records"].items()
+                    for name, record in stage_records_data.items()
                 },
                 waivers=[_waiver_from_dict(item) for item in waivers],
             )

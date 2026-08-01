@@ -229,12 +229,9 @@ def inspect_repowise(
     artifact_path = repo_root / config.artifact
     state_path = repo_root / config.state
     receipt_path = repo_root / RECEIPT_RELATIVE_PATH
-    required_paths = (artifact_path, state_path, receipt_path)
-    missing = [
-        path.relative_to(repo_root).as_posix()
-        for path in required_paths
-        if not path.is_file()
-    ]
+    missing = _missing_required_evidence(
+        repo_root, artifact_path, state_path, receipt_path
+    )
     if missing:
         return _unavailable(
             config,
@@ -242,38 +239,17 @@ def inspect_repowise(
             "missing RepoWise evidence: " + ", ".join(missing),
         )
     try:
-        artifact = _load_json(artifact_path, MAX_ARTIFACT_BYTES)
-        state = _load_json(state_path, 8 * 1024 * 1024)
-        receipt = _load_json(receipt_path, 2 * 1024 * 1024)
-        _validate_knowledge_graph(artifact)
-        _validate_state(state)
-        _validate_receipt(receipt, config)
+        artifact, state, receipt = _load_and_validate_artifacts(
+            artifact_path, state_path, receipt_path, config
+        )
     except RepoWiseIntegrationError as exc:
         return _unavailable(config, "invalid", str(exc))
 
-    warnings: list[str] = []
-    artifact_digest = _sha256_file(artifact_path)
-    state_digest = _sha256_file(state_path)
-    if receipt["artifact"] != config.artifact:
-        warnings.append("receipt artifact path does not match integration policy")
-    if receipt["state"] != config.state:
-        warnings.append("receipt state path does not match integration policy")
-    if receipt["artifact_sha256"] != artifact_digest:
-        warnings.append("RepoWise knowledge-graph digest does not match the receipt")
-    if receipt["state_sha256"] != state_digest:
-        warnings.append("RepoWise state digest does not match the receipt")
-    head = repository_head(repo_root)
-    worktree = worktree_fingerprint(repo_root)
-    if config.require_head_match:
-        if receipt["head"] != head:
-            warnings.append("RepoWise receipt Git HEAD is stale")
-        if state.get("last_sync_commit", "") != head:
-            warnings.append("RepoWise state last_sync_commit is stale")
-    if (
-        config.require_worktree_match
-        and receipt["worktree_fingerprint"] != worktree
-    ):
-        warnings.append("RepoWise receipt working-tree fingerprint is stale")
+    warnings, artifact_digest, state_digest, head, worktree = (
+        _compute_staleness_warnings(
+            repo_root, artifact_path, state_path, state, receipt, config
+        )
+    )
 
     proposals = _derive_proposals(artifact)
     provenance = {
@@ -306,29 +282,7 @@ def inspect_repowise(
         raise RepoWiseIntegrationError(
             "run_id is required when writing a RepoWise discovery snapshot"
         )
-    snapshot_path = (
-        repo_root
-        / ".agentic"
-        / "runs"
-        / run_id
-        / "discovery"
-        / "repowise.json"
-    )
-    snapshot = {
-        "schema_version": 1,
-        "status": inspection.status,
-        "warnings": list(inspection.warnings),
-        "evidence": list(inspection.evidence),
-        "provenance": inspection.provenance,
-        "proposals": inspection.proposals,
-    }
-    _atomic_json(snapshot_path, snapshot)
-    return RepoWiseInspection(
-        **{
-            **inspection.to_dict(),
-            "snapshot": snapshot_path.relative_to(repo_root).as_posix(),
-        }
-    )
+    return _write_discovery_snapshot(repo_root, run_id, inspection)
 
 
 def repository_head(repo_root: Path) -> str:
@@ -392,6 +346,138 @@ def worktree_fingerprint(repo_root: Path) -> str:
 
 
 # LOCAL HELPERS
+
+
+def _missing_required_evidence(
+    repo_root: Path,
+    artifact_path: Path,
+    state_path: Path,
+    receipt_path: Path,
+) -> list[str]:
+    """
+    @brief      Return the repo-relative paths of any missing required
+                RepoWise evidence files.
+    @param[in]  repo_root Repository root.
+    @param[in]  artifact_path Knowledge-graph JSON path.
+    @param[in]  state_path RepoWise state JSON path.
+    @param[in]  receipt_path WAEGIS sync receipt JSON path.
+    @return     Repo-relative paths of files that are not regular files.
+    """
+    return [
+        path.relative_to(repo_root).as_posix()
+        for path in (artifact_path, state_path, receipt_path)
+        if not path.is_file()
+    ]
+
+
+def _write_discovery_snapshot(
+    repo_root: Path,
+    run_id: str,
+    inspection: RepoWiseInspection,
+) -> RepoWiseInspection:
+    """
+    @brief      Persist the normalized RepoWise discovery snapshot for one run.
+    @param[in]  repo_root Repository root.
+    @param[in]  run_id AEGIS run the snapshot is scoped to.
+    @param[in]  inspection Current inspection to snapshot.
+    @return     Inspection updated with the written snapshot's repo-relative
+                path.
+    """
+    snapshot_path = (
+        repo_root
+        / ".agentic"
+        / "runs"
+        / run_id
+        / "discovery"
+        / "repowise.json"
+    )
+    snapshot = {
+        "schema_version": 1,
+        "status": inspection.status,
+        "warnings": list(inspection.warnings),
+        "evidence": list(inspection.evidence),
+        "provenance": inspection.provenance,
+        "proposals": inspection.proposals,
+    }
+    _atomic_json(snapshot_path, snapshot)
+    return RepoWiseInspection(
+        **{
+            **inspection.to_dict(),
+            "snapshot": snapshot_path.relative_to(repo_root).as_posix(),
+        }
+    )
+
+
+def _load_and_validate_artifacts(
+    artifact_path: Path,
+    state_path: Path,
+    receipt_path: Path,
+    config: RepoWiseIntegration,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """
+    @brief      Load and strictly validate the knowledge graph, state, and
+                receipt documents required for one RepoWise inspection.
+    @param[in]  artifact_path Knowledge-graph JSON path.
+    @param[in]  state_path RepoWise state JSON path.
+    @param[in]  receipt_path WAEGIS sync receipt JSON path.
+    @param[in]  config Validated integration policy the receipt is checked
+                against.
+    @return     Parsed `(artifact, state, receipt)` JSON documents.
+    @exception  RepoWiseIntegrationError If any document is oversized,
+                malformed, or fails schema validation.
+    """
+    artifact = _load_json(artifact_path, MAX_ARTIFACT_BYTES)
+    state = _load_json(state_path, 8 * 1024 * 1024)
+    receipt = _load_json(receipt_path, 2 * 1024 * 1024)
+    _validate_knowledge_graph(artifact)
+    _validate_state(state)
+    _validate_receipt(receipt, config)
+    return artifact, state, receipt
+
+
+def _compute_staleness_warnings(
+    repo_root: Path,
+    artifact_path: Path,
+    state_path: Path,
+    state: dict[str, Any],
+    receipt: dict[str, Any],
+    config: RepoWiseIntegration,
+) -> tuple[list[str], str, str, str, str]:
+    """
+    @brief      Compare receipt digests and Git provenance against the
+                current knowledge-graph/state artifacts and repository head.
+    @param[in]  repo_root Repository root.
+    @param[in]  artifact_path Knowledge-graph JSON path.
+    @param[in]  state_path RepoWise state JSON path.
+    @param[in]  state Parsed RepoWise state document.
+    @param[in]  receipt Parsed WAEGIS sync receipt document.
+    @param[in]  config Validated integration policy.
+    @return     `(warnings, artifact_digest, state_digest, head, worktree)`.
+    """
+    warnings: list[str] = []
+    artifact_digest = _sha256_file(artifact_path)
+    state_digest = _sha256_file(state_path)
+    if receipt["artifact"] != config.artifact:
+        warnings.append("receipt artifact path does not match integration policy")
+    if receipt["state"] != config.state:
+        warnings.append("receipt state path does not match integration policy")
+    if receipt["artifact_sha256"] != artifact_digest:
+        warnings.append("RepoWise knowledge-graph digest does not match the receipt")
+    if receipt["state_sha256"] != state_digest:
+        warnings.append("RepoWise state digest does not match the receipt")
+    head = repository_head(repo_root)
+    worktree = worktree_fingerprint(repo_root)
+    if config.require_head_match:
+        if receipt["head"] != head:
+            warnings.append("RepoWise receipt Git HEAD is stale")
+        if state.get("last_sync_commit", "") != head:
+            warnings.append("RepoWise state last_sync_commit is stale")
+    if (
+        config.require_worktree_match
+        and receipt["worktree_fingerprint"] != worktree
+    ):
+        warnings.append("RepoWise receipt working-tree fingerprint is stale")
+    return warnings, artifact_digest, state_digest, head, worktree
 
 
 def _unavailable(

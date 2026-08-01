@@ -85,6 +85,44 @@ class RequirementIndex:
     by_path: dict[str, tuple[str, ...]]
 
 
+@dataclass(frozen=True)
+class RequirementPatch:
+    """
+    @brief      Scalar field patches and complete collection replacements for
+                one `update_requirement` call.
+    @details    `None` means "leave the current value unchanged" for every
+                field. `linked_tests`/`affected_paths`/`spec_ref` each pair
+                with an explicit `clear_*` flag so "replace with an empty
+                collection" is distinguishable from "leave unchanged";
+                supplying both a value and its `clear_*` flag is rejected.
+    """
+
+    status: str | None = None
+    priority: str | None = None
+    requirement: str | None = None
+    rationale: str | None = None
+    verification: str | None = None
+    spec_ref: str | None = None
+    clear_spec_ref: bool = False
+    linked_tests: list[str] | None = None
+    clear_linked_tests: bool = False
+    affected_paths: list[str] | None = None
+    clear_affected_paths: bool = False
+    timestamp: str | None = None
+
+    def __post_init__(self) -> None:
+        """
+        @brief      Reject a value supplied alongside its `clear_*` flag.
+        @exception  ValueError If any value/`clear_*` pair conflicts.
+        """
+        if self.linked_tests is not None and self.clear_linked_tests:
+            raise ValueError("linked_tests and clear_linked_tests are mutually exclusive")
+        if self.affected_paths is not None and self.clear_affected_paths:
+            raise ValueError("affected_paths and clear_affected_paths are mutually exclusive")
+        if self.spec_ref is not None and self.clear_spec_ref:
+            raise ValueError("spec_ref and clear_spec_ref are mutually exclusive")
+
+
 # PUBLIC API
 
 
@@ -228,34 +266,30 @@ def update_requirement(
     requirement_id: str,
     *,
     config: WorkflowConfig,
-    status: str | None = None,
-    priority: str | None = None,
-    requirement: str | None = None,
-    rationale: str | None = None,
-    verification: str | None = None,
-    spec_ref: str | None = None,
-    clear_spec_ref: bool = False,
-    linked_tests: list[str] | None = None,
-    clear_linked_tests: bool = False,
-    affected_paths: list[str] | None = None,
-    clear_affected_paths: bool = False,
-    timestamp: str | None = None,
+    patch: RequirementPatch,
 ) -> RequirementRecord:
     """
     @brief Atomically apply scalar patches and complete collection replacements.
+    @param[in] repo_root Repository root.
+    @param[in] requirement_id Canonical UUID-backed requirement ID.
+    @param[in] config Validated workflow configuration.
+    @param[in] patch Scalar/collection changes to apply.
     @return Resulting complete current record.
-    @exception ValueError If options conflict, no update is supplied, or validation fails.
+    @exception ValueError If no update is supplied or validation fails.
     """
-    if linked_tests is not None and clear_linked_tests:
-        raise ValueError("linked_tests and clear_linked_tests are mutually exclusive")
-    if affected_paths is not None and clear_affected_paths:
-        raise ValueError("affected_paths and clear_affected_paths are mutually exclusive")
-    if spec_ref is not None and clear_spec_ref:
-        raise ValueError("spec_ref and clear_spec_ref are mutually exclusive")
     supplied = any(
         value is not None
-        for value in (status, priority, requirement, rationale, verification, spec_ref, linked_tests, affected_paths)
-    ) or clear_linked_tests or clear_affected_paths or clear_spec_ref
+        for value in (
+            patch.status,
+            patch.priority,
+            patch.requirement,
+            patch.rationale,
+            patch.verification,
+            patch.spec_ref,
+            patch.linked_tests,
+            patch.affected_paths,
+        )
+    ) or patch.clear_linked_tests or patch.clear_affected_paths or patch.clear_spec_ref
     if not supplied:
         raise ValueError("At least one requirement update option is required.")
     with locked(requirement_lock_path(repo_root, requirement_id)):
@@ -263,46 +297,46 @@ def update_requirement(
         source_digest = requirement_source_digest(repo_root, current)
         new_tests = (
             tuple()
-            if clear_linked_tests
-            else tuple(linked_tests)
-            if linked_tests is not None
+            if patch.clear_linked_tests
+            else tuple(patch.linked_tests)
+            if patch.linked_tests is not None
             else current.linked_tests
         )
         new_paths = (
             tuple()
-            if clear_affected_paths
-            else tuple(affected_paths)
-            if affected_paths is not None
+            if patch.clear_affected_paths
+            else tuple(patch.affected_paths)
+            if patch.affected_paths is not None
             else current.affected_paths
         )
         new_spec_ref = (
             ""
-            if clear_spec_ref
-            else spec_ref
-            if spec_ref is not None
+            if patch.clear_spec_ref
+            else patch.spec_ref
+            if patch.spec_ref is not None
             else current.spec_ref
         )
         candidate = replace(
             current,
-            status=status if status is not None else current.status,
-            priority=priority if priority is not None else current.priority,
+            status=patch.status if patch.status is not None else current.status,
+            priority=patch.priority if patch.priority is not None else current.priority,
             requirement=(
-                requirement
-                if requirement is not None
+                patch.requirement
+                if patch.requirement is not None
                 else current.requirement
             ),
             rationale=(
-                rationale if rationale is not None else current.rationale
+                patch.rationale if patch.rationale is not None else current.rationale
             ),
             verification=(
-                verification
-                if verification is not None
+                patch.verification
+                if patch.verification is not None
                 else current.verification
             ),
             spec_ref=new_spec_ref,
             linked_tests=new_tests,
             affected_paths=new_paths,
-            last_updated=timestamp or utc_timestamp(),
+            last_updated=patch.timestamp or utc_timestamp(),
         )
         normalized = validate_requirement_record(candidate, config)
         _require_resolvable_tests(
@@ -341,11 +375,13 @@ def activate_requirement(
     return update_requirement(
         repo_root,
         req_id,
-        status="Active",
-        verification=verification,
-        linked_tests=linked_tests,
         config=config,
-        timestamp=timestamp,
+        patch=RequirementPatch(
+            status="Active",
+            verification=verification,
+            linked_tests=linked_tests,
+            timestamp=timestamp,
+        ),
     )
 
 

@@ -28,6 +28,27 @@ from __future__ import annotations
 import os
 from fnmatch import fnmatchcase
 from pathlib import Path
+import re
+
+
+# DATA MODELS / TYPEDEFINITIONS
+
+
+class RepositoryPathError(ValueError):
+    """
+    @brief      ValueError subtype carrying a stable reason code for
+                repository path/glob normalization failures.
+    @details    Lets each trust boundary that calls
+                :func:`normalize_repository_path`/:func:`validate_glob`
+                (currently `config.py` and `requirement_store.py`) translate
+                the one canonical failure into its own typed error without
+                string-matching the exception text. ``reason`` is one of
+                ``"escapes-root"``, ``"has-globs"``, or ``"unbalanced-glob"``.
+    """
+
+    def __init__(self, reason: str, message: str) -> None:
+        self.reason = reason
+        super().__init__(message)
 
 
 # PUBLIC API
@@ -107,6 +128,68 @@ def matches_pattern(path: str, pattern: str) -> bool:
     return fnmatchcase(normalized_path, normalized_pattern) or fnmatchcase(
         normalized_path, f"{normalized_pattern}/**"
     )
+
+
+def normalize_repository_path(value: str, *, allow_glob: bool = False) -> str:
+    """
+    @brief      Apply the canonical repository-relative path normalization.
+    @param[in]  value Candidate repository path or glob (already known to be
+                a `str`; callers validate the raw type themselves).
+    @param[in]  allow_glob Whether glob metacharacters (`*?[]`) are permitted.
+    @return     Normalized slash-separated repository-relative value.
+    @exception  RepositoryPathError If the value is empty, escapes the
+                repository root (absolute, drive-letter, `~`, or `..`
+                segment), or contains glob metacharacters while
+                ``allow_glob`` is False.
+    @details    Shared by `config.py`'s TOML rule normalization and
+                `requirement_store.py`'s requirement-record path fields, so
+                both trust boundaries agree on what counts as a safe
+                repository-relative path.
+    """
+    normalized = value.replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    normalized = re.sub(r"/{2,}", "/", normalized).rstrip("/")
+    if (
+        not normalized
+        or normalized.startswith(("/", "~"))
+        or re.match(r"^[A-Za-z]:", normalized)
+        or ".." in normalized.split("/")
+    ):
+        raise RepositoryPathError(
+            "escapes-root", "must be a repository-relative path without `..`"
+        )
+    if not allow_glob and any(char in normalized for char in "*?[]"):
+        raise RepositoryPathError("has-globs", "must not contain glob syntax")
+    return normalized
+
+
+def validate_glob(value: str) -> None:
+    """
+    @brief      Reject glob strings with unbalanced bracket-expression syntax.
+    @param[in]  value Normalized glob candidate.
+    @return     None.
+    @exception  RepositoryPathError If a `[`/`]` bracket expression is
+                unbalanced or nested.
+    """
+    depth = 0
+    for char in value:
+        if char == "[":
+            if depth:
+                raise RepositoryPathError(
+                    "unbalanced-glob", "glob bracket expressions must be balanced"
+                )
+            depth = 1
+        elif char == "]":
+            if not depth:
+                raise RepositoryPathError(
+                    "unbalanced-glob", "glob bracket expressions must be balanced"
+                )
+            depth = 0
+    if depth:
+        raise RepositoryPathError(
+            "unbalanced-glob", "glob bracket expressions must be balanced"
+        )
 
 
 # END OF FILE

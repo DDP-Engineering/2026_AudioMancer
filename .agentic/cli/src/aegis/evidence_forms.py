@@ -17,13 +17,13 @@
 
 from __future__ import annotations
 
-import json
-from hashlib import sha256
 from pathlib import Path
-import shutil
-import tomllib
 from typing import Any
 
+from ._form_io import load_evidence_form as _load
+from ._form_io import quote_toml_string as _q
+from ._form_io import read_string_field as _string
+from ._form_io import retire_form as _retire_form
 from .models import Evidence, Graph
 from .stage_forms import StageOperationError, stage_directory
 from .store import (
@@ -229,15 +229,6 @@ def show_evidence(repo_root: Path, graph: Graph) -> dict[str, Any]:
 # LOCAL HELPERS
 
 
-def _load(path: Path) -> dict[str, Any]:
-    """@brief Load one manual evidence TOML form."""
-    try:
-        with path.open("rb") as stream:
-            return tomllib.load(stream)
-    except (OSError, tomllib.TOMLDecodeError) as exc:
-        raise StageOperationError(f"{path}: cannot load evidence form: {exc}") from exc
-
-
 def _closed(data: dict[str, Any], allowed: tuple[str, ...], path: Path) -> None:
     """@brief Reject unknown or missing strict-form keys."""
     unknown = sorted(set(data) - set(allowed))
@@ -253,14 +244,6 @@ def _closed(data: dict[str, Any], allowed: tuple[str, ...], path: Path) -> None:
         )
 
 
-def _string(data: dict[str, Any], key: str, path: Path) -> str:
-    """@brief Read one trimmed string field."""
-    value = data.get(key)
-    if not isinstance(value, str):
-        raise StageOperationError(f"{path}: {key} must be a string")
-    return value.strip()
-
-
 def _optional(data: dict[str, Any], key: str, path: Path) -> str | None:
     """@brief Read one optional blank-as-none string field."""
     return _string(data, key, path) or None
@@ -271,28 +254,6 @@ def _next_evidence_id(graph: Graph) -> str:
     @brief Return the next CLI-controlled evidence sequence ID.
     """
     return next_evidence_id(graph)
-
-
-def _q(value: str) -> str:
-    """@brief Quote one TOML string."""
-    return json.dumps(value, ensure_ascii=False)
-
-
-def _retire_form(path: Path, retention: str, revision_name: str) -> None:
-    """
-    @brief Apply captured retention to one imported manual-evidence form.
-    """
-    if retention == "versioned":
-        destination = path.parent / "revisions" / revision_name
-        destination.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, destination / path.name)
-        (destination / "digest.json").write_text(
-            json.dumps({"sha256": sha256(path.read_bytes()).hexdigest()}, indent=2)
-            + "\n",
-            encoding="utf-8",
-        )
-    elif retention == "discard":
-        path.unlink()
 
 
 # END OF FILE

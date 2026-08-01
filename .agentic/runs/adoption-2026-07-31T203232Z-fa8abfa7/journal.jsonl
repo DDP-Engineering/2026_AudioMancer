@@ -85,3 +85,10 @@
 {"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-0bdf74a2-284a-4fd4-80ed-894dffa3f461"}, "event": "agentic.tool", "time": "2026-08-01T12:44:46+00:00"}
 {"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-3629c1e7-6a06-491f-a5d1-1bc9fbe49f16"}, "event": "agentic.tool", "time": "2026-08-01T12:46:17+00:00"}
 {"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-1ab2188f-1025-44b8-b13a-868ec1b67cf5"}, "event": "agentic.tool", "time": "2026-08-01T12:46:31+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-eecbe8a6-ca3f-4470-a5b0-e8e6ebe8fde6"}, "event": "agentic.tool", "time": "2026-08-01T13:05:33+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-a2a729e0-8fef-4690-ad6d-e70f7d5138f5"}, "event": "agentic.tool", "time": "2026-08-01T13:05:43+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml", "check_execution": "external", "retention": "versioned", "revision": 2, "stage": "baseline-review"}, "event": "stage.prepared", "time": "2026-08-01T13:06:00+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-8ac51d49-dc30-4e57-979a-931e1619b780"}, "event": "agentic.tool", "time": "2026-08-01T13:06:01+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-08adf386-a6f9-4d4b-8a10-f773e21c2452"}, "event": "agentic.tool", "time": "2026-08-01T13:06:23+00:00"}
+{"data": {"digest": "c24be82a941e1f36bc421cefc2c68a5798996fda12c23d843c46e330d3daacb2", "revision": 2, "stage": "baseline-review"}, "event": "stage.applied", "time": "2026-08-01T13:06:33+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-c54957dd-8707-42df-a59f-f4b6464cf21d"}, "event": "agentic.tool", "time": "2026-08-01T13:06:36+00:00"}
