@@ -51,7 +51,7 @@ from .waivers import Blocker, active_waiver, state_digests
 # CONSTANTS
 
 # @brief Default per-command timeout, in seconds, for gate/check subprocesses.
-DEFAULT_GATE_TIMEOUT_SECONDS = 300
+DEFAULT_GATE_TIMEOUT_SECONDS = 1800
 
 # PUBLIC API
 

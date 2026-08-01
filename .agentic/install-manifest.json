@@ -51,8 +51,8 @@
       "size": 9081
     },
     ".agentic/cli/src/aegis/gates.py": {
-      "sha256": "6edbe965a0267a74a94b7cc7d60963081c771e41df05d6182feb49f2853cb807",
-      "size": 13596
+      "sha256": "3ece657a28a4f24158fa4b68c90ede6fdd57f81a8e62e8d3c8c7840faa49ba95",
+      "size": 13597
     },
     ".agentic/cli/src/aegis/invariants.py": {
       "sha256": "4bd45e42b37939d7b3ab6a89979c1a017a9dab71b4e84edb9b4baec761f5d98d",
@@ -601,7 +601,7 @@
     ".gitignore",
     "CHANGELOG.md"
   ],
-  "payload_digest": "f18ac6c0e8ee8f9c10d75df1f93c8944ccbf025ba8587713d04d88f237e92a97",
+  "payload_digest": "f3c0df7cab869c12b0aaedfcc29f54d1c93573152a91adcdb9056d360ec2dd1f",
   "configuration": {
     "answers": {
       "alignment_enabled": true,
