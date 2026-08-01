@@ -1,0 +1,22 @@
+schema_version = 3
+run_id = "adoption-2026-07-31T203232Z-fa8abfa7"
+stage = "adoption-alignment"
+revision = 1
+understanding = "Continue the selected AEGIS 2.1 adoption run to establish a durable, non-behavioral repository baseline. Validate governance metadata, existing requirement/specification/test traceability, component documentation and manifest coverage, and adoption reports; use archived AEGIS 1.4.1 runs solely as audit evidence."
+in_scope = ["AEGIS governance and workflow metadata", "existing requirements, specifications, and test-link inventory", "component documentation and component manifest coverage", "durable adoption baseline records and reports", "archived AEGIS 1.4.1 runs as read-only audit evidence"]
+out_of_scope = ["AudioMancer runtime behavior", "application source behavior changes", "resuming, rewriting, or otherwise modifying archived AEGIS 1.4.1 runs", "creating a new AEGIS run", "publishing, merging, or creating a pull request"]
+assumptions = ["The selected adoption run remains the authoritative run for this work.", "Existing repository artifacts accurately describe the current baseline unless discovery identifies a conflict.", "Any required adoption changes can be limited to AEGIS metadata, documentation, maps, inventories, and reports."]
+acceptance_criteria = ["Each remaining adoption stage is prepared, completed, applied, and explicitly approved before it is closed.", "The adoption baseline records governance metadata, requirements/specifications/test links, and component documentation/manifest coverage.", "No AudioMancer runtime behavior is changed.", "Archived AEGIS 1.4.1 runs remain unmodified and are cited only as audit evidence where relevant.", "Durable adoption reports are produced by the selected run."]
+questions = []
+recommended_answers = []
+planned_paths = [".agentic/workflow.toml", ".agentic/requirements", ".agentic/knowledge/components", ".agentic/components.toml", ".agentic/reports/adoption", ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7"]
+risk = "medium"
+decision = "proceed"
+
+[control]
+requested_access_mode = ""
+access_rationale = ""
+route_to = ""
+route_rationale = ""
+summary = "Proceed with a non-behavioral adoption baseline. The stale advisory RepoWise receipt is a discovery risk to assess, not authority to alter runtime behavior or archived runs."
+unresolved_questions = []

@@ -1,0 +1,16 @@
+schema_version = 3
+run_id = "adoption-2026-07-31T203232Z-fa8abfa7"
+stage = "component-map"
+revision = 1
+manifest = ".agentic/components.toml"
+components = ["app-shell", "platform-settings-ui", "project-lifecycle", "operation-orchestration", "ai-runtime", "text-cleanup", "text-chunking", "ai-translation", "character-discovery", "voice-profiles", "speech-blocks", "tts-audio-blocks", "audio-assembly", "pcm-codec"]
+approved_slice = ["pcm-codec"]
+approval_decision = "pending"
+
+[control]
+requested_access_mode = ""
+access_rationale = ""
+route_to = ""
+route_rationale = ""
+summary = "Proposed component map retains the 13 pre-existing manifest components and adds pcm-codec as a separate, self-contained component. The PCM codec maps its source and direct test suite; its documentation and requirement/test links already exist. No bundle is proposed. Human approval is required before component adoption proceeds."
+unresolved_questions = []

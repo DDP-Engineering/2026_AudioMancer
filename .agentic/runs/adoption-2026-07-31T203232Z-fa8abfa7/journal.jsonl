@@ -3,3 +3,85 @@
 {"data": {"digest": "4d420dad32646ba0376538431a152ba2a9c7092ba37c12cb3e72718b66c0112a", "revision": 1, "stage": "adoption-intake"}, "event": "stage.applied", "time": "2026-07-31T20:33:16+00:00"}
 {"data": {"approver": "human", "revision": 1, "stage": "adoption-intake"}, "event": "stage.approved", "time": "2026-07-31T20:44:44+00:00"}
 {"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/adoption-alignment.toml", "check_execution": "external", "retention": "versioned", "revision": 1, "stage": "adoption-alignment"}, "event": "stage.prepared", "time": "2026-07-31T20:44:44+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-332433dd-fae1-42fc-920d-cf0e0dd1b106"}, "event": "agentic.tool", "time": "2026-08-01T07:02:51+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-2fff524d-5872-486a-8982-3d713bc8d1fe"}, "event": "agentic.tool", "time": "2026-08-01T07:02:59+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-9860068a-a516-4db5-9a62-5c5abc2d3950"}, "event": "agentic.tool", "time": "2026-08-01T07:03:05+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-46e0511c-6011-443b-a0ed-4f8fabf5993b"}, "event": "agentic.tool", "time": "2026-08-01T07:03:15+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-3e3b34ea-fb68-47f3-b30b-c132e63f5e40"}, "event": "agentic.tool", "time": "2026-08-01T07:03:22+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-6775e69c-9ecf-489f-8878-dd538ee54027"}, "event": "agentic.tool", "time": "2026-08-01T07:03:31+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-0ca2f868-b338-4cee-b051-74a2fad4e5ae"}, "event": "agentic.tool", "time": "2026-08-01T09:55:43+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-cd1b3a09-48fa-48d7-b6bd-e827228551b7"}, "event": "agentic.tool", "time": "2026-08-01T09:55:51+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-65d6cdde-4fd3-4245-897a-5b05ceb25108"}, "event": "agentic.tool", "time": "2026-08-01T09:56:14+00:00"}
+{"data": {"digest": "4f4a446ad107897d48f2ed78f3218b70410d7690a4f97a228a0e66fbbfbfc7ff", "revision": 1, "stage": "adoption-alignment"}, "event": "stage.applied", "time": "2026-08-01T09:56:25+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-fb8e83fc-5c1f-44be-a07c-e81e2993a2a6"}, "event": "agentic.tool", "time": "2026-08-01T09:56:25+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-7c28f522-d898-4bef-bdf4-b71c87d30237"}, "event": "agentic.tool", "time": "2026-08-01T09:57:47+00:00"}
+{"data": {"approver": "human", "revision": 1, "stage": "adoption-alignment"}, "event": "stage.approved", "time": "2026-08-01T09:57:55+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/repo-discovery.toml", "check_execution": "external", "retention": "versioned", "revision": 1, "stage": "repo-discovery"}, "event": "stage.prepared", "time": "2026-08-01T09:57:55+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-c6d2899d-44cf-4755-9d7c-20742faf0902"}, "event": "agentic.tool", "time": "2026-08-01T09:57:56+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-63efa37c-d163-4a5f-9b39-9fe9ec9135b5"}, "event": "agentic.tool", "time": "2026-08-01T09:58:04+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-d4898175-17e5-4b64-a17f-541f4a6e2166"}, "event": "agentic.tool", "time": "2026-08-01T09:58:22+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-c6d26e6e-507e-4c89-bd7c-373cae1bd10c"}, "event": "agentic.tool", "time": "2026-08-01T09:59:14+00:00"}
+{"data": {"digest": "3b06288e746167c932561968e532a785a1db84a8a558106d7930cf38e0f15ecf", "revision": 1, "stage": "repo-discovery"}, "event": "stage.applied", "time": "2026-08-01T09:59:24+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-7f78c799-5833-4fd4-9390-325476c4ea24"}, "event": "agentic.tool", "time": "2026-08-01T09:59:25+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-eebdb6d6-f4ba-4f11-9d62-0fdc0c1b8307"}, "event": "agentic.tool", "time": "2026-08-01T10:00:54+00:00"}
+{"data": {"approver": "human", "revision": 1, "stage": "repo-discovery"}, "event": "stage.approved", "time": "2026-08-01T10:01:03+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/component-map.toml", "check_execution": "external", "retention": "versioned", "revision": 1, "stage": "component-map"}, "event": "stage.prepared", "time": "2026-08-01T10:01:03+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-a0050f96-44cb-4e4f-a071-b4bb6882cf38"}, "event": "agentic.tool", "time": "2026-08-01T10:01:03+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-2454b490-4bb1-4168-ac35-bfa99e756c3b"}, "event": "agentic.tool", "time": "2026-08-01T10:01:22+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-7fc1cdfa-e6ff-4f8d-9c61-d30385b7973d"}, "event": "agentic.tool", "time": "2026-08-01T10:01:28+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-2f0f5bd4-7aee-4dad-b8c1-b9c4f6906ba0"}, "event": "agentic.tool", "time": "2026-08-01T10:01:45+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-22df8638-71f4-4ecf-a084-6f2ff8ea8afa"}, "event": "agentic.tool", "time": "2026-08-01T10:01:52+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-e225c73d-bec3-46a1-aa3a-eabfa54c6b04"}, "event": "agentic.tool", "time": "2026-08-01T10:02:25+00:00"}
+{"data": {"digest": "5d44997819ecb615befc6ea4181ed9ed320ccac5140ea41531eba8af17a51f11", "revision": 1, "stage": "component-map"}, "event": "stage.applied", "time": "2026-08-01T10:02:34+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-2d3c6db7-a415-4461-87a2-eeae9d3489b0"}, "event": "agentic.tool", "time": "2026-08-01T10:02:35+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/component-map.toml", "check_execution": "external", "retention": "versioned", "revision": 2, "stage": "component-map"}, "event": "stage.prepared", "time": "2026-08-01T10:03:36+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-e14cbd8e-ea32-43c5-b6a1-192025589b85"}, "event": "agentic.tool", "time": "2026-08-01T10:03:36+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-0768e5bd-49f1-400e-a6d3-269957fee171"}, "event": "agentic.tool", "time": "2026-08-01T10:03:51+00:00"}
+{"data": {"digest": "f8f0e68abc0691b6ba0ac1a623715bc4a8b65ea4905f2a582af020d8953bb677", "revision": 2, "stage": "component-map"}, "event": "stage.applied", "time": "2026-08-01T10:04:00+00:00"}
+{"data": {"approver": "human", "revision": 2, "stage": "component-map"}, "event": "stage.approved", "time": "2026-08-01T10:04:01+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/component-adoption.toml", "check_execution": "external", "retention": "versioned", "revision": 1, "stage": "component-adoption"}, "event": "stage.prepared", "time": "2026-08-01T10:04:01+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-1caa1e4c-28dc-4fc3-b76b-ad223691d280"}, "event": "agentic.tool", "time": "2026-08-01T10:04:01+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-bcfe95e3-7c6b-4a29-9723-96894ada969b"}, "event": "agentic.tool", "time": "2026-08-01T10:04:25+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-51728899-ed70-4b27-8977-040cc7088812"}, "event": "agentic.tool", "time": "2026-08-01T10:04:47+00:00"}
+{"data": {"digest": "5295b0c500b9708e75116cbcc62fd291cd296a1df7cd1c2b65de4e2f1f6351e6", "revision": 1, "stage": "component-adoption"}, "event": "stage.applied", "time": "2026-08-01T10:04:57+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-9afcefad-05ca-4585-b2d0-ff4fe8117979"}, "event": "agentic.tool", "time": "2026-08-01T10:04:58+00:00"}
+{"data": {"approver": "human", "revision": 1, "stage": "component-adoption"}, "event": "stage.approved", "time": "2026-08-01T10:06:00+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml", "check_execution": "external", "retention": "versioned", "revision": 1, "stage": "baseline-review"}, "event": "stage.prepared", "time": "2026-08-01T10:06:00+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-c54937ce-8a44-404b-9580-7a5a60edf3d5"}, "event": "agentic.tool", "time": "2026-08-01T10:06:00+00:00"}
+{"data": {"gate": "build", "status": "disabled"}, "event": "gate.disabled", "time": "2026-08-01T10:06:17+00:00"}
+{"data": {"gate": "typecheck", "status": "disabled"}, "event": "gate.disabled", "time": "2026-08-01T10:06:17+00:00"}
+{"data": {"check_id": null, "command": "uv run --directory 04_Software/AudioMancer ruff check .", "created_at": "2026-08-01T10:06:17+00:00", "exit_status": 127, "failure_kind": null, "gate_name": "lint", "id": "E-0001", "kind": "gate", "output_log": null, "path": null, "result": "fail", "stage": "baseline-review", "status": "active", "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .", "supersede_reason": null, "superseded_by": null}, "event": "evidence.recorded", "time": "2026-08-01T10:06:17+00:00"}
+{"data": {"command": "uv run --directory 04_Software/AudioMancer ruff check .", "gate": "lint", "returncode": 127, "stderr_tail": "PermissionError: [WinError 5] Access is denied", "stdout_tail": ""}, "event": "gate.output", "time": "2026-08-01T10:06:17+00:00"}
+{"data": {"check_id": null, "command": "uv run --directory 04_Software/AudioMancer python -m pytest -q", "created_at": "2026-08-01T10:06:17+00:00", "exit_status": 127, "failure_kind": null, "gate_name": "test", "id": "E-0002", "kind": "gate", "output_log": null, "path": null, "result": "fail", "stage": "baseline-review", "status": "active", "summary": "test: uv run --directory 04_Software/AudioMancer python -m pytest -q", "supersede_reason": null, "superseded_by": null}, "event": "evidence.recorded", "time": "2026-08-01T10:06:17+00:00"}
+{"data": {"command": "uv run --directory 04_Software/AudioMancer python -m pytest -q", "gate": "test", "returncode": 127, "stderr_tail": "PermissionError: [WinError 5] Access is denied", "stdout_tail": ""}, "event": "gate.output", "time": "2026-08-01T10:06:17+00:00"}
+{"data": {"gate": "security", "status": "disabled"}, "event": "gate.disabled", "time": "2026-08-01T10:06:17+00:00"}
+{"data": {"status": "failed", "summary": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/validation-summary.json"}, "event": "verification.completed", "time": "2026-08-01T10:06:18+00:00"}
+{"data": {"gate": "build", "status": "disabled"}, "event": "gate.disabled", "time": "2026-08-01T10:06:52+00:00"}
+{"data": {"gate": "typecheck", "status": "disabled"}, "event": "gate.disabled", "time": "2026-08-01T10:06:52+00:00"}
+{"data": {"check_id": null, "command": "uv run --directory 04_Software/AudioMancer ruff check .", "created_at": "2026-08-01T10:06:52+00:00", "exit_status": 127, "failure_kind": null, "gate_name": "lint", "id": "E-0003", "kind": "gate", "output_log": null, "path": null, "result": "fail", "stage": "baseline-review", "status": "active", "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .", "supersede_reason": null, "superseded_by": null}, "event": "evidence.recorded", "time": "2026-08-01T10:06:52+00:00"}
+{"data": {"command": "uv run --directory 04_Software/AudioMancer ruff check .", "gate": "lint", "returncode": 127, "stderr_tail": "PermissionError: [WinError 5] Access is denied", "stdout_tail": ""}, "event": "gate.output", "time": "2026-08-01T10:06:52+00:00"}
+{"data": {"check_id": null, "command": "uv run --directory 04_Software/AudioMancer python -m pytest -q", "created_at": "2026-08-01T10:06:52+00:00", "exit_status": 127, "failure_kind": null, "gate_name": "test", "id": "E-0004", "kind": "gate", "output_log": null, "path": null, "result": "fail", "stage": "baseline-review", "status": "active", "summary": "test: uv run --directory 04_Software/AudioMancer python -m pytest -q", "supersede_reason": null, "superseded_by": null}, "event": "evidence.recorded", "time": "2026-08-01T10:06:52+00:00"}
+{"data": {"command": "uv run --directory 04_Software/AudioMancer python -m pytest -q", "gate": "test", "returncode": 127, "stderr_tail": "PermissionError: [WinError 5] Access is denied", "stdout_tail": ""}, "event": "gate.output", "time": "2026-08-01T10:06:52+00:00"}
+{"data": {"gate": "security", "status": "disabled"}, "event": "gate.disabled", "time": "2026-08-01T10:06:52+00:00"}
+{"data": {"status": "failed", "summary": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/validation-summary.json"}, "event": "verification.completed", "time": "2026-08-01T10:06:54+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-78b51ad7-0171-47d2-95b5-cdb0bb446ab2"}, "event": "agentic.tool", "time": "2026-08-01T10:07:32+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-ab186c32-da15-4e88-8d93-5d5ca9628a25"}, "event": "agentic.tool", "time": "2026-08-01T10:07:55+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "exec-2abaf763-1334-4d3c-9798-340b3eaf292f"}, "event": "agentic.tool", "time": "2026-08-01T10:08:17+00:00"}
+{"data": {"digest": "69a499dfd8c421d86616c1e0f7ba9ca49a1290ab68061721def1b816426214e9", "revision": 1, "stage": "baseline-review"}, "event": "stage.applied", "time": "2026-08-01T10:08:31+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-6cfa5b67-ba88-4fd5-a7f3-e6984e8fd51f"}, "event": "agentic.tool", "time": "2026-08-01T10:08:31+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-97bb729e-ad1a-4abc-898d-36aeaa2b7584"}, "event": "agentic.tool", "time": "2026-08-01T10:20:16+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-d1da6f48-a687-4804-af9f-3be0fbfebaa9"}, "event": "agentic.tool", "time": "2026-08-01T10:21:02+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-e90398be-ba86-4fa1-9045-fbf07070cdf9"}, "event": "agentic.tool", "time": "2026-08-01T10:21:26+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-dc6f7e7a-f5cf-4730-b2a6-26e057407baf"}, "event": "agentic.tool", "time": "2026-08-01T10:21:50+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-c5dfcce8-7ec5-4424-9493-f30da3322dcc"}, "event": "agentic.tool", "time": "2026-08-01T10:22:11+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-2e2c08f1-d53b-4014-a6de-4f0970551f50"}, "event": "agentic.tool", "time": "2026-08-01T12:28:18+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-93df48c6-6cc6-4a2d-9b9f-56719b820907"}, "event": "agentic.tool", "time": "2026-08-01T12:28:51+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-7b919a11-cc6f-4984-9660-7eabb1a07c53"}, "event": "agentic.tool", "time": "2026-08-01T12:32:32+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-dfaeee0f-5bad-4ad8-9736-42504f48f0de"}, "event": "agentic.tool", "time": "2026-08-01T12:32:48+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-e7e7255f-605b-4b92-9269-d2d5f872ed3a"}, "event": "agentic.tool", "time": "2026-08-01T12:33:04+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-071e9b4a-72fe-4b5d-8703-e2a87a787892"}, "event": "agentic.tool", "time": "2026-08-01T12:33:43+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-0e3718ba-8bb8-4a2e-934b-d2ebf411e1ae"}, "event": "agentic.tool", "time": "2026-08-01T12:34:28+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-1e3f9ad3-9f62-4e07-bb0e-92a211f81602"}, "event": "agentic.tool", "time": "2026-08-01T12:42:06+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-0bdf74a2-284a-4fd4-80ed-894dffa3f461"}, "event": "agentic.tool", "time": "2026-08-01T12:44:46+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-3629c1e7-6a06-491f-a5d1-1bc9fbe49f16"}, "event": "agentic.tool", "time": "2026-08-01T12:46:17+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "exec-1ab2188f-1025-44b8-b13a-868ec1b67cf5"}, "event": "agentic.tool", "time": "2026-08-01T12:46:31+00:00"}

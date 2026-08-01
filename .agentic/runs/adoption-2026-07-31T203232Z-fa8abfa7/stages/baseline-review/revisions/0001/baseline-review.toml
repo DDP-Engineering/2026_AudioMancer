@@ -1,0 +1,17 @@
+schema_version = 3
+run_id = "adoption-2026-07-31T203232Z-fa8abfa7"
+stage = "baseline-review"
+revision = 1
+reviewed_components = ["app-shell", "platform-settings-ui", "project-lifecycle", "operation-orchestration", "ai-runtime", "text-cleanup", "text-chunking", "ai-translation", "character-discovery", "voice-profiles", "speech-blocks", "tts-audio-blocks", "audio-assembly", "pcm-codec"]
+blocking_gaps = ["INV-1: the selected adoption run lacks AEGIS check records for the repository's historical requirements; waiver inventory identifies INV-1 as eligible.", "gate:lint: the configured uv command cannot execute because uv cannot query the Python interpreter (Windows Access is denied); waiver inventory identifies gate:lint as eligible.", "gate:test: the configured uv command cannot execute for the same uv Python-interpreter access failure; waiver inventory identifies gate:test as eligible."]
+follow_up_gaps = ["RepoWise remains advisory and stale: its knowledge-graph digest, receipt HEAD, receipt working-tree fingerprint, and state digest do not match.", "The default uv cache path is also unusable in this environment because a file occupies the expected cache directory."]
+accepted_legacy_risks = ["pcm-codec remains characterized rather than baseline-usable because end-to-end audible-quality assessment belongs to audio-assembly and is outside this non-behavioral adoption slice."]
+decision = "pending"
+
+[control]
+requested_access_mode = ""
+access_rationale = ""
+route_to = ""
+route_rationale = ""
+summary = "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. Baseline verification is blocked by INV-1 and by unable-to-start lint/test gates in the current environment. No runtime behavior changed and no waiver was added."
+unresolved_questions = []

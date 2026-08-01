@@ -1,12 +1,133 @@
 {
   "access_mode": "repo-wide",
-  "alignment": null,
-  "change_units": [],
+  "alignment": {
+    "acceptance": [
+      "Each remaining adoption stage is prepared, completed, applied, and explicitly approved before it is closed.",
+      "The adoption baseline records governance metadata, requirements/specifications/test links, and component documentation/manifest coverage.",
+      "No AudioMancer runtime behavior is changed.",
+      "Archived AEGIS 1.4.1 runs remain unmodified and are cited only as audit evidence where relevant.",
+      "Durable adoption reports are produced by the selected run."
+    ],
+    "assumptions": [
+      "The selected adoption run remains the authoritative run for this work.",
+      "Existing repository artifacts accurately describe the current baseline unless discovery identifies a conflict.",
+      "Any required adoption changes can be limited to AEGIS metadata, documentation, maps, inventories, and reports."
+    ],
+    "created_at": "2026-08-01T09:56:25+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      ".agentic/workflow.toml",
+      ".agentic/requirements",
+      ".agentic/knowledge/components",
+      ".agentic/components.toml",
+      ".agentic/reports/adoption",
+      ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7"
+    ],
+    "reason": "Proceed with a non-behavioral adoption baseline. The stale advisory RepoWise receipt is a discovery risk to assess, not authority to alter runtime behavior or archived runs.",
+    "recommended_responses": [],
+    "risk": "medium",
+    "scope": [
+      "in: AEGIS governance and workflow metadata",
+      "in: existing requirements, specifications, and test-link inventory",
+      "in: component documentation and component manifest coverage",
+      "in: durable adoption baseline records and reports",
+      "in: archived AEGIS 1.4.1 runs as read-only audit evidence",
+      "out: AudioMancer runtime behavior",
+      "out: application source behavior changes",
+      "out: resuming, rewriting, or otherwise modifying archived AEGIS 1.4.1 runs",
+      "out: creating a new AEGIS run",
+      "out: publishing, merging, or creating a pull request"
+    ],
+    "source": "stage-form",
+    "understanding": "Continue the selected AEGIS 2.1 adoption run to establish a durable, non-behavioral repository baseline. Validate governance metadata, existing requirement/specification/test traceability, component documentation and manifest coverage, and adoption reports; use archived AEGIS 1.4.1 runs solely as audit evidence."
+  },
+  "change_units": [
+    {
+      "id": "CU-d5efa6a7-a77e-42e2-af8c-193085f38312",
+      "touched_paths": [
+        ".agentic/components.toml"
+      ]
+    }
+  ],
   "checks": [],
   "complete": false,
   "decisions": [],
   "design": null,
-  "evidence": [],
+  "evidence": [
+    {
+      "check_id": null,
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-08-01T10:06:17+00:00",
+      "exit_status": 127,
+      "failure_kind": null,
+      "gate_name": "lint",
+      "id": "E-0001",
+      "kind": "gate",
+      "output_log": null,
+      "path": null,
+      "result": "fail",
+      "stage": "baseline-review",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "check_id": null,
+      "command": "uv run --directory 04_Software/AudioMancer python -m pytest -q",
+      "created_at": "2026-08-01T10:06:17+00:00",
+      "exit_status": 127,
+      "failure_kind": null,
+      "gate_name": "test",
+      "id": "E-0002",
+      "kind": "gate",
+      "output_log": null,
+      "path": null,
+      "result": "fail",
+      "stage": "baseline-review",
+      "status": "active",
+      "summary": "test: uv run --directory 04_Software/AudioMancer python -m pytest -q",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "check_id": null,
+      "command": "uv run --directory 04_Software/AudioMancer ruff check .",
+      "created_at": "2026-08-01T10:06:52+00:00",
+      "exit_status": 127,
+      "failure_kind": null,
+      "gate_name": "lint",
+      "id": "E-0003",
+      "kind": "gate",
+      "output_log": null,
+      "path": null,
+      "result": "fail",
+      "stage": "baseline-review",
+      "status": "active",
+      "summary": "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "check_id": null,
+      "command": "uv run --directory 04_Software/AudioMancer python -m pytest -q",
+      "created_at": "2026-08-01T10:06:52+00:00",
+      "exit_status": 127,
+      "failure_kind": null,
+      "gate_name": "test",
+      "id": "E-0004",
+      "kind": "gate",
+      "output_log": null,
+      "path": null,
+      "result": "fail",
+      "stage": "baseline-review",
+      "status": "active",
+      "summary": "test: uv run --directory 04_Software/AudioMancer python -m pytest -q",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
   "intent": {
     "created_at": "2026-07-31T20:32:32+00:00",
     "id": "I-c89fe51d-2625-4eb3-97bf-583086f1c57d",
@@ -20,16 +141,68 @@
   "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
   "schema_version": 3,
   "spec_items": [],
-  "stage": "adoption-alignment",
+  "stage": "baseline-review",
   "stage_records": {
     "adoption-alignment": {
       "access_rationale": "",
-      "applied_at": null,
+      "applied_at": "2026-08-01T09:56:25+00:00",
       "artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/adoption-alignment.toml",
       "check_execution": "external",
-      "closed_at": null,
-      "digest": "",
-      "payload": {},
+      "closed_at": "2026-08-01T09:57:55+00:00",
+      "digest": "4f4a446ad107897d48f2ed78f3218b70410d7690a4f97a228a0e66fbbfbfc7ff",
+      "payload": {
+        "acceptance_criteria": [
+          "Each remaining adoption stage is prepared, completed, applied, and explicitly approved before it is closed.",
+          "The adoption baseline records governance metadata, requirements/specifications/test links, and component documentation/manifest coverage.",
+          "No AudioMancer runtime behavior is changed.",
+          "Archived AEGIS 1.4.1 runs remain unmodified and are cited only as audit evidence where relevant.",
+          "Durable adoption reports are produced by the selected run."
+        ],
+        "assumptions": [
+          "The selected adoption run remains the authoritative run for this work.",
+          "Existing repository artifacts accurately describe the current baseline unless discovery identifies a conflict.",
+          "Any required adoption changes can be limited to AEGIS metadata, documentation, maps, inventories, and reports."
+        ],
+        "control": {
+          "access_rationale": "",
+          "requested_access_mode": "",
+          "route_rationale": "",
+          "route_to": "",
+          "summary": "Proceed with a non-behavioral adoption baseline. The stale advisory RepoWise receipt is a discovery risk to assess, not authority to alter runtime behavior or archived runs.",
+          "unresolved_questions": []
+        },
+        "decision": "proceed",
+        "in_scope": [
+          "AEGIS governance and workflow metadata",
+          "existing requirements, specifications, and test-link inventory",
+          "component documentation and component manifest coverage",
+          "durable adoption baseline records and reports",
+          "archived AEGIS 1.4.1 runs as read-only audit evidence"
+        ],
+        "out_of_scope": [
+          "AudioMancer runtime behavior",
+          "application source behavior changes",
+          "resuming, rewriting, or otherwise modifying archived AEGIS 1.4.1 runs",
+          "creating a new AEGIS run",
+          "publishing, merging, or creating a pull request"
+        ],
+        "planned_paths": [
+          ".agentic/workflow.toml",
+          ".agentic/requirements",
+          ".agentic/knowledge/components",
+          ".agentic/components.toml",
+          ".agentic/reports/adoption",
+          ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7"
+        ],
+        "questions": [],
+        "recommended_answers": [],
+        "revision": 1,
+        "risk": "medium",
+        "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
+        "schema_version": 3,
+        "stage": "adoption-alignment",
+        "understanding": "Continue the selected AEGIS 2.1 adoption run to establish a durable, non-behavioral repository baseline. Validate governance metadata, existing requirement/specification/test traceability, component documentation and manifest coverage, and adoption reports; use archived AEGIS 1.4.1 runs solely as audit evidence."
+      },
       "prepared_at": "2026-07-31T20:44:44+00:00",
       "requested_access_mode": "",
       "retention": "versioned",
@@ -37,8 +210,8 @@
       "route_rationale": "",
       "route_to": "",
       "stage": "adoption-alignment",
-      "status": "prepared",
-      "summary": "",
+      "status": "closed",
+      "summary": "Proceed with a non-behavioral adoption baseline. The stale advisory RepoWise receipt is a discovery risk to assess, not authority to alter runtime behavior or archived runs.",
       "unresolved_questions": []
     },
     "adoption-intake": {
@@ -76,6 +249,276 @@
       "stage": "adoption-intake",
       "status": "closed",
       "summary": "Adopt the existing AudioMancer governance baseline into AEGIS 2.1 without modifying runtime product behavior.",
+      "unresolved_questions": []
+    },
+    "baseline-review": {
+      "access_rationale": "",
+      "applied_at": "2026-08-01T10:08:31+00:00",
+      "artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/baseline-review/baseline-review.toml",
+      "check_execution": "external",
+      "closed_at": null,
+      "digest": "69a499dfd8c421d86616c1e0f7ba9ca49a1290ab68061721def1b816426214e9",
+      "payload": {
+        "accepted_legacy_risks": [
+          "pcm-codec remains characterized rather than baseline-usable because end-to-end audible-quality assessment belongs to audio-assembly and is outside this non-behavioral adoption slice."
+        ],
+        "blocking_gaps": [
+          "INV-1: the selected adoption run lacks AEGIS check records for the repository's historical requirements; waiver inventory identifies INV-1 as eligible.",
+          "gate:lint: the configured uv command cannot execute because uv cannot query the Python interpreter (Windows Access is denied); waiver inventory identifies gate:lint as eligible.",
+          "gate:test: the configured uv command cannot execute for the same uv Python-interpreter access failure; waiver inventory identifies gate:test as eligible."
+        ],
+        "control": {
+          "access_rationale": "",
+          "requested_access_mode": "",
+          "route_rationale": "",
+          "route_to": "",
+          "summary": "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. Baseline verification is blocked by INV-1 and by unable-to-start lint/test gates in the current environment. No runtime behavior changed and no waiver was added.",
+          "unresolved_questions": []
+        },
+        "decision": "pending",
+        "follow_up_gaps": [
+          "RepoWise remains advisory and stale: its knowledge-graph digest, receipt HEAD, receipt working-tree fingerprint, and state digest do not match.",
+          "The default uv cache path is also unusable in this environment because a file occupies the expected cache directory."
+        ],
+        "reviewed_components": [
+          "app-shell",
+          "platform-settings-ui",
+          "project-lifecycle",
+          "operation-orchestration",
+          "ai-runtime",
+          "text-cleanup",
+          "text-chunking",
+          "ai-translation",
+          "character-discovery",
+          "voice-profiles",
+          "speech-blocks",
+          "tts-audio-blocks",
+          "audio-assembly",
+          "pcm-codec"
+        ],
+        "revision": 1,
+        "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
+        "schema_version": 3,
+        "stage": "baseline-review"
+      },
+      "prepared_at": "2026-08-01T10:06:00+00:00",
+      "requested_access_mode": "",
+      "retention": "versioned",
+      "revision": 1,
+      "route_rationale": "",
+      "route_to": "",
+      "stage": "baseline-review",
+      "status": "applied",
+      "summary": "The component baseline is structurally complete at 14 manifest components: ownership, paths, documentation, requirement/test links, scope check, traceability, and coverage audits are recorded without issues. Baseline verification is blocked by INV-1 and by unable-to-start lint/test gates in the current environment. No runtime behavior changed and no waiver was added.",
+      "unresolved_questions": []
+    },
+    "component-adoption": {
+      "access_rationale": "",
+      "applied_at": "2026-08-01T10:04:57+00:00",
+      "artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-adoption/component-adoption.toml",
+      "check_execution": "external",
+      "closed_at": "2026-08-01T10:06:00+00:00",
+      "digest": "5295b0c500b9708e75116cbcc62fd291cd296a1df7cd1c2b65de4e2f1f6351e6",
+      "payload": {
+        "adopted_components": [
+          "pcm-codec"
+        ],
+        "behavior_changed": false,
+        "changed_paths": [
+          ".agentic/components.toml"
+        ],
+        "control": {
+          "access_rationale": "",
+          "requested_access_mode": "",
+          "route_rationale": "",
+          "route_to": "",
+          "summary": "Adopted the approved pcm-codec slice by adding its existing source and direct test suite to the manifest and recording its existing component documentation and requirement/test links. Scope, traceability, and coverage inspections reported no issues. No AudioMancer runtime behavior changed.",
+          "unresolved_questions": []
+        },
+        "documentation": [
+          ".agentic/knowledge/components/PCM_Codec.md"
+        ],
+        "remaining_gaps": [
+          "No unresolved structural mapping gap for pcm-codec. End-to-end audible-quality assessment remains owned by audio-assembly and is outside this non-behavioral adoption slice."
+        ],
+        "requirement_links": [
+          "REQ-FUNC-6228f441-c9fa-4018-ad8d-7a2fefd67f44",
+          "REQ-FUNC-2a5a861a-8f08-46e0-834f-4ba125864d7d",
+          "REQ-FUNC-999d448a-6629-45b2-a2c3-a2dfecaa2ee9",
+          "REQ-FUNC-2242c524-3b57-4460-afde-f6c97180c48a",
+          "REQ-FUNC-be94fb5d-88d2-40dc-9c8a-65bd2aab79b8",
+          "REQ-FUNC-7b43e8a3-c9aa-4e22-8b57-171bfb723fee",
+          "REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5",
+          "REQ-PLAT-50f144d0-0798-4aa8-8a70-cdc14fa3cf28",
+          "REQ-TEST-29d60d25-64ce-49bb-ac6d-24764f80eb37"
+        ],
+        "revision": 1,
+        "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
+        "schema_version": 3,
+        "stage": "component-adoption"
+      },
+      "prepared_at": "2026-08-01T10:04:01+00:00",
+      "requested_access_mode": "",
+      "retention": "versioned",
+      "revision": 1,
+      "route_rationale": "",
+      "route_to": "",
+      "stage": "component-adoption",
+      "status": "closed",
+      "summary": "Adopted the approved pcm-codec slice by adding its existing source and direct test suite to the manifest and recording its existing component documentation and requirement/test links. Scope, traceability, and coverage inspections reported no issues. No AudioMancer runtime behavior changed.",
+      "unresolved_questions": []
+    },
+    "component-map": {
+      "access_rationale": "",
+      "applied_at": "2026-08-01T10:04:00+00:00",
+      "artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/component-map/component-map.toml",
+      "check_execution": "external",
+      "closed_at": "2026-08-01T10:04:01+00:00",
+      "digest": "f8f0e68abc0691b6ba0ac1a623715bc4a8b65ea4905f2a582af020d8953bb677",
+      "payload": {
+        "approval_decision": "approved",
+        "approved_slice": [
+          "pcm-codec"
+        ],
+        "components": [
+          "app-shell",
+          "platform-settings-ui",
+          "project-lifecycle",
+          "operation-orchestration",
+          "ai-runtime",
+          "text-cleanup",
+          "text-chunking",
+          "ai-translation",
+          "character-discovery",
+          "voice-profiles",
+          "speech-blocks",
+          "tts-audio-blocks",
+          "audio-assembly",
+          "pcm-codec"
+        ],
+        "control": {
+          "access_rationale": "",
+          "requested_access_mode": "",
+          "route_rationale": "",
+          "route_to": "",
+          "summary": "Proposed component map retains the 13 pre-existing manifest components and adds pcm-codec as a separate, self-contained component. The PCM codec maps its source and direct test suite; its documentation and requirement/test links already exist. No bundle is proposed. Human approval is required before component adoption proceeds.",
+          "unresolved_questions": []
+        },
+        "manifest": ".agentic/components.toml",
+        "revision": 2,
+        "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
+        "schema_version": 3,
+        "stage": "component-map"
+      },
+      "prepared_at": "2026-08-01T10:03:36+00:00",
+      "requested_access_mode": "",
+      "retention": "versioned",
+      "revision": 2,
+      "route_rationale": "",
+      "route_to": "",
+      "stage": "component-map",
+      "status": "closed",
+      "summary": "Proposed component map retains the 13 pre-existing manifest components and adds pcm-codec as a separate, self-contained component. The PCM codec maps its source and direct test suite; its documentation and requirement/test links already exist. No bundle is proposed. Human approval is required before component adoption proceeds.",
+      "unresolved_questions": []
+    },
+    "repo-discovery": {
+      "access_rationale": "",
+      "applied_at": "2026-08-01T09:59:24+00:00",
+      "artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/repo-discovery/repo-discovery.toml",
+      "check_execution": "external",
+      "closed_at": "2026-08-01T10:01:03+00:00",
+      "digest": "3b06288e746167c932561968e532a785a1db84a8a558106d7930cf38e0f15ecf",
+      "payload": {
+        "candidate_components": [
+          "app-shell",
+          "platform-settings-ui",
+          "project-lifecycle",
+          "operation-orchestration",
+          "ai-runtime",
+          "text-cleanup",
+          "text-chunking",
+          "ai-translation",
+          "character-discovery",
+          "voice-profiles",
+          "speech-blocks",
+          "tts-audio-blocks",
+          "audio-assembly",
+          "pcm-codec"
+        ],
+        "control": {
+          "access_rationale": "",
+          "requested_access_mode": "",
+          "route_rationale": "",
+          "route_to": "",
+          "summary": "Repository discovery is complete without application-code changes. The governance roots, enforced lint and test gates, passing traceability and coverage audits, manifest, component documentation, and stale advisory RepoWise receipt are recorded. Component mapping must resolve the documented-but-unregistered pcm-codec coverage gap.",
+          "unresolved_questions": []
+        },
+        "discovery_evidence": [
+          "100 Python source files discovered under 04_Software/AudioMancer/src/audiomancer",
+          "495 requirement TOML files discovered under .agentic/requirements",
+          "14 component documentation files discovered under .agentic/knowledge/components, excluding the index and template",
+          "13 components registered in .agentic/components.toml",
+          "pcm-codec is documented but is not among the 13 registered manifest components",
+          "adoption component-status reported baseline metadata for 13 registered components",
+          "adoption baseline reported component_count=13 and no minimum completion level"
+        ],
+        "documentation_roots": [
+          ".agentic/knowledge/components"
+        ],
+        "entry_points": [
+          "audiomancer = audiomancer.app:main (project script)",
+          "04_Software/AudioMancer/src/audiomancer/__main__.py"
+        ],
+        "existing_tests": [
+          "108 discovered Python test modules under 04_Software/AudioMancer/tests",
+          "pytest configuration uses testpaths = tests and excludes performance tests by default",
+          "traceability audit completed with no issues",
+          "coverage audit completed with no issues"
+        ],
+        "external_dependencies": [
+          "PySide6>=6.8,<7.0",
+          "PyMuPDF>=1.25,<2.0",
+          "langdetect>=1.0.9,<2.0",
+          "python-docx>=1.1,<2.0",
+          "striprtf>=0.0.29,<1.0",
+          "odfpy>=1.4.1,<2.0",
+          "EbookLib>=0.18,<1.0",
+          "markdown-it-py>=3.0,<4.0"
+        ],
+        "gate_commands": [
+          "lint: uv run --directory 04_Software/AudioMancer ruff check .",
+          "test: uv run --directory 04_Software/AudioMancer python -m pytest -q"
+        ],
+        "repowise_status": "stale",
+        "repowise_warnings": [
+          "RepoWise knowledge-graph digest does not match the receipt",
+          "RepoWise receipt Git HEAD is stale",
+          "RepoWise receipt working-tree fingerprint is stale",
+          "RepoWise state digest does not match the receipt"
+        ],
+        "requirement_roots": [
+          ".agentic/requirements"
+        ],
+        "revision": 1,
+        "run_id": "adoption-2026-07-31T203232Z-fa8abfa7",
+        "schema_version": 3,
+        "source_roots": [
+          "04_Software/AudioMancer/src/audiomancer"
+        ],
+        "stage": "repo-discovery",
+        "test_roots": [
+          "04_Software/AudioMancer/tests"
+        ]
+      },
+      "prepared_at": "2026-08-01T09:57:55+00:00",
+      "requested_access_mode": "",
+      "retention": "versioned",
+      "revision": 1,
+      "route_rationale": "",
+      "route_to": "",
+      "stage": "repo-discovery",
+      "status": "closed",
+      "summary": "Repository discovery is complete without application-code changes. The governance roots, enforced lint and test gates, passing traceability and coverage audits, manifest, component documentation, and stale advisory RepoWise receipt are recorded. Component mapping must resolve the documented-but-unregistered pcm-codec coverage gap.",
       "unresolved_questions": []
     }
   }

@@ -390,4 +390,17 @@ adoption_status = "characterized"
 owner = "DDP Engineering / Eng. Dan Dumitru Pasare"
 notes = "Re-characterized through REQ-FUNC-017 and REQ-FUNC-046 through REQ-FUNC-047 with focused evidence E-0017 (48 passed). It remains characterized pending operator listening for mixing, loudness, ambience balance, clipping, and artistic sequencing."
 
+[components.pcm-codec]
+paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+  "04_Software/AudioMancer/tests/test_pcm_codec.py",
+]
+tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py",
+]
+criticality = "high"
+adoption_status = "characterized"
+owner = "DDP Engineering / Eng. Dan Dumitru Pasare"
+notes = "Self-contained linear PCM conversion support for Audio Assembly. Behavior is documented in .agentic/knowledge/components/PCM_Codec.md; its direct test suite links REQ-FUNC-6228f441-c9fa-4018-ad8d-7a2fefd67f44, REQ-FUNC-2a5a861a-8f08-46e0-834f-4ba125864d7d, REQ-FUNC-999d448a-6629-45b2-a2c3-a2dfecaa2ee9, REQ-FUNC-2242c524-3b57-4460-afde-f6c97180c48a, REQ-FUNC-be94fb5d-88d2-40dc-9c8a-65bd2aab79b8, REQ-FUNC-7b43e8a3-c9aa-4e22-8b57-171bfb723fee, REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5, REQ-PLAT-50f144d0-0798-4aa8-8a70-cdc14fa3cf28, and REQ-TEST-29d60d25-64ce-49bb-ac6d-24764f80eb37. It remains characterized because audible output qualities are owned by Audio Assembly."
+
 [bundles]
