@@ -29,9 +29,6 @@
          shell write to ``/tmp``, ``/dev/null``, or any path outside the
          workspace is not a repository write-zone concern and is ignored, which
          keeps ordinary commands (``… > /dev/null``, temp files) unaffected.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-24
-@version 0.1.0
 """
 
 # IMPORTS
@@ -87,9 +84,6 @@ def main() -> int:
                 read-only shell command is never blocked and never forces an
                 active-run selection.
     @exception  None Configuration and state failures become hook denials.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PreToolUse":
@@ -166,9 +160,6 @@ def extract_write_targets(command: str) -> list[str]:
                 Windows path survives), and every segment is scanned for output
                 redirections and for the operand a write command names.
     @exception  None A segment that cannot be tokenized yields no targets.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     targets: list[str] = []
     for segment in _SEGMENT_SPLIT_RE.split(command):
@@ -190,9 +181,6 @@ def _tokenize(segment: str) -> list[str]:
                 backslashes literal so a Windows path is not mangled. Matches the
                 lexer configuration used by ``aegis.gates`` for the same reason.
     @exception  None Unbalanced quoting yields an empty token list.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     lexer = shlex.shlex(segment, posix=True)
     lexer.whitespace_split = True
@@ -214,9 +202,6 @@ def _redirect_targets(tokens: list[str]) -> list[str]:
                 that begins with ``&`` is a file-descriptor duplication
                 (``2>&1``, ``>&2``), not a file, and is ignored.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     targets: list[str] = []
     for index, token in enumerate(tokens):
@@ -241,9 +226,6 @@ def _command_targets(tokens: list[str]) -> list[str]:
                 and ``sed -i`` (the last operand, present only when a script and
                 at least one file are both given).
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     index = 0
     while index < len(tokens):
@@ -274,9 +256,6 @@ def _has_inplace_flag(tokens: list[str]) -> bool:
     @param[in]  tokens Arguments following the ``sed`` command word.
     @return     True when an ``-i``/``-i<suffix>``/``--in-place`` flag is present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     return any(
         token == "-i" or token.startswith("-i") or token == "--in-place" or token.startswith("--in-place=")
@@ -290,9 +269,6 @@ def _basename(token: str) -> str:
     @param[in]  token Command word, possibly a path such as ``/usr/bin/tee``.
     @return     The basename with either slash style handled.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     return token.replace("\\", "/").rsplit("/", 1)[-1]
 
@@ -304,9 +280,6 @@ def read_run_state(cwd: Path) -> tuple[Path, str, str]:
     @return     Repository root, active stage, and run-local access mode.
     @exception  RunResolutionError If no valid worktree selection exists.
     @exception  RuntimeError If the delivered AEGIS package cannot be found.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     from workflow_config_bootstrap import find_repository_root
 
@@ -330,9 +303,6 @@ def is_protected_path(path: str, policy, matcher) -> bool:  # type: ignore[no-un
     @param[in]  matcher Shared ``matches_pattern`` callable.
     @return     Whether protected-path policy blocks a write to ``path``.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     return (
         policy.mode == "enforce"
@@ -346,9 +316,6 @@ def deny(message: str) -> int:
     @brief      Emit the common pre-tool denial envelope.
     @param[in]  message Actionable reason shown to the agent.
     @return     Zero as required by adapter hook transports.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     print(
         json.dumps(

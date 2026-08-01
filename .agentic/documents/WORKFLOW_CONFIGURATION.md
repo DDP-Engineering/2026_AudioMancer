@@ -121,11 +121,11 @@ tool evidence only—not a general security assurance.
 
 All remaining source, tests, requirements, documentation, component,
 traceability, adoption, alignment, and guardrail tables remain required. Use
-`aegis config show --json` to inspect the normalized effective policy.
+`<workflow> config show --json` to inspect the normalized effective policy.
 
 ## Optional Integrations
 
 Optional discovery integration is deliberately outside `.agentic/workflow.toml`
-and does not change schema 3. `aegis config validate/show` also inspects the
+and does not change schema 3. `<workflow> config validate/show` also inspects the
 strict schema-1 `.agentic/integrations/repowise.toml`; absence means disabled.
 See `REPOWISE_INTEGRATION.md`.

@@ -51,7 +51,7 @@ changed-path and evidence capture, enabled gates, secrets and working-tree
 review, scope analysis, delivery reporting, and the four human closes remain
 real. If scope grows, restart a full run and carry the recorded context forward.
 
-For quick implementation, follow `aegis evidence prepare add`, apply the
+For quick implementation, follow `<workflow> evidence prepare add`, apply the
 manual-evidence form, and copy its CLI-minted active ID into the implementation
 form's `linked_check_evidence` before `stage apply`. Do not invent or reuse a
 superseded or other-stage evidence ID.

@@ -10,9 +10,6 @@
 @file run_aegis.py
 @brief Template launcher for the embedded agentic workflow CLI.
 @details Bootstraps the embedded CLI from a generated project checkout.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.1.0
 """
 
 # IMPORTS
@@ -31,9 +28,6 @@ def main(argv: list[str] | None = None) -> int:
     @param[in]  argv Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     if sys.version_info < (3, 11):
         print("Python 3.11 or newer is required for aegis.", file=sys.stderr)

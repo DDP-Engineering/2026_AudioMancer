@@ -1,6 +1,6 @@
 ---
 name: agentic-development
-description: Use for feature, bug fix, or behavior-change work that should follow the shared agentic development workflow gates.
+description: Use for feature, bug fix, or behavior-change work that should follow the shared agentic development workflow gates, including the proportional --quick profile for genuinely small fixes and changes.
 compatibility: opencode
 ---
 

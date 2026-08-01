@@ -15,12 +15,9 @@
          state denies the edit with the canonical actionable resolver error.
 @details Active stage and access mode are resolved directly through the
          canonical AEGIS store API.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-22
 @details `extract_target_paths` (0.7.0) reads the `apply_patch` envelope from
          any of the keys a host may use, not `command` alone, so a patch that
          arrives under a different key still yields paths to check.
-@version 0.7.0
 """
 
 # IMPORTS
@@ -50,9 +47,6 @@ def main() -> int:
     @brief      Run command-line entry point workflow behavior.
     @return     Result produced by the workflow helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.4.0
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PreToolUse":
@@ -118,9 +112,6 @@ def read_run_state(cwd: Path) -> tuple[Path, str, str]:
     @return     Repository root, active stage, and run-local access mode.
     @exception  RunResolutionError If no valid worktree selection exists.
     @exception  RuntimeError If the delivered AEGIS package cannot be found.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.2.0
     """
     from workflow_config_bootstrap import find_repository_root
 
@@ -154,9 +145,6 @@ def extract_target_paths(tool_input: dict) -> list[str]:
                 unread key produced no paths at all, and a guard that extracts
                 no paths finds nothing to block.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-23
-    @version    0.2.0
     """
     paths: list[str] = []
     for key in PATCH_ENVELOPE_KEYS:
@@ -178,9 +166,6 @@ def extract_patch_paths(command: str) -> list[str]:
     @param[in]  command Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     paths = []
     for line in command.splitlines():
@@ -197,9 +182,6 @@ def normalize(path: str, cwd: Path) -> str:
     @param[in]  cwd Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.2.0
     """
     from aegis.paths import relative_to_root
 
@@ -215,9 +197,6 @@ def matches(path: str, pattern: str) -> bool:
     @details    Delegates to the canonical package matcher imported by the
                 shared hook bootstrap.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.3.0
     """
     from aegis.paths import matches_pattern
 
@@ -231,9 +210,6 @@ def is_protected_path(path: str, policy) -> bool:  # type: ignore[no-untyped-def
     @param[in]  policy Validated protected-path policy.
     @return     Whether configured policy blocks a write to `path`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.3.0
     """
     return (
         policy.mode == "enforce"
@@ -248,9 +224,6 @@ def deny(message: str) -> int:
     @param[in]  message Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.1.0
     """
     print(
         json.dumps(

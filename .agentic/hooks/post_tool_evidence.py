@@ -11,9 +11,6 @@
 @brief Post-tool hook recording agent tool-use evidence.
 @details Resolves worktree-local state through the canonical AEGIS store and
          emits a non-destructive structured warning when no valid run exists.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-20
-@version 0.2.0
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ def main() -> int:
     @brief      Run command-line entry point workflow behavior.
     @return     Result produced by the workflow helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-20
-    @version    0.2.0
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PostToolUse":

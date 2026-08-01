@@ -12,9 +12,6 @@
 @details Command fragments come only from validated
          ``guardrails.delivery.command_patterns``. Disabled policy has no
          implicit publish commands, and configuration errors deny pre-tool use.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-22
-@version 0.5.0
 """
 
 # IMPORTS
@@ -34,9 +31,6 @@ def main() -> int:
     @brief      Run command-line entry point workflow behavior.
     @return     Result produced by the workflow helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.4.0
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PreToolUse":
@@ -99,7 +93,6 @@ def _run_aegis(
     @param[in] launcher Project-local AEGIS launcher.
     @param[in] args Grouped AEGIS arguments.
     @return Captured process result.
-    @version 0.1.0
     """
     return subprocess.run(
         [sys.executable, str(launcher), *args],
@@ -117,9 +110,6 @@ def deny(message: str) -> int:
     @brief      Emit the common pre-tool denial envelope.
     @param[in]  message Actionable policy or preflight reason.
     @return     Zero as required by adapter hook transports.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     print(
         json.dumps(

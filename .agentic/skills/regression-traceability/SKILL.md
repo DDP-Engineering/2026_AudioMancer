@@ -14,8 +14,8 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 1. Run `<workflow> config validate --json` and
    `<workflow> config show --json`.
-2. Run `aegis verify traceability`, `aegis verify coverage`, and
-   `aegis verify impact [paths-file]`.
+2. Run `<workflow> verify traceability`, `<workflow> verify coverage`, and
+   `<workflow> verify impact [paths-file]`.
 3. Treat impacted requirements as observable contracts. Mutate them only
    through requirement-stage forms after human approval.
 4. For a fix, reproduce the exact failure as red evidence before
@@ -28,7 +28,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
    concurrency, and idempotency where applicable.
 7. Run linked checks first. Run full regression for shared or cross-cutting
    changes, untraced paths, or paths where impact recommends it.
-8. Run `aegis verify run` before the human interprets the diff.
+8. Run `<workflow> verify run` before the human interprets the diff.
 
 Report impacted requirements, variants, linked checks, untraced paths,
 regression selection, commands/evidence, and remaining findings. Do not invent

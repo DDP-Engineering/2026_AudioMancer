@@ -12,7 +12,8 @@ adoption work.
 
 Use adoption reports to keep durable summaries of component baseline status,
 component bundles, local-scope findings, and the evidence used to move a
-component from discovery toward a usable baseline.
+component from discovery toward a usable baseline. Use
+`adoption_report_template.md` as the starting point for a new report.
 
 Keep reports project-local and avoid storing secrets, credentials, personal
 data, or environment-specific machine details. The component manifest remains

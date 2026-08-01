@@ -12,9 +12,6 @@
 @details Locates the delivered `.agentic/cli/src` package without interpreting
          workflow policy, imports `aegis.config`, and exposes consistent typed
          errors to standalone hook processes.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-22
-@version 0.1.0
 """
 
 # IMPORTS
@@ -35,9 +32,6 @@ def find_repository_root(start: Path | None = None) -> Path:
     @param[in]  start Starting directory; defaults to the process directory.
     @return     Repository root containing `.agentic/cli/src/aegis`.
     @exception  RuntimeError If the delivered parser package cannot be found.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     candidate = (start or Path.cwd()).resolve()
     if candidate.is_file():
@@ -58,9 +52,6 @@ def load_workflow_config(start: Path | None = None):  # type: ignore[no-untyped-
     @return     `aegis.config.WorkflowConfig` for the discovered repository.
     @exception  aegis.config.ConfigurationError If workflow.toml is invalid.
     @exception  RuntimeError If the delivered AEGIS package is unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     repo_root = find_repository_root(start)
     source_root = repo_root / ".agentic" / "cli" / "src"
@@ -77,9 +68,6 @@ def configuration_error_payload(error: BaseException) -> dict[str, Any]:
     @brief      Convert canonical configuration errors into hook-safe payloads.
     @param[in]  error Exception raised while loading workflow configuration.
     @return     Stable error mapping; unknown bootstrap failures are identified.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     serializer = getattr(error, "to_dict", None)
     if callable(serializer):
@@ -105,9 +93,6 @@ def configuration_error_json(error: BaseException) -> str:
     @brief      Render one hook-safe configuration error as JSON.
     @param[in]  error Configuration or bootstrap failure.
     @return     Deterministic JSON text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-22
-    @version    0.1.0
     """
     return json.dumps(configuration_error_payload(error), sort_keys=True)
 

@@ -169,7 +169,7 @@ publication. Those actions require a separate explicit request.
 
 ## 10. WAEGIS Version Boundary
 
-WAEGIS 1.1 supports AEGIS `>=2.0.0,<3.0.0`. It can generate, inspect,
+WAEGIS 1.2 supports AEGIS `>=2.0.0,<3.0.0`. It can generate, inspect,
 configure, optionally execute, and report all five gate groups. Upgrading an
 AEGIS 1.x installation across the major boundary is unsupported; make a fresh
 AEGIS 2.x deployment after preserving project-owned artifacts deliberately.

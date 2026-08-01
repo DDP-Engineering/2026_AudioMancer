@@ -1,6 +1,6 @@
 ---
 name: agentic-delivery
-description: AEGIS 2.1 delivery-stage validation and human handoff. Use for final reports and for separately approved Git push, PR, merge, or publication work.
+description: AEGIS delivery-stage validation and human handoff. Use for final reports and for separately approved Git push, PR, merge, or publication work.
 ---
 
 <!--
