@@ -85,6 +85,7 @@ commands = ["uv run --directory 04_Software/AudioMancer ruff check ."]
 [gates.test]
 mode = "enforce"
 commands = ["uv run --directory 04_Software/AudioMancer python -m pytest -q"]
+timeout = 1800
 
 [gates.security]
 mode = "disabled"
