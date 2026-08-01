@@ -1,0 +1,22 @@
+schema_version = 3
+run_id = "adoption-2026-07-31T203232Z-fa8abfa7"
+stage = "adoption-alignment"
+revision = 1
+understanding = ""
+in_scope = []
+out_of_scope = []
+assumptions = []
+acceptance_criteria = []
+questions = []
+recommended_answers = []
+planned_paths = []
+risk = "low"
+decision = "proceed"
+
+[control]
+requested_access_mode = ""
+access_rationale = ""
+route_to = ""
+route_rationale = ""
+summary = ""
+unresolved_questions = []

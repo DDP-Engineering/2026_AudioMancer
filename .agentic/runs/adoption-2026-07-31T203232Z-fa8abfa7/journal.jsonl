@@ -1,0 +1,5 @@
+{"data": {"access_mode": "standard", "kind": "adoption", "scope_hint": [], "statement": ""}, "event": "run.started", "time": "2026-07-31T20:32:32+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-intake/adoption-intake.toml", "check_execution": "external", "retention": "versioned", "revision": 1, "stage": "adoption-intake"}, "event": "stage.prepared", "time": "2026-07-31T20:32:32+00:00"}
+{"data": {"digest": "4d420dad32646ba0376538431a152ba2a9c7092ba37c12cb3e72718b66c0112a", "revision": 1, "stage": "adoption-intake"}, "event": "stage.applied", "time": "2026-07-31T20:33:16+00:00"}
+{"data": {"approver": "human", "revision": 1, "stage": "adoption-intake"}, "event": "stage.approved", "time": "2026-07-31T20:44:44+00:00"}
+{"data": {"artifact": ".agentic/runs/adoption-2026-07-31T203232Z-fa8abfa7/stages/adoption-alignment/adoption-alignment.toml", "check_execution": "external", "retention": "versioned", "revision": 1, "stage": "adoption-alignment"}, "event": "stage.prepared", "time": "2026-07-31T20:44:44+00:00"}

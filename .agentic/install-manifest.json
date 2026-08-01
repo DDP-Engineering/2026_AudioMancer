@@ -190,10 +190,6 @@
       "sha256": "647c81f6a27804940c784fea797c2b5a9fbacd4a2737c30cd73ee1c7c2ad926e",
       "size": 4221
     },
-    ".agentic/integrations/repowise.toml": {
-      "sha256": "5c4aa868ba50707f9f62d6e19e36f6cd091ce754d9ec3756db1e8a85a3b98a6a",
-      "size": 551
-    },
     ".agentic/knowledge/components/component_template.md": {
       "sha256": "9a85dd7c94ea99b8e1d77b676d4856735ecc8c7675fd06e8672348acab914a24",
       "size": 2105
@@ -592,6 +588,7 @@
     }
   },
   "generated": [
+    ".agentic/integrations/repowise.toml",
     ".agentic/workflow.toml"
   ],
   "skipped": [
@@ -601,5 +598,96 @@
     "CHANGELOG.md"
   ],
   "payload_digest": "7cde5bb7b53932c1d478bc085de071a328251e6018cabce85bfce522f123815e",
-  "configuration": {}
+  "configuration": {
+    "answers": {
+      "alignment_enabled": true,
+      "alignment_protected_scope_mode": "disabled",
+      "alignment_protected_scope_patterns": [],
+      "baseline_guard_mode": "disabled",
+      "baseline_minimum_completion_level": "baseline-usable",
+      "check_execution": "external",
+      "coverage_exclude": [
+        "**/__init__.py"
+      ],
+      "coverage_mode": "enforce",
+      "coverage_roots": [
+        "04_Software/AudioMancer/src/audiomancer"
+      ],
+      "delivery_command_patterns": [],
+      "delivery_mode": "disabled",
+      "gate_build_cmds": [],
+      "gate_build_mode": "disabled",
+      "gate_lint_cmds": [
+        "uv run --directory 04_Software/AudioMancer ruff check ."
+      ],
+      "gate_lint_mode": "enforce",
+      "gate_security_cmds": [],
+      "gate_security_mode": "disabled",
+      "gate_test_cmds": [
+        "uv run --directory 04_Software/AudioMancer python -m pytest -q"
+      ],
+      "gate_test_mode": "enforce",
+      "gate_typecheck_cmds": [],
+      "gate_typecheck_mode": "disabled",
+      "language": "python",
+      "protected_path_operations": [],
+      "protected_path_patterns": [],
+      "protected_paths_mode": "disabled",
+      "scope_allowed_roots": [],
+      "scope_mode": "unrestricted",
+      "secret_patterns": [
+        "sk-[A-Za-z0-9_-]{20,}",
+        "ghp_[A-Za-z0-9_]{20,}",
+        "AKIA[0-9A-Z]{16}",
+        "-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----"
+      ],
+      "secrets_mode": "enforce",
+      "source_changes_mode": "blocked",
+      "source_roots": [
+        "04_Software/AudioMancer/src/audiomancer"
+      ],
+      "stage_form_retention": "versioned",
+      "test_roots": [
+        "04_Software/AudioMancer/tests"
+      ],
+      "working_tree_blocked_patterns": [],
+      "working_tree_mode": "unrestricted",
+      "write_access_mode": "unrestricted",
+      "write_access_stages": {
+        "intake": [],
+        "alignment": [],
+        "requirement": [],
+        "design": [],
+        "check": [],
+        "implementation": [],
+        "validation": [],
+        "delivery": [],
+        "adoption-intake": [],
+        "adoption-alignment": [],
+        "repo-discovery": [],
+        "component-map": [],
+        "component-adoption": [],
+        "baseline-review": [],
+        "adoption-delivery": []
+      }
+    },
+    "generator_version": "1.1.0",
+    "generated_files": {
+      ".agentic/workflow.toml": {
+        "sha256": "0a6d119fed902f926e78237b7526ac1cd0d95fc93deb3b944d3e40e20b12cfc9"
+      },
+      ".agentic/integrations/repowise.toml": {
+        "sha256": "42c4d1a47968a51c9423e06aeb3cec904a3fb9eb18e97d37340f3966c166fa5e"
+      }
+    },
+    "repowise": {
+      "schema_version": 1,
+      "source": "external",
+      "profile": "deterministic",
+      "ollama_url": "http://127.0.0.1:11434",
+      "model": "",
+      "embedding_model": "",
+      "enforcement": "advisory"
+    }
+  }
 }

@@ -1,0 +1,17 @@
+schema_version = 3
+run_id = "adoption-2026-07-31T203232Z-fa8abfa7"
+stage = "adoption-intake"
+revision = 1
+statement = "Establish the first genuine AEGIS 2.1 schema-3 adoption baseline after the approved cross-major AudioMancer governance deployment, preserving validated requirements, specifications, linked tests, component metadata, and adoption reports while treating archived AEGIS 1.4.1 runs as non-resumable audit evidence."
+adoption_slice = "Repository-wide governance metadata and component baseline; no application behavior changes."
+bundle_components = []
+bundle_rationale = ""
+access_mode = "repo-wide"
+
+[control]
+requested_access_mode = ""
+access_rationale = ""
+route_to = ""
+route_rationale = ""
+summary = "Adopt the existing AudioMancer governance baseline into AEGIS 2.1 without modifying runtime product behavior."
+unresolved_questions = []
