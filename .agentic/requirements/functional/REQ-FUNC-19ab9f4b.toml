@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-19ab9f4b"
+title = "Audio assembly shall require a reset when settings change or state"
+status = "active"
+
+requirement = """
+Audio assembly shall require a reset when settings change or state lacks a fingerprint and delete report, state, and audiobook folder on reset.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_requires_reset_when_settings_change",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_requires_reset_for_state_without_fingerprint",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_reset_deletes_report_state_and_audiobook_folder",
+]
+
+priority = "high"
+rationale = """
+Incompatible state must force a clean reset.
+"""
+created = 2026-07-19
+updated = 2026-07-24

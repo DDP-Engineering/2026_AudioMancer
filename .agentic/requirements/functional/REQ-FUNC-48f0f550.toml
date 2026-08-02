@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-48f0f550"
+title = "Text Chunking shall not create default state on page open and shall"
+status = "active"
+
+requirement = """
+Text Chunking shall not create default state on page open and shall delete all owned artifacts on reset.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_chunking_default_state_is_not_created_and_reset_deletes_all_owned_artifacts",
+]
+
+priority = "high"
+rationale = """
+Opening the page must not fabricate state; reset must be complete.
+"""
+created = 2026-07-24
+updated = 2026-07-24

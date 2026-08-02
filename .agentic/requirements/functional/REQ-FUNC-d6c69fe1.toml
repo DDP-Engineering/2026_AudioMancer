@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-d6c69fe1"
+title = "Cleanup finalization recovery shall deterministically rerender"
+status = "active"
+
+requirement = """
+Cleanup finalization recovery shall deterministically rerender persisted decisions without an LLM request when metadata is finalizing or completed output is missing or hash-invalid.
+"""
+
+verification = "Focused finalizing and completed-output recovery tests pass without an LLM call."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_completed_cleanup_rerenders_when_output_missing_or_mismatched",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+A crash, deletion, or stale replacement between checkpoint completion and output publication must be recoverable without cost or changed adjudication.
+"""
+created = 2026-07-28
+updated = 2026-07-30

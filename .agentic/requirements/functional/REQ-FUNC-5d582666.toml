@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-5d582666"
+title = "Character voice selection shall persist the selected voice language"
+status = "active"
+
+requirement = """
+Character voice selection shall persist the selected voice language.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_persists",
+]
+
+priority = "high"
+rationale = """
+The chosen voice language must be durable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

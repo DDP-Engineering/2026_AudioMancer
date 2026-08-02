@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-b12823a4"
+title = "Character discovery shall load input chunks from source or translation"
+status = "active"
+
+requirement = """
+Character discovery shall load input chunks from source or translation and derive runtime chapter context, ignoring mixed translation targets.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_load_input_chunks_uses_fully_approved_translation",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_load_input_chunks_derives_runtime_chapter_context",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_load_input_chunks_uses_original_when_translation_is_not_fully_approved",
+]
+
+priority = "high"
+rationale = """
+Input selection must follow the approved language and chapter context.
+"""
+created = 2026-07-19
+updated = 2026-07-24

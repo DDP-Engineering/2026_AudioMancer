@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-23c51ea4"
+title = "The provider client shall perform bounded JSON repair and refuse to"
+status = "active"
+
+requirement = """
+The provider client shall perform bounded JSON repair and refuse to repair empty content.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_invalid_backslash_escapes_in_model_output",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_non_json_output_with_followup_request",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_repair_empty_message_content",
+]
+
+priority = "high"
+rationale = """
+Malformed output may be repaired within bounds but empty content must not be fabricated.
+"""
+created = 2026-07-19
+updated = 2026-07-24

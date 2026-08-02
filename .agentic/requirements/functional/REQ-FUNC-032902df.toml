@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-032902df"
+title = "Backend probing shall normalize OpenAI-compatible model discovery"
+status = "active"
+
+requirement = """
+Backend probing shall normalize OpenAI-compatible model discovery.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_normalizes_openai_compatible_models",
+]
+
+priority = "high"
+rationale = """
+Provider selection needs a normalized model list for OpenAI-compatible backends.
+"""
+created = 2026-07-19
+updated = 2026-07-24

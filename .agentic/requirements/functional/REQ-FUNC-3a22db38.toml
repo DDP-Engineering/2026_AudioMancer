@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-3a22db38"
+title = "Every persisted deterministic chunking checkpoint shall encode the"
+status = "active"
+
+requirement = """
+Every persisted deterministic chunking checkpoint shall encode the exact processed paragraph prefix in its chunks and next_paragraph values.
+"""
+
+verification = "Automated focused pytest: 75 deterministic and Chunking contract tests passed across checkpoint pairs, cancellation, resume, separator prefixes, and source fingerprints."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_cancellation_preserves_committed_chunks_and_next_paragraph",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_resume_counts_processed_separator_without_persisting_it",
+  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_checkpoint_pairs_are_resume_consistent",
+  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_persists_resumable_state_after_cancellation",
+  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_resumes_after_interruption",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Resume validation must observe one self-consistent boundary even when processed paragraphs do not produce narratable chunks.
+"""
+created = 2026-07-19
+updated = 2026-07-30

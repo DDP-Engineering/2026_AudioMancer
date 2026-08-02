@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-e5e7a14c"
+title = "Character voices state refresh shall be read-only when character voices"
+status = "active"
+
+requirement = """
+Character voices state refresh shall be read-only when character voices are unchanged.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_refresh_is_read_only_when_character_voices_are_unchanged",
+]
+
+priority = "high"
+rationale = """
+A refresh must not mutate durable state when nothing changed.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-c7728be5"
+title = "Workflow impact shall delete only exact affected in-project audio"
+status = "active"
+
+requirement = """
+Workflow impact shall delete only exact affected in-project audio artifacts resolved from speech_block_id, skipping unsafe paths.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_deletes_audio_artifacts_for_affected_speech_block_only",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_requires_exact_ids_for_audio_artifact_deletion",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_skips_unsafe_audio_artifact_paths",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+Artifact derivation from stable speech_block_id values keeps impact deletion exact and safe.
+"""
+created = 2026-07-19
+updated = 2026-07-25

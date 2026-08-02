@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-TEST-1b7844b3"
+title = "Cleanup quality gates shall use a synthetic 20-to-25-fixture"
+status = "active"
+
+requirement = """
+Cleanup quality gates shall use a synthetic 20-to-25-fixture cross-format and cross-language corpus plus the external measured benchmark.
+"""
+
+verification = "Automated 22-fixture cross-format/language corpus passes its tier thresholds; read-only external Command Performance replay E-0028 verifies 604 typed boundaries, zero fusions/projection violations, 205 target paragraphs, and 27 page transitions. Real online/offline model acceptance remains the operator validation method."
+
+affected_paths = [
+  "04_Software/AudioMancer/tests/fixtures/cleanup_corpus.json",
+  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_acceptance_corpus_has_required_size_and_domain_coverage",
+  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_acceptance_corpus_meets_boundary_and_projection_thresholds",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Generalization and the measured defects require deterministic evidence beyond one copyrighted book.
+"""
+created = 2026-07-28
+updated = 2026-07-30

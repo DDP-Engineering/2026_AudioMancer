@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-f17bc992"
+title = "Audio-block planning shall split preferring sentences then word groups"
+status = "active"
+
+requirement = """
+Audio-block planning shall split preferring sentences then word groups, order part-artifact paths by speech_block_id, and derive the model budget from runtime effective parameters.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_model_budget_prefers_runtime_effective_parameters",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_part_artifact_paths_are_keyed_by_speech_block_id",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_prefers_qwen_1_7b_base_model",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_split_planner_prefers_sentences_then_word_groups",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+Part artifacts follow the same derived naming rule as the final WAV, so ordering keys on speech_block_id.
+"""
+created = 2026-07-19
+updated = 2026-07-26

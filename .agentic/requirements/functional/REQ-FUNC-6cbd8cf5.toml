@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-6cbd8cf5"
+title = "Project snapshot shall skip symlink directories where supported"
+status = "active"
+
+requirement = """
+Project snapshot shall skip symlink directories where supported.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_skips_symlink_directories_when_supported",
+]
+
+priority = "high"
+rationale = """
+Backups must avoid following symlinks to prevent recursion or escape.
+"""
+created = 2026-07-24
+updated = 2026-07-24

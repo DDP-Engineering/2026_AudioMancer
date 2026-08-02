@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-bd7cd503"
+title = "Chunking shall consume paragraph roles, boundaries, confidence, and"
+status = "active"
+
+requirement = """
+Chunking shall consume paragraph roles, boundaries, confidence, and provenance only from completed cleanup.json whose output hash matches clean_text.txt.
+"""
+
+verification = "Strict completed/hash gate and role propagation tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_rejects_clean_text_hash_mismatch",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_rejects_noncompleted_cleanup_even_when_text_exists",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_slices_cleanup_paragraph_offsets_and_propagates_roles",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Chunking must use truthful typed Cleanup structure and reject partial or mismatched output.
+"""
+created = 2026-07-19
+updated = 2026-07-30

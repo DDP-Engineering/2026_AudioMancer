@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-1179da33"
+title = "A whitespace-only manual Cleanup edit whose source-unit realignment is"
+status = "active"
+
+requirement = """
+A whitespace-only manual Cleanup edit whose source-unit realignment is incomplete shall persist one diagnostic warning in both the component log and cleanup.json.
+"""
+
+verification = "Focused diagnostic test passed; E-0008."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_realign_failure_records_diagnostic",
+]
+
+spec = "specs/minor_robustness_consistency.spec.md"
+priority = "high"
+rationale = """
+Persisting an edit with stale boundary finals must be observable to operators and diagnostics instead of failing silently.
+"""
+created = 2026-07-30
+updated = 2026-07-30

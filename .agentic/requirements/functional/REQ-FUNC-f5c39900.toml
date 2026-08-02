@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-f5c39900"
+title = "Audio-block exact-block operations shall detect and remove audio for an"
+status = "active"
+
+requirement = """
+Audio-block exact-block operations shall detect and remove audio for an exact speech block, approve and regenerate a selected block, and reconcile after resplit.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_and_regenerate_selected_block",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_detects_persisted_audio_for_exact_speech_block",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_keeps_later_audio",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_removes_audio_for_exact_speech_block_only",
+]
+
+priority = "high"
+rationale = """
+Per-block audio must be targeted exactly.
+"""
+created = 2026-07-19
+updated = 2026-07-26

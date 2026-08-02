@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-2048d415"
+title = "Manual Chunking mutations shall preserve an existing leading"
+status = "active"
+
+requirement = """
+Manual Chunking mutations shall preserve an existing leading scene-separator boundary.
+"""
+
+verification = "Focused state-service mutation test passed within the 126-test module run."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_manual_chunk_mutations_preserve_leading_scene_boundary",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Editing or deleting a chunk must not silently erase structural information already confirmed by Cleanup and Chunking.
+"""
+created = 2026-07-29
+updated = 2026-07-30

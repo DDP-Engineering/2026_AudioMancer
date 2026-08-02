@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-84c50360"
+title = "The progress dialog shall localize its title, cancel control, and"
+status = "active"
+
+requirement = """
+The progress dialog shall localize its title, cancel control, and token-usage display.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_progress_dialog_localizes_title_cancel_and_token_usage",
+]
+
+priority = "high"
+rationale = """
+Progress UI must be localized and readable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

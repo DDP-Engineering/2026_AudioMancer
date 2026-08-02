@@ -1,0 +1,28 @@
+schema = 1
+id = "REQ-FUNC-fb2645f1"
+title = "The provider client shall send, adapt, or omit the structured-output"
+status = "active"
+
+requirement = """
+The provider client shall send, adapt, or omit the structured-output response format per backend support.
+"""
+
+verification = "Automated: 5 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_response_format_when_structured_output_is_supported",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_json_schema_response_format_for_local_backends",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_operation_schema_response_format_for_local_backends",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_omits_response_format_when_structured_output_is_not_supported",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_without_response_format_when_provider_rejects_it",
+]
+
+priority = "high"
+rationale = """
+Structured-output compatibility varies by backend and must be negotiated correctly.
+"""
+created = 2026-07-19
+updated = 2026-07-24

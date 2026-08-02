@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-1083e0f2"
+title = "Text extraction shall extract supported TXT, Markdown, PDF, RTF, DOCX"
+status = "active"
+
+requirement = """
+Text extraction shall extract supported TXT, Markdown, PDF, RTF, DOCX, ODT, and EPUB formats into canonical text.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_supports_document_formats",
+]
+
+priority = "high"
+rationale = """
+All supported source formats must normalize to one canonical text.
+"""
+created = 2026-07-18
+updated = 2026-07-24

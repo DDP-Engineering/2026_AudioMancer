@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a0ea278d"
+title = "Token usage normalization shall normalize provider usage into the"
+status = "active"
+
+requirement = """
+Token usage normalization shall normalize provider usage into the canonical shape.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_normalizes_provider_usage",
+]
+
+priority = "high"
+rationale = """
+Provider usage variance must be normalized before aggregation.
+"""
+created = 2026-07-19
+updated = 2026-07-24

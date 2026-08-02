@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-UX-7f2722c8"
+title = "The configuration shall define seven named UI font-size steps in"
+status = "active"
+
+requirement = """
+The configuration shall define seven named UI font-size steps in ascending order (extra_small, small, medium, normal, large, very_large, huge) with 'normal' as the default step.
+"""
+
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_defines_seven_font_size_steps",
+]
+
+priority = "high"
+rationale = """
+Operators need discrete font-size steps to adapt the UI to monitor resolution and eyesight.
+"""
+created = 2026-07-25
+updated = 2026-07-25

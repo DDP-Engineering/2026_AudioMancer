@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-33d14311"
+title = "Speech-block manual deletion and edits shall renumber remaining blocks"
+status = "active"
+
+requirement = """
+Speech-block manual deletion and edits shall renumber remaining blocks, reject unknown blocks, normalize indications, and preserve operations on same-narrator edits.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_delete_speech_block_renumbers_remaining_chunk_blocks",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_delete_unknown_speech_block_raises",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_indication_content_kind_normalizes_and_pause_duration_parses",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_same_narrator_edit_forces_narration_but_preserves_operations",
+]
+
+priority = "high"
+rationale = """
+Manual mutations must keep the plan consistent.
+"""
+created = 2026-07-19
+updated = 2026-07-24

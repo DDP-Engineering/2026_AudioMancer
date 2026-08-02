@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-a3071769"
+title = "The Character Voices controller shall batch-generate current character"
+status = "active"
+
+requirement = """
+The Character Voices controller shall batch-generate current character samples, stop preview before deleting a sample, and target only generatable characters.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_generate_stops_preview_before_deleting_sample",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_regenerates_all_current_character_samples",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_targets_only_generatable_characters",
+]
+
+priority = "high"
+rationale = """
+Batch generation must be safe and correctly scoped.
+"""
+created = 2026-07-19
+updated = 2026-07-24

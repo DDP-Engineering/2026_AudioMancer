@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-085eb21b"
+title = "The Narrator Voice controller shall clear the preview flag on state"
+status = "active"
+
+requirement = """
+The Narrator Voice controller shall clear the preview flag on state change and redact runtime model identifiers from progress.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_preview_state_change_clears_preview_flag",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_progress_messages_hide_model_id",
+]
+
+priority = "high"
+rationale = """
+Progress must be understandable and free of runtime model IDs.
+"""
+created = 2026-07-19
+updated = 2026-07-24

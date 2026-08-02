@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-2c4de221"
+title = "Narrator profile generation shall leave existing profiles unchanged on"
+status = "active"
+
+requirement = """
+Narrator profile generation shall leave existing profiles unchanged on invalid or cancelled work.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_leaves_profiles_unchanged",
+]
+
+priority = "high"
+rationale = """
+Failed or cancelled generation must not corrupt the profile inventory.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-ac0451b0"
+title = "A non-object speech_blocks.json or a missing document shall be treated"
+status = "active"
+
+requirement = """
+A non-object speech_blocks.json or a missing document shall be treated as not-started: load_speech_blocks_document() shall return None.
+"""
+
+verification = "A non-object document yields None."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_non_object_document_is_treated_as_absent",
+]
+
+priority = "high"
+rationale = """
+Only a document matching the current root contract can represent Speech Blocks state.
+"""
+created = 2026-07-24
+updated = 2026-07-24

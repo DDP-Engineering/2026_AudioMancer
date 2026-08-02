@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-UX-61dacc39"
+title = "Text Cleanup shall report monotonic progress plus AI workload estimates"
+status = "active"
+
+requirement = """
+Text Cleanup shall report monotonic progress plus AI workload estimates through the existing progress dialog and reserve 100 percent for validated publication.
+"""
+
+verification = "Monotonic progress and workload estimate test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_cleanup_without_ai_reports_monotonic_phase_progress",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Long local inference must remain observable, and completion must not be shown before output validation.
+"""
+created = 2026-07-27
+updated = 2026-07-30

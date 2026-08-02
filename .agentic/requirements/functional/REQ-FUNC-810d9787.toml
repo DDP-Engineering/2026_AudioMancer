@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-810d9787"
+title = "Project opening shall propagate operating-system errors raised while"
+status = "active"
+
+requirement = """
+Project opening shall propagate operating-system errors raised while reading Chunking data without deleting project artifacts.
+"""
+
+verification = "Focused PermissionError propagation and zero-deletion test passed."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_propagates_chunking_io_error_without_reset",
+]
+
+priority = "high"
+rationale = """
+Permission and transient filesystem failures do not prove schema incompatibility and must never trigger destructive recovery.
+"""
+created = 2026-07-29
+updated = 2026-07-29

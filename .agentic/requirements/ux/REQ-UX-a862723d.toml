@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-UX-a862723d"
+title = "The application shell shall display an 'AudioMancer' wordmark label"
+status = "active"
+
+requirement = """
+The application shell shall display an 'AudioMancer' wordmark label (object name appWordmark) in the top toolbar.
+"""
+
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_toolbar_shows_audiomancer_wordmark",
+]
+
+priority = "normal"
+rationale = """
+A brand wordmark in the shell anchors the identity from the hero posters without altering the fixed-width sidebar contract.
+"""
+created = 2026-07-24
+updated = 2026-07-24

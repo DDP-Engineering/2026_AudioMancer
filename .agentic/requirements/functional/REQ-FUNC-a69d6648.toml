@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a69d6648"
+title = "Character voices state shall initialize character preview text from the"
+status = "active"
+
+requirement = """
+Character voices state shall initialize character preview text from the locked voice language.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_initializes_character_preview_text_from_locked_voice_language",
+]
+
+priority = "high"
+rationale = """
+Preview text must follow the locked voice language rather than a stale default.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-e72a9442"
+title = "AI chunking shall define an approved descriptor schema and anchor"
+status = "active"
+
+requirement = """
+AI chunking shall define an approved descriptor schema and anchor contract demonstrated in the prompt.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_schema_contains_only_the_approved_fields",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_anchor_uses_first_eight_normalized_words",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_chunking_prompt_demonstrates_exactly_eight_anchor_words",
+]
+
+priority = "high"
+rationale = """
+The descriptor contract must be fixed and shown to the provider.
+"""
+created = 2026-07-19
+updated = 2026-07-24

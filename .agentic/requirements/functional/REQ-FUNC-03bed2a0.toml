@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-03bed2a0"
+title = "Project opening shall automatically reset an incompatible Chunking"
+status = "active"
+
+requirement = """
+Project opening shall automatically reset an incompatible Chunking document and all downstream operation data before retrying validation once.
+"""
+
+verification = "Focused project-open self-heal test verifies reset of incompatible Chunking and downstream state followed by one successful validation retry."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_self_heals_incompatible_chunking_and_downstream",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+One bounded recovery restores a usable project when the persisted Chunking document fails the current schema.
+"""
+created = 2026-07-29
+updated = 2026-07-30

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-UX-28e1b47a"
+title = "All supported languages shall share identical translation keys"
+status = "active"
+
+requirement = """
+All supported languages shall share identical translation keys.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
+]
+
+priority = "high"
+rationale = """
+Localization must be complete and consistent across languages.
+"""
+created = 2026-07-24
+updated = 2026-07-24

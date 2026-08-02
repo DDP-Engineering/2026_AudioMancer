@@ -1,0 +1,28 @@
+schema = 1
+id = "REQ-FUNC-337ba16d"
+title = "The application shall stay silent at operation completion when the"
+status = "active"
+
+requirement = """
+The application shall stay silent at operation completion when the completion-beep setting is disabled or absent, and when the operator cancelled the operation.
+"""
+
+verification = "Automated: pytest selectors patching QApplication.beep assert no audible call for the disabled, absent, and operator-cancelled paths."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_play_completion_beep_stays_silent_for_disabled_or_missing_preference",
+  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_cancel_does_not_play_completion_beep",
+  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_stays_silent_when_completion_beep_is_disabled",
+]
+
+priority = "normal"
+rationale = """
+A beep the operator did not ask for is noise, and cancellation is operator-initiated so the operator is already present; the silent paths are as much a contract as the audible one.
+"""
+created = 2026-07-25
+updated = 2026-07-25

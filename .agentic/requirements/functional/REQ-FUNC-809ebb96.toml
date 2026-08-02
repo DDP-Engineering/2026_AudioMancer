@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-809ebb96"
+title = "Cleanup shall allow an LLM to override a deterministic prior only when"
+status = "active"
+
+requirement = """
+Cleanup shall allow an LLM to override a deterministic prior only when matching valid primary and blind-verifier choices support the override.
+"""
+
+verification = "Matching verifier override, disagreement fallback, and strict prompt-choice tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/prompts/text_cleanup_adjudication_primary_system.txt",
+  "04_Software/AudioMancer/prompts/text_cleanup_adjudication_verifier_system.txt",
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_cleanup_prompts_require_listed_choices",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_matching_primary_and_verifier_may_override_prior",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_verifier_disagreement_keeps_deterministic_prior",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Small or online models must not replace a deterministic decision on one unverified response.
+"""
+created = 2026-07-28
+updated = 2026-07-30

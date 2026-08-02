@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-a4c87ddc"
+title = "Each persisted Audio Block entry shall carry only speech_block_id"
+status = "active"
+
+requirement = """
+Each persisted Audio Block entry shall carry only speech_block_id, voice_target_id, generated, approved, audio_can_play, audio_duration_seconds, and generation_fingerprint, plus split_part_count and split_plan_fingerprint only when the block was split.
+"""
+
+verification = "Automated contract test: persisted blocks carry exactly the seven contract fields, plus the two split fields only when split_part_count > 1."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_persisted_block_carries_only_the_contracted_field_set",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_split_fields_are_persisted_only_for_split_blocks",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+The exact minimal field set prevents drift between Audio Blocks state and authoritative Speech Blocks data.
+"""
+created = 2026-07-25
+updated = 2026-07-26

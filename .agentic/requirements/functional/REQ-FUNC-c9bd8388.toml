@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-c9bd8388"
+title = "Speech-block report rebuild shall reflect stage counts and warnings"
+status = "active"
+
+requirement = """
+Speech-block report rebuild shall reflect stage counts and warnings.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_rebuild_report_reflects_stage_counts_and_warnings",
+]
+
+priority = "high"
+rationale = """
+The report must project truthful counts and warnings.
+"""
+created = 2026-07-19
+updated = 2026-07-24

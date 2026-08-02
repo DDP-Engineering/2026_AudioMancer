@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-740ca92f"
+title = "Narrator export shall use the authoritative document and canonical"
+status = "active"
+
+requirement = """
+Narrator export shall use the authoritative document and canonical profile WAV.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_export_uses_authoritative_document_and_profile_wav",
+]
+
+priority = "high"
+rationale = """
+Export must read the single authoritative narrator source.
+"""
+created = 2026-07-24
+updated = 2026-07-24

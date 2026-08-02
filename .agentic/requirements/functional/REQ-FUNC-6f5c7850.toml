@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-6f5c7850"
+title = "The Speech Blocks controller shall route generation and resplit with"
+status = "active"
+
+requirement = """
+The Speech Blocks controller shall route generation and resplit with confirmation and pass extra prompts through.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_requires_confirmation_before_starting",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_passes_extra_prompt_to_generation",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_passes_extra_prompt_to_selected_resplit",
+]
+
+priority = "high"
+rationale = """
+Generation must start deliberately and carry operator prompts.
+"""
+created = 2026-07-19
+updated = 2026-07-24

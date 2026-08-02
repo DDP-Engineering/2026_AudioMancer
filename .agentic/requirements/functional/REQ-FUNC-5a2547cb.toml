@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-5a2547cb"
+title = "The provider client shall redact sensitive values from the transaction"
+status = "active"
+
+requirement = """
+The provider client shall redact sensitive values from the transaction log.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_redacts_sensitive_values_from_transaction_log",
+]
+
+priority = "high"
+rationale = """
+Credentials must never leak into transaction logs.
+"""
+created = 2026-07-19
+updated = 2026-07-24

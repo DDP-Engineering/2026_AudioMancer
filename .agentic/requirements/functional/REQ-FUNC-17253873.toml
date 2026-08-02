@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-17253873"
+title = "The Characters controller shall reject a duplicate character name on"
+status = "active"
+
+requirement = """
+The Characters controller shall reject a duplicate character name on add.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_add_rejects_duplicate_name",
+]
+
+priority = "high"
+rationale = """
+Manual additions must not create duplicate identities.
+"""
+created = 2026-07-19
+updated = 2026-07-24

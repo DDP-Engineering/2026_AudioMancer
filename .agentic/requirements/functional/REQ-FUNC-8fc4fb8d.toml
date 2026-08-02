@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-8fc4fb8d"
+title = "Source import shall reject a previous-source path that escapes the"
+status = "active"
+
+requirement = """
+Source import shall reject a previous-source path that escapes the project root.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_previous_source_traversal_path",
+]
+
+priority = "high"
+rationale = """
+Replacement must not delete files outside the project.
+"""
+created = 2026-07-18
+updated = 2026-07-24

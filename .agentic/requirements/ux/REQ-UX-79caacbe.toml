@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-UX-79caacbe"
+title = "The scroll step filter shall move the scroll pane by configured steps"
+status = "active"
+
+requirement = """
+The scroll step filter shall move the scroll pane by configured steps and ignore non-scroll-area widgets.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_moves_scroll_pane_by_configured_steps",
+  "04_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_ignores_non_scroll_area_widgets",
+]
+
+priority = "high"
+rationale = """
+Scroll behavior must be predictable and scoped to scroll areas.
+"""
+created = 2026-07-24
+updated = 2026-07-24

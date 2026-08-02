@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-8e7c0758"
+title = "The Audio Blocks controller shall preserve the selected block across"
+status = "active"
+
+requirement = """
+The Audio Blocks controller shall preserve the selected block across regeneration refresh, selected-audio generation, and playback stop.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_refresh",
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_preserves_speech_blocks_review_after_selected_audio_generation",
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_preserves_selected_block_after_selected_playback_stop",
+]
+
+priority = "high"
+rationale = """
+Operator selection must survive refresh and playback transitions.
+"""
+created = 2026-07-19
+updated = 2026-07-24

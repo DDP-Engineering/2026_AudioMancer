@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-f55ef9d9"
+title = "Character discovery shall request demographic-confidence candidates and"
+status = "active"
+
+requirement = """
+Character discovery shall request demographic-confidence candidates and preserve confidence during normalization.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_prompts_request_demographic_confidence",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_window_candidate_normalization_preserves_demographic_confidence",
+]
+
+priority = "high"
+rationale = """
+Candidate demographics must be requested and preserved through normalization.
+"""
+created = 2026-07-19
+updated = 2026-07-24

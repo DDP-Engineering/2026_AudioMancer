@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-b591a6da"
+title = "Speech-block generation shall reject a profile with too little AI"
+status = "active"
+
+requirement = """
+Speech-block generation shall reject a profile with too little AI context.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_rejects_profile_with_too_little_ai_context",
+]
+
+priority = "high"
+rationale = """
+A profile that cannot fit the request must be refused.
+"""
+created = 2026-07-19
+updated = 2026-07-24

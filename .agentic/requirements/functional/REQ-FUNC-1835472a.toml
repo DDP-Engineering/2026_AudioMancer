@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-1835472a"
+title = "Character voices state shall disable character edit and generate in"
+status = "active"
+
+requirement = """
+Character voices state shall disable character edit and generate in same-narrator mode.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_same_narrator_mode_disables_character_edit_and_generate",
+]
+
+priority = "high"
+rationale = """
+Same-narrator mode has no per-character voice work to edit or generate.
+"""
+created = 2026-07-19
+updated = 2026-07-24

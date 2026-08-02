@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-PLAT-9fe6262f"
+title = "Settings validation shall replace any interface language outside"
+status = "active"
+
+requirement = """
+Settings validation shall replace any interface language outside config.SUPPORTED_LANGUAGES with config.DEFAULT_LANGUAGE.
+"""
+
+verification = "Focused settings tests passed: invalid fr heals to en on load and save."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_self_heals_missing_and_invalid_values",
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_save_settings_writes_validated_payload_to_disk",
+]
+
+priority = "high"
+rationale = """
+Persisted or submitted settings must not activate an untranslated operator interface.
+"""
+created = 2026-07-29
+updated = 2026-07-29

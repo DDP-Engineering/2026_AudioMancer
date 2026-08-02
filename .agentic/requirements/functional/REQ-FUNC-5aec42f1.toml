@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-5aec42f1"
+title = "Project snapshot shall append the ZIP extension and a default name"
+status = "active"
+
+requirement = """
+Project snapshot shall append the ZIP extension and a default name.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_appends_zip_extension_and_default_name",
+]
+
+priority = "high"
+rationale = """
+Snapshots must have a valid archive name.
+"""
+created = 2026-07-24
+updated = 2026-07-24

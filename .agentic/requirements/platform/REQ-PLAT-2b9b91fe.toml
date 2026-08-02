@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-PLAT-2b9b91fe"
+title = "The default UI theme identifier config.DEFAULT_UI_THEME_ID shall be"
+status = "active"
+
+requirement = """
+The default UI theme identifier config.DEFAULT_UI_THEME_ID shall be 'audiomancer_dark' so a fresh valid settings file opens in the brand theme.
+"""
+
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_default_theme_is_audiomancer_dark",
+]
+
+priority = "normal"
+rationale = """
+The application should open in the AudioMancer brand look out of the box, consistent with default_theme_id().
+"""
+created = 2026-07-25
+updated = 2026-07-25

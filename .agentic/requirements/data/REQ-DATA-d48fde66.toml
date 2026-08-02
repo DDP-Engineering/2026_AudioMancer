@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-DATA-d48fde66"
+title = "Cleanup runtime quality reporting shall expose the backend kind and"
+status = "active"
+
+requirement = """
+Cleanup runtime quality reporting shall expose the backend kind and count of fragments submitted to an online provider.
+"""
+
+verification = "Successful and failed online submission disclosure tests pass without persisting submitted fragments."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_online_disclosure_counts_failed_submission_attempts",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_online_disclosure_metrics_do_not_persist_fragments_or_secrets",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Operators need durable disclosure visibility without persisting the submitted text.
+"""
+created = 2026-07-28
+updated = 2026-07-30

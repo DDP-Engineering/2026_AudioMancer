@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-9dcf0271"
+title = "Cleanup AI adjudication shall retry an invalid batch once and continue"
+status = "active"
+
+requirement = """
+Cleanup AI adjudication shall retry an invalid batch once and continue later batches with deterministic fallback after the retry fails.
+"""
+
+verification = "One-retry and later-batch continuation test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_invalid_batch_retries_once_then_falls_back_and_continues",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+A provider or schema failure must remain local to the affected boundaries.
+"""
+created = 2026-07-28
+updated = 2026-07-30

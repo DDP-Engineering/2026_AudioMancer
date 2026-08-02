@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-3542179e"
+title = "The operation runtime shall constrain all project-relative artifact"
+status = "active"
+
+requirement = """
+The operation runtime shall constrain all project-relative artifact paths to the active project without creating folders.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_project_relative_path_resolver_rejects_escapes",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_resolve_operation_path_uses_project_root_without_creating_folders",
+]
+
+priority = "high"
+rationale = """
+Artifact paths must never escape the project.
+"""
+created = 2026-07-19
+updated = 2026-07-24

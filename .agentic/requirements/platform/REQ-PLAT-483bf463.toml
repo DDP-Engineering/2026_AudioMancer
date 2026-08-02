@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-PLAT-483bf463"
+title = "AudioMancer shall provide its PCM conversion through the internal codec"
+status = "active"
+
+requirement = """
+AudioMancer shall provide its PCM conversion through the internal codec and remain importable on every supported Python interpreter.
+"""
+
+verification = "Automated: source tree dependency scan and Audio Assembly import coverage on supported interpreters."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_sources_use_internal_pcm_codec",
+]
+
+spec = "specs/python_interpreter_range.spec.md"
+priority = "high"
+rationale = """
+Audio Assembly and Scene Mix must use dependencies available across the declared interpreter range.
+"""
+created = 2026-07-25
+updated = 2026-07-25

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-b27e4e87"
+title = "The Home controller shall create and activate a project"
+status = "active"
+
+requirement = """
+The Home controller shall create and activate a project.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_creates_and_activates_project",
+]
+
+priority = "high"
+rationale = """
+Creating a project must activate it for the workflow.
+"""
+created = 2026-07-18
+updated = 2026-07-24

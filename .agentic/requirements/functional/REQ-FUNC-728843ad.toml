@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-728843ad"
+title = "Character voice targets and sample bytes shall be persisted atomically"
+status = "active"
+
+requirement = """
+Character voice targets and sample bytes shall be persisted atomically.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_voices_targets_use_atomic_json_writer",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_audio_uses_atomic_byte_writer",
+]
+
+priority = "high"
+rationale = """
+Durable voice artifacts must be written atomically.
+"""
+created = 2026-07-19
+updated = 2026-07-24

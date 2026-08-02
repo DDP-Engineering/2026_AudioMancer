@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-b3c6df2a"
+title = "VoiceWeaver endpoint URLs shall cover the extended REST surface without"
+status = "active"
+
+requirement = """
+VoiceWeaver endpoint URLs shall cover the extended REST surface without duplicating the version suffix.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surface",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_endpoint_url_avoids_duplicate_v1_suffix",
+]
+
+priority = "high"
+rationale = """
+Endpoint construction must be correct across the REST surface.
+"""
+created = 2026-07-19
+updated = 2026-07-24

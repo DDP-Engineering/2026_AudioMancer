@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-c1ab4b69"
+title = "Narrator AI profile generation shall atomically persist attempt status"
+status = "active"
+
+requirement = """
+Narrator AI profile generation shall atomically persist attempt status, cumulative token usage, budget metadata, current instructions, and a deterministic compact resume checkpoint in `narrator_voice.json`; retain matching resume state and leave profiles unchanged on cancellation/failure; append all validated profiles and clear resume in one write on success; and keep transaction logs separate.
+"""
+
+verification = "Compact AI resume checkpoint test passes; success-path companion test also passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_keeps_compact_resume_in_document",
+]
+
+priority = "high"
+rationale = """
+One transaction document must support safe retries without coupling durable state to diagnostic files or publishing partial profile inventories.
+"""
+created = 2026-07-21
+updated = 2026-07-21

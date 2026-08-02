@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-4cdfb665"
+title = "Token usage notes shall render 'unavailable' only when usage was"
+status = "active"
+
+requirement = """
+Token usage notes shall render 'unavailable' only when usage was previously persisted.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_unavailable_only_when_usage_was_persisted",
+]
+
+priority = "high"
+rationale = """
+An unavailable note must not appear for operations that never recorded usage.
+"""
+created = 2026-07-19
+updated = 2026-07-24

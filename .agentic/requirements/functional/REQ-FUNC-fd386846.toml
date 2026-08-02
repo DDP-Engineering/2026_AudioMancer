@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-fd386846"
+title = "Workflow impact shall be able to skip preserved audio-artifact"
+status = "active"
+
+requirement = """
+Workflow impact shall be able to skip preserved audio-artifact collection.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_can_skip_preserved_audio_artifact_collection",
+]
+
+priority = "high"
+rationale = """
+Preserved artifacts must be excludable from collection.
+"""
+created = 2026-07-19
+updated = 2026-07-24

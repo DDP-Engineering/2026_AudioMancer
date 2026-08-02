@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-af8ba070"
+title = "AI translation shall persist one authoritative target-language document"
+status = "active"
+
+requirement = """
+AI translation shall persist one authoritative target-language document aligned to canonical chunk IDs, writing once per completed chunk and review action.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_is_the_only_authoritative_artifact",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_writes_once_per_completed_chunk_and_review_action",
+]
+
+priority = "high"
+rationale = """
+Parallel or unaligned translation state would make downstream decisions unsafe.
+"""
+created = 2026-07-19
+updated = 2026-07-24

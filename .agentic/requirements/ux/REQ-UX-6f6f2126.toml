@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-UX-6f6f2126"
+title = "The operator-selectable interface language set shall contain exactly en"
+status = "active"
+
+requirement = """
+The operator-selectable interface language set shall contain exactly en and ro.
+"""
+
+verification = "Focused Qt page test passed: Settings exposes exactly en and ro."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_offers_exactly_supported_ui_languages",
+]
+
+priority = "high"
+rationale = """
+The Settings page must not offer locales without complete operator-facing translation catalogs.
+"""
+created = 2026-07-29
+updated = 2026-07-29

@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-bb462b56"
+title = "Text chunking chunk insertion shall preserve existing chunk IDs and"
+status = "active"
+
+requirement = """
+Text chunking chunk insertion shall preserve existing chunk IDs and translation, and create the first manual chunk when none exist.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_insert_chunk_preserves_existing_chunk_ids_and_translation",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist",
+]
+
+priority = "high"
+rationale = """
+Insertion must keep stable IDs and support an empty starting point.
+"""
+created = 2026-07-19
+updated = 2026-07-24

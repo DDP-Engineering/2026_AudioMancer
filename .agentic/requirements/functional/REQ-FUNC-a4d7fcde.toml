@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a4d7fcde"
+title = "Reset_speech_blocks shall remove the authoritative speech_blocks.json"
+status = "active"
+
+requirement = """
+reset_speech_blocks shall remove the authoritative speech_blocks.json document so the operator can regenerate cleanly.
+"""
+
+verification = "Reset removes the authoritative document."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_reset_removes_document",
+]
+
+priority = "high"
+rationale = """
+Reset must clear the current Speech Blocks state completely.
+"""
+created = 2026-07-24
+updated = 2026-07-24

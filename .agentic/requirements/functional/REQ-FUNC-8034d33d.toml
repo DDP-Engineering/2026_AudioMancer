@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-8034d33d"
+title = "Cleanup shall preserve verse and preformatted intra-block line"
+status = "active"
+
+requirement = """
+Cleanup shall preserve verse and preformatted intra-block line structure with typed semantic line breaks.
+"""
+
+verification = "Verse semantic-line and dialogue-exclusion test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_non_native_verse_uses_semantic_line_breaks_and_excludes_dialogue",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Poetry and preformatted content require meaningful single line breaks rather than prose unwrapping or paragraph inflation.
+"""
+created = 2026-07-28
+updated = 2026-07-30

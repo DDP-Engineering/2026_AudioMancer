@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-bfa5d6ed"
+title = "The Text Chunking component documentation shall describe the current"
+status = "active"
+
+requirement = """
+The Text Chunking component documentation shall describe the current single-document contract.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  ".agentic/knowledge/Text_Chunking.md",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_component_documentation_describes_current_contract",
+]
+
+priority = "high"
+rationale = """
+Component documentation must match the implemented contract.
+"""
+created = 2026-07-24
+updated = 2026-07-24

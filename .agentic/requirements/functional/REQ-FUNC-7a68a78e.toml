@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-7a68a78e"
+title = "The Character Voices controller shall preserve the existing sample on"
+status = "active"
+
+requirement = """
+The Character Voices controller shall preserve the existing sample on cancelled or failed generation.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_sample_generation_cancel_during_model_load",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_failed_character_sample_generation_preserves_existing_sample",
+]
+
+priority = "high"
+rationale = """
+Failed generation must not destroy an existing sample.
+"""
+created = 2026-07-19
+updated = 2026-07-24

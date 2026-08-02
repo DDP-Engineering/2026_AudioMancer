@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-554ffe77"
+title = "Cleanup document loading shall raise CleanupDocumentError for every"
+status = "active"
+
+requirement = """
+Cleanup document loading shall raise CleanupDocumentError for every invalid completed-document blocking quality metric.
+"""
+
+verification = "Focused issue #33 run passed all blocking-metric variants; E-0007."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Persisted JSON is untrusted input, and the strict document boundary must not leak conversion or shape exceptions to consumers.
+"""
+created = 2026-07-29
+updated = 2026-07-30

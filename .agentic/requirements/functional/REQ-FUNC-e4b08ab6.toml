@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-e4b08ab6"
+title = "The operation runtime shall ensure default not-started state for"
+status = "active"
+
+requirement = """
+The operation runtime shall ensure default not-started state for operations with a dedicated state artifact, while Audio Blocks and Speech Blocks shall derive state from their authoritative documents.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_compact_character_discovery_state",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_creates_not_started_state_only",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_ensure_default_operation_state_skips_audio_blocks",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+Each operation must obtain not-started state from its current persistence contract.
+"""
+created = 2026-07-19
+updated = 2026-07-26

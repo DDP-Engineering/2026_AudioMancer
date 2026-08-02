@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-c71fbab4"
+title = "Speech Blocks shall persist all operation metadata and blocks in one"
+status = "active"
+
+requirement = """
+Speech Blocks shall persist all operation metadata and blocks in one authoritative speech_blocks.json document with a fixed top-level field set.
+"""
+
+verification = "Single-document round-trip test passes in the full green suite."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_document_round_trips_and_writes_only_one_artifact",
+]
+
+priority = "high"
+rationale = """
+One authoritative document keeps persisted state and block-derived projections consistent.
+"""
+created = 2026-07-24
+updated = 2026-07-24

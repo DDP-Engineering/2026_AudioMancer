@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-456e2e99"
+title = "The Home page shall use a compact, non-scrolled dashboard"
+status = "active"
+
+requirement = """
+The Home page shall use a compact, non-scrolled dashboard.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_uses_compact_non_scrolled_dashboard",
+]
+
+priority = "high"
+rationale = """
+The dashboard must fit without scrolling.
+"""
+created = 2026-07-24
+updated = 2026-07-24

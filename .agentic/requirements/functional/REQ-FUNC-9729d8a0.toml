@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-9729d8a0"
+title = "Text extraction shall report PDF warnings and the total page count"
+status = "active"
+
+requirement = """
+Text extraction shall report PDF warnings and the total page count.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_reports_pdf_warnings_and_total_pages",
+]
+
+priority = "high"
+rationale = """
+Operators need extraction warnings and page totals for PDF sources.
+"""
+created = 2026-07-24
+updated = 2026-07-24

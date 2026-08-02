@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-35279cc2"
+title = "The Speech Blocks page shall lay out selected-chunk actions, keep a"
+status = "active"
+
+requirement = """
+The Speech Blocks page shall lay out selected-chunk actions, keep a minimum pane width, restore text selection, and align metadata controls.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_selected_chunk_actions_fill_row_evenly",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_selected_chunk_pane_keeps_minimum_width",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_restores_selected_chunk_text_selection",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_metadata_controls_align_to_list_edges",
+]
+
+priority = "high"
+rationale = """
+Selected-chunk layout must be stable and usable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

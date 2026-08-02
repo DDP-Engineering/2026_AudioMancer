@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-168e8717"
+title = "Audio-block generation shall preserve existing audio on fingerprint"
+status = "active"
+
+requirement = """
+Audio-block generation shall preserve existing audio on fingerprint change, start fresh on input-fingerprint mismatch, and skip later existing audio after an insert.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_changes",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run",
+]
+
+priority = "high"
+rationale = """
+Completed audio must be reused when still valid.
+"""
+created = 2026-07-19
+updated = 2026-07-24

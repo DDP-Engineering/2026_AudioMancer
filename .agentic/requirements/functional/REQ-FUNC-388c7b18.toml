@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-388c7b18"
+title = "The provider client shall retry transient failures and not retry"
+status = "active"
+
+requirement = """
+The provider client shall retry transient failures and not retry permanent HTTP failures.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_transient_failure",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
+]
+
+priority = "high"
+rationale = """
+Retries must recover transient errors without hammering permanent ones.
+"""
+created = 2026-07-19
+updated = 2026-07-24

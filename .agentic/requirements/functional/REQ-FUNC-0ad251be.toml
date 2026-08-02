@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-0ad251be"
+title = "Speech-block source-chunks input path shall select original or"
+status = "active"
+
+requirement = """
+Speech-block source-chunks input path shall select original or translated input.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_source_chunks_input_path_selects_original_or_translated",
+]
+
+priority = "high"
+rationale = """
+Input resolution must follow the approved language source.
+"""
+created = 2026-07-19
+updated = 2026-07-24

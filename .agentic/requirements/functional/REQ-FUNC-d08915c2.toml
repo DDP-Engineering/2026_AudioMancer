@@ -1,0 +1,30 @@
+schema = 1
+id = "REQ-FUNC-d08915c2"
+title = "Each persisted narratable chunk shall record whether its leading"
+status = "active"
+
+requirement = """
+Each persisted narratable chunk shall record whether its leading boundary is a recognized scene separator.
+"""
+
+verification = "Focused strict-schema and both Chunking materializer tests verify a required boolean field and correct boundary propagation."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_ai_chunking_omits_and_splits_around_scene_separator_artifacts",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_non_boolean_scene_boundary_flag",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_slices_cleanup_paragraph_offsets_and_propagates_roles",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Omitting separator text must not erase the structural boundary associated with the following narratable chunk.
+"""
+created = 2026-07-29
+updated = 2026-07-30

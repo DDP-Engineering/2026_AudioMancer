@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-5e008e3b"
+title = "Project export shall detect readiness for TXT, Markdown, and ZIP export"
+status = "active"
+
+requirement = """
+Project export shall detect readiness for TXT, Markdown, and ZIP export types.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_detects_readiness_for_all_export_types",
+]
+
+priority = "high"
+rationale = """
+Exports must only offer deliverables that current artifacts can produce.
+"""
+created = 2026-07-18
+updated = 2026-07-24

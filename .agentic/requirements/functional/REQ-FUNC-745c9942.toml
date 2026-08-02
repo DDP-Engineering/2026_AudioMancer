@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-745c9942"
+title = "The Audio Blocks controller audiobook playback shall include the"
+status = "active"
+
+requirement = """
+The Audio Blocks controller audiobook playback shall include the current pause even without an audio block.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_audiobook_playback_includes_current_pause_without_audio_block",
+]
+
+priority = "high"
+rationale = """
+Pause blocks must be represented in playback.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-e85a7cf0"
+title = "Speech-block source resolution shall use the translated text when a"
+status = "active"
+
+requirement = """
+Speech-block source resolution shall use the translated text when a translation exists, is complete, and every chunk is approved (regardless of the selected Character Voices language); otherwise it shall use the original chunking text. This mirrors Character Discovery source selection.
+"""
+
+verification = "resolve_source_chunks mirrors Character Discovery; 4 selector tests green (translated when complete+approved regardless of voice language; original when absent/partial)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_translated_regardless_of_selected_voice_language",
+]
+
+priority = "high"
+rationale = """
+The translated text is repair-normalized (e.g. mid-phrase newlines removed); once fully approved it is the canonical source, and Speech Blocks must match Character Discovery so both operations read the same approved source.
+"""
+created = 2026-07-19
+updated = 2026-07-24

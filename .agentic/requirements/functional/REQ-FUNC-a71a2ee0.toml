@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-a71a2ee0"
+title = "The translation controller shall resume without prompting for all"
+status = "active"
+
+requirement = """
+The translation controller shall resume without prompting for all resumable statuses.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_controller_resumes_without_prompt_for_all_resumable_statuses",
+]
+
+priority = "high"
+rationale = """
+Resuming an interrupted translation must not re-prompt the operator.
+"""
+created = 2026-07-19
+updated = 2026-07-24

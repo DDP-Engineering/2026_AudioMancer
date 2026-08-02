@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-1ae729a7"
+title = "Workflow impact shall derive ordered full and selective invalidation"
+status = "active"
+
+requirement = """
+Workflow impact shall derive ordered full and selective invalidation summaries with normalized affected IDs.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_operation_order_matches_current_workflow",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_summary_preserves_requested_operations",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_selective_summary_normalizes_affected_ids",
+  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_wrapper_keeps_existing_broad_reset_behavior",
+]
+
+priority = "high"
+rationale = """
+Downstream invalidation must be predictable and correctly ordered.
+"""
+created = 2026-07-19
+updated = 2026-07-24

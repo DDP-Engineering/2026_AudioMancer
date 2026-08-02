@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-cbf4d2eb"
+title = "The main window shall refresh Home export readiness"
+status = "active"
+
+requirement = """
+The main window shall refresh Home export readiness.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_main_window_home_exports.py::test_main_window_refreshes_home_export_readiness",
+]
+
+priority = "high"
+rationale = """
+Export readiness on Home must stay in sync with project state.
+"""
+created = 2026-07-24
+updated = 2026-07-24

@@ -1,0 +1,28 @@
+schema = 1
+id = "REQ-FUNC-43787500"
+title = "The Speech Blocks page shall render chunks, read-only block details"
+status = "active"
+
+requirement = """
+The Speech Blocks page shall render chunks, read-only block details, compact header, operation names, and translated labels.
+"""
+
+verification = "Automated: 5 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_renders_chunks_and_read_only_block_details",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_chunk_list_uses_one_line_full_preview",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_list_shows_operation_name_for_metadata_block",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_applies_translated_labels",
+]
+
+priority = "high"
+rationale = """
+The review surface must present the plan readably.
+"""
+created = 2026-07-19
+updated = 2026-07-24

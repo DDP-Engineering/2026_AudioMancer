@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-c3211661"
+title = "Project validation shall return normally when Cleanup completion"
+status = "active"
+
+requirement = """
+Project validation shall return normally when Cleanup completion evidence is invalid.
+"""
+
+verification = "Focused project-open regression returned normally without exception; E-0011."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+A corrupt Cleanup document must become unavailable completion evidence without crashing the Open Project path; existing metadata-healing policy determines whether the normal result is ok or repair_required.
+"""
+created = 2026-07-29
+updated = 2026-07-30

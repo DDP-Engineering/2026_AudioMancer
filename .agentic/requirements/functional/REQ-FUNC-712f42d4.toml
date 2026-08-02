@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-712f42d4"
+title = "The operation runner shall support cooperative cancellation"
+status = "active"
+
+requirement = """
+The operation runner shall support cooperative cancellation.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_cancel_sets_event_and_calls_cancel_handler",
+]
+
+priority = "high"
+rationale = """
+Operators must be able to cancel long-running work safely.
+"""
+created = 2026-07-19
+updated = 2026-07-24

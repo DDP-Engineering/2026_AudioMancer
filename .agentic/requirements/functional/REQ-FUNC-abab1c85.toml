@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-abab1c85"
+title = "The Text Chunking controller shall route deterministic starts through"
+status = "active"
+
+requirement = """
+The Text Chunking controller shall route deterministic starts through the shared operation and clear the dialog.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_start_operation_clears_dialog",
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_chunk_request_uses_controller_start",
+]
+
+priority = "high"
+rationale = """
+Deterministic chunking must run through one shared start path.
+"""
+created = 2026-07-19
+updated = 2026-07-24

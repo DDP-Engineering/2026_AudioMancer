@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-666a26b5"
+title = "The Narrator Voice controller shall keep selection and editor state"
+status = "active"
+
+requirement = """
+The Narrator Voice controller shall keep selection and editor state explicit: create without changing selection, clear sample and selection on edit, and refresh delete state on selection change.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_create_profile_does_not_change_selected_narrator",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_selected_profile_clears_sample_and_selection",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_selection_change_refreshes_delete_state",
+]
+
+priority = "high"
+rationale = """
+Editor and selection state must remain explicit and consistent.
+"""
+created = 2026-07-19
+updated = 2026-07-24

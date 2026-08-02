@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-REL-33fa2b3b"
+title = "Development builds shall accept only Chunking documents that match the"
+status = "active"
+
+requirement = """
+Development builds shall accept only Chunking documents that match the current strict schema.
+"""
+
+verification = "Focused strict-schema and component-contract run passed on 2026-07-30: 11 passed; incompatible Chunking shapes are rejected."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Strict schema validation prevents incomplete or incompatible derived data from being treated as current Chunking state.
+"""
+created = 2026-07-30
+updated = 2026-07-30

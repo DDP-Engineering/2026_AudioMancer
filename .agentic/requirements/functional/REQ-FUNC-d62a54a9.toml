@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-d62a54a9"
+title = "AI Chunking resume shall accept only resumable AI-assisted documents"
+status = "active"
+
+requirement = """
+AI Chunking resume shall accept only resumable AI-assisted documents whose source fingerprint matches current canonical clean text, reuse the stored strategy and normalized instructions, recalculate windows from the currently selected profile and settings, preserve cumulative usage and fallback count, and create a separate transaction log for each invocation without persisting its path.
+"""
+
+verification = "AI resume contract uses stored operation data and current runtime profile."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile",
+]
+
+priority = "high"
+rationale = """
+Resume must continue the same source operation without coupling durable project state to stale provider configuration or a previous log file.
+"""
+created = 2026-07-20
+updated = 2026-07-20

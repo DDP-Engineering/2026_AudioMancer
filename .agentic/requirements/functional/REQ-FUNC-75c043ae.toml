@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-75c043ae"
+title = "Text extraction shall write self-contained canonical text and report"
+status = "active"
+
+requirement = """
+Text extraction shall write self-contained canonical text and report artifacts for a TXT source.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_writes_self_contained_artifacts_for_txt_source",
+]
+
+priority = "high"
+rationale = """
+Cleanup needs one stable local text input with self-contained state.
+"""
+created = 2026-07-18
+updated = 2026-07-24

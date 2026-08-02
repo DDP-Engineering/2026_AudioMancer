@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-UX-a3f0f73c"
+title = "The Settings page shall present a separate text-window font-size"
+status = "active"
+
+requirement = """
+The Settings page shall present a separate text-window font-size selector offering the seven font-size steps, load the persisted text_font_size_step, and write the chosen step into the built settings payload.
+"""
+
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_text_font_size_selector_persists",
+]
+
+priority = "high"
+rationale = """
+Reading/editing text windows must be sized independently from the interface controls.
+"""
+created = 2026-07-25
+updated = 2026-07-25

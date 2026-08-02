@@ -1,0 +1,1687 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+# -----------------------------------------------------------------------------
+"""
+@file aegis.py
+@brief The AEGIS Light companion CLI: a scaffolder and a reporter.
+@version 0.1.0
+@details Single file, stdlib only, Python >= 3.11. Invoked as
+         `python .agentic/aegis.py <cmd>` from the repo root on Windows and
+         Linux alike; it locates its own `.agentic` directory from
+         `__file__`, never from the working directory. Commands exit 0 on
+         success and 1 with a one-line message on user error - no
+         tracebacks for expected failures.
+@details The ownership split is law here: `requirements/`,
+         `specs/`, `tasks/` and `knowledge/` are user data and are only
+         ever created as empty folders; `aegis.toml` is written only when
+         absent; root pointer files are appended to under a marker.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as _dt
+import fnmatch
+import json
+import re
+import secrets
+import subprocess
+import sys
+import tempfile
+import time
+import tomllib
+from pathlib import Path
+
+VERSION = "0.1.0"
+SCHEMA = 1
+
+AGENTIC = Path(__file__).resolve().parent
+ROOT = AGENTIC.parent
+
+DATA_DIRS = ("requirements", "specs", "tasks", "knowledge")
+POINTER_FILES = ("AGENTS.md", "CLAUDE.md", "QWEN.md")
+MARK_BEGIN = "<!-- AEGIS-LIGHT:BEGIN (managed by .agentic/aegis.py init) -->"
+MARK_END = "<!-- AEGIS-LIGHT:END -->"
+
+TASK_TYPES = ("feature", "fix", "change", "adopt")
+
+#: category name -> (folder under requirements/, requirement ID code).
+#: Folder names follow .agentic/AGENTS.md; the longer spellings are
+#: accepted as aliases so both vocabularies work on the command line.
+CATEGORIES: dict[str, tuple[str, str]] = {
+    "functional": ("functional", "FUNC"),
+    "ux": ("ux", "UX"),
+    "nfr": ("nfr", "NFR"),
+    "non_functional": ("nfr", "NFR"),
+    "security": ("security", "SEC"),
+    "data": ("data", "DATA"),
+    "data_privacy": ("data", "DATA"),
+    "platform": ("platform", "PLAT"),
+    "reliability": ("reliability", "REL"),
+    "release": ("reliability", "REL"),
+    "test": ("test", "TEST"),
+    "testing": ("test", "TEST"),
+}
+
+DEFAULT_CONFIG = """\
+# AEGIS Light configuration. Written once by `aegis init` and yours from
+# then on - upgrades never overwrite this file.
+
+schema = 1
+
+[commands]
+# `aegis test` runs `test`; `aegis check --run` runs every entry here.
+test = "pytest -q"
+# test_impacted = "pytest -q {tests}"   # {tests} = the focused regression set
+# lint = "ruff check ."
+# timeout = 1800                        # seconds allowed per command
+
+[layout]
+# Globs used by the traceability heuristics of `aegis check`.
+source = ["src/"]
+tests = ["tests/"]
+
+[check]
+secret_patterns_extra = []
+ignore = []
+strict_promote = []
+# run = ["test", "lint"]   # restrict what `check --run` executes; without
+#                          # this, side-effect-looking names are skipped
+"""
+
+POINTER_DIGEST = """\
+## AEGIS Light workflow
+
+The full contract is `.agentic/AGENTS.md` - read it before starting work.
+This digest is enough to act on if you read nothing else.
+
+Stages, one step file each in `.agentic/steps/`: **frame** (agree scope,
+open the task journal) -> **specify** (write the requirement, and a spec
+when useful) -> **design** (a short note for non-trivial work) -> **build**
+(failing test first, then the implementation, until green) -> **deliver**
+(full suite, check, knowledge pages, report, commit). A small fix or change
+may take the quick path, frame -> build -> deliver.
+
+To resume: `python .agentic/aegis.py status` lists the task journals; open
+`.agentic/tasks/TASK-<id>.md`, read its `stage:` line and `## Log`, open
+that stage's step file, and continue at the first unticked item of
+`## Done checklist`.
+
+Artifacts: requirements in `.agentic/requirements/<category>/`, specs in
+`.agentic/specs/`, journals in `.agentic/tasks/`, component pages in
+`.agentic/knowledge/`. `python .agentic/aegis.py check` is advisory - read
+its findings and self-correct; nothing here blocks you mid-flight.
+"""
+
+
+class UserError(Exception):
+    """An expected failure, reported as one line without a traceback."""
+
+
+# small helpers
+
+
+def today() -> str:
+    """@brief Today's date as YYYY-MM-DD."""
+    return _dt.date.today().isoformat()
+
+
+def rel(path: Path) -> str:
+    """@brief Repo-relative path with forward slashes, for output and storage."""
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def read_text(path: Path) -> str:
+    """
+    @brief Read UTF-8 text with newlines normalised to LF.
+    @details A corrupt (non-UTF-8) artifact is a one-line user error, not a
+             traceback - `check` must be able to report it like any other
+             broken file.
+    """
+    try:
+        return path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    except UnicodeDecodeError as exc:
+        raise UserError(f"{rel(path)} is not valid UTF-8: {exc}") from None
+
+
+def write_text(path: Path, text: str) -> None:
+    """@brief Write UTF-8 text (no BOM) with LF endings, creating parents."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
+def write_new(path: Path, text: str) -> None:
+    """
+    @brief Create a file exclusively - a concurrent duplicate loses cleanly.
+    @details `open("x")` is the collision backstop behind the id allocator:
+             two processes racing for the same id cannot both win silently.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+    except FileExistsError:
+        raise UserError(f"{rel(path)} already exists - run the command again "
+                        "for a fresh id") from None
+
+
+def template(name: str) -> str:
+    """@brief Load a payload template, or fail with a one-line message."""
+    path = AGENTIC / "templates" / name
+    if not path.is_file():
+        raise UserError(f"missing template: {rel(path)}")
+    return read_text(path)
+
+
+def run_git(*args: str) -> tuple[int, str] | None:
+    """
+    @brief Run git in the repo root with captured output.
+    @details Returns (returncode, stdout), or None when the git binary is
+             missing or the call itself failed - callers degrade, never crash.
+    @details Output is held in memory: a very large diff (generated or
+             vendored trees) costs proportional memory for the duration of
+             the call. There is no in-tool mitigation - `[check] ignore`
+             filters findings *after* the patch has been captured, so it
+             does not reduce this. Keep generated trees out of the diff
+             (`.gitignore`, a vendor submodule) if it matters here.
+    """
+    try:
+        out = subprocess.run(
+            ["git", *args],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.returncode, out.stdout
+
+
+def git_branch() -> str:
+    """
+    @brief Current git branch, or "unknown" when git is absent or fails.
+    @details `branch --show-current`, not `rev-parse --abbrev-ref HEAD`: it
+             also answers before the repository's first commit exists.
+    """
+    out = run_git("branch", "--show-current")
+    if out is None or out[0] != 0 or not out[1].strip():
+        return "unknown"
+    return out[1].strip()
+
+
+def load_config() -> dict:
+    """@brief Parse `.agentic/aegis.toml`; empty dict when it does not exist."""
+    path = AGENTIC / "aegis.toml"
+    if not path.is_file():
+        return {}
+    try:
+        with path.open("rb") as handle:
+            return tomllib.load(handle)
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+        raise UserError(f"{rel(path)} is not valid TOML: {exc}") from None
+
+
+def cfg_table(cfg: dict, name: str) -> dict:
+    """
+    @brief One top-level config table, tolerating a wrongly typed value.
+    @details `commands = "text"` is valid TOML but not a table; treating it
+             as an empty table keeps every caller on the one-line error
+             contract instead of raising AttributeError.
+    """
+    value = cfg.get(name)
+    return value if isinstance(value, dict) else {}
+
+
+def toml_string(value: str) -> str:
+    """@brief Quote a value as a TOML basic string."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def new_id(taken: set[str]) -> str:
+    """@brief A fresh 8-hex-char CSPRNG id not present in `taken`."""
+    for _ in range(200):
+        candidate = secrets.token_hex(4)
+        if candidate not in taken:
+            return candidate
+    raise UserError("could not allocate a free 8-hex id after 200 attempts")
+
+
+def taken_ids(folder: str, pattern: str) -> set[str]:
+    """@brief The id suffixes of every artifact matching `pattern` under `folder`."""
+    return {
+        path.stem.rsplit("-", 1)[-1].lower()
+        for path in (AGENTIC / folder).glob(pattern)
+    }
+
+
+# journal parsing - one place, reused by status and (later) check
+
+TITLE_RE = re.compile(
+    r"^#[ \t]+(TASK-[0-9A-Za-z]{4,12})[ \t]*(?:—|-{1,2})[ \t]*(.*?)[ \t]*$", re.M
+)
+HEADER_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_]*):[ \t]*(.*?)[ \t]*$")
+CHECK_RE = re.compile(r"^\s*-\s*\[([ xX])\]\s*(.*?)\s*$")
+
+
+def parse_journal(text: str) -> dict:
+    """
+    @brief Parse a task journal into id, title, header, checklist and log.
+    @details Plain regex over `key: value` lines - no YAML. The header is the
+             run of key/value lines that follows the `# TASK-<id> - <title>`
+             heading; it ends at the first blank line after it starts or at
+             the first line that is not a key/value pair.
+    """
+    lines = text.replace("\r\n", "\n").split("\n")
+    result: dict = {"id": "", "title": "", "header": {}, "checklist": [],
+                    "components": [], "log": []}
+
+    start = -1
+    for index, line in enumerate(lines):
+        match = TITLE_RE.match(line)
+        if match:
+            result["id"], result["title"] = match.group(1), match.group(2)
+            start = index
+            break
+    if start < 0:
+        return result
+
+    for line in lines[start + 1 :]:
+        if not line.strip():
+            if result["header"]:
+                break
+            continue
+        match = HEADER_RE.match(line)
+        if not match:
+            break
+        result["header"][match.group(1).lower()] = match.group(2)
+
+    section = ""
+    for line in lines[start + 1 :]:
+        if line.startswith("## "):
+            section = line[3:].strip().lower()
+            continue
+        if section.startswith("done checklist"):
+            match = CHECK_RE.match(line)
+            if match:
+                result["checklist"].append(
+                    (match.group(1).lower() == "x", match.group(2)))
+        elif section.startswith("components"):  # adoption progress
+            match = CHECK_RE.match(line)
+            if match:
+                result["components"].append(
+                    (match.group(1).lower() == "x", match.group(2)))
+        elif section == "log" and line.lstrip().startswith("- "):
+            result["log"].append(line.strip()[2:])
+    return result
+
+
+def read_journal(task_id: str) -> tuple[Path, dict]:
+    """
+    @brief Locate and parse one journal by id, with or without the prefix.
+    @details The id is validated as pure hex before it touches the
+             filesystem - a crafted id like `TASK-../../x` must never
+             resolve outside `.agentic/tasks/`.
+    """
+    suffix = task_id.split("-", 1)[1] if "-" in task_id else task_id
+    if not re.fullmatch(r"[0-9A-Fa-f]{4,12}", suffix):
+        raise UserError(f"invalid task id '{task_id}' (expected TASK-<hex id>)")
+    path = AGENTIC / "tasks" / f"TASK-{suffix.lower()}.md"
+    if not path.is_file():
+        raise UserError(f"no such task journal: {rel(path)}")
+    tasks_root = (AGENTIC / "tasks").resolve()
+    if not path.resolve().is_relative_to(tasks_root):  # symlink escape
+        raise UserError(f"{rel(path)} resolves outside .agentic/tasks")
+    return path, parse_journal(read_text(path))
+
+
+# init
+
+
+def write_pointer(name: str) -> str:
+    """
+    @brief Create or update one root pointer file, never clobbering content.
+    @details An existing file keeps every byte outside the marker pair -
+             including its newline style: a CRLF file stays CRLF. The managed
+             block is appended when absent and replaced exactly between the
+             markers when present. Returns a one-word outcome for the report.
+    """
+    path = ROOT / name
+    block = f"{MARK_BEGIN}\n\n{POINTER_DIGEST}\n{MARK_END}\n"
+    if not path.exists():
+        write_text(path, f"# {name}\n\n{block}")
+        return "created"
+
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        raw = handle.read()  # newline="" disables universal-newline translation
+    crlf = "\r\n" in raw
+    text = raw.replace("\r\n", "\n")
+
+    begin, end = text.find(MARK_BEGIN), text.find(MARK_END)
+    if begin >= 0 and end > begin:
+        stop = end + len(MARK_END)
+        if text[stop : stop + 1] == "\n":  # take the marker's own newline only
+            stop += 1
+        if text[begin:stop].strip() == block.strip():
+            return "unchanged"
+        out, outcome = text[:begin] + block + text[stop:], "refreshed"
+    else:
+        separator = ("" if text.endswith("\n\n")
+                     else "\n" if text.endswith("\n") else "\n\n")
+        out, outcome = text + separator + block, "appended"
+
+    if crlf:
+        out = out.replace("\n", "\r\n")
+    path.write_text(out, encoding="utf-8", newline="")
+    return outcome
+
+
+def cmd_init(_args: argparse.Namespace) -> int:
+    """@brief Finishing step after the payload was copied into a repo."""
+    if not (AGENTIC / "AGENTS.md").is_file():
+        raise UserError(f"payload looks incomplete: no {rel(AGENTIC / 'AGENTS.md')}")
+
+    print(f"aegis init - {rel(AGENTIC)}")
+    for name in DATA_DIRS:
+        path = AGENTIC / name
+        existed = path.is_dir()
+        path.mkdir(parents=True, exist_ok=True)
+        print(f"  {name + '/':<16} {'present' if existed else 'created'}")
+
+    config = AGENTIC / "aegis.toml"
+    if config.is_file():
+        schema = load_config().get("schema", "?")
+        print(f"  {'aegis.toml':<16} kept (yours; schema {schema})")
+    else:
+        write_text(config, DEFAULT_CONFIG)
+        print(f"  {'aegis.toml':<16} created")
+
+    for name in POINTER_FILES:
+        print(f"  {name:<16} {write_pointer(name)}")
+
+    print("Next: python .agentic/aegis.py task new \"<title>\"")
+    return 0
+
+
+# task new / req new
+
+
+def cmd_task_new(args: argparse.Namespace) -> int:
+    """@brief Scaffold a task journal from templates/task.md."""
+    title = args.title.strip()
+    if not title:
+        raise UserError("task title must not be empty")
+
+    tasks = AGENTIC / "tasks"
+    tasks.mkdir(parents=True, exist_ok=True)
+    taken = taken_ids("tasks", "TASK-*.md")
+    task_id = f"TASK-{new_id(taken)}"
+    branch = git_branch()
+    stamp = today()
+
+    text = template("task.md")
+    text = TITLE_RE.sub(lambda _m: f"# {task_id} — {title}", text, count=1)
+    text = re.sub(r"^type: .*$", f"type: {args.type}", text, count=1, flags=re.M)
+    text = re.sub(r"^branch: .*$", lambda _m: f"branch: {branch}", text, count=1,
+                  flags=re.M)
+    text = re.sub(r"^opened: .*$", f"opened: {stamp}", text, count=1, flags=re.M)
+    text = re.sub(r"^- \d{4}-\d{2}-\d{2} frame:", f"- {stamp} frame:", text, count=1,
+                  flags=re.M)
+
+    path = tasks / f"{task_id}.md"
+    write_new(path, text)
+    print(rel(path))
+    return 0
+
+
+def cmd_req_new(args: argparse.Namespace) -> int:
+    """@brief Scaffold a requirement from templates/requirement.toml."""
+    key = args.category.strip().lower()
+    if key not in CATEGORIES:
+        known = ", ".join(sorted({v[0] for v in CATEGORIES.values()}))
+        raise UserError(f"unknown category '{args.category}' (known: {known})")
+    title = args.title.strip()
+    if not title:
+        raise UserError("requirement title must not be empty")
+
+    folder, code = CATEGORIES[key]
+    taken = taken_ids("requirements", "**/REQ-*.toml")
+    req_id = f"REQ-{code}-{new_id(taken)}"
+    stamp = today()
+
+    text = template("requirement.toml")
+    text = re.sub(r'^id = ".*"$', f'id = "{req_id}"', text, count=1, flags=re.M)
+    text = re.sub(r"^title = .*$", lambda _m: f"title = {toml_string(title)}", text,
+                  count=1, flags=re.M)
+    text = re.sub(r"^created = .*$", f"created = {stamp}", text, count=1, flags=re.M)
+    text = re.sub(r"^updated = .*$", f"updated = {stamp}", text, count=1, flags=re.M)
+    try:
+        tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        raise UserError(f"generated requirement is not valid TOML: {exc}") from None
+
+    path = AGENTIC / "requirements" / folder / f"{req_id}.toml"
+    write_new(path, text)
+    print(rel(path))
+    return 0
+
+
+# status - the resume entry point
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    """@brief List task journals, or show one task's state in detail."""
+    if args.task:
+        return status_one(args.task, args.json)
+
+    paths = sorted((AGENTIC / "tasks").glob("TASK-*.md"))
+    parsed, unreadable = [], []
+    for path in paths:  # one corrupt journal must not hide all the others
+        try:
+            parsed.append((path, parse_journal(read_text(path))))
+        except UserError:
+            unreadable.append(path)
+    hidden = sum(1 for _p, d in parsed if d["header"].get("stage") == "done")
+    if not args.all:
+        parsed = [(p, d) for p, d in parsed
+                  if d["header"].get("stage") != "done"]
+
+    if args.json:  # complete: no cap, the consumer decides what to show
+        emit_json({
+            "command": "status",
+            "tasks": [{"id": d["id"] or path.stem, "title": d["title"],
+                       "file": rel(path), "stage": d["header"].get("stage", ""),
+                       "type": d["header"].get("type", ""),
+                       "branch": d["header"].get("branch", "")}
+                      for path, d in parsed],
+            "hidden_done": hidden if not args.all else 0,
+            "unreadable": [rel(path) for path in unreadable],
+        })
+        return 0
+
+    for path in unreadable:
+        print(f"  {path.stem:<15} (unreadable) not valid UTF-8")
+    if not paths:
+        print("no task journals yet - python .agentic/aegis.py task new \"<title>\"")
+        return 0
+    print(f"{len(parsed)} open task journal(s) in {rel(AGENTIC / 'tasks')}"
+          + (f" ({hidden} done hidden - use --all)" if hidden and not args.all else "")
+          + ":")
+    for _path, data in parsed[:STATUS_CAP]:
+        header = data["header"]
+        print(f"  {data['id'] or '?':<15} {header.get('stage', '?'):<10} "
+              f"{header.get('type', '?'):<8} {data['title']}")
+    if len(parsed) > STATUS_CAP:
+        print(f"  ... {len(parsed) - STATUS_CAP} more (see .agentic/tasks/)")
+    print("Resume one with: python .agentic/aegis.py status TASK-<id>")
+    return 0
+
+
+def status_one(task_id: str, as_json: bool = False) -> int:
+    """@brief Show one journal's header, checklist state and last log lines."""
+    path, data = read_journal(task_id)
+    stage = data["header"].get("stage", "?")
+
+    if as_json:  # the whole journal state, including the full log
+        emit_json({
+            "command": "status",
+            "task": {
+                "id": data["id"] or path.stem,
+                "title": data["title"],
+                "file": rel(path),
+                "header": data["header"],
+                "stage": stage,
+                "step_file": STAGE_STEP_FILES.get(stage),
+                "done": stage == "done",
+                "checklist": [{"done": ticked, "item": item}
+                              for ticked, item in data["checklist"]],
+                "components": [{"done": ticked, "item": item}
+                               for ticked, item in data["components"]],
+                "log": data["log"],
+            },
+        })
+        return 0
+    print(f"{data['id'] or path.stem} - {data['title']}")
+    print(f"  file: {rel(path)}")
+    for key, value in data["header"].items():
+        print(f"  {key}: {value}")
+
+    done = sum(1 for ticked, _ in data["checklist"] if ticked)
+    print(f"\nchecklist: {done}/{len(data['checklist'])} done")
+    for ticked, item in data["checklist"]:
+        print(f"  [{'x' if ticked else ' '}] {item}")
+
+    if data["components"]:  # adoption journals track per-component progress
+        adopted = sum(1 for ticked, _ in data["components"] if ticked)
+        print(f"\ncomponents: {adopted}/{len(data['components'])} adopted")
+        for ticked, item in data["components"]:
+            print(f"  [{'x' if ticked else ' '}] {item}")
+
+    tail = data["log"][-5:]
+    print(f"\nlog (last {len(tail)} of {len(data['log'])}):")
+    for line in tail:
+        print(f"  - {line}")
+    step = STAGE_STEP_FILES.get(stage)
+    if stage == "done":
+        print("\nthis task is delivered - nothing to resume")
+    elif step:
+        print(f"\nnext: open .agentic/steps/{step} (stage '{stage}'), "
+              "continue at the first unticked item")
+    else:
+        print(f"\nnext: unknown stage '{stage}' - fix the journal header first")
+    return 0
+
+
+# check - the 15-check heuristic catalog
+
+#: (slug, one-line description). The slugs are the stable vocabulary the
+#: later `--strict` promotion list will use - never rename one.
+CHECKS: tuple[tuple[str, str], ...] = (
+    ("req-parse", "requirement TOML parses and has the six required fields"),
+    ("dup-id", "id matches filename and category folder; ids are unique"),
+    ("journal-header", "task journal header parses; its requirement ids exist"),
+    ("spec-missing", "spec references resolve to existing files"),
+    ("uncovered-source", "changed source files are covered by affected_paths"),
+    ("no-linked-tests", "active requirements have existing linked tests"),
+    ("stale-paths", "affected_paths entries still exist on disk"),
+    ("scope-drift", "a build/deliver task's diff touches its requirements"),
+    ("secret-in-diff", "no secret patterns in the added diff lines"),
+    ("ticket-ref", "no ticket/run-id patterns inside requirement prose"),
+    ("unticked-deliver", "a journal in deliver has no unticked items"),
+    ("outside-layout", "the diff stays inside source/tests globs and .agentic/"),
+    ("source-no-test-changes", "source changes come with test changes"),
+    ("config", "aegis.toml keys have the documented shapes"),
+    ("nothing-ran", "--run actually executed at least one command"),
+)
+
+#: [table][key] -> expected python type, for the advisory config check.
+CONFIG_SHAPE: dict[str, dict[str, type]] = {
+    "commands": {"timeout": int},
+    "layout": {"source": list, "tests": list, "default_branch": str},
+    "check": {"ignore": list, "secret_patterns_extra": list,
+              "strict_promote": list, "run": list},
+}
+
+
+def check_config(add, cfg: dict) -> None:
+    """@brief Advisory shape check for aegis.toml: schema, tables, key types."""
+    name = ".agentic/aegis.toml"
+    schema = cfg.get("schema")
+    if cfg and (isinstance(schema, bool) or schema != SCHEMA):
+        add("WARN", "config", name, f"schema should be the integer {SCHEMA}")
+    for table, keys in CONFIG_SHAPE.items():
+        if table in cfg and not isinstance(cfg[table], dict):
+            add("WARN", "config", name, f"[{table}] should be a table")
+            continue
+        for key, want in keys.items():
+            value = cfg_table(cfg, table).get(key)
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, want):
+                add("WARN", "config", name,
+                    f"[{table}] {key} should be {want.__name__}")
+    for key, value in cfg_table(cfg, "commands").items():
+        if key != "timeout" and not isinstance(value, str):
+            add("WARN", "config", name, f"[commands] {key} should be a string")
+
+#: the diff-based subset; each degrades to one NOTE without git/merge base.
+DIFF_CHECKS = ("uncovered-source", "scope-drift", "secret-in-diff",
+               "outside-layout", "source-no-test-changes")
+
+REQUIRED_FIELDS = ("schema", "id", "title", "status", "requirement", "verification")
+CODE_BY_FOLDER = {folder: code for folder, code in CATEGORIES.values()}
+REQ_STATUSES = ("draft", "active", "retired")
+REQ_ID_RE = re.compile(r"^REQ-[A-Z]{2,6}-[0-9a-f]{4,12}$")
+#: journal stage vocabulary: the five stages, adoption's phases, and done.
+KNOWN_STAGES = ("frame", "specify", "design", "build", "deliver", "done",
+                "survey", "components", "close")
+#: which step file explains each stage - adoption's phases live in adopt.md.
+STAGE_STEP_FILES = {
+    "frame": "1_frame.md", "specify": "2_specify.md", "design": "3_design.md",
+    "build": "4_build.md", "deliver": "5_deliver.md",
+    "survey": "adopt.md", "components": "adopt.md", "close": "adopt.md",
+}
+
+
+def repo_relative_ok(entry: str) -> bool:
+    """@brief True when a stored path stays inside the repository."""
+    if entry.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:", entry):
+        return False
+    return ".." not in entry.replace("\\", "/").split("/")
+
+#: built-in secret heuristics; `[check] secret_patterns_extra` adds to these.
+SECRET_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("private key block", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    ("aws-style access key", r"\bAKIA[0-9A-Z]{16}\b"),
+    ("bearer/api token",
+     r"(?i)\b(?:bearer|api[_-]?key|access[_-]?token)\b\s*[:=]?\s*[\"']?"
+     r"[A-Za-z0-9_.\-]{16,}"),
+    ("password literal", r"(?i)\bpassword\b\s*[:=]\s*\S+"),
+)
+
+#: #123, JIRA-style ABC-123, and TASK-/REQ- references in requirement prose.
+TICKET_RE = re.compile(
+    r"(?<![\w&#])#\d+\b|\b[A-Z][A-Z0-9]{1,9}-\d{1,6}\b|\b(?:TASK|REQ)-[0-9A-Za-z-]{2,}\b"
+)
+
+#: standards and formats share the JIRA-style shape (UTF-8, SHA-256, RFC-2119,
+#: AES-128 ...). Technical prose is full of them and none is a ticket, so the
+#: prefix is checked before a match is reported.
+NOT_TICKET_PREFIXES = frozenset({
+    "AAC", "AES", "AGPL", "ANSI", "ARM", "ASCII", "BASE", "BSD", "CP", "CSS",
+    "DB", "DIN", "DPI", "EN", "FLAC", "FPS", "GPL", "H", "HTML", "HTTP", "HZ",
+    "IEC", "IEEE", "IPV", "ISO", "KHZ", "LGPL", "MD", "MP", "MPEG", "OGG",
+    "PCM", "PY", "QT", "RFC", "RGB", "RGBA", "RSA", "SHA", "SQL", "SRGB",
+    "SSL", "TLS", "USB", "UTC", "UTF", "WAV", "WCAG", "X", "XML",
+})
+
+
+def is_ticket_reference(hit: str) -> bool:
+    """@brief True when a TICKET_RE hit is a ticket, not a standard or format."""
+    if hit.startswith("#") or hit.startswith(("TASK-", "REQ-")):
+        return True
+    return hit.split("-", 1)[0].upper() not in NOT_TICKET_PREFIXES
+
+DIFF_HEADER_RE = re.compile(r"^diff --git a/(.*) b/(.*)$")
+
+CHECK_EPILOG = (
+    "the 15 checks (slug - what silent means):\n"
+    + "\n".join(f"  {slug:<24}{desc}" for slug, desc in CHECKS)
+    + """
+
+diff basis: `git diff` against `git merge-base HEAD <default branch>`.
+default branch resolution order: `[layout] default_branch` from
+aegis.toml always wins when set; else the branch origin/HEAD points at;
+else a local `master`, then `main`. Without git or a merge base, each diff-based check
+reports one NOTE line and everything else still runs. Lines longer
+than 100 columns are truncated with `...`.
+
+exits 0 always - except with --strict, which exits 1 when there are
+errors, failed --run commands, or warnings whose slug is listed in
+[check] strict_promote. --run executes every plain [commands] entry
+(template entries containing `{` and the `timeout` key are skipped, as
+are side-effect-looking names unless [check] run lists them); a failing
+command is an ERROR (`command-failed`), and running nothing at all is
+also an ERROR (`nothing-ran`), so --strict fails on it without needing a
+promotion entry - silence never counts as proof. Note that --run proves
+only what your [commands] actually cover: a `[check] run` list that
+omits the test command means the suite did not run, and the skip is
+printed as `run: <name> skipped`.
+
+output is capped at the first 40 findings; --full (implied by --strict)
+prints them all.
+"""
+)
+
+
+def str_list(value: object) -> list[str]:
+    """@brief A TOML value as a list of strings, tolerating a scalar."""
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value]
+    return [str(value)] if value else []
+
+
+def split_ids(value: str) -> list[str]:
+    """@brief Split a `requirements:` header value into individual ids."""
+    return [part for part in re.split(r"[\s,]+", value.strip()) if part]
+
+
+def match_path(path: str, pattern: str) -> bool:
+    """
+    @brief One layout/affected_paths entry against one repo-relative path.
+    @details A trailing `/` or a bare directory name matches by prefix; an
+             entry with glob characters matches by fnmatchcase - the
+             case-sensitive variant, so Windows and Linux agree; else exact.
+    """
+    if pattern.endswith("/"):
+        return path.startswith(pattern)
+    if any(char in pattern for char in "*?["):
+        return fnmatch.fnmatchcase(path, pattern)
+    return path == pattern or path.startswith(pattern + "/")
+
+
+def match_any(path: str, patterns: list[str]) -> bool:
+    """@brief True when any entry of `patterns` matches `path`."""
+    return any(match_path(path, pattern) for pattern in patterns)
+
+
+def default_branch(cfg: dict) -> str:
+    """
+    @brief The ref the diff is based on; "" when none can be resolved.
+    @details Resolution order (documented in `check --help`): an explicit
+             `[layout] default_branch` always wins; else the branch
+             origin/HEAD points at; else a local `master`, then `main`.
+    """
+    configured = str(cfg_table(cfg, "layout").get("default_branch", "") or "")
+    if configured:
+        return configured
+    out = run_git("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
+    if out and out[0] == 0 and out[1].strip():
+        return out[1].strip().removeprefix("refs/remotes/")
+    for name in ("master", "main"):
+        out = run_git("rev-parse", "--verify", "--quiet", f"refs/heads/{name}")
+        if out and out[0] == 0:
+            return name
+    return ""
+
+
+#: bound on how much of an untracked file the hygiene checks will read.
+MAX_SCAN_BYTES = 262_144
+#: findings printed before `check` summarises the rest (--full shows all).
+FINDING_CAP = 40
+#: cap on per-file re-diffs used to attribute git-quoted filenames.
+MAX_REDIFF_FILES = 25
+#: version of the `--json` envelopes. Consumers should refuse an unknown
+#: value rather than guess: that is the point of publishing it.
+JSON_SCHEMA = 1
+
+
+def emit_json(payload: dict) -> None:
+    """
+    @brief Print one JSON document as the command's entire stdout.
+    @details Every envelope carries `schema` so a consumer fails loudly on a
+             contract change instead of silently misparsing. Human progress
+             lines go to stderr under `--json`, keeping stdout a single
+             parseable document.
+    """
+    print(json.dumps({"schema": JSON_SCHEMA, **payload},
+                     ensure_ascii=False, indent=2, sort_keys=False))
+#: task journals listed by `status` before it summarises the rest.
+STATUS_CAP = 20
+
+
+def untracked_files() -> list[str]:
+    """@brief Untracked, non-ignored files - NUL-delimited so any name works."""
+    out = run_git("ls-files", "--others", "--exclude-standard", "-z")
+    if not out or out[0] != 0:
+        return []
+    return [name for name in out[1].split("\0") if name]
+
+
+def added_lines_of(file: str) -> list[tuple[str, str]]:
+    """
+    @brief Every line of an untracked text file, treated as an added line.
+    @details Bounded (`MAX_SCAN_BYTES`) and binary-safe: oversized or binary
+             files contribute their name to the file list but no text.
+    """
+    path = ROOT / file
+    try:
+        if path.stat().st_size > MAX_SCAN_BYTES:
+            return []
+        data = path.read_bytes()
+    except OSError:
+        return []
+    if b"\0" in data[:4096]:
+        return []
+    return [(file, line) for line in
+            data.decode("utf-8", errors="replace").splitlines()]
+
+
+def collect_diff(cfg: dict) -> tuple[list[str], list[tuple[str, str]], list[str], str]:
+    """
+    @brief Changed files and added lines versus the merge base.
+    @details File names come from `git diff --name-only -z` (robust against
+             quoted/non-ASCII paths); added text from the patch for tracked
+             files plus bounded reads of untracked files, so work in progress
+             is visible before it is ever staged. Returns (files, added
+             (file, text) pairs, reason); a non-empty reason means the
+             diff-based checks must degrade to NOTE lines.
+    """
+    probe = run_git("rev-parse", "--git-dir")
+    if probe is None:
+        return [], [], [], "git executable not found"
+    if probe[0] != 0:
+        return [], [], [], "not a git repository"
+    branch = default_branch(cfg)
+    if not branch:
+        return [], [], [], "no default branch (origin/HEAD, master, main)"
+    base = run_git("merge-base", "HEAD", branch)
+    if not base or base[0] != 0 or not base[1].strip():
+        return [], [], [], f"no merge base between HEAD and {branch}"
+    names = run_git("diff", "--name-only", "-z", base[1].strip(), "--")
+    if not names or names[0] != 0:
+        return [], [], [], "git diff failed"
+    files = [name for name in names[1].split("\0") if name]
+
+    added: list[tuple[str, str]] = []
+    gaps: list[str] = []
+    seen_in_patch: set[str] = set()
+    # quotepath=false keeps non-ASCII names unquoted so header attribution
+    # works for them; names with quotes or backslashes stay quoted and are
+    # picked up by the per-file fallback below.
+    patch = run_git("-c", "core.quotepath=false", "diff", base[1].strip(), "--")
+    if patch and patch[0] == 0:
+        current = ""
+        for line in patch[1].split("\n"):
+            if line.startswith("diff --git "):
+                # a header we cannot parse (git-quoted name) must clear the
+                # attribution, never leave it pointing at the previous file
+                match = DIFF_HEADER_RE.match(line)
+                current = match.group(2) if match else ""
+                if current:
+                    seen_in_patch.add(current)
+            elif line.startswith("+") and not line.startswith("+++") and current:
+                added.append((current, line[1:]))
+
+    # tracked files the header parse could not attribute (git-quoted names):
+    # diff them one at a time, where the name is known from the file list.
+    unattributed = [f for f in files if f not in seen_in_patch]
+    for name in unattributed[:MAX_REDIFF_FILES]:
+        one = run_git("diff", base[1].strip(), "--", name)
+        if one and one[0] == 0:
+            added.extend((name, line[1:]) for line in one[1].split("\n")
+                         if line.startswith("+") and not line.startswith("+++"))
+        else:
+            gaps.append(name)
+    gaps.extend(unattributed[MAX_REDIFF_FILES:])  # never silently skipped
+
+    for name in untracked_files():
+        if name not in files:
+            files.append(name)
+            lines = added_lines_of(name)
+            added.extend(lines)
+            if not lines and (ROOT / name).is_file():
+                gaps.append(name)  # too large or binary: not content-scanned
+    return files, added, gaps, ""
+
+
+def scan_requirements(add, skip) -> list[tuple[str, Path, dict]]:
+    """
+    @brief Single pass over the requirement tree: checks 1 and 2.
+    @details Returns the parsed records for the link checks; files that fail
+             to parse at all are reported and dropped from the records.
+    """
+    records: list[tuple[str, Path, dict]] = []
+    by_id: dict[str, list[str]] = {}
+    for path in sorted((AGENTIC / "requirements").glob("**/*.toml")):
+        relpath = rel(path)
+        if skip(relpath):
+            continue
+        try:
+            data = tomllib.loads(read_text(path))
+        except UserError:
+            add("ERROR", "req-parse", relpath, "not valid UTF-8")
+            continue
+        except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+            add("ERROR", "req-parse", relpath, f"not valid TOML: {exc}")
+            continue
+        missing = [f for f in REQUIRED_FIELDS if not str(data.get(f, "") or "").strip()]
+        if missing:
+            add("ERROR", "req-parse", relpath, "missing/empty: " + ", ".join(missing))
+        schema_val = data.get("schema")
+        if "schema" not in missing and (isinstance(schema_val, bool)
+                                        or schema_val != SCHEMA):
+            add("ERROR", "req-parse", relpath, f"schema must be the integer {SCHEMA}")
+        for field in ("id", "title", "status", "requirement", "verification"):
+            if field not in missing and not isinstance(data.get(field), str):
+                add("ERROR", "req-parse", relpath, f"{field} must be a string")
+        status = str(data.get("status", "") or "")
+        if "status" not in missing and status not in REQ_STATUSES:
+            add("ERROR", "req-parse", relpath,
+                f"status '{status}' not in {'|'.join(REQ_STATUSES)}")
+        records.append((relpath, path, data))
+        rid = str(data.get("id", "") or "")
+        if not rid:
+            continue
+        if not REQ_ID_RE.fullmatch(rid):
+            add("ERROR", "req-parse", relpath,
+                "id does not match REQ-<CODE>-<hex id>")
+        by_id.setdefault(rid, []).append(relpath)
+        if path.stem != rid:
+            add("ERROR", "dup-id", relpath, "id does not match filename")
+        expected = CODE_BY_FOLDER.get(path.parent.name)
+        parts = rid.split("-")
+        if expected and len(parts) == 3 and parts[1] != expected:
+            add("ERROR", "dup-id", relpath,
+                f"id says {parts[1]}, folder expects {expected}")
+    for rid, paths in by_id.items():
+        for relpath in (paths if len(paths) > 1 else []):
+            add("ERROR", "dup-id", relpath, f"duplicate id ({len(paths)} files)")
+    return records
+
+
+def check_requirement_links(add, records) -> None:
+    """@brief Per-requirement checks 4, 6, 7 and 10 over the parsed records."""
+    for relpath, _path, data in records:
+        spec_ref = str(data.get("spec", "") or "").strip()
+        if spec_ref and not repo_relative_ok(spec_ref):
+            add("ERROR", "spec-missing", relpath, f"{spec_ref} escapes the repository")
+        elif spec_ref and not (AGENTIC / spec_ref).is_file():
+            add("ERROR", "spec-missing", relpath, f"{spec_ref} does not resolve")
+        status = str(data.get("status", "") or "")
+        if status == "active":
+            linked = str_list(data.get("linked_tests"))
+            if not linked:
+                add("WARN", "no-linked-tests", relpath, "empty linked_tests")
+            for entry in linked:
+                file = entry.split("::", 1)[0]
+                if file and not repo_relative_ok(file):
+                    add("WARN", "no-linked-tests", relpath,
+                        f"{file} escapes the repository")
+                elif file and not (ROOT / file).is_file():
+                    add("WARN", "no-linked-tests", relpath,
+                        f"{file} does not exist")
+        if status != "retired":
+            for entry in str_list(data.get("affected_paths")):
+                if not repo_relative_ok(entry):
+                    add("WARN", "stale-paths", relpath,
+                        f"{entry} escapes the repository")
+                    continue
+                try:
+                    if any(char in entry for char in "*?["):
+                        exists = next(ROOT.glob(entry), None) is not None
+                    else:
+                        exists = (ROOT / entry).exists()
+                except (ValueError, OSError, NotImplementedError):
+                    exists = False
+                if not exists:
+                    add("WARN", "stale-paths", relpath,
+                        f"{entry} no longer exists")
+        hits = set(TICKET_RE.findall(str(data.get("requirement", ""))))
+        for hit in sorted(h for h in hits if is_ticket_reference(h)):
+            add("WARN", "ticket-ref", relpath, f"ticket pattern: {hit}")
+
+
+def scan_journals(add, skip, req_ids: set[str]) -> list[tuple[str, dict]]:
+    """@brief Single pass over the task journals: checks 3 and 11."""
+    journals: list[tuple[str, dict]] = []
+    for path in sorted((AGENTIC / "tasks").glob("TASK-*.md")):
+        relpath = rel(path)
+        if skip(relpath):
+            continue
+        try:
+            data = parse_journal(read_text(path))
+        except UserError:  # corrupt encoding: report, keep scanning
+            add("ERROR", "journal-header", relpath, "not valid UTF-8")
+            continue
+        if not data["id"]:
+            add("ERROR", "journal-header", relpath,
+                "no '# TASK-<id> - <title>' heading")
+            continue
+        if "stage" not in data["header"]:
+            add("ERROR", "journal-header", relpath, "no 'stage:' header line")
+            continue
+        if data["header"]["stage"] not in KNOWN_STAGES:
+            add("WARN", "journal-header", relpath,
+                f"unknown stage '{data['header']['stage']}'")
+        if data["id"] != path.stem:
+            add("ERROR", "journal-header", relpath,
+                f"heading id {data['id']} does not match the filename")
+        for key in ("type", "branch", "opened"):
+            if key not in data["header"]:
+                add("WARN", "journal-header", relpath,
+                    f"missing '{key}:' header line")
+        journals.append((relpath, data))
+        for rid in split_ids(data["header"].get("requirements", "")):
+            if rid not in req_ids:
+                add("ERROR", "journal-header", relpath, f"unknown requirement {rid}")
+        if data["header"]["stage"] == "deliver":
+            open_items = sum(1 for ticked, _i in data["checklist"] if not ticked)
+            if open_items:
+                add("WARN", "unticked-deliver", relpath,
+                    f"{open_items} unticked item(s) in deliver")
+    return journals
+
+
+def check_diff(add, skip, cfg, records, journals, scope) -> None:
+    """
+    @brief Diff-based checks 5, 8, 9, 12 and 13.
+    @details `scope` is the parsed journal of `--task` or None; it narrows
+             check 5's coverage set and check 8 to that one task. Without a
+             usable diff every check here emits one NOTE and returns.
+    """
+    files, added, gaps, reason = collect_diff(cfg)
+    if reason:
+        for slug in DIFF_CHECKS:
+            add("NOTE", slug, "(diff)", f"skipped: {reason}")
+        return
+    # WARN, not NOTE: a team that promotes `secret-in-diff` in CI is asking
+    # for the secret scan to be trusted, and an unscanned file is precisely
+    # when it cannot be - so the gap must be promotable too.
+    for name in gaps[:5]:  # a partial scan must say so, never read as clean
+        add("WARN", "secret-in-diff", name, "added lines not scanned")
+    if len(gaps) > 5:
+        add("WARN", "secret-in-diff", "(diff)",
+            f"{len(gaps) - 5} further file(s) not content-scanned")
+    files = [f for f in files if not skip(f)]
+    layout = cfg_table(cfg, "layout")
+    source_globs = str_list(layout.get("source"))
+    tests_globs = str_list(layout.get("tests"))
+    info = {str(d.get("id", "")): (relpath, str_list(d.get("affected_paths")))
+            for relpath, _p, d in records}
+
+    if scope:
+        rids = split_ids(scope["header"].get("requirements", ""))
+        cover = [p for rid in rids for p in info.get(rid, ("", []))[1]]
+        drift_journals = [(rp, d) for rp, d in journals if d["id"] == scope["id"]]
+    else:
+        cover = [p for _rp, _p, d in records
+                 if str(d.get("status", "")) != "retired"
+                 for p in str_list(d.get("affected_paths"))]
+        drift_journals = journals
+
+    for file in files:  # 5: uncovered-source
+        if match_any(file, source_globs) and not match_any(file, cover):
+            add("WARN", "uncovered-source", file,
+                "not covered by any requirement affected_paths")
+
+    for relpath, data in drift_journals:  # 8: scope-drift
+        stage = data["header"].get("stage", "")
+        if stage not in ("build", "deliver") or not files:
+            continue
+        # targets are the linked requirements' affected_paths only - the
+        # requirement TOML itself is usually created on this same branch and
+        # would make the check permanently silent if it counted as "touched"
+        targets: list[str] = []
+        for rid in split_ids(data["header"].get("requirements", "")):
+            if rid in info:
+                targets.extend(info[rid][1])
+        if not any(match_any(file, targets) for file in files):
+            add("WARN", "scope-drift", relpath,
+                f"{stage} diff touches no linked requirement")
+
+    patterns = [(name, re.compile(regex)) for name, regex in SECRET_PATTERNS]
+    for extra in str_list(cfg_table(cfg, "check").get("secret_patterns_extra")):
+        try:
+            patterns.append(("secret_patterns_extra", re.compile(extra)))
+        except re.error as exc:
+            add("NOTE", "secret-in-diff", "(config)",
+                f"invalid secret_patterns_extra regex: {exc}")
+    seen: set[tuple[str, str]] = set()
+    for file, text in added:  # 9: secret-in-diff
+        if skip(file):
+            continue
+        for name, regex in patterns:
+            if (file, name) not in seen and regex.search(text):
+                seen.add((file, name))
+                add("WARN", "secret-in-diff", file, f"possible secret ({name})")
+
+    for file in files:  # 12: outside-layout
+        # the root pointer files are ours - init creates them, so flagging
+        # them would greet every new install with three false warnings
+        if file in POINTER_FILES:
+            continue
+        if not (match_any(file, source_globs) or match_any(file, tests_globs)
+                or file.startswith(".agentic/")):
+            add("WARN", "outside-layout", file,
+                "outside source/tests globs and .agentic/")
+
+    source_changed = [f for f in files if match_any(f, source_globs)]
+    if source_changed and not any(match_any(f, tests_globs) for f in files):
+        add("WARN", "source-no-test-changes", "(diff)",  # 13
+            f"{len(source_changed)} source file(s) changed, no test changes")
+
+
+def run_checks(cfg: dict, task: str | None) -> list[tuple[str, str, str, str]]:
+    """
+    @brief Collect the full findings list of the 15-check catalog.
+    @details Shared by `check` and `report`. `task` scopes the diff-based
+             checks to that journal exactly as `check --task` does.
+    """
+    ignore = str_list(cfg_table(cfg, "check").get("ignore"))
+    findings: list[tuple[str, str, str, str]] = []
+
+    def add(level: str, slug: str, path: str, message: str) -> None:
+        findings.append((level, slug, path, message))
+
+    def skip(path: str) -> bool:
+        return match_any(path, ignore)
+
+    check_config(add, cfg)
+    scope = read_journal(task)[1] if task else None
+    if scope:
+        recorded, current = scope["header"].get("branch", ""), git_branch()
+        if recorded and current not in ("unknown", recorded):
+            add("WARN", "journal-header", "(task)",
+                f"journal branch '{recorded}' != current '{current}' - "
+                "diff checks reflect the current branch")
+    records = scan_requirements(add, skip)
+    check_requirement_links(add, records)
+    req_ids = {str(d.get("id", "")) for _r, _p, d in records} - {""}
+    journals = scan_journals(add, skip, req_ids)
+    check_diff(add, skip, cfg, records, journals, scope)
+    return findings
+
+
+def command_timeout(cfg: dict) -> int:
+    """@brief `[commands] timeout` in seconds; 1800 when absent or invalid,
+    and never below 1 - a zero or negative timeout would kill everything."""
+    try:
+        value = int(cfg_table(cfg, "commands").get("timeout", 1800))
+    except (TypeError, ValueError):
+        return 1800
+    return max(1, value)
+
+
+def runnable_commands(cfg: dict) -> list[tuple[str, str]]:
+    """
+    @brief The `[commands]` entries that can run as-is, in file order.
+    @details The `timeout` key and template entries containing `{` (such as
+             `test_impacted`) are not directly runnable and are skipped.
+    """
+    return [
+        (name, value)
+        for name, value in cfg_table(cfg, "commands").items()
+        if name != "timeout" and isinstance(value, str)
+        and value.strip() and "{" not in value
+    ]
+
+
+def kill_tree(proc: subprocess.Popen) -> bool:
+    """
+    @brief Kill a timed-out command and its descendants, per platform.
+    @details Returns True when the platform reported a successful tree kill;
+             False means descendants may have survived (restricted sandboxes
+             can deny `taskkill`) and the caller must say so.
+    """
+    if sys.platform == "win32":
+        killed = False
+        try:
+            result = subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                                    capture_output=True, timeout=20)
+            killed = result.returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            killed = False  # taskkill missing, denied, or itself hung
+        proc.kill()  # the shell itself, regardless of taskkill's outcome
+        return killed
+    import os
+    import signal
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        return True
+    except (OSError, ProcessLookupError):
+        proc.kill()
+        return False
+
+
+def run_command(command: str, timeout: int,
+                capture: bool = True) -> tuple[int, float, list[str]]:
+    """
+    @brief Run one configured shell command in the repo root.
+    @details Returns (exit code, seconds, captured output tail). Exit 124 on
+             timeout: the command's process tree is killed where the platform
+             allows it (`taskkill /F /T` on Windows, the session group on
+             POSIX), and when that kill is refused - restricted sandboxes do
+             refuse it - the shell is still killed and the returned tail says
+             descendants may have survived. Exit 127 when the command could
+             not be launched at all. With capture=False the output streams to
+             the console and the tail is empty - used by `aegis test`, where
+             live output matters. Captured output goes to a temporary file,
+             so memory stays flat whatever the command emits and only the
+             last 4 KiB is ever read back. The cost moves to the temp
+             volume - note this is a cost capture *adds*: run in a terminal
+             the same output would stream and be discarded, so a
+             pathologically noisy command can fill the temp volume here
+             when it would not have filled anything there.
+    """
+    start = time.monotonic()
+    kwargs: dict = {"cwd": str(ROOT), "shell": True}
+    sink = None
+    if capture:
+        # a temp file, not a pipe: output of any size costs disk, not memory,
+        # and only its tail is ever read back.
+        sink = tempfile.TemporaryFile(mode="w+", encoding="utf-8",
+                                      errors="replace", newline="")
+        kwargs.update(stdout=sink, stderr=subprocess.STDOUT)
+    if sys.platform != "win32":
+        kwargs["start_new_session"] = True
+    try:
+        proc = subprocess.Popen(command, **kwargs)
+    except OSError as exc:
+        if sink is not None:
+            sink.close()
+        return 127, time.monotonic() - start, [str(exc)]
+
+    note = ""
+    try:
+        code = proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        killed = kill_tree(proc)
+        try:
+            proc.wait(timeout=5)
+        except (subprocess.SubprocessError, OSError):
+            pass
+        code = 124
+        note = f"timed out after {timeout}s"
+        if not killed:
+            note += "; descendants may have survived the kill"
+
+    output = ""
+    if sink is not None:
+        try:
+            sink.seek(max(0, sink.tell() - 4096))
+            output = sink.read()
+        except OSError:
+            output = ""
+        finally:
+            sink.close()
+    if note:
+        output = f"{output}\n{note}"
+    tail = [line for line in output.strip().split("\n") if line.strip()][-8:]
+    return code, time.monotonic() - start, tail
+
+
+#: command names that suggest side effects beyond verification - skipped by
+#: `check --run` unless explicitly listed in `[check] run`.
+SIDE_EFFECT_NAME_RE = re.compile(r"deploy|migrat|publish|release|push|upload",
+                                 re.IGNORECASE)
+
+
+def run_configured_commands(cfg: dict, findings: list,
+                            stream=None) -> list[dict]:
+    """
+    @brief Execute the verification `[commands]` entries for `check --run`.
+    @details `check --run` is a verification pass, not a deployment tool: an
+             explicit `[check] run` list restricts execution to those names;
+             without one, every plain entry runs except names that look like
+             side effects (deploy/migrate/publish/release/push/upload), which
+             are skipped with a visible line. Progress prints as each command
+             finishes rather than at the end, so a long suite does not look
+             hung. Each failure appends an ERROR finding (`command-failed`),
+             and running *nothing* appends an ERROR (`nothing-ran`), which
+             fails strict mode on its own - silence must never read as proof
+             that the suite passed. What *did* run is only ever what
+             `[commands]` (minus `[check] run` exclusions) covers.
+    @details Progress goes to `stream` (stdout by default; stderr under
+             `--json`, so stdout stays one parseable document). Returns one
+             record per configured command for the JSON envelope.
+    """
+    entries = runnable_commands(cfg)
+    allowed = str_list(cfg_table(cfg, "check").get("run"))
+    out = stream if stream is not None else sys.stdout
+    results: list[dict] = []
+    timeout = command_timeout(cfg)
+    ran = 0
+
+    def say(text: str) -> None:
+        print(text, file=out, flush=True)  # live: each command lands visibly
+
+    for name, command in entries:
+        if allowed and name not in allowed:
+            say(f"run: {name} skipped (not listed in [check] run)")
+            results.append({"name": name, "status": "skipped",
+                            "reason": "not listed in [check] run"})
+            continue
+        if not allowed and SIDE_EFFECT_NAME_RE.search(name):
+            say(f"run: {name} skipped (name suggests side effects - "
+                "list it in [check] run to include it)")
+            results.append({"name": name, "status": "skipped",
+                            "reason": "name suggests side effects"})
+            continue
+        say(f"run: {name} started")  # a 20-minute suite must not look hung
+        code, seconds, tail = run_command(command, timeout)
+        ran += 1
+        if code == 0:
+            say(f"run: {name} ok ({seconds:.1f}s)")
+        else:
+            say(f"run: {name} FAIL exit {code} ({seconds:.1f}s)")
+            for text in tail:
+                say(f"  | {text}")
+            findings.append(("ERROR", "command-failed", "(run)",
+                             f"{name} exit {code}"))
+        results.append({"name": name, "status": "ok" if code == 0 else "failed",
+                        "exit": code, "seconds": round(seconds, 1),
+                        "tail": tail})
+    if not ran:
+        say("run: nothing ran")
+        # ERROR, not WARN: --run promised verification and delivered none, so
+        # strict mode must fail without needing a promotion entry. Advisory
+        # runs still exit 0 - errors inform there, they do not block.
+        findings.append(("ERROR", "nothing-ran", "(run)",
+                         "--run executed no command - nothing was verified"))
+    return results
+
+
+def cmd_check(args: argparse.Namespace) -> int:
+    """
+    @brief Run the 15-check catalog and print the findings report.
+    @details Advisory by design: exits 0 - except with --strict (the CI
+             mode), which exits 1 on errors, failed --run commands, and
+             warnings promoted via `[check] strict_promote`. One finding per
+             line, `LEVEL  CHECK-ID  path - message`, sorted by path, capped
+             at 100 columns; then two summary lines.
+    """
+    cfg = load_config()
+    findings = run_checks(cfg, args.task)
+    # under --json stdout must stay one parseable document, so live progress
+    # goes to stderr instead of being lost.
+    runs = (run_configured_commands(cfg, findings,
+                                    sys.stderr if args.json else None)
+            if args.run else [])
+
+    counts = {"ERROR": 0, "WARN": 0, "NOTE": 0}
+    promoted = set(str_list(cfg_table(cfg, "check").get("strict_promote")))
+    promoted_warns = 0
+    ordered = sorted(findings, key=lambda f: (f[2], f[1], f[3]))
+    for level, slug, _path, _message in ordered:
+        counts[level] += 1
+        promoted_warns += level == "WARN" and slug in promoted
+    worst = next((lv for lv in ("ERROR", "WARN", "NOTE") if counts[lv]), "")
+    failed = bool(args.strict and (counts["ERROR"] or promoted_warns))
+
+    if args.json:  # a machine consumer always gets the complete set
+        emit_json({
+            "command": "check",
+            "task": args.task or None,
+            "findings": [{"level": level, "check": slug, "path": path,
+                          "message": message}
+                         for level, slug, path, message in ordered],
+            "summary": {"errors": counts["ERROR"], "warnings": counts["WARN"],
+                        "notes": counts["NOTE"]},
+            "result": worst or "ok",
+            "run": runs,
+            "strict": {"enabled": bool(args.strict),
+                       "promoted_warnings": promoted_warns,
+                       "passed": not failed} if args.strict else None,
+        })
+        return 1 if failed else 0
+
+    shown = 0
+    # a small-context model should not be handed hundreds of lines; CI and
+    # --full want everything.
+    cap = None if (args.full or args.strict) else FINDING_CAP
+    for level, slug, path, message in ordered:
+        if cap is not None and shown >= cap:
+            continue
+        shown += 1
+        line = f"{level:<5}  {slug}  {path} - {message}"
+        print(line if len(line) <= 100 else line[:97] + "...")
+    if cap is not None and len(findings) > shown:
+        print(f"... {len(findings) - shown} more finding(s) - use --full")
+    print(f"summary: errors={counts['ERROR']} warnings={counts['WARN']} "
+          f"notes={counts['NOTE']}")
+    print(f"result: {worst or 'ok'}")
+
+    if args.strict:
+        if failed:
+            print(f"strict: exit 1 ({counts['ERROR']} error(s), "
+                  f"{promoted_warns} promoted warning(s))")
+            return 1
+        print("strict: ok")
+    return 0
+
+
+# test / report
+
+
+#: shape of a substitutable test reference: safe characters only, and it may
+#: not start with `-` (an option-like ref could alter the runner's behavior).
+#: Anything else falls back to the full suite instead of reaching the shell.
+SAFE_TEST_REF_RE = re.compile(r"^[A-Za-z0-9_./][A-Za-z0-9_.:\[\]/=-]*$")
+
+
+def impacted_tests(cfg: dict) -> tuple[list[str], str]:
+    """
+    @brief The focused regression set: diff -> requirements -> linked_tests.
+    @details The traceability mapping driven in reverse, with two safety
+             rules. Completeness: every changed source file must be covered
+             by some requirement's affected_paths, otherwise the focused set
+             would silently skip the uncovered work and the caller falls back
+             to the full suite. Hygiene: any test reference containing shell
+             metacharacters (spaces, quotes, `;`, `&`, redirects) also forces
+             the fallback - references are substituted into a shell command
+             and must never be able to alter it.
+    """
+    files, _added, _gaps, reason = collect_diff(cfg)
+    if reason:
+        return [], reason
+    source_globs = str_list(cfg_table(cfg, "layout").get("source"))
+    source_changed = [file for file in files if match_any(file, source_globs)]
+    if not source_changed:
+        return [], "no changed source files to map"
+
+    records = [
+        (str_list(data.get("affected_paths")), str_list(data.get("linked_tests")))
+        for _relpath, _path, data in
+        scan_requirements(lambda *_a: None, lambda _p: False)
+        if str(data.get("status", "")) != "retired"
+    ]
+    tests: list[str] = []
+    for file in source_changed:
+        covered, file_tests = False, []
+        for paths, linked in records:
+            if match_any(file, paths):
+                covered = True
+                file_tests.extend(entry for entry in linked if entry)
+        if not covered:
+            return [], f"changed source not fully covered ({file})"
+        if not file_tests:  # covered on paper, but nothing would test it
+            return [], f"no linked tests for changed source ({file})"
+        for entry in file_tests:
+            if entry not in tests:
+                tests.append(entry)
+    for entry in tests:
+        if not SAFE_TEST_REF_RE.fullmatch(entry):
+            return [], f"unsafe test reference '{entry}'"
+        if not repo_relative_ok(entry.split("::", 1)[0]):
+            return [], f"test reference escapes the repository ('{entry}')"
+    return tests, ""
+
+
+def append_log(task_id: str, message: str) -> None:
+    """
+    @brief Append one dated log line at the end of the journal's Log section.
+    @details The Log section may not be the last section once a delivery
+             report has been appended, so the line is inserted before the
+             next `## ` heading rather than blindly at end of file.
+    """
+    path, _data = read_journal(task_id)
+    text = read_text(path)
+    line = f"- {today()} {message}"
+    heading = re.search(r"^## Log[ \t]*$", text, re.M)
+    following = re.search(r"^## ", text[heading.end():], re.M) if heading else None
+    if heading and following:
+        pos = heading.end() + following.start()
+        head = text[:pos].rstrip("\n")
+        write_text(path, f"{head}\n{line}\n\n{text[pos:]}")
+    else:
+        if not text.endswith("\n"):
+            text += "\n"
+        write_text(path, f"{text}{line}\n")
+
+
+def cmd_test(args: argparse.Namespace) -> int:
+    """
+    @brief Convenience runner for one configured command (default: test).
+    @details Output streams live; the exit code mirrors the command's own
+             result. --impacted substitutes the focused regression set into
+             the `test_impacted` template and falls back to the full `test`
+             command - saying why - whenever the set cannot be used.
+    """
+    cfg = load_config()
+    commands = cfg_table(cfg, "commands")
+    if args.impacted and args.name != "test":
+        raise UserError("--impacted only applies to the 'test' command")
+    command = commands.get(args.name)
+    if not isinstance(command, str) or not command.strip() or "{" in command:
+        raise UserError(
+            f"no runnable [commands] entry named '{args.name}' in aegis.toml")
+
+    label = args.name
+    if args.impacted:
+        template_cmd = commands.get("test_impacted")
+        if not isinstance(template_cmd, str) or "{tests}" not in template_cmd:
+            print("impacted: no test_impacted template in aegis.toml"
+                  " - running the full test command")
+        else:
+            tests, reason = impacted_tests(cfg)
+            if tests:
+                command = template_cmd.replace("{tests}", " ".join(tests))
+                label = f"test --impacted ({len(tests)} test ref(s))"
+            else:
+                print(f"impacted: {reason} - running the full test command")
+
+    if args.task:  # validate before running: a typo must not cost a suite run
+        read_journal(args.task)
+
+    print(f"$ {command}")
+    code, seconds, _tail = run_command(command, command_timeout(cfg), capture=False)
+    print(f"{label}: exit {code} ({seconds:.1f}s)")
+    if args.task:
+        append_log(args.task, f"test: {label} exit {code} ({seconds:.1f}s)")
+    return code
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    """
+    @brief Append the delivery summary section to a task journal.
+    @details Gathers the journal state, the linked requirement titles, the
+             diff shape versus the merge base and the check counts (scoped to
+             this task). Append-only: repeated runs add dated sections and the
+             journal keeps its history.
+    """
+    cfg = load_config()
+    path, data = read_journal(args.task)
+    header = data["header"]
+
+    titles = {
+        str(record.get("id", "")): str(record.get("title", ""))
+        for _relpath, _p, record
+        in scan_requirements(lambda *_a: None, lambda _p: False)
+    }
+    req_lines = [
+        f"  - {rid} - {titles.get(rid, '(unknown requirement)')}"
+        for rid in split_ids(header.get("requirements", ""))
+    ]
+
+    files, added, gaps, reason = collect_diff(cfg)
+    diff_line = (f"unavailable ({reason})" if reason else
+                 f"{len(files)} file(s) changed, {len(added)} line(s) added"
+                 + (f"; {len(gaps)} file(s) not content-scanned" if gaps else ""))
+    counts = {"ERROR": 0, "WARN": 0, "NOTE": 0}
+    for level, _slug, _path, _message in run_checks(cfg, args.task):
+        counts[level] += 1
+    done = sum(1 for ticked, _item in data["checklist"] if ticked)
+    unticked = [item for ticked, item in data["checklist"] if not ticked]
+
+    lines = [
+        "",
+        f"## Delivery report ({today()})",
+        "",
+        f"- stage: {header.get('stage', '?')}; type: {header.get('type', '?')};"
+        f" path: {header.get('path', '?')}; branch: {header.get('branch', '?')}",
+        "- requirements:" if req_lines else "- requirements: none linked",
+        *req_lines,
+        f"- diff vs merge base: {diff_line}",
+        f"- checks: errors={counts['ERROR']} warnings={counts['WARN']}"
+        f" notes={counts['NOTE']}",
+        f"- checklist: {done}/{len(data['checklist'])} done"
+        + (f"; open: {'; '.join(unticked)}" if unticked else ""),
+    ]
+    if data["components"]:
+        adopted = sum(1 for ticked, _item in data["components"] if ticked)
+        open_comps = [item for ticked, item in data["components"] if not ticked]
+        lines.append(f"- components: {adopted}/{len(data['components'])} adopted"
+                     + (f"; open: {'; '.join(open_comps)}" if open_comps else ""))
+    text = read_text(path)
+    if not text.endswith("\n"):
+        text += "\n"
+    write_text(path, text + "\n".join(lines) + "\n")
+    print(f"report appended to {rel(path)}")
+    return 0
+
+
+# entry point
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """@brief The argparse tree for every implemented command."""
+    parser = argparse.ArgumentParser(
+        prog="aegis",
+        description="AEGIS Light companion CLI - a scaffolder and a reporter.",
+    )
+    parser.add_argument("--version", action="version", version=f"aegis-light {VERSION}")
+    subs = parser.add_subparsers(dest="command", required=True)
+
+    init = subs.add_parser("init", help="finish installing the payload in this repo")
+    init.set_defaults(func=cmd_init)
+
+    task = subs.add_parser("task", help="task journals")
+    task_subs = task.add_subparsers(dest="task_command", required=True)
+    task_new = task_subs.add_parser("new", help="create a task journal")
+    task_new.add_argument("title")
+    task_new.add_argument("--type", choices=TASK_TYPES, default="feature")
+    task_new.set_defaults(func=cmd_task_new)
+
+    req = subs.add_parser("req", help="requirements")
+    req_subs = req.add_subparsers(dest="req_command", required=True)
+    req_new = req_subs.add_parser("new", help="create a requirement file")
+    req_new.add_argument("category", help=", ".join(sorted(CATEGORIES)))
+    req_new.add_argument("title")
+    req_new.set_defaults(func=cmd_req_new)
+
+    check = subs.add_parser(
+        "check",
+        help="run the heuristic check catalog (advisory, always exits 0)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=CHECK_EPILOG,
+    )
+    check.add_argument("--task", help="scope the diff-based checks to this task")
+    check.add_argument("--strict", action="store_true",
+                       help="CI mode: exit 1 on errors and promoted warnings")
+    check.add_argument("--run", action="store_true",
+                       help="also execute the [commands] entries from aegis.toml")
+    check.add_argument("--full", action="store_true",
+                       help=f"print every finding (default caps at {FINDING_CAP};"
+                            " --strict implies --full)")
+    check.add_argument("--json", action="store_true",
+                       help="emit one JSON document on stdout (always complete;"
+                            " --run progress goes to stderr)")
+    check.set_defaults(func=cmd_check)
+
+    test = subs.add_parser(
+        "test", help="run a configured command (default: test); exit mirrors it")
+    test.add_argument("name", nargs="?", default="test",
+                      help="a [commands] entry name (default: test)")
+    test.add_argument("--impacted", action="store_true",
+                      help="run only the tests linked to requirements the diff touches")
+    test.add_argument("--task", help="append the result to this task journal's log")
+    test.set_defaults(func=cmd_test)
+
+    report = subs.add_parser(
+        "report", help="append the delivery summary to a task journal")
+    report.add_argument("task", help="TASK-<id> or <id>")
+    report.set_defaults(func=cmd_report)
+
+    status = subs.add_parser("status", help="list open task journals, or show one")
+    status.add_argument("task", nargs="?", help="TASK-<id> or <id>")
+    status.add_argument("--all", action="store_true",
+                        help="include journals whose stage is done")
+    status.add_argument("--json", action="store_true",
+                        help="emit one JSON document on stdout (always complete)")
+    status.set_defaults(func=cmd_status)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """@brief Parse arguments and dispatch; expected errors exit 1, no traceback."""
+    for stream in (sys.stdout, sys.stderr):
+        try:  # a title may hold characters the console encoding cannot render
+            stream.reconfigure(errors="replace")
+        except (AttributeError, OSError):  # pragma: no cover - non-tty streams
+            pass
+    args = build_parser().parse_args(argv)
+    try:
+        return int(args.func(args))
+    except UserError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    except OSError as exc:  # I/O and encoding failures stay one-line too
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

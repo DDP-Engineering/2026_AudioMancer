@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-27749fbe"
+title = "Audio assembly shall reject unapproved audio blocks and escaping input"
+status = "active"
+
+requirement = """
+Audio assembly shall reject unapproved audio blocks and escaping input, output, and reference paths.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_rejects_unapproved_audio_blocks",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_rejects_escaping_audio_block_path",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_resume_ignores_escaping_output_record",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_reference_fallback_rejects_escaping_path",
+]
+
+priority = "high"
+rationale = """
+Assembly must not read or write outside safe project paths.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-UX-69731a7c"
+title = "Theme payload validation shall reject invalid colors, fill missing"
+status = "active"
+
+requirement = """
+Theme payload validation shall reject invalid colors, fill missing color roles from Classic Light, and accept a distinct text font.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_rejects_invalid_color_values",
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_fills_missing_color_roles_from_classic_light",
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_accepts_distinct_text_font",
+]
+
+priority = "high"
+rationale = """
+Theme data must be validated and completed before use.
+"""
+created = 2026-07-24
+updated = 2026-07-24

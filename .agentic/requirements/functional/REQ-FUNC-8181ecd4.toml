@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-8181ecd4"
+title = "The application shall create the required flat project structure and"
+status = "active"
+
+requirement = """
+The application shall create the required flat project structure and manifest, rejecting a non-empty target folder.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_creates_required_structure_and_manifest",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_rejects_non_empty_target_folder",
+]
+
+priority = "high"
+rationale = """
+A new project needs its canonical structure and must not overwrite existing content.
+"""
+created = 2026-07-18
+updated = 2026-07-24

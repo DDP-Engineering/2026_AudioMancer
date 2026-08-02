@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-48949e26"
+title = "The Character Voices page shall emit import for character targets and"
+status = "active"
+
+requirement = """
+The Character Voices page shall emit import for character targets and enable or disable the batch button by target generatability.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_import_button_emits_for_character_targets",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_enables_for_current_character_targets",
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_disables_when_character_targets_cannot_generate",
+]
+
+priority = "high"
+rationale = """
+Import and batch controls must follow target state.
+"""
+created = 2026-07-19
+updated = 2026-07-24

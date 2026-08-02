@@ -1,0 +1,28 @@
+schema = 1
+id = "REQ-FUNC-bdee3fe2"
+title = "The application shall play one audible completion beep when a threaded"
+status = "active"
+
+requirement = """
+The application shall play one audible completion beep when a threaded workflow operation reaches a success or failure outcome while the persisted completion-beep setting is enabled.
+"""
+
+verification = "Automated: pytest selectors patching QApplication.beep verify the resolver, the emitter, and one beep on each of the success and failure runner outcomes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_play_completion_beep_emits_one_beep_when_enabled",
+  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_success_and_failure_play_completion_beep_when_enabled",
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_completion_beep_enabled_from_settings_resolves_persisted_flag",
+]
+
+priority = "normal"
+rationale = """
+Operators start long TTS, AI, and assembly runs and leave the machine; the persisted 'Play completion beep' preference exists in the Settings UI and in shipped configuration but had no runtime consumer, so the operator received no audible signal when work ended.
+"""
+created = 2026-07-25
+updated = 2026-07-25

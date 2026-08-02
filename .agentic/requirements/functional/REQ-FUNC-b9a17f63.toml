@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-b9a17f63"
+title = "Speech-block state shall allow scene-ambience selected-audio generation"
+status = "active"
+
+requirement = """
+Speech-block state shall allow scene-ambience selected-audio generation.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generation",
+]
+
+priority = "high"
+rationale = """
+Scene-ambience blocks must be individually generatable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

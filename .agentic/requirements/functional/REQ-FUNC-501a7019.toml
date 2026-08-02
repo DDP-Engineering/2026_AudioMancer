@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-501a7019"
+title = "Open project shall reject a missing manifest or a manifest missing a"
+status = "active"
+
+requirement = """
+Open project shall reject a missing manifest or a manifest missing a required field.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_fails_when_manifest_is_missing",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_fails_when_required_manifest_field_is_missing",
+]
+
+priority = "high"
+rationale = """
+Incompatible or incomplete projects must fail to open rather than load partially.
+"""
+created = 2026-07-18
+updated = 2026-07-24

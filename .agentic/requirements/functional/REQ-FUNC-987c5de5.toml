@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-987c5de5"
+title = "Audio assembly shall compose time-limited outputs, count inserted"
+status = "active"
+
+requirement = """
+Audio assembly shall compose time-limited outputs, count inserted silence, and preserve time-limit warnings on resume.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_time_limited_outputs",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_time_limit_counts_inserted_silence",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_resume_preserves_time_limit_warnings",
+]
+
+priority = "high"
+rationale = """
+Time-limited assembly must be accurate and resumable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

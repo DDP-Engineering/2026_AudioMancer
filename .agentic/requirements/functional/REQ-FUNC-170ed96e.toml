@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-170ed96e"
+title = "Audio Blocks shall persist all operation metadata and blocks in one"
+status = "active"
+
+requirement = """
+Audio Blocks shall persist all operation metadata and blocks in one authoritative audio_blocks.json document with a fixed top-level field set.
+"""
+
+verification = "Automated contract test: writing a document produces audio_blocks.json with the fixed root field set."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_document_round_trips_and_writes_only_one_artifact",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+One authoritative document keeps persisted state and block-derived projections consistent.
+"""
+created = 2026-07-25
+updated = 2026-07-26

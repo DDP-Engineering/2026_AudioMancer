@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-PLAT-46bbf1c0"
+title = "Validate_settings shall repair a missing or invalid ui_font_size_step"
+status = "active"
+
+requirement = """
+validate_settings shall repair a missing or invalid ui_font_size_step or text_font_size_step to 'normal'.
+"""
+
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_font_size_steps",
+]
+
+priority = "high"
+rationale = """
+Persisted settings must self-heal invalid font-size step values.
+"""
+created = 2026-07-25
+updated = 2026-07-25

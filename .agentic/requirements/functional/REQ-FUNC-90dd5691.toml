@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-90dd5691"
+title = "Character voice preview text shall cover supported TTS languages and"
+status = "active"
+
+requirement = """
+Character voice preview text shall cover supported TTS languages and persist on save.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_preview_text_covers_qwen3_tts_languages_with_chinese",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_save_target_prompt_persists_preview_text",
+]
+
+priority = "high"
+rationale = """
+Preview text must be language-appropriate and durable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,23 +1,40 @@
 <!--
 Copyright (c) 2026 DDP Engineering
-This software is licensed under the PolyForm Noncommercial License 1.0.0.
-Commercial use requires a separate commercial license.
-See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
 
 # CLAUDE.md
 
-Claude Code should treat `AGENTS.md` as the authoritative workflow contract for
-this repository. Read `AGENTS.md` first, then use this file only as the Claude
-Code adapter note.
+AudioMancer uses **AEGIS Light**: a companion engineering workflow that
+advises and records but never blocks. The full contract is
+`.agentic/AGENTS.md`; this repository's own rules - the binding code
+style and the release version workflow - are in `.agentic/PROJECT.md`.
+Read both before changing code.
 
-If this file and `AGENTS.md` disagree, follow `AGENTS.md`.
+<!-- AEGIS-LIGHT:BEGIN (managed by .agentic/aegis.py init) -->
 
-Before using repository tools, complete the mandatory workflow bootstrap in
-`AGENTS.md`: validate `.agentic/workflow.toml`, inspect effective modes, report
-the active restrictions and selected run, then obey both AEGIS policy and
-Claude Code host safety controls.
+## AEGIS Light workflow
 
-Claude direct skill invocation uses `/skill-name`. Existing Codex-style
-references such as `$documentation-audit` mean the matching Claude Code skill,
-for example `/documentation-audit`.
+The full contract is `.agentic/AGENTS.md` - read it before starting work.
+This digest is enough to act on if you read nothing else.
+
+Stages, one step file each in `.agentic/steps/`: **frame** (agree scope,
+open the task journal) -> **specify** (write the requirement, and a spec
+when useful) -> **design** (a short note for non-trivial work) -> **build**
+(failing test first, then the implementation, until green) -> **deliver**
+(full suite, check, knowledge pages, report, commit). A small fix or change
+may take the quick path, frame -> build -> deliver.
+
+To resume: `python .agentic/aegis.py status` lists the task journals; open
+`.agentic/tasks/TASK-<id>.md`, read its `stage:` line and `## Log`, open
+that stage's step file, and continue at the first unticked item of
+`## Done checklist`.
+
+Artifacts: requirements in `.agentic/requirements/<category>/`, specs in
+`.agentic/specs/`, journals in `.agentic/tasks/`, component pages in
+`.agentic/knowledge/`. `python .agentic/aegis.py check` is advisory - read
+its findings and self-correct; nothing here blocks you mid-flight.
+
+<!-- AEGIS-LIGHT:END -->

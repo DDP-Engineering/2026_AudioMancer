@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-d483b8d5"
+title = "The Speech Blocks controller shall handle approval and reset: preserve"
+status = "active"
+
+requirement = """
+The Speech Blocks controller shall handle approval and reset: preserve audio blocks while resetting assembly, toggle unapprove without advancing, clear on explicit reset, and complete the manifest only after full approval.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_assembly",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancing",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_sync_manifest_completes_only_after_full_approval",
+]
+
+priority = "high"
+rationale = """
+Approval must gate downstream work precisely.
+"""
+created = 2026-07-19
+updated = 2026-07-24

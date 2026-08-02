@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-c536ec4c"
+title = "Manifest repair shall fix only invalid current-stage metadata and"
+status = "active"
+
+requirement = """
+Manifest repair shall fix only invalid current-stage metadata and preserve character-discovery state for the narrator and character-voices stages.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_project_fixes_invalid_current_stage_metadata_only",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_manifest_preserves_character_discovery_for_narrator_stage",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_manifest_preserves_character_discovery_for_character_voices_stage",
+]
+
+priority = "high"
+rationale = """
+Repair must be metadata-only and must not discard valid discovery work.
+"""
+created = 2026-07-18
+updated = 2026-07-24

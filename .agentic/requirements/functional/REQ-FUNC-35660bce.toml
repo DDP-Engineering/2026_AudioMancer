@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-35660bce"
+title = "The Speech Blocks page shall advance visible selection within limits"
+status = "active"
+
+requirement = """
+The Speech Blocks page shall advance visible selection within limits, preserve selection and scroll on refresh, disable generate without source or while busy, and update a single item without disturbing siblings.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_advances_visible_block_selection_with_limit",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_disables_generate_without_source_and_while_busy",
+  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_single_item_update_preserves_sibling_items",
+]
+
+priority = "high"
+rationale = """
+Selection and generation controls must be stable across refresh.
+"""
+created = 2026-07-19
+updated = 2026-07-24

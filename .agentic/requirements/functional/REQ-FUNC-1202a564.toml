@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-1202a564"
+title = "Narrator profile generation shall enforce preview-text bounds"
+status = "active"
+
+requirement = """
+Narrator profile generation shall enforce preview-text bounds, rejecting short or sub-six-second text and accepting bounded word overage.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_short_preview_text",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_preview_text_below_six_seconds",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+]
+
+priority = "high"
+rationale = """
+Preview text must be long enough to be audible and useful.
+"""
+created = 2026-07-19
+updated = 2026-07-24

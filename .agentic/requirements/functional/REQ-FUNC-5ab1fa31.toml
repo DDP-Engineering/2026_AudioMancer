@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-5ab1fa31"
+title = "Saving a lexical manual Cleanup edit shall rebuild minimal paragraph"
+status = "active"
+
+requirement = """
+Saving a lexical manual Cleanup edit shall rebuild minimal paragraph structure marked user_edited.
+"""
+
+verification = "Lexical edit truthful-structure test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Manual correction is authoritative but must not leave false source provenance.
+"""
+created = 2026-07-28
+updated = 2026-07-30

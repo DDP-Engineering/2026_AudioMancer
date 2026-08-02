@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-6751d97e"
+title = "Speech-block generation shall split oversized chunks by AI context and"
+status = "active"
+
+requirement = """
+Speech-block generation shall split oversized chunks by AI context and output-safety caps and fall back for malformed direct JSON.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_oversized_chunk_by_ai_context_budget",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_direct_malformed_json_falls_back_for_segment_only",
+]
+
+priority = "high"
+rationale = """
+Oversized chunks and malformed output must not break generation.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-3fc66fe1"
+title = "The narrator definition service shall clear the sample and selection"
+status = "active"
+
+requirement = """
+The narrator definition service shall clear the sample and selection when a profile edit begins.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_begin_profile_edit_clears_sample_and_selection",
+]
+
+priority = "high"
+rationale = """
+Editing a profile must invalidate its now-stale sample and selection.
+"""
+created = 2026-07-24
+updated = 2026-07-24

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a90154c5"
+title = "The Text Chunking controller shall persist a saved chunk into project"
+status = "active"
+
+requirement = """
+The Text Chunking controller shall persist a saved chunk into project state.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_save_chunk_updates_project_state",
+]
+
+priority = "high"
+rationale = """
+Saved chunk edits must update durable project state.
+"""
+created = 2026-07-19
+updated = 2026-07-24

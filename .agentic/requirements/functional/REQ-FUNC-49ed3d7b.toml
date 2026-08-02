@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-49ed3d7b"
+title = "The Speech Blocks controller shall reset downstream work on insert and"
+status = "active"
+
+requirement = """
+The Speech Blocks controller shall reset downstream work on insert and confirmed delete.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream",
+]
+
+priority = "high"
+rationale = """
+Structural changes must invalidate downstream work.
+"""
+created = 2026-07-19
+updated = 2026-07-24

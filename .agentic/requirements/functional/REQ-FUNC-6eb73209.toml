@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-6eb73209"
+title = "Cleanup rendering shall construct output only from source-ledger slices"
+status = "active"
+
+requirement = """
+Cleanup rendering shall construct output only from source-ledger slices and validated typed separators.
+"""
+
+verification = "Source-ledger projection and invalid-action renderer tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_renderer_rejects_unknown_unit_actions",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Automated cleanup must not reproduce, invent, or accept replacement story text from an LLM.
+"""
+created = 2026-07-27
+updated = 2026-07-30

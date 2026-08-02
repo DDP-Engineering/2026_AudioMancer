@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-47dd0d73"
+title = "The narrator definition service shall normalize language labels to"
+status = "active"
+
+requirement = """
+The narrator definition service shall normalize language labels to runtime codes.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_normalizes_language_labels_to_runtime_codes",
+]
+
+priority = "high"
+rationale = """
+Language values must be normalized to the runtime code contract.
+"""
+created = 2026-07-24
+updated = 2026-07-24

@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-9e6c2465"
+title = "Audio-block resume shall continue from the checkpoint persisted in the"
+status = "active"
+
+requirement = """
+Audio-block resume shall continue from the checkpoint persisted in the single Audio Blocks document and reject invalid or escaping part checkpoints.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_resume_continues_from_saved_checkpoint",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+The authoritative document checkpoint must preserve all guards needed for safe resume.
+"""
+created = 2026-07-19
+updated = 2026-07-25

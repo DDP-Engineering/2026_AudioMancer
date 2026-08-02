@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-46ec3365"
+title = "The VoiceWeaver capability matrix shall ignore unhealthy models"
+status = "active"
+
+requirement = """
+The VoiceWeaver capability matrix shall ignore unhealthy models.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_build_capability_matrix_ignores_unhealthy_models",
+]
+
+priority = "high"
+rationale = """
+Unhealthy models must not appear as usable capabilities.
+"""
+created = 2026-07-19
+updated = 2026-07-24

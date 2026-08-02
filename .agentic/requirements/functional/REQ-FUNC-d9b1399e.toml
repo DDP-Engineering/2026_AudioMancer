@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-d9b1399e"
+title = "A malformed current narrator document shall be preserved and reported"
+status = "active"
+
+requirement = """
+A malformed current narrator document shall be preserved and reported rather than overwritten.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_malformed_current_document_is_preserved_and_reported",
+]
+
+priority = "high"
+rationale = """
+Corrupt narrator data must be operator-visible and intact.
+"""
+created = 2026-07-24
+updated = 2026-07-24

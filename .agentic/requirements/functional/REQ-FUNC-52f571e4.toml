@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-52f571e4"
+title = "Speech-block state shall not resolve missing chunks or unapproved"
+status = "active"
+
+requirement = """
+Speech-block state shall not resolve missing chunks or unapproved translation.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_does_not_resolve_missing_chunks",
+  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_does_not_resolve_unapproved_translation",
+]
+
+priority = "high"
+rationale = """
+State must not fabricate resolution from missing or unapproved upstream data.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-30d13a61"
+title = "The operation runtime shall tolerate missing or malformed optional"
+status = "active"
+
+requirement = """
+The operation runtime shall tolerate missing or malformed optional state and null-like values.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_load_operation_state_file_accepts_missing_and_dict_payloads",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_load_operation_state_file_tolerates_malformed_json",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_project_artifact_helpers_handle_missing_and_malformed_inputs",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_optional_string_and_runtime_value_helpers_normalize_null_like_values",
+]
+
+priority = "high"
+rationale = """
+Optional state must degrade safely.
+"""
+created = 2026-07-19
+updated = 2026-07-24

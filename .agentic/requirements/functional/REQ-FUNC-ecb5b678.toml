@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-ecb5b678"
+title = "The Speech Blocks document shall not persist a copy of upstream"
+status = "active"
+
+requirement = """
+The Speech Blocks document shall not persist a copy of upstream source-chunk text; it shall retain only source.fingerprint and re-resolve source chunks from upstream artifacts (chunks_text.json or translated_text.json) at read time.
+"""
+
+verification = "Artifact excludes source_chunks; source keeps only fingerprint."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_persisted_document_excludes_source_chunk_text",
+]
+
+priority = "high"
+rationale = """
+Storing a full source-text copy duplicated upstream data; re-resolving from upstream keeps a single source of truth, matching Character Discovery.
+"""
+created = 2026-07-24
+updated = 2026-07-24
