@@ -31,6 +31,7 @@
 
 from __future__ import annotations
 
+import os
 import shlex
 import subprocess
 from pathlib import Path
@@ -232,6 +233,14 @@ def _run_command(repo_root: Path, command: str, timeout: int) -> subprocess.Comp
     @return     Completed process, synthesized as a failure (exit 127 for an
                 unlaunchable executable, 124 for a timeout) when the command
                 could not run to completion.
+    @details    Windows refuses direct exec with `PermissionError` for targets
+                CreateProcess cannot launch itself, such as a resolved
+                directory or a shim the loader will not run. The command is
+                still a real gate, so it is retried once through the shell
+                rather than reported as an unlaunchable configuration error.
+                Only argv-eligible commands retry: they were accepted by
+                `_argv_for_simple_command` and therefore carry no shell
+                metacharacter, so shell mode changes launch behavior only.
     @exception  None
     """
     argv = _argv_for_simple_command(repo_root, command)
@@ -259,6 +268,25 @@ def _run_command(repo_root: Path, command: str, timeout: int) -> subprocess.Comp
             timeout=timeout,
             check=False,
         )
+    except PermissionError as exc:
+        if argv and os.name == "nt":
+            try:
+                return subprocess.run(
+                    command,
+                    cwd=repo_root,
+                    shell=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    capture_output=True,
+                    timeout=timeout,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired as retry_exc:
+                return _failed_process(command, 124, retry_exc)
+            except OSError as retry_exc:
+                return _failed_process(command, 127, retry_exc)
+        return _failed_process(command, 127, exc)
     except subprocess.TimeoutExpired as exc:
         return _failed_process(command, 124, exc)
     except OSError as exc:

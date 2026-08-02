@@ -32,16 +32,23 @@ from ._form_io import read_string_field as _string
 from ._form_io import retire_form as _retire_form
 from .config import DEFAULT_GATE_TIMEOUT_SECONDS
 from .gates import _run_command
-from .models import Check, Evidence, Graph
+from .models import Check, Evidence, Graph, StageRecord
 from .stage_forms import StageOperationError, stage_directory
 from .store import (
     GraphConflictError,
     append_journal,
     graph_transaction,
     next_evidence_id,
+    relink_check_evidence,
     run_dir,
     save_graph,
     serialized_graph_mutation,
+)
+from .waivers import (
+    Blocker,
+    active_waiver,
+    red_before_green_blocker,
+    state_digests,
 )
 
 # CONSTANTS
@@ -67,9 +74,13 @@ def prepare_check_evidence(repo_root: Path, graph: Graph) -> Path:
     @param[in]  graph Active workflow graph.
     @return     Path to the generated evidence TOML.
     @exception  StageOperationError If check execution mode is not external, the
-                stage is not check or implementation, or no checks are imported.
+                stage is not check or implementation, no checks are imported, or
+                every imported check is already excused by an active waiver.
+    @details    Checks whose stage evidence blocker is already covered by an
+                active, exactly matching waiver receive no result row. Their
+                honest absence replaces a fabricated observation.
     """
-    _require_external_evidence_preconditions(graph)
+    excused = _require_external_evidence_preconditions(graph)
     path = stage_directory(repo_root, graph) / "evidence.toml"
     path.parent.mkdir(parents=True, exist_ok=True)
     expected = "fail" if graph.stage == "check" else "pass"
@@ -80,6 +91,8 @@ def prepare_check_evidence(repo_root: Path, graph: Graph) -> Path:
         f"expected_result = {_q(expected)}",
     ]
     for check in graph.checks:
+        if check.id in excused:
+            continue
         lines.extend(
             [
                 "",
@@ -97,7 +110,11 @@ def prepare_check_evidence(repo_root: Path, graph: Graph) -> Path:
         repo_root,
         graph.run_id,
         "check.evidence.prepared",
-        {"stage": graph.stage, "path": path.relative_to(repo_root).as_posix()},
+        {
+            "stage": graph.stage,
+            "path": path.relative_to(repo_root).as_posix(),
+            "excused_checks": sorted(excused),
+        },
     )
     return path
 
@@ -111,8 +128,11 @@ def record_check_evidence(repo_root: Path, graph: Graph) -> list[Evidence]:
     @return     Imported evidence records.
     @exception  StageOperationError If preconditions are unmet, or the evidence
                 form's identity, completeness, or result content fails validation.
+    @details    Completeness is measured against the imported checks that are not
+                excused by an active, exactly matching waiver. Every present row
+                is validated unchanged, and an excused check may not carry one.
     """
-    _require_external_evidence_preconditions(graph)
+    excused = _require_external_evidence_preconditions(graph)
     path = stage_directory(repo_root, graph) / "evidence.toml"
     data = _load(path)
     expected_keys = {
@@ -146,7 +166,7 @@ def record_check_evidence(repo_root: Path, graph: Graph) -> list[Evidence]:
                 f"{path}: {key} must be {value!r}; received {data.get(key)!r}"
             )
     rows = data["result"]
-    if not isinstance(rows, list) or len(rows) != len(graph.checks):
+    if not isinstance(rows, list) or len(rows) != len(graph.checks) - len(excused):
         raise StageOperationError(
             f"{path}: result collection must contain every imported check exactly once"
         )
@@ -167,6 +187,11 @@ def record_check_evidence(repo_root: Path, graph: Graph) -> list[Evidence]:
         if check_id in seen or check_id not in checks:
             raise StageOperationError(
                 f"{path}: unknown or duplicate immutable check_id {check_id}"
+            )
+        if check_id in excused:
+            raise StageOperationError(
+                f"{path}: {check_id} is covered by an active waiver "
+                "and must not carry a result"
             )
         seen.add(check_id)
         check = checks[check_id]
@@ -360,12 +385,13 @@ def _check_definition_snapshot(checks: list[Check]) -> tuple[tuple[object, ...],
     )
 
 
-def _require_external_evidence_preconditions(graph: Graph) -> None:
+def _require_external_evidence_preconditions(graph: Graph) -> set[str]:
     """
     @brief Enforce shared preparation and recording preconditions.
     @param[in] graph Active workflow graph.
-    @return None.
-    @exception StageOperationError If stage, mode, or check state is invalid.
+    @return Immutable identities of the checks excused by an active waiver.
+    @exception StageOperationError If stage, mode, or check state is invalid, or
+               no check still requires an observation this stage.
     """
     _require_mode(graph, "external")
     if graph.stage not in {"check", "implementation"}:
@@ -374,6 +400,69 @@ def _require_external_evidence_preconditions(graph: Graph) -> None:
         )
     if not graph.checks:
         raise StageOperationError("no imported checks are available")
+    excused = _excused_check_ids(graph)
+    if len(excused) == len(graph.checks):
+        raise StageOperationError(
+            "every imported check is covered by an active waiver; "
+            "no external check evidence is required"
+        )
+    return excused
+
+
+def _excused_check_ids(graph: Graph) -> set[str]:
+    """
+    @brief Identify checks whose stage evidence blocker is already waived.
+    @param[in] graph Active workflow graph carrying human approval records.
+    @return Immutable check identities that need no result row this stage.
+    @details The blockers built here are the same objects `stage_blockers`
+             evaluates, so an approval excuses a check only while it still
+             covers exact current state. A stale or absent waiver excuses
+             nothing, and the check still owes a truthful observation.
+    """
+    record = graph.stage_records.get(graph.stage)
+    if record is None:
+        return set()
+    return {
+        check.id
+        for check in graph.checks
+        if active_waiver(graph, _check_stage_blocker(graph, record, check.id))
+        is not None
+    }
+
+
+def _check_stage_blocker(
+    graph: Graph,
+    record: StageRecord,
+    check_id: str,
+) -> Blocker:
+    """
+    @brief Rebuild the exact readiness blocker this stage's evidence answers.
+    @param[in] graph Active workflow graph.
+    @param[in] record Applied stage record pinning implementation approvals.
+    @param[in] check_id Concrete check identity.
+    @return The check stage's red-before-green or implementation's green blocker.
+    @details Construction mirrors `stage_forms._specific_stage_blocker` exactly;
+             any divergence would silently stop matching approved waivers.
+    """
+    if graph.stage == "check":
+        return red_before_green_blocker(
+            graph,
+            check_id,
+            f"{check_id} has no active red evidence",
+        )
+    description = f"{check_id} has no active green evidence"
+    return Blocker(
+        id=f"stage:implementation:{check_id}:green-evidence",
+        description=description,
+        state_digests=state_digests(
+            "stage:implementation",
+            {
+                "revision": record.revision,
+                "digest": record.digest,
+                "description": description,
+            },
+        ),
+    )
 
 
 def _require_mode(graph: Graph, requested: str) -> None:
@@ -392,19 +481,57 @@ def _require_mode(graph: Graph, requested: str) -> None:
         )
 
 
+# @brief Stages whose fail-result records are failed green attempts, not the
+#        durable check-stage red witness. Mirrors the stage set INV-4 scans.
+_GREEN_ATTEMPT_STAGES = frozenset({"implementation", "validation", "delivery"})
+
+
 def _update_check_states(graph: Graph, evidence: list[Evidence]) -> None:
-    """@brief Link evidence and update red/green state after atomic creation."""
+    """
+    @brief Supersede stale same-check evidence, then relink state and links.
+    @param[in,out] graph Authoritative graph already extended with `evidence`.
+    @param[in] evidence Freshly created records for this batch.
+    @details A new record supersedes every older active record for the same
+             check with the same result — a rerun of the same observation
+             replaces its predecessor rather than accumulating beside it. A
+             new pass additionally supersedes older fail records from the
+             implementation/validation/delivery stages: those are failed
+             attempts at the green observation, so a later genuine pass
+             retires them and INV-4 stops reporting them as live regressions.
+             Check-stage fail records are never superseded by a pass — they
+             are the durable red-before-green witness, and both the
+             implementation-close blocker and INV-3 continue to require an
+             active red. A new fail never supersedes an older pass: keeping
+             both visible is what lets INV-4 report a genuine regression
+             instead of hiding that the check once passed.
+    """
+    new_ids = {item.id for item in evidence}
     by_id = {item.check_id: item for item in evidence}
     for check in graph.checks:
         item = by_id.get(check.id)
         if not item:
             continue
-        if item.result == "fail":
-            check.state = "red"
-            check.red_evidence = item.id
-        elif item.result == "pass":
-            check.state = "green"
-            check.green_evidence = item.id
+        for prior in graph.evidence:
+            if (
+                prior.id in new_ids
+                or prior.status != "active"
+                or prior.check_id != check.id
+            ):
+                continue
+            same_result = prior.result == item.result
+            failed_green_attempt = (
+                item.result == "pass"
+                and prior.result == "fail"
+                and prior.stage in _GREEN_ATTEMPT_STAGES
+            )
+            if not (same_result or failed_green_attempt):
+                continue
+            prior.status = "superseded"
+            prior.superseded_by = item.id
+            prior.supersede_reason = (
+                "superseded by a newer run of the same check"
+            )
+    relink_check_evidence(graph, set(by_id))
 
 
 def _next_evidence_id(graph: Graph, offset: int) -> str:

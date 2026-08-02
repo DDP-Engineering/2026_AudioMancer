@@ -55,6 +55,7 @@ from .requirements import RequirementPatch, update_requirement
 from .repowise import inspect_repowise
 from .store import (
     append_journal,
+    relink_check_evidence,
     run_dir,
     save_graph,
     save_graph_with_journal_events,
@@ -1472,7 +1473,19 @@ def _apply_checks(
                 parity_targets=_strings(data, "parity_targets", path),
             )
         )
+    # Reapplying the collection must not orphan evidence already recorded for
+    # a check whose observable definition is unchanged: a same-id, same-command
+    # check keeps its red/green links, re-derived from the active evidence the
+    # graph still holds. A changed command means the old evidence no longer
+    # proves anything about the new definition, so that check starts unknown.
+    previous = {check.id: check for check in graph.checks}
+    unchanged = {
+        check.id
+        for check in checks
+        if check.id in previous and previous[check.id].command == check.command
+    }
     graph.checks = checks
+    relink_check_evidence(graph, unchanged)
     return {"checks": [asdict(item) for item in checks]}
 
 

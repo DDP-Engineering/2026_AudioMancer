@@ -183,11 +183,40 @@ invented, superseded, or non-implementation evidence is rejected.
 External preparation and recording are valid only during check or
 implementation, require a captured external mode and at least one imported
 check, and require exactly one result row per immutable check ID and command.
+
+A check whose stage evidence blocker already carries an active, exactly
+matching waiver is excused and needs no row. `check prepare` omits it, and
+`check record` measures completeness against the checks that remain. The
+excused blocker is the one `waive list` offers for that stage:
+`red-before-green:<check-id>` during check, and
+`stage:implementation:<check-id>:green-evidence` during implementation. A
+waiver that has gone stale excuses nothing, so its check owes a truthful
+observation again. An excused check may not carry a result either: a waiver
+records that the observation is unobtainable, so submitting one contradicts
+the approval. Recording rejects such a row rather than accepting a fabricated
+result. When every imported check is excused, both commands report that no
+external check evidence is required; the stage closes on its waivers.
+
 Recording validates the complete document before graph mutation. Permitted
 surrounding whitespace in `result`, `summary`, and `output_log` is trimmed, and
 the persisted result is the canonical `pass` or `fail` value that was
 validated. Invalid or incomplete documents leave graph, journal, and form state
 unchanged.
+
+Recording a check again supersedes its older evidence rather than
+accumulating beside it: a new observation retires prior active records with
+the same result, and a genuine pass additionally retires earlier failed
+attempts from the implementation, validation, and delivery stages. The
+check-stage red witness is never retired by a pass — red-before-green keeps
+its active red — and a new failure never retires an older pass, so a genuine
+regression stays visible to verification. Superseded records remain in the
+graph with a reference to the record that replaced them.
+
+Reapplying the check stage preserves the evidence links of every check whose
+identity and command are unchanged; their red/green state is re-derived from
+the active evidence the graph already holds. A check whose command changed
+returns to `unknown` with no links, because existing evidence no longer
+proves anything about the new definition.
 
 Manual evidence:
 

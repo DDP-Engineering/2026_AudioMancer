@@ -827,6 +827,45 @@ def next_evidence_id(graph: Graph, offset: int = 0) -> str:
     return candidate
 
 
+def relink_check_evidence(graph: Graph, check_ids: set[str] | None = None) -> None:
+    """
+    @brief Recompute check evidence links and state from active evidence.
+    @param[in,out] graph Authoritative graph whose checks are relinked in place.
+    @param[in] check_ids Optional identities to relink; ``None`` relinks all.
+    @details One shared derivation rule keeps every code path consistent:
+             `red_evidence` points at the newest active fail-result record for
+             the check, `green_evidence` at the newest active pass-result
+             record, and `state` follows the newest active pass/fail record
+             overall — so the latest genuine observation wins, exactly as a
+             fresh recording would have set it. A check with no active
+             pass/fail evidence returns to `unknown` with no links; a link is
+             never left pointing at superseded or removed evidence.
+    """
+    for check in graph.checks:
+        if check_ids is not None and check.id not in check_ids:
+            continue
+        newest_red: str | None = None
+        newest_green: str | None = None
+        newest_result: str | None = None
+        for item in graph.evidence:
+            if item.status != "active" or item.check_id != check.id:
+                continue
+            if item.result == "fail":
+                newest_red = item.id
+                newest_result = "fail"
+            elif item.result == "pass":
+                newest_green = item.id
+                newest_result = "pass"
+        check.red_evidence = newest_red
+        check.green_evidence = newest_green
+        if newest_result == "pass":
+            check.state = "green"
+        elif newest_result == "fail":
+            check.state = "red"
+        else:
+            check.state = "unknown"
+
+
 @contextmanager
 def graph_transaction(repo_root: Path, graph: Graph) -> Iterator[Graph]:
     """

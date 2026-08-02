@@ -27,8 +27,8 @@
       "size": 3225
     },
     ".agentic/cli/src/aegis/check_execution.py": {
-      "sha256": "4a2796f5eade5ab85ea32aa1d500d42f6f815c17fc13a978b04cda2e665c3d0e",
-      "size": 15524
+      "sha256": "94472f1f6fe03a805678e4d43b7642b81c826def755058930d0f0552baff41c4",
+      "size": 20997
     },
     ".agentic/cli/src/aegis/cli.py": {
       "sha256": "c9c993221aa75fd1a9c4da2d4b363e943243f04b7a4a2d277c274d4363aa01b5",
@@ -51,8 +51,8 @@
       "size": 9081
     },
     ".agentic/cli/src/aegis/gates.py": {
-      "sha256": "ee71e41fee9a54c72f4dde183dcf374d746e7e373de7d7aa9d9038a1ff3d4b7a",
-      "size": 13616
+      "sha256": "fb9b97b39ec9ff59d3b6f70001054850fae26a01702b232e64f461daedf0d6fe",
+      "size": 14962
     },
     ".agentic/cli/src/aegis/invariants.py": {
       "sha256": "4bd45e42b37939d7b3ab6a89979c1a017a9dab71b4e84edb9b4baec761f5d98d",
@@ -87,16 +87,16 @@
       "size": 26072
     },
     ".agentic/cli/src/aegis/stage_forms.py": {
-      "sha256": "53c96068f322f5a6c61f6cec38f926b328b2315b5dd7de297fd14f34ecf66a47",
-      "size": 75962
+      "sha256": "79a8c5b73ca2d6a77a38397618d37eec1776f20b4e8a6ee644093204e25be019",
+      "size": 76632
     },
     ".agentic/cli/src/aegis/stage_schema.py": {
       "sha256": "a6e092359c356db41136b3a4bda92e3c20cc96f8b6c219ac5fe2d582d135140c",
       "size": 10115
     },
     ".agentic/cli/src/aegis/store.py": {
-      "sha256": "62e4ddab7a95d2e9386f22200729a65838901a8a5c950ad7ee6a39eb0b38950d",
-      "size": 45210
+      "sha256": "6262f03e5bf23c6f7c4b21574cd08d62c4eecd59ae9c49713ff72bb10308731f",
+      "size": 47014
     },
     ".agentic/cli/src/aegis/verification.py": {
       "sha256": "f2d883075ae0a57dd7796b2e84edb8ba0a44ddc6eac8d292e88a4c5b509743b0",
@@ -115,8 +115,8 @@
       "size": 12521
     },
     ".agentic/documents/CLI_API_REFERENCE.md": {
-      "sha256": "08a9f43ae1cc7b67ca42341389799fd1b9c5bb8bec143d67df091fdbe08fe2f1",
-      "size": 11830
+      "sha256": "c11bfac32bd2f54e6a628cfb0dc253263786a49d8120cf48e850cf5dbff5b747",
+      "size": 13604
     },
     ".agentic/documents/COMPONENTS_CONFIGURATION.md": {
       "sha256": "95b60d686a679cb76d54d9cc5d25ac3e36783007867ab4abd24d1b704ac85e5e",
@@ -601,7 +601,7 @@
     ".gitignore",
     "CHANGELOG.md"
   ],
-  "payload_digest": "da43bc91f917366342f21f242d2b8cb889998eee6b9b1c72929aa23f5cf8912f",
+  "payload_digest": "7b5aeeb709fece5fdcb02a363b9784cfc117c39836b6b64ee9661fe368449268",
   "configuration": {
     "answers": {
       "alignment_enabled": true,
