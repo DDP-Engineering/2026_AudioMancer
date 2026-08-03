@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-6b5fffd6 — Synchronized Cleanup downstream invalidation
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-2ab78634
@@ -44,7 +44,7 @@ opened: 2026-08-03
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery endpoint confirmed by the user: stop before commit or push
 - [x] journal and report prepared without committing or pushing
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeds
+- [x] close-out: `stage: done` set and committed only after the outcome succeeds
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] release version workflow not applicable because this task is not a release
 
@@ -74,6 +74,7 @@ opened: 2026-08-03
 - 2026-08-03 deliver: Final `check --full` after report preparation retained zero errors and reduced to 20 explained warnings; `git diff --check` passed and HEAD remained f2c71ab with no commit or push performed.
 - 2026-08-03 deliver: Corrected the close-out checklist item to remain unticked because the requested pre-commit delivery endpoint does not authorize setting `stage: done`.
 - 2026-08-03 deliver: The user manually tested TC-2 successfully and authorized the implementation commit, with no push requested.
+- 2026-08-03 done: Implementation commit 0e8467f succeeded, so the AEGIS journal is closed without pushing.
 
 ## Design
 
