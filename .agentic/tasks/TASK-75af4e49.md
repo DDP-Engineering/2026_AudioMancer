@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-75af4e49 — Operation Orchestration localization and dismissal
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-FUNC-84c50360, REQ-UX-afd2c37d
@@ -46,9 +46,9 @@ opened: 2026-08-03
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
-- [x] journal and report inside the delivery commit; agreed outcome
-      delivered (PR by default)
-- [ ] close-out: `stage: done` set and committed only after the outcome
+- [x] journal and report inside the delivery commit; scoped commit delivered
+      at the user's request
+- [x] close-out: `stage: done` set and committed only after the outcome
       succeeded
 - [x] the project items from `.agentic/PROJECT.md` ("Delivery checklist
       additions") ƒ?" code style, and for a release the four-place version
@@ -76,6 +76,7 @@ opened: 2026-08-03
 - 2026-08-03 deliver: The unticked-deliver warning is expected because the user instructed the task to stop before commit or push; the configured strict-run wrapper timed out at its 120-second host limit, but its full-suite command was completed directly and passed above.
 - 2026-08-03 deliver: Re-read REQ-FUNC-84c50360 and REQ-UX-afd2c37d confirms active status, self-contained prose, concrete verification, and existing linked tests; this non-release change needs no four-place version workflow.
 - 2026-08-03 deliver: The user tested the implementation, confirmed it is working, and authorized the scoped delivery commit without a push.
+- 2026-08-03 close: Commit fd7edf7 delivered the requested scoped change; the user then requested task closure without a push, so this journal is closed with the documented host-limited strict-run wrapper exception.
 
 ## Design
 
