@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-FUNC-c316e829"
-title = "The Audio Blocks controller shall invalidate voice-target audio while"
+title = "Audio Blocks invalidates only voice-target audio"
 status = "active"
 
 requirement = """
@@ -22,4 +22,4 @@ rationale = """
 Voice-target changes must not delete unrelated generated audio.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-02

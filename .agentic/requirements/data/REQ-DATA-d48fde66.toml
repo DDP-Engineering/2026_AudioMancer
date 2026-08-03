@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-DATA-d48fde66"
-title = "Cleanup runtime quality reporting shall expose the backend kind and"
+title = "Cleanup reports online provider kind and submitted fragment count"
 status = "active"
 
 requirement = """
@@ -24,4 +24,4 @@ rationale = """
 Operators need durable disclosure visibility without persisting the submitted text.
 """
 created = 2026-07-28
-updated = 2026-07-30
+updated = 2026-08-02

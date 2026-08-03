@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-UX-a3f0f73c"
-title = "The Settings page shall present a separate text-window font-size"
+title = "Settings persists an independent text-window font size"
 status = "active"
 
 requirement = """
@@ -21,4 +21,4 @@ rationale = """
 Reading/editing text windows must be sized independently from the interface controls.
 """
 created = 2026-07-25
-updated = 2026-07-25
+updated = 2026-08-02

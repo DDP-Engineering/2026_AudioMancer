@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-REL-33fa2b3b"
-title = "Development builds shall accept only Chunking documents that match the"
+title = "Development builds enforce the current Chunking schema"
 status = "active"
 
 requirement = """
@@ -22,4 +22,4 @@ rationale = """
 Strict schema validation prevents incomplete or incompatible derived data from being treated as current Chunking state.
 """
 created = 2026-07-30
-updated = 2026-07-30
+updated = 2026-08-02

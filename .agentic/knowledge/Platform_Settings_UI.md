@@ -207,6 +207,7 @@ plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 From the adopted component map:
 
 - `04_Software/AudioMancer/settings.example.json`
+- `04_Software/AudioMancer/settings.json`
 - `04_Software/AudioMancer/src/audiomancer/config.py`
 - `04_Software/AudioMancer/src/audiomancer/services/logging_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/settings_service.py`
@@ -218,13 +219,15 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py`
 - `04_Software/AudioMancer/tests/test_config_contract.py`
-- `04_Software/AudioMancer/tests/test_config_hygiene.py`
 - `04_Software/AudioMancer/tests/test_localization_parity.py`
 - `04_Software/AudioMancer/tests/test_logging_service.py`
+- `04_Software/AudioMancer/tests/test_misc_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_operator_status_font_role.py`
 - `04_Software/AudioMancer/tests/test_settings_page.py`
 - `04_Software/AudioMancer/tests/test_settings_service.py`
 - `04_Software/AudioMancer/tests/test_ui_scroll_service.py`
 - `04_Software/AudioMancer/tests/test_ui_state_service.py`
 - `04_Software/AudioMancer/tests/test_ui_theme_service.py`
+- `04_Software/AudioMancer/tests/test_ui_localization_coverage.py`
 - `04_Software/AudioMancer/tests/test_url_service.py`
+- `04_Software/AudioMancer/tests/test_user_data_location.py`

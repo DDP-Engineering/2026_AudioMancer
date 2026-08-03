@@ -255,18 +255,24 @@ splitting, cancellation checkpoints, and resume invalidation.
 From the adopted component map:
 
 - `04_Software/AudioMancer/prompts/text_cleanup_*.txt`
-- `04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/deterministic_cleanup_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
-- `04_Software/AudioMancer/tests/test_ai_cleanup_contract.py`
-- `04_Software/AudioMancer/tests/test_ai_cleanup_service.py`
+- `04_Software/AudioMancer/tests/fixtures/cleanup_corpus.json`
+- `04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py`
+- `04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
 - `04_Software/AudioMancer/tests/test_cleanup_metadata_service.py`
-- `04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py`
+- `04_Software/AudioMancer/tests/test_cleanup_quality_contract.py`
+- `04_Software/AudioMancer/tests/test_cleanup_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`

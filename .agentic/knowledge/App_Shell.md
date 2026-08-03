@@ -129,4 +129,4 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_app_entrypoint.py`
 - `04_Software/AudioMancer/tests/test_main_window_lifecycle.py`
 - `04_Software/AudioMancer/tests/test_package_import.py`
-- `04_Software/AudioMancer/tests/test_traceability.py`
+- `04_Software/AudioMancer/tests/test_ui_localization_coverage.py`

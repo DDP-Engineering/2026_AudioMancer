@@ -524,7 +524,7 @@ def test_text_chunking_component_documentation_describes_current_contract() -> N
     """Verify the component documentation describes the implemented document contract."""
     repository_root = Path(__file__).resolve().parents[3]
     documentation = (
-        repository_root / ".agentic" / "knowledge" / "components" / "Text_Chunking.md"
+        repository_root / ".agentic" / "knowledge" / "Text_Chunking.md"
     ).read_text(encoding="utf-8")
     normalized = documentation.lower()
 

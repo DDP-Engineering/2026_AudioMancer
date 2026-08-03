@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-PLAT-9fe6262f"
-title = "Settings validation shall replace any interface language outside"
+title = "Settings repair unsupported interface languages"
 status = "active"
 
 requirement = """
@@ -23,4 +23,4 @@ rationale = """
 Persisted or submitted settings must not activate an untranslated operator interface.
 """
 created = 2026-07-29
-updated = 2026-07-29
+updated = 2026-08-02

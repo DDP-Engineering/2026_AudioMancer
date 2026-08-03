@@ -224,12 +224,15 @@ From the adopted component map:
 
 - `04_Software/AudioMancer/prompts/text_chunking_*.txt`
 - `04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py`
 - `04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py`
 - `04_Software/AudioMancer/tests/test_ai_chunking_service.py`
+- `04_Software/AudioMancer/tests/test_chunking_single_document_contract.py`
+- `04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py`
 - `04_Software/AudioMancer/tests/test_deterministic_chunking_service.py`
 - `04_Software/AudioMancer/tests/test_text_chunking_page.py`
 - `04_Software/AudioMancer/tests/test_text_chunking_state_service.py`

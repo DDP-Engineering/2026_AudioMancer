@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-FUNC-bfa5d6ed"
-title = "The Text Chunking component documentation shall describe the current"
+title = "Text Chunking documentation describes the single-document contract"
 status = "active"
 
 requirement = """
@@ -22,4 +22,4 @@ rationale = """
 Component documentation must match the implemented contract.
 """
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-08-02

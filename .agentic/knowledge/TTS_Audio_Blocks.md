@@ -128,6 +128,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_audio_blocks_main_window.py`
 - `04_Software/AudioMancer/tests/test_audio_blocks_page.py`
 - `04_Software/AudioMancer/tests/test_audio_blocks_service.py`
+- `04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py`
 - `04_Software/AudioMancer/tests/test_audio_blocks_state_service.py`
 - `04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_blocks_performance_baseline.py`

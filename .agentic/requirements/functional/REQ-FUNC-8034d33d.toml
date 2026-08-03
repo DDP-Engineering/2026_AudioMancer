@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-FUNC-8034d33d"
-title = "Cleanup shall preserve verse and preformatted intra-block line"
+title = "Cleanup preserves verse and preformatted line structure"
 status = "active"
 
 requirement = """
@@ -23,4 +23,4 @@ rationale = """
 Poetry and preformatted content require meaningful single line breaks rather than prose unwrapping or paragraph inflation.
 """
 created = 2026-07-28
-updated = 2026-07-30
+updated = 2026-08-02

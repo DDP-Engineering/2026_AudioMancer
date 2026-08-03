@@ -127,4 +127,5 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_narrator_definition_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_definition_state_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py`
+- `04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py`
 - `04_Software/AudioMancer/tests/test_voice_sample_import_service.py`

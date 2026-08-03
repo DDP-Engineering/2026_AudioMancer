@@ -1,6 +1,6 @@
 schema = 1
 id = "REQ-NFR-820d3753"
-title = "Critical text and JSON persistence shall write a complete"
+title = "Critical persistence uses durable atomic replacement"
 status = "active"
 
 requirement = """
@@ -23,4 +23,4 @@ rationale = """
 A crash or failed replacement must not turn a previously valid project manifest or settings file into a partial payload.
 """
 created = 2026-07-18
-updated = 2026-07-18
+updated = 2026-08-02
