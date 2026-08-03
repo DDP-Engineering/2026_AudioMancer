@@ -526,6 +526,9 @@ def _extract_message_content(payload: dict[str, object]) -> str:
     first_choice = choices[0]
     if not isinstance(first_choice, dict):
         raise ValueError("AI provider response contains an invalid choice payload.")
+    finish_reason = first_choice.get("finish_reason")
+    if isinstance(finish_reason, str) and finish_reason.strip().lower() == "length":
+        raise RuntimeError("AI provider response reached the provider output-token limit.")
     message = first_choice.get("message", {})
     if not isinstance(message, dict):
         raise ValueError("AI provider response contains an invalid message payload.")

@@ -1,0 +1,57 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-3875ac3b"
+
+title = "The provider client shall reject output-length-limited responses before JSON parsing or repair"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+requirement = """
+The provider client shall reject responses stopped by the provider's output length limit before JSON parsing or repair. When the first chat-completion choice explicitly reports finish_reason="length", it shall raise a RuntimeError that identifies the provider output-token limit without exposing prompts, response content, credentials, or other sensitive data. Providers that omit finish_reason remain compatible, and other finish reasons retain their existing behavior.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Automated: malformed and syntactically valid first-choice length responses each raise the documented RuntimeError after exactly one provider request; a supplied transaction log records parsed_failure and not parsed_success_after_repair; stop and omitted finish reasons parse normally; and the existing non-truncated malformed-response repair regression remains green."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_output_length_limited_malformed_json",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_output_length_limited_valid_json",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_accepts_stop_and_omitted_finish_reasons",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_non_json_output_with_followup_request",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"
+rationale = "Explicit provider output-length termination can produce silently incomplete domain data, so it must be surfaced as a non-repairable provider failure."
+
+created = 2026-08-03
+updated = 2026-08-03

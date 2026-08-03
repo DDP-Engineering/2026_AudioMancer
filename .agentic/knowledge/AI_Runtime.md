@@ -15,7 +15,8 @@ and lets operators manage AI profiles and defaults.
 - Build conservative context budgets and reject requests whose usable text
   budget is too small.
 - Send JSON-oriented chat completions with structured-output fallbacks,
-  retries, cancellation, response repair, transaction logging, and redaction.
+  retries, cancellation, hard output-length failure detection, response repair,
+  transaction logging, and redaction.
 - Load, render, and validate prompt templates with exact placeholders.
 - Normalize, merge, restore, and localize provider token usage.
 - Present editable, localized AI profiles/default selectors and persist their
@@ -30,7 +31,9 @@ semantic validation of a domain's provider response.
 normalizes `/models` or Ollama tags results. `llm_provider_service.chat_json`
 builds a chat endpoint and request payload, supports response-format and token
 parameter compatibility retries, cooperatively cancels waiting requests,
-parses/repairs bounded JSON responses, and redacts sensitive transaction logs.
+rejects explicit output-length termination before content parsing or repair,
+parses/repairs bounded non-truncated JSON responses, and redacts sensitive
+transaction logs.
 
 `ai_budget_service` calculates prompt, output, safety, and usable-text budgets.
 `prompt_template_service` resolves template files and rejects missing or extra
@@ -76,6 +79,13 @@ unconstrained `response_format` fallback and model-based JSON repair, and may
 override retry/output-token limits. Cleanup uses this path; existing AI
 operations retain the default compatibility behavior.
 
+For the first OpenAI-compatible chat-completion choice, an explicit
+`finish_reason` of `"length"` is a hard provider failure: `chat_json` raises a
+fixed `RuntimeError` that identifies the provider output-token limit before it
+reads message content, parses JSON, performs local repair, or issues a
+model-repair request. Providers that omit the field remain compatible, and
+other finish reasons keep their existing behavior.
+
 ## 7. Workflow Integration
 
 Text Cleanup, Text Chunking, AI Translation, Character Discovery, narrator
@@ -112,6 +122,12 @@ profile dialog editing/probing/persistence. Minimum validation after a change:
 run the focused modules above with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files.
 
+`test_llm_provider_service.py` additionally verifies that both malformed and
+otherwise valid output-length-limited responses fail after one provider
+request, log `parsed_failure` rather than repaired success, preserve normal
+`stop` and omitted-finish-reason parsing, and leave non-truncated
+malformed-response model repair available.
+
 ## 10. Limitations And Future Work
 
 Token counts are conservative estimates rather than provider tokenizers.
@@ -121,6 +137,9 @@ covers the current UI contract, but not live remote backend integration; that
 requires controlled manual/provider testing. Domain services must still
 validate output schemas beyond JSON-object parsing.
 
+Explicit output-length termination is a hard provider failure and is never
+repairable JSON.
+
 ## Files
 
 From the adopted component map:
@@ -129,6 +148,9 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py`
@@ -139,6 +161,9 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_ai_settings_page.py`
 - `04_Software/AudioMancer/tests/test_ai_state_note_service.py`
 - `04_Software/AudioMancer/tests/test_llm_provider_service.py`
+- `04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
+- `04_Software/AudioMancer/tests/test_ai_chunking_service.py`
+- `04_Software/AudioMancer/tests/test_ai_translation_service.py`
 - `04_Software/AudioMancer/tests/test_main_window_ai_profiles.py`
 - `04_Software/AudioMancer/tests/test_prompt_template_service.py`
 - `04_Software/AudioMancer/tests/test_token_usage_service.py`

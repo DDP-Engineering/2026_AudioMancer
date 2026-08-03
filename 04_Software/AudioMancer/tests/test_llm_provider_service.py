@@ -670,6 +670,182 @@ def test_chat_json_does_not_repair_empty_message_content(monkeypatch) -> None:
         raise AssertionError("Expected empty provider response to fail.")
 
 
+def test_chat_json_rejects_output_length_limited_malformed_json(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify output-length termination fails before malformed JSON repair.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    request_bodies: list[str] = []
+    truncated_content = '{"results":[{"unit_id":"partial"'
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Return one explicitly output-length-limited malformed response.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake provider response.
+        @exception  None
+        """
+        request_bodies.append(http_request.data.decode("utf-8"))
+        return _FakeResponse(
+            json.dumps(
+                {
+                    "choices": [
+                        {
+                            "finish_reason": "length",
+                            "message": {"content": truncated_content},
+                        }
+                    ]
+                }
+            )
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    log_path = tmp_path / "transactions.log"
+
+    try:
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+            },
+            "system",
+            "user",
+            log_path=log_path,
+        )
+    except RuntimeError as error_object:
+        error_text = str(error_object)
+        assert "output-token limit" in error_text
+        assert truncated_content not in error_text
+    else:  # pragma: no cover - defensive assertion path.
+        raise AssertionError("Expected output-length-limited response to fail.")
+
+    transaction_records = [
+        json.loads(line)
+        for line in log_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(request_bodies) == 1
+    assert any(record.get("parsed_status") == "parsed_failure" for record in transaction_records)
+    assert not any(
+        record.get("parsed_status") == "parsed_success_after_repair"
+        for record in transaction_records
+    )
+
+
+def test_chat_json_rejects_output_length_limited_valid_json(monkeypatch) -> None:
+    """
+    @brief      Verify output-length termination rejects otherwise valid JSON content.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    request_bodies: list[str] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Return one explicitly output-length-limited valid JSON response.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake provider response.
+        @exception  None
+        """
+        request_bodies.append(http_request.data.decode("utf-8"))
+        return _FakeResponse(
+            json.dumps(
+                {
+                    "choices": [
+                        {
+                            "finish_reason": "length",
+                            "message": {"content": '{"results":[]}'},
+                        }
+                    ]
+                }
+            )
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    try:
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+            },
+            "system",
+            "user",
+        )
+    except RuntimeError as error_object:
+        assert str(error_object) == "AI provider response reached the provider output-token limit."
+    else:  # pragma: no cover - defensive assertion path.
+        raise AssertionError("Expected output-length-limited response to fail.")
+
+    assert len(request_bodies) == 1
+
+
+def test_chat_json_accepts_stop_and_omitted_finish_reasons(monkeypatch) -> None:
+    """
+    @brief      Verify normal and legacy provider finish reasons retain JSON parsing.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    response_payloads = [
+        json.dumps(
+            {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {"content": '{"results":[{"unit_id":"stopped"}]}'},
+                    }
+                ]
+            }
+        ),
+        json.dumps(
+            {
+                "choices": [
+                    {
+                        "message": {"content": '{"results":[{"unit_id":"legacy"}]}'},
+                    }
+                ]
+            }
+        ),
+    ]
+
+    monkeypatch.setattr(
+        llm_provider_service.request,
+        "urlopen",
+        lambda *_args, **_kwargs: _FakeResponse(response_payloads.pop(0)),
+    )
+
+    profile_payload = {
+        "id": "profile_1",
+        "backend_kind": "lmstudio",
+        "base_url": "http://127.0.0.1:1234",
+        "model_name": "qwen3-8b",
+        "request_timeout_seconds": 30,
+        "temperature": 0.2,
+        "max_output_tokens": 256,
+    }
+    stopped_result = llm_provider_service.chat_json(profile_payload, "system", "user")
+    legacy_result = llm_provider_service.chat_json(profile_payload, "system", "user")
+
+    assert stopped_result["payload"]["results"][0]["unit_id"] == "stopped"
+    assert legacy_result["payload"]["results"][0]["unit_id"] == "legacy"
+
+
 def test_chat_json_normalizes_provider_usage(monkeypatch) -> None:
     """
     @brief      Verify provider usage fields are normalized into the shared token payload.
