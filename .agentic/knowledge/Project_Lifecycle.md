@@ -26,8 +26,9 @@ the shared atomic writer used for critical project metadata.
   Extraction, and Cleanup.
 - Validate project names and project-relative artifact paths across supported
   platforms.
-- Import or replace one supported source document before project options are
-  locked, preserving normalized source metadata in the manifest.
+- Import or transactionally replace one supported source document before
+  project options are locked, preserving normalized source metadata and draft
+  language/voice options while invalidating stale generated state.
 - Project detailed operation state into compact manifest summaries and derive
   Home-page workflow status and export readiness.
 - Coordinate Home-page create/open/repair, source import, option locking,
@@ -62,9 +63,21 @@ The implementation boundary is:
 selected root or child path, rejects invalid project layouts, proposes
 metadata-only repairs from artifact evidence, and saves compact operation
 summaries. `import_service.import_source` validates and copies the selected
-source, removes only a safely resolved previous project copy, and returns the
-manifest-ready source record. `persistence_service` provides the atomic write
+source through a same-project temporary file, atomically promotes it to a
+collision-safe non-artifact name, removes only a safely resolved previous
+project copy after the copy succeeds, and returns the manifest-ready source
+record. Reserved root-artifact names come from Operation Orchestration's
+central ownership registry. `persistence_service` provides the atomic write
 primitive used by manifest persistence.
+
+For replacement, `HomeUiController` registers the copied source in the pending
+manifest, calls `text_extraction_service.reset_extraction_and_downstream`,
+applies `text_cleanup_state_service.build_manifest_after_extraction_reset`,
+and then saves the manifest. The reset therefore deletes stale Extraction and
+downstream outputs and resets their compact summaries without deleting the
+new source or rewriting unlocked `target_language`,
+`selected_voice_language`, or `voice_assignment_mode`. Initial import retains
+the existing Home draft-option capture behavior.
 
 When strict Chunking loading reports incompatible persisted content,
 `project_workspace_service.open_project` invokes the operation-runtime reset,
@@ -101,7 +114,8 @@ the temporary ZIP completes.
 ## 4. Dependencies
 
 Internal dependencies include `audiomancer.config`, time and logging services,
-operation runtime/path-safety helpers, UI state, token-usage normalization, and
+operation runtime/path-safety and reserved-artifact helpers, Extraction and
+Cleanup reset-state helpers, UI state, token-usage normalization, and
 the domain service loaders whose artifacts are exposed as exports. The Home
 controller uses the shared operation runner for progress and cancellation.
 
@@ -183,6 +197,15 @@ and a trailing newline by default. Export/snapshot paths must be outside the
 active project. Snapshot members share one top-level folder named after the
 project root; AI transaction logs and symlinks are excluded.
 
+`REQ-FUNC-b1f49831` defines source replacement as one ordered state transition.
+The selected source and previous manifest path are validated before mutation;
+the new file is copied and atomically promoted before the previous stored file
+is deleted. A copy failure removes its incomplete temporary file and leaves the
+previous source, manifest bytes, generated artifacts, and operation summaries
+unchanged. Generated-artifact names are reserved case-insensitively, so a
+supported source named `extracted_text.txt` or `clean_text.txt` receives the
+normal numeric suffix instead of occupying a reset-owned path.
+
 ## 7. Workflow Integration
 
 The application shell delegates project and Home actions to
@@ -190,7 +213,9 @@ The application shell delegates project and Home actions to
 updates the Home presenter and export readiness, and enables the appropriate
 workflow pages. Source import precedes downstream processing; locking project
 options freezes source replacement and establishes target language and voice
-assignment mode.
+assignment mode. Replacing an unlocked source after processing first completes
+the safe copy and then resets Extraction and every downstream artifact and
+summary to `source_selected` while preserving the unlocked option fields.
 
 Downstream workflow components persist detailed artifacts and compact manifest
 summaries. Project open may use trustworthy artifacts to propose a metadata-only
@@ -247,6 +272,11 @@ activate a project. The main-window project-flow suite verifies that Chunking
 recovery information precedes both accepted and declined follow-up repair
 decisions and appears exactly once. The workspace-service suite separately
 verifies that a Chunking `OSError` propagates without reset or deletion.
+Source-import regressions inject a partial copy failure and compare the complete
+project tree byte-for-byte, exercise current and case-variant reserved names,
+and replace a processed project through the Home controller while checking all
+root artifacts, generated audio, compact summaries, new-source registration,
+stage reset, and unlocked option preservation.
 
 After changes, run those focused tests with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files. Changes

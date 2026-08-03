@@ -28,6 +28,8 @@ from audiomancer.services import (
     project_export_service,
     project_snapshot_service,
     project_workspace_service,
+    text_cleanup_state_service,
+    text_extraction_service,
     ui_state_service,
 )
 from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
@@ -224,10 +226,19 @@ def handle_import_source_requested(window: "MainWindow") -> None:
         )
         return
 
+    replacing_source = isinstance(previous_source_document, dict)
     updated_manifest = dict(window._current_manifest)
     updated_manifest["source_document"] = source_document
-    updated_manifest["current_stage"] = "source_selected"
-    if not bool(updated_manifest.get("project_options_locked", False)):
+    if replacing_source:
+        text_extraction_service.reset_extraction_and_downstream(
+            window._current_project_root,
+        )
+        updated_manifest = text_cleanup_state_service.build_manifest_after_extraction_reset(
+            updated_manifest,
+        )
+    else:
+        updated_manifest["current_stage"] = "source_selected"
+    if not replacing_source and not bool(updated_manifest.get("project_options_locked", False)):
         target_language, voice_assignment_mode = window._home_page.selected_project_options()
         updated_manifest["target_language"] = target_language
         updated_manifest["selected_voice_language"] = target_language

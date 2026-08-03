@@ -1,24 +1,31 @@
 schema = 1
 id = "REQ-FUNC-b1f49831"
-title = "Source import shall replace the previous project source file"
+title = "Source replacement shall preserve one consistent project state"
 status = "active"
 
 requirement = """
-Source import shall replace the previous project source file.
+Replacing an unlocked project's registered source shall copy the new source before deleting the previous stored source, store the new source under a name that cannot collide with a reserved generated artifact, and only after a successful copy invalidate Extraction and every downstream artifact and compact operation summary. The completed replacement shall register the new source, set current_stage to source_selected, and preserve the project's target-language, selected-voice-language, and voice-assignment options. A copy failure shall leave the previous source, manifest, generated artifacts, and operation summaries unchanged.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Automated service and Home-controller regressions confirm copy-first replacement, reserved-name storage, complete downstream invalidation, option preservation, and an unchanged prior project after an injected copy failure."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_replaces_processed_source_as_one_consistent_reset",
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_reserved_generated_artifact_names",
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_copy_failure_preserves_complete_previous_project_state",
   "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_replaces_previous_project_source_file",
 ]
 
+spec = "specs/REQ-FUNC-b1f49831.md"
+
 priority = "high"
 rationale = """
-Re-importing must replace the prior in-project source.
+Re-importing a different book must never expose stale content, destroy the only stored source on a failed copy, or let generated-artifact cleanup delete the newly imported source.
 """
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-08-03

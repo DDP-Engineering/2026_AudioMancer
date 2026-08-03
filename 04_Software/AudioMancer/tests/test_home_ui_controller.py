@@ -16,11 +16,16 @@
 
 # IMPORTS
 
+from types import SimpleNamespace
 import zipfile
 
 from PySide6.QtCore import Qt
 
-from audiomancer.services import project_export_service, project_workspace_service
+from audiomancer import config
+from audiomancer.services import (
+    project_export_service,
+    project_workspace_service,
+)
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
@@ -680,6 +685,117 @@ def test_home_ui_controller_import_preserves_unlocked_draft_project_options(
     assert saved_manifest["selected_voice_language"] == "fr"
     assert saved_manifest["voice_assignment_mode"] == "same_narrator"
     assert window._home_page._target_language_combo.currentData() == "fr"
+
+
+def test_home_ui_controller_replaces_processed_source_as_one_consistent_reset(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify processed source replacement clears derived state and preserves options.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("ProcessedReplacement", tmp_path)
+    default_operation_summaries = {
+        operation_kind: dict(operation_summary)
+        for operation_kind, operation_summary in manifest["operations"].items()
+    }
+    old_source = project_root / "old_story.txt"
+    old_source.write_text("old source", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": old_source.name,
+        "stored_relative_path": old_source.name,
+        "file_type": "txt",
+        "imported_at": "2026-08-02T12:00:00+00:00",
+        "size_bytes": old_source.stat().st_size,
+    }
+    manifest["current_stage"] = "audio_assembly_ready"
+    manifest["project_options_locked"] = False
+    manifest["target_language"] = "ro"
+    manifest["selected_voice_language"] = "en"
+    manifest["voice_assignment_mode"] = "same_narrator"
+    manifest["operations"] = {
+        operation_kind: project_workspace_service.project_manifest_operation_summary(
+            operation_kind,
+            {
+                "status": "completed",
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "test",
+                "warning_count": 1,
+            },
+        )
+        for operation_kind in config.WORKFLOW_OPERATION_ORDER
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+    manifest = project_workspace_service.load_manifest(project_root)
+
+    stale_artifact_names = (
+        config.EXTRACTED_TEXT_FILE_NAME,
+        config.SOURCE_LEDGER_FILE_NAME,
+        config.EXTRACTION_METADATA_FILE_NAME,
+        config.CLEANED_TEXT_FILE_NAME,
+        config.CLEANUP_DOCUMENT_FILE_NAME,
+        config.CHUNK_ARTIFACT_FILE_NAME,
+        config.TRANSLATED_CHUNKS_FILE_NAME,
+        config.CHARACTERS_DOCUMENT_FILE_NAME,
+        config.NARRATOR_VOICE_FILE_NAME,
+        config.CHARACTER_VOICES_TARGETS_FILE_NAME,
+        config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
+        config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
+        config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
+        config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+        config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
+    )
+    stale_artifact_paths = [project_root / name for name in stale_artifact_names]
+    for artifact_path in stale_artifact_paths:
+        artifact_path.write_text("stale", encoding="utf-8")
+    stale_generated_audio = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "stale.wav"
+    stale_generated_audio.parent.mkdir()
+    stale_generated_audio.write_bytes(b"stale audio")
+    stale_assembly_audio = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "stale.wav"
+    stale_assembly_audio.parent.mkdir()
+    stale_assembly_audio.write_bytes(b"stale assembly")
+
+    new_source = tmp_path / config.EXTRACTED_TEXT_FILE_NAME
+    new_source.write_text("new source", encoding="utf-8")
+    refreshed_manifests = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest=manifest,
+        _home_page=SimpleNamespace(
+            selected_project_options=lambda: ("de", "narrator_and_characters"),
+        ),
+        show_project_state=lambda _root, updated: refreshed_manifests.append(updated),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getOpenFileName",
+        lambda *args, **kwargs: (str(new_source), ""),
+    )
+    monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: None)
+
+    home_ui_controller.handle_import_source_requested(window)
+
+    saved_manifest = project_workspace_service.load_manifest(project_root)
+    assert saved_manifest["current_stage"] == "source_selected"
+    assert saved_manifest["operations"] == default_operation_summaries
+    assert saved_manifest["target_language"] == "ro"
+    assert saved_manifest["selected_voice_language"] == "en"
+    assert saved_manifest["voice_assignment_mode"] == "same_narrator"
+    assert saved_manifest["source_document"]["original_name"] == config.EXTRACTED_TEXT_FILE_NAME
+    assert saved_manifest["source_document"]["stored_relative_path"] == "extracted_text_1.txt"
+    stored_source = project_root / str(saved_manifest["source_document"]["stored_relative_path"])
+    assert stored_source.read_text(encoding="utf-8") == "new source"
+    assert not old_source.exists()
+    assert all(not path.exists() for path in stale_artifact_paths)
+    assert not stale_generated_audio.exists()
+    assert not stale_assembly_audio.exists()
+    assert refreshed_manifests == [saved_manifest]
 
 
 def _run_threaded_operation_synchronously(

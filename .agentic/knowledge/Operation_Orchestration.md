@@ -19,6 +19,8 @@ worker lifecycle used by all long-running workflow pages.
 - Define ordered full-reset and selective-invalidation impacts, preserve stable
   identities, and delete only operation-owned root artifacts, AI logs, and safe
   targeted audio/assembly files.
+- Publish the exact root-level artifact file names owned by the reset registry
+  so source storage cannot claim a generated-artifact path.
 - Run worker callables on a dedicated `QThread`, marshal progress/success/
   failure/cancellation back to the UI thread, and safely handle shutdown.
 - Present the modal operation-progress dialog, including localized messages,
@@ -38,6 +40,9 @@ relative paths against traversal and absolute-path forms (including Windows
 forms), owns standard `{status, progress_current, progress_total, mode,
 warning_count, metadata, resume_checkpoint}` state payloads, and resets only
 the configured root-level artifacts for affected operation kinds.
+`reserved_project_artifact_file_names()` exposes the same current and
+reset-only legacy file-name registry as an immutable set; consumers therefore
+do not duplicate the downstream deletion lists.
 
 `workflow_impact_service` converts workflow order and stable-ID policies into
 full and selective reset summaries. It can preserve selected operations,
@@ -94,14 +99,20 @@ Chunking reset owns `chunks_text.json` and matching
 configured downstream operation; Extraction and Cleanup artifacts are outside
 that scope.
 
+Root-level operation artifact names are reserved independently of whether a
+file currently exists. Project Lifecycle compares them case-insensitively when
+choosing a stored source name, which is conservative on case-sensitive hosts
+and consistent with Windows behavior.
+
 ## 7. Workflow Integration
 
 Text extraction/cleanup, chunking, translation, character, voice, speech, TTS,
 and assembly controllers use this component to start/cancel work and invalidate
 downstream outputs. The App Shell invokes its shutdown path. Project Lifecycle
 owns the manifest itself, invokes the scoped reset when project-open detects an
-incompatible Chunking document, and projects individual operation state into
-the manifest after an operation writes its artifacts.
+incompatible Chunking document, uses the root-artifact registry to choose safe
+source names, and projects individual operation state into the manifest after
+an operation writes its artifacts.
 
 ## 8. Usage
 

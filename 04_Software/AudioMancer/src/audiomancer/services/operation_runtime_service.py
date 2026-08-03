@@ -154,6 +154,19 @@ def downstream_operation_kinds(
     return _OPERATION_ORDER[start_index:]
 
 
+def reserved_project_artifact_file_names() -> frozenset[str]:
+    """
+    @brief      Return root-level file names reserved for generated operation artifacts.
+    @return     Immutable set of current and reset-only legacy artifact file names.
+    @exception  None
+    """
+    return frozenset(
+        file_name
+        for artifact_file_names in _OPERATION_ARTIFACT_FILE_NAMES.values()
+        for file_name in artifact_file_names
+    )
+
+
 def resolve_operation_path(
     project_root: str | Path,
     operation_kind: str,
