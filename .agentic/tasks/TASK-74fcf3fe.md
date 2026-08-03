@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-74fcf3fe — Correct AEGIS migration artifact findings
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-DATA-d48fde66, REQ-FUNC-8034d33d, REQ-FUNC-bfa5d6ed, REQ-FUNC-c316e829, REQ-NFR-5b12e005, REQ-NFR-820d3753, REQ-PLAT-9fe6262f, REQ-REL-33fa2b3b, REQ-TEST-1b7844b3, REQ-TEST-64c819ba, REQ-UX-a3f0f73c
@@ -43,8 +43,8 @@ opened: 2026-08-02
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, and links are true
 - [x] delivery confirmed by the human before the commit
-- [ ] journal and report included in the delivery commit
-- [ ] close-out completed only after the delivery outcome succeeds
+- [x] journal and report included in the delivery commit
+- [x] close-out completed only after the delivery outcome succeeds
 - [x] code style and applicable project delivery additions satisfied
 
 ## Log
@@ -70,6 +70,7 @@ opened: 2026-08-02
 - 2026-08-02 deliver: All 991 linked test paths resolve and all Files entries across the 14 knowledge pages resolve.
 - 2026-08-03 deliver: The owner corrected the prior stash instruction and confirmed the local review and commit handoff with no push.
 - 2026-08-03 deliver: The report is finalized and task files are prepared for staging, while AEGIS close-out remains pending the owner's successful commit.
+- 2026-08-03 close: Delivery commit 0c9718a succeeded and was pushed by the owner, so the task is now closed.
 
 ## Delivery report (2026-08-03)
 
