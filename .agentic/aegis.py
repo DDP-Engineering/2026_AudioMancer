@@ -1073,6 +1073,10 @@ def check_diff(add, skip, cfg, records, journals, scope) -> None:
         drift_journals = journals
 
     for file in files:  # 5: uncovered-source
+        # a deleted file is still in the diff, but demanding a requirement
+        # cover a file that no longer exists is an unactionable finding
+        if not (ROOT / file).is_file():
+            continue
         if match_any(file, source_globs) and not match_any(file, cover):
             add("WARN", "uncovered-source", file,
                 "not covered by any requirement affected_paths")

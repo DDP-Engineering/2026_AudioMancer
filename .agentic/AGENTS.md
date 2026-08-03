@@ -61,6 +61,15 @@ defined in that one file; `status` points them back at it.
 Source code and tests stay where the repo already keeps them. Never write
 work products anywhere else; `check` flags strays.
 
+**Do not edit the payload.** `AGENTS.md`, `steps/`, `templates/`,
+`aegis.py` and `LICENSE.txt` are replaced wholesale when this workflow is
+upgraded, so any change you make there is silently lost. Found a bug in
+`aegis.py`, or need a rule the steps do not cover? Say so and let the
+human decide — a project-specific rule belongs in a file this repository
+owns, not in the payload. Everything else under `.agentic/` —
+`requirements/`, `specs/`, `tasks/`, `knowledge/`, `aegis.toml` — is
+yours to write.
+
 ## Resume a task
 
 1. Open the task journal named in the prompt,
