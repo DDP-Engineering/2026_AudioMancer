@@ -38,3 +38,13 @@ Artifacts: requirements in `.agentic/requirements/<category>/`, specs in
 its findings and self-correct; nothing here blocks you mid-flight.
 
 <!-- AEGIS-LIGHT:END -->
+
+## Changelog - every delivery
+
+Before the delivery commit, record what this task changed under
+`## [Unreleased]` in `CHANGELOG.md`, in user language. This applies to
+every delivery, not only to releases.
+
+Assigning a version to that section makes the task a release, and a
+release must then carry the same version into the project and both help
+files - see `.agentic/PROJECT.md`, *Delivery - the version workflow*.
