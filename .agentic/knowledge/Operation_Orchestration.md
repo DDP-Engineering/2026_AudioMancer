@@ -23,8 +23,9 @@ worker lifecycle used by all long-running workflow pages.
   so source storage cannot claim a generated-artifact path.
 - Run worker callables on a dedicated `QThread`, marshal progress/success/
   failure/cancellation back to the UI thread, and safely handle shutdown.
-- Present the modal operation-progress dialog, including localized messages,
-  token usage, cancellation, and final success/failure state.
+- Present the modal operation-progress dialog, including factory-applied current
+  language, localized messages and token usage, cooperative cancellation, and
+  final success/failure state.
 - Request the operator completion beep when an operation ends on its own, so an
   operator who left the machine is told the run is over.
 - Synchronize persisted operation state into the project manifest and resolve
@@ -64,14 +65,29 @@ signals to UI-thread handlers, clears all bookkeeping after thread completion,
 and cooperatively waits during close. Its success and failure handlers also call
 `misc_ui_controller.play_completion_beep(...)`; the cancellation handler
 deliberately does not, because the operator requested the cancellation and is
-already present. `OperationProgressDialog` is the visible
-progress/token/cancel surface. `workflow_controller_service` is the small
+already present. `misc_ui_controller.create_progress_dialog` resolves the
+optional window settings payload and applies the current language before
+`OperationProgressDialog.start()` renders an operation title, so every
+production caller receives the same localized title, Cancel label, and later
+token-usage text. `OperationProgressDialog` is the visible progress/token/cancel
+surface: while active, its Cancel control, Escape rejection, and title-bar close
+request share one idempotent cooperative-cancellation path that leaves the
+application-modal dialog visible; terminal finish/fail paths deactivate and hide
+it, and shared clearing deletes its reference. `workflow_controller_service` is the small
 controller-facing facade for starting operations, syncing a manifest from
 disk, and choosing an enabled AI profile. For `REQ-FUNC-ccc76f34` and
 `REQ-FUNC-e45d3577`, it loads the persisted operation state but delegates the
 summary and stage update to Project Lifecycle's canonical manifest writer; it
 then displays the exact manifest reloaded from disk. A missing state with no
 stage request causes no manifest write but still refreshes the window.
+
+The dialog stays active from `start()` until `finish()` or `fail()` begins its
+terminal hide path. A dismissal gesture is a cooperative request only: it never
+means the worker has stopped, so the shared controller remains responsible for
+hide/clear after the worker reaches a terminal signal. Non-cancellable active
+dialogs ignore Escape and title-bar close requests. MainWindow retains ownership
+of application-close protection and the operation runner retains ownership of
+worker cancellation and shutdown waiting.
 
 ## 4. Dependencies
 
@@ -160,9 +176,12 @@ Primary automated coverage:
   operation-state path, and final window payload delivery,
   and close-time shutdown, including that a completion beep is emitted on
   success and failure but never on cancellation or when the preference is off.
-- `test_operation_progress_dialog.py` directly verifies the visible localized
-  title/cancel label, clamped progress, status replacement, and localized token
-  usage rendering.
+- `test_operation_progress_dialog.py` directly verifies runtime localized
+  title/cancel-label/token-usage rendering, active Escape and close requests,
+  cancellation idempotence, non-cancellable dismissal handling, and terminal
+  hide behavior; `test_misc_ui_controller.py` verifies the production factory
+  applies Romanian before start, retains English fallback behavior, and clears
+  the shared dialog reference.
 - `test_cleanup_service.py` verifies the centralized Chunking-and-downstream
   reset removes every current artifact class in both Cleanup publication paths
   while the paired manifest summaries are reset coherently.
@@ -186,10 +205,12 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py` - controller facade that delegates manifest summary and stage persistence to Project Lifecycle.
 - `04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py`
 - `04_Software/AudioMancer/tests/test_operation_progress_dialog.py`
+- `04_Software/AudioMancer/tests/test_misc_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_operation_runner_controller.py`
 - `04_Software/AudioMancer/tests/test_operation_runtime_service.py`
 - `04_Software/AudioMancer/tests/test_cleanup_service.py`

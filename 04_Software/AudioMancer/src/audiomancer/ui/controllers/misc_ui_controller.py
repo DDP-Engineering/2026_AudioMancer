@@ -284,7 +284,11 @@ def create_progress_dialog(
     @return     None.
     @exception  None
     """
+    current_language = ui_state_service.current_language_from_settings(
+        getattr(window, "_settings_payload", None)
+    )
     window._operation_progress_dialog = OperationProgressDialog(window)
+    window._operation_progress_dialog.apply_language(current_language)
     window._operation_progress_dialog.cancel_requested.connect(cancel_callback)
     window._operation_progress_dialog.start(
         operation_name,

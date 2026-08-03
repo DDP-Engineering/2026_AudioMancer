@@ -18,6 +18,7 @@
 from PySide6.QtWidgets import QWidget
 
 from audiomancer import config
+from audiomancer.services import ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
 
 
@@ -59,6 +60,88 @@ def test_play_completion_beep_stays_silent_for_disabled_or_missing_preference(mo
     misc_ui_controller.play_completion_beep(window_without_settings)
 
     assert beeps == []
+
+
+def test_create_progress_dialog_applies_window_language_before_start(qtbot) -> None:
+    """
+    @brief      Verify the shared production factory localizes before displaying progress.
+    @details    Covers REQ-FUNC-84c50360 with the factory used by every production
+                caller rather than a direct dialog-only language call.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    """
+    window = _build_window(qtbot, {"language": "ro"})
+
+    misc_ui_controller.create_progress_dialog(
+        window,
+        "Traducere",
+        "Se pregateste",
+        lambda: None,
+    )
+    dialog = window._operation_progress_dialog  # noqa: SLF001
+
+    assert dialog is not None
+    assert dialog.windowTitle() == ui_state_service.translate(
+        "dialog.operation_progress_title", "ro"
+    ).format(operation_name="Traducere")
+    assert dialog._cancel_button.text() == ui_state_service.translate(  # noqa: SLF001
+        "dialog.operation_progress_cancel", "ro"
+    )
+
+    misc_ui_controller.update_progress_dialog(
+        window,
+        50,
+        "In lucru",
+        {"input_tokens": 1200, "output_tokens": 34, "total_tokens": 1234, "usage_available": True},
+    )
+
+    assert dialog._token_usage_label.text() == ui_state_service.translate(  # noqa: SLF001
+        "dialog.operation_progress_token_usage", "ro"
+    ).format(input_tokens="1,200", output_tokens="34", total_tokens="1,234")
+
+    misc_ui_controller.clear_progress_dialog(window)
+
+    assert window._operation_progress_dialog is None  # noqa: SLF001
+
+    window._settings_payload = {"language": "en"}  # noqa: SLF001
+    misc_ui_controller.create_progress_dialog(window, "Translation", "Preparing", lambda: None)
+    english_dialog = window._operation_progress_dialog  # noqa: SLF001
+
+    assert english_dialog is not None
+    assert english_dialog.windowTitle() == "Translation In Progress"
+    assert english_dialog._cancel_button.text() == "Cancel Operation"  # noqa: SLF001
+
+
+def test_create_progress_dialog_defaults_to_english_without_settings_payload(qtbot) -> None:
+    """
+    @brief      Verify incomplete window doubles retain the helper's safe language fallback.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    """
+    window = QWidget()
+    qtbot.addWidget(window)
+    window._operation_progress_dialog = None  # noqa: SLF001
+
+    misc_ui_controller.create_progress_dialog(window, "Translation", "Preparing", lambda: None)
+
+    assert window._operation_progress_dialog.windowTitle() == "Translation In Progress"  # noqa: SLF001
+
+
+def test_clear_progress_dialog_destroys_and_clears_the_shared_reference(qtbot) -> None:
+    """
+    @brief      Verify terminal runner cleanup can destroy and clear the shared dialog.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    """
+    window = _build_window(qtbot, {"language": "en"})
+    misc_ui_controller.create_progress_dialog(window, "Operation", "Running", lambda: None)
+
+    misc_ui_controller.clear_progress_dialog(window)
+
+    assert window._operation_progress_dialog is None  # noqa: SLF001
 
 
 # HELPER FUNCTIONS

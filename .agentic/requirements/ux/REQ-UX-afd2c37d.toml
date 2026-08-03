@@ -1,0 +1,61 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-UX-afd2c37d"
+
+title = "Dismissing an active operation-progress dialog shall request cancellation without hiding it"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+requirement = """
+Dismissing an active operation-progress dialog shall request cancellation without hiding the dialog. Escape, a title-bar close request, and the Cancel control shall each request cancellation at most once when cancellation is available, disable the Cancel control after the first request, and leave the dialog visible and application-modal until its terminal lifecycle path hides or clears it. Escape and title-bar close requests on a non-cancellable active dialog shall be ignored without emitting a cancellation request.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Automated Qt interaction tests verify Escape, close, and the Cancel control emit one request without hiding a cancellable active dialog; repeated requests stay silent, non-cancellable dialogs ignore Escape and close, and finish, fail, and shared clearing retain their normal hide or destroy behavior."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_escape_requests_cancellation_without_hiding_active_dialog",
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_close_requests_cancellation_without_hiding_active_dialog",
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_repeated_active_dialog_dismissal_attempts_emit_one_cancellation_request",
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_non_cancellable_active_dialog_ignores_escape_and_close",
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_cancel_button_requests_cancellation_once_without_hiding_active_dialog",
+  "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_terminal_dialog_lifecycle_hides_after_finish_and_failure",
+  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_clear_progress_dialog_destroys_and_clears_the_shared_reference",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"
+rationale = "Operators need a safe, visible cooperative-cancellation path while long-running work remains active."
+
+created = 2026-08-03
+updated = 2026-08-03

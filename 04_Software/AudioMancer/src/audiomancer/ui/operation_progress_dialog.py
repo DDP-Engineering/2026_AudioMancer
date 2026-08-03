@@ -16,6 +16,7 @@
 # IMPORTS
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QPushButton, QVBoxLayout
 
 from audiomancer.services import token_usage_service, ui_state_service
@@ -41,6 +42,7 @@ class OperationProgressDialog(QDialog):
         super().__init__(parent)
         self._current_language = "en"
         self._operation_name = ""
+        self._is_operation_active = False
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setModal(True)
         self.setMinimumWidth(420)
@@ -59,7 +61,7 @@ class OperationProgressDialog(QDialog):
         self._progress_bar.setValue(0)
         self._progress_bar.setFormat("%p%")
         self._cancel_button = QPushButton("", self)
-        self._cancel_button.clicked.connect(self._emit_cancel_requested)
+        self._cancel_button.clicked.connect(self._request_cancellation)
 
         layout.addWidget(self._status_label)
         layout.addWidget(self._token_usage_label)
@@ -77,6 +79,7 @@ class OperationProgressDialog(QDialog):
         @exception  None
         """
         self._operation_name = operation_name
+        self._is_operation_active = True
         self.setWindowTitle(
             ui_state_service.translate("dialog.operation_progress_title", self._current_language).format(
                 operation_name=operation_name
@@ -117,6 +120,7 @@ class OperationProgressDialog(QDialog):
         @return     None.
         @exception  None
         """
+        self._is_operation_active = False
         self.hide()
 
     def fail(self, message: str) -> None:
@@ -126,8 +130,38 @@ class OperationProgressDialog(QDialog):
         @return     None.
         @exception  None
         """
+        self._is_operation_active = False
         self._status_label.setText(message)
         self.hide()
+
+    def reject(self) -> None:
+        """
+        @brief      Request cancellation instead of dismissing an active operation.
+        @details    QDialog routes Escape through this override. The active dialog
+                    remains visible until its shared terminal lifecycle handles it.
+        @return     None.
+        @exception  None.
+        """
+        if self._is_operation_active:
+            self._request_cancellation()
+            return
+        super().reject()
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - Qt event override
+        """
+        @brief      Keep an active modal dialog visible on title-bar close requests.
+        @details    Some Qt platforms deliver a window close directly to this event
+                    instead of the dialog rejection override, so both paths use the
+                    same idempotent cancellation request.
+        @param[in]  event Qt close event.
+        @return     None.
+        @exception  None.
+        """
+        if self._is_operation_active:
+            self._request_cancellation()
+            event.ignore()
+            return
+        super().closeEvent(event)
 
     def status_message(self) -> str:
         """
@@ -154,12 +188,14 @@ class OperationProgressDialog(QDialog):
         self._cancel_button.setText(ui_state_service.translate("dialog.operation_progress_cancel", language))
         self._refresh_token_usage_label()
 
-    def _emit_cancel_requested(self) -> None:
+    def _request_cancellation(self) -> None:
         """
-        @brief      Disable repeat clicks and emit one cancellation request.
+        @brief      Request cancellable active work exactly once without hiding it.
         @return     None.
         @exception  None
         """
+        if not self._cancel_button.isVisible() or not self._cancel_button.isEnabled():
+            return
         self._cancel_button.setEnabled(False)
         self.cancel_requested.emit()
 

@@ -1,25 +1,27 @@
 schema = 1
 id = "REQ-FUNC-84c50360"
-title = "The progress dialog shall localize its title, cancel control, and"
+title = "The shared progress-dialog factory shall localize operation progress UI before display"
 status = "active"
 
 requirement = """
-The progress dialog shall localize its title, cancel control, and token-usage display.
+The shared progress-dialog factory shall resolve the current UI language from the active window settings and apply it to each new operation-progress dialog before the dialog displays its operation title. The dialog shall render its title template, cancel control, and later token-usage text in that language, retain English behavior for English settings, preserve caller-supplied operation names and status messages, and continue to support runtime language changes for an existing dialog.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Automated: the shared factory creates a Romanian dialog whose title and cancel control are localized before start and whose later token-usage text is Romanian; direct dialog coverage verifies runtime language changes, and English factory settings retain English text."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_operation_progress_dialog.py::test_progress_dialog_localizes_title_cancel_and_token_usage",
+  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_create_progress_dialog_applies_window_language_before_start",
+  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_create_progress_dialog_defaults_to_english_without_settings_payload",
 ]
 
 priority = "high"
 rationale = """
-Progress UI must be localized and readable.
+Operators must receive the selected language in every operation-progress surface, including dialogs created through production callers.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-03
