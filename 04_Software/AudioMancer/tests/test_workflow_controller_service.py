@@ -69,7 +69,7 @@ def test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles() -> No
     }
 
 
-def test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window(tmp_path) -> None:
+def test_sync_manifest_operation_from_disk_refreshes_summary_and_displays_final_manifest(tmp_path) -> None:
     """
     @brief      Verify persisted operation state becomes the active manifest summary.
     @return     None.
@@ -109,6 +109,107 @@ def test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window
     }
     assert persisted_manifest["current_stage"] == "text_chunking_ready"
     show_project_state.assert_called_once_with(project_root, persisted_manifest)
+
+
+def test_sync_manifest_operation_from_disk_preserves_newer_manifest_fields(tmp_path) -> None:
+    """
+    @brief      Verify controller synchronization starts from the persisted manifest.
+    @return     None.
+    @exception  None.
+    """
+    project_root, stale_manifest = project_workspace_service.create_project("WorkflowFreshness", tmp_path)
+    persisted_manifest = project_workspace_service.load_manifest(project_root)
+    persisted_manifest["notes"] = "Written after the window snapshot."
+    project_workspace_service.save_manifest(persisted_manifest, project_root)
+    show_project_state = Mock()
+    window = SimpleNamespace(
+        _current_project_root=project_root,
+        _current_manifest=stale_manifest,
+        show_project_state=show_project_state,
+    )
+
+    workflow_controller_service.sync_manifest_operation_from_disk(
+        window,
+        "chunking",
+        lambda root: {"status": "in_progress", "progress_current": 1, "progress_total": 3}
+        if root == project_root
+        else None,
+    )
+
+    final_manifest = project_workspace_service.load_manifest(project_root)
+    assert final_manifest["notes"] == "Written after the window snapshot."
+    assert final_manifest["operations"]["chunking"]["progress_current"] == 1
+    show_project_state.assert_called_once_with(project_root, final_manifest)
+
+
+def test_sync_manifest_operation_from_disk_ignores_regressing_stage_and_preserves_downstream_summaries(
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify a controller sync cannot demote a completed project.
+    @return     None.
+    @exception  None.
+    """
+    project_root, stale_manifest = project_workspace_service.create_project("WorkflowStage", tmp_path)
+    persisted_manifest = project_workspace_service.load_manifest(project_root)
+    persisted_manifest["current_stage"] = "audio_assembly_ready"
+    for operation_kind in ("audio_blocks", "audio_assembly"):
+        persisted_manifest["operations"][operation_kind] = {
+            "status": "completed",
+            "progress_current": 1,
+            "progress_total": 1,
+            "mode": "manual",
+            "warning_count": 0,
+        }
+    project_workspace_service.save_manifest(persisted_manifest, project_root)
+    window = SimpleNamespace(
+        _current_project_root=project_root,
+        _current_manifest=stale_manifest,
+        show_project_state=Mock(),
+    )
+
+    workflow_controller_service.sync_manifest_operation_from_disk(
+        window,
+        "character_discovery",
+        lambda root: {"status": "in_progress", "progress_current": 1, "progress_total": 2}
+        if root == project_root
+        else None,
+        current_stage="translation_ready",
+    )
+
+    final_manifest = project_workspace_service.load_manifest(project_root)
+    assert final_manifest["current_stage"] == "audio_assembly_ready"
+    assert final_manifest["operations"]["audio_blocks"]["status"] == "completed"
+    assert final_manifest["operations"]["audio_assembly"]["status"] == "completed"
+    assert final_manifest["operations"]["character_discovery"]["status"] == "in_progress"
+
+
+def test_sync_manifest_operation_from_disk_refreshes_window_when_loader_returns_none(tmp_path) -> None:
+    """
+    @brief      Verify a missing persisted operation state still refreshes the window.
+    @return     None.
+    @exception  None.
+    """
+    project_root, stale_manifest = project_workspace_service.create_project("WorkflowNoState", tmp_path)
+    persisted_manifest = project_workspace_service.load_manifest(project_root)
+    persisted_manifest["notes"] = "Keep the persisted manifest intact."
+    project_workspace_service.save_manifest(persisted_manifest, project_root)
+    show_project_state = Mock()
+    window = SimpleNamespace(
+        _current_project_root=project_root,
+        _current_manifest=stale_manifest,
+        show_project_state=show_project_state,
+    )
+
+    workflow_controller_service.sync_manifest_operation_from_disk(
+        window,
+        "speech_blocks",
+        lambda root: None,
+    )
+
+    final_manifest = project_workspace_service.load_manifest(project_root)
+    assert final_manifest["notes"] == "Keep the persisted manifest intact."
+    show_project_state.assert_called_once_with(project_root, final_manifest)
 
 
 # END OF FILE

@@ -1,24 +1,26 @@
 schema = 1
 id = "REQ-FUNC-ccc76f34"
-title = "Workflow controllers shall project persisted operation state into the"
+title = "Workflow controllers shall synchronize persisted operation state over the freshest manifest"
 status = "active"
 
 requirement = """
-Workflow controllers shall project persisted operation state into the active manifest and refresh the window.
+When a workflow controller synchronizes an operation after a persisted state transition, it shall load the operation state and delegate summary and stage persistence to `project_workspace_service.sync_manifest_operation_summary`. The canonical Project Lifecycle path shall start from the freshest manifest on disk, preserve fields written after the window snapshot, refresh the requested compact operation summary from persisted state, and return the exact final persisted manifest to `show_project_state`. When the loader returns `None` and no stage is requested, the controller shall not write a replacement manifest and shall still refresh the window from disk.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Automated: controller pytest selectors verify persisted summary refresh and the exact final window payload, preservation of a newer on-disk field, and the no-write window refresh when the loader returns None."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window",
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_refreshes_summary_and_displays_final_manifest",
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_preserves_newer_manifest_fields",
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_refreshes_window_when_loader_returns_none",
 ]
 
 priority = "high"
 rationale = """
-The manifest must reflect the latest persisted operation summary.
+The window's in-memory snapshot can be older than manifest fields persisted by a worker. Reconstructing and saving from that snapshot loses those fields; the Project Lifecycle service is the single canonical disk-based summary writer.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-03

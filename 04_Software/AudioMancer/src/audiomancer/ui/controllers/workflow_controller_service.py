@@ -10,8 +10,8 @@
 @file workflow_controller_service.py
 @brief Shared workflow UI-controller helpers.
 @details Centralizes common threaded operation startup, cancellation flags,
-         manifest refresh from persisted operation state, and enabled AI profile
-         resolution used by workflow page controllers.
+         canonical manifest refresh from persisted operation state, and enabled
+         AI profile resolution used by workflow page controllers.
 """
 
 # IMPORTS
@@ -19,7 +19,7 @@
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from audiomancer.services import project_workspace_service, text_cleanup_state_service
+from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import operation_runner_controller
 
 if TYPE_CHECKING:
@@ -74,27 +74,25 @@ def sync_manifest_operation_from_disk(
 ) -> None:
     """
     @brief      Reload one persisted operation state into the project manifest.
+    @details    Delegates summary and stage persistence to the canonical
+                Project Lifecycle writer, then displays its final disk payload.
     @param[in]  window Active main window instance.
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  load_operation_state Callable loading the operation state from project root.
-    @param[in]  current_stage Optional manifest stage override.
+    @param[in]  current_stage Optional manifest stage milestone to synchronize.
     @return     None.
     @exception  None
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     operation_state = load_operation_state(window._current_project_root)
-    if operation_state is not None:
-        operations[operation_kind] = project_workspace_service.project_manifest_operation_summary(
+    if operation_state is not None or current_stage is not None:
+        project_workspace_service.sync_manifest_operation_summary(
+            window._current_project_root,
             operation_kind,
             operation_state,
+            current_stage=current_stage,
         )
-    updated_manifest["operations"] = operations
-    if current_stage is not None:
-        updated_manifest["current_stage"] = current_stage
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),

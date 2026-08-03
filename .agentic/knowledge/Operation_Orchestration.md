@@ -67,7 +67,11 @@ deliberately does not, because the operator requested the cancellation and is
 already present. `OperationProgressDialog` is the visible
 progress/token/cancel surface. `workflow_controller_service` is the small
 controller-facing facade for starting operations, syncing a manifest from
-disk, and choosing an enabled AI profile.
+disk, and choosing an enabled AI profile. For `REQ-FUNC-ccc76f34` and
+`REQ-FUNC-e45d3577`, it loads the persisted operation state but delegates the
+summary and stage update to Project Lifecycle's canonical manifest writer; it
+then displays the exact manifest reloaded from disk. A missing state with no
+stage request causes no manifest write but still refreshes the window.
 
 ## 4. Dependencies
 
@@ -134,7 +138,9 @@ a worker callable and success/failure/cancel handlers. Workers call
 domain artifacts through their own services or the operation-runtime helpers.
 Use `build_selective_invalidation_summary(...)` before invalidating edited
 speech data, and `sync_manifest_operation_from_disk(...)` after a persisted
-state transition.
+state transition. That helper does not reconstruct a manifest from the window
+snapshot: Project Lifecycle reloads the current file, refreshes the requested
+summary, and only promotes a requested workflow stage.
 
 ## 9. Validation And Tests
 
@@ -149,7 +155,9 @@ Primary automated coverage:
 - `test_operation_runner_controller.py`,
   `test_workflow_controller_service.py`, and
   `test_main_window_operation_shutdown.py` cover success/failure/cancellation,
-  active-operation suppression, profile resolution, manifest synchronization,
+  active-operation suppression, profile resolution, manifest synchronization
+  from the freshest disk payload, monotonic stage preservation, the missing
+  operation-state path, and final window payload delivery,
   and close-time shutdown, including that a completion beep is emitted on
   success and failure but never on cancellation or when the preference is off.
 - `test_operation_progress_dialog.py` directly verifies the visible localized
@@ -179,12 +187,12 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py` - controller facade that delegates manifest summary and stage persistence to Project Lifecycle.
 - `04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py`
 - `04_Software/AudioMancer/tests/test_operation_progress_dialog.py`
 - `04_Software/AudioMancer/tests/test_operation_runner_controller.py`
 - `04_Software/AudioMancer/tests/test_operation_runtime_service.py`
 - `04_Software/AudioMancer/tests/test_cleanup_service.py`
-- `04_Software/AudioMancer/tests/test_workflow_controller_service.py`
+- `04_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller synchronization and final-window-manifest regressions.
 - `04_Software/AudioMancer/tests/test_workflow_impact_service.py`
 - `04_Software/AudioMancer/tests/test_workflow_order_consistency.py`

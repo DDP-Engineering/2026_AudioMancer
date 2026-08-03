@@ -187,6 +187,13 @@ contradiction is what makes a finished project offer a metadata repair on every
 later open. Invalidating downstream work is the job of the explicit reset path,
 which clears domain artifacts and operation summaries together.
 
+For `REQ-FUNC-ccc76f34` and `REQ-FUNC-e45d3577`, this service is the sole
+operation-summary writer used by workflow controllers after persisted
+transitions. It first reloads `project.json`, so it retains fields newer than a
+window snapshot, updates only the requested compact summary, promotes but never
+demotes the stage, saves, and returns the exact reloaded manifest for the
+controller to display.
+
 Project-relative paths must be relative, contain no parent traversal, and
 resolve inside the active project even when symlinks are present. New projects
 use a flat root, with generated audio permitted under `audio_blocks/` and final
@@ -299,6 +306,10 @@ stage reset, and unlocked option preservation.
 Cleanup publication paths, including real downstream artifacts, completed
 summaries, preservation checks, coherent reopen, and injected manifest-write
 failures.
+`test_workflow_controller_service.py` verifies that controller callers reach the
+same disk-based writer, preserve newer manifest fields and completed downstream
+summaries, ignore a lower requested stage, and display the final persisted
+manifest.
 
 After changes, run those focused tests with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files. Changes
@@ -329,7 +340,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py` - canonical disk-based operation-summary writer and promotion-only workflow-stage owner.
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
@@ -345,4 +356,5 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_project_export_service.py`
 - `04_Software/AudioMancer/tests/test_project_snapshot_service.py`
 - `04_Software/AudioMancer/tests/test_project_workspace_service.py`
+- `04_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller-to-Project-Lifecycle synchronization regressions.
 - `04_Software/AudioMancer/tests/test_cleanup_service.py`

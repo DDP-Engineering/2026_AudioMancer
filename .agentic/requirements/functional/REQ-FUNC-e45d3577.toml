@@ -1,22 +1,24 @@
 schema = 1
 id = "REQ-FUNC-e45d3577"
-title = "Persisting an operation summary shall never move the project workflow"
+title = "Operation-summary synchronization shall preserve the project's highest completed workflow stage"
 status = "active"
 
 requirement = """
-Persisting an operation summary shall never move the project workflow stage backwards, so the stored stage remains the highest milestone the project has reached and cannot contradict completed operation summaries.
+Persisting an operation summary through `project_workspace_service.sync_manifest_operation_summary` shall never move the project workflow stage backwards. A requested stage lower than the stored stage shall be ignored, so the stored stage remains the highest completed milestone and cannot contradict completed downstream operation summaries. Workflow controllers shall use this canonical promotion-only path instead of assigning a stage directly.
 """
 
-verification = "Automated: pytest selectors covering stage promotion, ignored regression, preservation of completed downstream summaries, and the resulting manifest self-consistency invariant."
+verification = "Automated: Project Lifecycle selectors cover stage promotion, ignored regression, completed downstream-summary preservation, and manifest self-consistency; a workflow-controller selector verifies that the canonical path preserves a completed downstream stage and summaries when a controller requests a lower stage."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_finished_manifest_claims_no_completed_work_above_its_stage",
   "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_lower_requested_stage_does_not_destroy_completed_downstream_work",
   "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_operation_summary_advances_the_stage",
   "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_operation_summary_never_moves_the_stage_backwards",
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_ignores_regressing_stage_and_preserves_downstream_summaries",
 ]
 
 priority = "high"
@@ -24,4 +26,4 @@ rationale = """
 Speech Blocks writes passed an absolute stage, regressing current_stage to character_voices_ready while audio_blocks and audio_assembly stayed completed. That self-contradiction is what triggers the Repair Project dialog on every later open of a finished project. config.OPERATION_STAGE_BY_KIND documents the stage as the milestone promoted by each completed operation, so it is a high-water mark; lowering it here also risked destroying completed operator work, because invalidation is owned by the explicit downstream-reset path that resets artifacts and summaries together.
 """
 created = 2026-07-25
-updated = 2026-07-25
+updated = 2026-08-03
