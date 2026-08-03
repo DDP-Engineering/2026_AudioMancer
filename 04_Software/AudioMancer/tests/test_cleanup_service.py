@@ -25,9 +25,39 @@ from audiomancer import config
 from audiomancer.services import (
     cleanup_renderer_service,
     deterministic_chunking_service,
+    operation_runtime_service,
+    project_workspace_service,
     text_cleanup_service,
+    text_extraction_service,
 )
 from cleanup_test_support import build_ledger, build_project
+
+# CONSTANTS
+
+_DOWNSTREAM_ARTIFACT_RELATIVE_PATHS = (
+    config.CHUNK_ARTIFACT_FILE_NAME,
+    config.TRANSLATED_CHUNKS_FILE_NAME,
+    config.CHARACTERS_DOCUMENT_FILE_NAME,
+    config.NARRATOR_VOICE_FILE_NAME,
+    config.CHARACTER_VOICES_TARGETS_FILE_NAME,
+    config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
+    config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
+    config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
+    config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+    config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
+    "audio_narator_stale.wav",
+    f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}chunking_stale.log",
+    f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/stale.wav",
+    f"{config.AUDIOBOOK_OUTPUT_FOLDER_NAME}/stale.wav",
+)
+_PRESERVED_OPTION_FIELDS = (
+    "project_options_locked",
+    "target_language",
+    "selected_voice_language",
+    "voice_assignment_mode",
+    "audio_assembly_settings",
+    "notes",
+)
 
 # TESTS
 
@@ -55,6 +85,109 @@ def test_cleanup_without_ai_reports_monotonic_phase_progress(tmp_path) -> None:
     assert 100 not in percentages[:-1]
     assert any("ambiguous boundaries" in item[3] for item in progress)
     assert any("estimated" in item[3] and "AI requests" in item[3] for item in progress)
+
+
+def test_automatic_cleanup_publication_invalidates_downstream_state_coherently(
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify automatic Cleanup publication resets downstream files and summaries together.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_extracted_project(
+        tmp_path,
+        "AutomaticCleanupInvalidation",
+    )
+    artifact_paths, preserved_state = _seed_completed_downstream_state(project_root)
+
+    text_cleanup_service.clean_text(project_root, manifest)
+
+    _assert_synchronized_cleanup_transition(
+        project_root,
+        artifact_paths,
+        preserved_state,
+    )
+
+
+def test_manual_cleanup_edit_invalidates_downstream_state_coherently(tmp_path) -> None:
+    """
+    @brief      Verify manual cleaned-text publication resets downstream files and summaries together.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_extracted_project(
+        tmp_path,
+        "ManualCleanupInvalidation",
+    )
+    text_cleanup_service.clean_text(project_root, manifest)
+    artifact_paths, preserved_state = _seed_completed_downstream_state(project_root)
+
+    text_cleanup_service.save_user_cleaned_text(
+        project_root,
+        "Operator-edited canonical text.\n",
+    )
+
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
+    ) == "Operator-edited canonical text.\n"
+    _assert_synchronized_cleanup_transition(
+        project_root,
+        artifact_paths,
+        preserved_state,
+    )
+
+
+@pytest.mark.parametrize("publication_path", ["automatic", "manual"])
+def test_cleanup_publication_surfaces_manifest_persistence_failure(
+    tmp_path,
+    monkeypatch,
+    publication_path: str,
+) -> None:
+    """
+    @brief      Verify both Cleanup publication paths surface a manifest persistence failure.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  publication_path Cleanup publication path under test.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_extracted_project(
+        tmp_path,
+        f"CleanupPersistenceFailure{publication_path.title()}",
+    )
+    if publication_path == "manual":
+        text_cleanup_service.clean_text(project_root, manifest)
+    _seed_completed_downstream_state(project_root)
+    progress: list[int] = []
+
+    def _raise_manifest_failure(*_args, **_kwargs) -> None:
+        raise OSError("injected manifest persistence failure")
+
+    monkeypatch.setattr(
+        project_workspace_service,
+        "save_manifest",
+        _raise_manifest_failure,
+    )
+
+    with pytest.raises(OSError, match="injected manifest persistence failure"):
+        if publication_path == "automatic":
+            text_cleanup_service.clean_text(
+                project_root,
+                manifest,
+                progress_callback=lambda _current, _total, percent, _message: (
+                    progress.append(percent)
+                ),
+            )
+        else:
+            text_cleanup_service.save_user_cleaned_text(
+                project_root,
+                "Operator-edited canonical text.\n",
+            )
+
+    assert 100 not in progress
 
 
 def test_renderer_rejects_unknown_unit_actions() -> None:
@@ -226,6 +359,132 @@ def test_whitespace_realign_failure_records_diagnostic(tmp_path, caplog) -> None
         "could not realign Cleanup boundaries" in record.getMessage()
         for record in caplog.records
     )
+
+
+# HELPER FUNCTIONS
+
+
+def _build_extracted_project(tmp_path, name: str):
+    """Build one project with persisted completed Extraction and nondefault options."""
+    canonical_text, ledger = build_ledger(["Canonical source paragraph."])
+    project_root, manifest = build_project(
+        tmp_path,
+        name,
+        canonical_text,
+        ledger,
+    )
+    extraction_metadata = {
+        "status": "completed",
+        "progress_current": 1,
+        "progress_total": 1,
+        "warnings": [],
+        "character_count": len(canonical_text),
+        "word_count": len(canonical_text.split()),
+        "line_count": len(canonical_text.splitlines()),
+        "page_count": None,
+    }
+    text_extraction_service.write_extraction_metadata(
+        project_root,
+        extraction_metadata,
+    )
+    manifest["project_options_locked"] = True
+    manifest["target_language"] = "ro"
+    manifest["selected_voice_language"] = "ro"
+    manifest["notes"] = "preserve this project note"
+    manifest["current_stage"] = "text_cleanup_ready"
+    project_workspace_service.save_manifest(manifest, project_root)
+    return project_root, project_workspace_service.load_manifest(project_root)
+
+
+def _seed_completed_downstream_state(project_root):
+    """Persist completed downstream summaries and representative owned artifacts."""
+    manifest = project_workspace_service.load_manifest(project_root)
+    operations = dict(manifest["operations"])
+    for operation_kind in operation_runtime_service.downstream_operation_kinds(
+        "chunking",
+        include_current=True,
+    ):
+        operations[operation_kind] = (
+            project_workspace_service.project_manifest_operation_summary(
+                operation_kind,
+                {
+                    "status": "completed",
+                    "progress_current": 1,
+                    "progress_total": 1,
+                    "mode": "test",
+                    "warning_count": 0,
+                },
+            )
+        )
+    manifest["operations"] = operations
+    manifest["current_stage"] = "audio_assembly_ready"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    artifact_paths = []
+    for relative_path in _DOWNSTREAM_ARTIFACT_RELATIVE_PATHS:
+        artifact_path = project_root / relative_path
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_bytes(b"stale downstream artifact")
+        artifact_paths.append(artifact_path)
+
+    source_document = dict(manifest["source_document"])
+    source_path = project_root / str(source_document["stored_relative_path"])
+    extraction_artifacts = {
+        file_name: (project_root / file_name).read_bytes()
+        for file_name in (
+            config.EXTRACTED_TEXT_FILE_NAME,
+            config.SOURCE_LEDGER_FILE_NAME,
+            config.EXTRACTION_METADATA_FILE_NAME,
+        )
+    }
+    preserved_state = {
+        "source_document": source_document,
+        "source_bytes": source_path.read_bytes(),
+        "extraction_artifacts": extraction_artifacts,
+        "options": {
+            field_name: manifest[field_name]
+            for field_name in _PRESERVED_OPTION_FIELDS
+        },
+    }
+    return artifact_paths, preserved_state
+
+
+def _assert_synchronized_cleanup_transition(
+    project_root,
+    artifact_paths,
+    preserved_state,
+) -> None:
+    """Assert one successful Cleanup publication is coherent on disk and reopen."""
+    assert all(not artifact_path.exists() for artifact_path in artifact_paths)
+    manifest = project_workspace_service.load_manifest(project_root)
+    default_manifest = project_workspace_service.build_project_manifest("Defaults")
+    for operation_kind in operation_runtime_service.downstream_operation_kinds(
+        "chunking",
+        include_current=True,
+    ):
+        assert manifest["operations"][operation_kind] == (
+            default_manifest["operations"][operation_kind]
+        )
+    assert manifest["operations"]["cleanup"]["status"] == "completed"
+    assert manifest["current_stage"] == "text_chunking_ready"
+    assert manifest["source_document"] == preserved_state["source_document"]
+    source_path = project_root / str(
+        preserved_state["source_document"]["stored_relative_path"]
+    )
+    assert source_path.read_bytes() == preserved_state["source_bytes"]
+    for file_name, expected_bytes in preserved_state["extraction_artifacts"].items():
+        assert (project_root / file_name).read_bytes() == expected_bytes
+    assert {
+        field_name: manifest[field_name]
+        for field_name in _PRESERVED_OPTION_FIELDS
+    } == preserved_state["options"]
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).is_file()
+    assert (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).is_file()
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "ok"
+    assert "recovered_operations" not in open_result
 
 
 # END OF FILE

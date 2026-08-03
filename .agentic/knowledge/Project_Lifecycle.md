@@ -31,6 +31,8 @@ the shared atomic writer used for critical project metadata.
   language/voice options while invalidating stale generated state.
 - Project detailed operation state into compact manifest summaries and derive
   Home-page workflow status and export readiness.
+- Build coherent operation-and-downstream compact-summary resets for domain
+  services that have already invalidated their centralized runtime artifacts.
 - Coordinate Home-page create/open/repair, source import, option locking,
   snapshot, and export actions.
 - Render text/Markdown delivery projections and package ready voice or audio
@@ -62,13 +64,16 @@ The implementation boundary is:
 `project_workspace_service` builds and validates the manifest, resolves a
 selected root or child path, rejects invalid project layouts, proposes
 metadata-only repairs from artifact evidence, and saves compact operation
-summaries. `import_service.import_source` validates and copies the selected
-source through a same-project temporary file, atomically promotes it to a
-collision-safe non-artifact name, removes only a safely resolved previous
-project copy after the copy succeeds, and returns the manifest-ready source
-record. Reserved root-artifact names come from Operation Orchestration's
-central ownership registry. `persistence_service` provides the atomic write
-primitive used by manifest persistence.
+summaries. Its public `build_manifest_after_operation_reset` resets one
+operation and every downstream compact summary, sets the matching readiness
+stage, preserves explicit operation exceptions, and clears narrator shortcuts
+when the reset makes them inapplicable. `import_service.import_source`
+validates and copies the selected source through a same-project temporary file,
+atomically promotes it to a collision-safe non-artifact name, removes only a
+safely resolved previous project copy after the copy succeeds, and returns the
+manifest-ready source record. Reserved root-artifact names come from Operation
+Orchestration's central ownership registry. `persistence_service` provides the
+atomic write primitive used by manifest persistence.
 
 For replacement, `HomeUiController` registers the copied source in the pending
 manifest, calls `text_extraction_service.reset_extraction_and_downstream`,
@@ -206,6 +211,14 @@ unchanged. Generated-artifact names are reserved case-insensitively, so a
 supported source named `extracted_text.txt` or `clean_text.txt` receives the
 normal numeric suffix instead of occupying a reset-owned path.
 
+`REQ-FUNC-2ab78634` defines canonical Cleanup publication as a synchronized
+transition. Cleanup first uses Operation Orchestration to delete Chunking and
+all downstream artifacts, atomically publishes its text and metadata, then
+reloads the manifest and uses `build_manifest_after_operation_reset` to default
+the same downstream summaries. The completed Cleanup summary and
+`text_chunking_ready` stage are saved in that single manifest write, preserving
+the source, Extraction, project options, and unrelated manifest fields.
+
 ## 7. Workflow Integration
 
 The application shell delegates project and Home actions to
@@ -222,6 +235,11 @@ summaries. Project open may use trustworthy artifacts to propose a metadata-only
 summary/stage repair. Its sole automatic domain reset is the bounded incompatible
 Chunking recovery described above. Home exports and snapshots read the current
 local state without mutating the active project.
+
+Successful automatic Cleanup publication and manual cleaned-text save therefore
+reopen with `status="ok"`, not a repair request caused by stale downstream
+summaries. A failed manifest write propagates to Cleanup and is never converted
+into a successful transition.
 
 ## 8. Usage
 
@@ -277,6 +295,10 @@ project tree byte-for-byte, exercise current and case-variant reserved names,
 and replace a processed project through the Home controller while checking all
 root artifacts, generated audio, compact summaries, new-source registration,
 stage reset, and unlocked option preservation.
+`test_cleanup_service.py` covers the shared manifest-reset builder through both
+Cleanup publication paths, including real downstream artifacts, completed
+summaries, preservation checks, coherent reopen, and injected manifest-write
+failures.
 
 After changes, run those focused tests with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files. Changes
@@ -308,6 +330,8 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py`
 - `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
@@ -321,3 +345,4 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_project_export_service.py`
 - `04_Software/AudioMancer/tests/test_project_snapshot_service.py`
 - `04_Software/AudioMancer/tests/test_project_workspace_service.py`
+- `04_Software/AudioMancer/tests/test_cleanup_service.py`

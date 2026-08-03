@@ -29,6 +29,8 @@ ambiguous typed boundaries and may never generate replacement book text.
 - Render solely from source-ledger slices and typed separators while rejecting
   introduced alphanumeric fusion, projection loss, or incomplete decisions.
 - Persist exactly one Cleanup metadata/checkpoint file and one text output.
+- Publish automatic and manual canonical Cleanup changes together with a
+  synchronized Chunking-and-downstream artifact and compact-summary reset.
 - Stop safely after a completed model request and resume compatible work.
 - Diagnose incomplete source-unit realignment when a whitespace-only operator
   edit cannot update every persisted boundary.
@@ -69,6 +71,14 @@ first displayed percentage from persisted completed and estimated AI request
 counts, so cancellation followed by resume never resets the progress display.
 The adjudication phase explicitly reaches 88% even when conditional verifier
 requests are skipped.
+
+Automatic finalization and manual cleaned-text save share one publication
+helper. It validates the completed Cleanup document before mutation, delegates
+all Chunking-and-downstream file deletion to Operation Orchestration, atomically
+writes `clean_text.txt` and `cleanup.json`, then reloads and atomically saves one
+manifest containing the completed Cleanup summary plus default downstream
+summaries at `text_chunking_ready`. Project Lifecycle owns the reusable compact
+manifest reset builder; the page-state service only delegates to it.
 
 Analysis assigns `body`, `heading`, `scene_separator`, `list_item`, `verse`,
 `preformatted`, `footnote`, or `page_artifact` before boundary resolution.
@@ -173,6 +183,11 @@ A reusable completed checkpoint also verifies that `clean_text.txt` exists and
 matches `output_hash`; missing or mismatched output rerenders the same persisted
 decisions without a model request.
 
+Cleanup publication does not promise cross-file rollback, but any artifact or
+manifest persistence failure propagates before the service returns or reports
+100% progress. Only a fully successful publication is a completed logical
+transition.
+
 Paragraph `reason_codes` remain complete decision provenance. Runtime
 `warning_flags` contain only `deterministic_fallback`,
 `unknown_line_boundary`, and `page_transition_repaired`, so user-edit and
@@ -190,10 +205,14 @@ published.
 Cleanup completion promotes the project to `text_chunking_ready` immediately.
 Review and manual editing are optional rather than approval gates. Saving an
 operator edit updates the output hash, marks `user_modified`, and invalidates
-Chunking and later artifacts. A whitespace-only edit realigns typed structure
-by unambiguous normalized paragraph content rather than list index. The current
-classifier remains authoritative for explicit scene separators; a stale prior
-`scene_separator` role is never carried onto classifier-negative prose.
+Chunking and later artifacts plus their compact manifest summaries. Automatic
+Cleanup finalization and rerendering apply the same invalidation. Source,
+Extraction, project options, and the newly published Cleanup artifacts remain
+unchanged by the downstream reset. A whitespace-only edit realigns typed
+structure by unambiguous normalized paragraph content rather than list index.
+The current classifier remains authoritative for explicit scene separators; a
+stale prior `scene_separator` role is never carried onto classifier-negative
+prose.
 Unmatched or multiply matched content keeps the classifier-only role, while a
 unique content match may preserve headings and other noncontradicted roles. A
 lexical edit publishes minimal `user_edited` paragraph structure without
@@ -236,6 +255,11 @@ Primary coverage:
 - `tests/test_text_cleanup_ui_controller.py`
 - `tests/test_text_cleanup_page.py`
 
+`test_cleanup_service.py` specifically seeds completed downstream compact
+summaries and every current downstream artifact class for both automatic and
+manual publication, asserts preservation plus a clean project reopen, and
+injects manifest persistence failures into both paths.
+
 Run `uv run ruff check src tests` and `uv run pytest`. Format-specific changes
 must include exact ledger/hash/role assertions. AI changes must verify strict
 output, selective verification, retry isolation, context tiers, recursive
@@ -260,6 +284,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`

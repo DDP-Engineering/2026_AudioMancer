@@ -146,7 +146,6 @@ def clean_text(
         ):
             return _finalize_document(
                 root,
-                manifest,
                 canonical_text,
                 ledger,
                 document,
@@ -166,7 +165,6 @@ def clean_text(
                 )
                 return _finalize_document(
                     root,
-                    manifest,
                     canonical_text,
                     ledger,
                     document,
@@ -401,7 +399,6 @@ def clean_text(
     raise_if_cancelled(cancel_requested)
     return _finalize_document(
         root,
-        manifest,
         canonical_text,
         ledger,
         document,
@@ -504,15 +501,16 @@ def save_user_cleaned_text(
     document["updated_at"] = utc_now_iso()
     document["completed_at"] = document["updated_at"]
     document["output_hash"] = source_ledger_service.text_sha256(edited_text)
-    reset_operation_data(root, "chunking", include_current=True)
-    write_text_atomic(current_path, edited_text)
-    write_json_atomic(root / config.CLEANUP_DOCUMENT_FILE_NAME, document)
-    project_workspace_service.sync_manifest_operation_summary(
-        root,
-        "cleanup",
-        _manifest_summary(document),
-        current_stage="text_chunking_ready",
+    canonical_text = (root / config.EXTRACTED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
     )
+    ledger = source_ledger_service.load_source_ledger(root)
+    validate_cleanup_document(
+        document,
+        canonical_text=canonical_text,
+        ledger=ledger,
+    )
+    _publish_completed_cleanup(root, edited_text, document)
     return document
 
 
@@ -627,7 +625,6 @@ def _validate_blocking_quality_metrics(
 
 def _finalize_document(
     root: Path,
-    manifest: dict[str, object],
     canonical_text: str,
     ledger: dict[str, object],
     document: dict[str, object],
@@ -667,8 +664,6 @@ def _finalize_document(
         _PERSISTENCE_PERCENT,
         "Persisting Cleanup results...",
     )
-    reset_operation_data(root, "chunking", include_current=True)
-    write_text_atomic(root / config.CLEANED_TEXT_FILE_NAME, cleaned_text)
     document["status"] = "completed"
     document["phase"] = "done"
     document["completed_at"] = utc_now_iso()
@@ -678,16 +673,7 @@ def _finalize_document(
         canonical_text=canonical_text,
         ledger=ledger,
     )
-    _write_checkpoint(root, document)
-    project_workspace_service.sync_manifest_operation_summary(
-        root,
-        "cleanup",
-        _manifest_summary(document),
-        current_stage="text_chunking_ready",
-        extra_fields={
-            "original_language": document["document_profile"].get("language")
-        },
-    )
+    _publish_completed_cleanup(root, cleaned_text, document)
     _emit(
         progress_callback,
         1,
@@ -700,6 +686,44 @@ def _finalize_document(
         ),
     )
     return document
+
+
+def _publish_completed_cleanup(
+    root: Path,
+    cleaned_text: str,
+    document: dict[str, object],
+) -> None:
+    """
+    @brief      Publish canonical Cleanup artifacts and synchronized downstream reset state.
+    @param[in]  root Active project root folder.
+    @param[in]  cleaned_text Validated canonical cleaned text.
+    @param[in]  document Validated completed Cleanup document.
+    @return     None.
+    @exception  OSError Raised when artifact or manifest persistence fails.
+    """
+    reset_operation_data(root, "chunking", include_current=True)
+    write_text_atomic(root / config.CLEANED_TEXT_FILE_NAME, cleaned_text)
+    _write_checkpoint(root, document)
+
+    manifest = project_workspace_service.load_manifest(root)
+    updated_manifest = (
+        project_workspace_service.build_manifest_after_operation_reset(
+            manifest,
+            "chunking",
+        )
+    )
+    operations = dict(updated_manifest["operations"])
+    operations["cleanup"] = (
+        project_workspace_service.project_manifest_operation_summary(
+            "cleanup",
+            _manifest_summary(document),
+        )
+    )
+    updated_manifest["operations"] = operations
+    updated_manifest["original_language"] = document["document_profile"].get(
+        "language"
+    )
+    project_workspace_service.save_manifest(updated_manifest, root)
 
 
 def _apply_ai_result(

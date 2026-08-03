@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Running Cleanup again or saving a manual cleaned-text correction now resets
+  Text Chunking and every later workflow result consistently. Reopening the
+  project no longer asks to repair stale completed summaries for files that
+  Cleanup already removed.
+
 ## [2.0.0] - 2026-07-30
 
 ### Added

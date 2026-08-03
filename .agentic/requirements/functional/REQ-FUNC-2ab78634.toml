@@ -1,20 +1,37 @@
 schema = 1
 id = "REQ-FUNC-2ab78634"
-title = "Any manual Cleanup edit shall invalidate every downstream operation"
+title = "Cleanup publication shall invalidate every downstream operation coherently"
 status = "active"
 
 requirement = """
-Any manual Cleanup edit shall invalidate every downstream operation.
+Whenever an automatic Cleanup run or rerun, or an operator's manual cleaned-text
+save, successfully publishes a new canonical `clean_text.txt`, the same logical
+transition shall delete the artifacts owned by Chunking and every downstream
+operation through the centralized operation-reset mechanism and reset those
+operations' compact `project.json` summaries to their default not-started state.
+
+The transition shall retain the completed Cleanup artifact and summary, set
+`current_stage` to `text_chunking_ready`, and preserve the source document,
+completed Extraction state and artifacts, project options, and all other
+unrelated manifest fields. Reopening the successfully updated project shall not
+request metadata repair because of the invalidated downstream summaries.
+
+Any failure while persisting the Cleanup artifacts or synchronized manifest
+shall propagate to the caller, and the Cleanup operation shall not report a
+successful transition after that failure.
 """
 
-verification = "Manual edit downstream invalidation test passes."
+verification = "The automatic-publication and manual-edit regression tests start with completed downstream summaries plus real downstream files, then prove those files and summaries are reset while Cleanup, source, Extraction, options, and text_chunking_ready survive a clean reopen; the parameterized persistence-failure regression proves both paths propagate the manifest write error and automatic progress never reports 100 percent."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_automatic_cleanup_publication_invalidates_downstream_state_coherently",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_manual_cleanup_edit_invalidates_downstream_state_coherently",
+  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_cleanup_publication_surfaces_manifest_persistence_failure",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"
@@ -23,4 +40,4 @@ rationale = """
 Chunking and later artifacts must never remain valid after the canonical cleaned text changes.
 """
 created = 2026-07-28
-updated = 2026-07-30
+updated = 2026-08-03

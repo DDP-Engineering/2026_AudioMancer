@@ -8,7 +8,6 @@ from pathlib import Path
 from audiomancer import config
 from audiomancer.services import (
     home_presenter_service,
-    operation_runtime_service,
     project_workspace_service,
     source_ledger_service,
     text_cleanup_service,
@@ -182,7 +181,10 @@ def normalized_manifest_operations(
 
 def build_manifest_after_extraction_reset(manifest: dict[str, object]) -> dict[str, object]:
     """Reset all generated operation summaries after a fresh Extraction request."""
-    return build_manifest_after_operation_reset(manifest, "extraction")
+    return project_workspace_service.build_manifest_after_operation_reset(
+        manifest,
+        "extraction",
+    )
 
 
 def build_manifest_after_operation_reset(
@@ -190,34 +192,12 @@ def build_manifest_after_operation_reset(
     operation_kind: str,
     preserve_operation_kinds: Iterable[str] | None = None,
 ) -> dict[str, object]:
-    """Reset one operation and downstream summaries while retaining explicit exceptions."""
-    updated = dict(manifest)
-    operations = normalized_manifest_operations(updated)
-    defaults = normalized_manifest_operations({})
-    preserved = {str(item).strip() for item in (preserve_operation_kinds or ()) if str(item).strip()}
-    if operation_kind == "extraction":
-        updated["current_stage"] = "source_selected"
-        reset_kinds = list(operations)
-    else:
-        updated["current_stage"] = _stage_after_operation_reset(operation_kind)
-        reset_kinds = operation_runtime_service.downstream_operation_kinds(
-            operation_kind,
-            include_current=True,
-        )
-    for selected_kind in reset_kinds:
-        if selected_kind in defaults and selected_kind not in preserved:
-            operations[selected_kind] = defaults[selected_kind]
-    if "narrator_definition" not in preserved and updated["current_stage"] not in {
-        "narrator_definition_ready",
-        "character_voices_ready",
-        "speech_blocks_ready",
-        "audio_blocks_ready",
-        "audio_assembly_ready",
-    }:
-        updated["narrator_profile_name"] = None
-        updated["narrator_language"] = None
-    updated["operations"] = operations
-    return updated
+    """Delegate shared compact-summary reset construction to Project Lifecycle."""
+    return project_workspace_service.build_manifest_after_operation_reset(
+        manifest,
+        operation_kind,
+        preserve_operation_kinds,
+    )
 
 
 def read_optional_project_text(project_root: Path, relative_path: str | None) -> str | None:
@@ -228,15 +208,4 @@ def read_optional_project_text(project_root: Path, relative_path: str | None) ->
     return artifact_path.read_text(encoding="utf-8") if artifact_path.is_file() else None
 
 
-def _stage_after_operation_reset(operation_kind: str) -> str:
-    return {
-        "cleanup": "text_cleanup_ready",
-        "chunking": "text_chunking_ready",
-        "translation": "translation_ready",
-        "character_discovery": "translation_ready",
-        "narrator_definition": "character_discovery_ready",
-        "character_voices": "narrator_definition_ready",
-        "speech_blocks": "character_voices_ready",
-        "audio_blocks": "speech_blocks_ready",
-        "audio_assembly": "audio_blocks_ready",
-    }.get(operation_kind, "source_selected")
+# END OF FILE

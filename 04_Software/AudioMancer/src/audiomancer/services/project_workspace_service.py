@@ -15,6 +15,7 @@
 
 # IMPORTS
 
+from collections.abc import Iterable
 from functools import partial
 import json
 from pathlib import Path
@@ -71,6 +72,19 @@ _UNSUPPORTED_LEGACY_WORKFLOW_FOLDERS = (
 _OPERATION_STAGE_BY_KIND = config.OPERATION_STAGE_BY_KIND
 # @brief Ordered operation kinds that can be verified from local artifacts.
 _HEALABLE_OPERATION_ORDER = config.WORKFLOW_OPERATION_ORDER
+# @brief Workflow stage restored when one operation and its dependents are reset.
+_RESET_STAGE_BY_OPERATION_KIND = {
+    "extraction": "source_selected",
+    "cleanup": "text_cleanup_ready",
+    "chunking": "text_chunking_ready",
+    "translation": "translation_ready",
+    "character_discovery": "translation_ready",
+    "narrator_definition": "character_discovery_ready",
+    "character_voices": "narrator_definition_ready",
+    "speech_blocks": "character_voices_ready",
+    "audio_blocks": "speech_blocks_ready",
+    "audio_assembly": "audio_blocks_ready",
+}
 
 
 # PUBLIC API
@@ -473,6 +487,55 @@ def project_manifest_operation_summary(
         "mode": _optional_string(operation_payload.get("mode")),
         "warning_count": _non_negative_int(operation_payload.get("warning_count", default_summary["warning_count"])),
     }
+
+
+def build_manifest_after_operation_reset(
+    manifest: dict[str, object],
+    operation_kind: str,
+    preserve_operation_kinds: Iterable[str] | None = None,
+) -> ProjectManifestPayload:
+    """
+    @brief      Reset one operation and downstream compact manifest summaries.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  operation_kind First reset workflow operation.
+    @param[in]  preserve_operation_kinds Optional operation summaries retained unchanged.
+    @return     Updated manifest with a coherent reset stage and compact summaries.
+    @exception  ValueError Raised when the reset operation kind is unsupported.
+    @note       Artifact deletion remains owned by operation_runtime_service.
+    """
+    if operation_kind not in _RESET_STAGE_BY_OPERATION_KIND:
+        raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    updated = dict(manifest)
+    operations = _normalize_operations(updated.get("operations"))
+    default_operations = _build_default_operation_states()
+    preserved = {
+        str(selected_kind).strip()
+        for selected_kind in (preserve_operation_kinds or ())
+        if str(selected_kind).strip()
+    }
+    reset_kinds = (
+        tuple(operations)
+        if operation_kind == "extraction"
+        else operation_runtime_service.downstream_operation_kinds(
+            operation_kind,
+            include_current=True,
+        )
+    )
+    for selected_kind in reset_kinds:
+        if selected_kind in default_operations and selected_kind not in preserved:
+            operations[selected_kind] = default_operations[selected_kind]
+    updated["operations"] = operations
+    updated["current_stage"] = _RESET_STAGE_BY_OPERATION_KIND[operation_kind]
+    if "narrator_definition" not in preserved and updated["current_stage"] not in {
+        "narrator_definition_ready",
+        "character_voices_ready",
+        "speech_blocks_ready",
+        "audio_blocks_ready",
+        "audio_assembly_ready",
+    }:
+        updated["narrator_profile_name"] = None
+        updated["narrator_language"] = None
+    return updated
 
 
 def sync_manifest_operation_summary(

@@ -260,6 +260,37 @@ primary/verifier request, on cancellation, and before rendering.
 not consumable while metadata is non-completed. Same persisted decisions must
 render byte-identically.
 
+### Canonical Cleanup publication transition
+
+Automatic Cleanup finalization and manual cleaned-text save use the same
+Cleanup-owned publication transition. A successful transition has one ordering
+contract:
+
+1. Build and validate the new canonical text and completed Cleanup document in
+   memory.
+2. Ask Operation Orchestration's centralized reset to delete Chunking and every
+   downstream operation's owned files, logs, generated block audio, and
+   assembly output; Cleanup and Extraction are outside this reset scope.
+3. Atomically write `clean_text.txt` and `cleanup.json`.
+4. Reload `project.json`, use Project Lifecycle's shared manifest-reset builder
+   to default the Chunking-and-downstream compact summaries, write the completed
+   Cleanup summary into the same manifest value, force `current_stage` to
+   `text_chunking_ready`, preserve the source, Extraction state and artifacts,
+   options, and unrelated fields, and atomically save the manifest once.
+5. Only after every persistence step succeeds may the caller receive the
+   completed document or a 100-percent Cleanup progress update.
+
+The artifact registry remains the sole owner of file deletion lists. The
+manifest reset builder belongs to Project Lifecycle rather than the Cleanup
+page-state projection, so Cleanup orchestration can use it without creating a
+service dependency cycle. The page-state service may retain compatibility
+wrappers, but those wrappers delegate to the Project Lifecycle implementation.
+
+An `OSError` from artifact deletion or any atomic write is propagated. Cross-file
+rollback is not promised; a failed transition is never reported as successful,
+and successful transitions are the only ones required to reopen without a
+stale-downstream metadata repair.
+
 ## Validation and quality
 
 Blocking runtime counts are:
@@ -303,7 +334,8 @@ paragraph content, never by list index:
 This rule applies even when a merge before a scene separator and a split after
 it preserve the total paragraph count. Lexical edits set `user_modified=true`
 and `structure_source="user_edited"`, rebuild minimal paragraph records, mark
-unavailable provenance explicitly, and invalidate all downstream operations.
+unavailable provenance explicitly, and run the canonical Cleanup publication
+transition so all downstream artifacts and compact summaries are invalidated.
 When paragraph records are rebuilt from user-edited text, conservative explicit
 scene-separator forms are assigned `role="scene_separator"` instead of the
 generic `body` fallback. Ambiguous punctuation and lexical content remain

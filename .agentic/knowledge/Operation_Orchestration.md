@@ -29,6 +29,8 @@ worker lifecycle used by all long-running workflow pages.
   operator who left the machine is told the run is over.
 - Synchronize persisted operation state into the project manifest and resolve
   enabled AI profiles for page controllers.
+- Keep operation artifact ownership centralized while Project Lifecycle owns
+  the corresponding compact-summary reset construction.
 
 It does not define individual workflow algorithms, domain artifact schemas,
 or the project workspace/manifest persistence implementation.
@@ -49,6 +51,12 @@ full and selective reset summaries. It can preserve selected operations,
 resequence records without changing stable IDs, and only collects/deletes audio
 paths that resolve inside the active project. It refreshes manifest operation
 summaries from completed artifacts.
+
+`operation_runtime_service.reset_operation_data` remains the sole artifact-list
+owner for full Cleanup publication invalidation. It does not edit
+`project.json`; after the file reset and Cleanup publication succeed, Text
+Cleanup asks Project Lifecycle's shared manifest-reset builder to reset the
+matching compact summaries in one manifest value.
 
 `operation_runner_controller` owns `ThreadedOperationWorker` and its UI bridge.
 It disables conflicting project switches, creates the shared dialog, routes
@@ -97,7 +105,9 @@ Chunking reset owns `chunks_text.json` and matching
 `log_ai_chunking_*.log` files. When reset begins at Chunking with
 `include_current=True`, the same allowlisted deletion proceeds through every
 configured downstream operation; Extraction and Cleanup artifacts are outside
-that scope.
+that scope. `REQ-FUNC-2ab78634` requires automatic and manual Cleanup
+publication to pair this exact artifact reset with the Project Lifecycle
+compact-summary reset before reporting success.
 
 Root-level operation artifact names are reserved independently of whether a
 file currently exists. Project Lifecycle compares them case-insensitively when
@@ -112,7 +122,9 @@ downstream outputs. The App Shell invokes its shutdown path. Project Lifecycle
 owns the manifest itself, invokes the scoped reset when project-open detects an
 incompatible Chunking document, uses the root-artifact registry to choose safe
 source names, and projects individual operation state into the manifest after
-an operation writes its artifacts.
+an operation writes its artifacts. Text Cleanup uses the same scoped Chunking
+reset for both automatic and manual canonical-text publication, then delegates
+summary reset construction to Project Lifecycle before success is returned.
 
 ## 8. Usage
 
@@ -143,6 +155,9 @@ Primary automated coverage:
 - `test_operation_progress_dialog.py` directly verifies the visible localized
   title/cancel label, clamped progress, status replacement, and localized token
   usage rendering.
+- `test_cleanup_service.py` verifies the centralized Chunking-and-downstream
+  reset removes every current artifact class in both Cleanup publication paths
+  while the paired manifest summaries are reset coherently.
 
 After changes, run the focused modules above with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files.
@@ -169,6 +184,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_operation_progress_dialog.py`
 - `04_Software/AudioMancer/tests/test_operation_runner_controller.py`
 - `04_Software/AudioMancer/tests/test_operation_runtime_service.py`
+- `04_Software/AudioMancer/tests/test_cleanup_service.py`
 - `04_Software/AudioMancer/tests/test_workflow_controller_service.py`
 - `04_Software/AudioMancer/tests/test_workflow_impact_service.py`
 - `04_Software/AudioMancer/tests/test_workflow_order_consistency.py`
