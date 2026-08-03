@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-cd9a8d20 — Reject output-length-limited provider responses
 
-stage: deliver
+stage: done
 type: feature
 path: full
 requirements: REQ-FUNC-3875ac3b
@@ -43,7 +43,7 @@ opened: 2026-08-03
 - [x] requirement re-read: status, prose, verification, and linked tests are true
 - [x] delivery confirmation received; delivery commit authorized
 - [x] journal report generated and read; it will remain uncommitted at the user's direction
-- [ ] close-out intentionally deferred because no delivery commit or push is authorized
+- [x] close-out completed after the authorized delivery commit; push remains out of scope
 - [x] changed Python follows `01_Documentation/Code_Style.md`
 - [x] non-release task: no changelog, version, or bilingual help-file version workflow applies
 
@@ -74,6 +74,7 @@ opened: 2026-08-03
 - 2026-08-03 deliver: Reviewed the narrow five-file task diff against scope, REQ-FUNC-3875ac3b, the design, error handling, portability, security, and code style; it contains no unrequested behavior or sensitive-data exposure.
 - 2026-08-03 deliver: Read the generated report; its 52-file merge-base comparison and inherited-source warnings describe prior branch work, while this task's working-tree change is limited to the provider guard, its tests, the requirement, the AI Runtime knowledge page, and this journal.
 - 2026-08-03 deliver: User confirmed manual testing and authorized the delivery commit; push remains out of scope.
+- 2026-08-03 deliver: Delivery commit 6a866da succeeded on bugfix/improvements; closing the task without push as requested.
 
 ## Delivery report (2026-08-03)
 
