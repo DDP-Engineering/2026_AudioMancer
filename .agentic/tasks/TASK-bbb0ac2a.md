@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-bbb0ac2a — Transaction-safe source replacement
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-b1f49831
@@ -43,7 +43,7 @@ opened: 2026-08-03
 - [x] requirements re-read with status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit and agreed outcome delivered
-- [ ] close-out stage set and committed only after the outcome succeeded
+- [x] close-out stage set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] release-only changelog and four-place version workflow completed or recorded as not applicable
 
@@ -86,6 +86,7 @@ opened: 2026-08-03
 - 2026-08-03 deliver: This task is not a release, so CHANGELOG, version files, and bilingual help version workflow are not applicable and remain unchanged.
 - 2026-08-03 deliver: Dan Pasare approved the delivery commit after manually testing the application, with no push authorized.
 - 2026-08-03 deliver: The agreed outcome is one signed-off local commit on bugfix/improvements; PR, push, and close-out remain pending separate authorization.
+- 2026-08-03 close-out: The owner accepted the local delivery and requested task closure; the planning-analysis documents remain untracked and excluded, and no push is authorized.
 
 ## Delivery report (2026-08-03)
 
