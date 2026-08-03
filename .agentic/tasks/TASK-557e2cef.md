@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-557e2cef — Fix OC-1 manifest synchronization
 
-stage: deliver
+stage: done
 type: fix
 path: quick
 requirements: REQ-FUNC-ccc76f34, REQ-FUNC-e45d3577
@@ -46,9 +46,9 @@ opened: 2026-08-03
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
-- [ ] journal and report inside the delivery commit; agreed outcome delivered
-      (PR by default)
-- [ ] close-out: `stage: done` set and committed only after the outcome
+- [x] journal and report inside the delivery commit; the user-scoped delivery
+      commit succeeded without a requested PR
+- [x] close-out: `stage: done` set and committed after the delivery commit
       succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] release-only: not applicable because this fix does not create a release
@@ -69,6 +69,7 @@ opened: 2026-08-03
 - 2026-08-03 deliver: Accepted uncovered-source warnings for import_service, operation_runtime_service, text_cleanup_service, text_cleanup_state_service, and home_ui_controller because they are pre-existing branch diffs and absent from this task's working-tree changes.
 - 2026-08-03 deliver: Reviewed the final diff against REQ-FUNC-ccc76f34 and REQ-FUNC-e45d3577; the controller now delegates to the canonical disk writer, callers and domain algorithms remain unchanged, and no release version change is required.
 - 2026-08-03 deliver: The human authorized the delivery commit; push, PR creation, and close-out remain outside the current authorization.
+- 2026-08-03 close-out: The human directed task closure after delivery commit 36e3070; the journal is done, and push or PR creation remains intentionally unrequested.
 
 ## Delivery report (2026-08-03)
 
