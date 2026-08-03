@@ -17,6 +17,8 @@
 
 import json
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service, text_chunking_state_service
 from chunking_test_support import build_chunking_document, write_chunking_document
@@ -373,6 +375,90 @@ def test_manual_chunk_mutations_preserve_leading_scene_boundary(tmp_path) -> Non
     assert next(item for item in chunks if item["chunk_id"] == "chunk-0003")[
         "starts_after_scene_separator"
     ] is True
+
+
+@pytest.mark.parametrize("status", ("running", "cancelled", "failed"))
+@pytest.mark.parametrize("operation", ("edit", "insert", "delete"))
+def test_manual_chunk_mutations_reject_resumable_documents_without_side_effects(
+    tmp_path,
+    status: str,
+    operation: str,
+) -> None:
+    """
+    @brief      Verify REQ-FUNC-18dd9ec2 rejects every resumable manual mutation before side effects.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  status Resumable Chunking lifecycle status under test.
+    @param[in]  operation Public manual mutation operation under test.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("ResumableChunkMutation", tmp_path)
+    document_path = write_chunking_document(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "text": "First chunk."},
+            {"chunk_id": "chunk-0002", "text": "Second chunk."},
+        ],
+        mode="ai_assisted",
+        semantic_strategy="scene",
+        status=status,
+        source_text="First chunk.\n\nSecond chunk.\n\nThird paragraph.\n",
+        additional_chunking_instructions="Keep scene transitions intact.",
+        token_usage={
+            "input_tokens": 40,
+            "output_tokens": 10,
+            "total_tokens": 50,
+            "usage_available": True,
+        },
+        warnings=["Provider retry pending."],
+        next_paragraph=3,
+        context_window_fallback_count=2,
+    )
+    manifest["current_stage"] = "audio_assembly_ready"
+    manifest["operations"]["chunking"]["status"] = status
+    manifest["operations"]["translation"]["status"] = "completed"
+    manifest["operations"]["character_discovery"]["status"] = "completed"
+    manifest["operations"]["speech_blocks"]["status"] = "completed"
+    manifest["operations"]["audio_blocks"]["status"] = "completed"
+    manifest["operations"]["audio_assembly"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    downstream_paths = (
+        project_root / config.TRANSLATED_CHUNKS_FILE_NAME,
+        project_root / config.CHARACTERS_DOCUMENT_FILE_NAME,
+        project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
+        project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
+        project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+        project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
+        project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "chunk-0001.wav",
+        project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "book.wav",
+    )
+    for path in downstream_paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(f"fixture:{path.name}".encode())
+    snapshot_paths = (
+        document_path,
+        project_root / config.PROJECT_MANIFEST_FILE_NAME,
+        *downstream_paths,
+    )
+    snapshots = {path: path.read_bytes() for path in snapshot_paths}
+
+    with pytest.raises(
+        ValueError,
+        match="Finish, resume, or reset the current Chunking run before editing chunks.",
+    ):
+        if operation == "edit":
+            text_chunking_state_service.save_chunk_text_edit(
+                project_root,
+                manifest,
+                "chunk-0001",
+                "Edited first chunk.",
+            )
+        elif operation == "insert":
+            text_chunking_state_service.insert_chunk_after_selected(project_root, manifest, "chunk-0001")
+        else:
+            text_chunking_state_service.delete_selected_chunk(project_root, manifest, "chunk-0001")
+
+    assert {path: path.read_bytes() for path in snapshot_paths} == snapshots
 
 
 def _write_chunks(

@@ -38,6 +38,9 @@ from audiomancer.services.logging_service import get_component_logger
 
 # @brief Component logger used for Text Chunking state mutations.
 _TEXT_CHUNKING_STATE_LOGGER = get_component_logger("deterministic_chunking")
+_RESUMABLE_CHUNKING_MUTATION_MESSAGE = (
+    "Finish, resume, or reset the current Chunking run before editing chunks."
+)
 
 # PUBLIC API
 
@@ -284,8 +287,11 @@ def _persist_manual_chunk_change(
     @param[in]  affected_chunk_ids Exact chunk ids changed by the operation.
     @param[in]  reason Stable impact reason token.
     @return     Updated manifest payload.
-    @exception  None
+    @exception  ValueError Raised when the authoritative document is resumable.
     """
+    document = chunking_document_service.load_chunking_document(project_root)
+    if document is not None and document["status"] in chunking_document_service.RESUMABLE_STATUSES:
+        raise ValueError(_RESUMABLE_CHUNKING_MUTATION_MESSAGE)
     _write_chunk_artifact(project_root, chunks)
     target_language = _manifest_target_language(manifest)
     ai_translation_service.sync_translation_after_chunk_change(

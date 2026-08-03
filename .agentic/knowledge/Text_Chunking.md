@@ -32,8 +32,9 @@ rather than rediscovering document structure from plain text.
 - Keep recognized scene separators as structural evidence while omitting their
   text from generated chunks, splitting ranges on either side, and marking the
   following narratable chunk's leading boundary.
-- Project persisted chunks and readiness into page state; make controlled
-  insert, delete, and text edits invalidate downstream work appropriately.
+- Project persisted chunks and readiness into page state; accept controlled
+  insert, delete, and text edits only for completed documents, while resumable
+  documents retain their checkpoints unchanged.
 - Present deterministic/AI actions, profile and strategy selection, previews,
   editing, and localized find behavior through the existing page/controller.
 
@@ -62,7 +63,11 @@ time. A separator ends the current narratable range but never becomes a chunk;
 separator-only input is rejected before an authoritative document is written.
 
 `text_chunking_state_service` derives page state and persists operator changes
-through workflow-impact rules. The controller dispatches work through the
+through workflow-impact rules. Its service boundary rejects edit, insertion,
+and deletion for `running`, `cancelled`, and `failed` documents before any
+write or downstream invalidation, preserving the resume checkpoint and all
+artifacts; completed documents retain the existing manual-mutation behavior.
+The controller dispatches work through the
 shared operation runner and refreshes the project state. `TextChunkingPage`
 renders profiles, strategy, previews, edits, and search.
 
@@ -159,7 +164,11 @@ common singleton ornaments are recognized. Ambiguous punctuation and lexical
 text such as `...`, a single dash, `### Title`, or `x x x` remains narratable
 unless Cleanup explicitly assigned `scene_separator`.
 
-Manual operations resequence `sequence_index` without changing surviving
+Manual mutations are accepted only for a strictly valid completed authoritative
+document. A running, cancelled, or failed document rejects text edit, insert,
+and delete with operator guidance to finish, resume, or reset the run; its
+checkpoint and all persisted Chunking metadata remain unchanged. Manual
+operations resequence `sequence_index` without changing surviving
 `chunk_id` values. Deletion rejects an empty resulting set; insertion creates
 an empty `chunk-####` next to its selected anchor with no inferred scene
 boundary. Text edits preserve the selected chunk's boundary flag. Deleting a
@@ -237,3 +246,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_text_chunking_page.py`
 - `04_Software/AudioMancer/tests/test_text_chunking_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py`
+
+The state-service regression parameterizes every resumable status and manual
+operation, and verifies that authoritative Chunking, project, and downstream
+artifact byte snapshots remain unchanged after rejection.

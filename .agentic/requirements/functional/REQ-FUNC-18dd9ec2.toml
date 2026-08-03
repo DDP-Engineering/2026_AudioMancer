@@ -1,20 +1,36 @@
 schema = 1
 id = "REQ-FUNC-18dd9ec2"
-title = "A successful manual chunk edit, insertion, or deletion shall atomically"
+title = "Manual Chunking mutations require a completed authoritative document"
 status = "active"
 
 requirement = """
-A successful manual chunk edit, insertion, or deletion shall atomically mutate only a strictly valid completed Chunking document, preserve document-level generation and audit fields, retain stable IDs where possible, give inserted chunks only minimal cleanup provenance, resequence chunks, set `manual_adjusted` true, and calculate downstream invalidation without persisting its payload.
+A manual Chunking text edit, insertion, or deletion may mutate an existing
+authoritative `chunks_text.json` document only after that document strictly
+validates and has status `completed`. A document with status `running`,
+`cancelled`, or `failed` remains resume-capable: the state-service boundary
+shall raise `ValueError` directing the operator to finish, resume, or reset the
+current Chunking run before editing chunks, before any document write,
+downstream invalidation, manifest update, or artifact deletion. Rejection shall
+leave the Chunking document byte-for-byte unchanged, including status,
+checkpoint, chunks, mode, strategy, instructions, usage, warnings, and
+fallback count; it shall also leave `project.json`, compact manifest summaries,
+current stage, and all Translation, Character Discovery, Speech Blocks, Audio
+Blocks, and Audio Assembly artifacts unchanged. Completed-document mutations
+retain their existing atomic behavior: preserve document-level generation and
+audit fields, retain stable IDs where possible, give inserted chunks only
+minimal cleanup provenance, resequence chunks, set `manual_adjusted` true, and
+calculate downstream invalidation without persisting its payload. First manual
+insertion remains permitted when no Chunking document exists.
 """
 
-verification = "Manual edit, insert, and delete preserve the strict root contract."
+verification = "A parameterized state-service regression seeds valid running, cancelled, and failed documents with two chunks and a non-null checkpoint; each public edit, insert, and delete call raises the operator-guidance ValueError and preserves byte snapshots of the document, project.json, and representative downstream artifacts. Existing completed-document mutation and first-manual-insertion tests remain green."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_manual_mutations_preserve_document_origin_and_set_manual_adjusted",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_manual_chunk_mutations_reject_resumable_documents_without_side_effects",
 ]
 
 priority = "high"
@@ -22,4 +38,4 @@ rationale = """
 Operators need safe manual correction without corrupting origin metadata or embedding transient workflow-impact state.
 """
 created = 2026-07-20
-updated = 2026-07-20
+updated = 2026-08-03
