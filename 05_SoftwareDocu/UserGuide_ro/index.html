@@ -372,7 +372,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Genereaza segmente determinist sau cu asistenta AI.</li>
                     <li>Pentru o rulare AI noua de segmentare, adauga reguli optionale suplimentare cand apare caseta de instructiuni cu word wrap.</li>
                     <li>Alege strategia AI: <strong>Paragraph</strong> pentru ferestre stabile de paragrafe, <strong>Meaning</strong> pentru unitati semantice sau <strong>Scene</strong> pentru limite apropiate de scene.</li>
-                    <li>Daca AI nu returneaza o impartire utilizabila pentru o fereastra nefinala, AudioMancer pastreaza intreaga fereastra ca un singur segment si raporteaza fallback-ul la nivelul operatiei. Un context AI mai mare poate produce limite mai naturale.</li>
+                    <li>Daca AI nu returneaza o impartire utilizabila pentru orice fereastra de text, inclusiv pentru fereastra finala, AudioMancer pastreaza limitele structurale cand sunt disponibile si altfel salveaza fereastra ca un singur segment. Mesajul de progres identifica intervalul de paragrafe, iar operatia finalizata raporteaza numarul total de ferestre fallback. Un context AI mai mare poate produce limite mai naturale.</li>
                     <li>Inspecteaza fiecare segment generat.</li>
                     <li>Editeaza rezultatul generat cand textul sau impartirea trebuie corectate manual. Confirma mesajul de impact inainte de editare deoarece salvarile pot afecta datele etapelor urmatoare.</li>
                     <li>Foloseste <strong>Insert</strong> pentru a adauga un segment gol dupa segmentul selectat, apoi salveaza textul dorit in segmentul nou.</li>
@@ -380,7 +380,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Confirma inserarile si stergerile numai dupa ce citesti mesajul de impact. AudioMancer pastreaza traducerile, Blocurile de vorbire si Blocurile audio neafectate unde este posibil, dar reseteaza Asamblarea audio deoarece ordinea continutului final s-a schimbat.</li>
                     <li>Aproba segmentele pentru a debloca traducerea, personajele si Blocurile de vorbire.</li>
                     <li>Trage separatorul dintre zona de referinta/lista si previzualizarea segmentului selectat; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe segmentarea si continua mai tarziu de la urmatorul paragraf neprocesat. Checkpoint-urile create de vechea segmentare pe baza de identificatori pornesc din nou de la inceput.</li>
+                    <li>Intrerupe segmentarea si continua mai tarziu de la punctul de control salvat. Pagina arata daca rularea este in curs, poate fi reluata sau este finalizata fara sa inventeze o valoare indisponibila pentru progresul total. Checkpoint-urile create de vechea segmentare pe baza de identificatori pornesc din nou de la inceput.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare text">

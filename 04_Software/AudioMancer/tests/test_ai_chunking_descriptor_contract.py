@@ -336,9 +336,9 @@ def test_valid_non_final_split_advances_from_the_last_break_and_closes_final_rem
     assert report["context_window_fallback_count"] == 0
 
 
-def test_empty_non_final_response_commits_one_fallback_window_and_reports_it(tmp_path, monkeypatch) -> None:
+def test_empty_responses_count_and_disclose_every_fallback_window(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify S-0002/S-0003 and REQ-FUNC-065 report one non-final fallback.
+    @brief      Verify every no-prefix window is counted and disclosed.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
@@ -363,7 +363,53 @@ def test_empty_non_final_response_commits_one_fallback_window_and_reports_it(tmp
     assert "Paragraph 1 has stable text." in chunks[0]["text"]
     assert "Paragraph 4 has stable text." in chunks[0]["text"]
     assert "Paragraph 5 has stable text." in chunks[1]["text"]
+    persisted_document = read_chunking_document(project_root)
+
+    assert report["context_window_fallback_count"] == 2
+    assert persisted_document["context_window_fallback_count"] == 2
+    assert any(
+        "paragraphs 1-4" in message and "saved this text window as one chunk" in message
+        for message in progress_messages
+    )
+    assert any(
+        "paragraphs 5-6" in message and "saved this text window as one chunk" in message
+        for message in progress_messages
+    )
+    assert any("2 text windows were saved as a fallback chunk" in warning for warning in report["warnings"])
+
+
+def test_empty_final_response_counts_persists_and_discloses_one_fallback_window(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify a single final window uses the common fallback reporting path.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @return     None.
+    """
+    project_root, manifest = _prepare_project(tmp_path, monkeypatch, paragraph_count=4)
+    progress_messages: list[str] = []
+    monkeypatch.setattr(
+        ai_chunking_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: _response([]),
+    )
+
+    report = ai_chunking_service.chunk_text(
+        project_root,
+        manifest,
+        _profile(),
+        "paragraph",
+        progress_callback=lambda _current, _total, _percent, message, _usage: progress_messages.append(message),
+    )
+    persisted_document = read_chunking_document(project_root)
+    persisted_manifest = project_workspace_service.load_manifest(project_root)
+
+    assert [chunk["text"] for chunk in persisted_document["chunks"]] == [
+        "Paragraph 1 has stable text.\n\nParagraph 2 has stable text.\n\n"
+        "Paragraph 3 has stable text.\n\nParagraph 4 has stable text."
+    ]
     assert report["context_window_fallback_count"] == 1
+    assert persisted_document["context_window_fallback_count"] == 1
+    assert persisted_manifest["operations"]["chunking"]["warning_count"] == report["warning_count"]
     assert any(
         "paragraphs 1-4" in message and "saved this text window as one chunk" in message
         for message in progress_messages
@@ -465,7 +511,7 @@ def test_invalid_window_fallback_preserves_explicit_scene_separator_boundaries(
         "A new scene begins.\n\nThe new scene continues.",
     ]
     assert all("* * *" not in chunk["text"] for chunk in chunks)
-    assert report["context_window_fallback_count"] == 1
+    assert report["context_window_fallback_count"] == 2
     assert any(
         "deterministic structural fallback" in message
         for message in progress_messages

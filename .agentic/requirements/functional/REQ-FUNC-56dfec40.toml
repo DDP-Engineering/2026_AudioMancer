@@ -1,22 +1,27 @@
 schema = 1
 id = "REQ-FUNC-56dfec40"
-title = "Text chunking state notes shall show in-progress, resume, and persisted"
+title = "Text Chunking state notes shall truthfully present persisted lifecycle status and durable notes"
 status = "active"
 
 requirement = """
-Text chunking state notes shall show in-progress, resume, and persisted token-usage entries.
+Text Chunking state shall derive page notes from the authoritative Chunking document through its production state-builder path. Running documents shall show an in-progress note without fabricated numeric progress; failed and cancelled documents shall show the appropriate resume note while retaining persisted warnings and AI token usage; completed documents shall show the completed summary and rerun warning; and absent documents shall retain ready and profile guidance. AI-assisted lifecycle notes shall use the semantic strategy stored in the authoritative document.
 """
 
-verification = "Automated: 4 linked pytest selector(s)."
+verification = "Focused state-service production-path tests build persisted deterministic and AI-assisted documents and verify localized running, failed, cancelled, completed, and not-started notes contain only durable lifecycle facts while retaining warnings and AI token usage."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking",
   "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking",
   "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_cancelled_chunking",
   "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_persisted_token_usage_summary",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_uses_persisted_lifecycle_without_fabricated_progress",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_retains_ready_guidance_without_a_document",
 ]
 
 priority = "high"
@@ -24,4 +29,4 @@ rationale = """
 Operators need truthful workflow notes for running, failed, and cancelled chunking.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-03

@@ -328,6 +328,7 @@ def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tm
             "usage_available": True,
         },
     )
+    document["context_window_fallback_count"] = 1
     _write_document(project_root, document)
     captured: dict[str, object] = {}
 
@@ -370,6 +371,7 @@ def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tm
     assert resumed["semantic_strategy"] == "meaning"
     assert resumed["additional_chunking_instructions"] == "Stored operator instruction."
     assert resumed["token_usage"]["total_tokens"] == 20
+    assert resumed["context_window_fallback_count"] == 2
 
 
 def test_manual_mutations_preserve_document_origin_and_set_manual_adjusted(tmp_path) -> None:

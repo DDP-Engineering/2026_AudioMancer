@@ -45,7 +45,7 @@ def test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunkin
         language="en",
     )
 
-    assert any("in progress at 1/29" in note for note in notes)
+    assert any("in progress from the saved checkpoint using the scene strategy" in note for note in notes)
     assert not any("is ready for the current cleaned text" in note for note in notes)
 
 
@@ -131,6 +131,104 @@ def test_build_text_chunking_notes_shows_persisted_token_usage_summary() -> None
     )
 
     assert any("Input tokens: 120 | Output tokens: 30 | Total: 150" in note for note in notes)
+
+
+@pytest.mark.parametrize(
+    ("status", "mode", "strategy", "language", "expected_note"),
+    [
+        ("running", "deterministic", None, "en", "Deterministic chunking is in progress"),
+        ("running", "ai_assisted", "scene", "ro", "Segmentarea asistata de AI este in curs"),
+        ("failed", "ai_assisted", "meaning", "en", "was not finalized"),
+        ("cancelled", "deterministic", None, "en", "was not finalized"),
+        ("completed", "ai_assisted", "scene", "en", "AI-assisted chunking produced"),
+    ],
+)
+def test_build_text_chunking_state_uses_persisted_lifecycle_without_fabricated_progress(
+    tmp_path,
+    status: str,
+    mode: str,
+    strategy: str | None,
+    language: str,
+    expected_note: str,
+) -> None:
+    """
+    @brief      Verify production page state exposes durable Chunking lifecycle facts.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  status Persisted Chunking lifecycle state under evaluation.
+    @param[in]  mode Persisted Chunking mode under evaluation.
+    @param[in]  strategy Persisted AI strategy when applicable.
+    @param[in]  language Operator language used to render notes.
+    @param[in]  expected_note Required localized lifecycle text fragment.
+    @return     None.
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkingLifecycleState", tmp_path)
+    source_text = "Committed chunk.\n\nUncommitted paragraph.\n"
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(source_text, encoding="utf-8")
+    manifest["source_document"] = {"original_name": "story.txt"}
+    write_chunking_document(
+        project_root,
+        [{"text": "Committed chunk."}],
+        mode=mode,
+        semantic_strategy=strategy,
+        source_text=source_text,
+        status=status,
+        warnings=["Persisted fallback warning."],
+        next_paragraph=None if status == "completed" else 2,
+        token_usage={
+            "input_tokens": 120,
+            "output_tokens": 30,
+            "total_tokens": 150,
+            "usage_available": True,
+        },
+    )
+
+    state = text_chunking_state_service.build_text_chunking_state(
+        project_root,
+        manifest,
+        language,
+        settings_payload={"llm_profiles": [{"id": "profile", "enabled": True}]},
+    )
+    notes = "\n".join(state["notes"])
+
+    assert expected_note in notes
+    assert "Persisted fallback warning." in notes
+    assert "0/0" not in notes
+    assert "0 / 0" not in notes
+    if mode == "ai_assisted":
+        assert "120" in notes
+        assert strategy in notes
+        if status in {"running", "failed"}:
+            assert state["selected_strategy"] == strategy
+    if status == "running":
+        assert "ready" not in notes.lower()
+        assert "produced" not in notes.lower()
+        assert "Running AI-assisted chunking again" not in notes
+    if status in {"failed", "cancelled"}:
+        assert "in progress" not in notes.lower()
+    if status == "completed":
+        assert "Running AI-assisted chunking again" in notes
+
+
+def test_build_text_chunking_state_retains_ready_guidance_without_a_document(tmp_path) -> None:
+    """
+    @brief      Verify production page state retains not-started readiness guidance.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkingReadyState", tmp_path)
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Cleaned text\n", encoding="utf-8")
+    manifest["source_document"] = {"original_name": "story.txt"}
+
+    state = text_chunking_state_service.build_text_chunking_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload={"llm_profiles": [{"id": "profile", "enabled": True}]},
+    )
+
+    notes = "\n".join(state["notes"])
+    assert "ready to run" in notes
+    assert "AI-assisted chunking is ready" in notes
 
 
 def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tmp_path) -> None:

@@ -528,16 +528,53 @@ def build_text_chunking_notes(
     chunking_mode = (
         "" if not isinstance(chunking_operation_state, dict) else str(chunking_operation_state.get("mode") or "")
     )
+    if chunking_status == "running":
+        in_progress_key = (
+            "text_chunking.note_ai_in_progress" if chunking_mode == "ai_assisted" else "text_chunking.note_in_progress"
+        )
+        notes.append(
+            ui_state_service.translate(in_progress_key, language).format(
+                strategy=_chunking_state_strategy(chunking_operation_state or {}),
+            )
+        )
+        if chunking_mode == "ai_assisted":
+            notes.extend(
+                _build_token_usage_notes(
+                    chunking_report_payload,
+                    chunking_operation_state,
+                    language,
+                )
+            )
+        if chunking_report_payload is not None:
+            notes.extend(str(item) for item in list(chunking_report_payload.get("warnings", [])))
+        return notes
+
+    if chunking_status in {"failed", "cancelled"}:
+        resume_key = "text_chunking.note_ai_resume" if chunking_mode == "ai_assisted" else "text_chunking.note_resume"
+        notes.append(
+            ui_state_service.translate(resume_key, language).format(
+                strategy=_chunking_state_strategy(chunking_operation_state or {}),
+            )
+        )
+        if chunking_mode == "ai_assisted":
+            notes.extend(
+                _build_token_usage_notes(
+                    chunking_report_payload,
+                    chunking_operation_state,
+                    language,
+                )
+            )
+        if chunking_report_payload is not None:
+            notes.extend(str(item) for item in list(chunking_report_payload.get("warnings", [])))
+        return notes
+
     if chunking_report_payload is not None:
         chunking_mode = str(chunking_report_payload.get("chunking_mode") or chunking_mode)
         summary_key = (
             "text_chunking.note_ai_summary" if chunking_mode == "ai_assisted" else "text_chunking.note_summary"
         )
         notes.append(
-            ui_state_service.translate(
-                summary_key,
-                language,
-            ).format(
+            ui_state_service.translate(summary_key, language).format(
                 chunk_count=chunking_report_payload.get("chunk_count", 0),
                 chapter_count=chunking_report_payload.get("detected_chapter_count", 0),
                 strategy=chunking_report_payload.get(
@@ -555,84 +592,12 @@ def build_text_chunking_notes(
                 )
             )
         notes.extend(str(item) for item in list(chunking_report_payload.get("warnings", [])))
-        if chunking_status in {"failed", "cancelled"}:
-            resume_key = (
-                "text_chunking.note_ai_resume" if chunking_mode == "ai_assisted" else "text_chunking.note_resume"
-            )
-            notes.append(
-                ui_state_service.translate(resume_key, language).format(
-                    progress_current=0,
-                    progress_total=0,
-                    strategy=_chunking_state_strategy(chunking_operation_state or {}),
-                )
-            )
-        if chunking_status == "completed":
-            rerun_key = (
-                "text_chunking.note_ai_rerun_warning"
-                if chunking_mode == "ai_assisted"
-                else "text_chunking.note_rerun_warning"
-            )
-            notes.append(ui_state_service.translate(rerun_key, language))
-        return notes
-
-    if chunking_status == "running":
-        progress_current = (
-            0
-            if not isinstance(chunking_operation_state, dict)
-            else int(chunking_operation_state.get("progress_current", 0))
+        rerun_key = (
+            "text_chunking.note_ai_rerun_warning"
+            if chunking_mode == "ai_assisted"
+            else "text_chunking.note_rerun_warning"
         )
-        progress_total = (
-            0
-            if not isinstance(chunking_operation_state, dict)
-            else int(chunking_operation_state.get("progress_total", 0))
-        )
-        in_progress_key = (
-            "text_chunking.note_ai_in_progress" if chunking_mode == "ai_assisted" else "text_chunking.note_in_progress"
-        )
-        notes.append(
-            ui_state_service.translate(in_progress_key, language).format(
-                progress_current=progress_current,
-                progress_total=progress_total,
-                strategy=_chunking_state_strategy(chunking_operation_state),
-            )
-        )
-        if chunking_mode == "ai_assisted":
-            notes.extend(
-                _build_token_usage_notes(
-                    chunking_report_payload,
-                    chunking_operation_state,
-                    language,
-                )
-            )
-        return notes
-
-    if chunking_status in {"failed", "cancelled"}:
-        progress_current = (
-            0
-            if not isinstance(chunking_operation_state, dict)
-            else int(chunking_operation_state.get("progress_current", 0))
-        )
-        progress_total = (
-            0
-            if not isinstance(chunking_operation_state, dict)
-            else int(chunking_operation_state.get("progress_total", 0))
-        )
-        resume_key = "text_chunking.note_ai_resume" if chunking_mode == "ai_assisted" else "text_chunking.note_resume"
-        notes.append(
-            ui_state_service.translate(resume_key, language).format(
-                progress_current=progress_current,
-                progress_total=progress_total,
-                strategy=_chunking_state_strategy(chunking_operation_state),
-            )
-        )
-        if chunking_mode == "ai_assisted":
-            notes.extend(
-                _build_token_usage_notes(
-                    chunking_report_payload,
-                    chunking_operation_state,
-                    language,
-                )
-            )
+        notes.append(ui_state_service.translate(rerun_key, language))
         return notes
 
     notes.append(ui_state_service.translate("text_chunking.note_ready", language))

@@ -277,19 +277,6 @@ def chunk_text(
                         "AI chunking accepted a valid descriptor prefix and "
                         f"will retry from paragraph {next_paragraph}."
                     )
-            elif is_final_window:
-                fallback_ranges = _deterministic_structural_fallback_ranges(
-                    paragraph_records,
-                    window_start_index,
-                    len(paragraph_records) - 1,
-                )
-                _append_chunks_from_ranges(
-                    committed_chunks,
-                    paragraph_records,
-                    fallback_ranges,
-                    semantic_strategy,
-                )
-                next_paragraph = len(paragraph_records) + 1
             else:
                 fallback_ranges = _deterministic_structural_fallback_ranges(
                     paragraph_records,

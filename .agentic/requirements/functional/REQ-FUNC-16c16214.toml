@@ -13,9 +13,11 @@ affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_state_projects_resumable_document_without_durable_progress",
+  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_uses_persisted_lifecycle_without_fabricated_progress",
 ]
 
 priority = "high"
@@ -23,4 +25,4 @@ rationale = """
 Operators need an accurate workflow surface whose controls and notes reflect the sole persisted Chunking authority.
 """
 created = 2026-07-20
-updated = 2026-07-20
+updated = 2026-08-03

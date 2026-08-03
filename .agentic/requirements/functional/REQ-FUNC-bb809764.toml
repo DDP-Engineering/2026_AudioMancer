@@ -1,0 +1,58 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-bb809764"
+
+title = "AI Chunking shall count every window resolved through deterministic fallback"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+requirement = """
+AI Chunking shall count every context window resolved through deterministic fallback exactly once, including a single-window document and the final window of a multi-window document. The accumulated count shall be retained in the authoritative Chunking document across checkpoints and resume, and shall be projected into the completed Chunking report and manifest summary.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Focused AI descriptor tests show one empty final window and two empty windows retain all narratable text exactly once while the completed report, chunks_text.json, and manifest summary expose fallback counts of one and two respectively."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_responses_count_and_disclose_every_fallback_window",
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_final_response_counts_persists_and_discloses_one_fallback_window",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "Persisted fallback counts prevent a fully deterministic recovery from being reported as an unqualified AI-assisted success."
+
+created = 2026-08-03
+updated = 2026-08-03

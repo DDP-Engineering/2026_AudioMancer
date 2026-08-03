@@ -28,7 +28,8 @@ rather than rediscovering document structure from plain text.
 - Bound deterministic running-document checkpoints by processed-paragraph and
   monotonic-time intervals while always persisting terminal lifecycle state.
 - Run AI-assisted semantic chunking with validated paragraph descriptors,
-  bounded context windows, resumable state, fallback windows, and usage logs.
+  bounded context windows, resumable state, counted and disclosed fallback
+  windows, and usage logs.
 - Keep recognized scene separators as structural evidence while omitting their
   text from generated chunks, splitting ranges on either side, and marking the
   following narratable chunk's leading boundary.
@@ -55,15 +56,24 @@ state before returning or propagating. `ai_chunking_service` turns the same para
 budgeted windows, requires source-aligned descriptors from the provider,
 checkpoints each consecutive valid descriptor prefix, and retries from the
 first uncommitted paragraph when a later descriptor is invalid. If no valid
-prefix exists, deterministic fallback keeps explicit headings and scene
-separators as structural boundaries before using a complete-window chunk. Both
+prefix exists, every window, including the only or final window, uses the same
+deterministic fallback path: it keeps explicit headings and scene separators
+as structural boundaries before using a complete-window chunk, increments the
+persisted fallback count once, and emits an absolute paragraph-range progress
+message. Completion carries the singular or plural fallback warning into the
+report and manifest summary. Both
 modes use
 `cleanup_text_analysis_service.is_scene_separator_artifact` at materialization
 time. A separator ends the current narratable range but never becomes a chunk;
 separator-only input is rejected before an authoritative document is written.
 
 `text_chunking_state_service` derives page state and persists operator changes
-through workflow-impact rules. Its service boundary rejects edit, insertion,
+through workflow-impact rules. It selects notes from the authoritative
+document's lifecycle before report summaries: running states show a localized
+checkpoint-based in-progress note; failed and cancelled states show the resume
+note while retaining warnings and AI token usage; completed states show the
+summary and rerun warning; and absent documents retain ready/profile guidance.
+It never fabricates a total-progress value. Its service boundary rejects edit, insertion,
 and deletion for `running`, `cancelled`, and `failed` documents before any
 write or downstream invalidation, preserving the resume checkpoint and all
 artifacts; completed documents retain the existing manual-mutation behavior.
@@ -214,7 +224,8 @@ Primary automated coverage:
 
 These cover strict Cleanup gating, role propagation, canonical-only
 persistence, deterministic artifacts/chapter behavior, AI descriptor
-validation/resume/fallback contracts, scene-separator recognition and omission,
+validation/resume/fallback contracts (including single and final windows),
+scene-separator recognition and omission, production-path lifecycle notes,
 state edits/invalidation, controller dispatch, and page behavior.
 Minimum validation after a change: run the focused modules above with
 `uv run pytest`, plus `uv run ruff check` on changed files.
@@ -236,6 +247,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py`
 - `04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py`
@@ -246,6 +258,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_text_chunking_page.py`
 - `04_Software/AudioMancer/tests/test_text_chunking_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_localization_parity.py`
 
 The state-service regression parameterizes every resumable status and manual
 operation, and verifies that authoritative Chunking, project, and downstream

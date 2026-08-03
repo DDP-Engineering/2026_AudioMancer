@@ -363,7 +363,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Generate chunks deterministically or with AI assistance.</li>
                     <li>For a fresh AI chunking run, add optional extra prompt rules when the word-wrapped instructions box appears.</li>
                     <li>Choose AI chunking strategy: <strong>Paragraph</strong> for stable paragraph windows, <strong>Meaning</strong> for semantic units, or <strong>Scene</strong> for scene-like boundaries.</li>
-                    <li>If AI returns no usable split for a non-final text window, AudioMancer preserves that whole window as one chunk and reports the fallback at operation level. A larger AI chunking context may produce more natural boundaries.</li>
+                    <li>If AI returns no usable split for any text window, including the final window, AudioMancer preserves its structural boundaries when available and otherwise saves the window as one chunk. The progress note identifies the paragraph range, and the completed operation reports the total fallback-window count. A larger AI chunking context may produce more natural boundaries.</li>
                     <li>Inspect generated chunks one by one.</li>
                     <li>Edit generated chunk output before approval when the split or text needs manual correction. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
                     <li>Use <strong>Insert</strong> to add a new empty chunk after the selected chunk, then save the text you want in that new chunk.</li>
@@ -371,7 +371,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Confirm manual inserts and deletes only after checking the impact message. AudioMancer preserves unaffected translations, Speech Blocks, and Audio Blocks where possible, but resets Audio Assembly because the final ordered content changed.</li>
                     <li>Approve chunks to unlock translation, character discovery, and Speech Blocks.</li>
                     <li>Drag the divider between the reference/list area and the selected chunk preview; each side keeps at least one third of the page width.</li>
-                    <li>Interrupt chunking and continue it later from the next unprocessed paragraph. Checkpoints created by older AudioMancer break-ID chunking restart from the beginning.</li>
+                    <li>Interrupt chunking and continue it later from the saved checkpoint. The page shows whether a run is in progress, resumable, or complete without inventing an unavailable total-progress value. Checkpoints created by older AudioMancer break-ID chunking restart from the beginning.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Text Chunking page">
