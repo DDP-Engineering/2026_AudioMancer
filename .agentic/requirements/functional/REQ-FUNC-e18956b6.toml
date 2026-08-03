@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-e18956b6"
+title = "Speech-block generation shall create and normalize block artifacts"
+status = "active"
+
+requirement = """
+Speech-block generation shall create and normalize block artifacts, persist operator rules, and honor the online-profile context fraction.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_appends_and_persists_operator_speech_block_rules",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_online_profile_uses_direct_context_fraction",
+]
+
+priority = "high"
+rationale = """
+Generation must produce a durable normalized plan under the selected profile.
+"""
+created = 2026-07-19
+updated = 2026-07-24

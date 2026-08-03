@@ -14,9 +14,6 @@
          JSON responses conservatively, and optionally appends detailed
          transaction records to one operation-local log file while keeping
          UI-driven cancellation responsive during provider waits.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.8.3
 """
 
 # IMPORTS
@@ -62,9 +59,6 @@ class _UnsupportedResponseFormatError(RuntimeError):
     @details Allows chat_json to retry one structured-output request without
              response_format while keeping normal permanent HTTP failures
              surfaced unchanged.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-05-08
-    @version 0.1.0
     """
 
 
@@ -82,6 +76,11 @@ def chat_json(
     structured_output: bool = True,
     response_schema: dict[str, object] | None = None,
     response_schema_name: str = "audiomancer_json_response",
+    require_response_schema: bool = False,
+    allow_unconstrained_fallback: bool = True,
+    allow_model_json_repair: bool = True,
+    retry_count_override: int | None = None,
+    max_output_tokens_override: int | None = None,
 ) -> dict[str, object]:
     """
     @brief      Run one chat-completion request and parse JSON content.
@@ -98,10 +97,11 @@ def chat_json(
     @exception  RuntimeError Raised on provider or transport failures.
     @exception  ValueError Raised on invalid or non-object JSON output.
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.6.3
     """
+    if require_response_schema and (
+        response_schema is None or not bool(profile_payload.get("supports_structured_output", False))
+    ):
+        raise ValueError("This operation requires provider-enforced JSON Schema output.")
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
         "messages": [
@@ -110,10 +110,9 @@ def chat_json(
         ],
         "temperature": float(profile_payload.get("temperature", config.DEFAULT_LLM_TEMPERATURE)),
         "max_tokens": int(
-            profile_payload.get(
-                "max_output_tokens",
-                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-            )
+            max_output_tokens_override
+            if max_output_tokens_override is not None
+            else profile_payload.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS)
         ),
     }
     if structured_output and bool(profile_payload.get("supports_structured_output", False)):
@@ -138,7 +137,15 @@ def chat_json(
         },
     )
 
-    attempts = max(1, config.DEFAULT_LLM_REQUEST_RETRY_COUNT + 1)
+    attempts = max(
+        1,
+        (
+            config.DEFAULT_LLM_REQUEST_RETRY_COUNT
+            if retry_count_override is None
+            else int(retry_count_override)
+        )
+        + 1,
+    )
     last_error: Exception | None = None
     for attempt_index in range(1, attempts + 1):
         raw_content: str | None = None
@@ -151,7 +158,7 @@ def chat_json(
                     cancel_requested=cancel_requested,
                 )
             except _UnsupportedResponseFormatError as error_object:
-                if "response_format" not in active_request_payload:
+                if "response_format" not in active_request_payload or not allow_unconstrained_fallback:
                     raise
                 active_request_payload = _build_without_response_format_payload(active_request_payload)
                 _append_ai_log(
@@ -175,7 +182,7 @@ def chat_json(
                 parsed_payload = _parse_json_content(raw_content)
                 normalized_usage = token_usage_service.normalize_provider_usage(raw_payload)
             except ValueError as parse_error:
-                if not raw_content.strip():
+                if not raw_content.strip() or not allow_model_json_repair:
                     raise
                 (
                     parsed_payload,
@@ -262,9 +269,6 @@ def _request_chat_completion_with_cancellation(
     @param[in]  request_payload Payload for `request_payload`.
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.2
     """
     _LLM_PROVIDER_LOGGER.debug(
         "Starting cancellable AI provider request base_url=%s",
@@ -277,9 +281,6 @@ def _request_chat_completion_with_cancellation(
         """
         @brief      Execute the request worker helper.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.1
         """
         try:
             result_holder["payload"] = _request_chat_completion(
@@ -320,9 +321,6 @@ def _request_chat_completion(
     @return     Parsed JSON response payload plus raw response body text.
     @exception  RuntimeError Raised when the provider returns an HTTP or transport failure.
     @exception  ValueError Raised when the provider returns an invalid JSON payload.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.4.0
     """
     endpoint = _build_chat_endpoint(str(profile_payload.get("base_url", "")))
     api_key = str(profile_payload.get("api_key", "")).strip()
@@ -385,9 +383,6 @@ def _build_chat_endpoint(base_url: str) -> str:
     @param[in]  base_url Operator-configured provider base URL.
     @return     Fully qualified chat-completions endpoint.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.1
     """
     normalized_base = base_url.rstrip("/")
     parsed_url = parse.urlparse(normalized_base)
@@ -424,9 +419,6 @@ def _build_response_format(
     @param[in]  response_schema_name Provider-facing schema name used with `response_schema`.
     @return     Response-format payload accepted by the selected backend kind.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.1.0
     """
     backend_kind = str(profile_payload.get("backend_kind", "")).strip()
     if isinstance(response_schema, dict) and response_schema:
@@ -459,9 +451,6 @@ def _supports_max_completion_tokens_retry(status_code: int, error_body: str) -> 
     @param[in]  error_body Provider error response body.
     @return     True when the provider explicitly rejected the max_tokens field.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     if status_code != 400:
         return False
@@ -478,9 +467,6 @@ def _supports_response_format_retry(status_code: int, error_body: str) -> bool:
     @param[in]  error_body Provider error response body.
     @return     True when the provider explicitly rejected response_format.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.1.1
     """
     if status_code != 400:
         return False
@@ -506,9 +492,6 @@ def _build_max_completion_tokens_payload(
     @param[in]  request_payload Original request payload.
     @return     Compatibility payload for providers that reject max_tokens.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     compatibility_payload = dict(request_payload)
     if "max_tokens" not in compatibility_payload:
@@ -525,9 +508,6 @@ def _build_without_response_format_payload(
     @param[in]  request_payload Original request payload.
     @return     Compatibility payload for providers that reject response_format.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     compatibility_payload = dict(request_payload)
     compatibility_payload.pop("response_format", None)
@@ -539,9 +519,6 @@ def _extract_message_content(payload: dict[str, object]) -> str:
     @brief      Execute the extract message content helper.
     @param[in]  payload Optional payload processed by the helper.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     choices = payload.get("choices", [])
     if not isinstance(choices, list) or not choices:
@@ -567,9 +544,6 @@ def _parse_json_content(content: str) -> dict[str, object]:
     @brief      Execute the parse json content helper.
     @param[in]  content Value for `content`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     normalized = content.strip()
     if normalized.startswith("```"):
@@ -594,9 +568,6 @@ def _strip_code_fence(content: str) -> str:
     @brief      Execute the strip code fence helper.
     @param[in]  content Value for `content`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     stripped_lines = content.splitlines()
     if stripped_lines and stripped_lines[0].startswith("```"):
@@ -611,9 +582,6 @@ def _trim_json_like_payload(content: str) -> str:
     @brief      Execute the trim json like payload helper.
     @param[in]  content Value for `content`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     start_indexes = [index for index in (content.find("{"), content.find("[")) if index >= 0]
     if not start_indexes:
@@ -635,9 +603,6 @@ def _repair_json_like_content(content: str) -> str:
     @brief      Execute the repair json like content helper.
     @param[in]  content Value for `content`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     repaired: list[str] = []
     in_string = False
@@ -681,9 +646,6 @@ def _is_valid_json_escape_sequence(content: str, escape_index: int) -> bool:
     @param[in]  content Value for `content`.
     @param[in]  escape_index Value for `escape_index`.
     @return     True when the helper condition is satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if escape_index >= len(content):
         return False
@@ -708,9 +670,6 @@ def _repair_json_response_with_model(
     @param[in]  malformed_content Value for `malformed_content`.
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     repair_request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -763,9 +722,6 @@ def _is_likely_string_terminator(content: str, quote_index: int) -> bool:
     @param[in]  content Value for `content`.
     @param[in]  quote_index Value for `quote_index`.
     @return     True when the helper condition is satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     next_index = _next_non_whitespace_index(content, quote_index + 1)
     if next_index is None:
@@ -792,9 +748,6 @@ def _next_non_whitespace_index(content: str, start_index: int) -> int | None:
     @param[in]  content Value for `content`.
     @param[in]  start_index Value for `start_index`.
     @return     Resolved helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     for index in range(start_index, len(content)):
         if not content[index].isspace():
@@ -807,9 +760,6 @@ def _is_retryable_error(error_object: Exception) -> bool:
     @brief      Determine whether retryable error.
     @param[in]  error_object Value for `error_object`.
     @return     True when the helper condition is satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
     """
     message = str(error_object).lower()
     return (
@@ -826,9 +776,6 @@ def _append_ai_log(log_path: str | Path | None, payload: dict[str, object]) -> N
     @param[in]  log_path Operation log file path.
     @param[in]  payload Optional payload processed by the helper.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.3.0
     """
     if log_path is None:
         return
@@ -850,9 +797,6 @@ def _redact_ai_log_value(value: object) -> object:
     @param[in]  value Payload value to inspect recursively.
     @return     Value with sensitive fields replaced by a fixed placeholder.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if isinstance(value, dict):
         redacted_payload: dict[str, object] = {}
@@ -874,9 +818,6 @@ def _is_sensitive_log_field(field_name: str) -> bool:
     @param[in]  field_name Candidate field name.
     @return     True when the field value must be redacted before persistence.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_name = field_name.strip().casefold().replace("-", "_")
     return normalized_name in _SENSITIVE_LOG_FIELD_NAMES or normalized_name.endswith("_api_key")

@@ -11,9 +11,6 @@
 @brief Focused Qt tests for the AudioMancer Audio Blocks page.
 @details Verifies Audio Blocks rendering, translated labels, progress display,
          bounded approval navigation, and selected-row action enablement.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.6.8
 """
 
 # IMPORTS
@@ -28,9 +25,6 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -120,9 +114,6 @@ def test_audio_blocks_page_advances_to_next_pending_generated_scene_ambience_row
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-22
-    @version    0.1.0
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -195,9 +186,6 @@ def test_audio_blocks_page_places_scene_ambience_selector_on_progress_row(qtbot)
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.4
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -244,9 +232,6 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -328,9 +313,6 @@ def test_audio_blocks_page_advances_block_selection_with_limit(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -396,9 +378,6 @@ def test_audio_blocks_page_single_item_update_preserves_sibling_items(qtbot) -> 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -451,9 +430,6 @@ def _audio_block(
     @param[in]  approved True when the audio row is approved.
     @return     Audio Blocks page row payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     sequence_index = int(speech_block_id.rsplit("-", maxsplit=1)[-1])
     return {

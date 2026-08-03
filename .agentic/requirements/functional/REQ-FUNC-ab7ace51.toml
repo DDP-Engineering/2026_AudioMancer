@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-ab7ace51"
+title = "Each application run shall write to a log file whose name is unique per"
+status = "active"
+
+requirement = """
+Each application run shall write to a log file whose name is unique per process, so a concurrent start cannot truncate another run's log.
+"""
+
+verification = "Automated: a pytest selector asserting two process ids at one fixed timestamp yield distinct log paths that keep the app-name prefix, date, time and .log suffix."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_log_file_name_is_unique_per_process_for_the_same_second",
+]
+
+priority = "normal"
+rationale = """
+The name used second granularity while the handler opened with mode='w', so two starts within the same second resolved to the same path and the second truncated the first, destroying diagnostics precisely when two instances were running.
+"""
+created = 2026-07-25
+updated = 2026-07-25

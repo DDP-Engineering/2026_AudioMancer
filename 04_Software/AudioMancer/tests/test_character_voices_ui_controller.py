@@ -12,9 +12,6 @@
 @details Verifies destructive prompt-edit handling and missing narrator-sample
          page-entry warnings, cooperative cancellation, and non-destructive
          replacement for the Character Voices workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.8.0
 """
 
 # IMPORTS
@@ -45,9 +42,6 @@ def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edi
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.1
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerEdit")
     target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
@@ -79,19 +73,14 @@ def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edi
     assert window._character_voices_page._preview_text_edit.isReadOnly() is False
 
 
-def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after_audio_invalidation(
-    monkeypatch, qtbot, tmp_path
-) -> None:
+def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked(monkeypatch, qtbot, tmp_path) -> None:
     """
-    @brief      Verify downstream refreshes do not relock editors after pressing Edit Voice Prompt.
+    @brief      Verify pressing Edit Voice Prompt keeps both editors unlocked.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerEditReset")
     window = _build_window(qtbot, project_root)
@@ -99,26 +88,6 @@ def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after
         character_voices_ui_controller.QMessageBox,
         "question",
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
-    )
-
-    def _fake_audio_invalidation(window):
-        """
-        @brief      Emulate the downstream invalidation refresh that used to relock editors.
-        @param[in]  window Main window under test.
-        @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
-        """
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-
-    monkeypatch.setattr(
-        character_voices_ui_controller.audio_blocks_ui_controller,
-        "invalidate_audio_blocks_after_upstream_change",
-        _fake_audio_invalidation,
     )
 
     character_voices_ui_controller.handle_edit_prompt_requested(window, "character_alice")
@@ -138,9 +107,6 @@ def test_character_voices_ui_controller_page_activation_warns_when_narrator_samp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.1
     """
     project_root = _create_project_with_character_and_selected_narrator(
         tmp_path,
@@ -169,9 +135,6 @@ def test_character_voices_ui_controller_page_activation_syncs_home_status(qtbot,
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesHomeStatus")
     target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
@@ -207,9 +170,6 @@ def test_character_voices_page_activation_uses_persisted_targets_before_page_loa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesEmptyUiSync")
     target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
@@ -259,9 +219,6 @@ def test_character_voices_ui_controller_save_prompt_persists_preview_text(monkey
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerSave")
     window = _build_window(qtbot, project_root)
@@ -295,9 +252,6 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerGenerate")
     window = _build_window(qtbot, project_root)
@@ -380,9 +334,6 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
         @param[in]  cancel_handler Cancellation callback supplied by the controller.
         @param[in]  cancellable True when the operation is cancellable.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    0.1.1
         """
         _ = operation_kind
         _ = operation_name
@@ -421,9 +372,6 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerBatch")
     character_discovery_service.add_character_profile(project_root, "Bob")
@@ -484,11 +432,6 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        character_voices_ui_controller.audio_blocks_ui_controller,
-        "invalidate_audio_blocks_after_upstream_change",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr(
         character_voices_ui_controller.misc_ui_controller,
         "show_message",
         lambda *_args, **_kwargs: None,
@@ -515,9 +458,6 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
         @param[in]  _progress_callback Unused progress callback.
         @param[in]  _cancel_requested Unused cancellation callback.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.0
         """
         generated_target_ids.append(str(target_payload.get("target_id", "")))
 
@@ -552,9 +492,6 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
         @param[in]  cancel_handler Cancellation callback supplied by the controller.
         @param[in]  cancellable True when the operation is cancellable.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.0
         """
         _ = operation_name
         _ = initial_message
@@ -589,9 +526,6 @@ def test_character_voices_ui_controller_batch_targets_only_generatable_character
     @brief      Verify direct batch generation requests ignore non-generatable character targets.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     window = SimpleNamespace(
         _character_voices_page=SimpleNamespace(
@@ -627,9 +561,6 @@ def test_character_sample_generation_cancel_during_model_load(monkeypatch, tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  OperationCancelledError Expected cancellation signal.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesCancel")
     target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
@@ -679,9 +610,6 @@ def test_character_sample_generation_cancel_during_model_load(monkeypatch, tmp_p
         @brief      Assert runtime polling receives and honors the cancellation callback.
         @return     Completed status when cancellation is not supplied.
         @exception  OperationCancelledError Raised when cancellation is requested.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         observed_cancel_callbacks.append(kwargs.get("cancel_requested"))
         if callable(kwargs.get("cancel_requested")) and kwargs["cancel_requested"]():
@@ -716,9 +644,6 @@ def test_failed_character_sample_generation_preserves_existing_sample(monkeypatc
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  RuntimeError Expected runtime generation failure.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesFailurePreserves")
     target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
@@ -774,9 +699,6 @@ def test_failed_character_sample_generation_preserves_existing_sample(monkeypatc
         @brief      Simulate a runtime generation failure after generation starts.
         @return     None.
         @exception  RuntimeError Always raised.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         raise RuntimeError("runtime failed")
 
@@ -810,9 +732,6 @@ def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    1.1.0
     """
     _project_root = _create_project_with_character_and_selected_narrator(
         tmp_path,
@@ -859,9 +778,6 @@ def _create_project_with_character_and_selected_narrator(
     @param[in]  store_narrator_sample True when the narrator sample should be stored.
     @return     Created project root path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -924,9 +840,6 @@ def _build_window(qtbot, project_root):
     @param[in]  project_root Prepared project root path.
     @return     Main window under test.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    0.2.0
     """
     window = MainWindow(settings_payload=_default_settings_payload())
     qtbot.addWidget(window)
@@ -945,9 +858,6 @@ def _sample_progress_messages() -> dict[str, str]:
     @brief      Provide worker-safe Character Voices progress strings for direct helper tests.
     @return     Progress and error message payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     return {
         "prepare": "Preparing character sample...",
@@ -966,13 +876,9 @@ def _default_settings_payload() -> dict[str, object]:
     @brief      Provide the default settings payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return {
         "language": "en",
-        "ui_text_scale": "normal",
         "play_completion_beep": False,
         "llm_profiles": [],
         "default_ai_cleanup_profile_id": None,

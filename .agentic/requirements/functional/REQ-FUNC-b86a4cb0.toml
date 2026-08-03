@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-b86a4cb0"
+title = "Cleanup shall expose exactly en, ro, de, fr, ru, pt, es, and it as its"
+status = "active"
+
+requirement = """
+Cleanup shall expose exactly en, ro, de, fr, ru, pt, es, and it as its supported source-content languages.
+"""
+
+verification = "Focused pytest selector passed: Cleanup source-language constant equals the approved eight-language tuple."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_supported_languages_are_exactly_the_approved_eight",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Cleanup source eligibility is a domain contract distinct from the operator UI locale and AI translation target-language contracts.
+"""
+created = 2026-07-24
+updated = 2026-07-30

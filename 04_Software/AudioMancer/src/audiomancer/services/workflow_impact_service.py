@@ -8,13 +8,10 @@
 # -----------------------------------------------------------------------------
 """
 @file workflow_impact_service.py
-@brief V2 workflow impact helpers for selective downstream preservation.
+@brief Workflow impact helpers for selective downstream preservation.
 @details Defines shared workflow dependency policy, stable identity rules,
          reset summaries, manifest refresh helpers, and safe generated-artifact
-         deletion helpers used by staged v2 downstream invalidation work.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-04
-@version 0.1.3
+         deletion helpers used by staged downstream invalidation work.
 """
 
 # IMPORTS
@@ -33,13 +30,13 @@ from audiomancer.services.time_service import utc_now_iso
 # @brief Component logger used for shared workflow-impact mutations.
 _WORKFLOW_IMPACT_LOGGER = get_component_logger("operation_runtime")
 
-# @brief Canonical operation order used by the v2 workflow-impact layer.
+# @brief Canonical operation order used by the workflow-impact layer.
 WORKFLOW_OPERATION_ORDER = config.WORKFLOW_OPERATION_ORDER
 
 # @brief Workflow stage promoted by each completed operation.
 OPERATION_STAGE_BY_KIND = config.OPERATION_STAGE_BY_KIND
 
-# @brief Stable identity fields that must survive local v2 edit operations.
+# @brief Stable identity fields that must survive local edit operations.
 STABLE_IDENTITY_FIELDS = frozenset(("chunk_id", "speech_block_id", "voice_target_id"))
 
 # @brief Generated-audio folder holding artifacts derived from speech_block_id.
@@ -55,9 +52,6 @@ class ArtifactDeletionSummary:
     @brief      Summarize one safe generated-artifact deletion pass.
     @details    Paths are project-relative where possible and absolute only when
                 the helper rejected an unsafe persisted path.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
 
     deleted_paths: tuple[str, ...] = ()
@@ -71,9 +65,6 @@ class ArtifactDeletionSummary:
         @brief      Return the number of deleted files.
         @return     Deleted file count.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         return len(self.deleted_paths)
 
@@ -82,9 +73,6 @@ class ArtifactDeletionSummary:
         @brief      Convert the deletion summary into a JSON-ready dictionary.
         @return     JSON-ready deletion summary.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         return {
             "deleted_paths": list(self.deleted_paths),
@@ -101,9 +89,6 @@ class WorkflowImpactSummary:
     @brief      Describe one workflow reset or selective invalidation action.
     @details    This summary is intentionally UI-neutral. Controllers can use it
                 to build localized confirmation text without owning reset policy.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
 
     source_operation_kind: str
@@ -123,9 +108,6 @@ class WorkflowImpactSummary:
         @brief      Convert the impact summary into a JSON-ready dictionary.
         @return     JSON-ready impact summary.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         return {
             "source_operation_kind": self.source_operation_kind,
@@ -151,9 +133,6 @@ def operation_index(operation_kind: str) -> int:
     @param[in]  operation_kind Stable workflow operation token.
     @return     Zero-based workflow operation index.
     @exception  ValueError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     normalized_kind = str(operation_kind).strip()
     if normalized_kind not in WORKFLOW_OPERATION_ORDER:
@@ -163,14 +142,11 @@ def operation_index(operation_kind: str) -> int:
 
 def downstream_operation_kinds(operation_kind: str, include_current: bool = False) -> tuple[str, ...]:
     """
-    @brief      Return ordered downstream operation kinds for v2 impact planning.
+    @brief      Return ordered downstream operation kinds for impact planning.
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  include_current True to include the selected operation.
     @return     Ordered operation-kind tuple.
     @exception  ValueError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     start_index = operation_index(operation_kind)
     if not include_current:
@@ -180,25 +156,19 @@ def downstream_operation_kinds(operation_kind: str, include_current: bool = Fals
 
 def stable_identity_fields() -> tuple[str, ...]:
     """
-    @brief      Return stable persisted identity fields for local v2 edits.
+    @brief      Return stable persisted identity fields for local edits.
     @return     Ordered stable identity field tuple.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return tuple(sorted(STABLE_IDENTITY_FIELDS))
 
 
 def is_stable_identity_field(field_name: str) -> bool:
     """
-    @brief      Return whether one persisted field is a stable v2 identity.
+    @brief      Return whether one persisted field is a stable identity.
     @param[in]  field_name Candidate field name.
     @return     True when the field is a stable identity field.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return str(field_name).strip() in STABLE_IDENTITY_FIELDS
 
@@ -210,9 +180,6 @@ def resequence_records(records: Iterable[Mapping[str, object]], start_index: int
     @param[in]  start_index First sequence index to assign.
     @return     Copied records with stable identities preserved.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     resolved_start_index = max(int(start_index), 0)
     resequenced_records: list[dict[str, object]] = []
@@ -238,9 +205,6 @@ def build_full_reset_impact_summary(
     @param[in]  reason Operator-readable reset reason.
     @return     UI-neutral impact summary.
     @exception  ValueError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     preserved_kinds = _normalize_operation_kinds(preserve_operation_kinds)
     candidate_kinds = downstream_operation_kinds(operation_kind, include_current=include_current)
@@ -264,7 +228,7 @@ def apply_full_operation_reset(
     reason: str = "",
 ) -> WorkflowImpactSummary:
     """
-    @brief      Apply an existing broad reset through the v2 impact wrapper.
+    @brief      Apply an existing broad reset through the impact wrapper.
     @param[in]  project_root Active project root folder.
     @param[in]  operation_kind Selected workflow operation token.
     @param[in]  include_current True to reset the selected operation too.
@@ -272,9 +236,6 @@ def apply_full_operation_reset(
     @param[in]  reason Operator-readable reset reason.
     @return     UI-neutral impact summary.
     @exception  ValueError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     summary = build_full_reset_impact_summary(
         operation_kind,
@@ -304,7 +265,7 @@ def build_selective_invalidation_summary(
     artifact_deletion: ArtifactDeletionSummary | None = None,
 ) -> WorkflowImpactSummary:
     """
-    @brief      Build a summary for one selective v2 invalidation.
+    @brief      Build a summary for one selective invalidation.
     @param[in]  source_operation_kind Operation that caused the impact.
     @param[in]  reason Operator-readable impact reason.
     @param[in]  affected_chunk_ids Exact affected chunk identifiers.
@@ -315,9 +276,6 @@ def build_selective_invalidation_summary(
     @param[in]  artifact_deletion Optional generated-artifact deletion summary.
     @return     UI-neutral impact summary.
     @exception  ValueError Raised when the source operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     operation_index(source_operation_kind)
     return WorkflowImpactSummary(
@@ -339,9 +297,6 @@ def build_impact_metadata(summary: WorkflowImpactSummary) -> dict[str, object]:
     @param[in]  summary Impact summary to persist.
     @return     JSON-ready metadata note.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     payload = summary.as_dict()
     return {
@@ -379,9 +334,6 @@ def delete_audio_block_artifacts(
     @param[in]  collect_preserved_paths True to check and report unaffected generated files.
     @return     Deletion summary with deleted, missing, skipped, and optionally preserved paths.
     @exception  ValueError Raised when no exact affected IDs are provided.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     normalized_chunk_ids = set(_normalize_identity_tuple(chunk_ids))
     normalized_speech_block_ids = set(_normalize_identity_tuple(speech_block_ids))
@@ -431,9 +383,6 @@ def reset_audio_assembly_outputs(project_root: str | Path) -> ArtifactDeletionSu
     @param[in]  project_root Active project root folder.
     @return     Deletion summary for assembly artifacts.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     deleted_paths: list[str] = []
@@ -489,9 +438,6 @@ def refresh_manifest_from_artifacts(project_root: str | Path) -> dict[str, objec
     @param[in]  project_root Active project root folder.
     @return     Current or repaired project manifest payload.
     @exception  ValueError Raised when project validation reports a non-metadata repair.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     validation_result = project_workspace_service.validate_project(project_root)
     status = str(validation_result.get("status", "")).strip()
@@ -515,9 +461,6 @@ def _normalize_operation_kinds(operation_kinds: Iterable[str] | None) -> tuple[s
     @param[in]  operation_kinds Candidate operation-kind iterable.
     @return     Ordered deduplicated operation-kind tuple.
     @exception  ValueError Raised when any operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if operation_kinds is None:
         return ()
@@ -537,9 +480,6 @@ def _normalize_identity_tuple(values: Iterable[str] | None) -> tuple[str, ...]:
     @param[in]  values Candidate identity values.
     @return     Ordered deduplicated identity tuple.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if values is None:
         return ()
@@ -566,9 +506,6 @@ def _audio_block_matches(
     @param[in]  voice_target_ids Affected voice target identifiers.
     @return     True when the block should have generated artifacts deleted.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return (
         str(audio_block.get("chunk_id", "")).strip() in chunk_ids
@@ -583,9 +520,6 @@ def _iter_audio_block_artifact_paths(audio_block: Mapping[str, object]) -> tuple
     @param[in]  audio_block Candidate Audio Blocks payload.
     @return     Ordered artifact path tuple.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     from audiomancer.services import audio_blocks_artifact_service
 
@@ -626,9 +560,6 @@ def _collect_or_delete_artifact_path(
     @param[in,out] seen_paths Deduplication set.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     path_text = str(relative_path or "").strip()
     if not path_text:
@@ -677,9 +608,6 @@ def _collect_or_delete_resolved_path(
     @param[in,out] seen_paths Deduplication set.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     if not operation_runtime_service.is_path_inside_project(project_root, artifact_path):
         skipped_paths.append(str(artifact_path))

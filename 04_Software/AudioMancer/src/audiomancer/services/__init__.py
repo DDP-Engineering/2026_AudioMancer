@@ -10,9 +10,6 @@
 @file __init__.py
 @brief Service package exports for AudioMancer.
 @details Exposes reusable application services that support the desktop shell.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.0
 """
 
 # IMPORTS

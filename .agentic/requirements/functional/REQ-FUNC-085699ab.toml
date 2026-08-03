@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-085699ab"
+title = "The Character Voices controller shall, on page activation, warn on a"
+status = "active"
+
+requirement = """
+The Character Voices controller shall, on page activation, warn on a missing narrator sample, sync Home status, and use persisted targets before load.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_page_activation_warns_when_narrator_sample_is_missing",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_page_activation_syncs_home_status",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_page_activation_uses_persisted_targets_before_page_load",
+]
+
+priority = "high"
+rationale = """
+Activation must present truthful prerequisites and status.
+"""
+created = 2026-07-19
+updated = 2026-07-24

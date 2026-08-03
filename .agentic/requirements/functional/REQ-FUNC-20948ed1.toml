@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-20948ed1"
+title = "Audio-block artifacts shall use project-local paths derived from"
+status = "active"
+
+requirement = """
+Audio-block artifacts shall use project-local paths derived from speech_block_id alone, as audio_blocks/<speech_block_id>.wav and audio_blocks/parts/<speech_block_id>_part<NNN>.wav.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_paths_are_deterministic",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+Deriving the name from the block's stable primary key keeps it valid for the block's whole life, so no path needs to be stored or repaired.
+"""
+created = 2026-07-19
+updated = 2026-07-25

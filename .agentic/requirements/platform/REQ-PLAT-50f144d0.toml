@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-PLAT-50f144d0"
+title = "The AudioMancer package shall declare its supported interpreter range"
+status = "active"
+
+requirement = """
+The AudioMancer package shall declare its supported interpreter range as Python 3.12 up to but excluding 3.14.
+"""
+
+verification = "Automated: pyproject requires-python parsed and asserted equal to >=3.12,<3.14."
+
+affected_paths = [
+  "04_Software/AudioMancer/pyproject.toml",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_declares_python_3_13_as_supported",
+]
+
+spec = "specs/python_interpreter_range.spec.md"
+priority = "high"
+rationale = """
+The declared range covers the validated 3.12 and 3.13 interpreters while keeping 3.14 an explicit future compatibility decision.
+"""
+created = 2026-07-25
+updated = 2026-07-25

@@ -11,9 +11,6 @@
 @brief Shared voice-sample import validation helpers for AudioMancer.
 @details Validates operator-provided WAV reference samples before they are
          copied into narrator or character voice sample storage.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-15
-@version 0.1.0
 """
 
 # IMPORTS
@@ -38,9 +35,6 @@ def validate_imported_wav_sample(sample_path: str | Path) -> dict[str, object]:
     @param[in]  sample_path Candidate WAV file path.
     @return     Normalized validation report.
     @exception  ValueError Raised when the file is missing, unsupported, too short, or silent.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     path = Path(sample_path)
     if path.suffix.casefold() != ".wav":
@@ -85,9 +79,6 @@ def _audio_level_metrics(audio_bytes: bytes, sample_width_bytes: int) -> dict[st
     @param[in]  sample_width_bytes WAV sample width in bytes.
     @return     Audio level metrics and silence thresholds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     max_amplitude = float(_maximum_amplitude(sample_width_bytes))
     if max_amplitude <= 0.0:
@@ -123,9 +114,6 @@ def _is_effectively_silent(audio_metrics: dict[str, float]) -> bool:
     @param[in]  audio_metrics Level metrics from `_audio_level_metrics`.
     @return     True when the sample is silent or too close to silence.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     return float(audio_metrics.get("peak_amplitude", 0.0)) <= float(
         audio_metrics.get("silence_peak_threshold", 0.0)
@@ -138,9 +126,6 @@ def _maximum_amplitude(sample_width_bytes: int) -> int:
     @param[in]  sample_width_bytes WAV sample width in bytes.
     @return     Maximum signed PCM amplitude.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     if sample_width_bytes == 1:
         return 128
@@ -154,9 +139,6 @@ def _pcm_sample_value(sample_bytes: bytes, sample_width_bytes: int) -> int:
     @param[in]  sample_width_bytes WAV sample width in bytes.
     @return     Signed sample value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     if sample_width_bytes == 1:
         return int(sample_bytes[0]) - 128

@@ -1,0 +1,31 @@
+schema = 1
+id = "REQ-REL-6347c5a6"
+title = "AudioMancer release surfaces shall declare one identical semantic"
+status = "active"
+
+requirement = """
+AudioMancer release surfaces shall declare one identical semantic version.
+"""
+
+verification = "Focused release-version consistency test passed on 2026-07-30."
+
+affected_paths = [
+  "04_Software/AudioMancer/pyproject.toml",
+  "04_Software/AudioMancer/src/audiomancer/__init__.py",
+  "04_Software/AudioMancer/tests/test_package_import.py",
+  "04_Software/AudioMancer/uv.lock",
+  "05_SoftwareDocu/UserGuide/index.html",
+  "05_SoftwareDocu/UserGuide_ro/index.html",
+  "CHANGELOG.md",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata",
+]
+
+spec = "specs/release_version_sync.spec.md"
+priority = "high"
+rationale = """
+A release is reproducible and operator-visible only when package metadata, runtime API, dependency lock, changelog, verification, and offline help identify the same build.
+"""
+created = 2026-07-30
+updated = 2026-07-30

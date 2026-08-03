@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-8f5eb03f"
+title = "Source import shall reject an unsupported document format"
+status = "active"
+
+requirement = """
+Source import shall reject an unsupported document format.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_unsupported_doc_format",
+]
+
+priority = "high"
+rationale = """
+Unsupported formats must be refused at import.
+"""
+created = 2026-07-24
+updated = 2026-07-24

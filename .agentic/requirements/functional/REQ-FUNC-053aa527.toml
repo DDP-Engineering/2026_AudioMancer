@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-053aa527"
+title = "The Audio Blocks page shall advance block selection within limits and"
+status = "active"
+
+requirement = """
+The Audio Blocks page shall advance block selection within limits and update a single item without disturbing siblings.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_advances_block_selection_with_limit",
+  "04_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_single_item_update_preserves_sibling_items",
+]
+
+priority = "high"
+rationale = """
+Selection and per-item refresh must be stable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

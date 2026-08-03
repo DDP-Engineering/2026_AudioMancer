@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a9cae511"
+title = "Audio assembly state shall report completed saved outputs from"
+status = "active"
+
+requirement = """
+Audio assembly state shall report completed saved outputs from persisted assembly artifacts.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_reports_completed_outputs",
+]
+
+priority = "high"
+rationale = """
+Readiness must reflect actually generated audio, not inferred progress.
+"""
+created = 2026-07-19
+updated = 2026-07-24

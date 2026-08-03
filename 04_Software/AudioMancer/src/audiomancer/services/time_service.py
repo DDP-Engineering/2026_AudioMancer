@@ -11,9 +11,6 @@
 @brief Shared timestamp helpers for AudioMancer services.
 @details Provides stable UTC timestamp formatting for persisted runtime
          artifacts and project metadata.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -28,9 +25,6 @@ def utc_now_iso() -> str:
     @brief      Build one current UTC timestamp in stable ISO-8601 format.
     @return     UTC timestamp string without microseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 

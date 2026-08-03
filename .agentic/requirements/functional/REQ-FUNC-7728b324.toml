@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-7728b324"
+title = "The Characters page evidence panel shall keep its minimum split layout"
+status = "active"
+
+requirement = """
+The Characters page evidence panel shall keep its minimum split layout and support preview find-next with wraparound.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_splitter_keeps_twenty_percent_minimums",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_preview_supports_find_next_wraparound",
+]
+
+priority = "high"
+rationale = """
+Operators need a stable, searchable evidence view.
+"""
+created = 2026-07-19
+updated = 2026-07-24

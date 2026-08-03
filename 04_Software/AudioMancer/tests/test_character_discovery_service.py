@@ -12,9 +12,6 @@
 @details Verifies discovery persistence, resumable synthesis, manual add or
          update or delete behavior, and reset behavior for the character
          discovery workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-08
-@version 0.15.1
 """
 
 # IMPORTS
@@ -34,9 +31,6 @@ def test_character_discovery_prompts_request_demographic_confidence() -> None:
     @brief      Verify Character Discovery prompts request demographic hints and confidence values.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.3.0
     """
     window_prompt_text = (config.APP_PROMPTS_PATH / "character_discovery_window_user.txt").read_text(encoding="utf-8")
     synthesis_prompt_text = (config.APP_PROMPTS_PATH / "character_profile_synthesis_user.txt").read_text(
@@ -59,9 +53,6 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
     @brief      Validate start discovery persists outputs and report.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryService")
     monkeypatch.setattr(
@@ -202,9 +193,6 @@ def test_start_discovery_appends_and_persists_operator_character_rules(monkeypat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryExtraPrompt")
     additional_rules = "Treat titled names like Lady Catherine as character identities."
@@ -261,9 +249,6 @@ def test_start_discovery_appends_and_persists_operator_character_rules(monkeypat
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake Character Discovery model response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-13
-        @version    0.1.0
         """
         requested_prompts.append(str(user_prompt))
         return next(responses)
@@ -289,9 +274,6 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     @brief      Validate start discovery resumes from saved synthesis checkpoint.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
     _resolved_chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
@@ -340,9 +322,6 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         @brief      Provide the fake chat json test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         call_profiles.append(dict(ai_profile_payload))
         log_paths.append(Path(kwargs["log_path"]).name)
@@ -398,15 +377,12 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
 
 
-def test_character_discovery_strictly_rejects_malformed_and_old_root_payloads(tmp_path) -> None:
+def test_character_discovery_strictly_rejects_malformed_and_invalid_root_payloads(tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-012 malformed Character Discovery artifacts degrade to missing data.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryMalformedArtifacts")
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -431,9 +407,6 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryCancelledResume")
     _patch_character_discovery_prompt_rendering(monkeypatch)
@@ -444,9 +417,6 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
         @brief      Provide a fake model that cancels during profile synthesis.
         @return     Fake model response for discovery windows.
         @exception  OperationCancelledError Raised for the synthesis call.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         stage_label = str(kwargs["log_context"]["stage_label"])
         call_stages.append(stage_label)
@@ -480,9 +450,6 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
         @brief      Provide a fake model that records resumed synthesis calls.
         @return     Fake synthesis payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         resumed_stages.append(str(kwargs["log_context"]["stage_label"]))
         return _synthesis_response_payload()
@@ -509,9 +476,6 @@ def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryFailedState")
     _patch_character_discovery_prompt_rendering(monkeypatch)
@@ -521,9 +485,6 @@ def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
         @brief      Provide a fake model that fails during profile synthesis.
         @return     Fake model response for discovery windows.
         @exception  RuntimeError Raised for the synthesis call.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         if str(kwargs["log_context"]["stage_label"]) == "character_profile_synthesis":
             raise RuntimeError("model failed")
@@ -555,9 +516,6 @@ def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoverySingleWindowBuild")
     _patch_character_discovery_prompt_rendering(monkeypatch)
@@ -569,9 +527,6 @@ def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
         @brief      Count request-window construction calls.
         @return     Original window construction result.
         @exception  ValueError Propagated from original window construction.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         nonlocal build_call_count
         build_call_count += 1
@@ -601,9 +556,6 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     @brief      Validate manual add update delete and reset.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryManual")
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -686,9 +638,6 @@ def test_regenerate_character_voice_definition_preserves_compact_voice_prompt() 
     @brief      Verify local regeneration preserves the compact final voice-definition prompt.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    2.1.0
     """
     regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
         {
@@ -712,9 +661,6 @@ def test_regenerate_character_voice_definition_prevents_young_default_when_age_u
     @brief      Verify character voice prompts carry explicit unknown-age guidance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
         {
@@ -733,9 +679,6 @@ def test_regenerate_character_voice_definition_does_not_duplicate_explicit_age_g
     @brief      Verify character prompt regeneration preserves one explicit age-domain instruction.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
         {
@@ -756,9 +699,6 @@ def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
     @brief      Verify character synthesis derives a six-second preview from dialogue evidence.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     profile = character_discovery_service._build_profile_from_synthesis(  # noqa: SLF001
         {
@@ -809,9 +749,6 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
     @brief      Verify merged candidates preserve deterministic role speakers as dialogue characters.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     merged_candidates = character_discovery_service._merge_character_candidates(  # noqa: SLF001
         [
@@ -841,9 +778,6 @@ def test_merge_character_candidates_keeps_strongest_demographic_confidence() -> 
     @brief      Verify merged candidates keep the strongest demographic hint/confidence pairs.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     merged_candidates = character_discovery_service._merge_character_candidates(  # noqa: SLF001
         [
@@ -901,9 +835,6 @@ def test_window_candidate_normalization_preserves_demographic_confidence() -> No
     @brief      Verify window candidate normalization preserves current demographic fields only.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.2.0
     """
     source_chunk = _chunk_payload("chunk-0001", 1, '"Hello," said Alice.')
     chunk_map = {"chunk-0001": source_chunk}
@@ -951,9 +882,6 @@ def test_load_input_chunks_uses_fully_approved_translation(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  AssertionError Raised when translated input is selected.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoverySourcePreferred")
     artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -996,9 +924,6 @@ def test_load_input_chunks_derives_runtime_chapter_context(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  AssertionError Raised when runtime chapter context is not carried forward.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryRuntimeChapter")
     artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -1040,9 +965,6 @@ def test_load_input_chunks_uses_original_when_translation_is_not_fully_approved(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  AssertionError Raised when mixed translation input is selected.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryMixedTranslation")
     artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -1109,9 +1031,6 @@ def test_merge_character_candidates_reports_rejected_non_dialogue_candidates() -
     @brief      Verify rejected candidate diagnostics are retained for review.
     @return     None.
     @exception  AssertionError Raised when rejection diagnostics are missing.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     accepted, rejected = character_discovery_service._merge_character_candidates_with_rejections(  # noqa: SLF001
         [
@@ -1156,14 +1075,11 @@ def test_merge_character_candidates_reports_rejected_non_dialogue_candidates() -
     ]
 
 
-def test_group_character_candidates_matches_legacy_first_match_order() -> None:
+def test_group_character_candidates_preserves_first_match_order() -> None:
     """
-    @brief      Verify REQ-NFR-017 indexed identity grouping preserves legacy first-match semantics.
+    @brief      Verify REQ-NFR-017 indexed identity grouping preserves first-match semantics.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     candidates = [
         {"canonical_name": "Alice", "aliases": ["A"]},
@@ -1173,10 +1089,10 @@ def test_group_character_candidates_matches_legacy_first_match_order() -> None:
         {"canonical_name": "Cara", "aliases": ["C"]},
     ]
 
-    legacy_groups = _legacy_group_character_candidates_by_identity(candidates)
+    reference_groups = _reference_group_character_candidates_by_identity(candidates)
     indexed_groups = character_discovery_service._group_character_candidates_by_identity(candidates)  # noqa: SLF001
 
-    assert indexed_groups == legacy_groups
+    assert indexed_groups == reference_groups
     assert [[str(candidate["canonical_name"]) for candidate in group] for group in indexed_groups] == [
         ["Alice", "Bridge", "Beatrice"],
         ["Beth"],
@@ -1189,9 +1105,6 @@ def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -
     @brief      Validate validate manual character name rejects duplicates and invalid names.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     existing_profiles = [_saved_profile_payload()]
 
@@ -1217,9 +1130,6 @@ def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
     @brief      Validate budgeted chunk windows use eight chunks as cap.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     source_chunks = [_chunk_payload(f"chunk-{index:04d}", index, "Short dialogue text.") for index in range(1, 11)]
     windows = character_discovery_service._build_chunk_windows(  # noqa: SLF001
@@ -1238,9 +1148,6 @@ def test_character_discovery_online_profile_uses_direct_context_fraction_without
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     monkeypatch.setattr(
         character_discovery_service.prompt_template_service,
@@ -1274,9 +1181,6 @@ def test_budgeted_chunk_windows_shrink_for_small_text_budget() -> None:
     @brief      Validate budgeted chunk windows shrink for small text budget.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     source_chunks = [_chunk_payload(f"chunk-{index:04d}", index, '"Hello," said Alice. ' * 30) for index in range(1, 5)]
     windows = character_discovery_service._build_chunk_windows(  # noqa: SLF001
@@ -1295,9 +1199,6 @@ def test_budgeted_chunk_windows_reject_oversized_single_chunk() -> None:
     @brief      Validate budgeted chunk windows reject oversized single chunk.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     source_chunks = [_chunk_payload("chunk-0001", 1, "Oversized text. " * 200)]
 
@@ -1315,9 +1216,6 @@ def test_character_discovery_rejects_profile_with_too_little_context(monkeypatch
     @brief      Validate character discovery rejects profile with too little context.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryTinyBudget")
     monkeypatch.setattr(
@@ -1351,9 +1249,6 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     @brief      Validate resume state requires current checkpoint boundary.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     source_chunks = [
         _chunk_payload("chunk-0001", 1, '"Hello," said Alice.'),
@@ -1405,9 +1300,6 @@ def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
     @brief      Validate synthesis candidate payload is trimmed to budget metadata.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     candidate = {
         "character_id": "alice",
@@ -1446,9 +1338,6 @@ def _patch_character_discovery_prompt_rendering(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     monkeypatch.setattr(
         character_discovery_service.prompt_template_service,
@@ -1467,9 +1356,6 @@ def _window_response_payload() -> dict[str, object]:
     @brief      Build a focused fake Character Discovery window response.
     @return     Fake model response payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     return {
         "payload": {
@@ -1497,9 +1383,6 @@ def _synthesis_response_payload() -> dict[str, object]:
     @brief      Build a focused fake Character Discovery synthesis response.
     @return     Fake model response payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     return {
         "payload": {
@@ -1513,17 +1396,14 @@ def _synthesis_response_payload() -> dict[str, object]:
     }
 
 
-def _legacy_group_character_candidates_by_identity(
+def _reference_group_character_candidates_by_identity(
     candidates: list[dict[str, object]],
 ) -> list[list[dict[str, object]]]:
     """
-    @brief      Preserve the prior identity-grouping algorithm for equivalence tests.
+    @brief      Provide a simple identity-grouping reference for equivalence tests.
     @param[in]  candidates Candidate payload list.
-    @return     Identity groups from the legacy scan algorithm.
+    @return     Identity groups from the reference scan algorithm.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     groups: list[list[dict[str, object]]] = []
     for candidate in candidates:
@@ -1563,9 +1443,6 @@ def _create_character_project(tmp_path, project_name: str):
     @param[in]  project_name Unique project name used by the test fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
     manifest["source_document"] = {
@@ -1623,9 +1500,6 @@ def _chunk_payload(chunk_id: str, sequence_index: int, text: str) -> dict[str, o
     @brief      Provide the chunk payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return {
         "chunk_id": chunk_id,
@@ -1641,9 +1515,6 @@ def _profile_payload(profile_id: str) -> dict[str, object]:
     @brief      Provide the profile payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return {
         "id": profile_id,
@@ -1666,9 +1537,6 @@ def _saved_profile_payload() -> dict[str, object]:
     @brief      Provide the saved profile payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return {
         "character_id": "alice",

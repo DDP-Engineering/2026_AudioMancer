@@ -12,9 +12,6 @@
 @details Verifies default settings generation, automatic file creation,
          packaged-scaffold seeding, persisted settings self-healing, and
          validated save behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.8.0
 """
 
 # IMPORTS
@@ -34,9 +31,6 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     @brief      Verify the committed settings scaffold matches the valid schema.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.3.0
     """
     committed_settings = json.loads(config.APP_DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8"))
     validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
@@ -49,13 +43,9 @@ def test_build_default_settings_includes_theme_and_scroll_fields() -> None:
     @brief      Verify default settings include theme and scroll persistence fields.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.1
     """
     default_settings = settings_service.build_default_settings()
 
-    assert "ui_text_scale" not in default_settings
     assert default_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert default_settings["ui_themes"] == []
     assert default_settings["ui_scroll_steps_per_wheel_notch"] == config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
@@ -66,9 +56,6 @@ def test_validate_settings_repairs_invalid_chunking_context_mode() -> None:
     @brief      Verify S-0001 and REQ-DATA-005 validate the chunking context mode setting.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-17
-    @version    0.1.0
     """
     default_settings = settings_service.build_default_settings()
 
@@ -100,9 +87,6 @@ def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) 
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     settings_path = tmp_path / "settings.json"
     monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
@@ -119,13 +103,11 @@ def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) 
 def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify invalid persisted settings are healed and rewritten.
+    @details    Covers S-0003 and REQ-PLAT-9fe6262f-238e-4020-aa23-5391bf9750a2.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     settings_path = tmp_path / "settings.json"
     monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
@@ -133,7 +115,6 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
 
     invalid_settings = settings_service.build_default_settings()
     invalid_settings["language"] = "fr"
-    invalid_settings["ui_text_scale"] = "gigantic"
     invalid_settings["default_ai_chunking_strategy"] = "invalid"
     invalid_settings["ui_theme_id"] = "missing_theme"
     invalid_settings["ui_themes"] = [
@@ -160,7 +141,6 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     defaults = settings_service.build_default_settings()
 
     assert loaded_settings["language"] == defaults["language"]
-    assert "ui_text_scale" not in loaded_settings
     assert loaded_settings["ui_theme_id"] == defaults["ui_theme_id"]
     assert loaded_settings["ui_themes"] == defaults["ui_themes"]
     assert loaded_settings["default_ai_cleanup_profile_id"] == defaults["default_ai_cleanup_profile_id"]
@@ -187,9 +167,6 @@ def test_validate_settings_preserves_valid_scroll_steps() -> None:
     @brief      Verify valid UI scroll-step settings survive validation.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     for scroll_steps in range(
         config.MIN_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
@@ -208,9 +185,6 @@ def test_validate_settings_repairs_invalid_scroll_steps() -> None:
     @brief      Verify invalid UI scroll-step settings repair to the default.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     for scroll_steps in (0, 6, "three"):
         candidate_settings = settings_service.build_default_settings()
@@ -221,30 +195,25 @@ def test_validate_settings_repairs_invalid_scroll_steps() -> None:
         assert validated_settings["ui_scroll_steps_per_wheel_notch"] == config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
 
 
-def test_load_settings_migrates_missing_theme_fields_and_removes_legacy_text_scale(tmp_path, monkeypatch) -> None:
+def test_load_settings_seeds_missing_theme_fields(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify old settings gain theme fields while removing legacy ui_text_scale.
+    @brief      Verify settings missing theme fields gain current defaults.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     settings_path = tmp_path / "settings.json"
     monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
     monkeypatch.setattr(config, "APP_ROOT", tmp_path)
 
-    old_settings = settings_service.build_default_settings()
-    old_settings["ui_text_scale"] = "large"
-    old_settings.pop("ui_theme_id")
-    old_settings.pop("ui_themes")
-    settings_path.write_text(json.dumps(old_settings, indent=2), encoding="utf-8")
+    incomplete_settings = settings_service.build_default_settings()
+    incomplete_settings.pop("ui_theme_id")
+    incomplete_settings.pop("ui_themes")
+    settings_path.write_text(json.dumps(incomplete_settings, indent=2), encoding="utf-8")
 
     loaded_settings = settings_service.load_settings()
 
-    assert "ui_text_scale" not in loaded_settings
     assert loaded_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert loaded_settings["ui_themes"] == []
     assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
@@ -255,9 +224,6 @@ def test_validate_settings_keeps_valid_selected_custom_theme() -> None:
     @brief      Verify a valid custom theme and selected custom id survive validation.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     custom_theme = ui_theme_service.import_theme_payload(
@@ -278,17 +244,11 @@ def test_validate_settings_keeps_valid_selected_custom_theme() -> None:
 
     assert validated_settings["ui_theme_id"] == "reading_theme"
     assert validated_settings["ui_themes"] == [custom_theme]
-    assert "ui_text_scale" not in validated_settings
-
-
 def test_validate_settings_repairs_invalid_selected_theme_id_to_default() -> None:
     """
     @brief      Verify missing selected theme ids are repaired to the default theme.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["ui_theme_id"] = "missing_theme"
@@ -303,9 +263,6 @@ def test_validate_settings_drops_invalid_custom_themes() -> None:
     @brief      Verify invalid custom theme payloads are removed from settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["ui_themes"] = [
@@ -329,9 +286,6 @@ def test_validate_settings_heals_invalid_llm_profiles_but_keeps_non_empty_list()
     @brief      Verify invalid LLM profile fields are healed when profiles exist.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.1
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["llm_profiles"] = [
@@ -376,9 +330,6 @@ def test_validate_settings_preserves_overnight_llm_timeout() -> None:
     @brief      Verify S-0001 and REQ-UX-035 keep valid overnight LLM timeout values.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-04
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["llm_profiles"] = [
@@ -414,9 +365,6 @@ def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
     @brief      Verify valid enabled AI default-profile ids are preserved.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["llm_profiles"] = [
@@ -463,9 +411,6 @@ def test_validate_settings_preserves_unknown_extra_keys() -> None:
     @brief      Verify validation keeps unknown extra keys in the payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["future_key"] = {"enabled": True}
@@ -478,13 +423,11 @@ def test_validate_settings_preserves_unknown_extra_keys() -> None:
 def test_save_settings_writes_validated_payload_to_disk(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify save_settings validates and persists the payload.
+    @details    Covers S-0003 and REQ-PLAT-9fe6262f-238e-4020-aa23-5391bf9750a2.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     settings_path = tmp_path / "settings.json"
     monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
@@ -504,9 +447,6 @@ def test_validate_settings_keeps_valid_persisted_payload_unchanged() -> None:
     @brief      Verify a valid settings payload remains unchanged after validation.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
 
@@ -518,9 +458,6 @@ def test_validate_settings_keeps_empty_api_key_for_lmstudio_profile() -> None:
     @brief      Verify empty API keys remain valid for LM Studio-backed profiles.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["llm_profiles"] = [
@@ -558,9 +495,6 @@ def test_validate_settings_does_not_log_fake_root_repair_for_valid_dict_payload(
     @param[in]  caplog Pytest log-capture fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
 
@@ -576,9 +510,6 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
     @brief      Verify invalid cached VoiceWeaver discovery fields are repaired safely.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["tts_runtime_probe_succeeded"] = "yes"
@@ -610,9 +541,6 @@ def test_load_settings_logs_repair_summary_only_when_repairs_occur(tmp_path, mon
     @param[in]  caplog Pytest log-capture fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     settings_path = tmp_path / "settings.json"
     monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
@@ -658,9 +586,6 @@ def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> Non
     @brief      Verify invalid TTS audio timeout and preview-limit settings are repaired to their defaults.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.2.1
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["tts_audio_preview_timeout_seconds"] = 0
@@ -698,9 +623,6 @@ def test_validate_settings_repairs_invalid_urls() -> None:
     @brief      Verify invalid persisted HTTP base URLs are repaired to their defaults.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["tts_runtime_base_url"] = "localhost:8059"
@@ -739,9 +661,6 @@ def test_default_settings_include_font_size_steps() -> None:
     @details    Covers REQ-PLAT-0c2009a9-c691-4fd3-8e8c-e45e5e77d297 / SPEC-FONT-DEFAULTS.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     defaults = settings_service.build_default_settings()
 
@@ -749,24 +668,16 @@ def test_default_settings_include_font_size_steps() -> None:
     assert defaults["text_font_size_step"] == "normal"
 
 
-def test_validate_settings_repairs_and_migrates_font_size_steps() -> None:
+def test_validate_settings_repairs_font_size_steps() -> None:
     """
-    @brief      Verify invalid font-size steps repair to normal and legacy ui_text_scale migrates.
+    @brief      Verify invalid font-size steps repair to normal.
     @details    Covers REQ-PLAT-46bbf1c0-5b82-45b8-a4e2-27748b1f5aeb / SPEC-FONT-VALIDATE.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     repaired = settings_service.validate_settings({"ui_font_size_step": "gigantic", "text_font_size_step": 5})
     assert repaired["ui_font_size_step"] == "normal"
     assert repaired["text_font_size_step"] == "normal"
-
-    migrated = settings_service.validate_settings({"ui_text_scale": "very_large"})
-    assert "ui_text_scale" not in migrated
-    assert migrated["ui_font_size_step"] == "very_large"
-    assert migrated["text_font_size_step"] == "very_large"
 
 
 def test_ensure_settings_file_seeds_from_the_bundled_default(tmp_path, monkeypatch) -> None:
@@ -779,9 +690,6 @@ def test_ensure_settings_file_seeds_from_the_bundled_default(tmp_path, monkeypat
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     bundled_settings_path = tmp_path / "install" / "settings.json"
     bundled_settings_path.parent.mkdir(parents=True)
@@ -811,9 +719,6 @@ def test_ensure_settings_file_falls_back_when_the_bundled_default_is_unusable(tm
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     bundled_settings_path = tmp_path / "install" / "settings.json"
     bundled_settings_path.parent.mkdir(parents=True)
@@ -839,9 +744,6 @@ def test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     portable_settings_path = tmp_path / "settings.json"
     monkeypatch.setattr(config, "APP_DEFAULT_SETTINGS_PATH", portable_settings_path)

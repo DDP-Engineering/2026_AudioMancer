@@ -12,9 +12,6 @@
 @details Verifies confirmation gating, destructive rerun reset behavior,
          approval toggling, and manifest advancement after approval of all
          generated audio blocks.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.6.6
 """
 
 # IMPORTS
@@ -46,9 +43,6 @@ def test_audio_blocks_ui_controller_requires_confirmation_before_starting(
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerConfirm")
     window = _build_window(qtbot, project_root, default_settings_payload)
@@ -85,9 +79,6 @@ def test_audio_blocks_ui_controller_ignores_completed_start_request(
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerCompletedStart")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -140,9 +131,6 @@ def test_audio_blocks_ui_controller_allows_completed_start_when_current_speech_b
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerCompletedWithMissing")
     _seed_audio_blocks_run(project_root, approved=True)
@@ -198,9 +186,6 @@ def test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_app
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.1
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerApproveAll")
     _seed_audio_blocks_run(project_root, approved=False)
@@ -233,9 +218,6 @@ def test_audio_blocks_ui_controller_approval_resets_only_audio_assembly(
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerApproveAssemblyReset")
     _seed_audio_blocks_run(project_root, approved=False)
@@ -281,9 +263,6 @@ def test_audio_blocks_ui_controller_approval_toggle_unapproves_without_advancing
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerToggleUnapprove")
     _seed_audio_blocks_run(project_root, approved=True)
@@ -324,21 +303,12 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerPreserveRegenerate")
     _seed_audio_blocks_run(project_root, approved=False)
     window = _build_window(qtbot, project_root, default_settings_payload)
     window._audio_blocks_page.select_block_id("0001-000002")
     monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
-    monkeypatch.setattr(
-        audio_blocks_ui_controller,
-        "_sync_manifest_after_audio_blocks_update",
-        lambda active_window: active_window._audio_blocks_page.select_block_id("0001-000001"),
-    )
-
     def _start_threaded_operation(
         window,
         operation_kind,
@@ -355,9 +325,6 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_
         @brief      Synchronously invoke the success handler for operation-start testing.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         _ = window
         _ = operation_kind
@@ -399,9 +366,6 @@ def test_audio_blocks_ui_controller_preserves_speech_blocks_review_after_selecte
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerPreserveSpeechBlocksReview")
     _seed_audio_blocks_run(project_root, approved=False)
@@ -417,9 +381,6 @@ def test_audio_blocks_ui_controller_preserves_speech_blocks_review_after_selecte
         @param[in]  active_window Main window under test.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         active_window.show_project_state(
             active_window._current_project_root,
@@ -443,9 +404,6 @@ def test_audio_blocks_ui_controller_preserves_speech_blocks_review_after_selecte
         @brief      Synchronously invoke the success handler for operation-start testing.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         _ = window
         _ = operation_kind
@@ -492,9 +450,6 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_selected_play
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerPreservePlayback")
     _seed_audio_blocks_run(project_root, approved=False)
@@ -525,9 +480,6 @@ def test_audio_blocks_ui_controller_audiobook_playback_includes_current_pause_wi
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerPlaybackPause")
     _seed_audio_blocks_run(project_root, approved=True)
@@ -573,9 +525,6 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelate
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerVoiceTargetInvalidation")
     _seed_audio_blocks_run(project_root, approved=True)
@@ -622,9 +571,6 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_can_skip_preserved
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerVoiceTargetInvalidationFast")
     _seed_audio_blocks_run(project_root, approved=True)
@@ -663,9 +609,6 @@ def _create_project(tmp_path, name: str):
     @param[in]  name Project display name.
     @return     Project root folder.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -748,9 +691,6 @@ def _build_window(qtbot, project_root, default_settings_payload):
     @param[in]  default_settings_payload Baseline settings payload fixture.
     @return     Initialized main window.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     settings_payload = dict(default_settings_payload)
     settings_payload["tts_runtime_discovered_models"] = _minimum_qwen_models()
@@ -768,9 +708,6 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
     @param[in]  approved True when all generated blocks should be approved.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -815,9 +752,6 @@ def _seed_audio_assembly_run(project_root) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     audiobook_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     audiobook_root.mkdir(parents=True, exist_ok=True)
@@ -851,9 +785,6 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
     @brief      Return a minimal healthy Qwen model list for controller tests.
     @return     Runtime model metadata list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     return [
         {

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-3a55585e"
+title = "Character voices state shall surface a warning when the narrator sample"
+status = "active"
+
+requirement = """
+Character voices state shall surface a warning when the narrator sample is missing.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_missing_narrator_sample_surfaces_warning",
+]
+
+priority = "high"
+rationale = """
+Generation prerequisites must be visible before the operator acts.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer prompt-template service.
 @details Verifies prompt loading and strict placeholder rendering for the new
          AI-assisted cleanup prompt files.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.1.1
 """
 
 # IMPORTS
@@ -29,9 +26,6 @@ def test_render_prompt_requires_exact_placeholders(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -61,9 +55,6 @@ def test_render_prompt_allows_braced_source_text_values(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()

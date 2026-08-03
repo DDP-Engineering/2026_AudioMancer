@@ -8,12 +8,9 @@
 # -----------------------------------------------------------------------------
 """
 @file test_workflow_impact_service.py
-@brief Focused tests for the v2 workflow-impact foundation service.
+@brief Focused tests for the workflow-impact foundation service.
 @details Verifies dependency ordering, impact summaries, stable identity policy,
          manifest refresh behavior, and safe generated-artifact deletion.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-04
-@version 0.2.0
 """
 
 # IMPORTS
@@ -31,12 +28,9 @@ from audiomancer.services import project_workspace_service, workflow_impact_serv
 
 def test_workflow_impact_operation_order_matches_current_workflow() -> None:
     """
-    @brief      Verify v2 impact ordering matches the current workflow sequence.
+    @brief      Verify impact ordering matches the current workflow sequence.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     assert workflow_impact_service.downstream_operation_kinds("chunking") == (
         "translation",
@@ -58,9 +52,6 @@ def test_workflow_impact_rejects_unknown_operation_kind() -> None:
     @brief      Verify unsupported operation kinds fail clearly.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     with pytest.raises(ValueError, match="Unsupported operation kind"):
         workflow_impact_service.operation_index("broken")
@@ -71,9 +62,6 @@ def test_workflow_impact_full_reset_summary_preserves_requested_operations() -> 
     @brief      Verify broad reset summaries exclude explicitly preserved operations.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     summary = workflow_impact_service.build_full_reset_impact_summary(
         "character_discovery",
@@ -100,9 +88,6 @@ def test_workflow_impact_selective_summary_normalizes_affected_ids() -> None:
     @brief      Verify selective summaries deduplicate affected IDs and metadata payloads.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     summary = workflow_impact_service.build_selective_invalidation_summary(
         "chunking",
@@ -124,9 +109,6 @@ def test_workflow_impact_stable_identity_policy_preserves_ids_when_resequencing(
     @brief      Verify sequence updates do not rewrite stable identity fields.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     records = [
         {"chunk_id": "chunk-0007", "speech_block_id": "sb-7", "sequence_index": 10},
@@ -148,9 +130,6 @@ def test_workflow_impact_deletes_audio_artifacts_for_affected_speech_block_only(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("SelectiveAudioArtifacts", tmp_path)
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -195,9 +174,6 @@ def test_workflow_impact_can_skip_preserved_audio_artifact_collection(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("SelectiveAudioArtifactsFast", tmp_path)
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -238,9 +214,6 @@ def test_workflow_impact_skips_unsafe_audio_artifact_paths(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("UnsafeAudioArtifacts", tmp_path)
     outside_path = tmp_path / "outside.wav"
@@ -265,9 +238,6 @@ def test_workflow_impact_requires_exact_ids_for_audio_artifact_deletion(tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("ExactIdsRequired", tmp_path)
 
@@ -281,9 +251,6 @@ def test_workflow_impact_resets_audio_assembly_outputs_only(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("AssemblyOnlyReset", tmp_path)
     (project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
@@ -306,15 +273,12 @@ def test_workflow_impact_resets_audio_assembly_outputs_only(tmp_path) -> None:
     assert audio_block_path.is_file()
 
 
-def test_workflow_impact_refreshes_manifest_from_completed_artifacts(tmp_path) -> None:
+def test_workflow_impact_rejects_cleanup_without_source_ledger(tmp_path) -> None:
     """
-    @brief      Verify manifest refresh saves metadata healed from persisted artifacts.
+    @brief      Verify manifest refresh rejects Cleanup artifacts without a source ledger.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("RefreshManifest", tmp_path)
     source_path = project_root / "story.txt"
@@ -342,25 +306,16 @@ def test_workflow_impact_refreshes_manifest_from_completed_artifacts(tmp_path) -
             "page_count": None,
         },
     )
-    _write_json(project_root / config.CLEANUP_STATE_FILE_NAME, _operation_state("completed", 1, 1))
-    _write_json(project_root / config.CLEANUP_REPORT_FILE_NAME, {"warning_count": 0})
-
-    refreshed_manifest = workflow_impact_service.refresh_manifest_from_artifacts(project_root)
-    saved_manifest = project_workspace_service.load_manifest(project_root)
-
-    assert refreshed_manifest["current_stage"] == "text_cleanup_ready"
-    assert saved_manifest["operations"]["cleanup"]["status"] == "completed"
+    with pytest.raises(ValueError, match="could not be refreshed"):
+        workflow_impact_service.refresh_manifest_from_artifacts(project_root)
 
 
 def test_workflow_impact_full_reset_wrapper_keeps_existing_broad_reset_behavior(tmp_path) -> None:
     """
-    @brief      Verify the v2 wrapper delegates to the existing broad reset service.
+    @brief      Verify the wrapper delegates to the existing broad reset service.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("FullResetWrapper", tmp_path)
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("clean", encoding="utf-8")
@@ -388,9 +343,6 @@ def _operation_state(status: str, current: int, total: int) -> dict[str, object]
     @param[in]  total Total progress count.
     @return     Operation-state fixture payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     completed_at = "2026-05-04T12:01:00+00:00" if status == "completed" else None
     return {
@@ -413,9 +365,6 @@ def _write_json(path: Path, payload: object) -> None:
     @param[in]  payload JSON-serializable payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 

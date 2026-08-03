@@ -12,9 +12,6 @@
 @details Probes the local VoiceWeaver REST runtime, normalizes discovered
          models and current status data, and derives one capability matrix used
          by the TTS Settings dialog and Narrator workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.11.2
 """
 
 # IMPORTS
@@ -46,9 +43,6 @@ def _build_request_headers(runtime_api_key: str) -> dict[str, str]:
     @param[in]  runtime_api_key Optional operator-configured bearer token.
     @return     HTTP header map.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.2.0
     """
     headers = {"Accept": "application/json"}
     normalized_api_key = str(runtime_api_key or "").strip()
@@ -65,9 +59,6 @@ def _read_json(url: str, headers: dict[str, str], timeout_seconds: int) -> dict[
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Decoded JSON object payload.
     @exception  ValueError Raised when the payload cannot be normalized.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     http_request = request.Request(url=url, headers=headers, method="GET")
     with request.urlopen(http_request, timeout=timeout_seconds) as response:
@@ -93,9 +84,6 @@ def _send_json_request(
     @param[in]  payload Optional JSON-serializable object request body.
     @return     Decoded JSON payload or `None` when the response body is empty.
     @exception  ValueError Raised when the response cannot be decoded as JSON.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.2.0
     """
     request_headers = dict(headers)
     request_body = None
@@ -121,9 +109,6 @@ def _add_tts_language_field(
     @param[in]  language Selected synthesis language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     normalized_language = str(language).strip()
     normalized_supported_languages = (
@@ -163,9 +148,6 @@ def _send_multipart_request(
     @param[in]  file_content_type Uploaded file content type.
     @return     Decoded JSON payload or `None` when the response body is empty.
     @exception  ValueError Raised when the response cannot be decoded as JSON.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     boundary = f"----AudioMancerVoiceWeaverBoundary{int(time.time() * 1000)}"
     request_headers = dict(headers)
@@ -213,9 +195,6 @@ def _read_bytes(url: str, headers: dict[str, str], timeout_seconds: int) -> byte
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Raw response bytes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.0.0
     """
     http_request = request.Request(url=url, headers=headers, method="GET")
     with request.urlopen(http_request, timeout=timeout_seconds) as response:
@@ -228,9 +207,6 @@ def _normalize_string_list(value: object) -> list[str]:
     @param[in]  value Candidate list payload.
     @return     Normalized string list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if not isinstance(value, list):
         return []
@@ -243,9 +219,6 @@ def _normalize_generation_modes(value: object) -> list[str]:
     @param[in]  value Candidate generation-mode list payload.
     @return     Normalized generation-mode list using current REST mode identifiers.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     mode_aliases = {
         "base": "clone",
@@ -265,9 +238,6 @@ def _normalize_model_parameters(value: object) -> dict[str, object] | None:
     @param[in]  value Candidate model-parameter payload.
     @return     Normalized flat parameter mapping or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     if not isinstance(value, dict):
         return None
@@ -287,9 +257,6 @@ def _normalize_generation_parameter_ranges(value: object) -> dict[str, dict[str,
     @param[in]  value Candidate range payload from model or status data.
     @return     Mapping of parameter names to scalar range metadata.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if not isinstance(value, (dict, list)):
         return {}
@@ -319,9 +286,6 @@ def _normalize_active_model_payload(value: object) -> object:
     @param[in]  value Candidate `/v1/status.active_model` payload.
     @return     Normalized active-model identifier string, object, or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     if value in (None, ""):
         return None
@@ -349,9 +313,6 @@ def _normalize_status_payload(payload: dict[str, object]) -> dict[str, object]:
     @param[in]  payload Raw VoiceWeaver status payload.
     @return     Status payload with normalized active/effective model parameter fields.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     normalized_payload = dict(payload)
     normalized_payload["active_model"] = _normalize_active_model_payload(payload.get("active_model"))
@@ -371,9 +332,6 @@ def _normalize_device_diagnostics(candidate_payload: object) -> dict[str, object
     @param[in]  candidate_payload Candidate diagnostics payload.
     @return     Normalized diagnostics dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if not isinstance(candidate_payload, dict):
         return {}
@@ -393,9 +351,6 @@ def _normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
     @param[in]  candidate_model Candidate model payload.
     @return     Normalized model payload or None when invalid.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    0.2.0
     """
     if not isinstance(candidate_model, dict):
         return None
@@ -425,9 +380,6 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
     @param[in]  discovered_models Normalized VoiceWeaver discovered-model list.
     @return     Capability matrix used by the UI and narrator state shaping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.1.0
     """
     normalized_models = [_normalize_model(model) for model in discovered_models if isinstance(model, dict)]
     healthy_models = [
@@ -488,9 +440,6 @@ def probe_runtime(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Normalized runtime probe payload with models and capability matrix.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.2.0
     """
     normalized_base_url = str(base_url or "").strip()
     if not normalized_base_url:
@@ -575,9 +524,6 @@ def read_status(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime status payload returned by `/v1/status`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.0.0
     """
     return _normalize_status_payload(_request_json_endpoint(base_url, runtime_api_key, "/v1/status", timeout_seconds))
 
@@ -594,9 +540,6 @@ def read_server_info(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime server payload returned by `/v1/server`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     return _request_json_endpoint(base_url, runtime_api_key, "/v1/server", timeout_seconds)
 
@@ -613,9 +556,6 @@ def read_model_catalog(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime catalog payload returned by `/v1/model-catalog`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     return _request_json_endpoint(base_url, runtime_api_key, "/v1/model-catalog", timeout_seconds)
 
@@ -634,9 +574,6 @@ def load_model(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by the load endpoint.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.1.0
     """
     response_payload = _post_json_endpoint(
         base_url,
@@ -662,9 +599,6 @@ def unload_model(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload or `None` when the runtime reports a no-op unload.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     response_payload = _post_json_endpoint(base_url, runtime_api_key, "/v1/models/unload", None, timeout_seconds)
     if response_payload is None:
@@ -686,9 +620,6 @@ def rescan_models(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime payload returned by the rescan endpoint.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     response_payload = _post_json_endpoint(base_url, runtime_api_key, "/v1/models/rescan", None, timeout_seconds)
     if not isinstance(response_payload, dict):
@@ -710,9 +641,6 @@ def delete_model(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     None.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     encoded_model_id = parse.quote(str(model_id).strip(), safe="")
     _request_without_json_response(
@@ -738,9 +666,6 @@ def start_model_download(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Download-status payload returned by the runtime.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     response_payload = _post_json_endpoint(
         base_url,
@@ -766,9 +691,6 @@ def read_model_download_status(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Download-status payload returned by `/v1/models/download/status`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     return _request_json_endpoint(base_url, runtime_api_key, "/v1/models/download/status", timeout_seconds)
 
@@ -785,9 +707,6 @@ def cancel_model_download(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     None.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
     """
     _request_without_json_response(base_url, runtime_api_key, "/v1/models/download/cancel", "POST", timeout_seconds)
 
@@ -813,9 +732,6 @@ def generate_voice_design(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by `/v1/voice/design`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.2.0
     """
     payload = {
         "text": str(text).strip(),
@@ -859,9 +775,6 @@ def generate_voice_clone(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by `/v1/voice/clone`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
     """
     headers = _build_request_headers(runtime_api_key)
     form_fields: dict[str, object] = {
@@ -916,9 +829,6 @@ def create_voice_clone_prompt(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by `/v1/voice/clone-prompt`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     headers = _build_request_headers(runtime_api_key)
     form_fields: dict[str, object] = {
@@ -972,9 +882,6 @@ def generate_voice_clone_from_prompt(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by `/v1/voice/clone-from-prompt`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     payload: dict[str, object] = {
         "voice_clone_prompt": voice_clone_prompt,
@@ -1020,9 +927,6 @@ def generate_sound_prompt(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by `/v1/sound/prompt`.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     normalized_prompt = str(prompt).strip()
     if not normalized_prompt:
@@ -1078,9 +982,6 @@ def wait_for_terminal_operation(
     @return     Final runtime status payload.
     @exception  RuntimeError Raised when the poll times out.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    1.2.1
     """
     deadline = time.monotonic() + timeout_seconds
     last_status_payload: dict[str, object] | None = None
@@ -1115,9 +1016,6 @@ def _sleep_with_cancel(delay_seconds: float, cancel_requested) -> None:
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     None.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     deadline = time.monotonic() + max(float(delay_seconds), 0.0)
     while time.monotonic() < deadline:
@@ -1138,9 +1036,6 @@ def download_generated_voice(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Downloaded WAV bytes.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.0.1
     """
     headers = _build_request_headers(runtime_api_key)
     try:
@@ -1163,9 +1058,6 @@ def download_generated_audio(
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Downloaded WAV bytes.
     @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.1
     """
     headers = _build_request_headers(runtime_api_key)
     try:
@@ -1182,9 +1074,6 @@ def operation_failed_message(status_payload: dict[str, object]) -> str:
     @param[in]  status_payload Final runtime status payload.
     @return     Failure message or one fallback summary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.0.0
     """
     operation_payload = status_payload.get("operation", {})
     if isinstance(operation_payload, dict):
@@ -1207,9 +1096,6 @@ def _validate_health_payload(health_payload: object) -> None:
     @param[in]  health_payload Candidate health payload.
     @return     None.
     @exception  ValueError Raised when the payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if not isinstance(health_payload, dict):
         raise ValueError("runtime returned an invalid health payload")
@@ -1223,9 +1109,6 @@ def _normalize_models_payload(models_payload: object) -> list[VoiceWeaverModelPa
     @param[in]  models_payload Candidate models payload.
     @return     Normalized discovered-model list.
     @exception  ValueError Raised when the payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if not isinstance(models_payload, dict):
         raise ValueError("runtime returned an invalid models payload")
@@ -1246,9 +1129,6 @@ def _resolve_active_model_id(active_model_payload: object) -> str | None:
     @param[in]  active_model_payload Candidate active-model payload.
     @return     Active model identifier or None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if active_model_payload in (None, ""):
         return None
@@ -1277,9 +1157,6 @@ def _build_probe_result(
     @param[in]  device_diagnostics Normalized runtime device-diagnostics payload.
     @return     Normalized runtime probe result dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     capability_matrix = build_capability_matrix(discovered_models)
     return {
@@ -1306,9 +1183,6 @@ def _request_json_endpoint(
     @param[in]  endpoint Value for `endpoint`.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     headers = _build_request_headers(runtime_api_key)
     try:
@@ -1339,9 +1213,6 @@ def _post_json_endpoint(
     @param[in]  payload Optional payload processed by the helper.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     headers = _build_request_headers(runtime_api_key)
     try:
@@ -1378,9 +1249,6 @@ def _request_without_json_response(
     @param[in]  method HTTP method token.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     headers = _build_request_headers(runtime_api_key)
     http_request = request.Request(url=_endpoint_url(base_url, endpoint), headers=headers, method=method)
@@ -1400,9 +1268,6 @@ def _runtime_error_message(http_exception: error.HTTPError) -> str:
     @brief      Execute the runtime error message helper.
     @param[in]  http_exception Value for `http_exception`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if http_exception.code == 401:
         return "Connection failed: invalid or missing runtime credentials."
@@ -1430,9 +1295,6 @@ def _is_qwen_model(model_payload: VoiceWeaverModelPayload) -> bool:
     @param[in]  model_payload Normalized discovered-model payload.
     @return     True when the model id or backend name indicates Qwen support.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.0.0
     """
     search_blob = " ".join(
         (

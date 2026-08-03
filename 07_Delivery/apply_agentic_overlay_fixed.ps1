@@ -1,14 +1,17 @@
 $ErrorActionPreference = "Stop"
 
-$repo = "D:\Temp\2026_AudioMancer"
+$repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $overlay = "$repo\07_Delivery\agentic_workflow_sync_overlay"
 
-$repoResolved = (Resolve-Path -LiteralPath $repo).Path
-$overlayResolved = (Resolve-Path -LiteralPath $overlay).Path
+$repoResolved = $repo
 
-if (-not $repoResolved.StartsWith("D:\Temp\2026_AudioMancer")) {
-  throw "Unexpected repo path: $repoResolved"
+if (-not (Test-Path -LiteralPath (Join-Path $repoResolved ".git"))) {
+  throw "Expected a Git repository root: $repoResolved"
 }
+if (-not (Test-Path -LiteralPath $overlay -PathType Container)) {
+  throw "Agentic overlay directory not found: $overlay"
+}
+$overlayResolved = (Resolve-Path -LiteralPath $overlay).Path
 if (-not $overlayResolved.StartsWith($repoResolved)) {
   throw "Unexpected overlay path: $overlayResolved"
 }

@@ -9,11 +9,8 @@
 """
 @file test_settings_page.py
 @brief Focused tests for the simplified AudioMancer settings (Appearance) page.
-@details Verifies theme selection, interface/text font-size step selectors, merged
-         settings output, and the removal of the color/custom-theme editor.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.7.0
+@details Verifies theme selection, interface/text font-size step selectors, and
+         merged settings output.
 """
 
 # IMPORTS
@@ -24,15 +21,29 @@ from audiomancer.ui.pages.settings_page import SettingsPage
 # PUBLIC API
 
 
+def test_settings_page_offers_exactly_supported_ui_languages(qtbot) -> None:
+    """
+    @brief      Verify the interface language selector offers only English and Romanian.
+    @details    Covers S-0002 and REQ-UX-6f6f2126-58f4-4c7e-955a-74bc4ca70284.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SettingsPage()
+    qtbot.addWidget(page)
+
+    language_items = [page._language_combo.itemText(index) for index in range(page._language_combo.count())]
+
+    assert config.SUPPORTED_LANGUAGES == ("en", "ro")
+    assert language_items == ["en", "ro"]
+
+
 def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     """
     @brief      Verify the settings page loads and rebuilds persisted values.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.4.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
@@ -72,7 +83,6 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     rebuilt = page.build_settings(existing_settings)
 
     assert rebuilt["language"] == "en"
-    assert "ui_text_scale" not in rebuilt
     assert rebuilt["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert rebuilt["play_completion_beep"] is False
     assert rebuilt["ui_scroll_steps_per_wheel_notch"] == 2
@@ -88,9 +98,6 @@ def test_settings_page_theme_selector_loads_and_persists(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
@@ -113,9 +120,6 @@ def test_settings_page_interface_font_size_selector_persists(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)
@@ -136,9 +140,6 @@ def test_settings_page_text_font_size_selector_persists(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     page = SettingsPage()
     qtbot.addWidget(page)

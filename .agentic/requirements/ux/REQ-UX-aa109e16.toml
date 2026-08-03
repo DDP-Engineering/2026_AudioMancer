@@ -1,0 +1,42 @@
+schema = 1
+id = "REQ-UX-aa109e16"
+title = "Every app-owned operator-facing string on persistent windows, pages"
+status = "active"
+
+requirement = """
+Every app-owned operator-facing string on persistent windows, pages, and popup dialogs shall resolve from the complete English/Romanian UI catalog and refresh for the active language without changing stable option data or operator content.
+"""
+
+verification = "Focused localization coverage, catalog parity, page/controller regressions, targeted Ruff, and Python compilation passed; manual full-application retest remains the delivery hold."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
+  "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_app_owned_dialog_calls_do_not_embed_operator_facing_literals",
+  "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_each_persistent_page_localizes_audited_visible_text",
+  "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_runtime_language_change_refreshes_current_project_page",
+  "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_settings_page_localizes_all_visible_text_and_preserves_option_data",
+]
+
+spec = "specs/ui_localization_coverage.spec.md"
+priority = "high"
+rationale = """
+Catalog parity alone does not prevent widgets and dialog calls from retaining constructor-time English literals, as confirmed by manual Romanian testing.
+"""
+created = 2026-07-29
+updated = 2026-07-29

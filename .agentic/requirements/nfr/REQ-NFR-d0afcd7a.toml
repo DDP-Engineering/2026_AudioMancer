@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-NFR-d0afcd7a"
+title = "Logging initialization shall never abort application startup: when the"
+status = "active"
+
+requirement = """
+Logging initialization shall never abort application startup: when the log directory cannot be created or the log file cannot be opened it shall install a console-only root logger, record one degraded-logging warning, and return no log file path, and log retention cleanup shall not propagate filesystem errors.
+"""
+
+verification = "Automated: 4 linked pytest selectors covering mkdir failure, log-file open failure, unremovable expired retention entries, and a bootstrap that received no log file path."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/app.py",
+  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_app_entrypoint.py::test_main_reports_an_unavailable_log_file_when_logging_is_console_only",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_degrades_to_console_when_log_directory_is_unusable",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_degrades_to_console_when_log_file_cannot_be_opened",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_survives_unremovable_expired_log_entries",
+]
+
+spec = "specs/user_data_location.spec.md"
+priority = "high"
+rationale = """
+initialize_logging runs before the bootstrap try/except, so any filesystem error there crashed the application with no log to diagnose it from.
+"""
+created = 2026-07-25
+updated = 2026-07-25

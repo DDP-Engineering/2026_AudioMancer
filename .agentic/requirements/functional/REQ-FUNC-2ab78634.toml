@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-2ab78634"
+title = "Any manual Cleanup edit shall invalidate every downstream operation"
+status = "active"
+
+requirement = """
+Any manual Cleanup edit shall invalidate every downstream operation.
+"""
+
+verification = "Manual edit downstream invalidation test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Chunking and later artifacts must never remain valid after the canonical cleaned text changes.
+"""
+created = 2026-07-28
+updated = 2026-07-30

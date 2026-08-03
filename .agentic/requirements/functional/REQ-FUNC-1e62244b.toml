@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-1e62244b"
+title = "The Speech Blocks operation-state projection shall omit source chunks"
+status = "active"
+
+requirement = """
+The Speech Blocks operation-state projection shall omit source chunks and expose the checkpoint.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_load_operation_state_projection_omits_source_chunks_and_exposes_checkpoint",
+]
+
+priority = "high"
+rationale = """
+The projection must carry resume state without duplicating source text.
+"""
+created = 2026-07-24
+updated = 2026-07-24

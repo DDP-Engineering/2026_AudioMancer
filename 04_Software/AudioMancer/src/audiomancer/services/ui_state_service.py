@@ -13,9 +13,6 @@
          application through one centralized string catalog, scale mapping, and
          theme runtime adapter, and resolves settings-backed runtime preferences
          such as the operator completion beep.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.59.0
 """
 
 # ruff: noqa: E501
@@ -76,6 +73,22 @@ _UI_STRINGS = {
         "toolbar.tts_settings": "TTS Settings",
         "toolbar.help": "Help",
         "toolbar.about": "About",
+        "language.en": "English",
+        "language.ro": "Romanian",
+        "language.ja": "Japanese",
+        "language.ko": "Korean",
+        "language.zh": "Chinese",
+        "language.de": "German",
+        "language.fr": "French",
+        "language.ru": "Russian",
+        "language.pt": "Portuguese",
+        "language.es": "Spanish",
+        "language.it": "Italian",
+        "language.unknown": "Unknown",
+        "language.not_translated": "Not translated",
+        "chunking.strategy.paragraph": "Paragraph",
+        "chunking.strategy.meaning": "Meaning",
+        "chunking.strategy.scene": "Scene",
         "dialog.settings_title": "Settings",
         "dialog.theme_name_title": "Theme Name",
         "dialog.theme_name_prompt": "Enter the theme name:",
@@ -100,6 +113,7 @@ _UI_STRINGS = {
         "dialog.snapshot_filter_zip": "ZIP Archives (*.zip)",
         "dialog.project_error_title": "Project Error",
         "dialog.project_repair_title": "Repair Project",
+        "dialog.project_recovery_title": "Project Data Reset",
         "dialog.confirm_extraction_rerun_title": "Confirm Extraction Rerun",
         "dialog.confirm_cleanup_rerun_title": "Confirm Cleanup Rerun",
         "dialog.confirm_cleanup_mode_switch_title": "Change Cleanup Mode",
@@ -244,6 +258,24 @@ _UI_STRINGS = {
         "settings.theme_preview_input": "Sample text window",
         "settings.theme_preview_button": "Sample button",
         "settings.theme_preview_status": "Ready",
+        "settings.font_size.extra_small": "Extra small",
+        "settings.font_size.small": "Small",
+        "settings.font_size.medium": "Medium",
+        "settings.font_size.normal": "Normal",
+        "settings.font_size.large": "Large",
+        "settings.font_size.very_large": "Very large",
+        "settings.font_size.huge": "Huge",
+        "settings.theme_name.classic_light": "Classic Light",
+        "settings.theme_name.warm_reading": "Warm Reading",
+        "settings.theme_name.high_contrast": "High Contrast",
+        "settings.theme_name.default_dark": "Default Dark",
+        "settings.theme_name.dark_contrast": "Dark Contrast",
+        "settings.theme_name.audiomancer_dark": "AudioMancer Dark",
+        "settings.theme_name.audiomancer_parchment": "AudioMancer Parchment",
+        "settings.theme_name.midnight_studio": "Midnight Studio",
+        "settings.theme_name.ember_night": "Ember Night",
+        "settings.theme_name.nordic_slate": "Nordic Slate",
+        "settings.theme_name.ink_and_paper": "Ink and Paper",
         "settings.theme_builtin_readonly": "Built-in themes are read-only.",
         "settings.theme_color_window_background": "Window background",
         "settings.theme_color_panel_background": "Panel background",
@@ -271,6 +303,7 @@ _UI_STRINGS = {
         "ai_settings.backend_kind": "Backend Kind",
         "ai_settings.base_url": "Base URL",
         "ai_settings.api_key": "API Key",
+        "ai_settings.api_key_placeholder": "optional for local provider",
         "ai_settings.model_name": "Model Name",
         "ai_settings.context_window": "Context Window",
         "ai_settings.max_output_tokens": "Max Output Tokens",
@@ -321,6 +354,12 @@ _UI_STRINGS = {
         "tts_settings.preview_timeout": "Audio Preview Timeout (s)",
         "tts_settings.generation_timeout": "Audio Generation Timeout (s)",
         "tts_settings.preview_text_limit": "Preview Text Limit (chars)",
+        "tts_settings.speech_block_target": "Narration Block Target (s)",
+        "tts_settings.speech_block_target_auto": "Auto",
+        "tts_settings.speech_block_target_tooltip": (
+            "Preferred spoken length of one same-narrator block. "
+            "The TTS model budget always stays the hard limit, so this can only shorten blocks."
+        ),
         "tts_settings.scene_ambience_enabled": "Scene Ambience Generation",
         "tts_settings.scene_ambience_placement": "Scene Ambience Placement",
         "tts_settings.scene_ambience_duration": "Scene Ambience Max Sequence Duration (s)",
@@ -328,6 +367,7 @@ _UI_STRINGS = {
         "tts_settings.scene_ambience_guidance": "Scene Ambience Guidance",
         "tts_settings.scene_ambience_steps": "Scene Ambience Steps",
         "tts_settings.scene_ambience_seed": "Scene Ambience Seed",
+        "tts_settings.scene_ambience_seed_random": "Random",
         "tts_settings.scene_ambience_placement_none": "None",
         "tts_settings.scene_ambience_placement_openers_and_closers": "Openers and closers",
         "tts_settings.scene_ambience_placement_openers_closers_and_scene_changes": (
@@ -347,12 +387,13 @@ _UI_STRINGS = {
         "tts_settings.popup_failure_message": "Connection failed.",
         "text_cleanup.title": "Text Cleanup",
         "text_cleanup.extract": "Extract Text",
-        "text_cleanup.clean": "Deterministic Cleanup",
-        "text_cleanup.ai_profile": "AI Profile",
+        "text_cleanup.clean": "Cleanup",
+        "text_cleanup.ai_profile": "AI Profile (optional)",
         "text_cleanup.ai_clean": "AI-Assisted Cleanup",
         "text_cleanup.reset": "Reset Cleanup",
         "text_cleanup.edit_cleaned": "Edit",
         "text_cleanup.save_cleaned": "Save",
+        "text_cleanup.cancel_edit": "Cancel",
         "text_cleanup.spacing_label": "Insert new line for:",
         "text_cleanup.spacing_heading": "Heading",
         "text_cleanup.spacing_separator": "Separator",
@@ -371,6 +412,12 @@ _UI_STRINGS = {
         "text_cleanup.extracted_note": "Raw extracted text will appear here after source processing.",
         "text_cleanup.cleaned_note": "Deterministic or AI-assisted cleanup output will appear here.",
         "text_cleanup.notes_text": "Import a source to begin text extraction.\nDeterministic cleanup and AI-assisted cleanup are not wired yet.",
+        "text_cleanup.initial_note": "Import a source to begin text extraction.",
+        "text_cleanup.error_extraction_required": "Complete Text Extraction before Cleanup.",
+        "text_cleanup.operation_extraction": "Text Extraction",
+        "text_cleanup.progress_extraction_start": "Extracting text and source structure...",
+        "text_cleanup.operation_cleanup": "Cleanup",
+        "text_cleanup.progress_cleanup_start": "Analyzing text structure...",
         "text_cleanup.note_no_project": "Create or open a project to begin text extraction.",
         "text_cleanup.note_no_source": "Import a source file to begin extraction.",
         "text_cleanup.note_ready": "Extraction is ready to run for the current source file.",
@@ -412,6 +459,7 @@ _UI_STRINGS = {
         "text_chunking.cleaned_note": "Cleaned text will appear here and serve as the chunking reference.",
         "text_chunking.selected_note": "The full text of the selected chunk will appear here.",
         "text_chunking.notes_text": "Run cleanup before chunking.\nDeterministic chunking will populate the chunk list and selected preview.",
+        "text_chunking.initial_note": "Run cleanup before chunking.",
         "text_chunking.note_no_project": "Create or open a project to begin text chunking.",
         "text_chunking.note_no_source": "Import a source file and complete cleanup before chunking.",
         "text_chunking.note_missing_cleanup": "Run deterministic or AI-assisted cleanup before chunking.",
@@ -437,7 +485,11 @@ _UI_STRINGS = {
         "ai_translation.approve_all": "Approve All",
         "ai_translation.original_group": "Original Chunk",
         "ai_translation.translated_group": "Translated Chunk",
-        "ai_translation.approved_chunks": "Approved chunks: 0/0",
+        "ai_translation.approved_chunks": "Approved chunks: {approved_count}/{total_count}",
+        "ai_translation.status_approved": "Approved",
+        "ai_translation.status_translated": "Translated",
+        "ai_translation.status_pending": "Pending",
+        "ai_translation.initial_note": "Run text chunking before AI Translation.",
         "ai_translation.retranslate": "Re-Translate Selected",
         "ai_translation.approve_selected": "Approve Selected",
         "ai_translation.source_note": "The source chunk selected from the list will appear here.",
@@ -646,6 +698,7 @@ _UI_STRINGS = {
         "speech_blocks.ai_profile": "AI Profile",
         "speech_blocks.generate": "Generate All",
         "speech_blocks.reset_generation": "Reset",
+        "speech_blocks.initial_note": "Create or open a project to begin Speech Blocks generation.",
         "speech_blocks.approve_all": "Approve All",
         "speech_blocks.chunk_list_group": "Chunk List",
         "speech_blocks.selected_group": "Selected Chunk",
@@ -695,6 +748,7 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Play Audiobook",
         "audio_blocks.stop_audiobook": "Stop Audiobook",
         "audio_blocks.reset_generation": "Reset Audio Generation",
+        "audio_blocks.initial_note": "Create or open a project before generating Audio Blocks.",
         "audio_blocks.approve_all": "Approve All",
         "audio_blocks.source_group": "Source Text",
         "audio_blocks.blocks_group": "Speech Blocks",
@@ -838,6 +892,7 @@ _UI_STRINGS = {
         "home.narration_mode": "Audio Output Style: {mode_label}",
         "home.translation_language": "Translation language",
         "home.audio_output_style": "Audio output style",
+        "home.pipeline_group": "Workflow Pipeline",
         "home.options_locked": "Project options locked. Source import is available.",
         "home.options_unlocked": "Select a source file, choose translation language and audio output style, then press Start Project.",
         "home.mode_same_narrator": "Same narrator for whole book",
@@ -993,10 +1048,6 @@ _UI_STRINGS = {
             "Continuing will delete all generated audio blocks, reusable voice prompts, and downstream Audio Assembly "
             "data. Continue?"
         ),
-        "project.confirm_audio_blocks_invalidation": (
-            "This change affects the current Audio Blocks inputs. Continuing will reset generated audio blocks, "
-            "their approvals, and downstream Audio Assembly data. Continue?"
-        ),
         "project.confirm_audio_block_regeneration": (
             "Continuing will regenerate only the selected Audio Block, clear its approval, and reset downstream "
             "Audio Assembly outputs. Other Audio Blocks and upstream workflow data will be preserved. Continue?"
@@ -1059,7 +1110,6 @@ _UI_STRINGS = {
         "dialog.confirm_scene_ambience_audio_blocks_title": "Enable Scene Ambience Audio",
         "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
         "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
-        "dialog.confirm_audio_blocks_invalidation_title": "Confirm Audio Blocks Reset",
         "dialog.confirm_audio_block_regeneration_title": "Confirm Selected Audio Regeneration",
         "dialog.confirm_audio_block_approval_title": "Confirm Audio Approval Change",
         "dialog.confirm_single_voice_target_invalidation_title": "Confirm Voice Target Audio Reset",
@@ -1109,6 +1159,10 @@ _UI_STRINGS = {
         "project.repair_changes_header": "Metadata updates",
         "project.repair_warnings_header": "Warnings",
         "project.repair_confirm": "Do you want to repair the project now?",
+        "project.chunking_self_heal_message": (
+            "Incompatible Chunking data and all downstream results were reset. "
+            "Cleanup was preserved. Run Chunking again."
+        ),
     },
     "ro": {
         "window_title.main": "AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!",
@@ -1119,6 +1173,22 @@ _UI_STRINGS = {
         "toolbar.tts_settings": "Setari TTS",
         "toolbar.help": "Ajutor",
         "toolbar.about": "Despre",
+        "language.en": "Engleza",
+        "language.ro": "Romana",
+        "language.ja": "Japoneza",
+        "language.ko": "Coreeana",
+        "language.zh": "Chineza",
+        "language.de": "Germana",
+        "language.fr": "Franceza",
+        "language.ru": "Rusa",
+        "language.pt": "Portugheza",
+        "language.es": "Spaniola",
+        "language.it": "Italiana",
+        "language.unknown": "Necunoscuta",
+        "language.not_translated": "Netradusa",
+        "chunking.strategy.paragraph": "Paragraf",
+        "chunking.strategy.meaning": "Semnificatie",
+        "chunking.strategy.scene": "Scena",
         "dialog.settings_title": "Setari",
         "dialog.theme_name_title": "Nume Tema",
         "dialog.theme_name_prompt": "Introdu numele temei:",
@@ -1143,6 +1213,7 @@ _UI_STRINGS = {
         "dialog.snapshot_filter_zip": "Arhive ZIP (*.zip)",
         "dialog.project_error_title": "Eroare Proiect",
         "dialog.project_repair_title": "Repara Proiectul",
+        "dialog.project_recovery_title": "Date de Proiect Resetate",
         "dialog.confirm_extraction_rerun_title": "Confirma Reluarea Extragerii",
         "dialog.confirm_cleanup_rerun_title": "Confirma Reluarea Curatarii",
         "dialog.confirm_cleanup_mode_switch_title": "Schimba Modul de Curatare",
@@ -1287,6 +1358,24 @@ _UI_STRINGS = {
         "settings.theme_preview_input": "Fereastra text exemplu",
         "settings.theme_preview_button": "Buton exemplu",
         "settings.theme_preview_status": "Gata",
+        "settings.font_size.extra_small": "Foarte mica",
+        "settings.font_size.small": "Mica",
+        "settings.font_size.medium": "Medie",
+        "settings.font_size.normal": "Normala",
+        "settings.font_size.large": "Mare",
+        "settings.font_size.very_large": "Foarte mare",
+        "settings.font_size.huge": "Uriasa",
+        "settings.theme_name.classic_light": "Clasic Luminos",
+        "settings.theme_name.warm_reading": "Lectura Calda",
+        "settings.theme_name.high_contrast": "Contrast Ridicat",
+        "settings.theme_name.default_dark": "Intunecat Implicit",
+        "settings.theme_name.dark_contrast": "Contrast Intunecat",
+        "settings.theme_name.audiomancer_dark": "AudioMancer Intunecat",
+        "settings.theme_name.audiomancer_parchment": "Pergament AudioMancer",
+        "settings.theme_name.midnight_studio": "Studio de Miezul Noptii",
+        "settings.theme_name.ember_night": "Noapte de Jar",
+        "settings.theme_name.nordic_slate": "Ardezie Nordica",
+        "settings.theme_name.ink_and_paper": "Cerneala si Hartie",
         "settings.theme_builtin_readonly": "Temele incluse pot fi doar citite.",
         "settings.theme_color_window_background": "Fundal fereastra",
         "settings.theme_color_panel_background": "Fundal panou",
@@ -1314,6 +1403,7 @@ _UI_STRINGS = {
         "ai_settings.backend_kind": "Tip Backend",
         "ai_settings.base_url": "URL Baza",
         "ai_settings.api_key": "Cheie API",
+        "ai_settings.api_key_placeholder": "optional pentru furnizor local",
         "ai_settings.model_name": "Nume Model",
         "ai_settings.context_window": "Fereastra Context",
         "ai_settings.max_output_tokens": "Tokeni Maximi Iesire",
@@ -1364,6 +1454,12 @@ _UI_STRINGS = {
         "tts_settings.preview_timeout": "Timeout Preview Audio (s)",
         "tts_settings.generation_timeout": "Timeout Generare Audio (s)",
         "tts_settings.preview_text_limit": "Limita Text Previzualizare (caractere)",
+        "tts_settings.speech_block_target": "Tinta Bloc Naratiune (s)",
+        "tts_settings.speech_block_target_auto": "Automat",
+        "tts_settings.speech_block_target_tooltip": (
+            "Durata vorbita preferata pentru un bloc cu acelasi narator. "
+            "Bugetul modelului TTS ramane limita stricta, deci aceasta optiune poate doar scurta blocurile."
+        ),
         "tts_settings.scene_ambience_enabled": "Generare Ambienta Scena",
         "tts_settings.scene_ambience_placement": "Pozitionare Ambienta Scena",
         "tts_settings.scene_ambience_duration": "Durata Max Secventa Ambienta (s)",
@@ -1371,6 +1467,7 @@ _UI_STRINGS = {
         "tts_settings.scene_ambience_guidance": "Ghidaj Ambienta Scena",
         "tts_settings.scene_ambience_steps": "Pasi Ambienta Scena",
         "tts_settings.scene_ambience_seed": "Seed Ambienta Scena",
+        "tts_settings.scene_ambience_seed_random": "Aleatoriu",
         "tts_settings.scene_ambience_placement_none": "Fara",
         "tts_settings.scene_ambience_placement_openers_and_closers": "Deschideri si inchideri",
         "tts_settings.scene_ambience_placement_openers_closers_and_scene_changes": (
@@ -1390,12 +1487,13 @@ _UI_STRINGS = {
         "tts_settings.popup_failure_message": "Conectarea a esuat.",
         "text_cleanup.title": "Curatare Text",
         "text_cleanup.extract": "Extrage Textul",
-        "text_cleanup.clean": "Curatare Determinista",
-        "text_cleanup.ai_profile": "Profil AI",
+        "text_cleanup.clean": "Curatare",
+        "text_cleanup.ai_profile": "Profil AI (optional)",
         "text_cleanup.ai_clean": "Curatare Asistata de AI",
         "text_cleanup.reset": "Reseteaza Curatarea",
         "text_cleanup.edit_cleaned": "Editeaza",
         "text_cleanup.save_cleaned": "Salveaza",
+        "text_cleanup.cancel_edit": "Anuleaza",
         "text_cleanup.spacing_label": "Insereaza linie noua pentru:",
         "text_cleanup.spacing_heading": "Titlu",
         "text_cleanup.spacing_separator": "Separator",
@@ -1414,6 +1512,12 @@ _UI_STRINGS = {
         "text_cleanup.extracted_note": "Textul extras brut va aparea aici dupa procesarea sursei.",
         "text_cleanup.cleaned_note": "Rezultatul curatarii deterministe sau asistate de AI va aparea aici.",
         "text_cleanup.notes_text": "Importa o sursa pentru a incepe extragerea textului.\nCuratarea determinista si cea asistata de AI nu sunt inca conectate.",
+        "text_cleanup.initial_note": "Importa o sursa pentru a incepe extragerea textului.",
+        "text_cleanup.error_extraction_required": "Finalizeaza Extragerea Textului inainte de Curatare.",
+        "text_cleanup.operation_extraction": "Extragere Text",
+        "text_cleanup.progress_extraction_start": "Se extrag textul si structura sursei...",
+        "text_cleanup.operation_cleanup": "Curatare",
+        "text_cleanup.progress_cleanup_start": "Se analizeaza structura textului...",
         "text_cleanup.note_no_project": "Creeaza sau deschide un proiect pentru a incepe extragerea textului.",
         "text_cleanup.note_no_source": "Importa un fisier sursa pentru a incepe extragerea.",
         "text_cleanup.note_ready": "Extragerea este pregatita pentru fisierul sursa curent.",
@@ -1455,6 +1559,7 @@ _UI_STRINGS = {
         "text_chunking.cleaned_note": "Textul curatat va aparea aici si va servi drept referinta pentru segmentare.",
         "text_chunking.selected_note": "Textul complet al segmentului selectat va aparea aici.",
         "text_chunking.notes_text": "Ruleaza curatarea inainte de segmentare.\nSegmentarea determinista va popula lista segmentelor si previzualizarea selectiei.",
+        "text_chunking.initial_note": "Ruleaza curatarea inainte de segmentare.",
         "text_chunking.note_no_project": "Creeaza sau deschide un proiect pentru a incepe segmentarea textului.",
         "text_chunking.note_no_source": "Importa un fisier sursa si finalizeaza curatarea inainte de segmentare.",
         "text_chunking.note_missing_cleanup": "Ruleaza curatarea determinista sau asistata de AI inainte de segmentare.",
@@ -1480,7 +1585,11 @@ _UI_STRINGS = {
         "ai_translation.approve_all": "Aproba Tot",
         "ai_translation.original_group": "Segment Original",
         "ai_translation.translated_group": "Segment Tradus",
-        "ai_translation.approved_chunks": "Segmente aprobate: 0/0",
+        "ai_translation.approved_chunks": "Segmente aprobate: {approved_count}/{total_count}",
+        "ai_translation.status_approved": "Aprobat",
+        "ai_translation.status_translated": "Tradus",
+        "ai_translation.status_pending": "In asteptare",
+        "ai_translation.initial_note": "Ruleaza segmentarea textului inainte de Traducerea AI.",
         "ai_translation.retranslate": "Retradu Segmentul Selectat",
         "ai_translation.approve_selected": "Aproba Selectia",
         "ai_translation.source_note": "Segmentul sursa selectat din lista va aparea aici.",
@@ -1550,8 +1659,8 @@ _UI_STRINGS = {
         "narator_voice.save_profile": "Salveaza",
         "narator_voice.delete_profile": "Sterge",
         "narator_voice.select_profile": "Selecteaza",
-        "narator_voice.generate_sample": "Genereaza Sample",
-        "narator_voice.import_sample": "Import Sample",
+        "narator_voice.generate_sample": "Genereaza Mostra",
+        "narator_voice.import_sample": "Importa Mostra",
         "narator_voice.generate_profiles": "Genereaza Naratori",
         "narator_voice.preview": "Reda",
         "narator_voice.stop_preview": "Opreste",
@@ -1564,31 +1673,31 @@ _UI_STRINGS = {
         "narator_voice.note_no_source": "Importa un document sursa inainte de a defini vocea naratorului.",
         "narator_voice.note_runtime_not_connected": "Deschide Setari TTS si ruleaza Testeaza Conexiunea pentru a descoperi modelele VoiceWeaver pentru acest proiect.",
         "narator_voice.note_no_profiles": "Nu exista profiluri de voce narator stocate pentru proiectul curent.",
-        "narator_voice.note_qwen_capabilities_ready": "Capabilitatile minime Qwen3 TTS sunt disponibile pentru generarea sample-urilor vocii naratorului.",
+        "narator_voice.note_qwen_capabilities_ready": "Capabilitatile minime Qwen3 TTS sunt disponibile pentru generarea mostrelor vocii naratorului.",
         "narator_voice.note_qwen_capabilities_missing": "Capabilitatile minime Qwen3 TTS lipsesc: {missing_capabilities}.",
         "narator_voice.note_upstream_not_ready": "Descoperirea personajelor nu este finalizata inca, dar profilurile vocii naratorului pot fi pregatite deja local.",
         "narator_voice.note_no_selected_profile": "Selecteaza un profil de voce narator inainte de a pregati vocile personajelor.",
         "narator_voice.note_selected_profile": "Profil {profile_kind} selectat: {profile_name}.",
-        "narator_voice.note_selected_profile_missing_sample": "Naratorul selectat are nevoie de un sample generat inainte sa poata fi previzualizat sau refolosit la naratie.",
-        "narator_voice.note_selected_profile_runtime_missing": "Sample-ul naratorului selectat face referire la un model care nu este raportat de runtime-ul VoiceWeaver curent.",
-        "narator_voice.note_generate_sample_required": "Genereaza un sample pentru profilul inspectat inainte sa il previzualizezi sau sa il selectezi.",
-        "narator_voice.note_profile_runtime_missing": "Acest sample stocat face referire la un model care nu este raportat momentan de VoiceWeaver.",
+        "narator_voice.note_selected_profile_missing_sample": "Naratorul selectat are nevoie de o mostra generata inainte sa poata fi previzualizat sau refolosit la naratie.",
+        "narator_voice.note_selected_profile_runtime_missing": "Mostra naratorului selectat face referire la un model care nu este raportat de runtime-ul VoiceWeaver curent.",
+        "narator_voice.note_generate_sample_required": "Genereaza o mostra pentru profilul inspectat inainte sa il previzualizezi sau sa il selectezi.",
+        "narator_voice.note_profile_runtime_missing": "Aceasta mostra stocata face referire la un model care nu este raportat momentan de VoiceWeaver.",
         "narator_voice.error_invalid_profile_name": "Introdu un nume pentru profilul naratorului inainte de a crea sau salva un profil personalizat.",
         "narator_voice.error_duplicate_profile_name": "Un profil de narator cu acest nume exista deja in proiectul curent.",
         "narator_voice.error_readonly_profile": "Acest profil de narator nu poate fi editat.",
-        "narator_voice.error_missing_preview_text": "Introdu un text de previzualizare inainte de a genera sample-ul naratorului.",
-        "narator_voice.error_missing_sample": "Genereaza un sample pentru acest profil de narator inainte sa il selectezi sau sa il previzualizezi.",
+        "narator_voice.error_missing_preview_text": "Introdu un text de previzualizare inainte de a genera mostra naratorului.",
+        "narator_voice.error_missing_sample": "Genereaza o mostra pentru acest profil de narator inainte sa il selectezi sau sa il previzualizezi.",
         "narator_voice.error_runtime_model_missing": "Modelul TTS necesar pentru acest profil de narator nu este raportat de runtime-ul VoiceWeaver curent.",
-        "narator_voice.error_qwen_capabilities_missing": "Nu se poate genera sample-ul naratorului deoarece lipsesc capabilitatile Qwen3 TTS necesare: {missing_capabilities}.",
+        "narator_voice.error_qwen_capabilities_missing": "Nu se poate genera mostra naratorului deoarece lipsesc capabilitatile Qwen3 TTS necesare: {missing_capabilities}.",
         "narator_voice.error_generation_missing_audio": "VoiceWeaver a terminat cererea, dar nu a raportat niciun fisier audio disponibil pentru descarcare.",
-        "narator_voice.error_preview_text_over_budget": "Textul de previzualizare este prea lung pentru limita runtime-ului TTS activ ({word_count} cuvinte, limita sigura {safe_word_count}). Scurteaza textul de previzualizare inainte de a genera un sample.",
+        "narator_voice.error_preview_text_over_budget": "Textul de previzualizare este prea lung pentru limita runtime-ului TTS activ ({word_count} cuvinte, limita sigura {safe_word_count}). Scurteaza textul de previzualizare inainte de a genera o mostra.",
         "narator_voice.status_runtime_connected": "Runtime: conectat",
         "narator_voice.status_runtime_not_connected": "Runtime: neconectat",
         "narator_voice.status_active_model": "Model activ: {model_id}",
         "narator_voice.status_active_model_none": "Model activ: niciunul",
         "narator_voice.status_preview_budget": "Buget previzualizare: {word_count}/{safe_word_count} cuvinte sigure",
         "narator_voice.status_profile_count": "Profiluri: {profile_count}",
-        "narator_voice.status_sample_count": "Profiluri cu sample: {sample_count}",
+        "narator_voice.status_sample_count": "Profiluri cu mostra: {sample_count}",
         "narator_voice.status_selected_count": "Profiluri selectate: {selected_count}",
         "narator_voice.status_qwen_ready": "Stare Qwen3 TTS: pregatit",
         "narator_voice.status_qwen_missing": "Stare Qwen3 TTS: lipsesc {missing_capabilities}",
@@ -1597,21 +1706,21 @@ _UI_STRINGS = {
         "dialog.narator_voice_delete_title": "Sterge Profilul Vocii Naratorului",
         "dialog.narator_voice_delete_message": "Stergi profilul personalizat de voce narator selectat din proiectul curent?",
         "dialog.narator_voice_edit_title": "Editeaza Profilul Vocii Naratorului",
-        "dialog.narator_voice_edit_message": "Continuarea va sterge sample-ul audio curent. Va trebui sa generezi un sample nou inainte ca acest profil sa poata fi selectat din nou. Continui?",
-        "dialog.narator_voice_generate_sample_title": "Genereaza Sample Voce Narator",
+        "dialog.narator_voice_edit_message": "Continuarea va sterge mostra audio curenta. Va trebui sa generezi o mostra noua inainte ca acest profil sa poata fi selectat din nou. Continui?",
+        "dialog.narator_voice_generate_sample_title": "Genereaza Mostra Voce Narator",
         "dialog.narator_voice_generate_sample_message": "AudioMancer va contacta runtime-ul TTS configurat si conexiunea trebuie testata inainte din Setari TTS. Continui?",
-        "dialog.narator_voice_generate_sample_message_replace": "Continuarea va sterge sample-ul audio curent, iar AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata inainte din Setari TTS. Continui?",
-        "dialog.voice_sample_import_title": "Import Sample",
+        "dialog.narator_voice_generate_sample_message_replace": "Continuarea va sterge mostra audio curenta, iar AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata inainte din Setari TTS. Continui?",
+        "dialog.voice_sample_import_title": "Importa Mostra",
         "dialog.voice_sample_import_filter": "Fisiere audio WAV (*.wav)",
-        "dialog.voice_sample_text_title": "Text Sample",
-        "dialog.voice_sample_text_prompt": "Introdu textul exact rostit in sample-ul importat:",
+        "dialog.voice_sample_text_title": "Textul Mostrei",
+        "dialog.voice_sample_text_prompt": "Introdu textul exact rostit in mostra importata:",
         "dialog.narator_voice_generate_profiles_title": "Genereaza Profiluri Voce Narator",
         "dialog.narator_voice_generate_profiles_message": "AudioMancer va analiza stilul cartii curente cu profilul AI selectat. Operatia poate dura mult si poate consuma tokeni platiti sau credite. Continui?",
         "dialog.narator_voice_generate_profiles_count_prompt": "Cate profiluri de narator trebuie generate?",
-        "progress.narator_voice_sample_prepare": "Se pregateste generarea sample-ului pentru narator...",
+        "progress.narator_voice_sample_prepare": "Se pregateste generarea mostrei pentru narator...",
         "progress.narator_voice_sample_load_model": "Se incarca modelul pentru generarea vocii...",
-        "progress.narator_voice_sample_generate": "Se genereaza sample-ul pentru narator...",
-        "progress.narator_voice_sample_download": "Se descarca sample-ul pentru narator...",
+        "progress.narator_voice_sample_generate": "Se genereaza mostra pentru narator...",
+        "progress.narator_voice_sample_download": "Se descarca mostra pentru narator...",
         "progress.narator_voice_generate_profiles": "Se genereaza profilurile naratorului...",
         "progress.narator_voice_change_prepare": "Se pregateste schimbarea vocii naratorului...",
         "progress.narator_voice_change_profile": "Se salveaza profilul vocii naratorului...",
@@ -1625,21 +1734,21 @@ _UI_STRINGS = {
         "status.narator_voice_preview_cancelled": "Previzualizarea naratorului a fost anulata.",
         "status.narator_voice_profile_selected": "Profilul naratorului a fost selectat.",
         "status.narator_voice_profiles_imported": "Au fost importate {imported_count} profiluri de model si au fost omise {skipped_count} existente.",
-        "status.narator_voice_sample_generated": "Sample-ul naratorului a fost generat.",
-        "status.narator_voice_sample_imported": "Sample-ul naratorului a fost importat.",
+        "status.narator_voice_sample_generated": "Mostra naratorului a fost generata.",
+        "status.narator_voice_sample_imported": "Mostra naratorului a fost importata.",
         "status.narator_voice_profiles_generated": "Au fost generate {generated_count} profiluri de voce narator.",
-        "status.narator_voice_language_changed": "Limba vocii audiobookului a fost schimbata. Sample-urile generate si datele ulterioare au fost resetate.",
+        "status.narator_voice_language_changed": "Limba vocii audiobookului a fost schimbata. Mostrele generate si datele ulterioare au fost resetate.",
         "status.character_voices_prompt_saved": "Promptul vocal a fost salvat.",
-        "status.character_voices_sample_generated": "Sample-ul personajului a fost generat.",
-        "status.character_voices_sample_imported": "Sample-ul personajului a fost importat.",
-        "status.character_voices_missing_samples_generated": "Sample-urile personajelor au fost regenerate.",
+        "status.character_voices_sample_generated": "Mostra personajului a fost generata.",
+        "status.character_voices_sample_imported": "Mostra personajului a fost importata.",
+        "status.character_voices_missing_samples_generated": "Mostrele personajelor au fost regenerate.",
         "voice_sample_import.error_unsupported_file_type": "Importa un fisier audio WAV.",
-        "voice_sample_import.error_missing_file": "Fisierul sample selectat nu a fost gasit.",
-        "voice_sample_import.error_invalid_wav": "Fisierul selectat nu este un sample WAV citibil.",
-        "voice_sample_import.error_sample_too_short": "Sample-ul importat trebuie sa aiba cel putin {min_duration_seconds:.1f} secunde.",
-        "voice_sample_import.error_sample_silent": "Sample-ul importat este silentios sau prea aproape de tacere.",
-        "voice_sample_import.error_empty_sample_text": "Introdu textul rostit in sample-ul importat.",
-        "voice_sample_import.error_readonly_target": "Importa sample-uri doar pentru tintele de personaj pe aceasta pagina.",
+        "voice_sample_import.error_missing_file": "Fisierul mostra selectat nu a fost gasit.",
+        "voice_sample_import.error_invalid_wav": "Fisierul selectat nu este o mostra WAV valida.",
+        "voice_sample_import.error_sample_too_short": "Mostra importata trebuie sa aiba cel putin {min_duration_seconds:.1f} secunde.",
+        "voice_sample_import.error_sample_silent": "Mostra importata este silentioasa sau prea aproape de tacere.",
+        "voice_sample_import.error_empty_sample_text": "Introdu textul rostit in mostra importata.",
+        "voice_sample_import.error_readonly_target": "Importa mostre doar pentru tintele de personaj pe aceasta pagina.",
         "character_voices.title": "Voci Personaje",
         "character_voices.list_group": "Tintele Vocii",
         "character_voices.setup_group": "Tinta Vocala",
@@ -1656,15 +1765,15 @@ _UI_STRINGS = {
         "character_voices.target_kind_character": "Personaj",
         "character_voices.assignment_same_narrator": "Acelasi narator pentru toata cartea",
         "character_voices.assignment_narrator_and_characters": "Narator + voci personaje",
-        "character_voices.import_sample": "Import Sample",
+        "character_voices.import_sample": "Importa Mostra",
         "character_voices.edit_prompt": "Editeaza Promptul Vocal",
         "character_voices.save_prompt": "Salveaza Promptul Vocal",
-        "character_voices.generate_sample": "Genereaza Sample",
-        "character_voices.generate_missing_samples": "Genereaza Sample-uri Personaje",
+        "character_voices.generate_sample": "Genereaza Mostra",
+        "character_voices.generate_missing_samples": "Genereaza Mostre Personaje",
         "character_voices.preview": "Previzualizare",
         "character_voices.stop_preview": "Opreste Previzualizarea",
-        "character_voices.sample_present": "Sample prezent",
-        "character_voices.sample_missing": "Sample lipsa",
+        "character_voices.sample_present": "Mostra prezenta",
+        "character_voices.sample_missing": "Mostra lipsa",
         "character_voices.note_no_project": "Creeaza sau deschide un proiect inainte de a pregati vocile personajelor.",
         "character_voices.note_no_source": "Importa un document sursa inainte de a pregati vocile personajelor.",
         "character_voices.note_no_characters": "Finalizeaza Descoperirea Personajelor astfel incat aceasta pagina sa poata lista toate personajele.",
@@ -1672,24 +1781,25 @@ _UI_STRINGS = {
             "Selecteaza un profil de voce narator in pagina Voce Narator inainte de a pregati vocile personajelor."
         ),
         "character_voices.note_missing_narrator_sample": (
-            "Genereaza sample-ul vocii naratorului selectat in pagina Voce Narator inainte de a pregati vocile "
+            "Genereaza mostra vocii naratorului selectat in pagina Voce Narator inainte de a pregati vocile "
             "personajelor."
         ),
         "character_voices.note_translation_not_fully_approved": "Limba tradusa va deveni selectabila numai dupa aprobarea tuturor segmentelor traduse.",
         "character_voices.note_same_narrator_mode": "Alocarea vocilor este setata sa foloseasca aceeasi voce a naratorului pentru toata cartea, asa ca prompturile si generarea pentru personaje sunt dezactivate.",
-        "character_voices.note_runtime_not_connected": "Deschide Setari TTS si ruleaza Testeaza Conexiunea pentru a verifica VoiceWeaver inainte de a genera sample-uri pentru personaje.",
-        "character_voices.note_profile_runtime_missing": "Acest sample stocat face referire la un model care nu este raportat momentan de VoiceWeaver.",
-        "character_voices.note_qwen_capabilities_ready": "Capabilitatile minime Qwen3 TTS sunt disponibile pentru generarea sample-urilor personajelor.",
+        "character_voices.note_runtime_not_connected": "Deschide Setari TTS si ruleaza Testeaza Conexiunea pentru a verifica VoiceWeaver inainte de a genera mostre pentru personaje.",
+        "character_voices.note_profile_runtime_missing": "Aceasta mostra stocata face referire la un model care nu este raportat momentan de VoiceWeaver.",
+        "character_voices.note_qwen_capabilities_ready": "Capabilitatile minime Qwen3 TTS sunt disponibile pentru generarea mostrelor personajelor.",
         "character_voices.note_qwen_capabilities_missing": "Capabilitatile minime Qwen3 TTS lipsesc: {missing_capabilities}.",
         "character_voices.error_missing_prompt": "Introdu un prompt designer voce inainte de salvare.",
-        "character_voices.error_missing_preview_text": "Introdu un text de previzualizare inainte de salvare sau generarea sample-ului.",
-        "character_voices.error_missing_sample": "Nu exista niciun sample stocat pentru tinta inspectata.",
-        "character_voices.error_qwen_capabilities_missing": "Sample-ul personajului nu poate fi generat deoarece capabilitatile Qwen3 TTS necesare lipsesc: {missing_capabilities}.",
+        "character_voices.error_missing_preview_text": "Introdu un text de previzualizare inainte de salvare sau generarea mostrei.",
+        "character_voices.error_missing_sample": "Nu exista nicio mostra stocata pentru tinta inspectata.",
+        "character_voices.error_qwen_capabilities_missing": "Mostra personajului nu poate fi generata deoarece capabilitatile Qwen3 TTS necesare lipsesc: {missing_capabilities}.",
         "character_voices.error_generation_missing_audio": "VoiceWeaver a terminat cererea, dar nu a raportat niciun audio descarcabil.",
         "speech_blocks.title": "Blocuri Vorbire",
         "speech_blocks.ai_profile": "Profil AI",
         "speech_blocks.generate": "Genereaza Tot",
-        "speech_blocks.reset_generation": "Reset",
+        "speech_blocks.reset_generation": "Reseteaza",
+        "speech_blocks.initial_note": "Creeaza sau deschide un proiect pentru a incepe generarea Blocurilor de Vorbire.",
         "speech_blocks.approve_all": "Aproba Tot",
         "speech_blocks.chunk_list_group": "Lista Segmentelor",
         "speech_blocks.selected_group": "Segment Selectat",
@@ -1739,6 +1849,7 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Reda Audiobook",
         "audio_blocks.stop_audiobook": "Opreste Audiobook",
         "audio_blocks.reset_generation": "Reseteaza Generarea Audio",
+        "audio_blocks.initial_note": "Creeaza sau deschide un proiect inainte de generarea Blocurilor Audio.",
         "audio_blocks.approve_all": "Aproba Tot",
         "audio_blocks.source_group": "Text Sursa",
         "audio_blocks.blocks_group": "Blocuri Vorbire",
@@ -1769,7 +1880,7 @@ _UI_STRINGS = {
             "pentru a continua de la {progress_current}/{progress_total}."
         ),
         "audio_blocks.note_ready": (
-            "Generarea Blocurilor Audio este pregatita pentru Blocurile de Vorbire curente si sample-urile vocale."
+            "Generarea Blocurilor Audio este pregatita pentru Blocurile de Vorbire curente si mostrele vocale."
         ),
         "audio_blocks.note_waiting_for_approval": (
             "Fiecare bloc de vorbire are audio generat, dar aprobarea este inca necesara inainte de Asamblarea Audio."
@@ -1797,30 +1908,30 @@ _UI_STRINGS = {
         "audio_blocks.duration_seconds": "{duration_seconds:.1f}s",
         "audio_blocks.duration_unknown": "--.-s",
         "character_voices.status_total_targets": "Total tinte: {target_count}",
-        "character_voices.status_targets_with_samples": "Tinte cu sample-uri: {sample_count}",
+        "character_voices.status_targets_with_samples": "Tinte cu mostre: {sample_count}",
         "character_voices.status_assignment_mode": "Alocare voci: {assignment_mode}",
         "character_voices.status_voice_language": "Limba vocii: {language_label}",
         "character_voices.status_generation_ready": "Pregatire generare: {readiness}",
         "character_voices.readiness_ready": "gata",
         "character_voices.readiness_not_ready": "negata",
         "dialog.character_voices_edit_title": "Editeaza Promptul Vocal",
-        "dialog.character_voices_edit_message": "Continuarea va sterge sample-ul curent pentru acest personaj. Va trebui sa generezi un nou sample dupa salvarea promptului editat. Continui?",
-        "dialog.character_voices_generate_sample_title": "Genereaza Sample Personaj",
+        "dialog.character_voices_edit_message": "Continuarea va sterge mostra curenta pentru acest personaj. Va trebui sa generezi o noua mostra dupa salvarea promptului editat. Continui?",
+        "dialog.character_voices_generate_sample_title": "Genereaza Mostra Personaj",
         "dialog.character_voices_generate_sample_message": "AudioMancer va contacta runtime-ul TTS configurat si necesita testarea conexiunii mai intai in Setari TTS. Continui?",
-        "dialog.character_voices_generate_sample_message_replace": "Continuarea va sterge sample-ul curent si AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata mai intai in Setari TTS. Continui?",
-        "dialog.character_voices_generate_missing_samples_title": "Genereaza Sample-uri Personaje",
-        "dialog.character_voices_generate_missing_samples_message": "AudioMancer va regenera sample-uri pentru toate cele {sample_count} tinta/tinte curente de personaj. Sample-urile existente ale personajelor vor fi inlocuite. Runtime-ul TTS configurat trebuie sa fie disponibil. Continui?",
-        "dialog.character_voices_missing_narrator_sample_title": "Este Necesar Sample-ul Naratorului",
+        "dialog.character_voices_generate_sample_message_replace": "Continuarea va sterge mostra curenta si AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata mai intai in Setari TTS. Continui?",
+        "dialog.character_voices_generate_missing_samples_title": "Genereaza Mostre Personaje",
+        "dialog.character_voices_generate_missing_samples_message": "AudioMancer va regenera mostre pentru toate cele {sample_count} tinta/tinte curente de personaj. Mostrele existente ale personajelor vor fi inlocuite. Runtime-ul TTS configurat trebuie sa fie disponibil. Continui?",
+        "dialog.character_voices_missing_narrator_sample_title": "Este Necesara Mostra Naratorului",
         "dialog.character_voices_missing_narrator_sample_message": (
-            "Profilul de voce narator selectat nu are inca un sample generat. Deschide pagina Voce Narator si "
-            "genereaza sample-ul vocii naratorului inainte de a pregati vocile personajelor."
+            "Profilul de voce narator selectat nu are inca o mostra generata. Deschide pagina Voce Narator si "
+            "genereaza mostra vocii naratorului inainte de a pregati vocile personajelor."
         ),
-        "progress.character_voices_sample_prepare": "Se pregateste generarea sample-ului personajului...",
+        "progress.character_voices_sample_prepare": "Se pregateste generarea mostrei personajului...",
         "progress.character_voices_sample_load_model": "Se incarca modelul pentru generarea vocii...",
-        "progress.character_voices_sample_generate": "Se genereaza sample-ul personajului...",
-        "progress.character_voices_sample_download": "Se descarca sample-ul personajului...",
-        "progress.character_voices_batch_prepare": "Se pregateste generarea sample-urilor pentru personaje...",
-        "progress.character_voices_batch_target": "Se genereaza sample-ul {current}/{total}: {target_name}",
+        "progress.character_voices_sample_generate": "Se genereaza mostra personajului...",
+        "progress.character_voices_sample_download": "Se descarca mostra personajului...",
+        "progress.character_voices_batch_prepare": "Se pregateste generarea mostrelor pentru personaje...",
+        "progress.character_voices_batch_target": "Se genereaza mostra {current}/{total}: {target_name}",
         "placeholder.character_voices.title": "Voci Personaje",
         "placeholder.character_voices.note": "Pregatirea vocilor personajelor este implementata in aceasta pagina.",
         "placeholder.speech_blocks.title": "Blocuri Vorbire",
@@ -1890,6 +2001,7 @@ _UI_STRINGS = {
         "home.narration_mode": "Stil iesire audio: {mode_label}",
         "home.translation_language": "Limba traducerii",
         "home.audio_output_style": "Stil iesire audio",
+        "home.pipeline_group": "Flux de Lucru",
         "home.options_locked": "Optiunile proiectului sunt blocate. Importul sursei este disponibil.",
         "home.options_unlocked": "Selecteaza fisierul sursa, limba traducerii si stilul audio, apoi apasa Porneste Proiectul.",
         "home.mode_same_narrator": "Acelasi narator pentru toata cartea",
@@ -1961,7 +2073,7 @@ _UI_STRINGS = {
         "home.stage_note.active.translation_ready": "Tradu setul de segmente atunci cand este necesar.",
         "home.stage_note.active.character_discovery_ready": "Extrage si revizuieste setul de personaje.",
         "home.stage_note.active.narrator_definition_ready": "Selecteaza si adapteaza profilul vocii naratorului pentru proiect.",
-        "home.stage_note.active.character_voices_ready": "Pregateste sample-urile vocale pentru narator si personaje pentru generarea audio ulterioara.",
+        "home.stage_note.active.character_voices_ready": "Pregateste mostrele vocale pentru narator si personaje pentru generarea audio ulterioara.",
         "home.stage_note.active.speech_blocks_ready": "Imparte segmentele traduse sau originale in blocuri de vorbire atribuite vorbitorilor.",
         "home.stage_note.active.audio_blocks_ready": "Genereaza si aproba audio pentru fiecare bloc de vorbire.",
         "home.stage_note.active.audio_assembly_ready": "Asambleaza blocurile audio aprobate in livrabilele finale.",
@@ -1996,7 +2108,7 @@ _UI_STRINGS = {
         "project.confirm_extraction_rerun": "Continuarea va sterge datele curente de extragere si toate datele pasilor urmatori, va goli folderele operatiilor urmatoare si va reseta progresul fluxului. Continui?",
         "project.confirm_cleanup_rerun": "Continuarea va sterge datele curente de curatare si toate rezultatele ulterioare. Continui?",
         "project.confirm_cleanup_mode_switch": "Schimbarea modului de curatare va sterge rezultatul Cleanup curent si toate rezultatele ulterioare. Continui?",
-        "project.confirm_cleanup_reset": "Reset Cleanup va sterge cleanup.json, clean_text.txt, metadatele Cleanup vechi, logurile Cleanup si toate rezultatele ulterioare, inclusiv personajele, vocile si fisierele audio. Continui?",
+        "project.confirm_cleanup_reset": "Reseteaza Curatarea va sterge cleanup.json, clean_text.txt, metadatele vechi de curatare, jurnalele de curatare si toate rezultatele ulterioare, inclusiv personajele, vocile si fisierele audio. Continui?",
         "project.ai_cleanup_reset_required_invalid": "AI Cleanup nu poate continua deoarece cleanup.json este invalid, incompatibil sau lipseste pentru o rulare veche. Foloseste mai intai Reseteaza Curatarea.",
         "project.ai_cleanup_reset_required_completed": "AI Cleanup este finalizat. Foloseste Reseteaza Curatarea inainte de o noua rulare.",
         "project.confirm_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare. Continui?",
@@ -2043,10 +2155,6 @@ _UI_STRINGS = {
         "project.confirm_audio_blocks_reset": (
             "Continuarea va sterge toate blocurile audio generate, prompturile vocale reutilizabile si datele din aval pentru "
             "Asamblarea Audio. Continui?"
-        ),
-        "project.confirm_audio_blocks_invalidation": (
-            "Aceasta schimbare afecteaza intrarile curente pentru Blocurile Audio. Continuarea va reseta blocurile "
-            "audio generate, aprobarile lor si datele din aval pentru Asamblarea Audio. Continui?"
         ),
         "project.confirm_audio_block_regeneration": (
             "Continuarea va regenera doar Blocul Audio selectat, ii va elimina aprobarea si va reseta iesirile "
@@ -2114,7 +2222,6 @@ _UI_STRINGS = {
         "dialog.confirm_scene_ambience_audio_blocks_title": "Activeaza Audio Ambienta Scena",
         "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
         "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",
-        "dialog.confirm_audio_blocks_invalidation_title": "Confirma Resetarea Blocurilor Audio",
         "dialog.confirm_audio_block_regeneration_title": "Confirma Regenerarea Audio Selectata",
         "dialog.confirm_audio_block_approval_title": "Confirma Schimbarea Aprobarii Audio",
         "dialog.confirm_single_voice_target_invalidation_title": "Confirma Resetarea Audio a Tintei Vocale",
@@ -2166,6 +2273,10 @@ _UI_STRINGS = {
         "project.repair_changes_header": "Actualizari metadata",
         "project.repair_warnings_header": "Avertismente",
         "project.repair_confirm": "Vrei sa repari proiectul acum?",
+        "project.chunking_self_heal_message": (
+            "Datele Chunking incompatibile si toate rezultatele ulterioare au fost resetate. "
+            "Cleanup a fost pastrat. Ruleaza din nou Chunking."
+        ),
     },
 }
 
@@ -2177,9 +2288,6 @@ def translate(key: str, language: str | None) -> str:
     @param[in]  language Target UI language code.
     @return     Translated UI string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.1
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
     return _UI_STRINGS[resolved_language].get(
@@ -2194,12 +2302,41 @@ def get_ui_strings(language: str | None) -> dict[str, str]:
     @param[in]  language Target UI language code.
     @return     Language-specific UI string mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.1
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
     return _UI_STRINGS[resolved_language].copy()
+
+
+def localized_language_label(language_value: object, ui_language: str | None) -> str:
+    """
+    @brief      Resolve a language code or canonical English label for the active UI language.
+    @param[in]  language_value Language code, canonical English label, or empty-state label.
+    @param[in]  ui_language Active operator UI language code.
+    @return     Localized language label, or the original value when it is not a known language.
+    @exception  None
+    """
+    normalized_value = str(language_value or "").strip()
+    if not normalized_value:
+        return ""
+    normalized_lookup = normalized_value.casefold()
+    if normalized_lookup == "unknown":
+        return translate("language.unknown", ui_language)
+    if normalized_lookup == "not translated":
+        return translate("language.not_translated", ui_language)
+    language_labels = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
+    language_code = normalized_value if normalized_value in language_labels else ""
+    if not language_code:
+        language_code = next(
+            (
+                code
+                for code, label in config.TRANSLATION_LANGUAGE_OPTIONS
+                if str(label).casefold() == normalized_lookup
+            ),
+            "",
+        )
+    if not language_code:
+        return normalized_value
+    return translate(f"language.{language_code}", ui_language)
 
 
 def current_language_from_settings(
@@ -2210,9 +2347,6 @@ def current_language_from_settings(
     @param[in]  settings_payload Optional persisted settings mapping.
     @return     Current UI language code or the configured default.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return _DEFAULT_LANGUAGE
@@ -2227,9 +2361,6 @@ def completion_beep_enabled_from_settings(
     @param[in]  settings_payload Optional persisted settings mapping.
     @return     True when a finished operation should produce an audible beep.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return False
@@ -2247,9 +2378,6 @@ def operator_status_pane_height(reference_widget: QWidget, line_count: int = 3) 
     @param[in]  line_count Number of text rows the pane should display.
     @return     Fixed pane height in pixels.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.0
     """
     line_height = reference_widget.fontMetrics().lineSpacing()
     document_margin = 4
@@ -2266,9 +2394,6 @@ def _capture_base_font(application: QApplication) -> QFont:
     @param[in]  application Running Qt application instance.
     @return     Current application font.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     global _BASE_FONT_FAMILY, _BASE_FONT_POINT_SIZE
 
@@ -2288,9 +2413,6 @@ def _scaled_point_size(base_point_size: float, ui_text_scale: str | None) -> flo
     @param[in]  ui_text_scale Operator-selected UI text-scale preset.
     @return     Effective scaled point size.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     scale_key = ui_text_scale if ui_text_scale in _UI_SCALE_FACTORS else config.DEFAULT_UI_TEXT_SCALE
     return base_point_size * _UI_SCALE_FACTORS[scale_key]
@@ -2303,9 +2425,6 @@ def _font_stylesheet(font_payload: dict[str, object], base_point_size: float) ->
     @param[in]  base_point_size Unscaled application point size fallback.
     @return     Font declaration lines for a Qt stylesheet block.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.2.0
     """
     declarations: list[str] = []
     font_family = str(font_payload.get("family", "")).strip()
@@ -2325,9 +2444,6 @@ def _theme_colors(theme_payload: dict[str, object]) -> dict[str, str]:
     @param[in]  theme_payload Normalized theme payload.
     @return     Color-role mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     colors = theme_payload.get("colors")
     if isinstance(colors, dict):
@@ -2341,9 +2457,6 @@ def _qcolor(color_value: str) -> QColor:
     @param[in]  color_value Hex RGB color value.
     @return     Qt color object.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     return QColor(color_value)
 
@@ -2354,9 +2467,6 @@ def _readable_foreground(background: QColor) -> QColor:
     @param[in]  background Background color.
     @return     Readable foreground color.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     luminance = (0.299 * background.red()) + (0.587 * background.green()) + (0.114 * background.blue())
     return QColor("#000000" if luminance > 145 else "#FFFFFF")
@@ -2369,9 +2479,6 @@ def _refresh_top_level_widgets(application: QApplication, font: QFont | None = N
     @param[in]  font Optional font to apply to each top-level widget.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     for widget in application.topLevelWidgets():
         if isinstance(widget, QWidget):
@@ -2396,9 +2503,6 @@ def apply_text_scale(
     @param[in]  ui_text_scale Operator-selected text-scale preset.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     if application is None:
         return
@@ -2439,9 +2543,6 @@ def build_theme_stylesheet(theme_payload: dict[str, object], base_point_size: fl
     @param[in]  base_point_size Unscaled application point size used for text editor font fallback.
     @return     Qt stylesheet string.
     @exception  ValueError Raised when the theme payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.5.0
     """
     normalized_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
     colors = _theme_colors(normalized_theme)
@@ -2660,9 +2761,6 @@ def font_size_step_factor(step: object) -> float:
     @param[in]  step Candidate font-size step name.
     @return     Multiplier for a known step, or the 'normal' multiplier otherwise.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     return FONT_SIZE_STEP_FACTORS.get(str(step), FONT_SIZE_STEP_FACTORS[config.DEFAULT_UI_FONT_SIZE_STEP])
 
@@ -2674,9 +2772,6 @@ def resolve_font_point_size(step: object, base_point_size: float) -> float:
     @param[in]  base_point_size Unscaled base font point size.
     @return     Base point size multiplied by the step factor.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     return float(base_point_size) * font_size_step_factor(step)
 
@@ -2697,9 +2792,6 @@ def apply_theme(
     @param[in]  text_font_size_step Text-window (editor) font-size step.
     @return     None.
     @exception  ValueError Raised when the theme payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.4.0
     """
     if application is None:
         return
@@ -2785,9 +2877,6 @@ def apply_language(main_window: QWidget, language: str | None) -> None:
     @param[in]  language Target UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
     if language not in _UI_STRINGS:
@@ -2824,9 +2913,6 @@ def apply_ui_settings(
     @param[in]  settings_payload Persisted application settings payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.2.0
     """
     selected_theme = ui_theme_service.theme_by_id(
         settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID),

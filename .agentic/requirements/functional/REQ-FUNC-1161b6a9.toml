@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-1161b6a9"
+title = "The Characters page shall enter edit mode and enable save only after a"
+status = "active"
+
+requirement = """
+The Characters page shall enter edit mode and enable save only after a change, exiting edit mode when saved without changes.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_edit_mode_enables_save_after_change",
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_save_without_changes_exits_edit_mode",
+]
+
+priority = "high"
+rationale = """
+Editing must be gated so save reflects a real change.
+"""
+created = 2026-07-19
+updated = 2026-07-24

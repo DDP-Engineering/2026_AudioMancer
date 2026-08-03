@@ -11,9 +11,6 @@
 @brief Focused tests for Speech Blocks text splitting helpers.
 @details Verifies AI-context source segmentation and TTS budget-unit estimates
          outside the large Speech Blocks orchestration service.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -27,9 +24,6 @@ def test_build_source_spans_preserves_exact_text_and_paragraph_boundaries() -> N
     @details    Covers SBSPAN-001, SBSPAN-003, and REQ-FUNC-042.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     source_text = 'Naratiune inainte. "Deal," the pilot said.\n\n- Vii acasa? intreba Ion.'
 
@@ -48,9 +42,6 @@ def test_build_source_spans_classifies_multilingual_dialogue_conventions() -> No
     @details    Covers SBSPAN-002, SBSPAN-003, and REQ-FUNC-043.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     cases = [
         ("romanian_guillemet", "«Bună seara.»", "dialogue_candidate"),
@@ -78,9 +69,6 @@ def test_build_atomic_speech_units_splits_many_elements_inside_one_span() -> Non
     @details    Covers SB-ATOMIC-001 and REQ-FUNC-050.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     source_text = '"Are you coming?" Ana asked. "Not yet," Ion said. "Then hurry."'
     source_spans = [
@@ -120,9 +108,6 @@ def test_build_atomic_speech_units_classifies_multilingual_attribution_patterns(
     @details    Covers SB-ATOMIC-002 and REQ-FUNC-051.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     cases = [
         ('"Come?" Ana asked. "Soon."', ["dialogue", "attribution", "dialogue"]),
@@ -150,9 +135,6 @@ def test_split_text_for_ai_context_budget_preserves_ordered_segments() -> None:
     @brief      Verify AI-context splitting produces ordered spans under a small token budget.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     source_text = "First sentence. Second sentence. Third sentence."
 
@@ -167,9 +149,6 @@ def test_estimate_budget_units_handles_words_and_compact_scripts() -> None:
     @brief      Verify TTS budget units work for spaced and compact text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     assert tts_budget_service.estimate_budget_units("") == 0
     assert tts_budget_service.estimate_budget_units("one two three") == 3
@@ -183,9 +162,6 @@ def _assert_source_spans_reconstruct_text(source_text: str, source_spans: list[d
     @param[in]  source_spans Candidate source-span payloads.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     assert source_spans
     cursor = 0
@@ -212,9 +188,6 @@ def _assert_atomic_units_reconstruct_text(source_text: str, atomic_units: list[d
     @param[in]  atomic_units Candidate atomic-unit payloads.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     assert atomic_units
     cursor = 0

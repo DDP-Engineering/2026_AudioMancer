@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-5f9a084d"
+title = "The Home page snapshot button shall follow project and busy state"
+status = "active"
+
+requirement = """
+The Home page snapshot button shall follow project and busy state.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_project_snapshot_button_follows_project_and_busy_state",
+]
+
+priority = "high"
+rationale = """
+The control must reflect whether a snapshot can currently be taken.
+"""
+created = 2026-07-18
+updated = 2026-07-24

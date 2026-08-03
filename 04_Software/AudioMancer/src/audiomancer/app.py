@@ -12,9 +12,6 @@
 @details Creates the Qt application instance, opens the main window, and
          starts the event loop for the initial UI scaffold. Tolerates logging
          that degraded to console-only output.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.7
 @example
     uv run audiomancer
 """
@@ -44,9 +41,6 @@ def main() -> int:
     @brief      Start the AudioMancer desktop application.
     @return     Process exit code returned by QApplication.exec().
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.7
     """
     # initialize_logging() degrades to console-only output and returns None when
     # the log file cannot be created, so a read-only installation directory

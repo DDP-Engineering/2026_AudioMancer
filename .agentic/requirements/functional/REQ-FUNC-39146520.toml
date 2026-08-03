@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-39146520"
+title = "A non-object audio_blocks.json or a missing document shall be treated"
+status = "active"
+
+requirement = """
+A non-object audio_blocks.json or a missing document shall be treated as not-started.
+"""
+
+verification = "Automated contract test: a non-object payload reads as not-started."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_non_object_document_is_treated_as_absent",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+Only a document matching the current root contract can represent Audio Blocks state.
+"""
+created = 2026-07-25
+updated = 2026-07-26

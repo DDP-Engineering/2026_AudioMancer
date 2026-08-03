@@ -10,9 +10,6 @@
 @file test_ai_state_note_service.py
 @brief Focused tests for shared AI workflow state-note helpers.
 @details Verifies token usage note rendering shared by AI workflow state services.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -25,9 +22,6 @@ def test_build_token_usage_notes_renders_summary_from_report() -> None:
     @brief      Verify available token usage renders one localized summary note.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     notes = ai_state_note_service.build_token_usage_notes(
         {"token_usage": {"input_tokens": 1000, "output_tokens": 25, "total_tokens": 1025, "usage_available": True}},
@@ -43,9 +37,6 @@ def test_build_token_usage_notes_renders_unavailable_only_when_usage_was_persist
     @brief      Verify unavailable token usage is shown only when a usage payload exists.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert ai_state_note_service.build_token_usage_notes({}, None, "en") == []
     assert ai_state_note_service.build_token_usage_notes(

@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-ecb1e86f"
+title = "User-edited Cleanup paragraph reconstruction shall classify"
+status = "active"
+
+requirement = """
+User-edited Cleanup paragraph reconstruction shall classify conservative explicit scene-separator forms as scene_separator.
+"""
+
+verification = "Focused Cleanup and Chunking module run passed: 126 tests."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Rebuilding every edited paragraph as body makes detected scene structure write-only and prevents truthful downstream structure.
+"""
+created = 2026-07-29
+updated = 2026-07-30

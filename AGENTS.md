@@ -1,211 +1,40 @@
 <!--
 Copyright (c) 2026 DDP Engineering
-This software is licensed under the PolyForm Noncommercial License 1.0.0.
-Commercial use requires a separate commercial license.
-See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
 
 # AGENTS.md
 
-Guidance for Codex and other AI agents in this repository.
+AudioMancer uses **AEGIS Light**: a companion engineering workflow that
+advises and records but never blocks. The full contract is
+`.agentic/AGENTS.md`; this repository's own rules - the binding code
+style and the release version workflow - are in `.agentic/PROJECT.md`.
+Read both before changing code.
 
-## Agentic Development Workflow
+<!-- AEGIS-LIGHT:BEGIN (managed by .agentic/aegis.py init) -->
 
-This repository uses a manual, human-steered agentic development workflow.
-When the user asks to implement a feature, fix a bug, or change behavior:
+## AEGIS Light workflow
 
-1. Start or resume an `.agentic` run.
-2. Complete the `alignment` Intent Alignment stage before requirement/spec work
-   when enabled.
-3. Complete only one workflow gate at a time.
-4. Keep intent/spec, checks/tests, source implementation, validation, and
-   delivery as separate steps.
-5. Stop after each gate with a concise summary and next prompt options.
+The full contract is `.agentic/AGENTS.md` - read it before starting work.
+This digest is enough to act on if you read nothing else.
 
-Use the project-local wrappers when available:
+Stages, one step file each in `.agentic/steps/`: **frame** (agree scope,
+open the task journal) -> **specify** (write the requirement, and a spec
+when useful) -> **design** (a short note for non-trivial work) -> **build**
+(failing test first, then the implementation, until green) -> **deliver**
+(full suite, check, knowledge pages, report, commit). A small fix or change
+may take the quick path, frame -> build -> deliver.
 
-```text
-.\.agentic\tools\run.ps1 <command>
-bash .agentic/tools/run.sh <command>
-```
+To resume: `python .agentic/aegis.py status` lists the task journals; open
+`.agentic/tasks/TASK-<id>.md`, read its `stage:` line and `## Log`, open
+that stage's step file, and continue at the first unticked item of
+`## Done checklist`.
 
-If the workflow package is installed in the active environment, `aegis`
-or `python -m aegis` may also be used.
+Artifacts: requirements in `.agentic/requirements/<category>/`, specs in
+`.agentic/specs/`, journals in `.agentic/tasks/`, component pages in
+`.agentic/knowledge/`. `python .agentic/aegis.py check` is advisory - read
+its findings and self-correct; nothing here blocks you mid-flight.
 
-Examples below use `<workflow>` for the selected project-local or installed
-workflow command.
-
-## Mandatory Workflow Bootstrap
-
-Before inspecting or changing repository files:
-
-1. Run `<workflow> config validate --json`.
-2. Run `<workflow> config show --effective --json`.
-3. Report the effective write-access, protected-read/path, scope, secret,
-   gate, coverage, and delivery modes and their active rule counts.
-4. State whether the work uses the worktree-local selected run or an explicit
-   `--run-id <existing-run-id>`.
-5. Follow configured AEGIS repository restrictions and separately respect all
-   external platform, host, sandbox, approval, and operating-system controls.
-
-Missing or invalid `.agentic/workflow.toml` is an actionable configuration
-error. Do not infer policy, continue with defaults, or copy policy from an
-adapter. The validated file is the only AEGIS repository-policy source.
-
-## Pi Adapter
-
-Under [Pi](https://pi.dev), this `AGENTS.md` contract applies unchanged (Pi reads
-it natively). The `.pi/` directory is a thin adapter that bridges Pi tool events
-to the same `.agentic/hooks/` guards used by the Codex and Claude adapters, so
-write-zone, secret, delivery-preflight, protected-read, and evidence rules hold
-identically. `<workflow>` still means the project-local runner under
-`.agentic/tools/`. Shared skills are invoked as `/skill:<name>` (for example
-`/skill:agentic-development`). Project-local Pi resources load only after the
-project is trusted; see `.pi/README.md`.
-
-## OpenCode Adapter
-
-Under [OpenCode](https://opencode.ai), this `AGENTS.md` contract applies
-unchanged. The project root `opencode.json` points OpenCode at this file and the
-workflow CLI reference, and sets the default primary agent to
-`aegis` for TUI, `opencode run`, desktop, and GitHub Action usage.
-The `.opencode/` directory provides that workflow agent, native skill wrappers,
-command prompts, and a local plugin that bridges OpenCode tool events to the
-same `.agentic/hooks/` guards used by the Codex, Claude Code, and Pi adapters.
-`<workflow>` still means the project-local runner under `.agentic/tools/`.
-Shared skills are loaded with OpenCode's native `skill` tool (for example
-`agentic-development`). Start OpenCode from the repository root so the project
-config, agent, skills, commands, and plugin load together; see
-`.opencode/README.md`.
-
-## Qwen Code Adapter
-
-Under [Qwen Code](https://github.com/QwenLM/qwen-code), this `AGENTS.md` contract
-applies unchanged. The `.qwen/settings.json` file sets `context.fileName` to
-`["AGENTS.md", "QWEN.md"]` so `AGENTS.md` loads first and stays authoritative, and
-its native `PreToolUse`/`PostToolUse` command hooks call the same `.agentic/hooks/`
-guards used by the Codex, Claude Code, Pi, and OpenCode adapters, so write-zone,
-secret, delivery-preflight, protected-read, and evidence rules hold identically.
-`<workflow>` still means the project-local runner under `.agentic/tools/`. Shared
-skills are model-invoked or selected from Qwen's `/skills` picker (for example
-`agentic-development`), and `.qwen/commands/` exposes `/workflow-status`,
-`/workflow-preflight`, and `/workflow-report`. Start Qwen Code from the repository
-root so the project settings, skills, and commands load together, and trust the
-project on first start; see `.qwen/README.md`.
-
-## Durable Requirements Contract
-
-- Long-lived requirements live under `.agentic/requirements/`, one complete
-  TOML snapshot per UUIDv4-backed requirement.
-- The active run graph under `.agentic/runs/` records one workflow run; the
-  requirement snapshots describe durable current project behavior.
-- Every behavior change starts by checking impact against existing requirement
-  snapshots before implementation code is written.
-- Search with `requirement list` before creating a requirement so semantically
-  duplicate contracts are not introduced.
-- Create requirements with `<workflow> requirement create ...`; use the
-  returned `REQ-<CATEGORY>-<uuid>` ID and never invent or renumber IDs.
-- New requirement snapshots start as `Planned` and become `Active` only when a
-  linked test exists and passes, or when an explicit manual verification method
-  is documented.
-- Update the same snapshot and preserve its ID when the same behavioral
-  contract changes. Replace the complete linked-test and affected-path sets
-  with `requirement update`; do not retain renamed or stale associations.
-- Activate a proven snapshot with
-  `<workflow> requirement activate [--run-id <run-id>] --id <requirement-id> --linked-test <test-id> --verification "<method>"`.
-- Link each active requirement to exact test identifiers when practical.
-- Keep the `requirement` sentence atomic and put concrete detail (data
-  structures, interface formats, dialog text, worked examples) in a companion
-  spec file named by the optional `spec_ref`. When `spec_ref` is set the file
-  must exist; a deleted target is reported as `REQ-SPEC-MISSING` by the
-  traceability audit. `feature` and `change` work should carry a `spec_ref`.
-- When adding or changing tests, cite relevant requirement IDs in comments,
-  docstrings, or test names where practical.
-- New source files under configured `coverable_roots` need a file-level
-  requirement snapshot naming the file in `affected_paths` and a linked test,
-  unless the file is listed in `.agentic/requirements/coverage_waivers.txt`.
-- Waivers are a legacy baseline only. Remove stale waivers once a module is
-  covered or deleted.
-- Run traceability, coverage, and impact directly from canonical snapshots.
-  There is no registry sync, registry audit, or generated traceability cache.
-- Treat concurrent edits to the same requirement TOML file as a semantic
-  conflict that requires reconciliation.
-
-## Worktree-Local Run Selection
-
-- The active pointer is `.agentic/.workspace/state/current_run`; the entire
-  `.agentic/.workspace/` tree is ignored local state and must never be staged.
-- One pointer belongs to one Git worktree. Never copy it between worktrees.
-- Use `--run-id <existing-run-id>` when automation must pin a particular run.
-  Explicit selection does not change the worktree pointer.
-- Treat `RUN-POINTER-*` and `RUN-ID-NOT-FOUND` messages as setup instructions.
-  Never guess a run ID or edit a graph to bypass resolution.
-
-## Component Documentation Contract
-
-- New software components require a new or updated component document under
-  `.agentic/knowledge/components/`.
-- Material changes to a component's behavior, contracts, responsibilities, data
-  formats, dependencies, or workflow integration require updating the matching
-  `.agentic/knowledge/components/*.md` document in the same change.
-- Component documents must follow
-  `.agentic/knowledge/components/component_template.md`.
-- When adding a new component page, update
-  `.agentic/knowledge/components/index.md` in the same change.
-- Component documentation complements requirements and tests. It does not
-  replace durable requirement snapshots or linked verification.
-
-## Required Order
-
-1. Intake: classify request and inspect likely implementation impact.
-2. Intent Alignment: record understanding, scope, acceptance, risk, and open
-   questions with recommended responses when automated flow is acceptable; pause
-   when policy or risk requires human input.
-3. Requirement: create or update minimal spec items and durable requirement snapshots.
-4. Check: create checks/tests that cite spec/requirement IDs and fail first.
-5. Implementation: edit source and required component documentation until
-   checks pass.
-6. Validation: run deterministic gates, documentation review, and read-only
-   review.
-7. Delivery: run preflight and ask before PR/push/merge.
-
-## Safety Rules
-
-- Do not commit secrets, tokens, keys, `.env` files, or credential stores.
-- Do not weaken or delete tests to make implementation pass.
-- Do not edit specs during implementation unless the human routes back to the
-  requirement stage with `<workflow> set-stage requirement --reason "<reason>"`.
-- Do not edit tests during implementation unless the human routes back to the
-  check stage with `<workflow> set-stage check --reason "<reason>"`.
-- If a late failing evidence entry is proven to be an environment, command, or
-  operator issue, record the passing rerun and use
-  `<workflow> supersede-evidence --id <old-evidence-id> --by <new-evidence-id> --reason "<reason>"`.
-- Record Intent Alignment with
-  `<workflow> alignment --source "<ref>" --understanding "<text>" --scope "<scope>" --acceptance "<criterion>" --risk low|medium|high --decision proceed|pause --reason "<reason>"`.
-  When questions exist, include `--recommended-response "<answer to assume>"`
-  for each question if automated continuation is acceptable. Use `proceed` only
-  when `.agentic/workflow.toml` policy allows it; otherwise stop in alignment
-  and ask for human answers or risk approval.
-- Treat arbitrary untracked human files as advisory delivery context unless
-  they match protected paths, configured working-tree blockers, or secret
-  patterns.
-- Do not push, create a PR, merge, or publish until delivery preflight passes
-  and the human explicitly approves that action.
-- Do not report work complete while `<workflow> audit traceability` or
-  `<workflow> audit coverage` has blocking findings.
-
-## Stage Stop Format
-
-End each workflow gate with:
-
-```text
-Stage: <stage>
-Artifacts changed: <paths or none>
-Evidence: <ids and short results>
-Invariant status: <pass/fail summary>
-Needs human: <questions or approval needed>
-Next prompt options:
-- Continue to <next stage>
-- Revise <specific artifact>
-- Abort or park this run
-```
+<!-- AEGIS-LIGHT:END -->

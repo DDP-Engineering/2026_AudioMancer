@@ -12,9 +12,6 @@
 @details Provides same-directory temporary-file writes followed by atomic
          replacement for JSON and text files that must not be left partially
          written after interruptions.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -42,9 +39,6 @@ def write_text_atomic(
     @param[in]  encoding Text encoding used for the temporary file.
     @return     None.
     @exception  OSError Raised when the temporary write or replacement fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     resolved_path = Path(target_path)
     resolved_path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,9 +81,6 @@ def write_json_atomic(
     @return     None.
     @exception  TypeError Raised when the payload is not JSON-serializable.
     @exception  OSError Raised when the temporary write or replacement fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     json_text = json.dumps(payload, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys) + "\n"
     write_text_atomic(target_path, json_text, encoding=encoding)
@@ -101,9 +92,6 @@ def _unlink_temporary_file(temporary_path: Path) -> None:
     @param[in]  temporary_path Temporary file path to remove.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     with suppress(OSError):
         temporary_path.unlink(missing_ok=True)

@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-ea10abd8"
+title = "The Characters page and controller shall enter add mode, creating a"
+status = "active"
+
+requirement = """
+The Characters page and controller shall enter add mode, creating a draft row with manual evidence.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_add_mode_creates_draft_row_and_manual_evidence",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_add_flow_enters_draft_mode",
+]
+
+priority = "high"
+rationale = """
+Adding a character must start a clearly manual draft.
+"""
+created = 2026-07-19
+updated = 2026-07-24

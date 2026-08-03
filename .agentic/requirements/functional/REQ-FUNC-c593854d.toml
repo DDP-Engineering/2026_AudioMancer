@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-c593854d"
+title = "Project creation shall reject a target path that is an existing file"
+status = "active"
+
+requirement = """
+Project creation shall reject a target path that is an existing file with FileExistsError before changing that file.
+"""
+
+verification = "Focused existing-file rejection test passed; E-0011."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_rejects_existing_file_target",
+]
+
+spec = "specs/minor_robustness_consistency.spec.md"
+priority = "high"
+rationale = """
+Directory iteration on a file currently leaks NotADirectoryError outside the Home controller's recoverable create-project error handling.
+"""
+created = 2026-07-30
+updated = 2026-07-30

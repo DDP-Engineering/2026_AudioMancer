@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-dbdac4f1"
+title = "The Text Chunking controller shall route AI chunking with the selected"
+status = "active"
+
+requirement = """
+The Text Chunking controller shall route AI chunking with the selected profile and strategy and resume without re-confirming.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_strategy",
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmation",
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile",
+]
+
+priority = "high"
+rationale = """
+AI chunking and resume must use the selected profile and strategy.
+"""
+created = 2026-07-19
+updated = 2026-07-24

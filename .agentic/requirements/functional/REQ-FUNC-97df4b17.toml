@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-97df4b17"
+title = "The narrator definition service shall reject a torn authoritative"
+status = "active"
+
+requirement = """
+The narrator definition service shall reject a torn authoritative document without replacing it.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_rejects_torn_authoritative_document_without_replacing_it",
+]
+
+priority = "high"
+rationale = """
+A corrupt narrator document must be surfaced, not silently overwritten.
+"""
+created = 2026-07-24
+updated = 2026-07-24

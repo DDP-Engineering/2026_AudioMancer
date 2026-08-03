@@ -11,9 +11,6 @@
 @brief Reusable modal progress dialog for long-running workflow operations.
 @details Shows one application-modal operation status, percent progress, and
          one cancel action while blocking access to the main shell.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.5.1
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ class OperationProgressDialog(QDialog):
     """
     @brief      Display one reusable modal progress dialog for workflow operations.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.5.1
     """
 
     cancel_requested = Signal()
@@ -43,9 +37,6 @@ class OperationProgressDialog(QDialog):
             @param[in]  parent Optional parent widget.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-06
-        @version    0.5.1
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -84,9 +75,6 @@ class OperationProgressDialog(QDialog):
         @param[in]  cancellable True to expose the cancel button.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
         """
         self._operation_name = operation_name
         self.setWindowTitle(
@@ -116,9 +104,6 @@ class OperationProgressDialog(QDialog):
             @param[in]  message Operator-facing progress status message.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-06
-        @version    0.5.1
         """
         self._progress_bar.setValue(max(0, min(percent, 100)))
         self._status_label.setText(message)
@@ -131,9 +116,6 @@ class OperationProgressDialog(QDialog):
         @brief      Close the dialog after one successful operation.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         self.hide()
 
@@ -143,9 +125,6 @@ class OperationProgressDialog(QDialog):
         @param[in]  message Operator-facing failure or cancellation message.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         self._status_label.setText(message)
         self.hide()
@@ -155,9 +134,6 @@ class OperationProgressDialog(QDialog):
         @brief      Return the currently displayed operator-facing status text.
         @return     Current progress status text.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.0
         """
         return self._status_label.text()
 
@@ -167,9 +143,6 @@ class OperationProgressDialog(QDialog):
         @param[in]  language Runtime UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
         """
         self._current_language = language
         if self._operation_name:
@@ -186,9 +159,6 @@ class OperationProgressDialog(QDialog):
         @brief      Disable repeat clicks and emit one cancellation request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
         """
         self._cancel_button.setEnabled(False)
         self.cancel_requested.emit()
@@ -198,9 +168,6 @@ class OperationProgressDialog(QDialog):
         @brief      Set the token usage.
         @param[in]  token_usage Value for `token_usage`.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if token_usage is None:
             self._token_usage = token_usage_service.empty_token_usage()
@@ -214,9 +181,6 @@ class OperationProgressDialog(QDialog):
         """
         @brief      Execute the refresh token usage label helper.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if not self._token_usage_visible:
             self._token_usage_label.clear()

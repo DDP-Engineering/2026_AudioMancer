@@ -11,9 +11,6 @@
 @brief Atomic persistence routing tests for high-value JSON artifacts.
 @details Verifies project manifests, app settings, and operation JSON artifacts
          are persisted through the shared atomic writer.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -23,10 +20,10 @@ from pathlib import Path
 from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
-    cleanup_metadata_service,
     operation_runtime_service,
     project_workspace_service,
     settings_service,
+    text_cleanup_service,
     text_cleanup_state_service,
     text_extraction_service,
 )
@@ -41,9 +38,6 @@ def test_project_manifest_save_uses_atomic_json_writer(monkeypatch, tmp_path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AtomicManifest", tmp_path)
     write_calls: list[tuple[Path, object]] = []
@@ -55,9 +49,6 @@ def test_project_manifest_save_uses_atomic_json_writer(monkeypatch, tmp_path) ->
         @param[in]  payload JSON payload passed to the writer.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         write_calls.append((Path(target_path), payload))
 
@@ -78,9 +69,6 @@ def test_settings_save_uses_atomic_json_writer(monkeypatch, tmp_path, default_se
     @param[in]  default_settings_payload Shared valid settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     settings_path = tmp_path / "settings.json"
     write_calls: list[tuple[Path, object]] = []
@@ -92,9 +80,6 @@ def test_settings_save_uses_atomic_json_writer(monkeypatch, tmp_path, default_se
         @param[in]  payload JSON payload passed to the writer.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         write_calls.append((Path(target_path), payload))
 
@@ -115,9 +100,6 @@ def test_operation_state_artifact_save_uses_atomic_json_writer(monkeypatch, tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root = tmp_path / "AtomicOperation"
     payload = {"status": "completed"}
@@ -130,9 +112,6 @@ def test_operation_state_artifact_save_uses_atomic_json_writer(monkeypatch, tmp_
         @param[in]  payload JSON payload passed to the writer.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         write_calls.append((Path(target_path), payload))
 
@@ -140,55 +119,13 @@ def test_operation_state_artifact_save_uses_atomic_json_writer(monkeypatch, tmp_
 
     output_path = operation_runtime_service.write_operation_json_artifact(
         project_root,
-        "cleanup",
-        config.CLEANUP_STATE_FILE_NAME,
+        "translation",
+        config.TRANSLATED_CHUNKS_FILE_NAME,
         payload,
     )
 
-    assert output_path == project_root / config.CLEANUP_STATE_FILE_NAME
+    assert output_path == project_root / config.TRANSLATED_CHUNKS_FILE_NAME
     assert write_calls == [(output_path, payload)]
-
-
-def test_cleanup_metadata_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify cleanup metadata sidecar persistence routes through the atomic JSON writer.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
-    """
-    project_root = tmp_path / "AtomicCleanupMetadata"
-    write_calls: list[tuple[Path, object]] = []
-
-    def _capture_atomic_write(target_path: str | Path, payload: object) -> None:
-        """
-        @brief      Capture one atomic writer call.
-        @param[in]  target_path Requested target path.
-        @param[in]  payload JSON payload passed to the writer.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
-        """
-        write_calls.append((Path(target_path), payload))
-
-    monkeypatch.setattr(cleanup_metadata_service, "write_json_atomic", _capture_atomic_write)
-
-    cleanup_metadata_service.write_cleanup_metadata(
-        project_root,
-        None,
-        project_root / config.CLEANED_TEXT_FILE_NAME,
-        [{"paragraph_id": "paragraph-0001", "text": "Story paragraph."}],
-        "deterministic",
-    )
-
-    assert len(write_calls) == 1
-    assert write_calls[0][0] == project_root / config.CLEANED_TEXT_METADATA_FILE_NAME
-    assert write_calls[0][1]["cleanup_mode"] == "deterministic"
 
 
 def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> None:
@@ -198,13 +135,21 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AtomicManualCleanup", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("Old text.", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": source_path.name,
+        "stored_relative_path": source_path.name,
+        "file_type": "txt",
+        "imported_at": "2026-07-27T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+    text_extraction_service.extract_text(project_root, manifest)
+    text_cleanup_service.clean_text(project_root, manifest)
     cleaned_path = project_root / config.CLEANED_TEXT_FILE_NAME
-    cleaned_path.write_text("Old text.\n", encoding="utf-8")
     text_calls: list[tuple[Path, str]] = []
     json_calls: list[tuple[Path, object]] = []
 
@@ -216,9 +161,6 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
         @param[in]  encoding Text encoding.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
         """
         text_calls.append((Path(target_path), text))
         Path(target_path).write_text(text, encoding=encoding)
@@ -230,19 +172,21 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
         @param[in]  payload JSON payload passed to the writer.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
         """
         json_calls.append((Path(target_path), payload))
         operation_runtime_service.write_json_atomic(target_path, payload)
 
-    monkeypatch.setattr(text_cleanup_state_service, "write_text_atomic", _capture_text_write)
+    monkeypatch.setattr(text_cleanup_service, "write_text_atomic", _capture_text_write)
+    monkeypatch.setattr(text_cleanup_service, "write_json_atomic", _capture_json_write)
     monkeypatch.setattr(project_workspace_service, "write_json_atomic", _capture_json_write)
 
     text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Edited text.\n")
 
     assert text_calls[0] == (cleaned_path, "Edited text.\n")
+    assert any(
+        path == project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+        for path, _payload in json_calls
+    )
     assert any(path == project_root / config.PROJECT_MANIFEST_FILE_NAME for path, _payload in json_calls)
 
 
@@ -253,9 +197,6 @@ def test_audio_assembly_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
     """
     project_root = tmp_path / "AtomicAssembly"
     report = {"operation_status": "running"}
@@ -269,9 +210,6 @@ def test_audio_assembly_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> 
         @param[in]  payload JSON payload passed to the writer.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
         """
         write_calls.append((Path(target_path), payload))
 
@@ -292,9 +230,6 @@ def test_text_extraction_running_metadata_uses_atomic_json_writer(monkeypatch, t
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
     """
     metadata_path = tmp_path / config.EXTRACTION_METADATA_FILE_NAME
     write_calls: list[tuple[Path, object]] = []
@@ -306,9 +241,6 @@ def test_text_extraction_running_metadata_uses_atomic_json_writer(monkeypatch, t
         @param[in]  payload JSON payload passed to the writer.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
         """
         write_calls.append((Path(target_path), payload))
 

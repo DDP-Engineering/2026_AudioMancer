@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-0990bdf6"
+title = "Audio-block approve-all shall mark only generated blocks and promote"
+status = "active"
+
+requirement = """
+Audio-block approve-all shall mark only generated blocks and promote stale in-progress state.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_all_marks_only_generated_blocks",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_all_promotes_stale_in_progress_state",
+]
+
+priority = "high"
+rationale = """
+Approve-all must act only on generated work.
+"""
+created = 2026-07-19
+updated = 2026-07-24

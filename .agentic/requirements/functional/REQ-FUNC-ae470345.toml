@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-ae470345"
+title = "AI translation shall reject an invalid translation document without"
+status = "active"
+
+requirement = """
+AI translation shall reject an invalid translation document without overwriting it.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_invalid_translation_document_is_rejected_without_overwrite",
+]
+
+priority = "high"
+rationale = """
+Incompatible documents must be surfaced, not silently replaced.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-5746f264"
+title = "The Audio Assembly controller shall control playback: stop on output"
+status = "active"
+
+requirement = """
+The Audio Assembly controller shall control playback: stop on output change, update progress, seek and skip with clamping, and ignore a startup stopped state.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_stops_active_playback_when_selected_output_changes",
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_updates_playback_progress",
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_seeks_and_skips_with_clamping",
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_ignores_startup_stopped_state",
+]
+
+priority = "high"
+rationale = """
+Playback controls must behave predictably.
+"""
+created = 2026-07-19
+updated = 2026-07-24

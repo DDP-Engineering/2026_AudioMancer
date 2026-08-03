@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-cdb7617a"
+title = "Cleanup document loading shall raise CleanupDocumentError for every"
+status = "active"
+
+requirement = """
+Cleanup document loading shall raise CleanupDocumentError for every malformed Progress payload.
+"""
+
+verification = "Focused issue #33 run passed all malformed Progress variants; E-0008."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Resume and manifest projection require a complete, safely typed progress structure and must not receive corrupt persisted shapes.
+"""
+created = 2026-07-29
+updated = 2026-07-30

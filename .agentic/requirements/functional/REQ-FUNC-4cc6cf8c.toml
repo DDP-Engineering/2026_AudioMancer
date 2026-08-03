@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-4cc6cf8c"
+title = "The project manifest shall normalize audio-assembly settings"
+status = "active"
+
+requirement = """
+The project manifest shall normalize audio-assembly settings.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_project_manifest_normalizes_audio_assembly_settings",
+]
+
+priority = "high"
+rationale = """
+Assembly settings must be stored in a normalized shape.
+"""
+created = 2026-07-19
+updated = 2026-07-24

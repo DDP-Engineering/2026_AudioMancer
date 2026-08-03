@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-82eb0f19"
+title = "The Text Chunking page shall provide preview find with context menus"
+status = "active"
+
+requirement = """
+The Text Chunking page shall provide preview find with context menus and find-next reuse.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_installs_preview_find_context_menus",
+  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_find_next_uses_last_preview_search",
+]
+
+priority = "high"
+rationale = """
+Operators need find support within the preview.
+"""
+created = 2026-07-19
+updated = 2026-07-24

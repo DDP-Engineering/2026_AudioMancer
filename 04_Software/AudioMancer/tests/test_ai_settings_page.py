@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer AI settings page.
 @details Verifies AI settings-page loading, profile editing, profile mutation,
          and merged settings payload generation.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.5.6
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.2.2
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -86,9 +80,6 @@ def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.1
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -120,9 +111,6 @@ def test_ai_settings_page_structured_output_is_in_model_name_row(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -150,9 +138,6 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -182,7 +167,6 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
         "default_speech_blocks_profile_id": "profile_a",
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": "profile_a",
-        "ui_text_scale": "normal",
     }
 
     page.load_settings(settings_payload)
@@ -217,9 +201,6 @@ def test_ai_settings_page_timeout_accepts_65535_seconds(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-04
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -260,9 +241,6 @@ def test_ai_settings_page_loads_and_builds_chunking_context_mode(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-17
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -293,9 +271,6 @@ def test_ai_settings_page_adds_and_removes_profiles(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -317,9 +292,6 @@ def test_ai_settings_page_applies_probe_result_and_updates_status(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -370,9 +342,6 @@ def test_ai_settings_page_marks_manual_overrides(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -419,9 +388,6 @@ def test_model_selector_keeps_discovered_models_across_a_settings_round_trip(qtb
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -466,9 +432,6 @@ def test_model_selector_falls_back_to_built_in_names_when_never_probed(qtbot) ->
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -488,9 +451,6 @@ def test_long_model_identifiers_do_not_widen_the_settings_form(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
 
     def _form_width(model_ids: list[str]) -> int:
@@ -499,9 +459,6 @@ def test_long_model_identifiers_do_not_widen_the_settings_form(qtbot) -> None:
         @param[in]  model_ids Discovered model identifiers.
         @return     Preferred page width in pixels.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-26
-        @version    0.1.0
         """
         page = AiSettingsPage()
         qtbot.addWidget(page)
@@ -548,9 +505,6 @@ def test_clicking_the_model_field_opens_the_discovered_model_list(qtbot) -> None
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -589,9 +543,6 @@ def test_clicking_the_model_field_opens_the_discovered_model_list(qtbot) -> None
         @param[in]  event_type Mouse event type to deliver.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-26
-        @version    0.1.0
         """
         QApplication.sendEvent(
             line_edit,
@@ -625,9 +576,6 @@ def test_model_field_still_accepts_a_hand_typed_model_name(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)

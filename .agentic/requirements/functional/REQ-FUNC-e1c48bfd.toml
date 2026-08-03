@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-e1c48bfd"
+title = "The Audio Assembly page shall emit playback progress and restart on"
+status = "active"
+
+requirement = """
+The Audio Assembly page shall emit playback progress and restart on double-click of an output.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_updates_and_emits_playback_progress",
+  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_double_click_emits_restart_for_clicked_output",
+]
+
+priority = "high"
+rationale = """
+The page must relay playback interactions.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-a257f918"
+title = "Source-span building shall preserve exact text and paragraph boundaries"
+status = "active"
+
+requirement = """
+Source-span building shall preserve exact text and paragraph boundaries across multilingual dialogue conventions.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries",
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions",
+]
+
+priority = "high"
+rationale = """
+Spans must retain the source text and structure without loss.
+"""
+created = 2026-07-19
+updated = 2026-07-24

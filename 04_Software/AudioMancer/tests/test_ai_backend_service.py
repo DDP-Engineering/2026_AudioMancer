@@ -11,9 +11,6 @@
 @brief Focused tests for the AI backend probe service.
 @details Verifies backend probe success/failure normalization for the current
          AI Settings connectivity flow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.3.0
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
 
     def _fake_read_json(url, headers, timeout_seconds):
@@ -43,9 +37,6 @@ def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
         @param[in]  timeout_seconds Requested timeout.
         @return     Fake JSON payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         assert url == "http://127.0.0.1:1234/v1/models"
         assert timeout_seconds == config.DEFAULT_AI_CONNECT_TIMEOUT_SECONDS
@@ -78,9 +69,6 @@ def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
 
     def _fake_read_json(url, headers, timeout_seconds):
@@ -91,9 +79,6 @@ def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
         @param[in]  timeout_seconds Requested timeout.
         @return     Fake JSON payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         assert url == "http://localhost:11434/api/tags"
         return {"models": [{"name": "qwen3:8b"}, {"name": "llama3.1:8b"}]}
@@ -121,9 +106,6 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
 
     def _fake_probe(*args, **kwargs):
@@ -133,9 +115,6 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
         @param[in]  kwargs Ignored keyword arguments.
         @return     None.
         @exception  urllib.error.URLError Always raised for the fake probe.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         raise error.URLError("connection refused")
 
@@ -165,9 +144,6 @@ def test_probe_profile_rejects_invalid_base_url() -> None:
     @brief      Verify invalid backend base URLs are rejected before network access.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     result = ai_backend_service.probe_profile(
         {

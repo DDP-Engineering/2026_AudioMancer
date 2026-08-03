@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-5f37c7df"
+title = "The existing Cleanup action shall start or resume Cleanup through the"
+status = "active"
+
+requirement = """
+The existing Cleanup action shall start or resume Cleanup through the threaded runner using the currently selected optional AI profile.
+"""
+
+verification = "Existing Cleanup action routes the selected optional profile through the runner."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_cleanup_controller_passes_optional_selected_profile",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+The unchanged UI needs one action that supports new runs, compatible resume, and profile-driven AI re-adjudication.
+"""
+created = 2026-07-27
+updated = 2026-07-30

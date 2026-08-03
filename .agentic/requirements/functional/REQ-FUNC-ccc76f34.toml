@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-ccc76f34"
+title = "Workflow controllers shall project persisted operation state into the"
+status = "active"
+
+requirement = """
+Workflow controllers shall project persisted operation state into the active manifest and refresh the window.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_persists_summary_and_refreshes_window",
+]
+
+priority = "high"
+rationale = """
+The manifest must reflect the latest persisted operation summary.
+"""
+created = 2026-07-19
+updated = 2026-07-24

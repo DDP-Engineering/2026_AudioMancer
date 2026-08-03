@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-10706590"
+title = "Audio-block state shall gate start correctly and not resolve missing"
+status = "active"
+
+requirement = """
+Audio-block state shall gate start correctly and not resolve missing chunks or unapproved translation.
+"""
+
+verification = "Automated: 6 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_does_not_resolve_missing_chunks",
+  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_does_not_resolve_unapproved_translation",
+  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_starts_when_any_speech_block_is_approved",
+  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_disables_start_after_completed_generation",
+  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_reenables_start_when_completed_report_has_missing_current_block",
+  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_keeps_reset_disabled_for_default_metadata",
+]
+
+priority = "high"
+rationale = """
+Start availability must reflect true readiness.
+"""
+created = 2026-07-19
+updated = 2026-07-24

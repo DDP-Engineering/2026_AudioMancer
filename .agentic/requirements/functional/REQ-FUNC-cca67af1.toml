@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-cca67af1"
+title = "TTS-budget unit counting shall handle spaced words and space-free"
+status = "active"
+
+requirement = """
+TTS-budget unit counting shall handle spaced words and space-free scripts using a per-script character rate.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_estimate_budget_units_handles_words_and_compact_scripts",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_stay_word_paced_for_latin_script",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_use_characters_for_space_free_scripts",
+]
+
+priority = "high"
+rationale = """
+Budget-safe pieces require correct unit counts for all scripts.
+"""
+created = 2026-07-19
+updated = 2026-07-26

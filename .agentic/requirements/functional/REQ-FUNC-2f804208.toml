@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-2f804208"
+title = "Speech-block audio-preview merge shall use persisted playability"
+status = "active"
+
+requirement = """
+Speech-block audio-preview merge shall use persisted playability without file checks.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_merge_audio_preview_state_uses_persisted_playability_without_file_checks",
+]
+
+priority = "high"
+rationale = """
+Preview state must derive from persisted playability, not disk probing.
+"""
+created = 2026-07-19
+updated = 2026-07-24

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-1d439308"
+title = "Source import shall store replacements collision-safely without"
+status = "active"
+
+requirement = """
+Source import shall store replacements collision-safely without overwriting existing files.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_name_collisions",
+]
+
+priority = "high"
+rationale = """
+Re-importing must not clobber an existing stored source.
+"""
+created = 2026-07-18
+updated = 2026-07-24

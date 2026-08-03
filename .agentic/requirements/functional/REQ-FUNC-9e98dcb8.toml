@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-9e98dcb8"
+title = "The AI Settings page shall lay out default selectors in workflow order"
+status = "active"
+
+requirement = """
+The AI Settings page shall lay out default selectors in workflow order, use a two-column numeric grid, and place structured output in the model-name row.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_default_selectors_are_stacked_in_workflow_order",
+  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_numeric_profile_options_use_two_column_grid",
+  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_structured_output_is_in_model_name_row",
+]
+
+priority = "high"
+rationale = """
+Settings layout must be consistent and readable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

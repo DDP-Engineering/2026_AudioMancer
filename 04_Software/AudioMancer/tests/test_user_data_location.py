@@ -15,9 +15,6 @@
          .agentic/specs/user_data_location.spec.md (S-0001, S-0002, S-0003):
          where settings and logs live for portable, override and read-only
          installation layouts.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -50,9 +47,6 @@ def _isolate_data_location_environment(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     for variable_name in _DATA_LOCATION_ENVIRONMENT_VARIABLES:
         monkeypatch.delenv(variable_name, raising=False)
@@ -66,9 +60,6 @@ def _unwritable_application_root(tmp_path: Path) -> Path:
     @param[in]  tmp_path Pytest temporary directory fixture value.
     @return     Path to a non-existent installation root.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     return tmp_path / "read_only_install_root"
 
@@ -84,9 +75,6 @@ def test_resolve_user_data_root_prefers_environment_override(tmp_path, monkeypat
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     writable_application_root = tmp_path / "portable_install"
@@ -107,9 +95,6 @@ def test_resolve_user_data_root_ignores_blank_environment_override(tmp_path, mon
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     writable_application_root = tmp_path / "portable_install"
@@ -131,9 +116,6 @@ def test_resolve_user_data_root_uses_writable_application_root(tmp_path, monkeyp
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     writable_application_root = tmp_path / "portable_install"
@@ -153,9 +135,6 @@ def test_resolve_user_data_root_rejects_a_non_directory_application_root(tmp_pat
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     file_application_root = tmp_path / "not_a_directory"
@@ -177,9 +156,6 @@ def test_resolve_user_data_root_falls_back_to_local_appdata_on_windows(tmp_path,
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     local_app_data = tmp_path / "LocalAppData"
@@ -201,9 +177,6 @@ def test_resolve_user_data_root_falls_back_to_roaming_appdata_on_windows(tmp_pat
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     roaming_app_data = tmp_path / "RoamingAppData"
@@ -223,9 +196,6 @@ def test_resolve_user_data_root_falls_back_to_xdg_data_home_on_linux(tmp_path, m
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     xdg_data_home = tmp_path / "xdg_data_home"
@@ -245,9 +215,6 @@ def test_resolve_user_data_root_falls_back_to_local_share_on_linux(tmp_path, mon
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     monkeypatch.setattr(sys, "platform", "linux")
@@ -265,9 +232,6 @@ def test_resolve_user_data_root_falls_back_to_application_support_on_macos(tmp_p
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     monkeypatch.setattr(sys, "platform", "darwin")
@@ -287,9 +251,6 @@ def test_resolve_user_data_root_rejects_frozen_extraction_directory(tmp_path, mo
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _isolate_data_location_environment(monkeypatch)
     extraction_root = tmp_path / "_MEI123456"
@@ -313,9 +274,6 @@ def test_settings_and_log_paths_follow_the_resolved_data_root(tmp_path, monkeypa
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     pinned_data_root = tmp_path / "pinned_data"
 
@@ -349,9 +307,6 @@ def test_read_only_application_root_keeps_settings_and_logs_under_the_data_root(
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     installation_root = tmp_path / "Program Files" / "AudioMancer"
     installation_root.mkdir(parents=True)

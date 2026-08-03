@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-a9f5a78e"
+title = "Connecting an AI profile shall show a success or failure popup"
+status = "active"
+
+requirement = """
+Connecting an AI profile shall show a success or failure popup.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_connect_ai_profile_shows_success_popup",
+  "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_connect_ai_profile_shows_failure_popup",
+]
+
+priority = "high"
+rationale = """
+Operators must see the outcome of a connection attempt.
+"""
+created = 2026-07-19
+updated = 2026-07-24

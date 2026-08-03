@@ -12,9 +12,6 @@
 @details Defines built-in UI themes, validates custom theme payloads, normalizes
          font and color roles, and prepares import/export payloads without Qt
          dependencies.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-13
-@version 0.4.0
 """
 
 # IMPORTS
@@ -306,9 +303,6 @@ def _classic_light_theme() -> dict[str, object]:
     @brief      Return a deep copy of the classic light built-in theme.
     @return     Classic light theme payload.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     return copy.deepcopy(_BUILT_IN_THEMES[0])
 
@@ -319,9 +313,6 @@ def _normalize_display_name(display_name: object) -> str:
     @param[in]  display_name Candidate display name.
     @return     Trimmed display name.
     @exception  ValueError Raised when the display name is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if not isinstance(display_name, str):
         raise ValueError("Theme display_name must be a string.")
@@ -339,9 +330,6 @@ def _normalize_theme_id(theme_id: object) -> str:
     @param[in]  theme_id Candidate theme id.
     @return     Trimmed stable theme id.
     @exception  ValueError Raised when the id is not a supported slug.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if not isinstance(theme_id, str):
         raise ValueError("Theme theme_id must be a string.")
@@ -357,9 +345,6 @@ def _theme_id_from_name(display_name: str) -> str:
     @param[in]  display_name Valid display name.
     @return     Lowercase slug suitable for the theme_id field.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     normalized_id = _SLUG_INVALID_PATTERN.sub("_", display_name.strip().casefold()).strip("_")
     return normalized_id or "custom_theme"
@@ -372,9 +357,6 @@ def _unique_theme_id(base_theme_id: str, reserved_theme_ids: set[str]) -> str:
     @param[in]  reserved_theme_ids Already-used theme ids.
     @return     Unique theme id.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if base_theme_id not in reserved_theme_ids:
         return base_theme_id
@@ -390,9 +372,6 @@ def _normalize_font(font_payload: object) -> dict[str, object]:
     @param[in]  font_payload Candidate font object.
     @return     Normalized font payload.
     @exception  ValueError Raised when font fields are invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if font_payload is None:
         return copy.deepcopy(_DEFAULT_FONT)
@@ -430,9 +409,6 @@ def _normalize_colors(colors_payload: object) -> dict[str, str]:
     @param[in]  colors_payload Candidate colors object.
     @return     Complete normalized color-role map.
     @exception  ValueError Raised when one color value is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if colors_payload is None:
         colors_payload = {}
@@ -458,9 +434,6 @@ def built_in_themes() -> list[dict[str, object]]:
     @brief      Return all built-in UI theme payloads.
     @return     Deep-copy list of built-in themes.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     return [copy.deepcopy(theme_payload) for theme_payload in _BUILT_IN_THEMES]
 
@@ -470,9 +443,6 @@ def default_theme_id() -> str:
     @brief      Return the default UI theme identifier.
     @return     Built-in default theme id.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     return "audiomancer_dark"
 
@@ -484,9 +454,6 @@ def validate_theme_payload(theme_payload: object, *, allow_built_in: bool = Fals
     @param[in]  allow_built_in Preserve a valid built-in flag when True.
     @return     Normalized theme payload.
     @exception  ValueError Raised when required schema values are invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     if not isinstance(theme_payload, dict):
         raise ValueError("Theme payload root must be an object.")
@@ -512,9 +479,6 @@ def normalize_theme_collection(theme_payloads: object) -> list[dict[str, object]
     @param[in]  theme_payloads Candidate list of custom theme payloads.
     @return     Valid custom themes with duplicate ids removed deterministically.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if not isinstance(theme_payloads, list):
         return []
@@ -540,9 +504,6 @@ def merged_theme_catalog(custom_themes: object) -> list[dict[str, object]]:
     @param[in]  custom_themes Candidate persisted custom themes.
     @return     Built-in themes followed by valid custom themes.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     return [*built_in_themes(), *normalize_theme_collection(custom_themes)]
 
@@ -554,9 +515,6 @@ def theme_by_id(theme_id: object, custom_themes: object) -> dict[str, object]:
     @param[in]  custom_themes Candidate persisted custom themes.
     @return     Matching theme payload or the default built-in theme.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     candidate_id = str(theme_id).strip() if isinstance(theme_id, str) else ""
     for theme_payload in merged_theme_catalog(custom_themes):
@@ -576,9 +534,6 @@ def duplicate_theme(theme_payload: dict[str, object], new_name: str) -> dict[str
     @param[in]  new_name Display name for the duplicated theme.
     @return     Custom duplicate theme payload.
     @exception  ValueError Raised when the source payload or name is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     source_theme = validate_theme_payload(theme_payload, allow_built_in=True)
     display_name = _normalize_display_name(new_name)
@@ -595,9 +550,6 @@ def export_theme_payload(theme_payload: dict[str, object]) -> dict[str, object]:
     @param[in]  theme_payload Source theme payload.
     @return     Normalized custom export payload.
     @exception  ValueError Raised when the source payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     return validate_theme_payload(theme_payload)
 
@@ -609,9 +561,6 @@ def import_theme_payload(candidate_payload: object, existing_themes: object) -> 
     @param[in]  existing_themes Candidate persisted custom themes already present.
     @return     Normalized imported custom theme payload.
     @exception  ValueError Raised when the imported payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if not isinstance(candidate_payload, dict):
         raise ValueError("Theme payload root must be an object.")

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-48a5fdc7"
+title = "The AI Settings page shall apply a probe result and update status"
+status = "active"
+
+requirement = """
+The AI Settings page shall apply a probe result and update status.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_applies_probe_result_and_updates_status",
+]
+
+priority = "high"
+rationale = """
+Probe results must be reflected in the page status.
+"""
+created = 2026-07-19
+updated = 2026-07-24

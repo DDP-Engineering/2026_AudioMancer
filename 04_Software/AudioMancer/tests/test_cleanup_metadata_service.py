@@ -8,50 +8,86 @@
 # -----------------------------------------------------------------------------
 """
 @file test_cleanup_metadata_service.py
-@brief Focused tests for cleaned-text paragraph metadata persistence.
-@details Verifies compact cleanup metadata omits duplicated text while
-         downstream loaders rebuild paragraph text from canonical clean text.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-17
-@version 0.1.0
+@brief Checks for paragraph offsets embedded in cleanup.json.
+@details Verifies the sole metadata document omits duplicate paragraph text
+         while its offsets reconstruct the canonical Cleanup output.
 """
 
-# IMPORTS
-
-import json
-
 from audiomancer import config
-from audiomancer.services import cleanup_metadata_service
+from audiomancer.services import (
+    ai_chunking_service,
+    cleanup_metadata_service,
+    deterministic_chunking_service,
+    speech_blocks_service,
+    text_cleanup_service,
+)
+from cleanup_test_support import build_ledger, build_project
 
 
-def test_cleanup_metadata_omits_text_and_reconstructs_from_clean_text(tmp_path) -> None:
-    """
-    @brief      Verify compact metadata omits paragraph text and reloads it from line spans.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
-    """
-    project_root = tmp_path / "MetadataProject"
-    project_root.mkdir()
-    cleaned_text = "First paragraph.\n\nSecond line one.\nSecond line two.\n"
-    cleaned_text_path = project_root / config.CLEANED_TEXT_FILE_NAME
-    cleaned_text_path.write_text(cleaned_text, encoding="utf-8")
-
-    records = cleanup_metadata_service.build_paragraph_records_from_text(cleaned_text)
-    cleanup_metadata_service.write_cleanup_metadata(project_root, None, cleaned_text_path, records, "manual_edit")
-
-    metadata_payload = json.loads(
-        cleanup_metadata_service.cleanup_metadata_path(project_root).read_text(encoding="utf-8")
+def test_cleanup_paragraph_offsets_reconstruct_clean_text(tmp_path) -> None:
+    """Cover S-0007 and REQ-FUNC-6ac5f253-1b2b-4661-b772-e79f36a9b1b8."""
+    canonical_text, ledger = build_ledger(
+        ["First paragraph.", "Second line one.\nSecond line two."],
+        kinds=["paragraph", "paragraph"],
+        boundaries=[("\n\n", "native_paragraph")],
+        origins=["native", "native"],
+        structure_quality="native",
     )
-    assert "text" not in metadata_payload["paragraphs"][0]
-    assert "text" not in metadata_payload["paragraphs"][1]
+    project_root, manifest = build_project(tmp_path, "EmbeddedMetadata", canonical_text, ledger)
 
-    loaded_records = cleanup_metadata_service.load_or_build_paragraph_records(project_root, cleaned_text)
-    assert loaded_records[0]["text"] == "First paragraph."
-    assert loaded_records[1]["text"] == "Second line one.\nSecond line two."
+    document = text_cleanup_service.clean_text(project_root, manifest)
+    cleaned_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+
+    reconstructed = [
+        cleaned_text[int(item["output_start"]) : int(item["output_end"])]
+        for item in document["paragraphs"]
+    ]
+    assert reconstructed == ["First paragraph.", "Second line one.\nSecond line two."]
+    assert all("text" not in item for item in document["paragraphs"])
+
+
+def test_cleanup_reason_codes_do_not_masquerade_as_warnings() -> None:
+    """Cover S-0005 and REQ-FUNC-9c9b7202-3dcd-4a19-a0bd-65a9278f8aa8."""
+    reason_codes = [
+        "user_edited",
+        "llm_verified_override",
+        "user_whitespace_realign",
+        "deterministic_fallback",
+        "unknown_line_boundary",
+        "page_transition_repaired",
+    ]
+    runtime_record = cleanup_metadata_service._runtime_record(
+        {
+            "paragraph_id": "paragraph-000001",
+            "output_start": 0,
+            "output_end": 10,
+            "role": "body",
+            "confidence": "low",
+            "reason_codes": reason_codes,
+            "crosses_page_transition": False,
+        },
+        "Narration.",
+    )
+    expected_warnings = [
+        "deterministic_fallback",
+        "unknown_line_boundary",
+        "page_transition_repaired",
+    ]
+
+    deterministic_chunk = deterministic_chunking_service._build_chunk_payload(
+        1,
+        runtime_record,
+    )
+    ai_warnings = ai_chunking_service._merged_warning_flags([runtime_record])
+    speech_metadata = speech_blocks_service._cleanup_provenance_fields(
+        deterministic_chunk
+    )
+
+    assert runtime_record["reason_codes"] == reason_codes
+    assert runtime_record["warning_flags"] == expected_warnings
+    assert deterministic_chunk["cleanup_warning_flags"] == expected_warnings
+    assert ai_warnings == expected_warnings
+    assert speech_metadata["cleanup_warning_flags"] == expected_warnings
 
 
 # END OF FILE

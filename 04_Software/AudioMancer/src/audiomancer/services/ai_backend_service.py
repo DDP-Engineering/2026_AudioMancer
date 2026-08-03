@@ -12,9 +12,6 @@
 @details Probes configured AI backends, normalizes discovered models behind one
          internal contract, and returns operator-facing connect feedback for
          the AI Settings page.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.3.1
 """
 
 # IMPORTS
@@ -45,9 +42,6 @@ def _resolve_ollama_tags_url(base_url: str) -> str:
     @param[in]  base_url Operator-configured backend base URL.
     @return     Fully qualified Ollama tags URL.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.2.0
     """
     return join_endpoint_url(remove_trailing_endpoint(base_url, "/v1"), "/api/tags")
 
@@ -58,9 +52,6 @@ def _build_request_headers(profile_payload: dict[str, object]) -> dict[str, str]
     @param[in]  profile_payload Normalized profile payload.
     @return     HTTP header map.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     headers = {"Accept": "application/json"}
     api_key = str(profile_payload.get("api_key", "")).strip()
@@ -76,9 +67,6 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
     @param[in]  profile_payload Normalized AI profile payload.
     @return     Normalized probe result payload with discovered models and feedback.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
     """
     backend_kind = str(profile_payload.get("backend_kind", "")).strip()
     base_url = str(profile_payload.get("base_url", "")).strip()
@@ -178,9 +166,6 @@ def _probe_openai_compatible_models(
     @param[in]  timeout_seconds HTTP request timeout.
     @return     Discovered model descriptors.
     @exception  ValueError When the response payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     models_url = join_endpoint_url(
         str(profile_payload.get("base_url", "")),
@@ -215,9 +200,6 @@ def _probe_ollama_models(
     @param[in]  timeout_seconds HTTP request timeout.
     @return     Discovered model descriptors.
     @exception  ValueError When the response payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     payload = _read_json(
         _resolve_ollama_tags_url(str(profile_payload.get("base_url", ""))),
@@ -250,9 +232,6 @@ def _read_json(
     @param[in]  timeout_seconds HTTP request timeout.
     @return     Decoded JSON object payload.
     @exception  ValueError When decoding fails or the payload root is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     http_request = request.Request(url=url, headers=headers, method="GET")
     with request.urlopen(http_request, timeout=timeout_seconds) as response:
@@ -278,9 +257,6 @@ def _build_probe_result(
     @param[in]  selected_model_valid True when the chosen model is valid.
     @return     Normalized probe result dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     return {
         "success": success,

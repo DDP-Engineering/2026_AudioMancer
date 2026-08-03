@@ -14,9 +14,6 @@
          Keeps the read-only packaged resource root separate from the resolved
          writable data root that owns settings and logs, and from the per-user
          documents folder offered by operator-facing folder pickers.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 1.44.0
 """
 
 # IMPORTS
@@ -55,9 +52,6 @@ def resolve_app_runtime_root() -> Path:
     @brief      Resolve the root folder that owns runtime resource files.
     @return     Runtime resource root for source, installed, or PyInstaller layouts.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     package_root = Path(__file__).resolve().parent
     if bool(getattr(sys, "frozen", False)):
@@ -83,9 +77,6 @@ def resolve_user_data_root(app_root: Path | None = None) -> Path:
     @param[in]  app_root Optional resolved application root reused by the caller.
     @return     Absolute writable data root; the folder may not exist yet.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     override_root = _explicit_data_root_override()
     if override_root is not None:
@@ -107,9 +98,6 @@ def resolve_user_documents_root() -> Path:
                 directory when handed a missing path.
     @return     Absolute per-user documents root, independent of `APP_ROOT`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     for candidate_root in (_xdg_documents_root(), Path.home() / _USER_DOCUMENTS_DIRECTORY_NAME):
         if candidate_root is not None and candidate_root.is_dir():
@@ -127,9 +115,6 @@ def _xdg_documents_root() -> Path | None:
                 found there is accidental and is ignored.
     @return     Override path, or `None` off POSIX or when the variable is blank.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if sys.platform.startswith("win") or sys.platform == "darwin":
         return None
@@ -144,9 +129,6 @@ def _resolve_frozen_runtime_root() -> Path:
     @brief      Resolve runtime resources in a PyInstaller execution layout.
     @return     Folder containing packaged runtime resources.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     executable_root = Path(sys.executable).resolve().parent
     meipass_root = _optional_meipass_root()
@@ -161,9 +143,6 @@ def _optional_meipass_root() -> Path | None:
     @brief      Resolve the optional PyInstaller extraction folder.
     @return     `_MEIPASS` path when provided by the bootloader, otherwise `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     meipass_value = str(getattr(sys, "_MEIPASS", "") or "").strip()
     if not meipass_value:
@@ -177,9 +156,6 @@ def _source_tree_root_from_package(package_root: Path) -> Path | None:
     @param[in]  package_root Imported Python package folder.
     @return     Source application root or `None` when not in a source checkout.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     for candidate_root in package_root.parents:
         if (candidate_root / "pyproject.toml").is_file() and (candidate_root / "src" / PACKAGE_NAME).is_dir():
@@ -193,9 +169,6 @@ def _installed_resource_root_from_package(package_root: Path) -> Path | None:
     @param[in]  package_root Imported Python package folder.
     @return     Installed resource root or `None` when no marker files are present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     for candidate_root in _unique_paths([package_root, package_root.parent]):
         if _has_runtime_resource_markers(candidate_root):
@@ -209,9 +182,6 @@ def _has_runtime_resource_markers(candidate_root: Path | None) -> bool:
     @param[in]  candidate_root Candidate resource folder.
     @return     True when expected resource markers are present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if candidate_root is None:
         return False
@@ -231,9 +201,6 @@ def _explicit_data_root_override() -> Path | None:
                 rather than being silently ignored.
     @return     Override path or `None` when the variable is unset or blank.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     override_value = str(os.environ.get(APP_DATA_DIR_ENVIRONMENT_VARIABLE, "") or "").strip()
     if not override_value:
@@ -247,9 +214,6 @@ def _is_portable_data_root(candidate_root: Path) -> bool:
     @param[in]  candidate_root Resolved application root.
     @return     True for a writable root that is not the frozen extraction folder.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if _is_frozen_extraction_root(candidate_root):
         return False
@@ -262,9 +226,6 @@ def _is_frozen_extraction_root(candidate_root: Path) -> bool:
     @param[in]  candidate_root Resolved candidate folder.
     @return     True when the candidate is `_MEIPASS` or lives inside it.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     extraction_root = _optional_meipass_root()
     if extraction_root is None:
@@ -281,9 +242,6 @@ def _directory_accepts_writes(candidate_root: Path) -> bool:
     @param[in]  candidate_root Candidate directory.
     @return     True when a probe file could be created and removed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if not candidate_root.is_dir():
         return False
@@ -299,9 +257,6 @@ def _per_user_data_root() -> Path:
     @brief      Resolve the per-user application data folder for this platform.
     @return     Absolute per-user data root; the folder may not exist yet.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if sys.platform.startswith("win"):
         return _windows_per_user_data_root()
@@ -315,9 +270,6 @@ def _windows_per_user_data_root() -> Path:
     @brief      Resolve the Windows per-user application data folder.
     @return     `%LOCALAPPDATA%`, `%APPDATA%`, or the default local app-data path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     for variable_name in ("LOCALAPPDATA", "APPDATA"):
         base_value = str(os.environ.get(variable_name, "") or "").strip()
@@ -331,9 +283,6 @@ def _xdg_per_user_data_root() -> Path:
     @brief      Resolve the XDG per-user application data folder.
     @return     `$XDG_DATA_HOME` based path or the `~/.local/share` default.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     base_value = str(os.environ.get("XDG_DATA_HOME", "") or "").strip()
     if base_value:
@@ -347,9 +296,6 @@ def _unique_paths(paths: list[Path | None]) -> list[Path]:
     @param[in]  paths Candidate paths.
     @return     De-duplicated path list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     unique_values: list[Path] = []
     seen_values: set[str] = set()
@@ -509,6 +455,9 @@ SUPPORTED_SOURCE_SUFFIXES = {
 # @brief File name used for persisted raw extracted text.
 EXTRACTED_TEXT_FILE_NAME = "extracted_text.txt"
 
+# @brief Canonical structural ledger paired with extracted_text.txt.
+SOURCE_LEDGER_FILE_NAME = "source_ledger.json"
+
 # @brief Authoritative deterministic text-extraction metadata file name.
 EXTRACTION_METADATA_FILE_NAME = "extraction_metadata.json"
 
@@ -518,14 +467,8 @@ CLEANED_TEXT_FILE_NAME = "clean_text.txt"
 # @brief Authoritative AI-assisted cleanup document file name.
 CLEANUP_DOCUMENT_FILE_NAME = "cleanup.json"
 
-# @brief File name used for persisted cleaned-text paragraph metadata.
-CLEANED_TEXT_METADATA_FILE_NAME = "clean_text_metadata.json"
-
-# @brief File name used for cleanup metadata.
-CLEANUP_REPORT_FILE_NAME = "cleanup_report.json"
-
-# @brief File name used for persisted cleanup runtime state.
-CLEANUP_STATE_FILE_NAME = "cleanup_state.json"
+# @brief Supported source-content language codes for Cleanup.
+CLEANUP_SUPPORTED_SOURCE_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
 
 # @brief File name used for the persisted chunk list artifact.
 CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
@@ -585,9 +528,6 @@ def ai_transaction_log_file_name(operation_kind: str, timestamp_token: str) -> s
     @param[in]  operation_kind Stable AI operation token.
     @param[in]  timestamp_token Filesystem-safe date/time token.
     @return     AI log file name.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     normalized_operation = str(operation_kind).strip().replace("-", "_")
     normalized_timestamp = str(timestamp_token).strip()
@@ -783,31 +723,6 @@ DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS = 100
 
 # @brief Default Stable Audio seed for Scene Ambience sound generation; None lets the runtime randomize.
 DEFAULT_SCENE_AMBIENCE_SEED = None
-
-# AI Workflow Defaults
-# @brief Default maximum cleanup-unit count sent in one AI cleanup request window.
-DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS = 24
-
-# @brief Minimum estimated text-token budget required for one AI cleanup request.
-DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS = 512
-
-# @brief Minimum estimated token safety margin reserved in each AI cleanup request.
-DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS = 256
-
-# @brief Fraction of the context window reserved as safety margin for AI cleanup.
-DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
-# @brief Preferred count of consecutive source pages in one AI Cleanup window.
-DEFAULT_AI_CLEANUP_TARGET_PAGE_COUNT = 4
-
-# @brief Worst-case response size estimate relative to canonical source tokens.
-DEFAULT_AI_CLEANUP_RESPONSE_EXPANSION_FACTOR = 2.0
-
-# @brief Per-page JSON metadata allowance in AI Cleanup response budgeting.
-DEFAULT_AI_CLEANUP_BLOCK_OVERHEAD_TOKENS = 256
-
-
-# @brief Maximum context-window fraction used for AI cleanup unit text.
-DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION = 0.60
 
 # @brief Default semantic AI chunking strategy.
 DEFAULT_AI_CHUNKING_STRATEGY = "paragraph"

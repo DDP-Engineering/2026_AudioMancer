@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-UX-bb78f412"
+title = "The first Cleanup progress update after an exact resume shall not be"
+status = "active"
+
+requirement = """
+The first Cleanup progress update after an exact resume shall not be lower than the last request progress persisted before cancellation.
+"""
+
+verification = "Focused pytest passed: resume begins at the last persisted request-derived percentage and remains monotonic through 100%."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requests",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+A resumed local-model operation must not appear to restart from the analysis percentage when completed AI work was checkpointed.
+"""
+created = 2026-07-28
+updated = 2026-07-30

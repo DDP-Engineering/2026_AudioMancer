@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-NFR-c26cffd5"
+title = "Deterministic chunking shall emit non-terminal progress no more often"
+status = "active"
+
+requirement = """
+Deterministic chunking shall emit non-terminal progress no more often than once per 0.1 elapsed monotonic seconds.
+"""
+
+verification = "Automated focused pytest: deterministic chunking file passed 14 tests; controlled-clock progress emits no more often than 0.1 seconds and always emits completion."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_throttles_non_terminal_progress_updates",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Progress callbacks must remain responsive without imposing per-paragraph UI and cross-thread overhead on large documents.
+"""
+created = 2026-07-29
+updated = 2026-07-30

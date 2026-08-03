@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-5d79430b"
+title = "Project completion healing, manifest projection, Narrator Voice export"
+status = "active"
+
+requirement = """
+Project completion healing, manifest projection, Narrator Voice export, snapshots, reset, and preservation shall derive narrator state from `narrator_voice.json` plus canonical profile WAVs; export the authoritative document and valid profile samples; exclude narrator AI logs from snapshots; delete the authoritative document, canonical profile WAV pattern, and narrator-profile logs only when narrator definition is in reset scope; and preserve them when requested.
+"""
+
+verification = "Reset and lifecycle current-artifact scoping test passes; export companion test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_reset_removes_current_artifacts",
+  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_narrator_export_uses_authoritative_document_and_profile_wav",
+]
+
+priority = "high"
+rationale = """
+Project lifecycle operations must remain accurate and scoped to the authoritative narrator artifacts.
+"""
+created = 2026-07-21
+updated = 2026-07-21

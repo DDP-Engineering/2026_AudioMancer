@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-fb89dab8"
+title = "The Characters controller save shall stay synchronous with progress and"
+status = "active"
+
+requirement = """
+The Characters controller save shall stay synchronous with progress and clear progress after a failure.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_with_progress_stays_synchronous",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_progress_clears_after_failure",
+]
+
+priority = "high"
+rationale = """
+Save feedback must be responsive and reset on error.
+"""
+created = 2026-07-19
+updated = 2026-07-24

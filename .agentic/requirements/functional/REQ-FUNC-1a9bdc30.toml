@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-1a9bdc30"
+title = "Text extraction shall reject a misnamed binary Word document carrying"
+status = "active"
+
+requirement = """
+Text extraction shall reject a misnamed binary Word document carrying an RTF extension.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension",
+]
+
+priority = "high"
+rationale = """
+Mislabeled sources must fail rather than extract incorrectly.
+"""
+created = 2026-07-24
+updated = 2026-07-24

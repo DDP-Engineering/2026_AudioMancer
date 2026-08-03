@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-65813be2"
+title = "Reset_audio_blocks shall remove the authoritative audio_blocks.json"
+status = "active"
+
+requirement = """
+reset_audio_blocks shall remove the authoritative audio_blocks.json document so the operator can regenerate cleanly.
+"""
+
+verification = "Automated contract test: reset_audio_blocks removes the authoritative document."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_reset_removes_document",
+]
+
+spec = "specs/audio_blocks_document.spec.md"
+priority = "high"
+rationale = """
+Reset must clear the current Audio Blocks state completely.
+"""
+created = 2026-07-25
+updated = 2026-07-26

@@ -12,9 +12,6 @@
 @details Centralizes root-level artifact path building, downstream reset
          behavior, timestamp helpers, JSON artifact IO, and progress helpers
          shared by long-running workflow operations.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.15.2
 """
 
 # IMPORTS
@@ -53,6 +50,7 @@ TEXT_REVISION_PRESERVED_OPERATION_KINDS = frozenset(
 _OPERATION_ARTIFACT_FILE_NAMES = {
     "extraction": (
         config.EXTRACTED_TEXT_FILE_NAME,
+        config.SOURCE_LEDGER_FILE_NAME,
         config.EXTRACTION_METADATA_FILE_NAME,
         # Reset-only legacy sidecars; Extraction never reads or writes them.
         "extraction_report.json",
@@ -61,19 +59,21 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     "cleanup": (
         config.CLEANED_TEXT_FILE_NAME,
         config.CLEANUP_DOCUMENT_FILE_NAME,
-        config.CLEANED_TEXT_METADATA_FILE_NAME,
-        config.CLEANUP_REPORT_FILE_NAME,
-        config.CLEANUP_STATE_FILE_NAME,
+        # Reset-only legacy sidecars; Cleanup never reads or writes them.
+        "clean_text_metadata.json",
+        "cleanup_report.json",
+        "cleanup_state.json",
     ),
     "chunking": (
         config.CHUNK_ARTIFACT_FILE_NAME,
-        # Cleanup-only legacy sidecars; Chunking never reads or writes them.
+        # Reset-only obsolete sidecars; Chunking never reads them.
+        "chunking_checkpoint.json",
         "chunking_report.json",
         "chunking_state.json",
     ),
     "translation": (
         config.TRANSLATED_CHUNKS_FILE_NAME,
-        # Cleanup-only legacy names; Translation never reads or writes them.
+        # Reset-only legacy names; Translation never reads or writes them.
         "translation_report.json",
         "translation_state.json",
     ),
@@ -129,28 +129,10 @@ class OperationCancelledError(RuntimeError):
     """
     @brief      Raised when one cancelable operation stops cooperatively.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
 
 
 # PUBLIC API
-
-
-def operation_folder_name(operation_kind: str) -> str:
-    """
-    @brief      Resolve one operation kind to its project-relative artifact root.
-    @param[in]  operation_kind Stable workflow operation token.
-    @return     Project-relative artifact-root name.
-    @exception  KeyError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.1
-    """
-    if operation_kind not in _OPERATION_ORDER:
-        raise ValueError(f"Unsupported operation kind: {operation_kind}")
-    return config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
 
 
 def downstream_operation_kinds(
@@ -163,9 +145,6 @@ def downstream_operation_kinds(
     @param[in]  include_current True to include the selected operation itself.
     @return     Ordered operation-kind tuple.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if operation_kind not in _OPERATION_ORDER:
         return ()
@@ -187,9 +166,6 @@ def resolve_operation_path(
     @param[in]  file_name Operation artifact file name.
     @return     Absolute project-local artifact path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
     """
     _ = operation_kind
     return Path(project_root) / file_name
@@ -207,9 +183,6 @@ def build_operation_output_path(
     @param[in]  file_name Operation artifact file name.
     @return     Absolute project-local artifact path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.3.0
     """
     Path(project_root).mkdir(parents=True, exist_ok=True)
     return resolve_operation_path(project_root, operation_kind, file_name)
@@ -224,9 +197,6 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
     @param[in]  operation_kind Stable workflow operation token.
     @return     Default operation-state payload.
     @exception  ValueError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.4.0
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
@@ -261,9 +231,6 @@ def build_operation_state_payload(
     @param[in]  resume_checkpoint Optional workflow-specific resume checkpoint.
     @return     JSON-ready operation-state payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.3.0
     """
     return {
         "status": str(status),
@@ -282,9 +249,6 @@ def _default_operation_metadata(operation_kind: str) -> dict[str, object]:
     @param[in]  operation_kind Stable workflow operation token.
     @return     Default metadata payload for the operation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.4.0
     """
     return {}
 
@@ -296,9 +260,6 @@ def ensure_default_operation_state(project_root: str | Path, operation_kind: str
     @param[in]  operation_kind Stable workflow operation token.
     @return     Created or existing state path, or `None` when the operation has no state file.
     @exception  ValueError Raised when the operation kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.1
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
@@ -323,9 +284,6 @@ def load_operation_state_payload(
     @param[in]  state_file_name Operation-state artifact file name.
     @return     Persisted operation-state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     state_path = resolve_operation_path(project_root, operation_kind, state_file_name)
     if not state_path.is_file():
@@ -339,9 +297,6 @@ def load_operation_state_file(state_path: str | Path) -> dict[str, object] | Non
     @param[in]  state_path Candidate operation-state file path.
     @return     Persisted operation-state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     return _load_operation_state_path(Path(state_path))
 
@@ -353,9 +308,6 @@ def load_optional_json_artifact(artifact_path: str | Path) -> object | None:
     @return     Parsed JSON payload or `None` when the artifact is missing.
     @exception  OSError Raised when the artifact cannot be read.
     @exception  json.JSONDecodeError Raised when the artifact is not valid JSON.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     resolved_path = Path(artifact_path)
     if not resolved_path.is_file():
@@ -370,9 +322,6 @@ def load_project_json_artifact(project_root: str | Path, file_name: str) -> obje
     @param[in]  file_name Root-level artifact file name.
     @return     Parsed JSON payload or `None` for missing, unreadable, or malformed artifacts.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     try:
         return load_optional_json_artifact(Path(project_root) / file_name)
@@ -387,9 +336,6 @@ def project_artifact_exists(project_root: str | Path, file_name: str) -> bool:
     @param[in]  file_name Root-level artifact file name.
     @return     True when the artifact exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return (Path(project_root) / file_name).exists()
 
@@ -401,9 +347,6 @@ def project_text_artifact_has_content(project_root: str | Path, file_name: str) 
     @param[in]  file_name Root-level artifact file name.
     @return     True when the text artifact is present and non-empty.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     path = Path(project_root) / file_name
     try:
@@ -427,9 +370,6 @@ def write_operation_json_artifact(
     @return     Final artifact path.
     @exception  TypeError Raised when the payload is not JSON-serializable.
     @exception  OSError Raised when the artifact cannot be written.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     output_path = build_operation_output_path(project_root, operation_kind, file_name)
     write_json_atomic(output_path, payload)
@@ -443,9 +383,6 @@ def relative_to_project(project_root: str | Path, artifact_path: str | Path) -> 
     @param[in]  artifact_path Absolute project-local artifact path.
     @return     POSIX-style project-relative string.
     @exception  ValueError Raised when the path is outside the project root.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root).resolve()
     resolved_artifact_path = Path(artifact_path).resolve()
@@ -462,9 +399,6 @@ def is_path_inside_project(project_root: str | Path, candidate_path: str | Path)
     @param[in]  candidate_path Candidate filesystem path.
     @return     True when the resolved candidate path is inside the project root.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     resolved_project_root = Path(project_root).resolve()
     resolved_candidate_path = Path(candidate_path).resolve()
@@ -481,9 +415,6 @@ def validate_project_relative_path(relative_path: str | Path) -> str:
     @param[in]  relative_path Candidate project-relative path value.
     @return     POSIX-style project-relative path.
     @exception  ValueError Raised when the path is empty, absolute, or contains parent traversal.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_text = str(relative_path).strip()
     if not normalized_text:
@@ -511,9 +442,6 @@ def resolve_project_relative_path(project_root: str | Path, relative_path: str |
     @param[in]  relative_path Candidate project-relative path value.
     @return     Resolved absolute path below the project root.
     @exception  ValueError Raised when the path escapes the active project.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     safe_relative_path = validate_project_relative_path(relative_path)
     resolved_project_root = Path(project_root).resolve()
@@ -532,9 +460,6 @@ def try_resolve_project_relative_path(project_root: str | Path, relative_path: o
     @param[in]  relative_path Candidate persisted project-relative path.
     @return     Resolved project-local path or `None` for missing or invalid input.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_relative_path = optional_string(relative_path)
     if not normalized_relative_path:
@@ -552,9 +477,6 @@ def project_relative_path_exists(project_root: str | Path, relative_path: str | 
     @param[in]  relative_path Candidate project-relative path value.
     @return     True when the resolved path stays below the project root and exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     try:
         return resolve_project_relative_path(project_root, relative_path).exists()
@@ -569,9 +491,6 @@ def progress_percent(progress_current: int, progress_total: int) -> int:
     @param[in]  progress_total Total work-unit count.
     @return     Integer percent in the inclusive 0-100 range.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if progress_total <= 0:
         return 0
@@ -598,9 +517,6 @@ def emit_progress_update(
     @param[in]  include_token_usage True when the callback accepts a token-usage argument.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.2.0
     """
     if callable(progress_callback):
         percent_value = progress_percent(progress_current, progress_total)
@@ -617,9 +533,6 @@ def optional_string(value: object, *, strip: bool = True) -> str | None:
     @param[in]  strip True to trim leading and trailing whitespace.
     @return     Normalized string or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if value in (None, ""):
         return None
@@ -636,9 +549,6 @@ def safe_file_stem(value: object, fallback: str = "AudioMancer") -> str:
     @param[in]  fallback Stem returned when the normalized value is empty.
     @return     Filesystem-safe file stem preserving Unicode word characters.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     normalized = re.sub(r'[<>:"/\\|?*\x00-\x1F]+', "_", str(value).strip())
     normalized = re.sub(r"\s+", "_", normalized).strip("._ ")
@@ -651,9 +561,6 @@ def is_missing_runtime_value(value: object) -> bool:
     @param[in]  value Candidate runtime value.
     @return     True when the value represents a missing runtime field.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return str(value).strip().casefold() in {"", "none", "null"}
 
@@ -664,9 +571,6 @@ def valid_runtime_value(value: object) -> str:
     @param[in]  value Candidate runtime value.
     @return     String value or an empty string for null-like values.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     text = str(value).strip() if value is not None else ""
     return "" if is_missing_runtime_value(text) else text
@@ -686,9 +590,6 @@ def reset_operation_data(
     @param[in]  preserve_operation_kinds Optional operation kinds excluded from clearing.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.4.0
     """
     preserved_operation_kinds = _normalized_operation_kind_set(preserve_operation_kinds)
     operation_kinds = downstream_operation_kinds(
@@ -732,9 +633,6 @@ def _normalized_operation_kind_set(operation_kinds: Iterable[str] | None) -> fro
     @param[in]  operation_kinds Optional operation-kind iterable.
     @return     Clean operation-kind set.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     if operation_kinds is None:
         return frozenset()
@@ -747,9 +645,6 @@ def _load_operation_state_path(state_path: Path) -> dict[str, object] | None:
     @param[in]  state_path Candidate operation-state file path.
     @return     Persisted operation-state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
     """
     if not state_path.is_file():
         return None
@@ -774,9 +669,6 @@ def raise_if_cancelled(cancel_requested) -> None:
     @param[in]  cancel_requested Optional zero-argument callable.
     @return     None.
     @exception  OperationCancelledError Raised when cancellation is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if callable(cancel_requested) and bool(cancel_requested()):
         raise OperationCancelledError("The operation was cancelled by the operator.")

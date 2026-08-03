@@ -12,9 +12,6 @@
 @details Builds Characters-page selector state, notes, evidence previews, and
          manual-maintenance enablement flags from persisted project artifacts
          and settings.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-08
-@version 0.5.2
 """
 
 # IMPORTS
@@ -39,9 +36,6 @@ def build_character_discovery_profile_state(
     @param[in]  selected_profile_id Preferred profile identifier if available.
     @return     Selector entries plus resolved selected profile id.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.2
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -83,9 +77,6 @@ def build_character_discovery_state(
     @param[in]  settings_payload Persisted application settings payload.
     @return     Page-state payload consumed by the Characters page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.3
     """
     if project_root is None or manifest is None:
         return {
@@ -190,9 +181,6 @@ def build_character_discovery_notes(
     @param[in]  language Runtime UI language code.
     @return     Ordered notes for the Characters page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.2
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("characters.note_no_source", language)]
@@ -259,9 +247,6 @@ def _build_token_usage_notes(
     @param[in]  operation_state Value for `operation_state`.
     @param[in]  language Language code.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
 
@@ -276,9 +261,6 @@ def _character_discovery_stage_status(
     @param[in]  operation_state Persisted operation state or `None`.
     @return     Effective stage token for the Characters page state.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.1
     """
     if isinstance(operation_state, dict):
         operation_status = str(operation_state.get("status", ""))
@@ -301,9 +283,6 @@ def _persisted_profile_id(
     @param[in]  operation_state Persisted operation state or `None`.
     @return     Persisted AI profile identifier or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
     """
     if isinstance(report, dict):
         profile_id = report.get("character_profile_id_last_used")

@@ -11,9 +11,6 @@
 @brief Prompt-template helpers for AudioMancer.
 @details Loads UTF-8 prompt text files from the application-owned prompt folder
          and renders them through strict named placeholder substitution.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.1.1
 """
 
 # IMPORTS
@@ -47,9 +44,6 @@ def load_prompt(
     @return     Loaded prompt text.
     @exception  FileNotFoundError Raised when the prompt file is missing.
     @exception  ValueError Raised when the prompt file is empty.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     prompt_path = _resolve_prompt_path(prompt_name, prompt_root)
     if not prompt_path.is_file():
@@ -73,9 +67,6 @@ def render_prompt(
     @param[in]  prompt_root Optional filesystem override used by tests.
     @return     Fully rendered prompt text.
     @exception  ValueError Raised on missing or extra placeholders.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.1
     """
     template = load_prompt(prompt_name, prompt_root)
     placeholders = set(_PLACEHOLDER_PATTERN.findall(template))
@@ -111,9 +102,6 @@ def validate_required_prompts(
     @return     None.
     @exception  FileNotFoundError Raised when one prompt file is missing.
     @exception  ValueError Raised when one prompt file is empty.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     for prompt_name in prompt_names:
         load_prompt(prompt_name, prompt_root)
@@ -128,9 +116,6 @@ def _resolve_prompt_path(prompt_name: str, prompt_root: str | Path | None) -> Pa
     @param[in]  prompt_name Value for `prompt_name`.
     @param[in]  prompt_root Value for `prompt_root`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     prompt_directory = config.APP_PROMPTS_PATH if prompt_root is None else Path(prompt_root)
     return prompt_directory / f"{prompt_name}.txt"

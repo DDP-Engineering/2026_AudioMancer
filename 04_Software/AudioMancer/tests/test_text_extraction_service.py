@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer text extraction service.
 @details Verifies self-contained extraction artifacts, resumable state, and
          deterministic text extraction for the supported source formats.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.1.2
 """
 
 # IMPORTS
@@ -29,7 +26,11 @@ from odf.text import P
 import pytest
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service, text_extraction_service
+from audiomancer.services import (
+    project_workspace_service,
+    source_ledger_service,
+    text_extraction_service,
+)
 
 
 def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -> None:
@@ -38,9 +39,6 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -77,9 +75,11 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     assert generated_artifact_names == {
         config.EXTRACTED_TEXT_FILE_NAME,
         config.EXTRACTION_METADATA_FILE_NAME,
+        config.SOURCE_LEDGER_FILE_NAME,
     }
-    assert (project_root / "extraction_report.json").exists() is False
-    assert (project_root / "extraction_state.json").exists() is False
+    ledger = source_ledger_service.load_source_ledger(project_root)
+    assert ledger["canonical_text"]["length_codepoints"] == 24
+    assert [unit["unit_id"] for unit in ledger["units"]] == ["u-000001", "u-000002"]
 
 
 @pytest.mark.parametrize(
@@ -106,9 +106,6 @@ def test_extract_text_supports_document_formats(
     @param[in]  builder_name Fixture-builder token for the format.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         f"Project_{file_type}",
@@ -139,9 +136,6 @@ def test_extract_text_reports_pdf_warnings_and_total_pages(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "PdfProject",
@@ -166,9 +160,6 @@ def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "EmptyPdfProject",
@@ -192,9 +183,6 @@ def test_extract_text_splits_rtf_into_multiple_progress_units(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "RtfProgressProject",
@@ -220,9 +208,6 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "EpubProgressProject",
@@ -250,40 +235,34 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
     assert metadata["progress_total"] >= 2
 
 
-def test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension(tmp_path) -> None:
+def test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension(tmp_path) -> None:
     """
-    @brief      Verify misnamed legacy Word containers do not pass through the RTF extractor.
+    @brief      Verify misnamed binary Word containers do not pass through the RTF extractor.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
-        "LegacyDocProject",
+        "MisnamedBinaryDocProject",
         tmp_path,
     )
-    source_path = project_root / "legacy.rtf"
+    source_path = project_root / "misnamed-binary-doc.rtf"
     source_path.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 64)
     manifest["source_document"] = _build_source_document(source_path, "rtf")
 
-    with pytest.raises(ValueError, match="legacy Word \\.doc container"):
+    with pytest.raises(ValueError, match="Word \\.doc container"):
         text_extraction_service.extract_text(project_root, manifest)
     metadata = text_extraction_service.load_extraction_metadata(project_root)
     assert metadata is not None
     assert metadata["status"] == "failed"
 
 
-def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
+def test_extract_text_restarts_unfinished_docx_extraction(tmp_path) -> None:
     """
-    @brief      Verify rerunning an unfinished incremental extraction continues from saved progress.
+    @brief      Verify rerunning an unfinished extraction rebuilds canonical text and its ledger.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ResumeProject",
@@ -316,8 +295,13 @@ def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
     assert output_path.read_text(encoding="utf-8") == "Story first\n\nStory second\n"
 
 
-def test_extract_text_persists_cancelled_progress_and_resumes(tmp_path) -> None:
-    """Verify cancellation persists one resumable strict metadata checkpoint."""
+def test_extract_text_persists_cancelled_progress_and_restarts(tmp_path) -> None:
+    """
+    @brief      Verify cancellation persists progress while the next run rebuilds from source.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
     project_root, manifest = project_workspace_service.create_project("CancelledExtraction", tmp_path)
     source_path = project_root / "story.docx"
     _write_docx_source(source_path, paragraphs=["Story first", "Story second"])
@@ -377,15 +361,6 @@ def test_load_extraction_metadata_rejects_incompatible_schema(tmp_path, payload_
         text_extraction_service.load_extraction_metadata(project_root)
 
 
-def test_load_extraction_metadata_rejects_legacy_sidecars(tmp_path) -> None:
-    """Verify old report/state artifacts require a destructive extraction reset."""
-    project_root, _manifest = project_workspace_service.create_project("LegacyExtraction", tmp_path)
-    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
-
-    with pytest.raises(text_extraction_service.ExtractionMetadataError, match="Legacy extraction sidecars"):
-        text_extraction_service.load_extraction_metadata(project_root)
-
-
 def test_load_extraction_metadata_rejects_invalid_json(tmp_path) -> None:
     """Verify malformed metadata JSON requires a destructive extraction reset."""
     project_root, _manifest = project_workspace_service.create_project("InvalidExtractionJson", tmp_path)
@@ -401,9 +376,6 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project(
         "ResetProject",
@@ -427,8 +399,6 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
         ),
         encoding="utf-8",
     )
-    (project_root / "extraction_report.json").write_text("{}", encoding="utf-8")
-    (project_root / "extraction_state.json").write_text("{}", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("cleanup", encoding="utf-8")
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / "operator_note.txt").write_text("keep", encoding="utf-8")
@@ -439,8 +409,6 @@ def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> 
     assert (project_root / "operator_note.txt").is_file()
     assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).exists() is False
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / "extraction_report.json").exists() is False
-    assert (project_root / "extraction_state.json").exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
 
@@ -452,9 +420,6 @@ def _build_source_document(source_path: Path, file_type: str) -> dict[str, objec
     @param[in]  file_type Persisted source-type token.
     @return     Source-document payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     return {
         "original_name": source_path.name,
@@ -471,9 +436,6 @@ def _write_markdown_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     path.write_text("# Story\n\nParagraph", encoding="utf-8")
 
@@ -484,9 +446,6 @@ def _write_rtf_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     path.write_text(r"{\rtf1\ansi Story paragraph}", encoding="utf-8")
 
@@ -498,9 +457,6 @@ def _write_docx_source(path: Path, paragraphs: list[str] | None = None) -> None:
     @param[in]  paragraphs Optional paragraph list.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     document = Document()
     for paragraph in paragraphs or ["Story paragraph"]:
@@ -514,9 +470,6 @@ def _write_odt_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     document = OpenDocumentText()
     document.text.addElement(P(text="Story paragraph"))
@@ -529,9 +482,6 @@ def _write_epub_source(path: Path) -> None:
     @param[in]  path Target source path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     book = epub.EpubBook()
     book.set_identifier("test-book")
@@ -554,9 +504,6 @@ def _write_pdf_source(path: Path, page_texts: list[str]) -> None:
     @param[in]  page_texts Ordered page-text payloads.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     document = fitz.open()
     for page_text in page_texts:

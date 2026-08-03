@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-28cc7dea"
+title = "The Home page shall present export panel widgets and update export"
+status = "active"
+
+requirement = """
+The Home page shall present export panel widgets and update export labels on language change.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_export_panel_widgets_exist",
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_language_application_updates_export_labels",
+]
+
+priority = "high"
+rationale = """
+Export controls must be present and localized.
+"""
+created = 2026-07-24
+updated = 2026-07-24

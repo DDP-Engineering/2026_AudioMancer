@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-80165518"
+title = "Text Cleanup state shall require structural extraction and expose"
+status = "active"
+
+requirement = """
+Text Cleanup state shall require structural extraction and expose terminal warning plus optional operator-edit state from authoritative artifacts.
+"""
+
+verification = "Cleanup state readiness, runtime quality, and manual-save tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_exposes_runtime_quality_and_manual_save",
+  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_requires_structural_extraction",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+The page must show truthful readiness and review state from authoritative Cleanup artifacts.
+"""
+created = 2026-07-27
+updated = 2026-07-30

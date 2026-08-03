@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-16c16214"
+title = "The Text Chunking UI shall derive not-started, running, resumable"
+status = "active"
+
+requirement = """
+The Text Chunking UI shall derive not-started, running, resumable, completed, warned, and manually adjusted states from the authoritative document, resume with its stored strategy and instructions and the currently selected AI profile without re-prompting, omit durable progress claims, and preserve existing rerun and reset confirmations.
+"""
+
+verification = "Text Chunking UI state derives resume and strategy without durable progress."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_state_projects_resumable_document_without_durable_progress",
+]
+
+priority = "high"
+rationale = """
+Operators need an accurate workflow surface whose controls and notes reflect the sole persisted Chunking authority.
+"""
+created = 2026-07-20
+updated = 2026-07-20

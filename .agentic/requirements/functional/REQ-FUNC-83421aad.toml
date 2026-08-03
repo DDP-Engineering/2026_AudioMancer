@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-83421aad"
+title = "Workflow controllers shall resolve only enabled AI profiles by"
+status = "active"
+
+requirement = """
+Workflow controllers shall resolve only enabled AI profiles by identifier, ignoring disabled or missing ones.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles",
+]
+
+priority = "high"
+rationale = """
+Domain work must not use disabled or absent provider profiles.
+"""
+created = 2026-07-19
+updated = 2026-07-24

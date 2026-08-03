@@ -9,15 +9,11 @@
 """
 @file test_pcm_codec.py
 @brief Internal PCM codec tests for AudioMancer.
-@details Verifies the stdlib-only PCM conversions that replace the audioop
-         module removed in Python 3.13. Golden cases pin the measured audioop
-         semantics on every interpreter; differential cases compare byte-for-byte
-         against real audioop and skip where it no longer exists.
+@details Verifies the internal PCM conversions used by Audio Assembly. Golden
+         cases pin the specified semantics on every interpreter; differential
+         cases use audioop as a reference oracle where it is available.
          Covers S-WIDTH, S-CHANNELS, S-RATE, S-PARITY, S-SIGNED, S-REJECT,
          S-EMPTY, S-PIN and S-SKIP.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -31,9 +27,9 @@ import pytest
 
 from audiomancer.services import audio_assembly_service, pcm_codec
 
-# The reference implementation only exists up to Python 3.12. Everything below
-# that is guarded by `requires_audioop` still runs there, which is what proves
-# the replacement is behaviour-preserving. See REQ-TEST-29d60d25-64ce-49bb-ac6d-24764f80eb37.
+# The optional reference implementation is available on Python 3.12. Everything
+# guarded by `requires_audioop` runs there as an additional differential oracle.
+# See REQ-TEST-29d60d25-64ce-49bb-ac6d-24764f80eb37.
 try:  # pragma: no cover - import guard depends on interpreter version
     import audioop
 except ImportError:  # pragma: no cover - Python 3.13 and newer
@@ -41,7 +37,7 @@ except ImportError:  # pragma: no cover - Python 3.13 and newer
 
 requires_audioop = pytest.mark.skipif(
     audioop is None,
-    reason="audioop reference implementation is unavailable on this interpreter (removed in Python 3.13)",
+    reason="audioop reference implementation is unavailable on this interpreter",
 )
 
 _SAMPLE_WIDTHS = (1, 2, 3, 4)
@@ -54,9 +50,6 @@ def _sample_limits(sample_width: int) -> tuple[int, int]:
     @param[in]  sample_width Sample width in bytes.
     @return     Tuple of minimum and maximum signed sample values.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     maximum = (1 << (sample_width * 8 - 1)) - 1
     return -maximum - 1, maximum
@@ -71,9 +64,6 @@ def _build_pcm(sample_width: int, channels: int, frames: int, seed: int = 202607
     @param[in]  seed Deterministic random seed.
     @return     Little-endian signed PCM bytes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     minimum, maximum = _sample_limits(sample_width)
     generator = random.Random(seed)
@@ -113,9 +103,6 @@ def test_pcm_codec_sample_width_conversion_matches_measured_audioop_bytes(
     @exception  None
     @details    Covers S-WIDTH and REQ-FUNC-6228f441-c9fa-4018-ad8d-7a2fefd67f44.
                 Conversion is a pure arithmetic shift, so widening never rounds.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     converted = pcm_codec.convert_sample_width(bytes.fromhex(source_hex), source_width, target_width)
     assert converted.hex() == expected_hex
@@ -129,9 +116,6 @@ def test_pcm_codec_sample_width_conversion_reads_single_byte_samples_as_signed()
     @details    Covers S-SIGNED and REQ-FUNC-6228f441-c9fa-4018-ad8d-7a2fefd67f44.
                 WAV stores 8-bit PCM unsigned, but audioop reads it signed, so
                 0x80 must widen to -32768 rather than to +128.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     converted = pcm_codec.convert_sample_width(b"\x80", 1, 2)
     assert int.from_bytes(converted, "little", signed=True) == -32768
@@ -145,9 +129,6 @@ def test_pcm_codec_stereo_to_mono_floors_instead_of_rounding() -> None:
     @details    Covers S-CHANNELS and REQ-FUNC-2a5a861a-8f08-46e0-834f-4ba125864d7d.
                 Mixing 100 and 101 at 0.5/0.5 yields 100.5, which audioop floors
                 to 100 rather than rounding to 101.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     frame = (100).to_bytes(2, "little", signed=True) + (101).to_bytes(2, "little", signed=True)
     mixed = pcm_codec.stereo_to_mono(frame, 2)
@@ -162,9 +143,6 @@ def test_pcm_codec_stereo_to_mono_clips_to_the_sample_width_maximum() -> None:
     @details    Covers S-CHANNELS and REQ-FUNC-2a5a861a-8f08-46e0-834f-4ba125864d7d.
                 Mixing 100 and 100 at unity factors yields 200, which must clip
                 to 127 for a one-byte sample rather than wrap to a negative value.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     mixed = pcm_codec.stereo_to_mono(b"\x64\x64", 1, 1.0, 1.0)
     assert mixed == b"\x7f"
@@ -176,9 +154,6 @@ def test_pcm_codec_mono_to_stereo_duplicates_each_sample() -> None:
     @return     None.
     @exception  None
     @details    Covers S-CHANNELS and REQ-FUNC-2a5a861a-8f08-46e0-834f-4ba125864d7d.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert pcm_codec.mono_to_stereo(b"\x01\xfe", 1).hex() == "0101fefe"
 
@@ -191,9 +166,6 @@ def test_pcm_codec_rate_conversion_reduces_the_rate_pair_by_greatest_common_divi
     @details    Covers S-RATE and REQ-FUNC-999d448a-6629-45b2-a2c3-a2dfecaa2ee9.
                 44100/22050 reduces to 2/1, so the fractional counter starts at
                 -1 rather than at -22050.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     converted, state = pcm_codec.convert_frame_rate(b"", 2, 1, 44100, 22050, None)
     assert converted == b""
@@ -208,9 +180,6 @@ def test_pcm_codec_rate_conversion_state_holds_samples_scaled_to_32_bit() -> Non
     @details    Covers S-RATE and REQ-FUNC-999d448a-6629-45b2-a2c3-a2dfecaa2ee9.
                 Two-byte samples are held shifted left by 16, so trailing samples
                 2000 and 3000 appear as 131072000 and 196608000.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     frame_data = b"".join((value * 1000).to_bytes(2, "little", signed=True) for value in range(-4, 4))
     _, state = pcm_codec.convert_frame_rate(frame_data, 2, 1, 44100, 22050, None)
@@ -231,9 +200,6 @@ def test_pcm_codec_chunked_rate_conversion_matches_single_call(source_rate: int,
     @details    Covers S-RATE and REQ-FUNC-999d448a-6629-45b2-a2c3-a2dfecaa2ee9.
                 Final assembly streams WAV data in chunks, so a discontinuity at
                 a chunk boundary would be an audible defect.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     frame_data = _build_pcm(2, 1, 600)
     whole, _ = pcm_codec.convert_frame_rate(frame_data, 2, 1, source_rate, target_rate, None)
@@ -264,9 +230,6 @@ def test_pcm_codec_rejects_unsupported_sample_width(bad_width: int) -> None:
     @return     None.
     @exception  None
     @details    Covers S-REJECT and REQ-FUNC-2242c524-3b57-4460-afde-f6c97180c48a.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     with pytest.raises(ValueError):
         pcm_codec.convert_sample_width(b"\x00\x00\x00\x00", bad_width, 2)
@@ -280,9 +243,6 @@ def test_pcm_codec_rejects_non_positive_channel_and_rate_values() -> None:
     @return     None.
     @exception  None
     @details    Covers S-REJECT and REQ-FUNC-2242c524-3b57-4460-afde-f6c97180c48a.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     with pytest.raises(ValueError):
         pcm_codec.convert_frame_rate(b"", 2, 0, 44100, 22050, None)
@@ -300,9 +260,6 @@ def test_pcm_codec_returns_empty_output_for_empty_input(sample_width: int) -> No
     @return     None.
     @exception  None
     @details    Covers S-EMPTY and REQ-FUNC-be94fb5d-88d2-40dc-9c8a-65bd2aab79b8.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert pcm_codec.convert_sample_width(b"", sample_width, 2) == b""
     assert pcm_codec.mono_to_stereo(b"", sample_width) == b""
@@ -319,15 +276,12 @@ def test_audio_assembly_rejects_unsupported_channel_conversion() -> None:
     @exception  None
     @details    Covers S-REJECT and REQ-FUNC-7b43e8a3-c9aa-4e22-8b57-171bfb723fee.
                 This pre-existing contract must survive the move off audioop.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     with pytest.raises(RuntimeError, match="only between mono and stereo"):
         audio_assembly_service._convert_wav_channels(b"\x00\x00" * 6, 2, 3, 2)
 
 
-# DIFFERENTIAL PARITY - the oracle comparison against the implementation being replaced.
+# DIFFERENTIAL PARITY - optional oracle comparisons.
 
 
 @requires_audioop
@@ -342,9 +296,6 @@ def test_pcm_codec_sample_width_conversion_is_byte_identical_to_audioop(source_w
     @exception  None
     @details    Covers S-PARITY and REQ-FUNC-6228f441-c9fa-4018-ad8d-7a2fefd67f44
                 for every ordered width pair drawn from {1,2,3,4}.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     frame_data = _build_pcm(source_width, 1, 256)
     expected = audioop.lin2lin(frame_data, source_width, target_width)
@@ -361,9 +312,6 @@ def test_pcm_codec_channel_conversion_is_byte_identical_to_audioop(sample_width:
     @exception  None
     @details    Covers S-PARITY and REQ-FUNC-2a5a861a-8f08-46e0-834f-4ba125864d7d
                 at the exact factors Audio Assembly uses.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     mono_data = _build_pcm(sample_width, 1, 256)
     stereo_data = _build_pcm(sample_width, 2, 256, seed=99)
@@ -392,9 +340,6 @@ def test_pcm_codec_rate_conversion_is_byte_identical_to_audioop(
     @details    Covers S-PARITY and REQ-FUNC-999d448a-6629-45b2-a2c3-a2dfecaa2ee9.
                 The returned state is compared too, because a divergent state
                 would corrupt only later chunks of a long audiobook.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     frame_data = _build_pcm(sample_width, channels, 300)
     expected_bytes, expected_state = audioop.ratecv(
@@ -416,9 +361,6 @@ def test_pcm_codec_chunked_rate_conversion_is_byte_identical_to_audioop() -> Non
     @details    Covers S-PARITY and REQ-FUNC-999d448a-6629-45b2-a2c3-a2dfecaa2ee9.
                 State is threaded through both implementations so divergence in
                 the carry-over samples is caught, not just in the first chunk.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     frame_data = _build_pcm(2, 2, 900)
     chunk_size = 4 * 61
@@ -435,17 +377,13 @@ def test_pcm_codec_chunked_rate_conversion_is_byte_identical_to_audioop() -> Non
 # PLATFORM CONTRACTS.
 
 
-def test_audiomancer_sources_do_not_import_audioop() -> None:
+def test_audiomancer_sources_use_internal_pcm_codec() -> None:
     """
-    @brief      Verify no source module imports the removed audioop module.
+    @brief      Verify source modules use the internal PCM codec.
     @return     None.
     @exception  None
-    @details    Covers REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5. audioop has
-                no stdlib replacement, so any surviving import breaks Audio
-                Assembly at import time on Python 3.13.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
+    @details    Covers REQ-PLAT-483bf463-b356-480b-ac4a-a2be60d5a9e5 and keeps
+                Audio Assembly importable throughout the supported interpreter range.
     """
     source_root = Path(audio_assembly_service.__file__).resolve().parents[1]
     offenders = [
@@ -467,9 +405,6 @@ def test_audiomancer_declares_python_3_13_as_supported() -> None:
     @details    Covers REQ-PLAT-50f144d0-0798-4aa8-8a70-cdc14fa3cf28. The upper
                 bound stays exclusive so Python 3.14 remains a deliberate
                 decision rather than an accidental one.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_file = Path(audio_assembly_service.__file__).resolve().parents[3] / "pyproject.toml"
     metadata = tomllib.loads(project_file.read_text(encoding="utf-8"))
@@ -484,9 +419,6 @@ def test_pcm_codec_parity_suite_skips_when_reference_is_unavailable() -> None:
     @details    Covers S-SKIP and REQ-TEST-29d60d25-64ce-49bb-ac6d-24764f80eb37.
                 On Python 3.13 audioop is gone, so the oracle comparison must
                 skip rather than fail and redden the suite.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     reference_expected = sys.version_info < (3, 13)
     assert (audioop is not None) is reference_expected

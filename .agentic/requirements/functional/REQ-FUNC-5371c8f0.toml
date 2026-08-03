@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-5371c8f0"
+title = "Translation state shall derive translation counts and status"
+status = "active"
+
+requirement = """
+Translation state shall derive translation counts and status.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_build_ai_translation_state_derives_counts_and_status",
+]
+
+priority = "high"
+rationale = """
+The UI needs truthful translation counts and status.
+"""
+created = 2026-07-19
+updated = 2026-07-24

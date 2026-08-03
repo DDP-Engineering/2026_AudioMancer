@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-f80b4df1"
+title = "Speech-block state shall load persisted blocks and summary"
+status = "active"
+
+requirement = """
+Speech-block state shall load persisted blocks and summary.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_loads_persisted_blocks_and_summary",
+]
+
+priority = "high"
+rationale = """
+State must reflect the saved plan and its summary.
+"""
+created = 2026-07-19
+updated = 2026-07-24

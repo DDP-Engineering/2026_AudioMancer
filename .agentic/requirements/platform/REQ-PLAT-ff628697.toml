@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-PLAT-ff628697"
+title = "The settings.json scaffold shall match service defaults"
+status = "active"
+
+requirement = """
+The settings.json scaffold shall match service defaults.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_settings_json_scaffold_matches_service_defaults",
+]
+
+priority = "high"
+rationale = """
+The shipped settings scaffold must stay in sync with code defaults.
+"""
+created = 2026-07-24
+updated = 2026-07-24

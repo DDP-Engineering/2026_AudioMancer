@@ -12,9 +12,6 @@
 @details Builds readiness state and TXT/Markdown export documents from runtime
          project artifacts plus ZIP archive exports for generated voice and
          audiobook assets without modifying the active project workspace.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.5.1
 """
 
 # IMPORTS
@@ -32,9 +29,9 @@ from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
     chunking_document_service,
-    deterministic_cleanup_service,
     narrator_definition_service,
     speech_blocks_service,
+    text_cleanup_service,
     token_usage_service,
 )
 from audiomancer.services.logging_service import get_component_logger
@@ -141,9 +138,6 @@ class ExportDocument:
                 the plain-text projection.
     @return     Immutable export document payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.3.0
     """
 
     title: str
@@ -166,9 +160,6 @@ def build_export_states(
     @param[in]  manifest Active project manifest or `None`.
     @return     Ordered export readiness state dictionaries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     return [_build_export_state(project_root, manifest, export_kind) for export_kind in EXPORT_KIND_OPTIONS]
 
@@ -181,9 +172,6 @@ def default_export_file_name(manifest: dict[str, object] | None, export_kind: st
     @param[in]  export_format Stable export format token.
     @return     Filesystem-safe default file name.
     @exception  ValueError Raised when the export kind or format is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     _validate_export_kind(export_kind)
     extension = export_extension(export_format)
@@ -198,9 +186,6 @@ def export_extension(export_format: str) -> str:
     @param[in]  export_format Stable export format token.
     @return     File extension including the leading dot.
     @exception  ValueError Raised when the format is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if export_format == EXPORT_FORMAT_TXT:
         return ".txt"
@@ -217,9 +202,6 @@ def export_formats_for_kind(export_kind: str) -> tuple[str, ...]:
     @param[in]  export_kind Stable export kind token.
     @return     Ordered export format tokens.
     @exception  ValueError Raised when the export kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     _validate_export_kind(export_kind)
     if export_kind in _ARCHIVE_EXPORT_KINDS:
@@ -234,9 +216,6 @@ def is_path_inside_project(project_root: str | Path, export_path: str | Path) ->
     @param[in]  export_path Candidate save path.
     @return     True when the candidate is equal to or below the project root.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     return _is_path_inside_project(project_root, export_path)
 
@@ -255,9 +234,6 @@ def render_export(
     @param[in]  export_format Stable export format token.
     @return     Rendered UTF-8 text content.
     @exception  ValueError Raised when the export is unavailable or unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     _PROJECT_EXPORT_LOGGER.info("Rendering project export kind=%s format=%s", export_kind, export_format)
     _validate_export_kind(export_kind)
@@ -291,9 +267,6 @@ def create_archive_export(
     @return     Final ZIP path.
     @exception  ValueError Raised when the export is unavailable or unsupported.
     @exception  OSError Raised when the archive cannot be written.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     _PROJECT_EXPORT_LOGGER.info("Creating project archive export kind=%s path=%s", export_kind, export_path)
     _validate_export_kind(export_kind)
@@ -334,9 +307,6 @@ def _build_export_state(
     @param[in]  export_kind Stable export kind token.
     @return     Export readiness state dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     operation_kind = _EXPORT_OPERATION_BY_KIND[export_kind]
     status = EXPORT_STATUS_NOT_READY
@@ -368,9 +338,6 @@ def _build_export_document(project_root: Path, manifest: dict[str, object], expo
     @param[in]  export_kind Stable export kind token.
     @return     Normalized export document.
     @exception  ValueError Raised when the export kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     builders: dict[str, Callable[[Path, dict[str, object]], ExportDocument]] = {
         EXPORT_KIND_CLEANED_TEXT: _build_cleaned_text_document,
@@ -389,31 +356,17 @@ def _build_cleaned_text_document(project_root: Path, manifest: dict[str, object]
     @param[in]  manifest Active project manifest.
     @return     Normalized export document.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
-    report = deterministic_cleanup_service.load_cleanup_report(project_root) or {}
-    state = deterministic_cleanup_service.load_operation_state(project_root) or {}
-    metadata = _metadata_from_state(state)
+    report = text_cleanup_service.load_cleanup_document(project_root) or {}
     cleaned_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8").strip()
     parameters = _compact_fields(
         [
-            ("Cleanup Mode", _first_value(report.get("cleanup_mode"), state.get("mode"), "deterministic")),
-            *_ai_parameter_fields(
-                project_root,
-                report,
-                state,
-                _first_value(report.get("ai_profile_id"), metadata.get("ai_profile_id")),
-            ),
-            ("Paragraph Count", _first_value(report.get("paragraph_count"), metadata.get("paragraph_count"))),
-            ("Removed Line Count", _first_value(report.get("removed_line_count"), _removed_line_count(metadata))),
-            (
-                "Detected Chapters",
-                _first_value(report.get("detected_chapter_count"), metadata.get("detected_chapter_count")),
-            ),
-            ("Detected Language", _first_value(report.get("detected_language"), metadata.get("detected_language"))),
-            ("Warnings Count", _first_value(len(report.get("warnings", [])), state.get("warning_count"))),
+            ("Cleanup Mode", "hybrid"),
+            ("Validation", report.get("validation_state")),
+            ("Uncertain Decisions Preserved", report.get("uncertainty_count")),
+            ("Detected Language", dict(report.get("document_profile") or {}).get("language")),
+            ("Warnings Count", len(report.get("warnings", []))),
+            *_token_usage_fields(report),
         ]
     )
     return ExportDocument(
@@ -431,9 +384,6 @@ def _build_text_chunks_document(project_root: Path, manifest: dict[str, object])
     @param[in]  manifest Active project manifest.
     @return     Normalized export document.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     document = chunking_document_service.load_chunking_document(project_root)
     report = {} if document is None else chunking_document_service.derive_report(document)
@@ -486,9 +436,6 @@ def _build_ai_translation_document(project_root: Path, manifest: dict[str, objec
     @param[in]  manifest Active project manifest.
     @return     Normalized export document.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     document = ai_translation_service.load_translation_document(project_root)
     if document is None:
@@ -528,9 +475,6 @@ def _build_characters_document(project_root: Path, manifest: dict[str, object]) 
     @param[in]  manifest Active project manifest.
     @return     Normalized export document.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.2.0
     """
     document = character_discovery_service.load_character_document(project_root) or {}
     characters = character_discovery_service.load_character_profiles(project_root)
@@ -561,9 +505,6 @@ def _build_speech_blocks_document(project_root: Path, manifest: dict[str, object
     @param[in]  manifest Active project manifest.
     @return     Normalized export document.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.2
     """
     report = speech_blocks_service.load_speech_blocks_report(project_root) or {}
     state = speech_blocks_service.load_operation_state(project_root) or {}
@@ -606,9 +547,6 @@ def _render_txt_document(document: ExportDocument) -> str:
     @param[in]  document Normalized export document.
     @return     Plain-text document content.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     lines = [document.title, "=" * len(document.title), ""]
     lines.extend(_render_txt_fields(document.header_fields))
@@ -625,9 +563,6 @@ def _render_markdown_document(document: ExportDocument) -> str:
     @param[in]  document Normalized export document.
     @return     Markdown document content.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.2.0
     """
     lines = [f"# {document.title}", "", "## Header", "", "| Field | Value |", "| --- | --- |"]
     lines.extend(
@@ -652,9 +587,6 @@ def _render_markdown_section_body(section_title: str, section_body: str, documen
     @param[in]  document Source export document carrying structured payloads.
     @return     Markdown-ready section body.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.2.0
     """
     if section_title == "Character Dossiers" and document.character_dossiers is not None:
         return _render_character_dossiers_markdown(document.character_dossiers)
@@ -669,9 +601,6 @@ def _render_speech_blocks_markdown(section_body: str) -> str:
     @param[in]  section_body Plain Speech Blocks section body.
     @return     Markdown-ready Speech Blocks section body.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     rendered_blocks: list[str] = []
     for block_text in section_body.strip().split("\n\n"):
@@ -687,9 +616,6 @@ def _render_character_dossiers_markdown(records: list[list[tuple[str, str]]]) ->
     @param[in]  records Ordered per-character label/value records.
     @return     Markdown-ready character dossier section body.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.2.0
     """
     rendered_dossiers: list[str] = []
     for record in records:
@@ -711,9 +637,6 @@ def _render_txt_fields(fields: Iterable[tuple[str, str]]) -> list[str]:
     @param[in]  fields Ordered label/value pairs.
     @return     Plain-text field lines.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return [f"{label}: {value}" for label, value in fields]
 
@@ -725,9 +648,6 @@ def _header_fields(manifest: dict[str, object], export_type_label: str) -> list[
     @param[in]  export_type_label Operator-facing export type label.
     @return     Ordered header fields.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     source_name = _source_original_name(manifest)
     return [
@@ -746,9 +666,6 @@ def _artifact_ready(project_root: Path, export_kind: str) -> bool:
     @param[in]  export_kind Stable export kind token.
     @return     True when the artifact can be exported.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if export_kind == EXPORT_KIND_NARRATOR_VOICE:
         return bool(_narrator_voice_archive_items(project_root))
@@ -787,9 +704,6 @@ def _build_archive_entries(
     @param[in]  export_kind Stable archive export kind token.
     @return     Ordered tuples of archive name, optional source path, and optional text content.
     @exception  ValueError Raised when the export kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     if export_kind == EXPORT_KIND_NARRATOR_VOICE:
         return _build_narrator_voice_archive_entries(project_root)
@@ -806,9 +720,6 @@ def _build_narrator_voice_archive_entries(project_root: Path) -> list[tuple[str,
     @param[in]  project_root Active project root folder.
     @return     Ordered ZIP entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    1.0.0
     """
     document_path = project_root / config.NARRATOR_VOICE_FILE_NAME
     entries: list[tuple[str, Path | None, str | None]] = [
@@ -825,9 +736,6 @@ def _build_character_voice_archive_entries(project_root: Path) -> list[tuple[str
     @param[in]  project_root Active project root folder.
     @return     Ordered ZIP entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     entries: list[tuple[str, Path | None, str | None]] = []
     used_names: set[str] = set()
@@ -869,9 +777,6 @@ def _build_audio_assembly_archive_entries(
     @param[in]  manifest Active project manifest.
     @return     Ordered ZIP entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     items = _audio_assembly_archive_items(project_root)
     entries: list[tuple[str, Path | None, str | None]] = []
@@ -896,9 +801,6 @@ def _narrator_voice_archive_items(project_root: Path) -> list[tuple[dict[str, ob
     @param[in]  project_root Active project root folder.
     @return     Ordered narrator profile, audio path, and metadata tuples.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.2.0
     """
     items: list[tuple[dict[str, object], Path, dict[str, object]]] = []
     if not (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file():
@@ -918,9 +820,6 @@ def _character_voice_archive_items(project_root: Path) -> list[tuple[dict[str, o
     @param[in]  project_root Active project root folder.
     @return     Ordered character target, audio path, and metadata tuples.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.2.0
     """
     items: list[tuple[dict[str, object], Path, dict[str, object]]] = []
     if not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file():
@@ -942,9 +841,6 @@ def _audio_assembly_archive_items(project_root: Path) -> list[tuple[dict[str, ob
     @param[in]  project_root Active project root folder.
     @return     Ordered output record and audio path tuples.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     items: list[tuple[dict[str, object], Path]] = []
     for output in audio_assembly_service.load_generated_outputs(project_root):
@@ -971,9 +867,6 @@ def _build_voice_companion_text(
     @param[in]  preview_text Preview text used for the sample.
     @return     UTF-8 companion text content.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     return (
         f"{voice_type}: {display_name.strip() or '-'}\n\n"
@@ -998,9 +891,6 @@ def _build_audio_assembly_manifest_text(
     @param[in]  items Exported output record and audio path tuples.
     @return     UTF-8 manifest text content.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     report = audio_assembly_service.load_audio_assembly_report(project_root) or {}
     settings = audio_assembly_service.normalize_audio_assembly_settings(
@@ -1060,9 +950,6 @@ def _operation_is_completed(manifest: dict[str, object], operation_kind: str) ->
     @param[in]  operation_kind Stable operation kind token.
     @return     True when the operation status is completed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
@@ -1079,9 +966,6 @@ def _character_dossier_records(characters: list[dict[str, object]]) -> list[list
     @param[in]  characters Normalized character profile payloads.
     @return     Ordered per-character label/value records (empty records dropped).
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     field_map = [
         ("Name", "canonical_name"),
@@ -1107,9 +991,6 @@ def _render_character_dossiers(records: list[list[tuple[str, str]]]) -> str:
     @param[in]  records Ordered per-character label/value records.
     @return     Character dossier text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.4.0
     """
     dossiers = ["\n".join(f"{label}: {value}" for label, value in record) for record in records]
     return "\n\n----\n\n".join(dossier for dossier in dossiers if dossier.strip())
@@ -1121,9 +1002,6 @@ def _render_speech_blocks(speech_blocks: list[dict[str, object]]) -> str:
     @param[in]  speech_blocks Normalized Speech Blocks payloads.
     @return     Speaker/text export body.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     rendered_blocks: list[str] = []
     for block in speech_blocks:
@@ -1140,9 +1018,6 @@ def _token_usage_fields(*payloads: object) -> list[tuple[str, object]]:
     @param[in]  payloads Candidate payloads containing token-usage data.
     @return     Token-usage fields when available.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     token_usage = token_usage_service.restore_token_usage(
         *[payload.get("token_usage") for payload in payloads if isinstance(payload, dict)]
@@ -1170,9 +1045,6 @@ def _ai_parameter_fields(
     @param[in]  profile_id Profile identifier resolved from report or state.
     @return     AI parameter fields when an AI profile or transaction log exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     request_record = _first_ai_request_record(project_root, state)
     request_payload = request_record.get("request_payload")
@@ -1205,9 +1077,6 @@ def _first_ai_request_record(project_root: Path, state: dict[str, object]) -> di
     @param[in]  state Operation state payload.
     @return     First request record or an empty dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     log_path = _ai_log_path(project_root, state)
     if log_path is None or not log_path.is_file():
@@ -1230,9 +1099,6 @@ def _ai_log_path(project_root: Path, state: dict[str, object]) -> Path | None:
     @param[in]  state Operation state payload.
     @return     Log file path or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     metadata = _metadata_from_state(state)
     candidate = _first_value(metadata.get("ai_log_relative_path"), metadata.get("log_relative_path"))
@@ -1255,9 +1121,6 @@ def _compact_fields(fields: Iterable[tuple[str, object]]) -> list[tuple[str, str
     @param[in]  fields Ordered raw label/value pairs.
     @return     Ordered display label/value pairs.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return [(label, _format_value(value)) for label, value in fields]
 
@@ -1268,9 +1131,6 @@ def _format_value(value: object) -> str:
     @param[in]  value Candidate value.
     @return     Readable field value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if value in (None, ""):
         return "-"
@@ -1285,9 +1145,6 @@ def _first_value(*values: object) -> object:
     @param[in]  values Candidate values.
     @return     First non-empty value or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     for value in values:
         if value not in (None, ""):
@@ -1301,32 +1158,9 @@ def _metadata_from_state(state: dict[str, object]) -> dict[str, object]:
     @param[in]  state Operation-state payload.
     @return     Metadata dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     metadata = state.get("metadata")
     return dict(metadata) if isinstance(metadata, dict) else {}
-
-
-def _removed_line_count(metadata: dict[str, object]) -> int:
-    """
-    @brief      Sum cleanup removed-line counters from metadata.
-    @param[in]  metadata Cleanup metadata payload.
-    @return     Total removed-line count.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    return sum(
-        int(metadata.get(key, 0) or 0)
-        for key in (
-            "removed_header_footer_line_count",
-            "removed_page_number_line_count",
-            "removed_separator_line_count",
-        )
-    )
 
 
 def _sorted_by_sequence(items: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -1335,9 +1169,6 @@ def _sorted_by_sequence(items: list[dict[str, object]]) -> list[dict[str, object
     @param[in]  items Artifact record dictionaries.
     @return     Ordered artifact record dictionaries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return sorted(items, key=lambda item: int(item.get("sequence_index", 0) or item.get("block_index", 0) or 0))
 
@@ -1348,9 +1179,6 @@ def _word_count(texts: Iterable[str]) -> int:
     @param[in]  texts Text spans.
     @return     Word count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return sum(len(text.split()) for text in texts)
 
@@ -1361,9 +1189,6 @@ def _approved_count(items: Iterable[dict[str, object]]) -> int:
     @param[in]  items Translation records.
     @return     Approved record count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return sum(1 for item in items if bool(item.get("approved", False)))
 
@@ -1374,9 +1199,6 @@ def _chunk_mode_from_chunks(chunks: list[dict[str, object]]) -> str | None:
     @param[in]  chunks Chunk payload list.
     @return     Chunking mode or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     for chunk in chunks:
         mode = str(chunk.get("chunking_mode") or "").strip()
@@ -1391,9 +1213,6 @@ def _semantic_strategy_from_chunks(chunks: list[dict[str, object]]) -> str | Non
     @param[in]  chunks Chunk payload list.
     @return     Semantic strategy or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     for chunk in chunks:
         strategy = str(chunk.get("semantic_strategy") or "").strip()
@@ -1408,9 +1227,6 @@ def _source_original_name(manifest: dict[str, object]) -> str:
     @param[in]  manifest Active project manifest.
     @return     Original source file name or placeholder.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     source_document = manifest.get("source_document")
     if not isinstance(source_document, dict):
@@ -1424,9 +1240,6 @@ def _safe_file_stem(value: str) -> str:
     @param[in]  value Candidate file stem.
     @return     Filesystem-safe file stem.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.2.0
     """
     return _shared_safe_file_stem(value)
 
@@ -1438,9 +1251,6 @@ def _unique_archive_stem(value: object, used_names: set[str]) -> str:
     @param[in]  used_names Case-folded names already emitted.
     @return     Unique archive file stem.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     base_name = _safe_file_stem(str(value or "AudioMancer"))
     candidate_name = base_name
@@ -1459,9 +1269,6 @@ def _unique_archive_file_name(value: object, used_names: set[str]) -> str:
     @param[in]  used_names Case-folded names already emitted.
     @return     Unique archive file name.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     file_name = Path(str(value or "audio.wav")).name
     suffix = Path(file_name).suffix or ".wav"
@@ -1481,9 +1288,6 @@ def _format_seconds(duration_seconds: float) -> str:
     @param[in]  duration_seconds Duration in seconds.
     @return     Human-readable duration.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     total_seconds = max(0, int(round(duration_seconds)))
     hours, remainder = divmod(total_seconds, 3600)
@@ -1499,9 +1303,6 @@ def _escape_markdown(value: str) -> str:
     @param[in]  value Candidate table value.
     @return     Escaped table value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return value.replace("|", "\\|").replace("\n", "<br>")
 
@@ -1512,9 +1313,6 @@ def _validate_export_kind(export_kind: str) -> None:
     @param[in]  export_kind Candidate export kind.
     @return     None.
     @exception  ValueError Raised when the export kind is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if export_kind not in EXPORT_KIND_OPTIONS:
         raise ValueError(f"Unsupported export kind: {export_kind}")
@@ -1526,9 +1324,6 @@ def _validate_export_format(export_format: str) -> None:
     @param[in]  export_format Candidate export format.
     @return     None.
     @exception  ValueError Raised when the export format is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if export_format not in EXPORT_FORMAT_OPTIONS:
         raise ValueError(f"Unsupported export format: {export_format}")

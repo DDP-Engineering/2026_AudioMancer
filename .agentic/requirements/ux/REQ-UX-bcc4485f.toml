@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-UX-bcc4485f"
+title = "The Settings page shall present an interface font-size selector"
+status = "active"
+
+requirement = """
+The Settings page shall present an interface font-size selector offering the seven font-size steps, load the persisted ui_font_size_step, and write the chosen step into the built settings payload.
+"""
+
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_interface_font_size_selector_persists",
+]
+
+priority = "high"
+rationale = """
+Operators must adjust the control font size in discrete steps for their monitor and eyesight.
+"""
+created = 2026-07-25
+updated = 2026-07-25

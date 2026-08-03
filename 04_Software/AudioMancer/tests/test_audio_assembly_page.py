@@ -11,9 +11,6 @@
 @brief Audio Assembly page tests for AudioMancer.
 @details Verifies output-mode controls, generated-output rendering, progress,
          and playback button state on the Audio Assembly page.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.5.0
 """
 
 # IMPORTS
@@ -28,9 +25,6 @@ def test_audio_assembly_page_time_limit_enables_duration_control(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)
@@ -52,9 +46,6 @@ def test_audio_assembly_page_uses_two_column_settings_and_scene_ambience_option(
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)
@@ -93,9 +84,6 @@ def test_audio_assembly_page_renders_outputs_progress_and_playback_state(qtbot) 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)
@@ -142,9 +130,6 @@ def test_audio_assembly_page_renders_scene_mix_previews(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)
@@ -198,9 +183,6 @@ def test_audio_assembly_page_updates_and_emits_playback_progress(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)
@@ -256,9 +238,6 @@ def test_audio_assembly_page_double_click_emits_restart_for_clicked_output(qtbot
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)
@@ -314,9 +293,6 @@ def test_audio_assembly_page_localizes_mode_and_output_rows(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)

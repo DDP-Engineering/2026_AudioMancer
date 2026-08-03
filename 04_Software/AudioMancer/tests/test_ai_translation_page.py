@@ -10,9 +10,6 @@
 @file test_ai_translation_page.py
 @brief Focused Qt tests for monofile AI Translation review behavior.
 @details Verifies debounced edits, flush ordering, and status-driven controls.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-16
-@version 0.5.0
 """
 
 # IMPORTS

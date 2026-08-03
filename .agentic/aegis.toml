@@ -1,0 +1,22 @@
+# AEGIS Light configuration. Written once by `aegis init` and yours from
+# then on - upgrades never overwrite this file.
+
+schema = 1
+
+[commands]
+# The application lives in 04_Software/AudioMancer and runs through uv.
+test = "cd 04_Software/AudioMancer && uv run pytest -q"
+test_impacted = "cd 04_Software/AudioMancer && uv run pytest -q {tests}"
+# timeout = 1800                        # seconds allowed per command
+
+[layout]
+# Globs used by the traceability heuristics of `aegis check`.
+source = ["04_Software/AudioMancer/src/"]
+tests = ["04_Software/AudioMancer/tests/"]
+
+[check]
+secret_patterns_extra = []
+ignore = ["**/.venv/**"]
+strict_promote = []
+# run = ["test"]   # restrict what `check --run` executes; without this,
+#                  # side-effect-looking names are skipped

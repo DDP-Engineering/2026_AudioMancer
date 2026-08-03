@@ -11,9 +11,6 @@
 @brief Read-only AI Translation page-state composition.
 @details Derives page state from canonical chunks and the strict authoritative
          translation document without synchronizing or persisting artifacts.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-16
-@version 0.8.0
 """
 
 # IMPORTS
@@ -42,7 +39,6 @@ def build_ai_translation_profile_state(
     @param[in]  settings_payload Validated application settings payload.
     @param[in]  selected_profile_id Optional identifier of the currently selected AI profile.
     @return     Constructed ai translation profile state.
-    @version    0.1.0
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -82,7 +78,6 @@ def build_ai_translation_state(
     @param[in]  language Active user-interface language token.
     @param[in]  settings_payload Validated application settings payload.
     @return     Constructed ai translation state.
-    @version    0.1.0
     """
     profile_state = build_ai_translation_profile_state(settings_payload)
     if project_root is None or manifest is None:
@@ -148,7 +143,6 @@ def build_ai_translation_notes(
     @param[in]  has_ai_profiles Whether at least one usable AI profile is configured.
     @param[in]  language Active user-interface language token.
     @return     Constructed ai translation notes.
-    @version    0.1.0
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("ai_translation.note_no_source", language)]
@@ -224,7 +218,6 @@ def _persisted_target_language(manifest: dict[str, object]) -> str:
     @brief      Resolve the locked target language from the project manifest.
     @param[in]  manifest Active project manifest payload.
     @return     Persisted target-language token, or an empty string when unavailable.
-    @version    0.1.0
     """
     candidate = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
     if candidate in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
@@ -237,7 +230,6 @@ def _manifest_original_language(manifest: dict[str, object]) -> str | None:
     @brief      Resolve a supported source-language code from the manifest.
     @param[in]  manifest Active project manifest payload.
     @return     Original-language token from the manifest, or None when unavailable.
-    @version    0.1.0
     """
     candidate = str(manifest.get("original_language", "") or "").strip()
     return candidate if candidate in dict(config.TRANSLATION_LANGUAGE_OPTIONS) else None
@@ -249,7 +241,6 @@ def _original_language_label(manifest: dict[str, object], language: str) -> str:
     @param[in]  manifest Active project manifest payload.
     @param[in]  language Active user-interface language token.
     @return     Operator-facing original-language label.
-    @version    0.1.0
     """
     original_language = _manifest_original_language(manifest)
     if original_language is None:

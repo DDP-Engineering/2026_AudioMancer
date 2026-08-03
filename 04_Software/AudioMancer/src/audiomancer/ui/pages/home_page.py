@@ -11,9 +11,6 @@
 @brief Home/project dashboard page for AudioMancer.
 @details Copies the DDP_Audiomancer dashboard layout so the main window uses
          the same first-page structure without implementing import behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-23
-@version 0.12.2
 """
 
 # IMPORTS
@@ -76,9 +73,6 @@ class _WorkflowStepper(QWidget):
     @details    Draws a connected row of stage beads (finished / in_progress / not_started)
                 with captions, using the active Home theme color roles.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -87,9 +81,6 @@ class _WorkflowStepper(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         super().__init__(parent)
         self._steps: list[tuple[str, str]] = []
@@ -103,9 +94,6 @@ class _WorkflowStepper(QWidget):
         @param[in]  stages Ordered stage dictionaries with label and status.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         self._steps = [(str(stage.get("label", "")), str(stage.get("status", "not_started"))) for stage in stages]
         self.update()
@@ -116,9 +104,6 @@ class _WorkflowStepper(QWidget):
         @param[in]  theme_colors Home theme color-role mapping.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         payload = {"colors": theme_colors} if isinstance(theme_colors, dict) else None
         self._colors = _normalize_home_theme_colors(payload)
@@ -129,9 +114,6 @@ class _WorkflowStepper(QWidget):
         @brief      Return the number of rendered steps.
         @return     Step count.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         return len(self._steps)
 
@@ -140,9 +122,6 @@ class _WorkflowStepper(QWidget):
         @brief      Return the ordered stage status tokens.
         @return     Status token list.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         return [status for _label, status in self._steps]
 
@@ -152,9 +131,6 @@ class _WorkflowStepper(QWidget):
         @param[in]  event Qt paint event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         del event
         if not self._steps:
@@ -172,9 +148,6 @@ class _WorkflowStepper(QWidget):
         @param[in]  painter Active painter bound to this widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         colors = self._colors
         count = len(self._steps)
@@ -266,9 +239,6 @@ class HomeProjectPage(QWidget):
     """
     @brief      Display the project dashboard and source-import controls.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.11.1
     """
 
     import_requested = Signal()
@@ -282,9 +252,6 @@ class HomeProjectPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.11.2
         """
         super().__init__(parent)
         self._project_active = False
@@ -462,9 +429,6 @@ class HomeProjectPage(QWidget):
         @param[in]  stage_name Active workflow stage name or `None`.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.4.1
         """
         self._current_project_name = display_name
         self._current_project_path = project_path
@@ -478,9 +442,6 @@ class HomeProjectPage(QWidget):
         @param[in]  summary Source summary text or `None`.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
         """
         self._current_source_summary = summary
         self._refresh_summary_labels()
@@ -491,9 +452,6 @@ class HomeProjectPage(QWidget):
         @param[in]  is_active True when a project is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
         """
         self._project_active = is_active
         self._refresh_import_button()
@@ -505,9 +463,6 @@ class HomeProjectPage(QWidget):
         @param[in]  is_busy True when a long-running workflow operation is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.0
         """
         self._operation_busy = is_busy
         self._refresh_import_button()
@@ -520,9 +475,6 @@ class HomeProjectPage(QWidget):
         @param[in]  source_name Optional source-file display name.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
         """
         self._source_locked = is_locked
         self._current_locked_source_name = source_name
@@ -543,9 +495,6 @@ class HomeProjectPage(QWidget):
         @param[in]  voice_assignment_mode Selected narration mode.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         self._project_options_locked = bool(project_options_locked)
         self._target_language = _normalize_language_code(target_language)
@@ -565,9 +514,6 @@ class HomeProjectPage(QWidget):
         @brief      Return the currently selected draft project options.
         @return     Tuple of target language and voice-assignment mode tokens.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         return (
             str(self._target_language_combo.currentData() or config.DEFAULT_TRANSLATION_TARGET_LANGUAGE),
@@ -580,9 +526,6 @@ class HomeProjectPage(QWidget):
         @param[in]  stages Ordered stage dictionaries with label, status, and note.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.3.0
         """
         self._stage_entries = [dict(stage) for stage in stages]
         for row_index, stage_row in enumerate(self._stage_rows):
@@ -606,9 +549,6 @@ class HomeProjectPage(QWidget):
         @param[in]  export_states Ordered export readiness dictionaries.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self._export_states = {
             str(state.get("export_kind", "")): dict(state)
@@ -622,9 +562,6 @@ class HomeProjectPage(QWidget):
         @brief      Apply the current summary button-enabled state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.4.0
         """
         self._import_button.setEnabled(self._project_active and not self._project_options_locked)
         self._snapshot_button.setEnabled(self._project_active and not self._operation_busy)
@@ -634,9 +571,6 @@ class HomeProjectPage(QWidget):
         @brief      Apply project option selector enabled state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         can_edit_options = self._project_active and not self._project_options_locked and not self._operation_busy
         self._target_language_combo.setEnabled(can_edit_options)
@@ -649,12 +583,10 @@ class HomeProjectPage(QWidget):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.5.1
         """
         self._current_language = language
         self._summary_group.setTitle(ui_state_service.translate("home.summary_group", language))
+        self._pipeline_group.setTitle(ui_state_service.translate("home.pipeline_group", language))
         self._exports_group.setTitle(ui_state_service.translate("home.exports_group", language))
         self._stage_group.setTitle(ui_state_service.translate("home.workflow_group", language))
         self._target_language_caption.setText(ui_state_service.translate("home.translation_language", language))
@@ -662,6 +594,12 @@ class HomeProjectPage(QWidget):
         self._import_button.setText(ui_state_service.translate("home.select_source", language))
         self._snapshot_button.setText(ui_state_service.translate("home.export_project_zip", language))
         self._start_project_button.setText(ui_state_service.translate("home.start_project", language))
+        for index in range(self._target_language_combo.count()):
+            language_code = str(self._target_language_combo.itemData(index) or "")
+            self._target_language_combo.setItemText(
+                index,
+                ui_state_service.localized_language_label(language_code, language),
+            )
         self._narration_mode_combo.setItemText(
             0,
             ui_state_service.translate("home.mode_same_narrator", language),
@@ -686,9 +624,6 @@ class HomeProjectPage(QWidget):
         @param[in]  theme_payload Runtime UI theme payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-14
-        @version    0.1.0
         """
         self._theme_colors = _normalize_home_theme_colors(theme_payload)
         self._workflow_stepper.apply_theme(self._theme_colors)
@@ -701,9 +636,6 @@ class HomeProjectPage(QWidget):
         @brief      Refresh translated export row labels and readiness controls.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.3.0
         """
         for export_kind, widgets in self._export_rows.items():
             state = self._export_states.get(
@@ -745,9 +677,6 @@ class HomeProjectPage(QWidget):
         @brief      Keep workflow rows and matching export controls on identical fixed-height bands.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-16
-        @version    0.1.0
         """
         candidate_heights = [max(_WORKFLOW_ROW_MIN_HEIGHT, self.fontMetrics().height() + 12)]
         candidate_heights.extend(stage_row.sizeHint().height() for stage_row in self._stage_rows)
@@ -783,9 +712,6 @@ class HomeProjectPage(QWidget):
         @brief      Refresh the translated project summary values.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         none_text = ui_state_service.translate("home.none", self._current_language)
         self._name_label.setText(
@@ -834,9 +760,6 @@ class HomeProjectPage(QWidget):
         @brief      Build the retained source-status label used in summary.
         @return     Configured source-status label.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
         """
         self._source_lock_label = QLabel("No source imported yet.")
         self._source_lock_label.setWordWrap(True)
@@ -851,9 +774,6 @@ class HomeProjectPage(QWidget):
         @brief      Emit the selected immutable project options.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.1
         """
         self.project_options_lock_requested.emit(*self.selected_project_options())
 
@@ -865,9 +785,6 @@ def _status_title(status: str, language: str) -> str:
     @param[in]  language Target UI language code.
     @return     Human-readable status title.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     if status == "finished":
         return ui_state_service.translate("home.status.finished", language)
@@ -883,9 +800,6 @@ def _stage_row_style(status: str, theme_colors: dict[str, str] | None = None) ->
     @param[in]  theme_colors Active Home page theme color roles.
     @return     Qt stylesheet for one row box.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.2.0
     """
     colors = _normalize_home_theme_colors({"colors": theme_colors} if theme_colors is not None else None)
     status_role = _STATUS_COLOR_ROLES.get(status, _STATUS_COLOR_ROLES["not_started"])
@@ -907,9 +821,6 @@ def _normalize_home_theme_colors(theme_payload: object) -> dict[str, str]:
     @param[in]  theme_payload Candidate runtime theme payload or colors-only mapping.
     @return     Complete color-role mapping with classic-light fallback values.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     default_colors = dict(_DEFAULT_THEME_COLORS) if isinstance(_DEFAULT_THEME_COLORS, dict) else {}
     if not isinstance(theme_payload, dict):
@@ -934,9 +845,6 @@ def _build_summary_text(label_key: str, language: str, value: str) -> str:
     @param[in]  value Operator-facing value text.
     @return     One `Label: value` text string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     return f"{ui_state_service.translate(label_key, language)}: {value}"
 
@@ -947,9 +855,6 @@ def _normalize_language_code(value: object) -> str:
     @param[in]  value Candidate language code.
     @return     Supported language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     normalized_value = str(value or "").strip()
     if normalized_value in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
@@ -963,9 +868,6 @@ def _language_label(value: object) -> str:
     @param[in]  value Candidate language code.
     @return     Operator-facing language label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     language_code = _normalize_language_code(value)
     return str(dict(config.TRANSLATION_LANGUAGE_OPTIONS).get(language_code, language_code))
@@ -977,9 +879,6 @@ def _normalize_voice_assignment_mode(value: object) -> str:
     @param[in]  value Candidate mode.
     @return     Supported voice-assignment mode.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     normalized_value = str(value or "").strip()
     if normalized_value in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
@@ -994,9 +893,6 @@ def _build_locked_source_text(language: str, source_name: str | None) -> str:
     @param[in]  source_name Optional locked source display name.
     @return     One translated locked-source text string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
     """
     resolved_source = source_name or "selected source"
     return (
@@ -1013,9 +909,6 @@ def _build_selected_source_text(language: str, source_name: str | None) -> str:
     @param[in]  source_name Optional selected source display name.
     @return     One translated selected-source text string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     resolved_source = source_name or "selected source"
     return (
@@ -1039,9 +932,6 @@ def _build_source_status_text(
     @param[in]  source_name Optional source display name.
     @return     One translated source-status text line.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.2.0
     """
     if has_source and is_project_locked:
         return _build_locked_source_text(language, source_name)
@@ -1054,9 +944,6 @@ class _StageRowListProxy:
     """
     @brief      Backward-compatible read-only adapter for stage-row tests.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
 
     def __init__(self, rows: list[QLineEdit]) -> None:
@@ -1065,9 +952,6 @@ class _StageRowListProxy:
         @param[in]  rows Ordered stage row widgets.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         self._rows = rows
 
@@ -1076,9 +960,6 @@ class _StageRowListProxy:
         @brief      Return the number of workflow rows.
         @return     Workflow row count.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         return len(self._rows)
 
@@ -1088,9 +969,6 @@ class _StageRowListProxy:
         @param[in]  index Zero-based row index.
         @return     Workflow row widget.
         @exception  IndexError Raised when the index is invalid.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         return self._rows[index]
 

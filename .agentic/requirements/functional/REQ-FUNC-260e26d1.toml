@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-260e26d1"
+title = "The Characters page and controller shall emit the requested character"
+status = "active"
+
+requirement = """
+The Characters page and controller shall emit the requested character ID on selection change and restore the current row on cancellation.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_selection_change_emits_requested_character_id",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_selection_change_cancel_restores_current_row",
+]
+
+priority = "high"
+rationale = """
+Selection must be explicit and reversible.
+"""
+created = 2026-07-19
+updated = 2026-07-24

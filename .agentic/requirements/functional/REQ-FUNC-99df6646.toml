@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-99df6646"
+title = "Speech-block logging shall create a timestamped log from a null-like"
+status = "active"
+
+requirement = """
+Speech-block logging shall create a timestamped log from a null-like start and replace it on review update.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_null_like_started_at_creates_timestamped_speech_blocks_log",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_review_update_replaces_null_like_started_at",
+]
+
+priority = "high"
+rationale = """
+Run timestamps must be recorded truthfully.
+"""
+created = 2026-07-19
+updated = 2026-07-24

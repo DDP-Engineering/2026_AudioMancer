@@ -11,9 +11,6 @@
 @brief Qt window tests for the copied AudioMancer main-window shell.
 @details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
          pages are created without workflow functionality.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 1.3.0
 """
 
 # IMPORTS
@@ -31,9 +28,6 @@ def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot, 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     popup_calls = []
 
@@ -76,9 +70,6 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot, 
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     popup_calls = []
 

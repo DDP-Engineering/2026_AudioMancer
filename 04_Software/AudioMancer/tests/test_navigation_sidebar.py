@@ -10,9 +10,6 @@
 @file test_navigation_sidebar.py
 @brief Focused tests for the AudioMancer navigation sidebar visuals.
 @details Verifies each workflow page receives a brand icon (REQ-UX-23258764).
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -45,9 +42,6 @@ def test_navigation_sidebar_assigns_an_icon_to_each_page(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     sidebar = NavigationSidebar()
     qtbot.addWidget(sidebar)
@@ -68,9 +62,6 @@ def test_navigation_sidebar_sets_full_label_tooltip(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     sidebar = NavigationSidebar()
     qtbot.addWidget(sidebar)

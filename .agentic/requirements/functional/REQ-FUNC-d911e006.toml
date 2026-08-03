@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-d911e006"
+title = "AI translation shall preserve completed chunks on cancel, failure"
+status = "active"
+
+requirement = """
+AI translation shall preserve completed chunks on cancel, failure, retranslate failure, and partial-segment failure.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_cancel_and_failure_preserve_completed_chunks",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_failure_preserves_previous_translation",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_partial_segment_failure_preserves_usage_without_partial_chunk",
+]
+
+priority = "high"
+rationale = """
+Interrupted or failed work must never lose completed translation.
+"""
+created = 2026-07-19
+updated = 2026-07-24

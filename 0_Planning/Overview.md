@@ -81,7 +81,7 @@ Each stage must have:
 - visible state to the operator
 - persisted artifacts on disk
 - a predictable reset or rerun behavior
-- a preservation-first v2 impact behavior for local manual edits when stable
+- a preservation-first impact behavior for local manual edits when stable
   IDs make the affected chunk, Speech Block, or voice target unambiguous
 
 ## 5. Major Functional Areas

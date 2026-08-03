@@ -11,9 +11,6 @@
 @brief Functional project workspace persistence helpers for AudioMancer.
 @details Creates, validates, saves, and opens file-based project workspaces
          using one minimal root-level `project.json` manifest contract.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version    2.1.3
 """
 
 # IMPORTS
@@ -24,7 +21,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from audiomancer import config
-from audiomancer.services import chunking_document_service, text_extraction_service
+from audiomancer.services import (
+    chunking_document_service,
+    operation_runtime_service,
+    text_extraction_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     load_project_json_artifact as _load_json_artifact,
@@ -39,9 +40,6 @@ from audiomancer.services.operation_runtime_service import (
     project_relative_path_exists,
     resolve_project_relative_path,
     validate_project_relative_path,
-)
-from audiomancer.services.operation_runtime_service import (
-    project_text_artifact_has_content as _text_artifact_has_content,
 )
 from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
@@ -85,9 +83,6 @@ def validate_project_name(name: str) -> None:
     @param[in]  name Candidate exact folder name entered by the operator.
     @return     None.
     @exception  ValueError Raised when the name is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-        @version    0.3.0
     """
     if not name or not name.strip():
         raise ValueError("Project name cannot be empty.")
@@ -117,10 +112,7 @@ def create_project(
     @param[in]  parent_path Existing parent directory selected by the operator.
     @return     Tuple of created project root path and manifest payload.
     @exception  FileNotFoundError Raised when the selected parent folder does not exist.
-    @exception  FileExistsError Raised when the target project folder is not empty.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.5.0
+    @exception  FileExistsError Raised when the target path is a file or non-empty folder.
     """
     validate_project_name(name)
     resolved_parent = Path(parent_path)
@@ -128,6 +120,10 @@ def create_project(
         raise FileNotFoundError(f"Project parent folder was not found: {resolved_parent}")
 
     project_root = resolved_parent / name
+    if project_root.is_file():
+        raise FileExistsError(
+            f"Project path already exists as a file: {project_root}"
+        )
     if project_root.exists() and any(project_root.iterdir()):
         raise FileExistsError(f"Project folder is not empty: {project_root}")
 
@@ -150,9 +146,6 @@ def save_manifest(
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  ValueError Raised when folder-based repair is requested.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.1
     """
     normalized_manifest = validate_project_manifest(manifest)
     normalized_manifest["updated_at"] = _utc_now_iso()
@@ -175,9 +168,6 @@ def lock_project_options(
     @param[in]  voice_assignment_mode Selected narration mode.
     @return     Updated project manifest payload.
     @exception  ValueError Raised when options are invalid or already locked.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.3.0
     """
     manifest = load_manifest(project_root)
     if bool(manifest.get("project_options_locked", False)):
@@ -201,9 +191,6 @@ def resolve_project_root(selected_path: str | Path) -> Path:
     @param[in]  selected_path Folder path selected by the operator.
     @return     Resolved project root path.
     @exception  FileNotFoundError Raised when no project root can be resolved.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     current_path = Path(selected_path)
     if not current_path.exists():
@@ -227,9 +214,6 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
     @return     Tagged project validation result dictionary.
     @exception  FileNotFoundError Raised when required files or folders are missing.
     @exception  ValueError Raised when required manifest fields are invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.6.0
     """
     resolved_root = Path(project_root)
     manifest_path = resolved_root / config.PROJECT_MANIFEST_FILE_NAME
@@ -266,9 +250,6 @@ def load_manifest(project_root: str | Path) -> ProjectManifestPayload:
     @param[in]  project_root Resolved project root folder.
     @return     Loaded project manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     manifest_path = resolved_project_root / config.PROJECT_MANIFEST_FILE_NAME
@@ -287,12 +268,24 @@ def open_project(
     @param[in]  selected_path Folder path selected by the operator.
     @return     Tagged project-open result dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.0
     """
     project_root = resolve_project_root(selected_path)
-    return validate_project(project_root)
+    try:
+        return validate_project(project_root)
+    except chunking_document_service.IncompatibleChunkingDocumentError as error:
+        if isinstance(error.__cause__, OSError):
+            raise error.__cause__ from error
+        _reset_incompatible_chunking_data(project_root)
+        open_result = validate_project(project_root)
+        # Validation may materialize optional downstream defaults; recovery
+        # must leave every Chunking-dependent artifact reset.
+        operation_runtime_service.reset_operation_data(
+            project_root,
+            "chunking",
+            include_current=True,
+        )
+        open_result["recovered_operations"] = ["chunking"]
+        return open_result
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -304,9 +297,6 @@ def repair_project(
     @param[in]  repair_request Tagged repair-required result dictionary.
     @return     Tagged repaired project-open result dictionary.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.0
     """
     project_root = Path(str(repair_request["project_root"]))
     manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
@@ -344,6 +334,35 @@ def repair_project(
 # HELPER FUNCTIONS
 
 
+def _reset_incompatible_chunking_data(project_root: Path) -> None:
+    """
+    @brief      Reset incompatible Chunking data and every downstream operation.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  OSError Raised when scoped artifacts or the manifest cannot be updated.
+    """
+    manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    _validate_manifest_identity_fields(payload)
+    _validate_project_scoped_manifest_paths(payload, project_root)
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "chunking",
+        include_current=True,
+    )
+    reset_manifest = _build_repaired_manifest(payload, "text_chunking_ready")
+    reset_operations = dict(reset_manifest["operations"])
+    default_operations = _build_default_operation_states()
+    for operation_kind in operation_runtime_service.downstream_operation_kinds(
+        "chunking",
+        include_current=True,
+    ):
+        reset_operations[operation_kind] = default_operations[operation_kind]
+    reset_manifest["operations"] = reset_operations
+    save_manifest(reset_manifest, project_root)
+
+
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
 def build_project_manifest(
     display_name: str,
@@ -355,9 +374,6 @@ def build_project_manifest(
     @param[in]  timestamp_iso Optional shared creation timestamp.
     @return     New normalized manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    0.9.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -387,9 +403,6 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     @param[in]  payload Raw parsed manifest payload.
     @return     Normalized manifest dictionary.
     @exception  ValueError Raised when the payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    0.8.0
     """
     _validate_manifest_payload(payload)
     assert isinstance(payload, dict)
@@ -435,7 +448,6 @@ def project_manifest_operation_summary(
     @param[in]  operation_kind Stable operation-kind token.
     @param[in]  operation_payload Optional detailed operation payload.
     @return     Compact operation summary suitable for `project.json`.
-    @version    0.1.0
     """
     default_summary = _default_operation_state(operation_kind)
     if not isinstance(operation_payload, dict):
@@ -485,9 +497,6 @@ def sync_manifest_operation_summary(
                 that contradiction is what makes a finished project offer a repair on
                 every later open. Invalidating downstream work belongs to the explicit
                 reset path, which clears artifacts and summaries together.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.3.0
     """
     manifest = load_manifest(project_root)
     operations = _normalize_operations(manifest.get("operations"))
@@ -513,7 +522,13 @@ def _build_extraction_reset_result(
     payload: dict[str, object],
     project_root: Path,
 ) -> ProjectOpenResult | None:
-    """Build a destructive reset request for legacy or incompatible Extraction data."""
+    """
+    @brief      Build a destructive reset request for incompatible Extraction data.
+    @param[in]  payload Parsed project manifest payload.
+    @param[in]  project_root Active project root folder.
+    @return     Tagged reset request or `None` when Extraction is compatible.
+    @exception  None
+    """
     try:
         text_extraction_service.load_extraction_metadata(project_root)
     except text_extraction_service.ExtractionMetadataError as exc:
@@ -541,9 +556,6 @@ def _build_project_manifest_healing_result(
     @param[in]  project_root Active project root folder.
     @return     Repair-required result payload or `None` when no repair is needed.
     @exception  ValueError Raised when non-repairable manifest fields are invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     current_stage_is_invalid = _is_invalid_current_stage(payload)
     base_stage = (
@@ -611,9 +623,6 @@ def _filter_noncompleted_artifact_warnings(
     @param[in]  warnings Collected metadata-healing warnings.
     @return     Filtered warning list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.1
     """
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
@@ -639,9 +648,6 @@ def _validate_project_scoped_manifest_paths(payload: dict[str, object], project_
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  ValueError Raised when a manifest path escapes the project root.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     source_document = payload.get("source_document")
     if isinstance(source_document, dict):
@@ -671,9 +677,6 @@ def _resolve_manifest_path(project_root: Path, relative_path: str, field_name: s
     @param[in]  field_name Manifest field name used for diagnostics.
     @return     Resolved project-local path.
     @exception  ValueError Raised when the path escapes the project root.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     try:
         return resolve_project_relative_path(project_root, relative_path)
@@ -688,9 +691,6 @@ def _verified_source_stage(manifest: dict[str, object], project_root: Path) -> s
     @param[in]  project_root Active project root folder.
     @return     `source_selected` when source evidence is valid, otherwise default stage.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     source_document = manifest.get("source_document")
     if not isinstance(source_document, dict):
@@ -713,9 +713,6 @@ def _operation_completion_evidence(
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     evidence_builders = {
         "extraction": _extraction_completion_evidence,
@@ -739,9 +736,6 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _ = warnings
     try:
@@ -755,47 +749,29 @@ def _extraction_completion_evidence(project_root: Path, warnings: list[str]) -> 
 
 def _cleanup_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
     """
-    @brief      Verify completed AI, deterministic, or manual Cleanup artifacts.
+    @brief      Verify the single Cleanup document and cleaned-text artifact.
     @param[in]  project_root Active project root folder.
-    @param[in]  warnings Ordered persisted contract warnings.
-    @return     Cleanup completion evidence, or None when cleanup is incomplete.
-    @version    0.1.0
+    @param[out] warnings Non-destructive repair warnings accepted for parity.
+    @return     Completed operation evidence payload or `None`.
+    @exception  None
     """
     _ = warnings
-    cleanup_document_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
-    cleanup_document = _load_json_artifact(project_root, config.CLEANUP_DOCUMENT_FILE_NAME)
-    if cleanup_document_path.exists():
-        if (
-            isinstance(cleanup_document, dict)
-            and cleanup_document.get("status") == "completed"
-            and cleanup_document.get("mode") == "ai_assisted"
-            and isinstance(cleanup_document.get("warnings"), list)
-            and isinstance(cleanup_document.get("decisions"), dict)
-            and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
-        ):
-            return {"operation": cleanup_document, "report": cleanup_document}
+    from audiomancer.services import text_cleanup_service
+
+    try:
+        document = text_cleanup_service.load_cleanup_document(project_root)
+    except (OSError, ValueError):
         return None
-
-    state = _load_json_artifact(project_root, config.CLEANUP_STATE_FILE_NAME)
-    report = _load_json_artifact(project_root, config.CLEANUP_REPORT_FILE_NAME)
-    if (
-        _status_is_completed(state)
-        and isinstance(report, dict)
-        and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
-    ):
-        return {"operation": state, "report": report}
-
-    manifest = _load_json_artifact(project_root, config.PROJECT_MANIFEST_FILE_NAME)
-    operations = manifest.get("operations") if isinstance(manifest, dict) else None
-    cleanup_summary = operations.get("cleanup") if isinstance(operations, dict) else None
-    if (
-        isinstance(cleanup_summary, dict)
-        and cleanup_summary.get("status") == "completed"
-        and cleanup_summary.get("mode") == "manual_edit"
-        and _text_artifact_has_content(project_root, config.CLEANED_TEXT_FILE_NAME)
-    ):
-        return {"operation": cleanup_summary, "report": {}}
-    return None
+    if document is None:
+        return None
+    operation = {
+        "status": "completed",
+        "progress_current": 1,
+        "progress_total": 1,
+        "warning_count": len(document["warnings"]),
+        "mode": "hybrid",
+    }
+    return {"operation": operation, "report": document}
 
 
 def _chunking_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
@@ -805,9 +781,6 @@ def _chunking_completion_evidence(project_root: Path, warnings: list[str]) -> di
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _ = warnings
     document = chunking_document_service.load_chunking_document(project_root)
@@ -826,9 +799,6 @@ def _translation_completion_evidence(project_root: Path, warnings: list[str]) ->
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     _ = warnings
     document = _load_json_artifact(project_root, config.TRANSLATED_CHUNKS_FILE_NAME)
@@ -854,9 +824,6 @@ def _character_discovery_completion_evidence(project_root: Path, warnings: list[
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _ = warnings
     from audiomancer.services import character_discovery_service
@@ -883,9 +850,6 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     _ = warnings
     from audiomancer.services import narrator_definition_service
@@ -922,9 +886,6 @@ def _character_voices_completion_evidence(project_root: Path, warnings: list[str
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     _ = warnings
     targets = _load_json_artifact(project_root, config.CHARACTER_VOICES_TARGETS_FILE_NAME)
@@ -970,9 +931,6 @@ def _speech_blocks_completion_evidence(project_root: Path, warnings: list[str]) 
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     from audiomancer.services import speech_blocks_service
 
@@ -1004,9 +962,6 @@ def _audio_blocks_completion_evidence(project_root: Path, warnings: list[str]) -
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     from audiomancer.services import audio_blocks_service
 
@@ -1038,9 +993,6 @@ def _audio_assembly_completion_evidence(project_root: Path, warnings: list[str])
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     state = _load_json_artifact(project_root, config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
     report = _load_json_artifact(project_root, config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
@@ -1071,9 +1023,6 @@ def _completed_or_report_healed_operation(
     @param[in]  state_file_name Operation-state file name used in the warning.
     @return     Completed operation evidence payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if _status_is_completed(state):
         return {"operation": state, "report": report}
@@ -1113,9 +1062,6 @@ def _heal_operation_summary(
     @param[out] changes Human-readable metadata changes.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
@@ -1144,14 +1090,10 @@ def _heal_narrator_manifest_fields(
     @param[out] changes Human-readable metadata changes.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     profile = evidence.get("profile")
-    selection = evidence.get("selection")
-    narrator_name = _first_optional_string(selection, profile, "display_name", "profile_name", "name", "voice_name")
-    narrator_language = _first_optional_string(selection, profile, "selected_language", "language", "voice_language")
+    narrator_name = _first_optional_string(profile, "display_name", "profile_name", "name", "voice_name")
+    narrator_language = _first_optional_string(profile, "selected_language", "language", "voice_language")
     if narrator_name is not None:
         _record_manifest_value_change(manifest, "narrator_profile_name", narrator_name, changes)
     if narrator_language is not None:
@@ -1170,9 +1112,6 @@ def _heal_character_voice_manifest_fields(
     @param[out] changes Human-readable metadata changes.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if bool(manifest.get("project_options_locked", False)):
         _record_manifest_value_change(manifest, "selected_voice_language", manifest.get("target_language"), changes)
@@ -1205,9 +1144,6 @@ def _record_manifest_value_change(
     @param[out] changes Human-readable metadata changes.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     old_value = manifest.get(field_name)
     if old_value == new_value:
@@ -1225,9 +1161,6 @@ def _record_field_change(changes: list[str], field_name: str, old_value: object,
     @param[in]  new_value New field value.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     changes.append(f"{field_name}: {old_value} -> {new_value}")
 
@@ -1238,9 +1171,6 @@ def _status_is_completed(payload: object) -> bool:
     @param[in]  payload Candidate parsed payload.
     @return     True when the status is completed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return isinstance(payload, dict) and str(payload.get("status", "")).strip() == "completed"
 
@@ -1251,9 +1181,6 @@ def _translation_report_is_fully_approved(report: object) -> bool:
     @param[in]  report Candidate translation report payload.
     @return     True when every translated chunk is approved.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     if not isinstance(report, dict):
         return False
@@ -1287,56 +1214,8 @@ def _non_empty_payload_list(payload: object) -> bool:
     @param[in]  payload Candidate parsed payload.
     @return     True when the payload is a non-empty list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return isinstance(payload, list) and bool(payload)
-
-
-def _payload_has_text(payload: object, field_names: tuple[str, ...]) -> bool:
-    """
-    @brief      Return whether one parsed dictionary has any non-empty text field.
-    @param[in]  payload Candidate parsed payload.
-    @param[in]  field_names Candidate field names.
-    @return     True when a field contains text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    return isinstance(payload, dict) and any(str(payload.get(field_name, "")).strip() for field_name in field_names)
-
-
-def _selected_narrator_profile(profiles: object, selection: dict[str, object]) -> dict[str, object] | None:
-    """
-    @brief      Resolve the selected narrator profile from persisted profile data.
-    @param[in]  profiles Parsed narrator profile list.
-    @param[in]  selection Parsed narrator selection payload.
-    @return     Matching profile payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    if not isinstance(profiles, list):
-        return None
-    selected_identifier = _first_optional_string(selection, "selected_profile_id", "profile_id", "id")
-    selected_name = _first_optional_string(selection, "selected_profile_name", "profile_name", "name", "display_name")
-    for profile in profiles:
-        if not isinstance(profile, dict):
-            continue
-        profile_identifiers = {
-            value
-            for value in (
-                _first_optional_string(profile, "profile_id", "id"),
-                _first_optional_string(profile, "profile_name", "name", "display_name"),
-            )
-            if value is not None
-        }
-        if selected_identifier in profile_identifiers or selected_name in profile_identifiers:
-            return profile
-    return None
 
 
 def _character_voice_target_has_sample(project_root: Path, target: object) -> bool:
@@ -1346,9 +1225,6 @@ def _character_voice_target_has_sample(project_root: Path, target: object) -> bo
     @param[in]  target Candidate character-voice target payload.
     @return     True when the target has sample metadata and an existing audio file.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if not isinstance(target, dict) or not isinstance(target.get("sample_metadata"), dict):
         return False
@@ -1368,9 +1244,6 @@ def _audio_blocks_report_is_completed(report: object) -> bool:
     @param[in]  report Parsed Audio Blocks report.
     @return     True when report counts are completed and consistent.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if not isinstance(report, dict) or str(report.get("audio_blocks_stage_status", "")).strip() != "completed":
         return False
@@ -1388,9 +1261,6 @@ def _audio_block_files_exist(project_root: Path, audio_blocks: object, state: ob
     @param[in]  state Parsed Audio Blocks operation-state payload.
     @return     True when referenced generated audio artifacts exist.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     from audiomancer.services import audio_blocks_artifact_service
 
@@ -1415,9 +1285,6 @@ def _operation_path_list(payload: object, field_name: str) -> list[str]:
     @param[in]  field_name Path-list field name.
     @return     Normalized path strings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if not isinstance(payload, dict) or not isinstance(payload.get(field_name), list):
         return []
@@ -1430,9 +1297,6 @@ def _report_output_paths(report: dict[str, object]) -> list[str]:
     @param[in]  report Parsed Audio Assembly report.
     @return     Normalized project-relative output paths.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     outputs = report.get("outputs")
     if not isinstance(outputs, list):
@@ -1451,9 +1315,6 @@ def _project_relative_path_exists(project_root: Path, relative_path: str) -> boo
     @param[in]  relative_path Candidate project-relative path.
     @return     True when the path resolves under the project root and exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     return project_relative_path_exists(project_root, relative_path)
 
@@ -1464,9 +1325,6 @@ def _optional_string(value: object) -> str | None:
     @param[in]  value Candidate optional value.
     @return     Normalized string or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.1.0
     """
     normalized_value = _raw_optional_string(value)
     if normalized_value is None:
@@ -1482,9 +1340,6 @@ def _first_optional_string(*payloads_and_fields: object) -> str | None:
     @param[in]  payloads_and_fields Dictionaries followed by field-name strings.
     @return     First normalized value or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     payloads: list[dict[str, object]] = []
     field_names: list[str] = []
@@ -1507,9 +1362,6 @@ def _validate_manifest_payload(payload: object) -> None:
     @param[in]  payload Raw parsed JSON value.
     @return     None.
     @exception  ValueError Raised when the payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     _validate_manifest_identity_fields(payload)
     assert isinstance(payload, dict)
@@ -1527,9 +1379,6 @@ def _validate_manifest_identity_fields(payload: object) -> None:
     @param[in]  payload Raw parsed JSON value.
     @return     None.
     @exception  ValueError Raised when the payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     if not isinstance(payload, dict):
         raise ValueError("Project manifest payload must be a JSON object.")
@@ -1545,9 +1394,6 @@ def _first_unsupported_legacy_directory(project_root: Path) -> str | None:
     @param[in]  project_root Candidate project root folder.
     @return     Unsupported legacy folder name or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     for folder_name in _UNSUPPORTED_LEGACY_WORKFLOW_FOLDERS:
         if not (project_root / folder_name).is_dir():
@@ -1562,9 +1408,6 @@ def _is_invalid_current_stage(payload: dict[str, object]) -> bool:
     @param[in]  payload Parsed manifest payload.
     @return     True when the current stage is missing or unsupported.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
     current_stage = payload.get("current_stage")
     return (
@@ -1584,9 +1427,6 @@ def _derive_consistent_stage(
     @param[in]  project_root Candidate project root folder.
     @return     Conservatively trusted stage token for repaired metadata.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
     _ = project_root
     return _derive_trustworthy_stage(payload)
@@ -1602,9 +1442,6 @@ def _build_repaired_manifest(
     @param[in]  reset_stage Stage token to keep after repair.
     @return     Repaired manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    0.4.0
     """
     repaired_manifest = {
         "project_id": str(payload["project_id"]),
@@ -1651,9 +1488,6 @@ def _derive_trustworthy_stage(payload: dict[str, object]) -> str:
     @param[in]  payload Parsed manifest payload.
     @return     Conservatively trusted stage token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if _normalize_source_document(payload.get("source_document")) is not None:
         return "source_selected"
@@ -1666,9 +1500,6 @@ def _stage_rank(stage_token: str) -> int:
     @param[in]  stage_token Stage token to resolve.
     @return     Zero-based stage order index.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     if stage_token not in config.PROJECT_WORKFLOW_STAGES:
         return -1
@@ -1681,9 +1512,6 @@ def _normalize_target_language(value: object) -> str:
     @param[in]  value Candidate language code.
     @return     Supported target-language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     normalized_value = str(value or "").strip()
     supported_languages = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
@@ -1698,9 +1526,6 @@ def _non_negative_int(value: object) -> int:
     @param[in]  value Raw decoded JSON value.
     @return     Normalized non-negative integer.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     try:
         resolved_value = int(value)
@@ -1714,9 +1539,6 @@ def _default_audio_assembly_settings() -> dict[str, object]:
     @brief      Build default Audio Assembly settings for one project manifest.
     @return     Default Audio Assembly settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return {
         "output_mode": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_MODE,
@@ -1734,9 +1556,6 @@ def _normalize_audio_assembly_settings(value: object) -> dict[str, object]:
     @param[in]  value Raw decoded settings value.
     @return     Normalized Audio Assembly settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     defaults = _default_audio_assembly_settings()
     payload = value if isinstance(value, dict) else {}
@@ -1780,9 +1599,6 @@ def _bounded_int(value: object, minimum: int, maximum: int, fallback: int) -> in
     @param[in]  fallback Fallback value for invalid input.
     @return     Normalized bounded integer.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     try:
         resolved = int(value)
@@ -1797,9 +1613,6 @@ def _normalize_source_document(value: object) -> dict[str, object] | None:
     @param[in]  value Raw decoded JSON value.
     @return     Normalized source-document payload or `None`.
     @exception  ValueError Raised when the payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     if value in (None, ""):
         return None
@@ -1841,9 +1654,6 @@ def _build_default_operation_states() -> dict[str, dict[str, object]]:
     @brief      Build the default operation-state mapping for one new project.
     @return     Default project-local operation-state map.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
     """
     return {
         operation_kind: _default_operation_state(operation_kind)
@@ -1866,7 +1676,6 @@ def _default_operation_state(operation_kind: str) -> dict[str, object]:
     @brief      Build the compact default manifest summary for one operation.
     @param[in]  operation_kind Stable operation-kind token.
     @return     Default compact state for the requested operation kind.
-    @version    0.1.0
     """
     if operation_kind == "cleanup":
         return {
@@ -1889,9 +1698,6 @@ def _normalize_operations(value: object) -> dict[str, dict[str, object]]:
     @param[in]  value Raw decoded JSON value.
     @return     Normalized operations mapping with every required operation key.
     @exception  ValueError Raised when the operations payload is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
     """
     operations = _build_default_operation_states()
     if value in (None, ""):
@@ -1921,9 +1727,6 @@ def _reset_operations_for_stage(
     @param[in]  current_stage Current repaired project stage token.
     @return     Operations mapping with downstream steps reset.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     allowed_operations = _allowed_operations_for_stage(current_stage)
 
@@ -1940,9 +1743,6 @@ def _allowed_operations_for_stage(current_stage: str) -> set[str]:
     @param[in]  current_stage Current repaired project stage token.
     @return     Set of operation kinds that should be preserved.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.2.0
     """
     if current_stage == "source_selected":
         return {"extraction"}

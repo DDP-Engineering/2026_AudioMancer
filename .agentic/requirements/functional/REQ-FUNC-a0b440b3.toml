@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a0b440b3"
+title = "Backend probing shall normalize Ollama model discovery"
+status = "active"
+
+requirement = """
+Backend probing shall normalize Ollama model discovery.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_normalizes_ollama_models",
+]
+
+priority = "high"
+rationale = """
+Provider selection needs a normalized model list for Ollama backends.
+"""
+created = 2026-07-19
+updated = 2026-07-24

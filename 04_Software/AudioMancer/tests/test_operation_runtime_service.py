@@ -11,9 +11,6 @@
 @brief Focused tests for shared operation runtime helpers.
 @details Verifies percent conversion and downstream reset behavior shared by
          extraction, cleanup, and future workflow operations.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.9.0
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ def test_progress_percent_clamps_to_zero_and_hundred() -> None:
     @brief      Verify shared unit-progress conversion stays inside the UI range.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
     assert operation_runtime_service.progress_percent(0, 0) == 0
     assert operation_runtime_service.progress_percent(1, 4) == 25
@@ -44,9 +38,6 @@ def test_emit_progress_update_uses_standard_payload_shape() -> None:
     @brief      Verify shared progress emission sends the modal callback contract.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.1
     """
     received_payloads: list[tuple[int, int, int, str, dict[str, object] | None]] = []
 
@@ -66,9 +57,6 @@ def test_emit_progress_update_uses_standard_payload_shape() -> None:
         @param[in]  token_usage Optional token-usage payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         received_payloads.append((progress_current, progress_total, progress_percent_value, message, token_usage))
 
@@ -88,9 +76,6 @@ def test_emit_progress_update_can_omit_token_usage_payload() -> None:
     @brief      Verify shared progress emission supports four-argument callbacks.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     received_payloads: list[tuple[int, int, int, str]] = []
 
@@ -108,9 +93,6 @@ def test_emit_progress_update_can_omit_token_usage_payload() -> None:
         @param[in]  message Progress message text.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         received_payloads.append((progress_current, progress_total, progress_percent_value, message))
 
@@ -130,9 +112,6 @@ def test_utc_now_iso_uses_utc_without_microseconds() -> None:
     @brief      Verify shared timestamps use the persisted UTC ISO format.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     timestamp = utc_now_iso()
 
@@ -145,9 +124,6 @@ def test_build_operation_state_payload_uses_shared_envelope() -> None:
     @brief      Verify shared operation-state envelope normalizes workflow-specific payloads.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     payload = operation_runtime_service.build_operation_state_payload(
         status="running",
@@ -186,9 +162,6 @@ def test_operation_json_artifact_round_trips_via_shared_io(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("SharedJsonRuntime", tmp_path)
 
@@ -216,9 +189,6 @@ def test_load_operation_state_file_accepts_missing_and_dict_payloads(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     state_path = tmp_path / "operation_state.json"
     assert operation_runtime_service.load_operation_state_file(state_path) is None
@@ -237,9 +207,6 @@ def test_load_operation_state_file_tolerates_malformed_json(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
     """
     state_path = tmp_path / "operation_state.json"
     state_path.write_text("{", encoding="utf-8")
@@ -253,9 +220,6 @@ def test_project_artifact_helpers_handle_missing_and_malformed_inputs(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("SharedArtifactRuntime", tmp_path)
     (project_root / "bad.json").write_text("{", encoding="utf-8")
@@ -273,9 +237,6 @@ def test_optional_string_and_runtime_value_helpers_normalize_null_like_values() 
     @brief      Verify shared optional string and runtime null helpers keep consistent semantics.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert operation_runtime_service.optional_string(None) is None
     assert operation_runtime_service.optional_string("  name  ") == "name"
@@ -291,9 +252,6 @@ def test_project_relative_path_resolver_rejects_escapes(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.1
     """
     project_root, _manifest = project_workspace_service.create_project("PathRuntime", tmp_path)
     artifact_path = project_root / "safe.txt"
@@ -327,19 +285,15 @@ def test_project_relative_path_resolver_rejects_escapes(tmp_path) -> None:
 
 def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None:
     """
-    @brief      Verify one operation reset clears known flat artifacts without deleting unrelated root files.
+    @brief      Verify S-0003 clears known flat artifacts without deleting unrelated root files.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("ResetRuntime", tmp_path)
     (project_root / "story.txt").write_text("raw", encoding="utf-8")
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("raw", encoding="utf-8")
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("clean", encoding="utf-8")
-    (project_root / config.CLEANUP_REPORT_FILE_NAME).write_text("{}", encoding="utf-8")
     (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / "notes.txt").write_text("keep", encoding="utf-8")
@@ -354,7 +308,6 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
     assert (project_root / "notes.txt").read_text(encoding="utf-8") == "keep"
     assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file()
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
 
@@ -365,9 +318,6 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("PreserveNarratorRuntime", tmp_path)
     narrator_definition_service.ensure_narrator_voice_document(project_root)
@@ -397,9 +347,6 @@ def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("PreserveTextRevisionRuntime", tmp_path)
     (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
@@ -428,9 +375,6 @@ def test_resolve_operation_path_uses_project_root_without_creating_folders(tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("ResolveRuntime", tmp_path)
 
@@ -452,9 +396,6 @@ def test_ensure_default_operation_state_creates_not_started_state_only(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("DefaultStateRuntime", tmp_path)
 
@@ -474,9 +415,6 @@ def test_ensure_default_operation_state_creates_compact_character_discovery_stat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("DefaultCharacterStateRuntime", tmp_path)
 
@@ -495,16 +433,12 @@ def test_ensure_default_operation_state_skips_audio_blocks(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.3.0
     """
     project_root, _manifest = project_workspace_service.create_project("DefaultAudioBlocksStateRuntime", tmp_path)
 
     state_path = operation_runtime_service.ensure_default_operation_state(project_root, "audio_blocks")
 
     assert state_path is None
-    assert not (project_root / "audio_blocks_state.json").exists()
     assert not (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).exists()
 
 

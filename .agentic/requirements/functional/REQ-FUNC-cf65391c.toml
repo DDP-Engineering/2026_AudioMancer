@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-cf65391c"
+title = "Bare Roman-numeral chapter detection shall accept only non-empty"
+status = "active"
+
+requirement = """
+Bare Roman-numeral chapter detection shall accept only non-empty uppercase values valid under the standard subtractive Roman grammar.
+"""
+
+verification = "Focused three-detector grammar test passed; E-0009."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_bare_roman_chapter_detection_requires_valid_uppercase_numerals",
+]
+
+spec = "specs/minor_robustness_consistency.spec.md"
+priority = "high"
+rationale = """
+Loose case-insensitive character matching misclassifies ordinary words as chapter labels and corrupts informational chapter counts.
+"""
+created = 2026-07-30
+updated = 2026-07-30

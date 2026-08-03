@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-7a93344b"
+title = "Project Markdown export shall render deliverable content and character"
+status = "active"
+
+requirement = """
+Project Markdown export shall render deliverable content and character dossiers while hiding internal metadata and surviving separator and colon prompts.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_markdown_and_hides_internal_metadata",
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_character_dossier_labels",
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_markdown_character_dossiers_as_tables",
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_markdown_character_dossiers_survive_separator_and_colon_prompts",
+]
+
+priority = "high"
+rationale = """
+Markdown deliverables must present character data without leaking internal fields.
+"""
+created = 2026-07-24
+updated = 2026-07-24

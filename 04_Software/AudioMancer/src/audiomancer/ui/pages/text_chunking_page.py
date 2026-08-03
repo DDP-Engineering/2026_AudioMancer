@@ -12,9 +12,6 @@
 @details Provides deterministic chunk generation controls and renders the
          current cleaned-text reference plus editable persisted chunk previews
          with local text search.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.5.5
 """
 
 # IMPORTS
@@ -47,9 +44,6 @@ class TextChunkingPage(QWidget):
     @brief      Display deterministic and AI-assisted chunking controls.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.4.1
     """
 
     chunk_requested = Signal()
@@ -64,9 +58,6 @@ class TextChunkingPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.5.4
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -203,9 +194,6 @@ class TextChunkingPage(QWidget):
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.0
         """
         super().resizeEvent(event)
         self._apply_preview_splitter_minimums()
@@ -216,9 +204,6 @@ class TextChunkingPage(QWidget):
         @param[in]  is_active True when a project is open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.2
         """
         self._project_active = is_active
         self._apply_button_state()
@@ -242,9 +227,6 @@ class TextChunkingPage(QWidget):
         @param[in]  selected_strategy Optional strategy token to preselect.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.1
         """
         self._chunks = list(chunks)
         self._editing_chunk = False
@@ -269,9 +251,6 @@ class TextChunkingPage(QWidget):
         @brief      Return current cleaned-reference and chunk-list scroll state.
         @return     Mapping of local scroll and selection values.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         return {
             "cleaned_vertical": self._cleaned_text_edit.verticalScrollBar().value(),
@@ -287,9 +266,6 @@ class TextChunkingPage(QWidget):
         @param[in]  scroll_state Scroll state returned by `preview_scroll_state`.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         row = scroll_state.get("chunk_list_row", -1)
         if 0 <= row < self._chunk_list.count():
@@ -305,9 +281,6 @@ class TextChunkingPage(QWidget):
         @param[in]  strategy Strategy token to select.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         index = self._strategy_combo.findData(strategy)
         if index >= 0:
@@ -324,9 +297,6 @@ class TextChunkingPage(QWidget):
         @param[in]  selected_profile_id Profile id that should be selected.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self._profile_combo.blockSignals(True)
         self._profile_combo.clear()
@@ -350,9 +320,6 @@ class TextChunkingPage(QWidget):
         @brief      Return the currently selected AI chunking strategy token.
         @return     Strategy identifier from the combo box.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         return str(self._strategy_combo.currentData() or config.DEFAULT_AI_CHUNKING_STRATEGY)
 
@@ -361,9 +328,6 @@ class TextChunkingPage(QWidget):
         @brief      Return the selected AI-profile identifier.
         @return     Selected profile id or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         value = self._profile_combo.currentData()
         return None if value in (None, "") else str(value)
@@ -374,9 +338,6 @@ class TextChunkingPage(QWidget):
         @param[in]  is_busy True while the controller is running a blocking task.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         self._busy = is_busy
         self._apply_button_state()
@@ -386,9 +347,6 @@ class TextChunkingPage(QWidget):
         @brief      Apply the current page button states.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.3.0
         """
         enabled = self._project_active and not self._busy
         self._chunk_button.setEnabled(enabled and self._can_chunk)
@@ -412,9 +370,6 @@ class TextChunkingPage(QWidget):
         @brief      Set each chunking preview pane minimum width to one third of the preview splitter width.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.0
         """
         required_attributes = ("_preview_splitter", "_left_preview_container", "_chunk_preview_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -432,9 +387,6 @@ class TextChunkingPage(QWidget):
         @param[in]  row Current selected row in the chunk list.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         if row < 0 or row >= len(self._chunks):
             self._chunk_text_edit.clear()
@@ -452,9 +404,6 @@ class TextChunkingPage(QWidget):
         @brief      Emit one AI chunking request with the selected profile id.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-07
-        @version    0.1.0
         """
         profile_id = self.current_ai_profile_id()
         if profile_id is not None:
@@ -466,14 +415,17 @@ class TextChunkingPage(QWidget):
         @param[in]  language Runtime UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.3.2
         """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>")
         self._profile_label.setText(ui_state_service.translate("text_chunking.ai_profile", language))
         self._strategy_label.setText(ui_state_service.translate("text_chunking.ai_strategy", language))
+        for index in range(self._strategy_combo.count()):
+            strategy = str(self._strategy_combo.itemData(index) or "")
+            self._strategy_combo.setItemText(
+                index,
+                ui_state_service.translate(f"chunking.strategy.{strategy}", language),
+            )
         self._chunk_button.setText(ui_state_service.translate("text_chunking.chunk", language))
         self._ai_chunk_button.setText(ui_state_service.translate("text_chunking.ai_chunk", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_chunking.cleaned_group", language))
@@ -488,6 +440,8 @@ class TextChunkingPage(QWidget):
                 0,
                 ui_state_service.translate("ai_settings.none", language),
             )
+        if not self._project_active:
+            self._status_edit.setPlainText(ui_state_service.translate("text_chunking.initial_note", language))
 
     def _install_preview_find_context_menu(self, editor: QPlainTextEdit) -> None:
         """
@@ -495,9 +449,6 @@ class TextChunkingPage(QWidget):
         @param[in]  editor Preview editor receiving the custom context menu.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         editor.customContextMenuRequested.connect(
@@ -511,9 +462,6 @@ class TextChunkingPage(QWidget):
         @param[in]  position Local menu position inside the editor.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         menu = editor.createStandardContextMenu()
         menu.addSeparator()
@@ -536,9 +484,6 @@ class TextChunkingPage(QWidget):
         @param[in]  editor Preview editor that should be searched.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         search_text, accepted = QInputDialog.getText(
             self,
@@ -558,9 +503,6 @@ class TextChunkingPage(QWidget):
         @param[in]  editor Preview editor that should be searched.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         search_text = self._preview_find_text_by_editor_id.get(id(editor), "")
         if not search_text:
@@ -577,9 +519,6 @@ class TextChunkingPage(QWidget):
         @param[in]  search_text Text to find.
         @return     True when one match was selected.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         if editor.find(search_text):
             return True
@@ -594,9 +533,6 @@ class TextChunkingPage(QWidget):
         @param[in]  search_text Text that was not found in the preview.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         QMessageBox.information(
             self,
@@ -611,9 +547,6 @@ class TextChunkingPage(QWidget):
         @brief      Enable editing for the selected chunk preview.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.2.0
         """
         if not (0 <= self._chunk_list.currentRow() < len(self._chunks)):
             return
@@ -629,9 +562,6 @@ class TextChunkingPage(QWidget):
         @brief      Confirm downstream impact before entering selected-chunk edit mode.
         @return     True when the operator confirms the edit impact.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-05
-        @version    0.1.0
         """
         decision = QMessageBox.question(
             self,
@@ -647,9 +577,6 @@ class TextChunkingPage(QWidget):
         @brief      Emit one request to insert a new chunk after the selection.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.2.0
         """
         row = self._chunk_list.currentRow()
         if self._editing_chunk:
@@ -666,9 +593,6 @@ class TextChunkingPage(QWidget):
         @brief      Emit one request to delete the selected chunk.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
         """
         row = self._chunk_list.currentRow()
         if row < 0 or row >= len(self._chunks) or self._editing_chunk or len(self._chunks) <= 1:
@@ -680,9 +604,6 @@ class TextChunkingPage(QWidget):
         @brief      Emit one selected chunk text save request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.2
         """
         row = self._chunk_list.currentRow()
         if not self._editing_chunk or row < 0 or row >= len(self._chunks):
@@ -701,9 +622,6 @@ class TextChunkingPage(QWidget):
         @brief      Return the runtime language currently applied to the page.
         @return     Runtime UI language code.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
         """
         return str(getattr(self, "_language", config.DEFAULT_LANGUAGE))
 
@@ -714,9 +632,6 @@ def _format_chunk_list_item(chunk: dict[str, object]) -> str:
     @param[in]  chunk Chunk payload with chunk id and text.
     @return     Single-line chunk-list label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
     """
     chunk_text = str(chunk.get("text", ""))
     preview_line = next((line.strip() for line in chunk_text.splitlines() if line.strip()), "")

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-74115023"
+title = "Audio-block artifacts shall validate WAV inputs and outputs before"
+status = "active"
+
+requirement = """
+Audio-block artifacts shall validate WAV inputs and outputs before entering the generated-audio plan.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_wav_validation_and_stitching",
+]
+
+priority = "high"
+rationale = """
+Malformed WAV files must not enter the assembly plan.
+"""
+created = 2026-07-19
+updated = 2026-07-24

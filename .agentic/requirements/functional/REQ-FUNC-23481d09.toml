@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-23481d09"
+title = "The Audio Assembly controller shall expose deliberate output and"
+status = "active"
+
+requirement = """
+The Audio Assembly controller shall expose deliberate output and scene-mix selection with safe output paths.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_starts_selected_output",
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_generates_and_plays_scene_mix_preview",
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_rejects_escaping_output_path",
+  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_restarts_clicked_output_from_beginning",
+]
+
+priority = "high"
+rationale = """
+Output selection must be explicit and path-safe.
+"""
+created = 2026-07-19
+updated = 2026-07-24

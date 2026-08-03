@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-32d50c31"
+title = "Character voice-plan sync shall reuse discovery preview text and"
+status = "active"
+
+requirement = """
+Character voice-plan sync shall reuse discovery preview text and refresh an unedited prompt with explicit gender.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_uses_character_discovery_preview_text",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_refreshes_unedited_prompt_with_explicit_gender",
+]
+
+priority = "high"
+rationale = """
+Assignments must stay synchronized with discovery-derived data.
+"""
+created = 2026-07-19
+updated = 2026-07-24

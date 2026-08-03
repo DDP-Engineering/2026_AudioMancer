@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-f982a34c"
+title = "The operation runner shall not start a worker while another operation"
+status = "active"
+
+requirement = """
+The operation runner shall not start a worker while another operation is active.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_does_not_start_when_operation_is_active",
+]
+
+priority = "high"
+rationale = """
+Concurrent conflicting operations must be prevented.
+"""
+created = 2026-07-19
+updated = 2026-07-24

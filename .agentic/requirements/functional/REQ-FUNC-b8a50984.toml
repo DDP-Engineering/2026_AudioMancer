@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-b8a50984"
+title = "The narrator definition service shall require minimum Qwen capabilities"
+status = "active"
+
+requirement = """
+The narrator definition service shall require minimum Qwen capabilities for a profile generation request.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_generation_request_requires_minimum_qwen_capabilities",
+]
+
+priority = "high"
+rationale = """
+Generation must not start without the required runtime capabilities.
+"""
+created = 2026-07-24
+updated = 2026-07-24

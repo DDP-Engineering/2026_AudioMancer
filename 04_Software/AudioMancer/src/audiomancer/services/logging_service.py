@@ -14,9 +14,6 @@
          can be created, supports text and JSON formatting, applies
          per-component log-level overrides, and provides optional function
          tracing decorators for selected call sites.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.2.0
 """
 
 # IMPORTS
@@ -60,9 +57,6 @@ def _normalize_level_name(level_name: str | None) -> str:
     @param[in]  level_name Candidate textual level name.
     @return     Supported uppercase level name.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     candidate = (level_name or config.DEFAULT_LOG_LEVEL).strip().upper()
     if candidate not in _VALID_LEVEL_NAMES:
@@ -76,9 +70,6 @@ def _resolve_level(level_name: str | None) -> int:
     @param[in]  level_name Candidate textual level name.
     @return     Logging module numeric level.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     return getattr(logging, _normalize_level_name(level_name), logging.INFO)
 
@@ -88,9 +79,6 @@ def _resolve_log_format() -> str:
     @brief      Resolve the configured application log output format.
     @return     Supported log format token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     candidate = (config.DEFAULT_LOG_FORMAT or "text").strip().lower()
     if candidate == "txt":
@@ -107,9 +95,6 @@ def _safe_value(value: Any, max_length: int = _TRACE_VALUE_MAX_LENGTH) -> Any:
     @param[in]  max_length Maximum string length before truncation.
     @return     Sanitized summary value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     if isinstance(value, dict):
         return f"dict(keys={list(value.keys())[:12]})"
@@ -138,9 +123,6 @@ def _collect_parameters(
     @param[in]  kwargs Keyword call arguments.
     @return     Parameter-name to compact representation map.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     try:
         bound_arguments = signature(function).bind_partial(*args, **kwargs)
@@ -159,9 +141,6 @@ def _resolve_component_level(component_name: str, level_name: str | None) -> int
     @param[in]  level_name Explicit caller-supplied level override.
     @return     Effective numeric log level for the component.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     component_override = config.DEFAULT_LOG_LEVEL_OVERRIDES.get(component_name)
     return _resolve_level(level_name or component_override or config.DEFAULT_LOG_LEVEL)
@@ -175,9 +154,6 @@ def _log_directory_path() -> Path:
                 logging impossible.
     @return     Absolute application log directory path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     return config.APP_USER_DATA_ROOT / config.APP_LOG_DIRECTORY_NAME
 
@@ -193,9 +169,6 @@ def _build_log_file_path(timestamp: datetime | None = None) -> Path:
     @param[in]  timestamp Optional run timestamp override.
     @return     Absolute log file path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.2.0
     """
     run_timestamp = timestamp or datetime.now()
     file_name = f"{config.APP_NAME}_{run_timestamp:%Y%m%d}_{run_timestamp:%H%M%S}_{os.getpid()}.log"
@@ -211,9 +184,6 @@ def _cleanup_old_log_files(current_log_file: Path) -> None:
     @param[in]  current_log_file Active run log file that must be kept.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     retention_window = timedelta(days=max(config.DEFAULT_LOG_RETENTION_DAYS, 0))
     now = datetime.now()
@@ -240,9 +210,6 @@ def _cleanup_old_log_files(current_log_file: Path) -> None:
 class _JsonFormatter(logging.Formatter):
     """
     @brief      JSON-lines formatter for machine-readable log records.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -251,9 +218,6 @@ class _JsonFormatter(logging.Formatter):
         @param[in]  record Logging record to serialize.
         @return     JSON string representation of the log record.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
         payload = {
             "timestamp": datetime.fromtimestamp(record.created).isoformat(),
@@ -275,9 +239,6 @@ class _JsonFormatter(logging.Formatter):
 class _SafeTextFormatter(logging.Formatter):
     """
     @brief      Text formatter tolerant to missing custom logging fields.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -286,9 +247,6 @@ class _SafeTextFormatter(logging.Formatter):
         @param[in]  record Logging record to render.
         @return     Formatted text log line.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
         if not hasattr(record, "func_name"):
             record.func_name = record.funcName
@@ -307,9 +265,6 @@ def _open_run_log_file(
                 path and handler are `None` when creation failed, in which case
                 the reason names the path and the underlying error.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     log_directory = _log_directory_path()
     try:
@@ -335,9 +290,6 @@ def _build_formatter() -> logging.Formatter:
     @brief      Create the configured runtime log formatter.
     @return     Formatter instance matching the configured output mode.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     if _resolve_log_format() == "json":
         return _JsonFormatter()
@@ -357,9 +309,6 @@ def initialize_logging() -> Path | None:
     @return     Absolute path to the run log file, or `None` when logging
                 degraded to console output only.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     formatter = _build_formatter()
     root_logger = logging.getLogger()
@@ -391,9 +340,6 @@ def shutdown_logging() -> None:
     @brief      Flush and close all configured root logging handlers.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     root_logger = logging.getLogger()
     handlers = list(root_logger.handlers)
@@ -413,9 +359,6 @@ def get_component_logger(
     @param[in]  level_name Optional explicit per-call log-level override.
     @return     Configured logger instance for the requested component.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
     logger = logging.getLogger(component_name)
     logger.setLevel(_resolve_component_level(component_name, level_name))
@@ -429,9 +372,6 @@ def trace_function(logger: logging.Logger) -> Callable[[_CallableType], _Callabl
     @param[in]  logger Component logger used for trace output.
     @return     Decorator that logs call start, end, duration, and exceptions.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
     """
 
     def _decorator(function: _CallableType) -> _CallableType:
@@ -440,9 +380,6 @@ def trace_function(logger: logging.Logger) -> Callable[[_CallableType], _Callabl
         @param[in]  function Callable to be wrapped.
         @return     Wrapped callable with trace logging enabled.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-04
-        @version    0.1.0
         """
 
         @wraps(function)
@@ -453,9 +390,6 @@ def trace_function(logger: logging.Logger) -> Callable[[_CallableType], _Callabl
             @param[in]  kwargs Keyword call arguments.
             @return     Original wrapped function result.
             @exception  Re-raises any exception raised by the wrapped function.
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-04
-            @version    0.1.0
             """
             started_at = time.perf_counter()
             parameters = _collect_parameters(function, args, kwargs)

@@ -10,9 +10,6 @@
 @file test_url_service.py
 @brief Focused tests for shared URL helpers.
 @details Verifies endpoint joining behavior shared by HTTP runtime services.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -25,9 +22,6 @@ def test_join_endpoint_url_appends_missing_endpoint_once() -> None:
     @brief      Verify endpoint joins handle missing and already-present suffixes.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert join_endpoint_url("http://localhost:11434/v1", "/models") == "http://localhost:11434/v1/models"
     assert join_endpoint_url("http://localhost:11434/v1/models", "/models") == "http://localhost:11434/v1/models"
@@ -38,9 +32,6 @@ def test_join_endpoint_url_collapses_duplicate_version_prefix() -> None:
     @brief      Verify VoiceWeaver-style versioned endpoints avoid duplicated `/v1` segments.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert (
         join_endpoint_url("http://localhost:9000/v1", "/v1/health", collapse_duplicate_version=True)
@@ -53,9 +44,6 @@ def test_remove_trailing_endpoint_strips_present_suffix_only() -> None:
     @brief      Verify URL suffix removal leaves unrelated paths intact.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert remove_trailing_endpoint("http://localhost:11434/v1", "/v1") == "http://localhost:11434"
     assert remove_trailing_endpoint("http://localhost:11434/api/tags", "/v1") == "http://localhost:11434/api/tags"

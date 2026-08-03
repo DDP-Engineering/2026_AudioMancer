@@ -14,9 +14,6 @@
          cancellation handler, which syncs the manifest and refreshes project
          state. The existing controller tests accept `cancel_handler` and discard
          it, so this module is what proves the handler is actually connected.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -45,9 +42,6 @@ def test_controllers_pass_their_cancellation_handler_to_the_runner(monkeypatch, 
     @param[in]  controller_module Controller module under test.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     captured_cancel_handlers: list = []
     cancelled_messages: list[str] = []
@@ -57,9 +51,6 @@ def test_controllers_pass_their_cancellation_handler_to_the_runner(monkeypatch, 
         @brief      Capture the cancel handler the controller hands to the runner.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         _ = (window, operation_kind, operation_name, initial_message, worker_callable)
         captured_cancel_handlers.append(runner_callbacks["cancel_handler"])
@@ -97,9 +88,6 @@ class _StubWindow:
     """
     @brief      Minimal window double exposing the page attributes start_operation touches.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
 
     def __init__(self) -> None:
@@ -107,9 +95,6 @@ class _StubWindow:
         @brief      Provide busy-capable page doubles for both controllers.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         self._text_chunking_page = _StubPage()
         self._text_cleanup_page = _StubPage()
@@ -119,9 +104,6 @@ class _StubPage:
     """
     @brief      Page double that accepts busy-state changes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
 
     def set_busy(self, is_busy: bool, operation_name: str | None = None) -> None:
@@ -131,9 +113,6 @@ class _StubPage:
         @param[in]  operation_name Optional operator-facing operation name.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         _ = (is_busy, operation_name)
 

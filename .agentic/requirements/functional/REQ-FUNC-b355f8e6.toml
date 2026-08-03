@@ -1,0 +1,31 @@
+schema = 1
+id = "REQ-FUNC-b355f8e6"
+title = "Speech-block generation shall resume from persisted progress across"
+status = "active"
+
+requirement = """
+Speech-block generation shall resume from persisted progress across profile, budget, ambience, cast, and review changes.
+"""
+
+verification = "Automated: 8 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_same_narrator_resume_depends_on_the_recorded_response_contract",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_accepts_changed_scene_ambience_settings",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_continues_from_unfinished_direct_segment",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_ignores_source_chunk_count_without_processed_count",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_restarts_previous_full_cast_state",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_resumes_after_partial_review_approval",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_resumes_with_current_selected_profile",
+]
+
+priority = "high"
+rationale = """
+Interrupted generation must continue without losing completed work.
+"""
+created = 2026-07-19
+updated = 2026-07-26

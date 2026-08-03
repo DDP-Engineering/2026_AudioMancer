@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-eb5d81aa"
+title = "The Home controller shall preserve unlocked draft project options on"
+status = "active"
+
+requirement = """
+The Home controller shall preserve unlocked draft project options on import.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_import_preserves_unlocked_draft_project_options",
+]
+
+priority = "high"
+rationale = """
+Importing a source must not lock a still-draft project.
+"""
+created = 2026-07-24
+updated = 2026-07-24

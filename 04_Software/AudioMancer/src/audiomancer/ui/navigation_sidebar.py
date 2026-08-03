@@ -12,9 +12,6 @@
 @details Renders the workflow pages as a vertical left-hand sidebar list while
          preserving the page registration and selection contract used by the
          main-window shell.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-10
-@version 0.5.0
 """
 
 # IMPORTS
@@ -69,9 +66,6 @@ def _render_page_icon(inner_svg: str, color: str, px: int = 32) -> QIcon:
     @param[in]  px Rendered pixmap size in device pixels.
     @return     Icon with the stroked glyph on a transparent background.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     svg_markup = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
@@ -94,9 +88,6 @@ class NavigationSidebar(QListWidget):
     """
     @brief      Sidebar widget that emits the selected page identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.4.0
     """
 
     page_selected = Signal(str)
@@ -107,9 +98,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.4.0
         """
         super().__init__(parent)
         self.setObjectName("navigationSidebar")
@@ -129,9 +117,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  enabled Initial enabled state.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.3.0
         """
         item = QListWidgetItem(label)
         item.setData(Qt.ItemDataRole.UserRole, page_id)
@@ -149,9 +134,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  theme_payload Runtime UI theme payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-25
-        @version    0.1.0
         """
         colors = theme_payload.get("colors") if isinstance(theme_payload, dict) else None
         icon_color = str(colors.get("text_muted")) if isinstance(colors, dict) and colors.get("text_muted") else None
@@ -170,9 +152,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  label Human-readable page label.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         item = self._find_item(page_id)
         if item is None:
@@ -187,9 +166,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         for page_id in self._page_labels:
             self.set_page_label(
@@ -204,9 +180,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  enabled True to enable selection.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         item = self._find_item(page_id)
         if item is None:
@@ -220,9 +193,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  page_id Target page identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         item = self._find_item(page_id)
         if item is not None:
@@ -233,9 +203,6 @@ class NavigationSidebar(QListWidget):
         @brief      Emit the identifier of the currently selected page.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         item = self.currentItem()
         if item is not None:
@@ -247,9 +214,6 @@ class NavigationSidebar(QListWidget):
         @param[in]  page_id Target page identifier.
         @return     Matching list item or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
         """
         for index in range(self.count()):
             item = self.item(index)

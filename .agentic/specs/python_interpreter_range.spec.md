@@ -7,24 +7,18 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Spec: Supported Python Interpreter Range
 
-Companion specification for the platform requirements covering which Python
-interpreters AudioMancer supports and the removal of the last stdlib blocker.
+Companion specification for the supported Python interpreter range and internal
+PCM codec dependency.
 
-- Requirements: the `platform` set (no removed-stdlib dependency; declared
-  interpreter range).
+- Requirements: the `platform` set (internal PCM codec; declared interpreter
+  range).
 - Affected file: `04_Software/AudioMancer/pyproject.toml`
 
 ## Behavior
 
-`audioop` was removed from the standard library in Python 3.13 with no stdlib
-replacement. AudioMancer used it for every PCM conversion in Audio Assembly and
-Scene Mix, so the package pin `requires-python = ">=3.12,<3.13"` was the only
-thing preventing a hard `ModuleNotFoundError` at import time.
-
-Once PCM conversion is served by the internal codec, that blocker is gone and the
-declared interpreter range widens to include 3.13. The upper bound stays
-exclusive so a future interpreter is an explicit decision rather than an
-accident.
+AudioMancer serves PCM conversion through its internal codec and declares
+support for Python 3.12 and 3.13. The upper bound stays exclusive so a future
+interpreter is an explicit decision rather than an accident.
 
 The application must import and run its Audio Assembly and Scene Mix paths on
 both 3.12 and 3.13, and the configured test and lint gates must pass on both.

@@ -11,9 +11,6 @@
 @brief Tests for the PCM sample widths Audio Assembly accepts.
 @details Audio Assembly treats every sample width as signed, so unsigned 8-bit
          PCM must be rejected rather than rendered with DC-offset silence.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ def test_eight_bit_source_is_rejected_by_input_validation(tmp_path) -> None:
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_root = tmp_path
     _write_wav(project_root / "audio_block.wav", sample_width=1)
@@ -53,9 +47,6 @@ def test_sixteen_bit_source_stays_accepted(tmp_path) -> None:
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_root = tmp_path
     _write_wav(project_root / "audio_block.wav", sample_width=2)
@@ -74,9 +65,6 @@ def test_silence_at_retained_widths_is_zero_filled_and_frame_exact(tmp_path) -> 
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     output_path = tmp_path / "silence.wav"
     with wave.open(str(output_path), "wb") as output_wav:
@@ -103,9 +91,6 @@ def _write_wav(path, sample_width: int) -> None:
     @param[in]  sample_width Sample width in bytes.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)

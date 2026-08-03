@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-UX-de071609"
+title = "The project create and open dialogs shall start in the active project"
+status = "active"
+
+requirement = """
+The project create and open dialogs shall start in the active project folder context when a project is open and in the resolved per-user documents directory otherwise.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_project_dialogs_start_outside_the_install_root",
+]
+
+spec = "specs/project_dialog_default_directory.spec.md"
+priority = "high"
+rationale = """
+Defaulting to the application install root opens the project browser inside a read-only directory where any created project fails to write.
+"""
+created = 2026-07-25
+updated = 2026-07-25

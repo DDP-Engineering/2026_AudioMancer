@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-8fd4bd61"
+title = "Deterministic and AI-assisted Chunking shall atomically create the"
+status = "active"
+
+requirement = """
+Deterministic and AI-assisted Chunking shall atomically create the running document before work, commit only complete deterministic units or validated AI windows, emit progress only in memory, preserve committed chunks and source-paragraph resume fields on cancellation or failure, and complete with every narratable paragraph represented exactly once and next_paragraph set to null.
+"""
+
+verification = "Focused deterministic and AI lifecycle, separator materialization, and separator-aware resume tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_ai_chunking_omits_and_splits_around_scene_separator_artifacts",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress",
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_resume_counts_processed_separator_without_persisting_it",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Crash-safe unit commits must never publish partial provider output, duplicate narratable text, or turn non-narratable separators into chunks while source-paragraph progress remains resumable.
+"""
+created = 2026-07-20
+updated = 2026-07-30

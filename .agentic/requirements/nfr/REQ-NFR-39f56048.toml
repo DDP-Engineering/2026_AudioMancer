@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-NFR-39f56048"
+title = "Logging initialization shall remove only expired log files, apply"
+status = "active"
+
+requirement = """
+Logging initialization shall remove only expired log files, apply component-level overrides, and use the JSON formatter when configured.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_removes_only_expired_log_files",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_get_component_logger_applies_component_level_override",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_uses_json_formatter_when_configured",
+]
+
+priority = "high"
+rationale = """
+Observability setup must be correct and bounded.
+"""
+created = 2026-07-24
+updated = 2026-07-24

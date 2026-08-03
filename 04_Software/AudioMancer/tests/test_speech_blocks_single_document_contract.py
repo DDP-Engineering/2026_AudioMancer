@@ -9,17 +9,9 @@
 """
 @file test_speech_blocks_single_document_contract.py
 @brief Red-before-green contract tests for the single authoritative Speech Blocks document.
-@details Verifies the one-file persistence contract, the removed source-chunk
-         text copy, report/operation-state compatibility projections, resume
-         from the document checkpoint, legacy-artifact-as-absent handling, and
-         reset cleanup required by SPEC-SB-SINGLEDOC, SPEC-SB-NOSRCCOPY,
-         SPEC-SB-PROJECTION, SPEC-SB-RESUME, SPEC-SB-LEGACY-ABSENT, and
-         SPEC-SB-RESET, mapped to REQ-FUNC-c71fbab4, REQ-FUNC-ecb5b678,
-         REQ-FUNC-74be10fd, REQ-FUNC-6f65b68e, REQ-FUNC-ac0451b0, and
-         REQ-FUNC-a4d7fcde.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-24
-@version 0.1.0
+@details Verifies the one-file persistence contract, exact source references,
+         report/operation-state projections, resume from the document
+         checkpoint, non-object handling, root validation, and reset cleanup.
 """
 
 # IMPORTS
@@ -47,15 +39,6 @@ _DOCUMENT_FIELDS = {
     "failure",
     "blocks",
 }
-_REMOVED_CONFIG_CONSTANTS = (
-    "SPEECH_BLOCKS_OUTPUT_FILE_NAME",
-    "SPEECH_BLOCKS_REPORT_FILE_NAME",
-    "SPEECH_BLOCKS_STATE_FILE_NAME",
-)
-_LEGACY_REPORT_FILE_NAME = "speech_blocks_report.json"
-_LEGACY_STATE_FILE_NAME = "speech_blocks_state.json"
-
-
 def _block(speech_block_id: str, chunk_id: str, *, approved: bool, warnings: list[str] | None = None) -> dict:
     """Build one minimal persisted Speech Block payload for contract tests."""
     return {
@@ -105,9 +88,6 @@ def test_document_round_trips_and_writes_only_one_artifact(tmp_path: Path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -119,9 +99,6 @@ def test_document_round_trips_and_writes_only_one_artifact(tmp_path: Path) -> No
     assert config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME == "speech_blocks.json"
     assert set(document) == _DOCUMENT_FIELDS
     assert speech_blocks_service.load_speech_blocks_document(project_root) == document
-    operation_dir = document_path.parent
-    assert not (operation_dir / _LEGACY_REPORT_FILE_NAME).exists()
-    assert not (operation_dir / _LEGACY_STATE_FILE_NAME).exists()
 
 
 def test_persisted_document_excludes_source_chunk_text(tmp_path: Path) -> None:
@@ -130,9 +107,6 @@ def test_persisted_document_excludes_source_chunk_text(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -151,9 +125,6 @@ def test_load_report_projection_matches_recomputed_counts(tmp_path: Path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -181,9 +152,6 @@ def test_load_operation_state_projection_omits_source_chunks_and_exposes_checkpo
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -217,9 +185,6 @@ def test_resume_reads_segment_cursor_from_document_checkpoint(tmp_path: Path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -244,21 +209,18 @@ def test_resume_reads_segment_cursor_from_document_checkpoint(tmp_path: Path) ->
     assert resume_checkpoint["completed_segment_count"] == 4
 
 
-def test_legacy_list_artifact_is_treated_as_absent(tmp_path: Path) -> None:
+def test_non_object_document_is_treated_as_absent(tmp_path: Path) -> None:
     """
-    @brief      Verify SPEC-SB-LEGACY-ABSENT / REQ-FUNC-ac0451b0 old list format is not-started.
+    @brief      Verify REQ-FUNC-ac0451b0 treats a non-object payload as not-started.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
     document_path = speech_blocks_service.write_speech_blocks_document(project_root, _document())
-    legacy_blocks = [_block("chunk-0001-000001", "chunk-0001", approved=True)]
-    document_path.write_text(json.dumps(legacy_blocks), encoding="utf-8")
+    invalid_document = [_block("chunk-0001-000001", "chunk-0001", approved=True)]
+    document_path.write_text(json.dumps(invalid_document), encoding="utf-8")
 
     assert speech_blocks_service.load_speech_blocks_document(project_root) is None
     assert speech_blocks_service.load_speech_blocks(project_root) == []
@@ -266,30 +228,20 @@ def test_legacy_list_artifact_is_treated_as_absent(tmp_path: Path) -> None:
     assert speech_blocks_service.load_operation_state(project_root) is None
 
 
-def test_reset_removes_document_and_residual_legacy_files(tmp_path: Path) -> None:
+def test_reset_removes_document(tmp_path: Path) -> None:
     """
-    @brief      Verify SPEC-SB-RESET / REQ-FUNC-a4d7fcde reset clears document and legacy files.
+    @brief      Verify REQ-FUNC-a4d7fcde reset clears the authoritative document.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
     document_path = speech_blocks_service.write_speech_blocks_document(project_root, _document())
-    operation_dir = document_path.parent
-    legacy_report = operation_dir / _LEGACY_REPORT_FILE_NAME
-    legacy_state = operation_dir / _LEGACY_STATE_FILE_NAME
-    legacy_report.write_text("{}", encoding="utf-8")
-    legacy_state.write_text("{}", encoding="utf-8")
 
     speech_blocks_service.reset_speech_blocks(project_root)
 
     assert not document_path.exists()
-    assert not legacy_report.exists()
-    assert not legacy_state.exists()
 
 
 def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
@@ -298,9 +250,6 @@ def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()

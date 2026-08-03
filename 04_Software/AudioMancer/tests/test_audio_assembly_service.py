@@ -11,9 +11,6 @@
 @brief Audio Assembly service tests for AudioMancer.
 @details Verifies WAV audiobook composition, project settings normalization,
          stale-input protection, and generated-output reset behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.6.2
 """
 
 # IMPORTS
@@ -38,9 +35,6 @@ def test_audio_assembly_service_composes_per_chunk_outputs(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     manifest["audio_assembly_settings"] = {
@@ -66,9 +60,6 @@ def test_audio_assembly_service_writes_pause_blocks_as_silence(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     blocks = _load_block_fixtures(project_root)
@@ -96,9 +87,6 @@ def test_audio_assembly_service_can_skip_scene_ambience_blocks(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     blocks = _load_block_fixtures(project_root)
@@ -144,9 +132,6 @@ def test_audio_assembly_service_lists_and_generates_scene_mix_preview(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
     _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
@@ -181,9 +166,6 @@ def test_audio_assembly_service_scene_mix_group_not_ready_without_approved_audio
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
     _insert_scene_ambience_blocks(project_root, approved=False, with_audio=False)
@@ -203,9 +185,6 @@ def test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group(t
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
@@ -231,9 +210,6 @@ def test_audio_assembly_service_final_assembly_converts_scene_mix_wav_params(tmp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-27
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     _insert_scene_ambience_blocks(
@@ -269,9 +245,6 @@ def test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-08
-    @version    0.1.0
     """
     # REQ-FUNC-057: final output params must prefer speech over leading ambience.
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
@@ -308,13 +281,10 @@ def test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_
 
 def test_audio_assembly_service_missing_pause_duration_uses_default(tmp_path) -> None:
     """
-    @brief      Verify pause duration no longer falls back to parsing older pause text.
+    @brief      Verify a missing pause duration uses the configured default.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     blocks = _load_block_fixtures(project_root)
@@ -341,9 +311,6 @@ def test_audio_assembly_service_composes_time_limited_outputs(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path, frame_count=48_000)
     manifest["audio_assembly_settings"] = {
@@ -364,9 +331,6 @@ def test_audio_assembly_service_time_limit_counts_inserted_silence(tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path, frame_count=24_000 * 20)
     manifest["audio_assembly_settings"] = {
@@ -389,9 +353,6 @@ def test_audio_assembly_service_resume_preserves_time_limit_warnings(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path, frame_count=24_000 * 61)
     manifest["audio_assembly_settings"] = {
@@ -418,9 +379,6 @@ def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     blocks = _load_block_fixtures(project_root)
@@ -435,17 +393,13 @@ def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> Non
 def test_audio_assembly_service_rejects_escaping_audio_block_path(tmp_path, monkeypatch, path_kind: str) -> None:
     """
     @brief      Verify composition refuses Audio Block paths resolving outside the project root.
-    @details    The persisted document no longer stores a path, so the escaping
-                path is injected at the load seam to keep the composition-level
-                containment guard covered.
+    @details    The escaping path is injected at the load seam to keep the
+                composition-level containment guard covered.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  path_kind Escaping path form under test.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     outside_path = tmp_path / "outside.wav"
@@ -469,9 +423,6 @@ def test_audio_assembly_service_resume_ignores_escaping_output_record(tmp_path, 
     @param[in]  path_kind Escaping path form under test.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
     outside_path = tmp_path / "outside_resume.wav"
@@ -514,9 +465,6 @@ def test_audio_assembly_service_reference_fallback_rejects_escaping_path(tmp_pat
     @param[in]  path_kind Escaping path form under test.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
     outside_path = tmp_path / "outside_fallback.wav"
@@ -537,9 +485,6 @@ def _escaping_artifact_path(path_kind: str, traversal_file_name: str, absolute_p
     @param[in]  absolute_path Absolute path used by the drive-qualified case.
     @return     Escaping path string.
     @exception  AssertionError Raised when the test path kind is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if path_kind == "parent_traversal":
         return f"../{traversal_file_name}"
@@ -556,9 +501,6 @@ def test_audio_assembly_service_requires_reset_when_settings_change(tmp_path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     audio_assembly_service.start_or_continue_composition(project_root, manifest)
@@ -578,9 +520,6 @@ def test_audio_assembly_service_requires_reset_for_state_without_fingerprint(tmp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     (project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME).write_text(
@@ -607,9 +546,6 @@ def test_audio_assembly_service_reset_deletes_report_state_and_audiobook_folder(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     audio_assembly_service.start_or_continue_composition(project_root, manifest)
@@ -627,9 +563,6 @@ def test_project_manifest_normalizes_audio_assembly_settings(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     updated_manifest = audio_assembly_service.save_audio_assembly_settings(
@@ -662,9 +595,6 @@ def _create_project_with_audio_blocks(tmp_path, frame_count: int = 2400):
     @param[in]  frame_count Frame count for each generated WAV file.
     @return     Project root and loaded manifest.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root = tmp_path / "AudioAssemblyProject"
     project_root.mkdir()
@@ -733,9 +663,6 @@ def _insert_scene_ambience_blocks(
     @param[in]  wav_frame_count Generated source WAV frame count.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     blocks = _load_block_fixtures(project_root)
     ambience_audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -784,9 +711,6 @@ def _write_wav(path, frame_count: int, channels: int = 1, frame_rate: int = 24_0
     @param[in]  frame_rate WAV frame rate.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(channels)
@@ -804,9 +728,6 @@ def _pause_block_fixture(text: str) -> dict:
     @param[in]  text Pause Speech Block text carrying the duration.
     @return     Rich fixture block payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     return {
         "speech_block_id": "0001-000002-pause",
@@ -833,9 +754,6 @@ def _load_block_fixtures(project_root) -> list[dict]:
     @param[in]  project_root Active project root folder.
     @return     Ordered rich fixture block payloads.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     document = audio_blocks_service.load_audio_blocks_document(project_root) or {"blocks": []}
     audio_blocks_by_id = {
@@ -858,9 +776,6 @@ def _persist_block_fixtures(project_root, blocks) -> None:
     @param[in]  blocks Ordered rich fixture block payloads.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     audio_only_fields = {
         "audio_relative_path",

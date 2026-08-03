@@ -13,9 +13,6 @@
          approved Audio Blocks, resumable composition state, and generated
          audiobook output records, including on-demand Scene Ambience mix
          previews.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.2.0
 """
 
 # IMPORTS
@@ -37,9 +34,6 @@ def build_audio_assembly_state(
     @param[in]  language Runtime UI language code.
     @return     Page-state payload consumed by Audio Assembly page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if project_root is None or manifest is None:
         return _empty_state(language)
@@ -102,9 +96,6 @@ def _empty_state(language: str) -> dict[str, object]:
     @param[in]  language Runtime UI language code.
     @return     Empty page-state payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     return {
         "settings": audio_assembly_service.default_audio_assembly_settings(),
@@ -142,9 +133,6 @@ def _build_notes(
     @param[in]  language Runtime UI language code.
     @return     Operator-facing notes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if total_blocks <= 0:
         return [ui_state_service.translate("audio_assembly.note_missing_audio_blocks", language)]
@@ -173,9 +161,6 @@ def _filter_assembly_policy_blocks(
     @param[in]  include_scene_ambience True when Scene Ambience blocks count toward assembly.
     @return     Blocks relevant for current Audio Assembly readiness and status.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     if include_scene_ambience:
         return list(audio_blocks)
@@ -193,9 +178,6 @@ def _stage_status(report: dict[str, object] | None, operation_state: dict[str, o
     @param[in]  operation_state Optional persisted Audio Assembly state.
     @return     Stage status token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if isinstance(operation_state, dict) and str(operation_state.get("status", "")).strip() == "cancelled":
         return "cancelled"
@@ -213,9 +195,6 @@ def _format_duration(duration_seconds: float) -> str:
     @param[in]  duration_seconds Duration in seconds.
     @return     `MM:SS` or `HH:MM:SS` duration text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     total_seconds = max(int(duration_seconds), 0)
     hours = total_seconds // 3600

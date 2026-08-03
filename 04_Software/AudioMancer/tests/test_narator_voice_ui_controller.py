@@ -11,9 +11,6 @@
 @brief Narator Voice UI controller tests for AudioMancer.
 @details Verifies narrator profile creation, edit-mode sample invalidation,
          explicit narrator selection, and Qwen3-backed sample generation.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-18
-@version 3.7.0
 """
 
 # IMPORTS
@@ -42,9 +39,6 @@ def test_narator_voice_create_profile_does_not_change_selected_narrator(monkeypa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerCreate")
     window = _build_window(qtbot, project_root)
@@ -78,9 +72,6 @@ def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeyp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerEdit")
     window = _build_window(qtbot, project_root)
@@ -132,9 +123,6 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    1.3.1
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelect")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -207,9 +195,6 @@ def test_narator_voice_ui_controller_select_profile_without_sample_updates_manif
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectUnsampled")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -263,9 +248,6 @@ def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectProgress")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -313,7 +295,6 @@ def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypat
         @brief      Assert the page stays busy while downstream audio is reset.
         @return     Wrapped audio-block removal result.
         @exception  AssertionError Raised when busy-state expectations fail.
-        @version    0.1.0
         """
         assert window._narator_voice_page._busy is True
         assert kwargs["collect_preserved_paths"] is False
@@ -363,9 +344,6 @@ def test_narator_voice_select_profile_progress_clears_after_failure(monkeypatch,
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectProgressFailure")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -401,9 +379,6 @@ def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtb
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectionRefresh")
     first_profile = narrator_definition_service.create_custom_profile(
@@ -440,9 +415,6 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerate")
     profile = narrator_definition_service.create_custom_profile(
@@ -588,9 +560,6 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
         @brief      Provide the start threaded operation test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         _ = operation_kind
         _ = operation_name
@@ -648,9 +617,6 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateCancelWire")
     profile = narrator_definition_service.create_custom_profile(
@@ -666,9 +632,6 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
         @brief      Return the non-cancelled state for runtime wait callback identity checks.
         @return     False.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         return False
 
@@ -719,9 +682,6 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
         @brief      Capture cancellation callbacks passed to VoiceWeaver runtime polling.
         @return     Fake terminal runtime status.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-11
-        @version    0.1.0
         """
         observed_cancel_callbacks.append(kwargs.get("cancel_requested"))
         result_available = len(observed_cancel_callbacks) > 1
@@ -763,9 +723,6 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateFailurePreserves")
     profile = narrator_definition_service.create_custom_profile(
@@ -871,9 +828,6 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.1
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateProfiles")
     settings_payload = {
@@ -911,9 +865,6 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
         @brief      Capture profile generation inputs.
         @return     Fake narrator profile generation report.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-13
-        @version    0.1.0
         """
         captured.update(
             {
@@ -949,9 +900,6 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
         @brief      Run the generation worker synchronously for controller testing.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         _ = failure_handler
         _ = cancel_handler
@@ -1001,9 +949,6 @@ def test_narator_voice_generate_profiles_count_cancel_stops_before_worker(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateProfilesCancel")
     window = _build_window(
@@ -1040,9 +985,6 @@ def test_narator_voice_ui_controller_preview_state_change_clears_preview_flag(qt
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.1
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerPreviewState")
     window = _build_window(qtbot, project_root)
@@ -1062,9 +1004,6 @@ def test_narator_voice_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    1.1.0
     """
     _project_root, _manifest = _create_project(tmp_path, "NarratorControllerProgressPrivacy")
     _ = qtbot
@@ -1101,9 +1040,6 @@ def _create_project(tmp_path, name: str):
     @brief      Provide the create project test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -1123,9 +1059,6 @@ def _build_window(qtbot, project_root, settings_payload=None):
     @brief      Provide the build window test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     window = MainWindow(settings_payload=_default_settings_payload() if settings_payload is None else settings_payload)
     qtbot.addWidget(window)
@@ -1144,9 +1077,6 @@ def _write_generated_audio_blocks(project_root) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     generated_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
@@ -1242,9 +1172,6 @@ def _sample_progress_messages() -> dict[str, str]:
     @brief      Provide worker-safe sample generation progress messages for tests.
     @return     Progress message mapping.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     return {
         "prepare": "Preparing narator sample generation...",
@@ -1262,9 +1189,6 @@ def _sample_probe_result() -> dict[str, object]:
     @brief      Provide a ready VoiceWeaver probe result for sample-generation tests.
     @return     Runtime probe payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     discovered_models = _minimum_qwen_models()
     return {
@@ -1284,13 +1208,9 @@ def _default_settings_payload() -> dict[str, object]:
     @brief      Provide the default settings payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return {
         "language": "en",
-        "ui_text_scale": "normal",
         "play_completion_beep": False,
         "llm_profiles": [],
         "default_ai_cleanup_profile_id": None,
@@ -1318,9 +1238,6 @@ def _ai_profile_payload(profile_id: str) -> dict[str, object]:
     @param[in]  profile_id Profile identifier.
     @return     AI profile payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     return {
         "id": profile_id,
@@ -1343,9 +1260,6 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
     @brief      Provide the minimum qwen models test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return [
         {

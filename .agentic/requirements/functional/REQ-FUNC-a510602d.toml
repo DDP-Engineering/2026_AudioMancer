@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a510602d"
+title = "Character discovery shall synthesize reviewable profiles with a"
+status = "active"
+
+requirement = """
+Character discovery shall synthesize reviewable profiles with a dialogue-preview fallback.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_uses_dialogue_preview_fallback",
+]
+
+priority = "high"
+rationale = """
+Profiles must be reviewable even when preview data is sparse.
+"""
+created = 2026-07-19
+updated = 2026-07-24

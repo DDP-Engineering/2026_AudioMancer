@@ -11,9 +11,6 @@
 @brief Audio Blocks artifact path, naming, and WAV helpers.
 @details Keeps deterministic generated-audio names and WAV validation helpers
          separate from Audio Blocks orchestration and persistence workflows.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.2.0
 """
 
 # IMPORTS
@@ -35,9 +32,6 @@ def generated_audio_root(project_root: Path) -> Path:
     @param[in]  project_root Active project root folder.
     @return     Absolute generated-audio folder path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return Path(project_root) / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
 
@@ -52,9 +46,6 @@ def audio_artifact_path(project_root: Path, speech_block_id: str) -> Path:
     @param[in]  speech_block_id Stable Speech Block identifier.
     @return     Absolute generated WAV path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     return generated_audio_root(project_root) / f"{audio_artifact_file_stem(speech_block_id)}.wav"
 
@@ -67,9 +58,6 @@ def audio_part_artifact_path(project_root: Path, speech_block_id: str, part_inde
     @param[in]  part_index Zero-based split-part index.
     @return     Absolute split-part WAV path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     file_stem = f"{audio_artifact_file_stem(speech_block_id)}_part{max(int(part_index), 0) + 1:03d}"
     return generated_audio_root(project_root) / "parts" / f"{file_stem}.wav"
@@ -81,9 +69,6 @@ def audio_artifact_file_stem(speech_block_id: str) -> str:
     @param[in]  speech_block_id Stable Speech Block identifier.
     @return     File stem equal to the sanitized `speech_block_id`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     sanitized_id = re.sub(r"[^A-Za-z0-9_-]+", "", str(speech_block_id or "").strip())
     return sanitized_id or "block"
@@ -95,9 +80,6 @@ def normalize_speaker_name(value: str) -> str:
     @param[in]  value Raw speaker display name.
     @return     ASCII-safe normalized speaker token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     normalized_value = str(value or "").replace("\u00c3\u02c6\u00cb\u0153", "\u0218").replace("\u00c8\u02dc", "\u0218")
     normalized_value = unicodedata.normalize("NFKD", normalized_value)
@@ -112,9 +94,6 @@ def validate_wav_bytes(audio_bytes: bytes) -> None:
     @param[in]  audio_bytes Candidate WAV payload.
     @return     None.
     @exception  RuntimeError Raised when the payload is not a readable non-empty WAV.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     try:
         with wave.open(io.BytesIO(audio_bytes), "rb") as audio_file:
@@ -132,9 +111,6 @@ def is_valid_wav_path(audio_path: Path) -> bool:
     @param[in]  audio_path Candidate WAV path.
     @return     True when the path can be reused as a split checkpoint.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     try:
         with wave.open(str(audio_path), "rb") as audio_file:
@@ -154,9 +130,6 @@ def wav_duration_seconds(audio_path: Path) -> float | None:
     @param[in]  audio_path Candidate WAV path.
     @return     Duration in seconds, or `None` when the file cannot be measured.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     try:
         with wave.open(str(audio_path), "rb") as audio_file:
@@ -175,9 +148,6 @@ def stitch_wav_parts(part_paths: list[Path], output_path: Path) -> None:
     @param[in]  output_path Final stitched WAV path.
     @return     None.
     @exception  RuntimeError Raised when part files have incompatible WAV parameters.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if not part_paths:
         raise RuntimeError("Cannot stitch split Audio Block because no generated part WAV files exist.")

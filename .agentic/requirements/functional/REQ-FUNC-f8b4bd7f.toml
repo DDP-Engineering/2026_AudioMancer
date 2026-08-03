@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-f8b4bd7f"
+title = "Speech-block normalization shall produce valid content-kind and"
+status = "active"
+
+requirement = """
+Speech-block normalization shall produce valid content-kind and operation-entry fields.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_content_kind_and_operation_entry_normalization",
+]
+
+priority = "high"
+rationale = """
+Stored blocks must carry a consistent content and operation shape.
+"""
+created = 2026-07-19
+updated = 2026-07-24

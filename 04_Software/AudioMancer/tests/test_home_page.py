@@ -11,9 +11,6 @@
 @brief Home page widget tests for AudioMancer.
 @details Verifies the export panel rows, readiness buttons, and runtime
          language application.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-14
-@version 0.6.1
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -65,18 +59,14 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
 
 def test_home_page_uses_compact_non_scrolled_dashboard(qtbot) -> None:
     """
-    @brief      Verify the Home page no longer adds a duplicate page title or page-local scroll area.
+    @brief      Verify the Home page uses a compact dashboard without a local scroll area.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-06
-    @version    0.2.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
 
-    assert hasattr(page, "_title_label") is False
     assert page.findChild(QScrollArea) is None
     assert page._stage_rows[0].minimumHeight() == 28
 
@@ -87,9 +77,6 @@ def test_home_page_project_snapshot_button_follows_project_and_busy_state(qtbot)
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -110,9 +97,6 @@ def test_home_page_export_buttons_follow_readiness_state(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -146,9 +130,6 @@ def test_home_page_language_application_updates_export_labels(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -172,9 +153,6 @@ def test_home_page_project_options_lock_controls_source_import(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.3.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -212,9 +190,6 @@ def test_home_page_stage_rows_use_theme_status_roles(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -259,9 +234,6 @@ def test_home_page_theme_fallback_keeps_source_lock_style_valid(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -284,9 +256,6 @@ def test_home_page_has_workflow_stepper_matching_stage_count(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -307,9 +276,6 @@ def test_home_page_workflow_stepper_reflects_status_tokens(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -331,9 +297,6 @@ def test_home_page_project_title_uses_serif_font(qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)

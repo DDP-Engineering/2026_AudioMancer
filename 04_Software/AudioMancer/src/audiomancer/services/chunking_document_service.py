@@ -11,9 +11,6 @@
 @brief Strict persistence boundary for the authoritative Chunking document.
 @details Validates and atomically stores the one supported `chunks_text.json`
          root-object contract and exposes defensive derived views to callers.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.1.0
 """
 
 # IMPORTS
@@ -52,7 +49,12 @@ CHUNK_FIELDS = frozenset(
         "cleanup_boundary_confidence",
         "cleanup_joined_across_page_break",
         "cleanup_warning_flags",
+        "cleanup_role",
+        "starts_after_scene_separator",
     }
+)
+_ROMAN_NUMERAL_PATTERN = re.compile(
+    r"(?=[MDCLXVI]+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})"
 )
 TOKEN_USAGE_FIELDS = frozenset({"input_tokens", "output_tokens", "total_tokens", "usage_available"})
 RESUMABLE_STATUSES = frozenset({"running", "cancelled", "failed"})
@@ -72,7 +74,6 @@ ChunkPayload = dict[str, object]
 class IncompatibleChunkingDocumentError(ValueError):
     """
     @brief      Signal that persisted Chunking data requires Reset Chunking.
-    @version    0.1.0
     """
 
 
@@ -80,7 +81,6 @@ def empty_token_usage() -> dict[str, object]:
     """
     @brief      Return the canonical empty cumulative token-usage object.
     @return     Exact unavailable token-usage payload with integer counters.
-    @version    0.1.0
     """
     return {
         "input_tokens": 0,
@@ -95,7 +95,6 @@ def source_fingerprint(source_text: str) -> str:
     @brief      Return the canonical SHA-256 identity for cleaned source text.
     @param[in]  source_text Canonical cleaned source text.
     @return     Prefixed lowercase SHA-256 fingerprint.
-    @version    0.1.0
     """
     return f"sha256:{sha256(source_text.encode('utf-8')).hexdigest()}"
 
@@ -105,7 +104,6 @@ def document_path(project_root: str | Path) -> Path:
     @brief      Return the authoritative project-local Chunking document path.
     @param[in]  project_root Active project root.
     @return     Absolute or caller-relative document path.
-    @version    0.1.0
     """
     return Path(project_root) / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
 
@@ -116,7 +114,6 @@ def load_chunking_document(project_root: str | Path) -> ChunkingDocument | None:
     @param[in]  project_root Active project root.
     @return     Defensive validated document or None when absent.
     @exception  IncompatibleChunkingDocumentError Raised for unreadable or invalid data.
-    @version    0.1.0
     """
     path = document_path(project_root)
     if not path.is_file():
@@ -135,7 +132,6 @@ def write_chunking_document(project_root: str | Path, document: object) -> Path:
     @param[in]  document Candidate exact document payload.
     @return     Persisted document path.
     @exception  IncompatibleChunkingDocumentError Raised for invalid data.
-    @version    0.1.0
     """
     validated = validate_chunking_document(document)
     path = document_path(project_root)
@@ -148,7 +144,6 @@ def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
     @brief      Return defensive copies of canonical chunks or an empty list when absent.
     @param[in]  project_root Active project root.
     @return     Ordered exact chunk payload copies.
-    @version    0.1.0
     """
     document = load_chunking_document(project_root)
     if document is None:
@@ -162,7 +157,6 @@ def validate_chunking_document(payload: object) -> ChunkingDocument:
     @param[in]  payload Candidate persisted root value.
     @return     Defensive exact document copy.
     @exception  IncompatibleChunkingDocumentError Raised for every incompatible value.
-    @version    0.1.0
     """
     try:
         _validate_document_shape(payload)
@@ -202,7 +196,6 @@ def build_document(
     @param[in]  manual_adjusted Whether an operator manually changed canonical chunks.
     @return     Defensive strict document payload.
     @exception  IncompatibleChunkingDocumentError Raised when runtime values violate the contract.
-    @version    0.1.0
     """
     document: ChunkingDocument = {
         "status": status,
@@ -225,7 +218,6 @@ def derive_report(document: ChunkingDocument) -> dict[str, object]:
     @brief      Derive the transient report view used by callers and exports.
     @param[in]  document Strict Chunking document.
     @return     Non-persisted report projection.
-    @version    0.1.0
     """
     validated = validate_chunking_document(document)
     chunks = list(validated["chunks"])
@@ -250,7 +242,6 @@ def derive_operation_state(document: ChunkingDocument) -> dict[str, object]:
     @brief      Derive the compact manifest and UI operation view without persistence.
     @param[in]  document Strict Chunking document.
     @return     Non-persisted operation-state projection.
-    @version    0.1.0
     """
     report = derive_report(document)
     return {
@@ -280,7 +271,6 @@ def _validate_document_shape(payload: object) -> None:
     @return     None.
     @exception  TypeError Raised when invalid chunks.
     @exception  ValueError Raised when resumable document requires next paragraph.
-    @version    0.1.0
     """
     if not isinstance(payload, dict) or set(payload) != DOCUMENT_FIELDS:
         raise TypeError("invalid root fields")
@@ -330,7 +320,6 @@ def _validate_token_usage(payload: object) -> None:
     @return     None.
     @exception  TypeError Raised when invalid usage flag.
     @exception  ValueError Raised when token totals do not balance.
-    @version    0.1.0
     """
     if not isinstance(payload, dict) or set(payload) != TOKEN_USAGE_FIELDS:
         raise TypeError("invalid token usage fields")
@@ -353,7 +342,6 @@ def _validate_chunk(chunk: object, expected_index: int, seen_ids: set[str]) -> N
     @return     None.
     @exception  TypeError Raised when invalid cleanup warning flags.
     @exception  ValueError Raised when invalid chunk ordering.
-    @version    0.1.0
     """
     if not isinstance(chunk, dict) or set(chunk) != CHUNK_FIELDS:
         raise TypeError("invalid chunk fields")
@@ -373,6 +361,18 @@ def _validate_chunk(chunk: object, expected_index: int, seen_ids: set[str]) -> N
     flags = chunk["cleanup_warning_flags"]
     if not isinstance(flags, list) or any(not isinstance(item, str) for item in flags):
         raise TypeError("invalid cleanup warning flags")
+    if chunk["cleanup_role"] not in {
+        "body",
+        "heading",
+        "scene_separator",
+        "list_item",
+        "verse",
+        "preformatted",
+        "footnote",
+    }:
+        raise ValueError("invalid cleanup role")
+    if not isinstance(chunk["starts_after_scene_separator"], bool):
+        raise TypeError("invalid scene-separator boundary flag")
 
 
 def _chapter_count(chunks: list[ChunkPayload]) -> int:
@@ -380,7 +380,6 @@ def _chapter_count(chunks: list[ChunkPayload]) -> int:
     @brief      Derive the count of distinct chapter-like headings from chunk text.
     @param[in]  chunks Ordered canonical chunks.
     @return     Number of distinct consecutive headings.
-    @version    0.1.0
     """
     labels: list[str] = []
     for chunk in chunks:
@@ -388,7 +387,7 @@ def _chapter_count(chunks: list[ChunkPayload]) -> int:
             normalized = line.strip()
             if len(normalized) <= 100 and (
                 re.fullmatch(r"(?i)(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*", normalized)
-                or re.fullmatch(r"(?i)[IVXLCDM]+", normalized)
+                or _ROMAN_NUMERAL_PATTERN.fullmatch(normalized)
             ):
                 if not labels or labels[-1] != normalized:
                     labels.append(normalized)

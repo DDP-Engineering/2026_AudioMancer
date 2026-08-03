@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-f699a4ef"
+title = "The Audio Blocks controller approval flow shall advance the manifest"
+status = "active"
+
+requirement = """
+The Audio Blocks controller approval flow shall advance the manifest after full approval, reset only audio assembly, and toggle unapprove without advancing.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_approval",
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_approval_resets_only_audio_assembly",
+  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_approval_toggle_unapproves_without_advancing",
+]
+
+priority = "high"
+rationale = """
+Approval must gate downstream assembly correctly.
+"""
+created = 2026-07-19
+updated = 2026-07-24

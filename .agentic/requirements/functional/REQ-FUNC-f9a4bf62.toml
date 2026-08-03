@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-f9a4bf62"
+title = "Narrator profile generation shall append odd allocations without"
+status = "active"
+
+requirement = """
+Narrator profile generation shall append odd allocations without deleting existing profiles.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_odd_allocation_appends_without_deleting_existing",
+]
+
+priority = "high"
+rationale = """
+New profiles must not remove existing inventory.
+"""
+created = 2026-07-19
+updated = 2026-07-24

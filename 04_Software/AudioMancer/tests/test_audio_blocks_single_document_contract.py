@@ -9,18 +9,14 @@
 """
 @file test_audio_blocks_single_document_contract.py
 @brief Red-before-green contract tests for the single authoritative Audio Blocks document.
-@details Verifies the one-file persistence contract, the reduced block field
-         set, report and operation-state compatibility projections, resume from
-         the document checkpoint, generated-audio paths derived from
-         speech_block_id, the removal of artifact remapping, legacy-artifact-as-
-         absent handling, root-contract rejection, and reset cleanup required by
-         .agentic/specs/audio_blocks_document.spec.md, mapped to
+@details Verifies the one-file persistence contract, exact block field set,
+         report and operation-state projections, resume from the document
+         checkpoint, generated-audio paths derived from speech_block_id,
+         non-object handling, root-contract rejection, and reset cleanup
+         required by .agentic/specs/audio_blocks_document.spec.md, mapped to
          REQ-FUNC-170ed96e, REQ-FUNC-a4c87ddc, REQ-FUNC-e18bb65f,
-         REQ-FUNC-e9a6688e, REQ-FUNC-df8987d1, REQ-FUNC-4e8f2638,
-         REQ-FUNC-39146520, REQ-FUNC-cf8803d2, and REQ-FUNC-65813be2.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-26
-@version 0.1.0
+         REQ-FUNC-e9a6688e, REQ-FUNC-df8987d1, REQ-FUNC-39146520,
+         REQ-FUNC-cf8803d2, and REQ-FUNC-65813be2.
 """
 
 # IMPORTS
@@ -52,32 +48,6 @@ _BLOCK_FIELDS = {
     "generation_fingerprint",
 }
 _SPLIT_ONLY_BLOCK_FIELDS = {"split_part_count", "split_plan_fingerprint"}
-_REMOVED_BLOCK_FIELDS = (
-    "audio_relative_path",
-    "metadata_relative_path",
-    "generated_part_relative_paths",
-    "chunk_id",
-    "speaker_id",
-    "content_kind",
-    "sound_prompt",
-    "negative_prompt",
-    "duration_seconds",
-    "ambience_position",
-    "model_token_budget",
-    "model_audio_seconds_budget",
-    "runtime_result_summary",
-    "split_strategy",
-    "warning_flags",
-    "voice_language",
-    "prompt_format",
-)
-_REMOVED_CONFIG_CONSTANTS = (
-    "AUDIO_BLOCKS_OUTPUT_FILE_NAME",
-    "AUDIO_BLOCKS_REPORT_FILE_NAME",
-    "AUDIO_BLOCKS_STATE_FILE_NAME",
-)
-_LEGACY_REPORT_FILE_NAME = "audio_blocks_report.json"
-_LEGACY_STATE_FILE_NAME = "audio_blocks_state.json"
 
 
 def _audio_block(speech_block_id: str, *, generated: bool, approved: bool) -> dict:
@@ -165,9 +135,6 @@ def test_document_round_trips_and_writes_only_one_artifact(tmp_path: Path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -179,21 +146,6 @@ def test_document_round_trips_and_writes_only_one_artifact(tmp_path: Path) -> No
     assert config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME == "audio_blocks.json"
     assert set(document) == _DOCUMENT_FIELDS
     assert audio_blocks_service.load_audio_blocks_document(project_root) == document
-    assert not (project_root / _LEGACY_REPORT_FILE_NAME).exists()
-    assert not (project_root / _LEGACY_STATE_FILE_NAME).exists()
-
-
-def test_removed_report_and_state_config_constants_are_gone() -> None:
-    """
-    @brief      Verify REQ-FUNC-170ed96e removes the report and state artifact names.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
-    """
-    for constant_name in _REMOVED_CONFIG_CONSTANTS:
-        assert not hasattr(config, constant_name), f"{constant_name} must be removed"
 
 
 def test_persisted_block_carries_only_the_contracted_field_set(tmp_path: Path) -> None:
@@ -202,9 +154,6 @@ def test_persisted_block_carries_only_the_contracted_field_set(tmp_path: Path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -214,8 +163,6 @@ def test_persisted_block_carries_only_the_contracted_field_set(tmp_path: Path) -
 
     for block in persisted["blocks"]:
         assert set(block) == _BLOCK_FIELDS
-        for removed_field in _REMOVED_BLOCK_FIELDS:
-            assert removed_field not in block, f"{removed_field} must not be persisted"
 
 
 def test_split_fields_are_persisted_only_for_split_blocks(tmp_path: Path) -> None:
@@ -224,9 +171,6 @@ def test_split_fields_are_persisted_only_for_split_blocks(tmp_path: Path) -> Non
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -249,9 +193,6 @@ def test_generated_audio_path_is_derived_from_speech_block_id(tmp_path: Path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -269,9 +210,6 @@ def test_split_part_paths_are_derived_from_speech_block_id(tmp_path: Path) -> No
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -284,27 +222,12 @@ def test_split_part_paths_are_derived_from_speech_block_id(tmp_path: Path) -> No
     assert part_path == expected
 
 
-def test_artifact_remap_helper_is_removed() -> None:
-    """
-    @brief      Verify REQ-FUNC-4e8f2638 removes generated-artifact remapping.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
-    """
-    assert not hasattr(audio_blocks_service, "_remap_audio_block_artifacts")
-
-
 def test_load_report_projection_matches_recomputed_counts(tmp_path: Path) -> None:
     """
     @brief      Verify REQ-FUNC-e18bb65f projects the report from the document.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -330,9 +253,6 @@ def test_load_operation_state_projection_exposes_checkpoint(tmp_path: Path) -> N
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -352,33 +272,24 @@ def test_load_operation_state_projection_exposes_checkpoint(tmp_path: Path) -> N
     assert checkpoint["run_token"] == "2026-07-26T09:00:00+00:00"
     assert checkpoint["next_speech_block_index"] == 1
     assert checkpoint["next_split_part_index"] == 0
-    assert "next_profile_index" not in checkpoint
 
 
-def test_legacy_list_artifact_is_treated_as_absent(tmp_path: Path) -> None:
+def test_non_object_document_is_treated_as_absent(tmp_path: Path) -> None:
     """
-    @brief      Verify REQ-FUNC-39146520 treats a legacy list payload as not-started.
+    @brief      Verify REQ-FUNC-39146520 treats a non-object payload as not-started.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
-    legacy_blocks = [
+    invalid_document = [
         {
             "speech_block_id": "0001-000001",
-            "chunk_id": "chunk-0001",
-            "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
-            "generated": "2026-07-24T21:44:46+00:00",
+            "generated": True,
         }
     ]
-    (project_root / "audio_blocks.json").write_text(json.dumps(legacy_blocks), encoding="utf-8")
-    (project_root / _LEGACY_REPORT_FILE_NAME).write_text(
-        json.dumps({"audio_blocks_stage_status": "completed"}), encoding="utf-8"
-    )
+    (project_root / "audio_blocks.json").write_text(json.dumps(invalid_document), encoding="utf-8")
 
     assert audio_blocks_service.load_audio_blocks_document(project_root) is None
     assert audio_blocks_service.load_audio_blocks(project_root) == []
@@ -392,9 +303,6 @@ def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -410,27 +318,20 @@ def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
     assert audio_blocks_service.load_audio_blocks_document(project_root) is None
 
 
-def test_reset_removes_document_and_residual_legacy_files(tmp_path: Path) -> None:
+def test_reset_removes_document(tmp_path: Path) -> None:
     """
-    @brief      Verify REQ-FUNC-65813be2 clears the document and residual legacy files.
+    @brief      Verify REQ-FUNC-65813be2 clears the authoritative document.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
     audio_blocks_service.write_audio_blocks_document(project_root, _document())
-    (project_root / _LEGACY_REPORT_FILE_NAME).write_text("{}", encoding="utf-8")
-    (project_root / _LEGACY_STATE_FILE_NAME).write_text("{}", encoding="utf-8")
 
     audio_blocks_service.reset_audio_blocks(project_root)
 
     assert not (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).exists()
-    assert not (project_root / _LEGACY_REPORT_FILE_NAME).exists()
-    assert not (project_root / _LEGACY_STATE_FILE_NAME).exists()
 
 
 # END OF FILE

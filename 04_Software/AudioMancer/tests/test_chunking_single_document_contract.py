@@ -9,11 +9,8 @@
 """
 @file test_chunking_single_document_contract.py
 @brief Red-first contract tests for the authoritative Chunking document.
-@details Covers S-0001 through S-0007 and REQ-FUNC-048 through
-         REQ-FUNC-054 plus REQ-DATA-001 before production implementation.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-20
-@version 0.1.0
+@details Covers S-0001 through S-0007 and the linked functional and data
+         requirements for exact persistence, resume, projections, and routing.
 """
 
 # IMPORTS
@@ -35,6 +32,7 @@ from audiomancer.services import (
     project_workspace_service,
     text_chunking_state_service,
 )
+from chunking_test_support import write_cleanup_input
 
 # CONSTANTS
 
@@ -58,6 +56,8 @@ _CHUNK_FIELDS = {
     "cleanup_boundary_confidence",
     "cleanup_joined_across_page_break",
     "cleanup_warning_flags",
+    "cleanup_role",
+    "starts_after_scene_separator",
 }
 _FORBIDDEN_PERSISTED_FIELDS = {
     "schema_version",
@@ -85,7 +85,6 @@ def test_document_api_round_trips_exact_contract_and_returns_defensive_chunks(tm
     @brief Verify S-0001, REQ-FUNC-048, and REQ-DATA-001 strict document persistence.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     service = _chunking_document_service()
     document = _valid_document(
@@ -107,10 +106,22 @@ def test_document_api_round_trips_exact_contract_and_returns_defensive_chunks(tm
     assert service.load_chunks(tmp_path / "missing") == []
 
 
+def test_document_api_rejects_non_boolean_scene_boundary_flag(tmp_path) -> None:
+    """Cover S-0016 and REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012."""
+    service = _chunking_document_service()
+    document = _valid_document([_chunk("chunk-0001", 1, "Opening paragraph.")])
+    document["chunks"][0]["starts_after_scene_separator"] = "yes"
+
+    with pytest.raises(service.IncompatibleChunkingDocumentError) as error:
+        service.write_chunking_document(tmp_path, document)
+    assert isinstance(error.value.__cause__, TypeError)
+    assert "scene-separator boundary flag" in str(error.value.__cause__)
+
+
 @pytest.mark.parametrize(
     ("case_name", "payload_factory"),
     [
-        ("legacy root array", lambda: []),
+        ("non-object root", lambda: []),
         ("extra root field", lambda: {**_valid_document(), "metadata": {}}),
         (
             "missing root field",
@@ -138,6 +149,18 @@ def test_document_api_round_trips_exact_contract_and_returns_defensive_chunks(tm
             lambda: _valid_document([{**_chunk("chunk-0001", 1, "Text"), "source_start_line": 1}]),
         ),
         (
+            "missing scene boundary field",
+            lambda: _valid_document(
+                [
+                    {
+                        key: value
+                        for key, value in _chunk("chunk-0001", 1, "Text").items()
+                        if key != "starts_after_scene_separator"
+                    }
+                ]
+            ),
+        ),
+        (
             "out of order chunk",
             lambda: _valid_document([_chunk("chunk-0002", 2, "Text")]),
         ),
@@ -149,12 +172,11 @@ def test_document_api_rejects_incompatible_root_and_chunk_shapes(
     payload_factory,
 ) -> None:
     """
-    @brief Verify S-0001 and REQ-FUNC-048 reject invalid and legacy documents.
+    @brief Verify S-0001 and REQ-FUNC-048 reject invalid documents.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  case_name Stable name identifying the parametrized contract case.
     @param[in]  payload_factory Factory producing the candidate payload under test.
     @return     None.
-    @version 0.1.0
     """
     service = _chunking_document_service()
     payload = payload_factory()
@@ -167,28 +189,11 @@ def test_document_api_rejects_incompatible_root_and_chunk_shapes(
         service.load_chunking_document(tmp_path)
 
 
-def test_document_api_ignores_obsolete_sidecars_and_never_migrates_them(tmp_path) -> None:
-    """
-    @brief Verify S-0001, REQ-FUNC-048, and REQ-FUNC-052 reject migration paths.
-    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
-    @return     None.
-    @version 0.1.0
-    """
-    service = _chunking_document_service()
-    (tmp_path / "chunking_report.json").write_text('{"status": "completed"}\n', encoding="utf-8")
-    (tmp_path / "chunking_state.json").write_text('{"status": "completed"}\n', encoding="utf-8")
-
-    assert service.load_chunking_document(tmp_path) is None
-    assert service.load_chunks(tmp_path) == []
-    assert not (tmp_path / config.CHUNK_ARTIFACT_FILE_NAME).exists()
-
-
 def test_deterministic_chunking_commits_one_document_without_persisted_progress(tmp_path) -> None:
     """
     @brief Verify S-0001/S-0002 and REQ-FUNC-048/049 deterministic completion.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     project_root, manifest = _create_chunk_ready_project(
         tmp_path,
@@ -212,40 +217,35 @@ def test_deterministic_chunking_commits_one_document_without_persisted_progress(
     assert document["token_usage"] == _empty_usage()
     assert len(document["chunks"]) == 3
     assert progress_updates[-1] == (3, 3)
-    assert not (project_root / "chunking_report.json").exists()
-    assert not (project_root / "chunking_state.json").exists()
     assert not (_FORBIDDEN_PERSISTED_FIELDS & set(document))
 
 
 def test_deterministic_cancellation_preserves_committed_chunks_and_next_paragraph(tmp_path) -> None:
     """
-    @brief Verify S-0002 and REQ-FUNC-049 resumable deterministic cancellation.
+    @brief Verify S-0003/S-0005 and REQ-FUNC-3a22db38/REQ-FUNC-bdc31247 cancellation.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     project_root, manifest = _create_chunk_ready_project(
         tmp_path,
         "DeterministicCancelledDocument",
         "Paragraph one.\n\nParagraph two.\n\nParagraph three.\n",
     )
-    cancel = {"requested": False}
+    cancel_checks = {"count": 0}
 
-    def _capture_progress(*_args) -> None:
+    def _cancel_after_one_paragraph() -> bool:
         """
-        @brief Request cancellation after the first committed progress update.
-        @param[in]  _args Ignored positional arguments accepted by the test double.
-        @return     None.
-        @version 0.1.0
+        @brief Request cancellation before processing the second paragraph.
+        @return     True after one paragraph has been processed.
         """
-        cancel["requested"] = True
+        cancel_checks["count"] += 1
+        return cancel_checks["count"] >= 2
 
     with pytest.raises(operation_runtime_service.OperationCancelledError):
         deterministic_chunking_service.chunk_text(
             project_root,
             manifest,
-            progress_callback=_capture_progress,
-            cancel_requested=lambda: cancel["requested"],
+            cancel_requested=_cancel_after_one_paragraph,
         )
 
     document = _read_document(project_root)
@@ -261,7 +261,6 @@ def test_ai_chunking_persists_minimal_document_and_separate_log(tmp_path, monkey
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version 0.1.0
     """
     project_root, manifest = _create_chunk_ready_project(
         tmp_path,
@@ -302,8 +301,6 @@ def test_ai_chunking_persists_minimal_document_and_separate_log(tmp_path, monkey
     assert not (_FORBIDDEN_PERSISTED_FIELDS & set(document))
     assert all(not (_FORBIDDEN_PERSISTED_FIELDS & set(chunk)) for chunk in document["chunks"])
     assert any(path.name.startswith("log_ai_chunking_") for path in project_root.glob("*.log"))
-    assert not (project_root / "chunking_report.json").exists()
-    assert not (project_root / "chunking_state.json").exists()
 
 
 def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tmp_path, monkeypatch) -> None:
@@ -312,7 +309,6 @@ def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tm
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version 0.1.0
     """
     source_text = "Paragraph one.\n\nParagraph two.\n\nParagraph three.\n"
     project_root, manifest = _create_chunk_ready_project(tmp_path, "AiResumeDocument", source_text)
@@ -343,7 +339,6 @@ def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tm
         @param[in]  user_prompt Rendered user prompt inspected by the test double.
         @param[in]  _kwargs Ignored keyword arguments accepted by the test double.
         @return     Controlled AI chat response payload.
-        @version 0.1.0
         """
         captured["profile_id"] = profile["id"]
         captured["prompt"] = user_prompt
@@ -382,7 +377,6 @@ def test_manual_mutations_preserve_document_origin_and_set_manual_adjusted(tmp_p
     @brief Verify S-0004 and REQ-FUNC-051 atomic manual mutation semantics.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     source_text = "First chunk.\n\nSecond chunk.\n"
     project_root, manifest = _create_chunk_ready_project(tmp_path, "ManualDocumentMutation", source_text)
@@ -429,13 +423,10 @@ def test_chunking_default_state_is_not_created_and_reset_deletes_all_owned_artif
     @brief Verify S-0005 and REQ-FUNC-052 page-open and Reset Chunking behavior.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     assert operation_runtime_service.ensure_default_operation_state(tmp_path, "chunking") is None
     _write_document(tmp_path, _valid_document([_chunk("chunk-0001", 1, "Text")]))
     owned_paths = [
-        tmp_path / "chunking_report.json",
-        tmp_path / "chunking_state.json",
         tmp_path / "log_ai_chunking_20260720T220000Z.log",
     ]
     for path in owned_paths:
@@ -452,7 +443,6 @@ def test_project_completion_evidence_uses_only_the_authoritative_document(tmp_pa
     @brief Verify S-0005 and REQ-FUNC-052 manifest evidence derives from one document.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     document = _valid_document(
         [_chunk("chunk-0001", 1, "Chapter I\nText")],
@@ -469,11 +459,10 @@ def test_project_completion_evidence_uses_only_the_authoritative_document(tmp_pa
     assert evidence["report"]["warning_count"] == 1
 
 
-def test_downstream_consumers_use_shared_document_reader_without_legacy_branches() -> None:
+def test_downstream_consumers_use_shared_document_reader() -> None:
     """
     @brief Verify S-0006, REQ-FUNC-053, and REQ-DATA-001 production routing.
     @return     None.
-    @version 0.1.0
     """
     consumer_module_names = (
         "audiomancer.services.ai_translation_service",
@@ -487,10 +476,6 @@ def test_downstream_consumers_use_shared_document_reader_without_legacy_branches
     for module_name in consumer_module_names:
         source = inspect.getsource(import_module(module_name))
         assert "chunking_document_service" in source, module_name
-        assert "CHUNKING_REPORT_FILE_NAME" not in source, module_name
-        assert "CHUNKING_STATE_FILE_NAME" not in source, module_name
-    assert not hasattr(config, "CHUNKING_REPORT_FILE_NAME")
-    assert not hasattr(config, "CHUNKING_STATE_FILE_NAME")
 
 
 def test_text_chunking_state_projects_resumable_document_without_durable_progress(tmp_path) -> None:
@@ -498,7 +483,6 @@ def test_text_chunking_state_projects_resumable_document_without_durable_progres
     @brief Verify S-0007 and REQ-FUNC-054 UI state derives from the document.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version 0.1.0
     """
     source_text = "Paragraph one.\n\nParagraph two.\n"
     project_root, manifest = _create_chunk_ready_project(tmp_path, "ChunkingUiDocument", source_text)
@@ -536,15 +520,11 @@ def test_text_chunking_state_projects_resumable_document_without_durable_progres
     assert state["selected_strategy"] == "meaning"
 
 
-def test_text_chunking_component_documentation_describes_the_new_contract() -> None:
-    """
-    @brief Verify S-0006/S-0007 make required component documentation visible.
-    @return     None.
-    @version 0.1.0
-    """
+def test_text_chunking_component_documentation_describes_current_contract() -> None:
+    """Verify the component documentation describes the implemented document contract."""
     repository_root = Path(__file__).resolve().parents[3]
     documentation = (
-        repository_root / ".agentic" / "knowledge" / "components" / "Text_Chunking.md"
+        repository_root / ".agentic" / "knowledge" / "Text_Chunking.md"
     ).read_text(encoding="utf-8")
     normalized = documentation.lower()
 
@@ -553,6 +533,7 @@ def test_text_chunking_component_documentation_describes_the_new_contract() -> N
     assert "runtime-only" in normalized
     assert "currently selected profile" in normalized
     assert "reset chunking" in normalized
+    assert "only the current canonical project-artifact schema is supported" in normalized
 
 
 # LOCAL HELPERS
@@ -572,6 +553,8 @@ def _chunk(chunk_id: str, sequence_index: int, text: str) -> dict[str, object]:
         "cleanup_boundary_confidence": "high",
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
+        "cleanup_role": "body",
+        "starts_after_scene_separator": False,
     }
 
 
@@ -619,7 +602,6 @@ def _write_document(project_root: Path, document: dict[str, object]) -> Path:
     @param[in]  project_root Active project root folder.
     @param[in]  document Authoritative operation document payload.
     @return     Resolved filesystem path.
-    @version 0.1.0
     """
     path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
     path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -631,7 +613,6 @@ def _read_document(project_root: Path) -> dict[str, object]:
     @brief Read one raw document fixture for persisted-shape assertions.
     @param[in]  project_root Active project root folder.
     @return     Loaded document.
-    @version 0.1.0
     """
     payload = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert isinstance(payload, dict)
@@ -645,7 +626,6 @@ def _create_chunk_ready_project(tmp_path, name: str, source_text: str):
     @param[in]  name Stable name associated with the requested object.
     @param[in]  source_text Canonical source text processed by the callable.
     @return     Created chunk ready project.
-    @version 0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     source_path = project_root / "story.txt"
@@ -659,7 +639,7 @@ def _create_chunk_ready_project(tmp_path, name: str, source_text: str):
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(source_text, encoding="utf-8")
+    write_cleanup_input(project_root, source_text)
     project_workspace_service.save_manifest(manifest, project_root)
     return project_root, manifest
 
@@ -670,7 +650,6 @@ def _configure_chunking_prompts(tmp_path, monkeypatch) -> None:
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @return     None.
-    @version 0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir(exist_ok=True)
@@ -688,7 +667,6 @@ def _profile(profile_id: str, *, context_window: int) -> dict[str, object]:
     @param[in]  profile_id Stable AI profile identifier.
     @param[in]  context_window Configured AI context-window size under test.
     @return     Validated AI profile payload used by the contract tests.
-    @version 0.1.0
     """
     return {
         "id": profile_id,

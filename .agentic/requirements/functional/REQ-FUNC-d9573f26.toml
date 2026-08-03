@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-d9573f26"
+title = "Extraction reset shall preserve the registered source document"
+status = "active"
+
+requirement = """
+Extraction reset shall preserve the registered source document.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_reset_extraction_and_downstream_preserves_source_document",
+]
+
+priority = "high"
+rationale = """
+Operators must be able to rerun extraction without losing the imported source.
+"""
+created = 2026-07-18
+updated = 2026-07-24

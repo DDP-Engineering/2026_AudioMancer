@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-5efd992a"
+title = "The provider client shall parse fenced JSON from model output"
+status = "active"
+
+requirement = """
+The provider client shall parse fenced JSON from model output.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_parses_fenced_json",
+]
+
+priority = "high"
+rationale = """
+Model responses wrapped in fences must still yield valid JSON.
+"""
+created = 2026-07-19
+updated = 2026-07-24

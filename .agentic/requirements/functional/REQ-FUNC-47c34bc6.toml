@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-47c34bc6"
+title = "Deterministic chunking shall persist one failed terminal document"
+status = "active"
+
+requirement = """
+Deterministic chunking shall persist one failed terminal document before propagating an unexpected processing exception.
+"""
+
+verification = "Automated focused pytest: an injected processing exception persists one resume-consistent failed terminal document and re-raises the original exception."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_persists_one_failed_terminal_document",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Unexpected failures must leave an inspectable resumable boundary while preserving the original exception.
+"""
+created = 2026-07-29
+updated = 2026-07-30

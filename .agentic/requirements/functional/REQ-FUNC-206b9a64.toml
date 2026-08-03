@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-206b9a64"
+title = "Canonical Cleanup and Chunking validators shall reject persisted"
+status = "active"
+
+requirement = """
+Canonical Cleanup and Chunking validators shall reject persisted document shapes that differ from the current canonical schemas.
+"""
+
+verification = "Focused malformed Cleanup and incompatible Chunking tests verify rejection through the canonical validation paths."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_load_cleanup_document_rejects_malformed_progress",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Strict validation prevents incomplete or incompatible persisted data from being consumed as current operation state.
+"""
+created = 2026-07-30
+updated = 2026-07-30

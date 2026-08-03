@@ -20,9 +20,6 @@
          corrected here: samples are read as signed at every width including one
          byte, where WAV itself stores 8-bit PCM unsigned, and sample-width
          conversion is an arithmetic shift rather than a rounded rescale.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -52,9 +49,6 @@ def convert_sample_width(frame_data: bytes, sample_width: int, target_sample_wid
     @details    Mirrors `audioop.lin2lin`. The conversion is a pure arithmetic
                 shift between the widths, so widening never rounds and narrowing
                 truncates toward negative infinity.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _require_sample_width(sample_width)
     _require_sample_width(target_sample_width)
@@ -84,9 +78,6 @@ def mono_to_stereo(
     @return     Stereo PCM bytes.
     @exception  ValueError Raised when the sample width is unsupported.
     @details    Mirrors `audioop.tostereo`, including its clip-then-floor rule.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _require_sample_width(sample_width)
     if not frame_data:
@@ -116,9 +107,6 @@ def stereo_to_mono(
     @details    Mirrors `audioop.tomono`. Mixing happens in floating point and
                 the result is clipped then floored, so an exact half such as
                 100.5 becomes 100 rather than 101.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _require_sample_width(sample_width)
     if not frame_data:
@@ -158,9 +146,6 @@ def convert_frame_rate(
                 32-bit scaled samples held in the returned state. The caller
                 threads the state through successive chunks so resampling stays
                 continuous across chunk boundaries.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     _require_sample_width(sample_width)
     if channels <= 0:
@@ -218,9 +203,6 @@ def _require_sample_width(sample_width: int) -> None:
     @param[in]  sample_width Sample width in bytes.
     @return     None.
     @exception  ValueError Raised when the sample width is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if sample_width not in _SCALE_SHIFT_BY_SAMPLE_WIDTH:
         raise ValueError(
@@ -234,9 +216,6 @@ def _sample_limits(sample_width: int) -> tuple[int, int]:
     @param[in]  sample_width Sample width in bytes.
     @return     Tuple of minimum and maximum signed sample values.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     maximum = (1 << (sample_width * 8 - 1)) - 1
     return -maximum - 1, maximum
@@ -251,9 +230,6 @@ def _iter_samples(frame_data: bytes, sample_width: int):
     @exception  None
     @details    Trailing bytes that do not form a whole sample are ignored, which
                 is how `audioop` treats a truncated fragment.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     for offset in range(0, len(frame_data) - sample_width + 1, sample_width):
         yield _unpack_sample(frame_data, offset, sample_width)
@@ -267,9 +243,6 @@ def _unpack_sample(frame_data: bytes, offset: int, sample_width: int) -> int:
     @param[in]  sample_width Sample width in bytes.
     @return     Signed integer sample value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     return int.from_bytes(frame_data[offset : offset + sample_width], "little", signed=True)
 
@@ -283,9 +256,6 @@ def _pack_sample(value: int, sample_width: int) -> bytes:
     @exception  None
     @details    Values outside the width are truncated to the low bytes rather
                 than clipped, matching how `audioop` stores a scaled sample.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     bit_count = sample_width * 8
     truncated = int(value) & ((1 << bit_count) - 1)
@@ -305,9 +275,6 @@ def _bound(value: float, minimum: int, maximum: int) -> int:
     @details    Reproduces `audioop`'s own bounding rule verbatim, including its
                 `value < minimum + 1` comparison, which is deliberately not
                 simplified to `value < minimum`.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     if value > maximum:
         value = maximum
@@ -326,9 +293,6 @@ def _truncating_divide(dividend: int, divisor: int) -> int:
     @details    C integer division truncates toward zero while Python's floor
                 division rounds toward negative infinity. The resampler depends
                 on the C behaviour, so negative samples would otherwise drift.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     quotient = abs(dividend) // abs(divisor)
     return -quotient if (dividend < 0) != (divisor < 0) else quotient

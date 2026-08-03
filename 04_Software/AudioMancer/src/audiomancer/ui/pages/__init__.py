@@ -11,9 +11,6 @@
 @brief Page widgets for the copied AudioMancer shell.
 @details Exposes the minimal presentational pages used by the DDP-style main
          window shell in AudioMancer.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.2.1
 """
 
 # IMPORTS

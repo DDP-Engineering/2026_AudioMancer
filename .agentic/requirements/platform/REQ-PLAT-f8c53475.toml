@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-PLAT-f8c53475"
+title = "Configuration shall resolve frozen packaged runtime resources"
+status = "active"
+
+requirement = """
+Configuration shall resolve frozen packaged runtime resources.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_resolves_frozen_packaged_runtime_resources",
+]
+
+priority = "high"
+rationale = """
+Packaged/frozen builds must locate their runtime resources.
+"""
+created = 2026-07-24
+updated = 2026-07-24

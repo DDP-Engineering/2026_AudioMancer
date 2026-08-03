@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-18dd9ec2"
+title = "A successful manual chunk edit, insertion, or deletion shall atomically"
+status = "active"
+
+requirement = """
+A successful manual chunk edit, insertion, or deletion shall atomically mutate only a strictly valid completed Chunking document, preserve document-level generation and audit fields, retain stable IDs where possible, give inserted chunks only minimal cleanup provenance, resequence chunks, set `manual_adjusted` true, and calculate downstream invalidation without persisting its payload.
+"""
+
+verification = "Manual edit, insert, and delete preserve the strict root contract."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_manual_mutations_preserve_document_origin_and_set_manual_adjusted",
+]
+
+priority = "high"
+rationale = """
+Operators need safe manual correction without corrupting origin metadata or embedding transient workflow-impact state.
+"""
+created = 2026-07-20
+updated = 2026-07-20

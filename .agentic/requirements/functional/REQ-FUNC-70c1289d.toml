@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-70c1289d"
+title = "Cleanup AI adjudication shall split context-oversized batches"
+status = "active"
+
+requirement = """
+Cleanup AI adjudication shall split context-oversized batches recursively and apply a local deterministic fallback when one question still cannot fit.
+"""
+
+verification = "Context tier and recursive split tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_context_tiers_use_4_8_and_16_question_batches",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_oversized_batch_splits_recursively_and_single_question_falls_back",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Small offline contexts must not discard the remaining document or require model-specific branching.
+"""
+created = 2026-07-28
+updated = 2026-07-30

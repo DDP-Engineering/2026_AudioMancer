@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-7b43e8a3"
+title = "Audio Assembly shall raise RuntimeError when a WAV channel conversion"
+status = "active"
+
+requirement = """
+Audio Assembly shall raise RuntimeError when a WAV channel conversion other than mono to stereo or stereo to mono is required.
+"""
+
+verification = "Automated: RuntimeError message asserted for a 3-to-2 channel conversion."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audio_assembly_rejects_unsupported_channel_conversion",
+]
+
+spec = "specs/pcm_codec.spec.md"
+priority = "high"
+rationale = """
+Unsupported channel layouts must be refused explicitly; this pre-existing contract must survive the move off audioop.
+"""
+created = 2026-07-25
+updated = 2026-07-25

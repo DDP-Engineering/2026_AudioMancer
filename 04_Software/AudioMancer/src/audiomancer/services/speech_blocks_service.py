@@ -13,9 +13,6 @@
          selected chunk set into speaker-attributed speech blocks, persists the
          `70_speech_blocks` workflow artifacts, and maintains resumable chunk-
          based operation state plus AI transaction logging.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.21.0
 """
 
 # IMPORTS
@@ -196,9 +193,6 @@ def load_speech_blocks_document(project_root: str | Path) -> SpeechBlocksDocumen
     @param[in]  project_root Active project root folder.
     @return     Document payload, or `None` when missing or in an incompatible legacy format.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     document_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME)
     try:
@@ -224,9 +218,6 @@ def write_speech_blocks_document(
     @param[in]  document Complete Speech Blocks document payload.
     @return     Absolute project-local document path.
     @exception  SpeechBlocksDocumentError Raised when the document violates the strict contract.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     _validate_speech_blocks_document(document)
     write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME, document)
@@ -420,9 +411,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @param[in]  project_root Active project root folder.
     @return     Persisted operation-state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
     """
     document = load_speech_blocks_document(project_root)
     if document is None:
@@ -437,9 +425,6 @@ def load_speech_blocks_report(project_root: str | Path) -> SpeechBlocksReportPay
     @param[in]  project_root Active project root folder.
     @return     Persisted report payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
     """
     document = load_speech_blocks_document(project_root)
     if document is None:
@@ -454,9 +439,6 @@ def load_input_source_chunks(project_root: str | Path) -> list[dict[str, object]
     @param[in]  project_root Active project root folder.
     @return     Ordered source-chunk payloads, or an empty list when upstream is unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     try:
@@ -474,9 +456,6 @@ def load_speech_blocks(project_root: str | Path) -> list[SpeechBlockPayload]:
     @param[in]  project_root Active project root folder.
     @return     Ordered Speech Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     document = load_speech_blocks_document(project_root)
     if document is None:
@@ -501,9 +480,6 @@ def resolve_source_chunks(
     @param[in]  manifest Active project manifest payload.
     @return     Source-resolution payload with normalized source chunks.
     @exception  ValueError Raised when chunking output is unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     original_chunks = sorted(
@@ -544,9 +520,6 @@ def _cleanup_provenance_fields(chunk: dict[str, object]) -> dict[str, object]:
     @param[in]  chunk Persisted chunking record.
     @return     Cleanup provenance fields present on the record.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     return {
         "cleanup_boundary_confidence": str(chunk.get("cleanup_boundary_confidence", "") or ""),
@@ -566,9 +539,6 @@ def _resolve_translated_source_chunks(
     @return     Translated source-resolution payload, or `None` when the translation is absent,
                 incomplete, or not fully approved (caller then falls back to the original text).
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-24
-    @version    0.1.0
     """
     try:
         translation_document = ai_translation_service.load_translation_document(project_root)
@@ -627,9 +597,6 @@ def start_or_continue_generation(
     @return     Final Speech Blocks report payload.
     @exception  ValueError Raised when prerequisites or profile data are invalid.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     source_resolution = resolve_source_chunks(resolved_project_root, manifest)
@@ -804,9 +771,6 @@ def start_or_continue_generation(
             @param[in]  segment_total Total segment count for the active chunk.
             @return     None.
             @exception  None
-            @author     Eng. Dan Dumitru Pasare
-            @date       2026-07-07
-            @version    0.1.0
             """
             persisted_blocks = _renumber_speech_blocks(source_chunks, [*base_blocks, *segment_blocks])
             persisted_warnings = [*base_warnings, *segment_warnings]
@@ -1019,9 +983,6 @@ def speaker_catalog_entries(project_root: str | Path) -> list[dict[str, object]]
     @param[in]  project_root Active project root folder.
     @return     Ordered speaker catalog entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     return list(_speaker_catalog(character_discovery_service.load_character_profiles(Path(project_root))).values())
 
@@ -1032,9 +993,6 @@ def speech_block_book_sort_key(speech_block: dict[str, object]) -> tuple[int, in
     @param[in]  speech_block Speech Block or Audio Block payload.
     @return     Tuple of chunk order, chunk-local sequence index, and identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     chunk_id = str(speech_block.get("chunk_id", "")).strip()
     return (
@@ -1050,9 +1008,6 @@ def sort_speech_blocks(speech_blocks: list[dict[str, object]]) -> list[dict[str,
     @param[in]  speech_blocks Speech Block or Audio Block payload list.
     @return     Ordered payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     return sorted(speech_blocks, key=speech_block_book_sort_key)
 
@@ -1063,9 +1018,6 @@ def pause_duration_ms(text: object) -> int:
     @param[in]  text Candidate pause text.
     @return     Positive duration in milliseconds, or the configured default.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     match = re.search(r"\b(\d{1,9})\b", str(text))
     if match is None:
@@ -1083,9 +1035,6 @@ def reset_speech_blocks(project_root: str | Path) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     reset_operation_data(project_root, "speech_blocks", include_current=True)
 
@@ -1101,9 +1050,6 @@ def remove_speech_blocks_for_chunks(
     @param[in]  chunk_ids Source chunk identifiers whose Speech Blocks must reset.
     @return     Updated report when Speech Blocks existed, otherwise `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     normalized_chunk_ids = {str(chunk_id).strip() for chunk_id in chunk_ids if str(chunk_id).strip()}
     if not normalized_chunk_ids:
@@ -1119,47 +1065,6 @@ def remove_speech_blocks_for_chunks(
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
-def mark_speech_blocks_for_character_review(
-    project_root: str | Path,
-    character_id: str,
-    display_name: str | None = None,
-) -> tuple[SpeechBlocksReportPayload | None, tuple[str, ...]]:
-    """
-    @brief      Mark Speech Blocks assigned to one character as needing review.
-    @param[in]  project_root Active project root folder.
-    @param[in]  character_id Character identifier whose assignments changed.
-    @param[in]  display_name Optional refreshed speaker display name.
-    @return     Updated report, if Speech Blocks existed, plus affected block ids.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
-    """
-    normalized_character_id = str(character_id).strip()
-    if not normalized_character_id:
-        return load_speech_blocks_report(project_root), ()
-    resolved_project_root = Path(project_root)
-    speech_blocks = load_speech_blocks(resolved_project_root)
-    if not speech_blocks:
-        return load_speech_blocks_report(resolved_project_root), ()
-    normalized_display_name = None if display_name is None else str(display_name).strip()
-    affected_block_ids: list[str] = []
-    updated_blocks: list[SpeechBlockPayload] = []
-    for block in speech_blocks:
-        updated_block = dict(block)
-        if _is_character_speech_block(updated_block, normalized_character_id):
-            affected_block_ids.append(str(updated_block.get("speech_block_id", "")).strip())
-            updated_block["approved"] = False
-            updated_block["approved_at"] = None
-            if normalized_display_name:
-                updated_block["speaker_display_name"] = normalized_display_name
-        updated_blocks.append(updated_block)
-    if not affected_block_ids:
-        return load_speech_blocks_report(resolved_project_root), ()
-    return _persist_report_update(resolved_project_root, updated_blocks), tuple(affected_block_ids)
-
-
-@trace_function(_SPEECH_BLOCKS_LOGGER)
 def update_character_speech_block_display_name(
     project_root: str | Path,
     character_id: str,
@@ -1172,9 +1077,6 @@ def update_character_speech_block_display_name(
     @param[in]  display_name Optional refreshed speaker display name.
     @return     Updated report, if Speech Blocks existed, plus affected block ids.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     normalized_character_id = str(character_id).strip()
     normalized_display_name = None if display_name is None else str(display_name).strip()
@@ -1208,9 +1110,6 @@ def fallback_character_speech_blocks_to_narrator(
     @param[in]  character_id Deleted character identifier.
     @return     Updated report, if Speech Blocks existed, plus affected block ids.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     normalized_character_id = str(character_id).strip()
     if not normalized_character_id:
@@ -1249,9 +1148,6 @@ def insert_speech_block(
     @param[in]  after_speech_block_id Optional block id after which to insert.
     @return     Updated report payload and final inserted Speech Block id.
     @exception  ValueError Raised when Speech Blocks state, chunk, or after-block is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     selected_chunk_id = str(chunk_id).strip()
@@ -1292,9 +1188,6 @@ def delete_speech_block(project_root: str | Path, speech_block_id: str) -> Speec
     @param[in]  speech_block_id Target Speech Block identifier.
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when the block is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     normalized_id = str(speech_block_id).strip()
@@ -1315,9 +1208,6 @@ def clear_speech_block_warning_flags(project_root: str | Path, speech_block_id: 
     @param[in]  speech_block_id Target Speech Block identifier.
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when the block is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -1335,9 +1225,6 @@ def approve_all_speech_blocks(project_root: str | Path) -> SpeechBlocksReportPay
     @param[in]  project_root Active project root folder.
     @return     Updated Speech Blocks report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -1357,9 +1244,6 @@ def approve_speech_block(project_root: str | Path, speech_block_id: str) -> Spee
     @param[in]  speech_block_id Target Speech Block identifier.
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when the block is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.2
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -1380,9 +1264,6 @@ def unapprove_speech_block(project_root: str | Path, speech_block_id: str) -> Sp
     @param[in]  speech_block_id Target Speech Block identifier.
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when the block is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -1411,9 +1292,6 @@ def update_speech_block(
     @param[in]  edit_payload Edited text or Scene Ambience field payload.
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when the block or speaker is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -1484,9 +1362,6 @@ def regenerate_chunk_speech_blocks(
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when prerequisites or target chunk are invalid.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     source_resolution = resolve_source_chunks(resolved_project_root, manifest)
@@ -1658,9 +1533,6 @@ def _speaker_catalog(character_profiles: list[dict[str, object]]) -> dict[str, d
     @param[in]  character_profiles Persisted character profiles.
     @return     Mapping from speaker identifier to stable speaker metadata.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     catalog = {
         _NARRATOR_SPEAKER_ID: {
@@ -1689,9 +1561,6 @@ def _speaker_catalog_aliases(character_profile: dict[str, object]) -> list[str]:
     @param[in]  character_profile Persisted Character Discovery profile.
     @return     Ordered unique alias strings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     aliases: list[str] = []
     for raw_alias in character_profile.get("aliases", []):
@@ -1707,9 +1576,6 @@ def _speaker_catalog_evidence(character_profile: dict[str, object]) -> list[dict
     @param[in]  character_profile Persisted Character Discovery profile.
     @return     Compact evidence rows safe for prompt context.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     evidence_rows: list[dict[str, object]] = []
     for raw_evidence in character_profile.get("evidence", []):
@@ -1731,9 +1597,6 @@ def _voice_assignment_mode(manifest: dict[str, object]) -> str:
     @param[in]  manifest Active project manifest payload.
     @return     Supported voice-assignment mode.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     mode = str(manifest.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
     if mode in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
@@ -1747,9 +1610,6 @@ def _speech_blocks_response_contract(voice_assignment_mode: str) -> str:
     @param[in]  voice_assignment_mode Active project voice-assignment mode.
     @return     Response contract token persisted with resumable state.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     if str(voice_assignment_mode).strip() == "same_narrator":
         return _SPEECH_BLOCKS_DETERMINISTIC_NARRATOR_CONTRACT
@@ -1776,9 +1636,6 @@ def _chunk_user_prompt(
     @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @return     Rendered prompt text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.6.0
     """
     budget_payload = tts_budget or _resolve_narrator_only_budget(None)
     return _render_speech_blocks_user_prompt(
@@ -1814,9 +1671,6 @@ def _render_speech_blocks_user_prompt(prompt_name: str, variables: dict[str, obj
     @param[in]  variables Prompt variables.
     @return     Rendered Speech Blocks prompt.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     template = prompt_template_service.load_prompt(prompt_name)
     placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
@@ -1845,9 +1699,6 @@ def _resolve_additional_speech_block_instructions(
     @param[in]  existing_state Existing Speech Blocks operation state.
     @return     Normalized operator Speech Blocks instructions.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if additional_speech_block_instructions is not None:
         return _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
@@ -1872,9 +1723,6 @@ def _resolve_scene_ambience_settings(
     @param[in]  enabled_override Optional page-level enablement override.
     @return     Normalized scene-ambience settings payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.2.0
     """
     payload = settings_payload if isinstance(settings_payload, dict) else {}
     placement = str(
@@ -1912,9 +1760,6 @@ def _scene_ambience_allowed_positions(placement_policy: str) -> list[str]:
     @param[in]  placement_policy Persisted scene-ambience placement token.
     @return     Ordered allowed ambience-position tokens.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.3.0
     """
     return {
         "none": [],
@@ -1933,9 +1778,6 @@ def _compute_generation_rules_fingerprint(
     @param[in]  scene_ambience_settings Ignored legacy scene-ambience settings parameter.
     @return     SHA-256 fingerprint for resumable Speech Blocks runs.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.2.0
     """
     _ = scene_ambience_settings
     return _compute_prompt_fingerprint(additional_speech_block_instructions)
@@ -1951,9 +1793,6 @@ def _restore_persisted_additional_speech_block_instructions(
     @param[in]  operation_state Speech Blocks operation-state payload.
     @return     Normalized operator Speech Blocks instructions.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if isinstance(report, dict):
         restored_report_value = _normalized_additional_speech_block_instructions(
@@ -1982,9 +1821,6 @@ def _restore_persisted_scene_ambience_settings(
     @param[in]  operation_state Speech Blocks operation-state payload.
     @return     Normalized Scene Ambience generation settings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-21
-    @version    0.1.0
     """
     for candidate in (
         report.get("scene_ambience_generation") if isinstance(report, dict) else None,
@@ -2005,9 +1841,6 @@ def _restore_persisted_speech_blocks_response_contract(operation_state: dict[str
     @param[in]  operation_state Speech Blocks operation-state payload.
     @return     Known response contract token or the narrator+character contract.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     if not isinstance(operation_state, dict):
         return _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT
@@ -2032,9 +1865,6 @@ def _normalized_additional_speech_block_instructions(value: object) -> str:
     @param[in]  value Candidate instruction text.
     @return     Trimmed instruction text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if value is None:
         return ""
@@ -2048,9 +1878,6 @@ def _append_additional_speech_block_instructions(prompt_text: str, additional_sp
     @param[in]  additional_speech_block_instructions Normalized operator rules.
     @return     Prompt text with an additional-rules section.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     if not additional_speech_block_instructions:
         return prompt_text
@@ -2066,9 +1893,6 @@ def _compute_prompt_fingerprint(prompt_text: str) -> str:
     @param[in]  prompt_text Operator prompt-rule text.
     @return     SHA-256 fingerprint for the prompt-rule text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
@@ -2095,9 +1919,6 @@ def _build_budget_metadata(
     @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @return     Context-budget metadata used for source chunk segmentation.
     @exception  ValueError Raised when context and output settings leave too little input room.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.3.0
     """
     prompt_shell = _chunk_user_prompt(
         {"chunk_id": "", "text": ""},
@@ -2157,9 +1978,6 @@ def _generate_budgeted_chunk_blocks(
     @param[in]  cancellation_message Message used when the request is cancelled.
     @return     Generated Speech Blocks, warning entries, and provider token usage for this chunk.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     if str(voice_assignment_mode).strip() == "same_narrator":
         raise_if_cancelled(cancel_requested)
@@ -2256,9 +2074,6 @@ def _deterministic_narrator_chunk_blocks(
     @param[in]  tts_budget Optional narrator-only TTS budget metadata.
     @return     Generated Speech Blocks plus warning entries.
     @exception  ValueError Raised when segmentation would not reproduce the source chunk.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     planned_blocks = speech_blocks_narrator_split_service.plan_narrator_blocks(
@@ -2308,9 +2123,6 @@ def _cleanup_review_warning_flags(source_chunk: dict[str, object]) -> list[str]:
     @param[in]  source_chunk Source chunk payload carrying cleanup provenance.
     @return     Warning flags to attach to every block of this chunk.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     boundary_confidence = str(source_chunk.get("cleanup_boundary_confidence", "") or "").strip()
     joined_across_page_break = bool(source_chunk.get("cleanup_joined_across_page_break", False))
@@ -2339,9 +2151,6 @@ def _generate_direct_block_response(
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Provider result or deterministic segment fallback payload.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     response_schema = _direct_block_response_schema()
     response_schema_name = "speech_blocks_direct_blocks"
@@ -2382,9 +2191,6 @@ def _direct_block_response_schema() -> dict[str, object]:
     @brief      Build the structured-output schema for direct Speech Blocks responses.
     @return     JSON Schema payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     return {
         "type": "object",
@@ -2423,9 +2229,6 @@ def _compact_atomic_units_for_prompt(
     @param[in]  include_text True when prompt rows may include source text previews.
     @return     Compact atomic-unit rows.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     raw_units = [unit for unit in source_chunk.get("atomic_units", []) if isinstance(unit, dict)]
     compact_units: list[dict[str, object]] = []
@@ -2461,9 +2264,6 @@ def _is_selectable_atomic_prompt_unit(raw_unit: dict[str, object]) -> bool:
     @param[in]  raw_unit Atomic-unit payload.
     @return     True for speakable units; False for whitespace separators.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     structural_kind = str(raw_unit.get("structural_kind", "")).strip().casefold()
     unit_text = str(raw_unit.get("text", ""))
@@ -2480,9 +2280,6 @@ def _speaker_hint_ids_for_text(
     @param[in]  speaker_catalog Allowed speaker catalog.
     @return     Ordered matching speaker IDs.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-02
-    @version    0.1.0
     """
     normalized_text = _speaker_match_key(text)
     hint_ids: list[str] = []
@@ -2504,9 +2301,6 @@ def _compact_source_context_for_prompt(source_chunk: dict[str, object]) -> dict[
     @param[in]  source_chunk Source chunk or AI-budget segment payload.
     @return     Previous/next context rows marked as non-selectable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     return {
         "previous_context": {
@@ -2545,9 +2339,6 @@ def _generate_scene_ambience_blocks(
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Scene ambience blocks and provider token usage.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     if not speech_blocks:
         return [], token_usage_service.empty_token_usage()
@@ -2596,9 +2387,6 @@ def _scene_ambience_user_prompt(
     @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
     @return     Rendered scene-ambience prompt text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     compact_blocks = [
         {
@@ -2640,9 +2428,6 @@ def _normalize_scene_ambience_response(
     @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
     @return     Normalized scene-ambience Speech Blocks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.1
     """
     raw_blocks = payload.get("scene_ambience_blocks", [])
     if not isinstance(raw_blocks, list):
@@ -2705,9 +2490,6 @@ def _split_composed_scene_ambience_prompt(sound_prompt: str) -> list[str]:
     @param[in]  sound_prompt Candidate sound prompt.
     @return     One or more simple sound prompts.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-21
-    @version    0.1.0
     """
     normalized_prompt = " ".join(str(sound_prompt).strip().split())
     if not normalized_prompt:
@@ -2745,9 +2527,6 @@ def _insert_scene_ambience_blocks(
     @param[in]  scene_ambience_blocks Scene ambience operation Speech Blocks.
     @return     Renumbered chunk-local Speech Blocks including scene ambience.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     if not scene_ambience_blocks:
         return speech_blocks
@@ -2790,9 +2569,6 @@ def _budgeted_source_chunk_segments(
     @param[in]  budget_metadata Context-budget metadata.
     @return     Ordered source chunk segment payloads using the original chunk id.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     text_budget_tokens = int(budget_metadata["text_budget_tokens"])
     if source_token_cap is not None:
@@ -2817,9 +2593,6 @@ def _source_chunk_with_source_spans(source_chunk: dict[str, object]) -> dict[str
     @param[in]  source_chunk Source chunk or AI-budget segment payload.
     @return     Source chunk payload with local `source_spans` for model selection.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     chunk_payload = dict(source_chunk)
     chunk_payload["source_spans"] = _build_source_spans(str(chunk_payload.get("text", "")))
@@ -2840,9 +2613,6 @@ def _source_chunk_with_attribution_context(
     @param[in]  chunk_index Current chunk index.
     @return     Source chunk payload with compact attribution context fields.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     source_chunk = dict(source_chunks[chunk_index])
     previous_text = str(source_chunks[chunk_index - 1].get("text", "")) if chunk_index > 0 else ""
@@ -2860,9 +2630,6 @@ def _prompt_excerpt(text: str, limit: int, *, tail: bool = False) -> str:
     @param[in]  tail When true, keep the tail of oversized text.
     @return     Compact excerpt.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     normalized = re.sub(r"\s+", " ", str(text)).strip()
     if limit <= 0 or len(normalized) <= limit:
@@ -2878,9 +2645,6 @@ def _estimate_text_tokens(text: str) -> int:
     @param[in]  text Value for `text`.
     @return     Estimated token count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.1
     """
     return ai_budget_service.estimate_text_tokens(text)
 
@@ -2892,9 +2656,6 @@ def _positive_float(value: object, fallback: float) -> float:
     @param[in]  fallback Fallback float value.
     @return     Positive float value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     try:
         normalized_value = float(value)
@@ -2910,9 +2671,6 @@ def _positive_int(value: object, fallback: int) -> int:
     @param[in]  fallback Fallback integer value.
     @return     Positive integer value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-21
-    @version    0.1.0
     """
     try:
         normalized_value = int(value)
@@ -2931,9 +2689,6 @@ def _normalize_scene_ambience_edit_payload(
     @param[in]  existing_block Existing Speech Block payload used for field fallback.
     @return     Normalized Scene Ambience edit payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-21
-    @version    0.1.0
     """
     payload = edit_payload if isinstance(edit_payload, dict) else {"sound_prompt": str(edit_payload)}
     sound_prompt = str(payload.get("sound_prompt", payload.get("text", ""))).strip()
@@ -2958,9 +2713,6 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
     @param[in]  payload Raw persisted payload.
     @return     Normalized Speech Blocks payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
     """
     sequence_index = int(payload.get("sequence_index", 0))
     chunk_id = str(payload.get("chunk_id", "")).strip()
@@ -3029,9 +2781,6 @@ def _persist_state(
     @param[in]  operation_state Current Speech Blocks operation-state payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
     """
     _ = source_chunks
     document = _compose_speech_blocks_document(speech_blocks, report, operation_state)
@@ -3067,9 +2816,6 @@ def _rebuild_report_with_prompt_rules(
     @param[in]  updated_at Ignored legacy report timestamp override.
     @return     Rebuilt Speech Blocks report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     report = _rebuild_report(
         speech_blocks,
@@ -3138,9 +2884,6 @@ def _build_operation_state_with_prompt_rules(
     @param[in]  speech_blocks_response_contract Active model response contract token.
     @return     Persisted operation-state payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     state = _build_operation_state(
         project_root,
@@ -3200,9 +2943,6 @@ def _persist_compact_review_update(
     @param[in]  speech_blocks Updated Speech Blocks payload list.
     @return     Updated report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     report = load_speech_blocks_report(project_root) or {}
     operation_state = load_operation_state(project_root) or {}
@@ -3276,9 +3016,6 @@ def _build_compact_review_operation_state(
     @param[in]  speech_blocks Updated Speech Blocks payload list.
     @return     Compact operation-state payload without source chunk snapshots.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.1
     """
     metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
     metadata = dict(metadata) if isinstance(metadata, dict) else {}
@@ -3363,9 +3100,6 @@ def _metadata_int_value(
     @param[in]  fallback Fallback integer value.
     @return     Non-negative integer value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     for source in (report, metadata):
         try:
@@ -3385,9 +3119,6 @@ def _persist_report_update(
     @param[in]  speech_blocks Updated Speech Blocks payload list.
     @return     Updated report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     source_chunks, resolved_source_language, resolved_source_kind = _load_or_resolve_source_context(project_root)
     report = load_speech_blocks_report(project_root) or {}
@@ -3476,9 +3207,6 @@ def _load_or_resolve_source_context(project_root: Path) -> tuple[list[dict[str, 
     @param[in]  project_root Active project root folder.
     @return     Tuple of source chunks, source language, and source kind.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     report = load_speech_blocks_report(project_root) or {}
     operation_state = load_operation_state(project_root) or {}
@@ -3506,9 +3234,6 @@ def _is_character_speech_block(block: SpeechBlockPayload, character_id: str) -> 
     @param[in]  character_id Character identifier to match.
     @return     True when the block currently uses that character as speaker.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return (
         str(block.get("speaker_kind", "")).strip() == SPEAKER_KIND_CHARACTER
@@ -3526,9 +3251,6 @@ def _renumber_speech_blocks(
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @return     Renumbered Speech Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.4.0
     """
     chunk_order = {
         str(chunk.get("chunk_id", "")).strip(): int(chunk.get("sequence_index", 0)) for chunk in source_chunks
@@ -3564,9 +3286,6 @@ def _renumber_single_chunk_blocks(
     @param[in]  speech_blocks Current Speech Blocks payload list for the chunk.
     @return     Renumbered Speech Blocks payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.3.0
     """
     normalized_chunk_id = str(chunk_id).strip()
     renumbered_blocks: list[SpeechBlockPayload] = []
@@ -3588,9 +3307,6 @@ def _stable_speech_block_id(block: SpeechBlockPayload, chunk_id: str, used_ids: 
     @param[in]  used_ids Speech Block ids already emitted in this renumbering pass.
     @return     Stable Speech Block identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     existing_id = str(block.get("speech_block_id", "")).strip()
     if existing_id and existing_id not in used_ids:
@@ -3607,9 +3323,6 @@ def _used_speech_block_ids(speech_blocks: list[SpeechBlockPayload]) -> set[str]:
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @return     Existing Speech Block id set.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     return {
         str(block.get("speech_block_id", "")).strip()
@@ -3625,9 +3338,6 @@ def _next_unused_speech_block_id(chunk_id: str, used_ids: set[str]) -> str:
     @param[in]  used_ids Speech Block ids already present or emitted.
     @return     Unused Speech Block identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     chunk_numeric_prefix = f"{_chunk_order_from_id(chunk_id):04d}"
     next_index = 1
@@ -3651,9 +3361,6 @@ def _manual_inserted_speech_block(chunk_id: str, sequence_index: int, speech_blo
     @param[in]  speech_block_id Temporary Speech Block identifier.
     @return     New unapproved narrator narration Speech Block payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     return {
         "speech_block_id": speech_block_id,
@@ -3682,9 +3389,6 @@ def _speech_block_by_id(
     @param[in]  speech_block_id Target Speech Block identifier.
     @return     Matching block or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     normalized_id = str(speech_block_id).strip()
     return next(
@@ -3701,9 +3405,6 @@ def _build_source_fingerprint(source_chunks: list[dict[str, object]], source_lan
     @param[in]  source_kind Active source-kind token.
     @return     Hex-encoded fingerprint string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     fingerprint_payload = {
         "source_language": source_language,
@@ -3742,9 +3443,6 @@ def _restore_resume_state(
     @param[in]  additional_speech_block_instructions_fingerprint Operator instruction fingerprint.
     @return     Existing blocks, warning entries, and the next chunk index.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.5.0
     """
     if not isinstance(existing_state, dict):
         return [], [], 0
@@ -3803,9 +3501,6 @@ def _is_resumable_speech_blocks_response_contract(
     @param[in]  resume_checkpoint Existing resumable checkpoint payload.
     @return     True when the state can be resumed safely.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     response_contract = str(
         metadata.get("speech_blocks_response_contract")
@@ -3834,9 +3529,6 @@ def _restore_next_speech_blocks_chunk_index(
     @param[in]  total_chunk_count Current source chunk count.
     @return     Clamped next source-chunk index.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.2.0
     """
     if str(existing_state.get("status", "")).strip() in {"running", "failed"}:
         raw_checkpoint_index = resume_checkpoint.get("next_chunk_index")
@@ -3864,9 +3556,6 @@ def _restore_next_speech_blocks_segment_index(
     @param[in]  next_chunk_index Restored next chunk index.
     @return     Zero-based segment index to resume inside the active chunk.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-07
-    @version    0.1.0
     """
     if not isinstance(existing_state, dict):
         return 0
@@ -3898,9 +3587,6 @@ def _restore_speech_blocks_warning_records(
     @param[in]  metadata Existing operation metadata payload.
     @return     Warning records safe to carry into resumed generation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     raw_warnings = (
         existing_report.get("warnings", []) if isinstance(existing_report, dict) else metadata.get("warnings", [])
@@ -3914,9 +3600,6 @@ def _resolve_started_at(existing_state: dict[str, object]) -> str:
     @param[in]  existing_state Existing operation-state payload.
     @return     Stable operation start timestamp.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
     if not isinstance(resume_checkpoint, dict):
@@ -3932,9 +3615,6 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     @param[in]  started_at Stable operation start timestamp.
     @return     Operation-local AI transaction log path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     existing_state = load_operation_state(project_root) or {}
     metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
@@ -3967,9 +3647,6 @@ def _metadata_token_usage(existing_state: dict[str, object]) -> dict[str, object
     @param[in]  existing_state Existing operation-state payload.
     @return     Persisted token-usage payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if not isinstance(existing_state, dict):
         return None
@@ -3990,9 +3667,6 @@ def _restore_persisted_budget_metadata(
     @param[in]  operation_state Persisted Speech Blocks operation-state payload.
     @return     Restored budget metadata or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     if isinstance(report, dict):
         report_budget = report.get("budget_metadata")

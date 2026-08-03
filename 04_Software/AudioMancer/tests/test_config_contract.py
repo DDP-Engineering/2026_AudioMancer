@@ -12,9 +12,6 @@
 @details Verifies that the adapted configuration constants, the packaged
          settings scaffold, and the frozen-bundle resource layout exist with the
          expected baseline contract.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.10.0
 """
 
 # IMPORTS
@@ -35,9 +32,6 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @brief      Verify the adapted configuration exposes the expected identity and UI defaults.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.6
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
@@ -58,18 +52,10 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.EXTRACTED_TEXT_FILE_NAME == "extracted_text.txt"
     assert config.EXTRACTION_METADATA_FILE_NAME == "extraction_metadata.json"
     assert config.CLEANED_TEXT_FILE_NAME == "clean_text.txt"
-    assert config.CLEANUP_STATE_FILE_NAME == "cleanup_state.json"
+    assert config.CLEANUP_DOCUMENT_FILE_NAME == "cleanup.json"
     assert config.CHUNK_ARTIFACT_FILE_NAME == "chunks_text.json"
-    assert not hasattr(config, "CHUNKING_REPORT_FILE_NAME")
-    assert not hasattr(config, "CHUNKING_STATE_FILE_NAME")
     assert config.TRANSLATED_CHUNKS_FILE_NAME == "translated_text.json"
-    assert not hasattr(config, "TRANSLATION_REPORT_FILE_NAME")
-    assert not hasattr(config, "TRANSLATION_STATE_FILE_NAME")
     assert config.NARRATOR_VOICE_FILE_NAME == "narrator_voice.json"
-    assert not hasattr(config, "NARRATOR_PROFILE_FILE_NAME")
-    assert not hasattr(config, "NARRATOR_SELECTION_FILE_NAME")
-    assert not hasattr(config, "SELECTED_NARRATOR_AUDIO_FILE_NAME")
-    assert not hasattr(config, "SELECTED_NARRATOR_METADATA_FILE_NAME")
     assert config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512
@@ -88,9 +74,6 @@ def test_settings_json_scaffold_matches_service_defaults(tmp_path, monkeypatch) 
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     scaffold_path = config.APP_DEFAULT_SETTINGS_PATH
     payload = json.loads(Path(scaffold_path).read_text(encoding="utf-8"))
@@ -113,9 +96,6 @@ def test_config_resolves_frozen_packaged_runtime_resources(monkeypatch, tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     from audiomancer.services import prompt_template_service
     from audiomancer.ui.controllers import misc_ui_controller
@@ -172,9 +152,6 @@ def test_config_translation_languages_include_qwen3_tts_languages_with_chinese()
     @brief      Verify shared language options include Qwen3 TTS languages, Romanian, and Chinese.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
     """
     language_codes = [language_code for language_code, _label in config.TRANSLATION_LANGUAGE_OPTIONS]
 
@@ -187,9 +164,6 @@ def test_config_defines_seven_font_size_steps() -> None:
     @details    Covers REQ-UX-7f2722c8-68e6-460b-a79a-1ee5577cadb5 / SPEC-FONT-STEPS.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert config.UI_FONT_SIZE_STEPS == (
         "extra_small",
@@ -212,9 +186,6 @@ def test_config_resolves_user_documents_root_across_platforms(monkeypatch, tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     home_root = tmp_path / "home"
     documents_root = home_root / "Documents"
@@ -242,9 +213,6 @@ def test_config_user_documents_root_honours_xdg_documents_dir_on_posix_only(monk
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     home_root = tmp_path / "home"
     documents_root = home_root / "Documents"
@@ -276,9 +244,6 @@ def test_config_default_theme_is_audiomancer_dark() -> None:
     @details    Covers REQ-PLAT-2b9b91fe-a021-4e8e-a52b-9070926315ca / SPEC-SET-DEFAULTTHEME.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert config.DEFAULT_UI_THEME_ID == "audiomancer_dark"
 

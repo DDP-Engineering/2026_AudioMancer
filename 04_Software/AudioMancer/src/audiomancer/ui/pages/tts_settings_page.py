@@ -11,9 +11,6 @@
 @brief TTS settings page for AudioMancer.
 @details Renders the operator-facing TTS Settings dialog and exposes load or
          build helpers so the main window can coordinate runtime persistence.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-23
-@version 1.6.4
 """
 
 # IMPORTS
@@ -61,9 +58,6 @@ class TtsSettingsPage(QWidget):
     """
     @brief      Display and edit global TTS runtime settings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.4.1
     """
 
     def __init__(self, parent=None) -> None:
@@ -72,9 +66,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    1.4.2
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
@@ -259,9 +250,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  project_active True when one project is currently open.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    1.5.0
         """
         self._project_active = project_active
         self._base_url_edit.setText(
@@ -376,9 +364,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  probe_result Normalized VoiceWeaver probe result payload.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-18
-        @version    1.1.0
         """
         self._probe_succeeded = bool(probe_result.get("success", False))
         self._probe_message = str(probe_result.get("message", ""))
@@ -404,9 +389,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  existing_settings_payload Existing application settings payload.
         @return     Merged settings payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.2.0
         """
         merged_settings = copy.deepcopy(existing_settings_payload)
         merged_settings["tts_runtime_base_url"] = self._base_url_edit.text().strip()
@@ -443,9 +425,6 @@ class TtsSettingsPage(QWidget):
         @brief      Return no project-local TTS plan because project options are locked on Home.
         @return     Project-local TTS plan payload or None when no project is active.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-18
-        @version    1.2.0
         """
         return None
 
@@ -455,9 +434,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.2.0
         """
         self._current_language = language
         self._runtime_group.setTitle(ui_state_service.translate("tts_settings.runtime_group", language))
@@ -469,6 +445,15 @@ class TtsSettingsPage(QWidget):
         self._preview_timeout_label.setText(ui_state_service.translate("tts_settings.preview_timeout", language))
         self._generation_timeout_label.setText(ui_state_service.translate("tts_settings.generation_timeout", language))
         self._preview_text_limit_label.setText(ui_state_service.translate("tts_settings.preview_text_limit", language))
+        self._speech_block_target_label.setText(
+            ui_state_service.translate("tts_settings.speech_block_target", language)
+        )
+        self._speech_block_target_spin.setSpecialValueText(
+            ui_state_service.translate("tts_settings.speech_block_target_auto", language)
+        )
+        self._speech_block_target_spin.setToolTip(
+            ui_state_service.translate("tts_settings.speech_block_target_tooltip", language)
+        )
         self._scene_ambience_placement_label.setText(
             ui_state_service.translate("tts_settings.scene_ambience_placement", language)
         )
@@ -487,6 +472,9 @@ class TtsSettingsPage(QWidget):
         self._scene_ambience_seed_label.setText(
             ui_state_service.translate("tts_settings.scene_ambience_seed", language)
         )
+        self._scene_ambience_seed_spin.setSpecialValueText(
+            ui_state_service.translate("tts_settings.scene_ambience_seed_random", language)
+        )
         self._refresh_scene_ambience_placement_labels()
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))
         self._save_button.setText(ui_state_service.translate("tts_settings.save", language))
@@ -502,9 +490,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  value Stored item value.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         for index in range(combo.count()):
             if str(combo.itemData(index)) == value:
@@ -517,9 +502,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  spinbox Target spin box.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.2.1
         """
         spinbox.setMinimumWidth(_RUNTIME_LIMIT_CONTROL_MIN_WIDTH_PX)
         spinbox.setMaximumWidth(_RUNTIME_LIMIT_CONTROL_MAX_WIDTH_PX)
@@ -534,9 +516,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  event Event delivered to the object.
         @return     True when the event was handled locally.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.3.0
         """
         if isinstance(watched, QAbstractSpinBox) and event.type() == QEvent.Type.MouseButtonPress:
             if event.button() != Qt.MouseButton.LeftButton or not watched.isEnabled():
@@ -572,9 +551,6 @@ class TtsSettingsPage(QWidget):
         @param[in]  label Target label.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         label.setMinimumWidth(_RUNTIME_LIMIT_LABEL_MIN_WIDTH_PX)
 
@@ -583,9 +559,6 @@ class TtsSettingsPage(QWidget):
         @brief      Refresh localized Scene Ambience placement combo labels.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
         """
         current_value = str(
             self._scene_ambience_placement_combo.currentData() or config.DEFAULT_SCENE_AMBIENCE_PLACEMENT
@@ -609,9 +582,6 @@ class TtsSettingsPage(QWidget):
         @brief      Load the project plan.
         @param[in]  project_plan_payload Payload for `project_plan_payload`.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.2.0
         """
         _ = project_plan_payload
         self._apply_planning_state()
@@ -620,9 +590,6 @@ class TtsSettingsPage(QWidget):
         """
         @brief      Execute the rebuild model list helper.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._model_list.clear()
         if not self._discovered_models:
@@ -645,9 +612,6 @@ class TtsSettingsPage(QWidget):
         """
         @brief      Build the runtime status text.
         @return     Derived helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._probe_succeeded:
             return ui_state_service.translate("tts_settings.connected", self._current_language)
@@ -659,9 +623,6 @@ class TtsSettingsPage(QWidget):
         """
         @brief      Apply the planning state.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.2.0
         """
         minimum_qwen_ready = bool(self._capability_matrix.get("minimum_qwen_ready", False))
         self._planning_group.setEnabled(True)

@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-e42171cc"
+title = "Cleanup validation shall reject every newly introduced alphanumeric"
+status = "active"
+
+requirement = """
+Cleanup validation shall reject every newly introduced alphanumeric adjacency except a source-validated dehyphenation.
+"""
+
+verification = "Fusion-blocking and safe join-form tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_rejects_unsupported_boundary_choice",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+The operation must make word fusion impossible by construction across ordinary and dropped-artifact boundaries.
+"""
+created = 2026-07-28
+updated = 2026-07-30

@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-880f7fda"
+title = "Audio-block clone prompts shall match and create using the reference"
+status = "active"
+
+requirement = """
+Audio-block clone prompts shall match and create using the reference sample language.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_clone_prompt_matching_uses_sample_language_for_romanian_output",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_clone_prompt_creation_uses_reference_sample_language",
+]
+
+priority = "high"
+rationale = """
+Clone prompts must use the correct sample language.
+"""
+created = 2026-07-19
+updated = 2026-07-24

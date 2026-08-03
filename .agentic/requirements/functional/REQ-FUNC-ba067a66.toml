@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-ba067a66"
+title = "AI translation resume shall continue from the first empty chunk under"
+status = "active"
+
+requirement = """
+AI translation resume shall continue from the first empty chunk under the current profile budget.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_resume_uses_first_empty_chunk_and_current_profile_budget",
+]
+
+priority = "high"
+rationale = """
+Resume must pick up exactly where translation stopped.
+"""
+created = 2026-07-19
+updated = 2026-07-24

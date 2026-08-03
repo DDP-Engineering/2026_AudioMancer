@@ -1,0 +1,32 @@
+schema = 1
+id = "REQ-NFR-5b12e005"
+title = "Touched Python files follow source-format and UTF-8 conventions"
+status = "active"
+
+requirement = """
+The listed Python files shall use the repository's required source-file structure and UTF-8 encoding without a byte-order mark. Module docstrings shall omit file-level author, date, and version tags because attribution and release versions are maintained at repository level.
+"""
+
+verification = "An automated source-hygiene test confirms that every listed Python file is UTF-8 without a byte-order mark and contains no @author, @date, or @version module tags; focused Ruff checks pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/__init__.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/__init__.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py",
+  "04_Software/AudioMancer/tests/test_logging_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_aegis_workflow_artifacts.py::test_requirement_source_hygiene_paths_follow_repository_conventions",
+]
+
+spec = "specs/minor_robustness_consistency.spec.md"
+priority = "normal"
+rationale = """
+Correct comments, docstring alignment, module spacing, and consistent encoding reduce maintenance surprises missed by non-preview Ruff rules.
+"""
+created = 2026-07-30
+updated = 2026-08-02

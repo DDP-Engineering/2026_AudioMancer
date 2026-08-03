@@ -11,9 +11,6 @@
 @brief Audio Assembly state-service tests for AudioMancer.
 @details Verifies reset eligibility, generated-output state shaping, and
          project-less state defaults for the Audio Assembly page.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-27
-@version 0.1.1
 """
 
 # IMPORTS
@@ -37,9 +34,6 @@ def test_build_audio_assembly_state_keeps_reset_disabled_for_default_metadata(tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioAssemblyDefaultState", tmp_path)
     operation_runtime_service.ensure_default_operation_state(project_root, "audio_assembly")
@@ -58,9 +52,6 @@ def test_build_audio_assembly_state_reports_completed_outputs(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioAssemblyCompletedState", tmp_path)
     _write_audio_blocks(project_root)
@@ -84,9 +75,6 @@ def test_build_audio_assembly_state_ignores_scene_ambience_when_excluded(tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioAssemblySceneAmbienceState", tmp_path)
     manifest["audio_assembly_settings"] = {
@@ -124,9 +112,6 @@ def test_build_audio_assembly_state_returns_empty_state_without_project() -> Non
     @brief      Verify no-project Audio Assembly state disables all page actions.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     state = audio_assembly_state_service.build_audio_assembly_state(None, None, "en")
 
@@ -147,9 +132,6 @@ def _write_audio_blocks(project_root, extra_blocks=()) -> None:
     @param[in]  extra_blocks Additional rich fixture blocks appended after the narrator block.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     blocks = [
         {
@@ -219,9 +201,6 @@ def _write_audio_assembly_report(project_root) -> None:
     @param[in]  project_root Active project root.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     report = {
         "audio_assembly_stage_status": audio_assembly_service.AUDIO_ASSEMBLY_STAGE_COMPLETED,

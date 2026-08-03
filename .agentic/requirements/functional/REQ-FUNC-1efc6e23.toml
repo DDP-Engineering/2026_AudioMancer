@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-1efc6e23"
+title = "Extraction metadata loading shall reject incompatible schemas and"
+status = "active"
+
+requirement = """
+Extraction metadata loading shall reject incompatible schemas and invalid JSON.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_incompatible_schema",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_invalid_json",
+]
+
+priority = "high"
+rationale = """
+Only current, valid extraction metadata may be consumed.
+"""
+created = 2026-07-24
+updated = 2026-07-24

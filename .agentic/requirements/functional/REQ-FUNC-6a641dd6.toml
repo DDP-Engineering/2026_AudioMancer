@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-6a641dd6"
+title = "Cleanup shall publish clean_text.txt only when cleanup.json contains"
+status = "active"
+
+requirement = """
+Cleanup shall publish clean_text.txt only when cleanup.json contains completed validated decisions.
+"""
+
+verification = "Finalization recovery and incomplete-output rejection tests pass."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_rejects_noncompleted_cleanup_even_when_text_exists",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Partial checkpoints or stale output must never become Chunking input.
+"""
+created = 2026-07-28
+updated = 2026-07-30

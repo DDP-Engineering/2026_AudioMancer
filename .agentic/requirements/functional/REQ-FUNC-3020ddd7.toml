@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-3020ddd7"
+title = "The Home presenter shall mark active, cancelled, and downstream"
+status = "active"
+
+requirement = """
+The Home presenter shall mark active, cancelled, and downstream operations as in-progress.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_cancelled_cleanup_as_in_progress",
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_apply_active_operation_status_marks_chunking_in_progress",
+  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_downstream_operation_status_as_in_progress",
+]
+
+priority = "high"
+rationale = """
+Running and cancelled work must surface as in-progress on the Home surface.
+"""
+created = 2026-07-24
+updated = 2026-07-24

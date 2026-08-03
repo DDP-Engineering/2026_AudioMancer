@@ -11,9 +11,6 @@
 @brief Home-page UI controller for AudioMancer.
 @details Handles project creation, opening, repair confirmation, activation,
          and source import workflows owned by the Home page.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.9.7
 """
 
 # IMPORTS
@@ -50,9 +47,6 @@ def handle_new_project_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_parent = QFileDialog.getExistingDirectory(
@@ -109,13 +103,12 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     """
     @brief      Let the operator select and open one existing project folder.
     @details    The folder picker starts at the active project root when one is
-                open, and at the per-user documents root otherwise.
+                open, and at the per-user documents root otherwise. Expected
+                validation and filesystem failures use the existing localized
+                project-error warning instead of escaping the Qt slot.
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_folder = QFileDialog.getExistingDirectory(
@@ -128,7 +121,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
 
     try:
         open_result = project_workspace_service.open_project(selected_folder)
-    except (FileNotFoundError, ValueError) as error:
+    except (OSError, ValueError) as error:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -137,6 +130,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
         return
 
     if str(open_result.get("status")) == "repair_required":
+        show_project_open_recovery(window, open_result, current_language)
         if not confirm_project_repair(window, open_result, current_language):
             return
         repaired_result = project_workspace_service.repair_project(open_result)
@@ -156,6 +150,30 @@ def handle_open_project_requested(window: "MainWindow") -> None:
         window,
         ui_state_service.translate("status.project_opened", current_language),
     )
+    show_project_open_recovery(window, open_result, current_language)
+
+
+def show_project_open_recovery(
+    window: "MainWindow",
+    open_result: dict[str, object],
+    language: str,
+) -> None:
+    """
+    @brief      Show one operator message for automatic project recovery.
+    @param[in]  window Active main window shell.
+    @param[in]  open_result Tagged project-open result dictionary.
+    @param[in]  language Current UI language code.
+    @return     None.
+    @exception  None
+    """
+    recovered_operations = open_result.get("recovered_operations")
+    if not isinstance(recovered_operations, list) or "chunking" not in recovered_operations:
+        return
+    QMessageBox.information(
+        window,
+        ui_state_service.translate("dialog.project_recovery_title", language),
+        ui_state_service.translate("project.chunking_self_heal_message", language),
+    )
 
 
 def handle_import_source_requested(window: "MainWindow") -> None:
@@ -164,9 +182,6 @@ def handle_import_source_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -241,9 +256,6 @@ def handle_project_options_lock_requested(
     @param[in]  voice_assignment_mode Requested narration mode.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -299,9 +311,6 @@ def handle_export_requested(window: "MainWindow", export_kind: str, export_forma
     @param[in]  export_format Stable export format token.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -397,9 +406,6 @@ def handle_project_snapshot_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -467,9 +473,6 @@ def _handle_project_snapshot_success(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     misc_ui_controller.show_message(
@@ -485,9 +488,6 @@ def _handle_project_snapshot_failure(window: "MainWindow", error: Exception) -> 
     @param[in]  error Raised snapshot export exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     QMessageBox.warning(
@@ -503,9 +503,6 @@ def _handle_project_snapshot_cancelled(window: "MainWindow") -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     misc_ui_controller.show_message(
@@ -526,9 +523,6 @@ def confirm_project_repair(
     @param[in]  language Current UI language code.
     @return     True when the operator accepts the repair.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     if bool(repair_result.get("metadata_only", False)):
         repair_detail = ui_state_service.translate(
@@ -574,9 +568,6 @@ def _repair_summary_lines(value: object, header_text: str) -> str:
     @param[in]  header_text Localized section header.
     @return     Dialog-ready text block, or an empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if not isinstance(value, list) or not value:
         return ""
@@ -595,9 +586,6 @@ def activate_project(
     @param[in]  manifest Loaded active project manifest.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.2
     """
     window.stop_all_audio_playback()
     audio_blocks_service.reconcile_audio_playability(project_root)
@@ -617,9 +605,6 @@ def _export_dialog_filter(export_format: str, language: str) -> str:
     @param[in]  language Current UI language code.
     @return     QFileDialog filter string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if export_format == project_export_service.EXPORT_FORMAT_ZIP:
         return ui_state_service.translate("dialog.snapshot_filter_zip", language)

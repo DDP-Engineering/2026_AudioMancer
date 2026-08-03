@@ -11,9 +11,6 @@
 @brief Global test fixtures for the AudioMancer test suite.
 @details Provides shared configurations, mock profiles, and environment
          setup to reduce boilerplate across test files.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 1.4.0
 """
 
 # IMPORTS
@@ -45,9 +42,6 @@ def pytest_collection_modifyitems(config, items) -> None:
     @param[in]  items Collected pytest items.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     _ = config
     for item in items:
@@ -61,9 +55,6 @@ def _is_ui_test_item(item) -> bool:
     @param[in]  item Collected pytest item.
     @return     True when the item uses Qt fixtures or a UI-facing test module.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     if "qtbot" in getattr(item, "fixturenames", ()):
         return True
@@ -79,16 +70,19 @@ def mock_prompt_environment(tmp_path, monkeypatch):
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     Path to the temporary prompt root.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir(exist_ok=True)
 
     # Generic stubs for tests verifying AI call generation
-    (prompt_root / "text_cleanup_system.txt").write_text("System prompt.", encoding="utf-8")
-    (prompt_root / "text_cleanup_user.txt").write_text("{units_block}", encoding="utf-8")
+    (prompt_root / "text_cleanup_adjudication_primary_system.txt").write_text(
+        "Primary classifier.",
+        encoding="utf-8",
+    )
+    (prompt_root / "text_cleanup_adjudication_verifier_system.txt").write_text(
+        "Independent verifier.",
+        encoding="utf-8",
+    )
     (prompt_root / "text_chunking_system.txt").write_text("Chunk system prompt.", encoding="utf-8")
     (prompt_root / "text_chunking_user.txt").write_text("{units_block}", encoding="utf-8")
     (prompt_root / "speech_blocks_system.txt").write_text("Speech blocks system prompt.", encoding="utf-8")
@@ -107,9 +101,6 @@ def default_settings_payload():
     @brief      Return a valid baseline application settings dictionary.
     @return     Dictionary containing global profile identifiers and UI preferences.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.2
     """
     return {
         "language": "en",
@@ -159,9 +150,6 @@ def mock_clean_project(tmp_path):
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     Tuple of (project_root_path, manifest_dict).
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("MockProject", tmp_path)
     return project_root, manifest
@@ -175,9 +163,6 @@ def mock_extracted_project(mock_clean_project):
     @param[in]  mock_clean_project Fixture yielding root and manifest.
     @return     Tuple of (project_root_path, manifest_dict).
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     project_root, manifest = mock_clean_project
 

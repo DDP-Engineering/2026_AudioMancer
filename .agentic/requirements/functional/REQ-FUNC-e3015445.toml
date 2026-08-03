@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-e3015445"
+title = "Character discovery shall validate and persist deliberate manual"
+status = "active"
+
+requirement = """
+Character discovery shall validate and persist deliberate manual character changes, rejecting duplicate or invalid names.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_manual_add_update_delete_and_reset",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_validate_manual_character_name_rejects_duplicates_and_invalid_names",
+]
+
+priority = "high"
+rationale = """
+Manual corrections must be safe and validated.
+"""
+created = 2026-07-19
+updated = 2026-07-24

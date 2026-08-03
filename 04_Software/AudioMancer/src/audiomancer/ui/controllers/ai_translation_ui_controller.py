@@ -11,9 +11,6 @@
 @brief AI Translation page UI controller for AudioMancer.
 @details Handles translation start/continue, reset, approvals, chunk edits,
          selected-chunk retranslation, and modal progress lifecycle.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.10.0
 """
 
 # IMPORTS
@@ -51,9 +48,6 @@ def handle_start_translation_requested(
     @param[in]  profile_id Selected enabled AI profile identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -137,9 +131,6 @@ def handle_retranslate_selected_requested(
     @param[in]  chunk_id Selected chunk identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -183,9 +174,6 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -239,9 +227,6 @@ def _translation_manifest_stage(summary: dict[str, object]) -> str:
     @param[in]  report Latest translation report payload.
     @return     Workflow stage that remains valid after the translation update.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     if str(summary.get("status", "")) == ai_translation_service.TRANSLATION_STATUS_COMPLETED:
         return "character_discovery_ready"
@@ -254,9 +239,6 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -271,9 +253,6 @@ def handle_approve_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @param[in]  chunk_id Selected chunk identifier.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -290,9 +269,6 @@ def handle_translated_text_changed(window: "MainWindow", chunk_id: str, translat
     @param[in]  translated_text Edited translated text.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -316,9 +292,6 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
     @param[in]  worker_callable Callable that performs the operation.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     workflow_controller_service.start_operation(
         window,
@@ -340,9 +313,6 @@ def _handle_translation_success(window: "MainWindow", result_payload: object) ->
     @param[in]  result_payload Worker result payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     assert isinstance(result_payload, dict)
     _sync_manifest_after_translation(window, result_payload)
@@ -362,9 +332,6 @@ def _handle_translation_failure(window: "MainWindow", error: Exception) -> None:
     @param[in]  error Raised operation exception.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _sync_manifest_from_disk(window)
     QMessageBox.warning(
@@ -384,9 +351,6 @@ def _handle_translation_cancelled(window: "MainWindow", message: str) -> None:
     @param[in]  message Cancellation message.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     _ = message
     _sync_manifest_from_disk(window)
@@ -406,9 +370,6 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
     @param[in]  report Latest translation report payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -454,9 +415,6 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
     """
     if window._current_project_root is None:
         return
@@ -478,9 +436,6 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     @param[in]  profile_id Requested profile identifier.
     @return     Resolved profile payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
 
@@ -492,9 +447,6 @@ def prompt_ai_translation_instructions(window: "MainWindow", language: str) -> s
     @param[in]  language Runtime UI language code.
     @return     Extra translation instructions, an empty string, or None when cancelled.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     instructions = misc_ui_controller.prompt_multiline_text(
         window,
@@ -513,9 +465,6 @@ def _has_chunking_output(project_root: str | None) -> bool:
     @param[in]  project_root Active project root path.
     @return     True when chunking output records can be loaded from disk.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     if not project_root:
         return False
@@ -528,9 +477,6 @@ def _manifest_target_language(window: "MainWindow") -> str:
     @param[in]  window Active main window instance.
     @return     Supported target language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     if isinstance(window._current_manifest, dict):
         target_language = str(

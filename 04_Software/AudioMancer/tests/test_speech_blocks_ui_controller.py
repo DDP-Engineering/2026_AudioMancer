@@ -11,9 +11,6 @@
 @brief Speech Blocks UI controller tests for AudioMancer.
 @details Verifies confirmation gating and explicit destructive reset behavior for
          the Speech Blocks workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.6.4
 """
 
 # IMPORTS
@@ -38,9 +35,6 @@ def test_speech_blocks_ui_controller_requires_confirmation_before_starting(monke
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "SpeechBlocksControllerConfirm")
     window = _build_window(qtbot, project_root)
@@ -77,9 +71,6 @@ def test_speech_blocks_ui_controller_passes_extra_prompt_to_generation(monkeypat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "SpeechBlocksControllerExtraPrompt")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -117,9 +108,6 @@ def test_speech_blocks_ui_controller_passes_extra_prompt_to_generation(monkeypat
         @param[in]  kwargs Worker keyword arguments.
         @return     Captured extra prompt payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-13
-        @version    0.1.0
         """
         return {"additional": kwargs.get("additional_speech_block_instructions")}
 
@@ -149,9 +137,6 @@ def test_speech_blocks_ui_controller_passes_extra_prompt_to_selected_resplit(mon
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "SpeechBlocksControllerResplitExtraPrompt")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -176,9 +161,6 @@ def test_speech_blocks_ui_controller_passes_extra_prompt_to_selected_resplit(mon
         @param[in]  kwargs Worker keyword arguments.
         @return     Captured extra prompt payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-13
-        @version    0.1.0
         """
         return {"additional": kwargs.get("additional_speech_block_instructions")}
 
@@ -208,9 +190,6 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
     """
     project_root = tmp_path / "SpeechBlocksEditStart"
     project_root.mkdir()
@@ -260,9 +239,6 @@ def test_speech_blocks_ui_controller_edit_start_skips_warning_clear_when_clean(m
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     project_root = tmp_path / "SpeechBlocksEditStartClean"
     project_root.mkdir()
@@ -312,9 +288,6 @@ def test_speech_blocks_ui_controller_edit_decline_keeps_editor_locked(monkeypatc
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     project_root = tmp_path / "SpeechBlocksEditDecline"
     project_root.mkdir()
@@ -362,9 +335,6 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.3
     """
     project_root = tmp_path / "SpeechBlocksSaveScroll"
     project_root.mkdir()
@@ -431,9 +401,6 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.0
     """
     project_root = tmp_path / "SpeechBlocksInsertController"
     project_root.mkdir()
@@ -504,9 +471,6 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.1
     """
     project_root = tmp_path / "SpeechBlocksDeleteController"
     project_root.mkdir()
@@ -579,9 +543,6 @@ def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_a
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root = tmp_path / "SpeechBlocksApproveController"
     project_root.mkdir()
@@ -652,9 +613,6 @@ def test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancin
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     project_root = tmp_path / "SpeechBlocksUnapproveController"
     project_root.mkdir()
@@ -732,9 +690,6 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "SpeechBlocksControllerRerun")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -777,9 +732,6 @@ def test_speech_blocks_sync_manifest_completes_only_after_full_approval(tmp_path
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root = _create_project(tmp_path, "SpeechBlocksManifestApproval")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -829,9 +781,6 @@ def test_speech_blocks_sync_manifest_completes_only_after_full_approval(tmp_path
         @brief      Provide the show project state test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         window._current_manifest = loaded_manifest
 
@@ -859,9 +808,6 @@ def _create_project(tmp_path, name: str):
     @param[in]  name Project display name.
     @return     Project root path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -908,9 +854,6 @@ def _build_window(qtbot, project_root):
     @param[in]  project_root Active project root folder.
     @return     Activated MainWindow test instance.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     window = MainWindow(settings_payload=_settings_payload())
     qtbot.addWidget(window)
@@ -923,13 +866,9 @@ def _settings_payload() -> dict[str, object]:
     @brief      Provide the settings payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     return {
         "language": "en",
-        "ui_text_scale": "normal",
         "play_completion_beep": False,
         "llm_profiles": [
             {

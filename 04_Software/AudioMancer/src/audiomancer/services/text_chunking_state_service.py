@@ -12,9 +12,6 @@
 @details Builds the cleaned-text preview, persisted chunk state, AI profile
          selectors, selected-chunk edits, and operator notes used by the Text
          Chunking page.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.9.1
 """
 
 # IMPORTS
@@ -29,7 +26,6 @@ from audiomancer.services import (
     character_discovery_service,
     chunking_document_service,
     home_presenter_service,
-    operation_runtime_service,
     project_workspace_service,
     speech_blocks_service,
     text_cleanup_state_service,
@@ -60,9 +56,6 @@ def build_text_chunking_state(
     @param[in]  settings_payload Validated application settings payload.
     @return     Keyword payload for `TextChunkingPage.set_processing_state`.
     @exception  ValueError Raised when cleaned text is unavailable for manual chunk insertion.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
     """
     if project_root is None or manifest is None:
         return {
@@ -119,9 +112,6 @@ def build_ai_chunking_profile_state(
     @param[in]  settings_payload Active application settings payload.
     @return     Selector payload with ordered entries and one selected id.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -165,9 +155,6 @@ def save_chunk_text_edit(
     @param[in]  chunk_text Edited selected chunk text.
     @return     Updated manifest payload.
     @exception  ValueError Raised when the chunk artifact or selected chunk is unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.1
     """
     chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
     if not chunk_artifact_path.is_file():
@@ -213,9 +200,6 @@ def insert_chunk_after_selected(
     @param[in]  selected_chunk_id Stable chunk identifier used as the insertion anchor, or empty for first insert.
     @return     Updated manifest payload.
     @exception  ValueError Raised when the selected chunk is unavailable or cleaned text is unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     chunks = chunking_document_service.load_chunks(project_root)
     if not chunks and not str(selected_chunk_id).strip():
@@ -258,14 +242,21 @@ def delete_selected_chunk(
     @param[in]  chunk_id Stable chunk identifier to delete.
     @return     Updated manifest payload.
     @exception  ValueError Raised when the selected chunk is unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     chunks = chunking_document_service.load_chunks(project_root)
-    if not any(str(chunk.get("chunk_id", "")) == chunk_id for chunk in chunks):
+    selected_index = next(
+        (index for index, chunk in enumerate(chunks) if str(chunk.get("chunk_id", "")) == chunk_id),
+        -1,
+    )
+    if selected_index < 0:
         raise ValueError("The selected chunk is no longer available.")
-    updated_chunks = [dict(chunk) for chunk in chunks if str(chunk.get("chunk_id", "")) != chunk_id]
+    updated_chunks = [dict(chunk) for chunk in chunks]
+    if (
+        bool(updated_chunks[selected_index].get("starts_after_scene_separator", False))
+        and selected_index + 1 < len(updated_chunks)
+    ):
+        updated_chunks[selected_index + 1]["starts_after_scene_separator"] = True
+    del updated_chunks[selected_index]
     if not updated_chunks:
         raise ValueError("At least one chunk must remain in the project.")
     resequenced_chunks = workflow_impact_service.resequence_records(updated_chunks, start_index=1)
@@ -278,28 +269,6 @@ def delete_selected_chunk(
     )
 
 
-def build_manifest_after_chunk_edit(manifest: dict[str, object]) -> dict[str, object]:
-    """
-    @brief      Build one manifest payload after a manual selected-chunk edit.
-    @param[in]  manifest Current manifest payload before the edit.
-    @return     Manifest with chunking preserved and downstream operations reset.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
-    """
-    updated_manifest = dict(manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    preserved_operation_kinds = operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS
-    for selected_kind in operation_runtime_service.downstream_operation_kinds("chunking", include_current=False):
-        if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
-            operations[selected_kind] = default_operations[selected_kind]
-    updated_manifest["operations"] = operations
-    updated_manifest["current_stage"] = "translation_ready"
-    return updated_manifest
-
-
 def _persist_manual_chunk_change(
     project_root: Path,
     manifest: dict[str, object],
@@ -308,7 +277,7 @@ def _persist_manual_chunk_change(
     reason: str,
 ) -> dict[str, object]:
     """
-    @brief      Persist a manual chunk-list change and apply selective v2 impact.
+    @brief      Persist a manual chunk-list change and apply selective impact.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Current project manifest payload.
     @param[in]  chunks Full updated chunk payload list.
@@ -316,9 +285,6 @@ def _persist_manual_chunk_change(
     @param[in]  reason Stable impact reason token.
     @return     Updated manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     _write_chunk_artifact(project_root, chunks)
     target_language = _manifest_target_language(manifest)
@@ -367,9 +333,6 @@ def _write_chunk_artifact(project_root: Path, chunks: list[dict[str, object]]) -
     @param[in]  chunks Full chunk payload list.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     document = chunking_document_service.load_chunking_document(project_root)
     if document is None:
@@ -404,9 +367,6 @@ def _build_manifest_after_selective_chunk_change(
     @param[in]  manifest Current project manifest payload.
     @return     Updated manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     updated_manifest = dict(manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
@@ -457,9 +417,6 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
     @param[in]  chunk_id New stable chunk identifier.
     @return     Inserted chunk payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     return {
         "chunk_id": chunk_id,
@@ -468,6 +425,8 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
         "cleanup_boundary_confidence": None,
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
+        "cleanup_role": str(source_chunk.get("cleanup_role") or "body"),
+        "starts_after_scene_separator": False,
     }
 
 
@@ -477,9 +436,6 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
     @param[in]  project_root Active project root folder.
     @return     Initial manual chunk payload.
     @exception  ValueError Raised when cleaned text is unavailable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     cleaned_text = text_cleanup_state_service.read_optional_project_text(
         project_root,
@@ -494,6 +450,8 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
         "cleanup_boundary_confidence": None,
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
+        "cleanup_role": "body",
+        "starts_after_scene_separator": False,
     }
 
 
@@ -503,9 +461,6 @@ def _next_chunk_id(chunks: list[dict[str, object]]) -> str:
     @param[in]  chunks Current chunk payload list.
     @return     Next `chunk-####` identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     max_number = 0
     for chunk in chunks:
@@ -525,9 +480,6 @@ def _manifest_target_language(manifest: dict[str, object]) -> str:
     @param[in]  manifest Current project manifest payload.
     @return     Supported target language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     target_language = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
     if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
@@ -553,9 +505,6 @@ def build_text_chunking_notes(
     @param[in]  language Current UI language code.
     @return     Ordered notes list for the chunking page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
     """
     notes: list[str] = []
     if home_presenter_service.source_document_name(manifest) is None:
@@ -693,9 +642,6 @@ def _selected_ai_strategy(settings_payload: dict[str, object] | None) -> str:
     @brief      Execute the selected ai strategy helper.
     @param[in]  settings_payload Payload for `settings_payload`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     if not isinstance(settings_payload, dict):
         return config.DEFAULT_AI_CHUNKING_STRATEGY
@@ -716,9 +662,6 @@ def _chunking_state_strategy(chunking_operation_state: dict[str, object]) -> str
     @param[in]  chunking_operation_state Persisted chunking operation state.
     @return     Valid semantic strategy or the configured default.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
     """
     resume_checkpoint = chunking_operation_state.get("resume_checkpoint")
     if isinstance(resume_checkpoint, dict):
@@ -744,9 +687,6 @@ def _build_token_usage_notes(
     @param[in]  operation_state Value for `operation_state`.
     @param[in]  language Language code.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return ai_state_note_service.build_token_usage_notes(report_payload, operation_state, language)
 

@@ -19,31 +19,11 @@ which folder the project create and open dialogs start in.
 
 ## Behavior
 
-### The problem
+### Directory ownership
 
-Both project folder pickers in `home_ui_controller` fall back to
-`config.APP_ROOT` when no project is open:
-
-- `handle_new_project_requested()` passes
-  `str(window._current_project_root.parent)` when a project is open and
-  `str(config.APP_ROOT)` otherwise.
-- `handle_open_project_requested()` passes
-  `str(window._current_project_root or config.APP_ROOT)`.
-
-`config.APP_ROOT` is the root that owns *packaged* resources — `prompts/`,
-`help/`, `LICENSE*.txt`. For a frozen build installed into
-`C:\Program Files\AudioMancer`, `/opt`, or `/usr/share`, it is a read-only
-system directory. The operator therefore starts browsing inside the install
-tree, and a project created there fails to write. Even on a writable portable
-install the install folder is the wrong place to keep audiobook projects: they
-are operator content, not application data, and they do not belong beside the
-executable.
-
-This is deliberately *not* the same problem as the writable data root. Settings
-and logs moved to `config.APP_USER_DATA_ROOT` — a per-user *application data*
-location — because the application itself must write them. Projects are chosen
-by the operator and belong under their documents folder. The two resolutions
-stay separate and neither derives from the other.
+Project dialogs use an operator documents directory when no project is open.
+Projects are operator content and remain separate from packaged application
+resources and the per-user application data root.
 
 ### Per-user documents directory resolution
 
@@ -146,4 +126,3 @@ Resolved locations:
 - [ ] The resolver returns the home directory when no candidate documents folder exists.
 - [ ] The new-project dialog opens at the active project's parent folder when a project is open, and at the resolved documents root otherwise.
 - [ ] The open-project dialog opens at the active project root when a project is open, and at the resolved documents root otherwise.
-- [ ] `config.APP_ROOT` is no longer used as a file-dialog default directory anywhere in `home_ui_controller`.

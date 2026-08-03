@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-52a1f005"
+title = "Narrator profile generation shall resume checkpoints safely without"
+status = "active"
+
+requirement = """
+Narrator profile generation shall resume checkpoints safely without reanalyzing completed style.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_after_completed_style_window",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_final_generation_without_reanalyzing_style",
+]
+
+priority = "high"
+rationale = """
+Resume must continue without redoing completed work.
+"""
+created = 2026-07-19
+updated = 2026-07-24

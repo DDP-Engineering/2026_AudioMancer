@@ -12,9 +12,6 @@
 @details Reproduces the Repair Project drift observed on a real finished project,
          where re-running Speech Blocks regressed current_stage while audio_blocks
          and audio_assembly stayed completed.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.2.0
 """
 
 # IMPORTS
@@ -29,9 +26,6 @@ def test_operation_summary_advances_the_stage(tmp_path) -> None:
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_root = _project_at_stage(tmp_path, "AdvanceProject", "character_voices_ready")
 
@@ -54,9 +48,6 @@ def test_operation_summary_never_moves_the_stage_backwards(tmp_path) -> None:
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_root = _finished_project(tmp_path, "RegressProject")
 
@@ -82,9 +73,6 @@ def test_lower_requested_stage_does_not_destroy_completed_downstream_work(tmp_pa
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_root = _finished_project(tmp_path, "PreserveProject")
 
@@ -112,9 +100,6 @@ def test_finished_manifest_claims_no_completed_work_above_its_stage(tmp_path) ->
     @param[in]  tmp_path Temporary project root fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_root = _finished_project(tmp_path, "ConsistentProject")
     project_workspace_service.sync_manifest_operation_summary(
@@ -148,9 +133,6 @@ def _project_at_stage(tmp_path, display_name: str, stage: str):
     @param[in]  stage Stage token to persist.
     @return     Active project root path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(display_name, tmp_path)
     manifest["source_document"] = {
@@ -175,9 +157,6 @@ def _finished_project(tmp_path, display_name: str):
     @param[in]  display_name Project display name.
     @return     Active project root path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.2.0
     """
     project_root = _project_at_stage(tmp_path, display_name, "audio_assembly_ready")
     manifest = project_workspace_service.load_manifest(project_root)

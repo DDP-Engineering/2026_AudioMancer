@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-ca6f6b29"
+title = "Audio-block voice-target invalidation shall remove target audio and"
+status = "active"
+
+requirement = """
+Audio-block voice-target invalidation shall remove target audio and clone profiles, preserve invalidated rows, and regenerate a stale-state row.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_removes_audio_and_clone_profiles_for_voice_target",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_preserves_invalidated_voice_target_rows",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_regenerates_invalidated_voice_target_row_with_stale_state",
+]
+
+priority = "high"
+rationale = """
+Voice-target changes must invalidate precisely.
+"""
+created = 2026-07-19
+updated = 2026-07-24

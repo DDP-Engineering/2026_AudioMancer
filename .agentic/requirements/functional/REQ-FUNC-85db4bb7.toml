@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-85db4bb7"
+title = "Character discovery shall persist outputs and report and append"
+status = "active"
+
+requirement = """
+Character discovery shall persist outputs and report and append operator character rules.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_one_authoritative_document",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_appends_and_persists_operator_character_rules",
+]
+
+priority = "high"
+rationale = """
+Discovery results and operator rules must be durable.
+"""
+created = 2026-07-19
+updated = 2026-07-24

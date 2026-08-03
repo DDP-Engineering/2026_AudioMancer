@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-0eb273c8"
+title = "Character voice-definition regeneration shall preserve the compact"
+status = "active"
+
+requirement = """
+Character voice-definition regeneration shall preserve the compact voice prompt and avoid stereotyping or duplicated age guidance.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_preserves_compact_voice_prompt",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_prevents_young_default_when_age_unknown",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_does_not_duplicate_explicit_age_guidance",
+]
+
+priority = "high"
+rationale = """
+Regenerated definitions must respect existing guidance and avoid demographic defaults.
+"""
+created = 2026-07-19
+updated = 2026-07-24

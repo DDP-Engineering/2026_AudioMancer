@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-6ac5f253"
+title = "Cleanup paragraph records shall live in cleanup.json as output offsets"
+status = "active"
+
+requirement = """
+Cleanup paragraph records shall live in cleanup.json as output offsets without duplicating paragraph text.
+"""
+
+verification = "Paragraph offset reconstruction test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_paragraph_offsets_reconstruct_clean_text",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+One metadata document remains authoritative while Chunking reconstructs text from the verified clean-text output.
+"""
+created = 2026-07-18
+updated = 2026-07-30

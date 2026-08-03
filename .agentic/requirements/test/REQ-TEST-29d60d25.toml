@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-TEST-29d60d25"
+title = "The PCM codec differential parity test shall skip rather than fail when"
+status = "active"
+
+requirement = """
+The PCM codec differential parity test shall skip rather than fail when the audioop reference module is unavailable.
+"""
+
+verification = "Automated: parity guard asserted to track interpreter version so the suite stays green on 3.13."
+
+affected_paths = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_parity_suite_skips_when_reference_is_unavailable",
+]
+
+spec = "specs/pcm_codec.spec.md"
+priority = "normal"
+rationale = """
+The oracle comparison can only run where audioop still exists, so the suite must stay green on Python 3.13 without losing the check on 3.12.
+"""
+created = 2026-07-25
+updated = 2026-07-25

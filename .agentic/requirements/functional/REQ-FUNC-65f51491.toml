@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-65f51491"
+title = "The Characters controller shall preserve approved speech work when a"
+status = "active"
+
+requirement = """
+The Characters controller shall preserve approved speech work when a voice-definition-only change permits it.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_preserves_speech_approval_for_voice_definition_change",
+]
+
+priority = "high"
+rationale = """
+A voice-definition-only edit must not discard approved speech work.
+"""
+created = 2026-07-19
+updated = 2026-07-24

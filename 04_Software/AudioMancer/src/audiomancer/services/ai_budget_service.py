@@ -11,9 +11,6 @@
 @brief Shared AI context-budget helpers for AudioMancer.
 @details Centralizes conservative token estimates and context-window input
          budget calculations used by AI-assisted workflow services.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.3.0
 """
 
 # IMPORTS
@@ -29,9 +26,6 @@ def estimate_text_tokens(text: str) -> int:
     @param[in]  text Candidate prompt or payload text.
     @return     Positive estimated token count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     return max(1, len(str(text)) // 4)
 
@@ -52,9 +46,6 @@ def available_text_budget(
     @param[in]  text_context_fraction Maximum context fraction available to input text.
     @return     Usable input-token budget.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     available_budget = (
         int(context_window) - int(max_output_tokens) - int(prompt_budget_tokens) - int(safety_margin_tokens)
@@ -71,9 +62,6 @@ def uses_online_text_budget(ai_profile_payload: dict[str, object]) -> bool:
     @param[in]  ai_profile_payload Selected AI profile payload.
     @return     True when the profile backend is the configured online AI backend.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     return str(ai_profile_payload.get("backend_kind", "")).strip() == config.ONLINE_AI_BACKEND_KIND
 
@@ -100,9 +88,6 @@ def context_budget_metadata(
     @param[in]  online_text_context_fraction Optional direct context fraction for online AI providers.
     @return     Common context-budget metadata fields.
     @exception  ValueError Raised when the selected profile leaves too little input room.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.2.0
     """
     context_window = max(1, int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)))
     max_output_tokens = max(

@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-PLAT-574da6b6"
+title = "The active settings file path and the application log directory shall"
+status = "active"
+
+requirement = """
+The active settings file path and the application log directory shall both derive from the resolved writable data root rather than directly from the application root.
+"""
+
+verification = "Automated: 4 linked pytest selectors asserting APP_SETTINGS_PATH and the log directory follow the resolved data root for the override, read-only-install and frozen-bundle layouts."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_resolves_frozen_packaged_runtime_resources",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_creates_per_run_log_file",
+  "04_Software/AudioMancer/tests/test_user_data_location.py::test_read_only_application_root_keeps_settings_and_logs_under_the_data_root",
+  "04_Software/AudioMancer/tests/test_user_data_location.py::test_settings_and_log_paths_follow_the_resolved_data_root",
+]
+
+spec = "specs/user_data_location.spec.md"
+priority = "high"
+rationale = """
+Deriving writable runtime data from the packaged-resource root is what made a read-only installation directory fatal.
+"""
+created = 2026-07-25
+updated = 2026-07-25

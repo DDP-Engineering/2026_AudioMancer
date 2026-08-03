@@ -11,9 +11,6 @@
 @brief Focused tests for Speech Blocks normalization helpers.
 @details Verifies extracted content-kind, operation-row, warning, identifier,
          and dialogue text normalization behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.0
 """
 
 # IMPORTS
@@ -26,9 +23,6 @@ def test_normalize_block_text_strips_only_dialogue_delimiters() -> None:
     @brief      Verify dialogue cleanup removes outer quote/dash delimiters only for dialogue.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert speech_blocks_normalization_service.normalize_block_text('"Hello."', "dialogue") == "Hello."
     assert speech_blocks_normalization_service.normalize_block_text("“Hello.”", "dialogue") == "Hello."
@@ -42,9 +36,6 @@ def test_content_kind_and_operation_entry_normalization() -> None:
     @brief      Verify content-kind tokens and operation-row speaker fields normalize consistently.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     assert speech_blocks_normalization_service.normalize_content_kind("Scene Ambience") == "scene_ambience"
     assert speech_blocks_normalization_service.normalize_content_kind("Background Noise") == "narration"
@@ -65,9 +56,6 @@ def test_warning_flags_and_identifiers_are_stable() -> None:
     @brief      Verify warning deduplication and Speech Block identifier formatting.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     warning_flags = ["ambiguous_speaker"]
 

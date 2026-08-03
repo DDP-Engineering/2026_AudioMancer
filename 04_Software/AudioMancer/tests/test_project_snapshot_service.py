@@ -11,9 +11,6 @@
 @brief Whole-project ZIP snapshot service tests for AudioMancer.
 @details Verifies full project archive creation, path safety, UTF-8 handling,
          extension helpers, and failure cleanup behavior.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.3.1
 """
 
 # IMPORTS
@@ -36,9 +33,6 @@ def test_project_snapshot_service_creates_zip_with_top_level_project_folder(tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
     snapshot_path = tmp_path / "exports" / "snapshot.zip"
@@ -64,9 +58,6 @@ def test_project_snapshot_service_preserves_utf8_filenames_and_content(tmp_path)
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
     utf8_file = project_root / "știri_copilărie.txt"
@@ -87,9 +78,6 @@ def test_project_snapshot_service_rejects_destination_inside_project(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  ValueError Expected for inside-project destinations.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
 
@@ -103,9 +91,6 @@ def test_project_snapshot_service_appends_zip_extension_and_default_name(tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("Snapshot Helper", tmp_path)
 
@@ -127,9 +112,6 @@ def test_project_snapshot_service_does_not_leave_final_zip_when_creation_fails(m
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  FileNotFoundError Expected from the injected missing file.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
     snapshot_path = tmp_path / "exports" / "failed.zip"
@@ -150,9 +132,6 @@ def test_project_snapshot_service_skips_symlink_directories_when_supported(tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
     external_folder = tmp_path / "external_payload"
@@ -177,9 +156,6 @@ def test_project_snapshot_service_reports_progress(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
     snapshot_path = tmp_path / "exports" / "progress.zip"
@@ -206,9 +182,6 @@ def test_project_snapshot_service_cancellation_removes_temporary_zip(tmp_path) -
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  OperationCancelledError Expected cancellation signal.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
     snapshot_path = tmp_path / "exports" / "cancelled.zip"
@@ -219,9 +192,6 @@ def test_project_snapshot_service_cancellation_removes_temporary_zip(tmp_path) -
         @brief      Request cancellation after snapshot creation has started.
         @return     True after the first archive loop cancellation check.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         calls["count"] += 1
         return calls["count"] > 2
@@ -246,9 +216,6 @@ def _build_snapshot_project(tmp_path) -> tuple[Path, dict[str, object]]:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     Tuple with project root and manifest.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("Snapshot Project", tmp_path)
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Clean text\n", encoding="utf-8")

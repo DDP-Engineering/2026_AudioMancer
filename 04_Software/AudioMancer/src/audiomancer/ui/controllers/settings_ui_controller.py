@@ -11,9 +11,6 @@
 @brief Settings-dialog UI controller for AudioMancer.
 @details Handles Settings dialog presentation, persistence, and application of
          runtime language and UI-theme changes to the shell.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-14
-@version 0.5.1
 """
 
 # IMPORTS
@@ -42,9 +39,6 @@ def show_settings_dialog(window) -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
     window._settings_page.load_settings(window._settings_payload)
     window._settings_dialog.show()
@@ -59,9 +53,6 @@ def _persist_settings_from_dialog(window, *, close_dialog: bool) -> None:
     @param[in]  close_dialog Whether the Settings dialog should close after saving.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     merged_settings = window._settings_page.build_settings(window._settings_payload)
     settings_service.save_settings(merged_settings)
@@ -84,9 +75,6 @@ def apply_settings_from_dialog(window) -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-14
-    @version    0.1.0
     """
     _persist_settings_from_dialog(window, close_dialog=False)
 
@@ -97,9 +85,6 @@ def save_settings_from_dialog(window) -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     _persist_settings_from_dialog(window, close_dialog=True)
 
@@ -110,9 +95,6 @@ def apply_current_ui_settings(window) -> None:
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
     ui_scroll_service.install_global_scroll_step_filter(
         QApplication.instance(),
@@ -128,6 +110,14 @@ def apply_current_ui_settings(window) -> None:
         window,
         window._settings_payload,
     )
+    project_root = getattr(window, "_current_project_root", None)
+    manifest = getattr(window, "_current_manifest", None)
+    if project_root is not None and manifest is not None:
+        window._refresh_current_page_state(
+            project_root,
+            manifest,
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        )
 
 
 def apply_language(window, language: str) -> None:
@@ -137,9 +127,6 @@ def apply_language(window, language: str) -> None:
     @param[in]  language Target UI language code.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.2.1
     """
     window.setWindowTitle(ui_state_service.translate("window_title.main", language))
     window._action_new_project.setText(ui_state_service.translate("toolbar.new_project", language))

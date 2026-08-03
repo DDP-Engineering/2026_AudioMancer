@@ -14,9 +14,6 @@
          generation through root-level state and report artifacts. Scene
          Ambience prompt WAVs can be mixed into grouped ambience beds for
          preview and final assembly.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.7.2
 """
 
 # IMPORTS
@@ -96,9 +93,6 @@ def default_audio_assembly_settings() -> AudioAssemblySettings:
     @brief      Build the default per-project Audio Assembly settings payload.
     @return     Default Audio Assembly settings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     return {
         "output_mode": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_MODE,
@@ -117,9 +111,6 @@ def normalize_audio_assembly_settings(value: object) -> AudioAssemblySettings:
     @param[in]  value Candidate settings mapping.
     @return     Normalized Audio Assembly settings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     defaults = default_audio_assembly_settings()
     payload = value if isinstance(value, dict) else {}
@@ -167,9 +158,6 @@ def save_audio_assembly_settings(
     @param[in]  settings Candidate Audio Assembly settings.
     @return     Reloaded normalized manifest.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     updated_manifest = dict(manifest)
     updated_manifest["audio_assembly_settings"] = normalize_audio_assembly_settings(settings)
@@ -184,9 +172,6 @@ def load_operation_state(project_root: str | Path) -> AudioAssemblyState | None:
     @param[in]  project_root Active project root folder.
     @return     Persisted state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     return load_operation_state_payload(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
 
@@ -198,9 +183,6 @@ def load_audio_assembly_report(project_root: str | Path) -> AudioAssemblyReport 
     @param[in]  project_root Active project root folder.
     @return     Persisted report payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     report_path = resolve_operation_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
     if not report_path.is_file():
@@ -215,9 +197,6 @@ def load_generated_outputs(project_root: str | Path) -> list[dict[str, object]]:
     @param[in]  project_root Active project root folder.
     @return     Ordered output record list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     report = load_audio_assembly_report(project_root)
     if not isinstance(report, dict):
@@ -235,9 +214,6 @@ def list_scene_mix_groups(project_root: str | Path) -> list[SceneMixGroup]:
     @param[in]  project_root Active project root folder.
     @return     Ordered Scene Ambience group records.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     resolved_project_root = Path(project_root)
     audio_blocks = speech_blocks_service.sort_speech_blocks(
@@ -261,9 +237,6 @@ def generate_scene_mix_preview(
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Refreshed Scene Ambience group record.
     @exception  ValueError Raised when the group is unavailable or incomplete.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     _emit_progress(progress_callback, 0, 3, "Preparing Scene Mix preview.")
@@ -308,9 +281,6 @@ def has_persisted_audio_assembly(project_root: str | Path) -> bool:
     @param[in]  project_root Active project root folder.
     @return     True when persisted assembly data exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     output_root = Path(project_root) / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     operation_state = load_operation_state(project_root)
@@ -338,9 +308,6 @@ def reset_audio_assembly(project_root: str | Path) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     operation_runtime_service.reset_operation_data(project_root, "audio_assembly", include_current=True)
 
@@ -362,9 +329,6 @@ def start_or_continue_composition(
     @exception  ValueError Raised when prerequisites are missing or stale data requires reset.
     @exception  RuntimeError Raised when source WAV files cannot be composed.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.1
     """
     resolved_project_root = Path(project_root)
     settings = normalize_audio_assembly_settings(manifest.get("audio_assembly_settings"))
@@ -480,9 +444,6 @@ def _load_approved_audio_blocks(project_root: Path, include_scene_ambience: bool
     @param[in]  project_root Active project root folder.
     @return     Approved generated Audio Blocks.
     @exception  ValueError Raised when prerequisites are not satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.1
     """
     audio_blocks = speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(project_root))
     if not audio_blocks:
@@ -521,9 +482,6 @@ def _build_composition_blocks(
     @param[in]  include_scene_ambience True when Scene Ambience contributes to output.
     @return     Ordered blocks for output planning and WAV composition.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     blocks = [
         _enrich_block_duration(project_root, block)
@@ -563,9 +521,6 @@ def _scene_mix_groups_from_blocks(
     @param[in]  include_blocks True to include source block payloads.
     @return     Ordered Scene Ambience mix group records.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     groups_by_key: dict[str, list[dict[str, object]]] = {}
     for block in audio_blocks:
@@ -593,9 +548,6 @@ def _scene_mix_group_record(
     @param[in]  include_blocks True to include source block payloads.
     @return     Scene Ambience group record.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     ordered_blocks = speech_blocks_service.sort_speech_blocks([dict(block) for block in source_blocks])
     first_block = ordered_blocks[0] if ordered_blocks else {}
@@ -630,9 +582,6 @@ def _strip_scene_mix_blocks(group: SceneMixGroup) -> SceneMixGroup:
     @param[in]  group Scene Ambience group record.
     @return     Public group record.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     public_group = dict(group)
     public_group.pop("_source_blocks", None)
@@ -646,9 +595,6 @@ def _scene_mix_virtual_block(project_root: Path, source_blocks: list[dict[str, o
     @param[in]  source_blocks Source Scene Ambience Audio Blocks.
     @return     Virtual Audio Block consumed by final composition.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     group = _scene_mix_group_record(project_root, source_blocks, include_blocks=True)
     first_block = dict(source_blocks[0])
@@ -679,9 +625,6 @@ def _build_output_plan(
     @param[in]  settings Normalized Audio Assembly settings.
     @return     Ordered output plan entries.
     @exception  ValueError Raised when no playable blocks exist.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.4.0
     """
     playable_blocks = _build_composition_blocks(project_root, audio_blocks, bool(settings["include_scene_ambience"]))
     if not playable_blocks:
@@ -714,9 +657,6 @@ def _plan_per_chunk_outputs(blocks: list[dict[str, object]]) -> list[dict[str, o
     @param[in]  blocks Playable Audio Blocks.
     @return     Ordered per-chunk output plan.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     grouped: dict[str, list[dict[str, object]]] = {}
     for block in blocks:
@@ -747,9 +687,6 @@ def _plan_time_limited_outputs(
     @param[in]  settings Normalized Audio Assembly settings.
     @return     Ordered time-limited output plan.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     max_seconds = max(1, int(max_minutes) * 60)
     output_plan: list[dict[str, object]] = []
@@ -788,9 +725,6 @@ def _time_part_record(
     @param[in]  over_limit_warning True when one block exceeds the limit.
     @return     Output plan record.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return {
         "output_key": f"part-{output_index:04d}",
@@ -811,9 +745,6 @@ def _with_reference_audio_path(
     @param[in]  blocks Full composable Audio Block list.
     @return     Output plan with optional reference audio paths.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     reference_path = next(
         (
@@ -834,9 +765,6 @@ def _warnings_for_output_plan(output_plan: list[dict[str, object]]) -> list[dict
     @param[in]  output_plan Planned output records.
     @return     Warning records for the planned outputs.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     return [
         {
@@ -861,9 +789,6 @@ def _automatic_gap_ms(
     @param[in]  settings Normalized Audio Assembly settings.
     @return     Automatic gap in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     if _is_pause_block(previous_block) or _is_pause_block(current_block):
         return 0
@@ -886,9 +811,6 @@ def _compose_output_file(
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Completed output record.
     @exception  RuntimeError Raised when source WAV files are invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.5.1
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     output_root.mkdir(parents=True, exist_ok=True)
@@ -957,9 +879,6 @@ def _materialize_scene_mix_block(
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Composition block with a materialized audio path.
     @exception  RuntimeError Raised when Scene Ambience sources cannot be mixed.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if not _is_scene_mix_virtual_block(block):
         return block
@@ -995,9 +914,6 @@ def _write_scene_mix_group(
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Generated scene mix WAV path.
     @exception  RuntimeError Raised when source WAV files are missing or invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.2.0
     """
     source_blocks = [dict(item) for item in group.get("_source_blocks", []) if isinstance(item, dict)]
     source_paths = [_audio_path(project_root, block) for block in source_blocks]
@@ -1052,9 +968,6 @@ def _mix_wav_sources(
     @param[in]  cancel_requested Optional cancellation callback.
     @return     None.
     @exception  RuntimeError Raised when source WAV files are incompatible.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.2.0
     """
     if not source_paths:
         raise RuntimeError("Scene Ambience mix requires at least one source WAV.")
@@ -1101,9 +1014,6 @@ def _scene_mix_target_frames(sources: list[wave.Wave_read], frame_rate: int, dur
     @param[in]  duration_seconds Requested target duration.
     @return     Target frame count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if frame_rate > 0 and duration_seconds > 0.0:
         return max(1, int(round(frame_rate * duration_seconds)))
@@ -1118,9 +1028,6 @@ def _read_or_pad_wav_frames(source_wav: wave.Wave_read, frame_count: int, params
     @param[in]  params Reference WAV parameters.
     @return     Exactly `frame_count` frames of PCM bytes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     frame_size = max(int(params.nchannels) * int(params.sampwidth), 1)
     data = source_wav.readframes(frame_count)
@@ -1139,9 +1046,6 @@ def _mix_pcm_chunks(chunks: list[bytes], frame_count: int, params) -> bytes:
     @param[in]  params Reference WAV parameters.
     @return     Mixed PCM byte chunk.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     channels = int(params.nchannels)
     sample_width = int(params.sampwidth)
@@ -1164,9 +1068,6 @@ def _decode_pcm_sample(sample_bytes: bytes, sample_width: int) -> int:
     @param[in]  sample_width Sample width in bytes.
     @return     Signed sample value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if sample_width == 1:
         return int.from_bytes(sample_bytes or b"\x80", "little", signed=False) - 128
@@ -1180,9 +1081,6 @@ def _encode_pcm_sample(sample_value: int, sample_width: int) -> bytes:
     @param[in]  sample_width Sample width in bytes.
     @return     Raw PCM sample bytes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if sample_width == 1:
         return int(max(0, min(sample_value + 128, 255))).to_bytes(1, "little", signed=False)
@@ -1197,9 +1095,6 @@ def _scene_mix_group_key(block: dict[str, object]) -> str:
     @param[in]  block Scene Ambience Audio Block payload.
     @return     Stable group key.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     chunk_id = str(block.get("chunk_id", "")).strip()
     position = str(block.get("ambience_position", "")).strip() or "scene"
@@ -1213,9 +1108,6 @@ def _scene_mix_label(block: dict[str, object]) -> str:
     @param[in]  block Scene Ambience Audio Block payload.
     @return     Display label.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     chunk_id = str(block.get("chunk_id", "")).strip() or "chunk"
     position = str(block.get("ambience_position", "")).strip() or "scene"
@@ -1232,9 +1124,6 @@ def _scene_mix_duration_seconds(project_root: Path, source_blocks: list[dict[str
     @param[in]  source_blocks Source Scene Ambience blocks.
     @return     Target group duration in seconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     durations: list[float] = []
     for block in source_blocks:
@@ -1254,9 +1143,6 @@ def _scene_mix_output_path(project_root: Path, source_blocks: list[dict[str, obj
     @param[in]  duration_seconds Target group duration.
     @return     Scene mix WAV path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     first_block = source_blocks[0] if source_blocks else {}
     group_digest = hashlib.sha1(_scene_mix_group_key(first_block).encode("utf-8")).hexdigest()[:10]  # noqa: S324
@@ -1281,9 +1167,6 @@ def _scene_mix_source_fingerprint(
     @param[in]  duration_seconds Target group duration.
     @return     SHA-1 hex digest.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     payload = {
         "duration_seconds": duration_seconds,
@@ -1307,9 +1190,6 @@ def _is_scene_mix_virtual_block(block: dict[str, object]) -> bool:
     @param[in]  block Composition block.
     @return     True when the block represents a mixed Scene Ambience group.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     return bool(str(block.get("scene_mix_group_key", "")).strip())
 
@@ -1320,9 +1200,6 @@ def _composition_block_count(block: dict[str, object]) -> int:
     @param[in]  block Composition block.
     @return     Source Audio Block count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-25
-    @version    0.1.0
     """
     if _is_scene_mix_virtual_block(block):
         return _bounded_int(block.get("scene_mix_source_block_count", 1), 1, 1_000_000, 1)
@@ -1341,9 +1218,6 @@ def _write_silence(output_wav: wave.Wave_write, gap_ms: int, params) -> int:
     @param[in]  params WAV params from the current source file.
     @return     Number of frames written.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     if gap_ms <= 0:
         return 0
@@ -1365,9 +1239,6 @@ def _copy_wav_frames(source_wav, output_wav: wave.Wave_write, cancel_requested=N
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Number of frames copied.
     @exception  OperationCancelledError Raised when the operator cancels the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     frame_size = max(int(source_wav.getnchannels()) * int(source_wav.getsampwidth()), 1)
     remaining_frames = int(source_wav.getnframes())
@@ -1401,9 +1272,6 @@ def _copy_or_convert_wav_frames(
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Number of output frames written.
     @exception  RuntimeError Raised when source conversion is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-27
-    @version    0.1.0
     """
     source_params = source_wav.getparams()
     if (source_params[:3], source_params[4:]) == (target_params[:3], target_params[4:]):
@@ -1444,9 +1312,6 @@ def _convert_wav_frame_chunk(frame_data: bytes, source_params, target_params, ra
     @param[in]  rate_state Running resampler state from `pcm_codec.convert_frame_rate`.
     @return     Tuple of converted PCM bytes and updated rate-conversion state.
     @exception  RuntimeError Raised when channel conversion is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-27
-    @version    0.1.0
     """
     converted_data = frame_data
     current_sample_width = int(source_params.sampwidth)
@@ -1484,9 +1349,6 @@ def _convert_wav_channels(frame_data: bytes, sample_width: int, source_channels:
     @param[in]  target_channels Target channel count.
     @return     PCM bytes with the target channel count.
     @exception  RuntimeError Raised when the channel conversion is unsupported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-27
-    @version    0.1.0
     """
     if source_channels == target_channels:
         return frame_data
@@ -1521,9 +1383,6 @@ def _build_report(
     @param[in]  completed_at Optional completion timestamp.
     @return     Report payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     included_audio_block_count = sum(
         1
@@ -1566,9 +1425,6 @@ def _build_operation_state(
     @param[in]  output_plan Planned output files.
     @return     Operation-state payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     _ = project_root
     return build_operation_state_payload(
@@ -1595,9 +1451,6 @@ def _persist_state(project_root: Path, report: AudioAssemblyReport, operation_st
     @param[in]  operation_state Current state payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     write_json_atomic(
         build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME),
@@ -1621,9 +1474,6 @@ def _completed_records_for_resume(
     @param[in]  input_fingerprint Current input fingerprint.
     @return     Reusable completed output records.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
     if not isinstance(metadata, dict) or str(metadata.get("input_fingerprint", "")) != input_fingerprint:
@@ -1643,9 +1493,6 @@ def _requires_manual_reset(existing_state: dict[str, object], input_fingerprint:
     @param[in]  input_fingerprint Current input fingerprint.
     @return     True when operator reset is required.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     if not existing_state:
         return False
@@ -1678,9 +1525,6 @@ def _audio_path(project_root: Path, audio_block: dict[str, object]) -> Path | No
     @param[in]  audio_block Audio Block payload.
     @return     Absolute audio path or `None` when no path is stored.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     return _safe_project_artifact_path(project_root, audio_block.get("audio_relative_path"))
 
@@ -1691,9 +1535,6 @@ def _is_assembly_block(audio_block: dict[str, object], include_scene_ambience: b
     @param[in]  audio_block Audio Block payload.
     @return     True for generated audio blocks and metadata-only pause blocks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     if _is_scene_ambience_block(audio_block):
         return bool(include_scene_ambience) and bool(str(audio_block.get("audio_relative_path", "") or "").strip())
@@ -1707,9 +1548,6 @@ def _is_included_scene_ambience_block(audio_block: dict[str, object], include_sc
     @param[in]  include_scene_ambience True when Scene Ambience audio should be included.
     @return     False only for Scene Ambience blocks excluded by settings.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     return bool(include_scene_ambience) or not _is_scene_ambience_block(audio_block)
 
@@ -1720,9 +1558,6 @@ def _is_scene_ambience_block(audio_block: dict[str, object]) -> bool:
     @param[in]  audio_block Audio Block payload.
     @return     True for Scene Ambience content-kind blocks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
     """
     return str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
 
@@ -1733,9 +1568,6 @@ def _is_pause_block(audio_block: dict[str, object]) -> bool:
     @param[in]  audio_block Audio Block payload.
     @return     True for pause content-kind blocks.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return (
         bool(audio_block.get("metadata_only", False))
@@ -1749,9 +1581,6 @@ def _pause_duration_ms(audio_block: dict[str, object]) -> int:
     @param[in]  audio_block Audio Block payload.
     @return     Positive pause duration in milliseconds.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     value = audio_block.get("pause_duration_ms")
     try:
@@ -1770,9 +1599,6 @@ def _enrich_block_duration(project_root: Path, block: dict[str, object]) -> dict
     @param[in]  block Audio Block payload.
     @return     Audio Block payload copy with `duration_seconds`.
     @exception  wave.Error Raised when the source file is not a readable WAV.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.1
     """
     enriched = dict(block)
     if _is_pause_block(enriched):
@@ -1795,9 +1621,6 @@ def _reference_wav_params(
     @param[in]  fallback_relative_path Project-relative WAV used when output only contains pauses.
     @return     Reference WAV params from a speech-preferred playable source block.
     @exception  RuntimeError Raised when no source WAV exists for the output.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     preferred_blocks = [block for block in blocks if not _is_scene_ambience_block(block)]
     for candidate_blocks in (preferred_blocks, blocks):
@@ -1820,9 +1643,6 @@ def _wav_duration_seconds(path: Path) -> float:
     @param[in]  path Source WAV file path.
     @return     Duration in seconds.
     @exception  wave.Error Raised when the source file is not a readable WAV.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     with wave.open(str(path), "rb") as wav_file:
         frame_rate = wav_file.getframerate()
@@ -1838,9 +1658,6 @@ def _validate_compatible_wav_inputs(project_root: Path, audio_blocks: list[dict[
     @param[in]  audio_blocks Playable Audio Block payloads.
     @return     None.
     @exception  RuntimeError Raised when WAV parameters are unsupported or incompatible.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
     """
     for block in audio_blocks:
         audio_path = _audio_path(project_root, block)
@@ -1863,9 +1680,6 @@ def _build_input_fingerprint(
     @param[in]  settings Normalized Audio Assembly settings.
     @return     SHA-1 fingerprint token used for resume validation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     payload = {
         "settings": normalize_audio_assembly_settings(settings),
@@ -1894,9 +1708,6 @@ def _file_sha1(path: Path | None) -> str | None:
     @param[in]  path Candidate file path.
     @return     Hex digest or `None` when the path is missing.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if path is None or not path.is_file():
         return None
@@ -1929,9 +1740,6 @@ def _bounded_int(value: object, minimum: int, maximum: int, fallback: int) -> in
     @param[in]  fallback Fallback value for invalid input.
     @return     Bounded integer value.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     try:
         resolved = int(value)
@@ -1946,9 +1754,6 @@ def _resolve_started_at(existing_state: dict[str, object]) -> str:
     @param[in]  existing_state Existing operation-state payload.
     @return     Existing runtime token or the current UTC timestamp.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
     """
     resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
     if not isinstance(resume_checkpoint, dict):

@@ -11,9 +11,6 @@
 @brief Focused tests for deterministic same-narrator Speech Blocks segmentation.
 @details Verifies exact source coverage, sentence integrity, quotation safety,
          multilingual behaviour, and budget-overflow flagging.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-26
-@version 0.1.0
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ def _plan(text: str, target_units: int = 40) -> list[dict[str, object]]:
     @param[in]  target_units Preferred budget units per block.
     @return     Planned block payloads.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     return narrator_split.plan_narrator_blocks(text, target_units)
 
@@ -45,9 +39,6 @@ def _rebuild(blocks: list[dict[str, object]]) -> str:
     @param[in]  blocks Planned block payloads.
     @return     Reconstructed source text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     return "".join(str(block["source_text"]) for block in blocks)
 
@@ -57,9 +48,6 @@ def test_planned_blocks_reproduce_the_source_chunk_exactly() -> None:
     @brief      Verify planned blocks never lose or alter source characters.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = (
         "Camera era goala. Pe masa statea o scrisoare nedeschisa. "
@@ -77,9 +65,6 @@ def test_blocks_never_end_in_the_middle_of_a_sentence() -> None:
     @brief      Verify every block boundary lands on a sentence terminator.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = " ".join(f"Aceasta este propozitia numarul {index} din paragraf." for index in range(1, 13))
 
@@ -95,9 +80,6 @@ def test_multi_sentence_quotation_is_never_split_open() -> None:
     @brief      Verify a quoted passage spanning several sentences stays in one block.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = 'El spuse: "Am fost acolo. Am vazut totul. Nu mai am ce adauga." Apoi a plecat.'
 
@@ -111,13 +93,9 @@ def test_multi_sentence_quotation_is_never_split_open() -> None:
 def test_sentence_boundary_inside_an_open_quote_is_not_used() -> None:
     """
     @brief      Verify a sentence end inside a quotation is never promoted to a block boundary.
-    @details    Ported from the retired boundary-candidate contract, which covered
-                SB-NARRATOR-QUOTE-001 and REQ-FUNC-055.
+    @details    Covers the current deterministic same-narrator segmentation contract.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = (
         "He had been working on it for years.\n"
@@ -154,9 +132,6 @@ def test_every_supported_quote_pair_keeps_its_passage_intact(opening_quote: str,
     @param[in]  closing_quote Matching closing delimiter.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     quoted = f"{opening_quote}Prima parte. A doua parte. A treia parte.{closing_quote}"
     source_text = f"El incepu. {quoted} Apoi tacu."
@@ -175,9 +150,6 @@ def test_single_oversized_sentence_stays_whole_and_is_flagged() -> None:
     @brief      Verify an over-budget sentence is preserved and marked instead of cut.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = " ".join(["cuvant"] * 60) + "."
 
@@ -193,9 +165,6 @@ def test_abbreviation_does_not_create_a_block_boundary() -> None:
     @brief      Verify a period closing an abbreviation is not treated as a sentence end.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = "Dr. Ionescu a intrat in camera fara sa bata la usa mai intai."
 
@@ -210,9 +179,6 @@ def test_short_trailing_block_is_absorbed_into_its_predecessor() -> None:
     @brief      Verify greedy packing does not strand a few words as a final block.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = "Prima propozitie este destul de lunga pentru a umple un bloc intreg singura. Nu."
 
@@ -242,9 +208,6 @@ def test_supported_languages_split_without_losing_text(label: str, source_text: 
     @param[in]  source_text Source chunk text in that language.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     blocks = narrator_split.plan_narrator_blocks(source_text, target_units=8)
 
@@ -258,9 +221,6 @@ def test_space_free_scripts_are_split_into_several_blocks() -> None:
     @brief      Verify CJK paragraphs are budgeted by characters rather than collapsing into one block.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = "".join("他笑了。她沉默了。然后他走了。" for _ in range(6))
 
@@ -277,9 +237,6 @@ def test_slightly_oversized_chunk_splits_into_even_blocks_without_flags() -> Non
                 remainder, which the orphan merge then folded back into one over-budget block.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = " ".join(f"Propozitia numarul {index} umple cateva unitati de buget." for index in range(1, 15))
     target_units = 60
@@ -299,9 +256,6 @@ def test_planning_is_deterministic_across_repeated_runs() -> None:
     @brief      Verify identical input always yields byte-identical blocks.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = "Una. Doua. Trei. Patru. Cinci. Sase. Sapte. Opt. Noua. Zece."
 
@@ -316,9 +270,6 @@ def test_blank_and_empty_chunks_produce_no_blocks() -> None:
     @brief      Verify whitespace-only chunks are ignored rather than producing empty blocks.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     assert narrator_split.plan_narrator_blocks("", 20) == []
     assert narrator_split.plan_narrator_blocks("   \n\n  ", 20) == []
@@ -329,9 +280,6 @@ def test_random_paragraphs_always_preserve_source_text() -> None:
     @brief      Property check that packing never loses characters on varied generated input.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     generator = random.Random(20260726)
     words = ["casa", "drum", "noapte", "lumina", "vânt", "poveste", "umbră", "carte"]

@@ -12,9 +12,6 @@
 @details Persists character-voices voice targets, selected voice language,
          per-target sample artifacts, and deterministic character voice prompts
          for the Character Voices workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.12.0
 """
 
 # IMPORTS
@@ -75,9 +72,6 @@ def ensure_character_voices_files(project_root: str | Path) -> None:
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.1
     """
     targets_path = _targets_path(project_root)
     if not targets_path.is_file():
@@ -94,9 +88,6 @@ def load_selected_voice_language(
     @param[in]  fallback Fallback language code used when the file is missing.
     @return     Canonical character-voices voice language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     try:
         payload = project_workspace_service.load_manifest(project_root)
@@ -117,9 +108,6 @@ def save_selected_voice_language(project_root: str | Path, selected_voice_langua
     @param[in]  selected_voice_language Candidate selected voice language value.
     @return     Persisted canonical voice language code.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     ensure_character_voices_files(project_root)
     normalized_language = narrator_definition_service.narrator_language_code(selected_voice_language)
@@ -150,9 +138,6 @@ def load_voice_plan(project_root: str | Path) -> list[dict[str, object]]:
     @param[in]  project_root Active project root folder.
     @return     Normalized ordered voice target payload list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     ensure_character_voices_files(project_root)
     payload = json.loads(_targets_path(project_root).read_text(encoding="utf-8"))
@@ -168,9 +153,6 @@ def save_voice_targets(project_root: str | Path, voice_targets: list[dict[str, o
     @param[in]  voice_targets Candidate voice target payload list.
     @return     Persisted normalized voice target list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     ensure_character_voices_files(project_root)
     normalized_targets = [_normalize_voice_target(item) for item in voice_targets if isinstance(item, dict)]
@@ -192,9 +174,6 @@ def sync_voice_plan(
     @param[in]  voice_language Selected audiobook voice language used for default preview text.
     @return     Persisted normalized character-voices target list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    2.3.0
     """
     normalized_voice_language = narrator_definition_service.narrator_language_code(voice_language)
     existing_targets = load_voice_plan(project_root)
@@ -264,9 +243,6 @@ def voice_target_by_id(
     @param[in]  voice_targets Optional already-loaded target payload list.
     @return     Matching voice target payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     normalized_target_id = str(target_id or "").strip()
     if not normalized_target_id:
@@ -288,9 +264,6 @@ def mark_character_voice_target_stale(project_root: str | Path, character_id: st
     @param[in]  character_id Character identifier whose voice definition changed.
     @return     Stable character voice target identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     target_id = character_target_id(str(character_id).strip())
     if not _targets_path(project_root).is_file():
@@ -308,9 +281,6 @@ def remove_character_voice_target(project_root: str | Path, character_id: str) -
     @param[in]  character_id Deleted character identifier.
     @return     Stable character voice target identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     target_id = character_target_id(str(character_id).strip())
     if not _targets_path(project_root).is_file():
@@ -342,9 +312,6 @@ def save_target_prompt(
     @param[in]  preview_text Optional edited preview text stored with the target.
     @return     Persisted updated target payload.
     @exception  ValueError Raised when the prompt is empty or the target is not editable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    2.0.0
     """
     return _update_target_prompt(
         project_root,
@@ -362,9 +329,6 @@ def begin_target_prompt_edit(project_root: str | Path, target_id: str) -> dict[s
     @param[in]  target_id Target voice identifier.
     @return     Target payload prepared for edit mode.
     @exception  ValueError Raised when the target is missing or not editable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     target_payload = voice_target_by_id(project_root, target_id)
     if target_payload is None:
@@ -387,9 +351,6 @@ def voice_target_generation_request(
     @param[in]  voice_language Selected character-voices voice language.
     @return     Generation-request payload with availability flags and model ids.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
     normalized_language = narrator_definition_service.narrator_language_code(voice_language)
@@ -443,9 +404,6 @@ def character_target_id(character_id: str) -> str:
     @param[in]  character_id Persisted character identifier.
     @return     Stable character-voices character target identifier.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     return f"character_{str(character_id).strip()}"
 
@@ -456,9 +414,6 @@ def build_character_default_prompt(character_profile: dict[str, object]) -> str:
     @param[in]  character_profile Persisted character profile payload.
     @return     Derived voice-designer prompt text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.3.0
     """
     stored_voice_definition_prompt = str(character_profile.get("voice_definition_prompt", "")).strip()
     if stored_voice_definition_prompt:
@@ -478,9 +433,6 @@ def preview_text_for_language(voice_language: object) -> str:
     @param[in]  voice_language Candidate selected voice language.
     @return     Stable localized preview text.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     normalized_language = narrator_definition_service.narrator_language_code(voice_language)
     return DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.get(
@@ -496,9 +448,6 @@ def effective_target_preview_text(target_payload: dict[str, object], voice_langu
     @param[in]  voice_language Selected character-voices voice language.
     @return     Stored preview text or the deterministic language fallback.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
     """
     stored_preview_text = str(target_payload.get("preview_text", "")).strip()
     return stored_preview_text or preview_text_for_language(voice_language)
@@ -516,9 +465,6 @@ def target_sample_paths(
     @param[in]  voice_targets Optional already-loaded target payload list.
     @return     Tuple of WAV path and `characters_voice.json` metadata path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.2.0
     """
     normalized_target_id = str(target_id).strip()
     target_payload = voice_target_by_id(project_root, normalized_target_id, voice_targets)
@@ -547,9 +493,6 @@ def load_target_sample_metadata(
     @param[in]  voice_targets Optional already-loaded target payload list.
     @return     Metadata payload or `None` when unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.2.0
     """
     target_payload = voice_target_by_id(project_root, target_id, voice_targets)
     if not isinstance(target_payload, dict):
@@ -570,9 +513,6 @@ def has_target_sample(
     @param[in]  voice_targets Optional already-loaded target payload list.
     @return     `True` when the sample WAV exists and `characters_voice.json` has sample metadata.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.2.0
     """
     audio_path, _metadata_path = target_sample_paths(project_root, target_id, voice_targets)
     return audio_path.is_file() and load_target_sample_metadata(project_root, target_id, voice_targets) is not None
@@ -590,9 +530,6 @@ def delete_target_sample(
     @param[in]  voice_targets Optional already-loaded target payload list.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.2.0
     """
     audio_path, _metadata_path = target_sample_paths(project_root, target_id, voice_targets)
     if audio_path.exists():
@@ -620,9 +557,6 @@ def store_target_sample(
     @param[in]  audio_bytes Downloaded WAV bytes.
     @return     Persisted sample metadata payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.2.0
     """
     ensure_character_voices_files(project_root)
     target_id = str(target_payload.get("target_id", "")).strip()
@@ -667,9 +601,6 @@ def import_target_sample(
     @param[in]  source_audio_path Operator-selected WAV file path.
     @return     Persisted imported-sample metadata payload.
     @exception  ValueError Raised when the target, sample, or transcript is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.2.0
     """
     ensure_character_voices_files(project_root)
     if str(target_payload.get("target_kind", "")).strip() != TARGET_KIND_CHARACTER:
@@ -719,9 +650,6 @@ def sync_same_narrator_samples(
     @param[in]  voice_language Current selected character-voices voice language.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.4.0
     """
     ensure_character_voices_files(project_root)
     voice_targets = load_voice_plan(project_root)
@@ -815,9 +743,6 @@ def sample_runtime_available(
     @param[in]  discovered_models Current normalized discovered runtime models.
     @return     `True` when the sample still references a healthy available model.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     return narrator_definition_service.sample_runtime_available(sample_metadata, discovered_models)
 
@@ -832,9 +757,6 @@ def character_voices_is_ready(
     @param[in]  voice_targets Current character-voices target list.
     @return     `True` when the selected narrator sample and every character sample exist.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     narrator_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
     if (
@@ -862,9 +784,6 @@ def character_voices_operation_summary(
     @param[in]  voice_targets Current character-voices target list.
     @return     Project-manifest operation summary payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.2.0
     """
     targets = [target for target in voice_targets if isinstance(target, dict)]
     narrator_targets = [
@@ -903,9 +822,6 @@ def selected_narrator_sample_exists(project_root: str | Path) -> bool:
     @param[in]  project_root Active project root folder.
     @return     `True` when the selected narrator WAV and metadata are both present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
     return (
@@ -921,9 +837,6 @@ def selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, obj
     @param[in]  project_root Active project root folder.
     @return     Selected narrator metadata payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
     """
     return narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
 
@@ -946,9 +859,6 @@ def _update_target_prompt(
     @param[in]  update_default_prompt Value for `update_default_prompt`.
     @param[in]  preview_text Text value for `preview_text`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).strip()
     if not normalized_prompt:
@@ -990,9 +900,6 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
     @brief      Normalize the voice target.
     @param[in]  target_payload Payload for `target_payload`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     normalized_target_kind = (
         str(target_payload.get("target_kind", TARGET_KIND_CHARACTER)).strip() or TARGET_KIND_CHARACTER
@@ -1041,9 +948,6 @@ def _synchronized_character_preview_text(
     @param[in]  character_profile Character Discovery profile payload.
     @param[in]  voice_language Selected audiobook voice language code.
     @return     Existing edited preview text, discovered dialogue preview, or the selected-language default.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
     """
     localized_preview_text = preview_text_for_language(voice_language)
     discovered_preview_text = str(character_profile.get("preview_text", "")).strip()
@@ -1069,9 +973,6 @@ def _synchronized_character_prompt_text(
     @param[in]  character_profile Current persisted character profile payload.
     @param[in]  default_prompt_text Current derived default prompt text.
     @return     Prompt text safe to send to VoiceWeaver voice design.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
     """
     existing_prompt_text = str(existing_target.get("prompt_text", "")).strip()
     existing_default_prompt_text = str(existing_target.get("default_prompt_text", "")).strip()
@@ -1088,9 +989,6 @@ def _ensure_character_prompt_instructions(prompt_text: str, character_profile: d
     @param[in]  prompt_text Candidate voice-designer prompt.
     @param[in]  character_profile Character profile used for voice evidence.
     @return     Prompt text containing explicit sex/gender and age-domain guidance.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     prompt_with_gender = _ensure_character_prompt_gender_instruction(prompt_text, character_profile)
     return _ensure_character_prompt_age_instruction(prompt_with_gender, character_profile)
@@ -1102,9 +1000,6 @@ def _ensure_character_prompt_gender_instruction(prompt_text: str, character_prof
     @param[in]  prompt_text Candidate voice-designer prompt.
     @param[in]  character_profile Character profile used for gender evidence.
     @return     Prompt text containing one explicit sex/gender instruction.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).strip()
     if _prompt_has_explicit_gender_instruction(normalized_prompt):
@@ -1121,9 +1016,6 @@ def _ensure_character_prompt_age_instruction(prompt_text: str, character_profile
     @param[in]  prompt_text Candidate voice-designer prompt.
     @param[in]  character_profile Character profile used for age evidence.
     @return     Prompt text containing one explicit age-domain instruction.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).strip()
     if _prompt_has_explicit_age_instruction(normalized_prompt):
@@ -1139,9 +1031,6 @@ def _character_voice_gender_instruction(character_profile: dict[str, object]) ->
     @brief      Build the mandatory sex/gender instruction for one character voice prompt.
     @param[in]  character_profile Character profile used for gender evidence.
     @return     Explicit sex/gender instruction sentence.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     gender_hint = str(character_profile.get("gender_hint", "")).strip()
     if gender_hint:
@@ -1160,9 +1049,6 @@ def _character_voice_age_instruction(character_profile: dict[str, object]) -> st
     @brief      Build the mandatory age-domain instruction for one character voice prompt.
     @param[in]  character_profile Character profile used for age evidence.
     @return     Explicit age-domain instruction sentence.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     age_hint = str(character_profile.get("age_hint", "")).strip()
     if age_hint:
@@ -1180,9 +1066,6 @@ def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
     @brief      Return whether a prompt already carries explicit sex/gender guidance.
     @param[in]  prompt_text Candidate voice-designer prompt.
     @return     True when a gender or sex instruction is already present.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).casefold()
     return bool(
@@ -1196,9 +1079,6 @@ def _prompt_has_explicit_age_instruction(prompt_text: str) -> bool:
     @brief      Return whether a prompt already carries explicit age-domain guidance.
     @param[in]  prompt_text Candidate voice-designer prompt.
     @return     True when an age instruction is already present.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     normalized_prompt = str(prompt_text).casefold()
     return bool(re.search(r"\b(age domain|age hint|age)\s*:", normalized_prompt))
@@ -1210,9 +1090,6 @@ def _is_unmodified_default_preview_text(preview_text: str, localized_preview_tex
     @param[in]  preview_text Candidate persisted preview text.
     @param[in]  localized_preview_text Current selected-language default preview text.
     @return     True when the candidate can be safely localized.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     return preview_text != localized_preview_text and preview_text in DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.values()
 
@@ -1230,9 +1107,6 @@ def _update_target_sample_metadata(
     @param[in]  relative_path Project-relative sample WAV path or `None`.
     @param[in]  metadata_payload Sample metadata payload or `None` to clear it.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     normalized_target_id = str(target_id or "").strip()
     voice_targets = load_voice_plan(project_root)
@@ -1259,9 +1133,6 @@ def _target_sample_metadata_updated_targets(
     @param[in]  relative_path Project-relative sample WAV path or `None`.
     @param[in]  metadata_payload Sample metadata payload or `None` to clear it.
     @return     Updated target payload list.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     normalized_target_id = str(target_id or "").strip()
     updated_targets: list[dict[str, object]] = []
@@ -1294,9 +1165,6 @@ def _copied_narrator_sample_is_current(
     @param[in]  narrator_audio_bytes Current selected narrator WAV bytes.
     @param[in]  voice_targets Already-loaded character-voices target payloads.
     @return     True when the stored copied sample is already current.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     target_payload = voice_target_by_id("", target_id, voice_targets)
     sample_metadata = None if not isinstance(target_payload, dict) else target_payload.get("sample_metadata")
@@ -1314,9 +1182,6 @@ def _safe_read_bytes(path: Path) -> bytes | None:
     @param[in]  path Candidate file path.
     @return     File bytes or `None` when unavailable.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     try:
         return path.read_bytes()
@@ -1329,9 +1194,6 @@ def _targets_path(project_root: str | Path) -> Path:
     @brief      Execute the voice targets path helper.
     @param[in]  project_root Active project root folder.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return Path(project_root) / config.CHARACTER_VOICES_TARGETS_FILE_NAME
 
@@ -1341,9 +1203,6 @@ def _normalized_audio_name(value: object) -> str:
     @brief      Normalize one voice target value for a root-level audio file name.
     @param[in]  value Candidate target identifier or name.
     @return     Filesystem-safe lowercase token.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     normalized = "".join(character.lower() if character.isalnum() else "_" for character in str(value).strip())
     normalized = "_".join(part for part in normalized.split("_") if part)
@@ -1371,9 +1230,6 @@ def _build_generation_request(
     @param[in]  model_id Identifier for `model_id`.
     @param[in]  source_model_id Identifier for `source_model_id`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return {
         "runtime_available": runtime_available,
@@ -1392,9 +1248,6 @@ def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | 
     @brief      Return the first model.
     @param[in]  model_entries Value for `model_entries`.
     @return     Resolved helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return None if not model_entries else deepcopy(model_entries[0])
 
@@ -1405,9 +1258,6 @@ def _write_json(path: Path, payload: object) -> None:
     @param[in]  path Value for `path`.
     @param[in]  payload Optional payload processed by the helper.
     @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     write_json_atomic(path, payload)
 
@@ -1419,9 +1269,6 @@ def _write_bytes_atomic(target_path: str | Path, payload: bytes) -> None:
     @param[in]  payload Complete byte payload to persist.
     @return     None.
     @exception  OSError Raised when the temporary write or replacement fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     resolved_path = Path(target_path)
     resolved_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1450,9 +1297,6 @@ def _unlink_temporary_file(temporary_path: Path) -> None:
     @param[in]  temporary_path Temporary file path to remove.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     with suppress(OSError):
         temporary_path.unlink(missing_ok=True)

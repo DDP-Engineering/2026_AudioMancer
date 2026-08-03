@@ -12,9 +12,6 @@
 @details Provides project-local narrator profile inspection, profile editing,
          sample generation, explicit narrator selection, and local sample
          preview controls for the fixed Qwen3-backed narrator workflow.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-17
-@version 3.12.9
 """
 
 # IMPORTS
@@ -49,9 +46,6 @@ class NaratorVoicePage(QWidget):
     """
     @brief      Display the Narator Voice workflow page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.6.1
     """
 
     create_profile_requested = Signal(dict)
@@ -71,9 +65,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    1.9.8
         """
         super().__init__(parent)
         self._project_active = False
@@ -219,9 +210,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.2.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -232,9 +220,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  is_active True when one project is currently loaded.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.6.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -245,9 +230,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  is_busy True while the controller is running a blocking task.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.1
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -258,9 +240,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  is_active True while preview playback is active.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.0
         """
         self._preview_active = is_active
         self._apply_control_state()
@@ -308,9 +287,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  preview_text_safe_word_limit Safe preview text word limit from the active TTS model budget.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.6.0
         """
         _ = notes
         self._profiles = [deepcopy(profile) for profile in profiles]
@@ -346,9 +322,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  can_generate_profiles True when the active project has usable source text.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         self._ai_profile_combo.blockSignals(True)
         self._ai_profile_combo.clear()
@@ -373,9 +346,6 @@ class NaratorVoicePage(QWidget):
         @brief      Enter explicit edit mode for the currently inspected profile.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.0
         """
         if not self._can_edit:
             return
@@ -390,9 +360,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  profile_id Selected narrator-profile identifier.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.0
         """
         self._current_profile_id = profile_id
         profile = self._current_profile()
@@ -414,9 +381,6 @@ class NaratorVoicePage(QWidget):
         @brief      Read the currently selected narrator-profile identifier.
         @return     The selected narrator-profile identifier or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.0
         """
         return self._current_profile_id
 
@@ -425,9 +389,6 @@ class NaratorVoicePage(QWidget):
         @brief      Read the currently selected audiobook voice language code.
         @return     The selected audiobook voice language code.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
         """
         return self._selected_voice_language
 
@@ -436,9 +397,6 @@ class NaratorVoicePage(QWidget):
         @brief      Return the selected AI profile identifier for narrator profile generation.
         @return     Selected AI profile id or `None`.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         value = self._ai_profile_combo.currentData()
         return None if value in (None, "") else str(value)
@@ -448,9 +406,6 @@ class NaratorVoicePage(QWidget):
         @brief      Build one narrator-profile payload from the current editor values.
         @return     Narrator-profile payload derived from the editor widgets.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.0
         """
         current_profile = self._current_profile() or {}
         profile_kind = str(current_profile.get("profile_kind", "custom"))
@@ -475,9 +430,6 @@ class NaratorVoicePage(QWidget):
         @brief      Indicate whether the page is in explicit profile edit mode.
         @return     `True` when the editor is unlocked.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.0
         """
         return self._edit_mode
 
@@ -486,9 +438,6 @@ class NaratorVoicePage(QWidget):
         @brief      Indicate whether the editable profile has unsaved changes.
         @return     `True` when the active editor state differs from the saved profile.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.0.0
         """
         return self._dirty
 
@@ -498,9 +447,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    1.5.1
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('narator_voice.title', language)}</h2>")
@@ -526,9 +472,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Apply the control state.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.7.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = self._project_active and not self._busy and not self._preview_active and self._edit_mode
@@ -599,9 +542,6 @@ class NaratorVoicePage(QWidget):
         @brief      Set Narator Voice main pane minimum widths from the main splitter width.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.4.1
         """
         required_attributes = ("_main_splitter", "_profiles_group", "_editor_container")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -621,9 +561,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Resolve the preview label key.
         @return     Helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.2.0
         """
         return "narator_voice.stop_preview" if self._preview_active else "narator_voice.preview"
 
@@ -632,9 +569,6 @@ class NaratorVoicePage(QWidget):
         @brief      Execute the refresh profile list helper.
         @param[in]  selected_profile_id Selected profile identifier.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self._profile_list.blockSignals(True)
         self._profile_list.clear()
@@ -642,7 +576,7 @@ class NaratorVoicePage(QWidget):
         selected_row = -1
         for profile in self._profiles:
             profile_id = str(profile.get("profile_id", "")).strip()
-            self._profile_list.addItem(_format_profile_list_item(profile))
+            self._profile_list.addItem(_format_profile_list_item(profile, self._ui_language))
             self._profile_row_ids.append(profile_id)
             if profile_id == str(selected_profile_id or "").strip():
                 selected_row = len(self._profile_row_ids) - 1
@@ -657,9 +591,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  prompt_text Text value for `prompt_text`.
         @param[in]  preview_text Text value for `preview_text`.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.3.0
         """
         self._loading_profile = True
         self._profile_name_edit.setText(profile_name)
@@ -673,9 +604,6 @@ class NaratorVoicePage(QWidget):
         @brief      Update the live preview-text word-budget label.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-27
-        @version    0.1.0
         """
         word_count = len([word for word in self._preview_text_edit.toPlainText().split() if word.strip()])
         safe_word_count = max(0, int(self._preview_text_safe_word_limit))
@@ -691,9 +619,6 @@ class NaratorVoicePage(QWidget):
         @brief      Limit preview text to the configured character budget.
         @param[in]  preview_text Candidate preview text.
         @return     Preview text truncated to the configured maximum length.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.2.0
         """
         return str(preview_text or "")[: self._preview_text_character_limit]
 
@@ -701,9 +626,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Return the current profile.
         @return     Resolved helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         return next(
             (
@@ -719,9 +641,6 @@ class NaratorVoicePage(QWidget):
         @brief      Handle the profile selection changed.
         @param[in]  row Selected row index.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._loading_profile or row < 0:
             return
@@ -738,9 +657,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Handle the editor changed.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._loading_profile or not self._edit_mode:
             return
@@ -751,9 +667,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Enforce the configured preview text character limit and mark editor changes.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.1.0
         """
         if self._enforcing_preview_text_limit:
             return
@@ -774,9 +687,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Emit the create profile.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self.create_profile_requested.emit(self.current_editor_payload())
 
@@ -784,9 +694,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Emit the edit profile.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._current_profile_id is not None:
             self.edit_profile_requested.emit(self._current_profile_id)
@@ -795,9 +702,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Emit the save profile.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         self.save_profile_requested.emit(self.current_editor_payload())
 
@@ -805,9 +709,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Emit the delete profile.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._current_profile_id is not None:
             self.delete_profile_requested.emit(self._current_profile_id)
@@ -816,9 +717,6 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Emit the generate sample.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._current_profile_id is not None:
             self.generate_sample_requested.emit(self._current_profile_id)
@@ -828,9 +726,6 @@ class NaratorVoicePage(QWidget):
         @brief      Emit the import sample request for the inspected profile.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-15
-        @version    0.1.0
         """
         if self._current_profile_id is not None:
             self.import_sample_requested.emit(self._current_profile_id)
@@ -840,9 +735,6 @@ class NaratorVoicePage(QWidget):
         @brief      Emit one AI narrator-profile generation request.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-11
-        @version    0.1.0
         """
         profile_id = self.current_ai_profile_id()
         if profile_id is not None:
@@ -852,26 +744,21 @@ class NaratorVoicePage(QWidget):
         """
         @brief      Emit the select profile.
         @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
         """
         if self._current_profile_id is not None:
             self.select_profile_requested.emit(self._current_profile_id)
 
 
-def _format_profile_list_item(profile: dict[str, object]) -> str:
+def _format_profile_list_item(profile: dict[str, object], language: str) -> str:
     """
     @brief      Format the profile list item.
     @param[in]  profile Value for `profile`.
+    @param[in]  language Runtime UI language code.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     display_name = _display_profile_name(str(profile.get("display_name", "")))
     if bool(profile.get("is_selected", False)):
-        selected_label = str(profile.get("selected_label", "")).strip() or "Selected"
+        selected_label = ui_state_service.translate("narator_voice.list_selected", language)
         return f"{display_name} | {selected_label}"
     return display_name
 
@@ -881,9 +768,6 @@ def _display_profile_name(display_name: str) -> str:
     @brief      Execute the display profile name helper.
     @param[in]  display_name Value for `display_name`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     normalized_name = str(display_name).strip()
     return normalized_name
@@ -894,9 +778,6 @@ def _positive_character_limit(value: object) -> int:
     @brief      Normalize a configured character limit.
     @param[in]  value Candidate character limit.
     @return     Positive character limit or the configured default.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     try:
         resolved_value = int(value)

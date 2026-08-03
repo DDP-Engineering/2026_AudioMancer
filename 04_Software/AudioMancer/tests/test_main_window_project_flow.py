@@ -11,9 +11,6 @@
 @brief Qt window tests for the copied AudioMancer main-window shell.
 @details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
          pages are created without workflow functionality.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.7.1
 """
 
 # IMPORTS
@@ -26,6 +23,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
 )
+import pytest
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service, speech_blocks_service
@@ -47,9 +45,6 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.2
     """
 
     monkeypatch.setattr(
@@ -91,9 +86,6 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.1
     """
     project_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -118,6 +110,143 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     assert window._home_page._path_label.text() == f"Path: {project_root}"
 
 
+def test_main_window_shows_message_after_chunking_self_heal(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify S-0005 and REQ-UX-c62252e7-2325-40cf-bf01-4701a429fc9d.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("RecoveredChunkingUi", tmp_path)
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root),
+    )
+    monkeypatch.setattr(
+        project_workspace_service,
+        "open_project",
+        lambda _selected_path: {
+            "status": "ok",
+            "project_root": project_root,
+            "manifest": manifest,
+            "recovered_operations": ["chunking"],
+        },
+    )
+    information_calls = []
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    def _capture_information(*args, **kwargs):
+        """Capture the post-activation recovery message."""
+        information_calls.append((window._current_project_root, args, kwargs))
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "information", _capture_information)
+
+    window._action_open_project.trigger()
+
+    assert window._current_project_root == project_root
+    assert len(information_calls) == 1
+    assert information_calls[0][0] == project_root
+    assert "Chunking" in information_calls[0][1][2]
+    assert "Cleanup" in information_calls[0][1][2]
+
+
+@pytest.mark.parametrize(
+    ("repair_choice", "expected_open"),
+    [
+        pytest.param(QMessageBox.StandardButton.No, False, id="declined"),
+        pytest.param(QMessageBox.StandardButton.Yes, True, id="accepted"),
+    ],
+)
+def test_main_window_shows_chunking_recovery_before_follow_up_repair(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+    repair_choice,
+    expected_open,
+) -> None:
+    """
+    @brief      Verify S-0001 and REQ-UX-c62252e7-2325-40cf-bf01-4701a429fc9d.
+    @details    A completed Chunking recovery is disclosed exactly once before
+                either accepting or declining a separate project repair.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @param[in]  repair_choice Simulated follow-up repair decision.
+    @param[in]  expected_open Whether the repaired project should be activated.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("RecoveredThenRepair", tmp_path)
+    open_result = {
+        "status": "repair_required",
+        "project_root": project_root,
+        "manifest": manifest,
+        "metadata_only": True,
+        "message": "Project metadata needs repair.",
+        "changes": ["operations.chunking.status: completed -> not_started"],
+        "warnings": [],
+        "recovered_operations": ["chunking"],
+    }
+    dialog_events = []
+    repair_calls = []
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root),
+    )
+    monkeypatch.setattr(
+        project_workspace_service,
+        "open_project",
+        lambda _selected_path: open_result,
+    )
+    monkeypatch.setattr(
+        project_workspace_service,
+        "repair_project",
+        lambda repair_result: (
+            repair_calls.append(repair_result),
+            {
+                "status": "ok",
+                "project_root": project_root,
+                "manifest": manifest,
+            },
+        )[1],
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "information",
+        lambda *args, **kwargs: (
+            dialog_events.append("recovery"),
+            QMessageBox.StandardButton.Ok,
+        )[1],
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            dialog_events.append("repair"),
+            repair_choice,
+        )[1],
+    )
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    window._action_open_project.trigger()
+
+    assert dialog_events == ["recovery", "repair"]
+    assert repair_calls == ([open_result] if expected_open else [])
+    assert window._current_project_root == (project_root if expected_open else None)
+
+
 def test_main_window_clears_audio_players_when_switching_projects(qtbot, tmp_path, default_settings_payload) -> None:
     """
     @brief      Verify project activation releases stale playback sources and UI state.
@@ -126,9 +255,6 @@ def test_main_window_clears_audio_players_when_switching_projects(qtbot, tmp_pat
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
     """
     first_root, first_manifest = project_workspace_service.create_project("PlaybackSwitchOne", tmp_path)
     second_root, second_manifest = project_workspace_service.create_project("PlaybackSwitchTwo", tmp_path)
@@ -186,9 +312,6 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.1
     """
     project_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -235,9 +358,6 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("PageStateProject", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -247,9 +367,6 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
 
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
-    assert (project_root / "chunking_state.json").exists() is False
-    assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists() is False
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
@@ -257,14 +374,10 @@ def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_
     window.set_current_page("text_cleanup")
 
     assert (project_root / config.EXTRACTION_METADATA_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
-    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
 
     window.set_current_page("text_chunking")
 
-    assert (project_root / "chunking_state.json").exists() is False
-    assert (project_root / "chunking_report.json").exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).exists() is False
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
@@ -289,9 +402,6 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "RerunProject",
@@ -307,24 +417,8 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
         "size_bytes": source_path.stat().st_size,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    extracted_text = "Story body\n"
-    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(extracted_text, encoding="utf-8")
-    (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "status": "completed",
-                "progress_current": 1,
-                "progress_total": 1,
-                "warnings": [],
-                "character_count": len(extracted_text),
-                "word_count": len(extracted_text.split()),
-                "line_count": len(extracted_text.splitlines()),
-                "page_count": None,
-            }
-        ),
-        encoding="utf-8",
-    )
     project_workspace_service.save_manifest(manifest, project_root)
+    text_cleanup_ui_controller.text_extraction_service.extract_text(project_root, manifest)
 
     question_calls = []
     reset_calls = []
@@ -370,9 +464,6 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ResumeWindowProject",
@@ -419,9 +510,6 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
         @brief      Record one resumed extraction call and return a minimal report.
         @return     Final extraction metadata payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.0
         """
         extract_calls.append(args)
         extracted_text = "Story body\n"
@@ -455,18 +543,37 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
-    monkeypatch.setattr(
-        text_cleanup_ui_controller,
-        "start_operation",
-        lambda _window, **kwargs: kwargs["success_handler"](
-            kwargs["worker_callable"](
+    def _run_synchronously(
+        _window,
+        _operation_kind,
+        _operation_name,
+        _message,
+        worker,
+        success_handler,
+        _failure_handler,
+    ):
+        """
+        @brief      Execute the captured Extraction worker synchronously for this UI test.
+        @param[in]  _window Main-window test double supplied by the controller.
+        @param[in]  _operation_kind Operation identifier unused by this test helper.
+        @param[in]  _operation_name Operator-facing operation name unused by this helper.
+        @param[in]  _message Operator-facing progress message unused by this helper.
+        @param[in]  worker Extraction worker callable under test.
+        @param[in]  success_handler Success callback invoked with the worker result.
+        @param[in]  _failure_handler Failure callback unused by the successful test path.
+        @return     None.
+        @exception  None
+        """
+        success_handler(
+            worker(
                 _window._current_project_root,
                 dict(_window._current_manifest),
                 progress_callback=lambda *_args: None,
                 cancel_requested=lambda: False,
             )
-        ),
-    )
+        )
+
+    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", _run_synchronously)
 
     window._text_cleanup_page.extract_requested.emit()
 
@@ -480,14 +587,10 @@ def test_main_window_exposes_modal_progress_dialog_and_cancel_signal(qtbot, defa
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -520,14 +623,10 @@ def test_main_window_progress_dialog_shows_token_usage(qtbot, default_settings_p
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -563,9 +662,6 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SynchronousProgressProject", tmp_path)
     source_path = project_root / "story.txt"
@@ -582,7 +678,6 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -601,9 +696,6 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
         @brief      Provide the worker callable test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         progress_callback(0, 1, 0, "Starting...")
         assert cancel_requested() is False
@@ -636,9 +728,6 @@ def test_main_window_loads_narrator_definition_state_into_narator_voice_page(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "NarratorWindowProject",
@@ -701,9 +790,6 @@ def test_main_window_prevents_reimport_when_source_is_locked(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -747,9 +833,6 @@ def test_main_window_offers_repair_and_opens_repaired_project(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -797,9 +880,6 @@ def test_main_window_opens_confirmed_manifest_healing_repair(
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SpeechRepair", tmp_path)
     speech_blocks_service.write_speech_blocks_document(
@@ -876,9 +956,6 @@ def test_main_window_declined_manifest_repair_leaves_project_unopened(
     @param[in]  default_settings_payload Default settings fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("DeclineRepair", tmp_path)
     manifest["current_stage"] = "broken_stage"
@@ -913,9 +990,6 @@ def _operation_state(status: str, current: int, total: int) -> dict[str, object]
     @param[in]  total Total progress count.
     @return     Operation-state fixture payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return {
         "folder_relative_path": ".",
@@ -937,9 +1011,6 @@ def _write_json(path, payload: object) -> None:
     @param[in]  payload JSON-serializable payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 

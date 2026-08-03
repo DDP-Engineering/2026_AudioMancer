@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-236b922c"
+title = "Text Chunking services shall persist operation state exclusively"
+status = "active"
+
+requirement = """
+Text Chunking services shall persist operation state exclusively through the canonical chunks_text.json document API.
+"""
+
+verification = "Automated contract coverage verifies canonical document round-trips and deterministic and AI Chunking persistence."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_round_trips_exact_contract_and_returns_defensive_chunks",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress",
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_chunking_persists_minimal_document_and_separate_log",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+A single document API keeps Chunking persistence, resume state, and projections consistent.
+"""
+created = 2026-07-24
+updated = 2026-07-30

@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-UX-9ae4e068"
+title = "Theme collection normalization shall return empty for a malformed root"
+status = "active"
+
+requirement = """
+Theme collection normalization shall return empty for a malformed root payload.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_normalize_theme_collection_returns_empty_for_malformed_root_payload",
+]
+
+priority = "high"
+rationale = """
+A malformed theme collection must degrade to empty rather than crash.
+"""
+created = 2026-07-24
+updated = 2026-07-24

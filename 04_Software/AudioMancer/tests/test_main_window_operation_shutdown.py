@@ -11,9 +11,6 @@
 @brief Main-window shutdown tests for active threaded operations.
 @details Verifies close handling requests cooperative cancellation and keeps the
          shell alive while a worker thread is still cleaning up.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-29
-@version 0.1.1
 """
 
 # IMPORTS
@@ -39,9 +36,6 @@ def test_main_window_close_ignores_event_while_operation_thread_is_active(
     @param[in]  default_settings_payload Baseline application settings fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("ShutdownOperationProject", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -58,9 +52,6 @@ def test_main_window_close_ignores_event_while_operation_thread_is_active(
         @brief      Provide the blocking worker test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         _ = progress_callback
         _ = cancel_requested

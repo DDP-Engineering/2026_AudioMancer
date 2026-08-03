@@ -11,9 +11,6 @@
 @brief Character Discovery UI controller tests for AudioMancer.
 @details Verifies guarded manual add or edit or save or delete flows plus
          discovery start and reset behavior for the Characters page controller.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-08
-@version 0.12.2
 """
 
 # IMPORTS
@@ -42,9 +39,6 @@ def test_character_ui_controller_first_run_shows_info_popup(monkeypatch, qtbot, 
     @brief      Validate character ui controller first run shows info popup.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerFirstRun")
     window = _build_window(qtbot, project_root)
@@ -82,9 +76,6 @@ def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatc
     @brief      Validate character ui controller resume uses current selected profile.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerResumeCurrentProfile")
     window = _build_window(qtbot, project_root)
@@ -121,9 +112,6 @@ def test_character_ui_controller_cancelled_state_resumes_without_prompt(monkeypa
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerCancelledResume")
     state_path = (
@@ -165,9 +153,6 @@ def test_character_ui_controller_passes_extra_prompt_to_discovery(monkeypatch, q
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerExtraPrompt")
     window = _build_window(qtbot, project_root)
@@ -203,9 +188,6 @@ def test_character_ui_controller_add_flow_enters_draft_mode(monkeypatch, qtbot, 
     @brief      Validate character ui controller add flow enters draft mode.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerAdd")
     window = _build_window(qtbot, project_root)
@@ -227,9 +209,6 @@ def test_character_ui_controller_add_rejects_duplicate_name(monkeypatch, qtbot, 
     @brief      Validate character ui controller add rejects duplicate name.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerDuplicate")
     window = _build_window(qtbot, project_root)
@@ -256,9 +235,6 @@ def test_character_ui_controller_edit_confirmation_cancel_keeps_view_mode(monkey
     @brief      Validate character edit confirmation cancellation does not enter edit mode.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditCancel")
     window = _build_window(qtbot, project_root)
@@ -274,9 +250,6 @@ def test_character_ui_controller_edit_confirmation_accepts_edit_mode(monkeypatch
     @brief      Validate character edit confirmation opens the selected profile editor.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditAccept")
     window = _build_window(qtbot, project_root)
@@ -292,9 +265,6 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
     @brief      Validate character ui controller save new character persists and selects.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerSave")
     window = _build_window(qtbot, project_root)
@@ -330,9 +300,6 @@ def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, q
     @brief      Validate character ui controller delete flow confirms and removes.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerDelete")
     window = _build_window(qtbot, project_root)
@@ -371,9 +338,6 @@ def test_character_ui_controller_edit_preserves_speech_approval_for_voice_defini
     @brief      Validate character voice-definition edits preserve Speech Blocks and clear only matching audio.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-08
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerEdit")
     window = _build_window(qtbot, project_root)
@@ -416,9 +380,6 @@ def test_character_ui_controller_save_with_progress_stays_synchronous(monkeypatc
     @brief      Validate Character save progress runs on the synchronous controller path.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditProgress")
     window = _build_window(qtbot, project_root)
@@ -442,7 +403,6 @@ def test_character_ui_controller_save_with_progress_stays_synchronous(monkeypatc
         @brief      Assert the page stays busy while downstream audio is reset.
         @return     Wrapped audio-block removal result.
         @exception  AssertionError Raised when busy-state expectations fail.
-        @version    0.1.0
         """
         assert window._characters_page._busy is True
         assert kwargs["collect_preserved_paths"] is False
@@ -476,9 +436,6 @@ def test_character_ui_controller_save_progress_clears_after_failure(monkeypatch,
     @brief      Validate Character save progress cleanup runs when save mutation fails.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditProgressFailure")
     window = _build_window(qtbot, project_root)
@@ -491,7 +448,6 @@ def test_character_ui_controller_save_progress_clears_after_failure(monkeypatch,
         @brief      Raise after progress setup to verify cleanup behavior.
         @return     None.
         @exception  RuntimeError Always raised for this test double.
-        @version    0.1.0
         """
         _ = args
         _ = kwargs
@@ -512,9 +468,6 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
     @brief      Validate character ui controller selection change cancel restores current row.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerSelection")
     window = _build_window(qtbot, project_root)
@@ -555,9 +508,6 @@ def _create_project(tmp_path, name: str):
     @param[in]  name Stable name associated with the requested object.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -619,13 +569,9 @@ def _build_window(qtbot, project_root):
     @brief      Provide the build window test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
     """
     settings_payload = {
         "language": "en",
-        "ui_text_scale": "normal",
         "play_completion_beep": False,
         "llm_profiles": [
             {
@@ -673,9 +619,6 @@ def _write_downstream_artifacts(project_root, window: MainWindow) -> None:
     @param[in]  window Main window carrying the manifest under test.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
     """
     narrator_profile = narrator_definition_service.create_custom_profile(
         project_root,
@@ -817,9 +760,6 @@ def _write_operation_state(project_root, file_name: str, status: str, mode: str)
     @brief      Create a compact operation state fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     (project_root / file_name).write_text(
         json.dumps(
@@ -847,9 +787,6 @@ def _saved_profile_payload() -> dict[str, object]:
     @brief      Provide the saved profile payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     return character_discovery_service.regenerate_character_voice_definition(
         {
@@ -905,9 +842,6 @@ def _manual_draft_payload(name: str) -> dict[str, object]:
     @brief      Provide the manual draft payload test helper.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
     """
     return character_discovery_service.regenerate_character_voice_definition(
         {

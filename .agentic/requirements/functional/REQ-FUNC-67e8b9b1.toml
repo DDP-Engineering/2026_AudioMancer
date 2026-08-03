@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-67e8b9b1"
+title = "Project export shall report not-ready and a missing artifact when"
+status = "active"
+
+requirement = """
+Project export shall report not-ready and a missing artifact when export prerequisites are absent.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_reports_not_ready_and_missing_artifact",
+]
+
+priority = "high"
+rationale = """
+Export must truthfully report readiness and missing inputs.
+"""
+created = 2026-07-24
+updated = 2026-07-24

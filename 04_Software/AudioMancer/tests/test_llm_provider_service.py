@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer LLM provider service.
 @details Verifies JSON normalization and retry behavior for AI-assisted
          cleanup provider requests.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.8.2
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ class _FakeResponse:
     @brief Minimal context-manager response used by provider HTTP tests.
     @details Stores one response body and exposes the subset of the urllib
              response contract needed by the LLM provider service.
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-04-29
-    @version 0.1.0
     """
 
     def __init__(self, body: str) -> None:
@@ -42,9 +36,6 @@ class _FakeResponse:
         @brief      Provide the init test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         self._body = body
 
@@ -53,9 +44,6 @@ class _FakeResponse:
         @brief      Provide the enter test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         return self
 
@@ -64,9 +52,6 @@ class _FakeResponse:
         @brief      Provide the exit test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         _ = exc_type
         _ = exc
@@ -77,9 +62,6 @@ class _FakeResponse:
         @brief      Return the configured fake response body as UTF-8 bytes.
         @return     Encoded fake response body.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         return self._body.encode("utf-8")
 
@@ -91,9 +73,6 @@ def test_chat_json_parses_fenced_json(monkeypatch, tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     monkeypatch.setattr(
         llm_provider_service.request,
@@ -128,9 +107,6 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     call_counter = {"count": 0}
 
@@ -141,9 +117,6 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake successful provider response.
         @exception  URLError Raised on the first request attempt.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         call_counter["count"] += 1
         if call_counter["count"] == 1:
@@ -178,9 +151,6 @@ def test_chat_json_sends_response_format_when_structured_output_is_supported(mon
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     request_bodies: list[dict[str, object]] = []
 
@@ -191,9 +161,6 @@ def test_chat_json_sends_response_format_when_structured_output_is_supported(mon
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake successful provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-08
-        @version    0.1.0
         """
         request_bodies.append(json.loads(http_request.data.decode("utf-8")))
         return _FakeResponse(
@@ -226,9 +193,6 @@ def test_chat_json_sends_json_schema_response_format_for_local_backends(monkeypa
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-10
-    @version    0.1.0
     """
     request_bodies: list[dict[str, object]] = []
 
@@ -239,9 +203,6 @@ def test_chat_json_sends_json_schema_response_format_for_local_backends(monkeypa
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake successful provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-10
-        @version    0.1.0
         """
         request_bodies.append(json.loads(http_request.data.decode("utf-8")))
         return _FakeResponse(
@@ -289,9 +250,6 @@ def test_chat_json_sends_operation_schema_response_format_for_local_backends(mon
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-01
-    @version    0.1.0
     """
     request_bodies: list[dict[str, object]] = []
 
@@ -302,9 +260,6 @@ def test_chat_json_sends_operation_schema_response_format_for_local_backends(mon
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake successful provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-01
-        @version    0.1.0
         """
         request_bodies.append(json.loads(http_request.data.decode("utf-8")))
         return _FakeResponse('{"choices":[{"message":{"content":"{\\"blocks\\":[]}"}}]}')
@@ -365,9 +320,6 @@ def test_chat_json_omits_response_format_when_structured_output_is_not_supported
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     request_bodies: list[dict[str, object]] = []
 
@@ -378,9 +330,6 @@ def test_chat_json_omits_response_format_when_structured_output_is_not_supported
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake successful provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-08
-        @version    0.1.0
         """
         request_bodies.append(json.loads(http_request.data.decode("utf-8")))
         return _FakeResponse(
@@ -414,9 +363,6 @@ def test_chat_json_retries_without_response_format_when_provider_rejects_it(monk
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     request_bodies: list[dict[str, object]] = []
 
@@ -427,9 +373,6 @@ def test_chat_json_retries_without_response_format_when_provider_rejects_it(monk
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake successful provider response.
         @exception  HTTPError Raised on the first incompatible request.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-08
-        @version    0.1.0
         """
         request_payload = json.loads(http_request.data.decode("utf-8"))
         request_bodies.append(request_payload)
@@ -482,9 +425,6 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
     """
 
     def _slow_request(_profile_payload, _request_payload):
@@ -492,9 +432,6 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
         @brief      Provide the slow request test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         time.sleep(0.3)
         return (
@@ -538,9 +475,6 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     request_bodies: list[str] = []
 
@@ -551,9 +485,6 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake successful provider response.
         @exception  HTTPError Raised on the first incompatible request.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         body_text = http_request.data.decode("utf-8")
         request_bodies.append(body_text)
@@ -605,9 +536,6 @@ def test_chat_json_repairs_invalid_backslash_escapes_in_model_output(
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     malformed_content = '{"translated_text":"Path C:\\Temp\\Books\\Dune"}'
     monkeypatch.setattr(
@@ -641,9 +569,6 @@ def test_chat_json_repairs_non_json_output_with_followup_request(
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     request_bodies: list[str] = []
 
@@ -654,9 +579,6 @@ def test_chat_json_repairs_non_json_output_with_followup_request(
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake provider response for initial or repair request.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         request_bodies.append(http_request.data.decode("utf-8"))
         if len(request_bodies) == 1:
@@ -697,9 +619,6 @@ def test_chat_json_does_not_repair_empty_message_content(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     request_bodies: list[str] = []
 
@@ -710,9 +629,6 @@ def test_chat_json_does_not_repair_empty_message_content(monkeypatch) -> None:
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake empty-content provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-19
-        @version    0.1.0
         """
         request_bodies.append(http_request.data.decode("utf-8"))
         return _FakeResponse(
@@ -760,9 +676,6 @@ def test_chat_json_normalizes_provider_usage(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     monkeypatch.setattr(
         llm_provider_service.request,
@@ -813,9 +726,6 @@ def test_chat_json_logs_raw_message_content_on_parse_failure(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     response_counter = {"count": 0}
 
@@ -826,9 +736,6 @@ def test_chat_json_logs_raw_message_content_on_parse_failure(
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     Fake invalid provider response.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         response_counter["count"] += 1
         if response_counter["count"] == 1:
@@ -867,9 +774,6 @@ def test_chat_json_redacts_sensitive_values_from_transaction_log(monkeypatch, tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
     """
     secret_value = "redaction-test-api-key"
     authorization_value = "Bearer redaction-test-token"
@@ -919,9 +823,6 @@ def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     call_counter = {"count": 0}
 
@@ -932,9 +833,6 @@ def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
         @param[in]  _kwargs Ignored keyword request arguments.
         @return     None.
         @exception  HTTPError Always raised with a 401 status.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         call_counter["count"] += 1
         raise error.HTTPError(
@@ -974,9 +872,6 @@ def test_build_chat_endpoint_keeps_complete_chat_completions_endpoint() -> None:
     @brief      Verify complete chat-completions endpoints are not duplicated during normalization.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.1.0
     """
     assert (
         llm_provider_service._build_chat_endpoint("https://api.example.com/v1/chat/completions")  # noqa: SLF001

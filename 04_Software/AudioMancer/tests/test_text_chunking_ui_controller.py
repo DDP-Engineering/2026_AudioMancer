@@ -12,9 +12,6 @@
 @details Verifies the Text Chunking page UI controller drives modal progress
          lifecycle, deterministic chunking dispatch, and manual chunk saves
          correctly.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.4.2
 """
 
 # IMPORTS
@@ -40,9 +37,6 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerChunkingProject",
@@ -60,7 +54,6 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -91,9 +84,6 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
         @brief      Provide the start threaded operation test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         _ = operation_name
         _ = initial_message
@@ -122,9 +112,6 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
         @brief      Provide the worker callable test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         progress_callback(1, 1, 100, "Completed.")
         assert cancel_requested() is False
@@ -158,9 +145,6 @@ def test_text_chunking_ui_controller_chunk_request_uses_controller_start(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerChunkDispatchProject",
@@ -183,7 +167,6 @@ def test_text_chunking_ui_controller_chunk_request_uses_controller_start(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -220,9 +203,6 @@ def test_text_chunking_ui_controller_completed_rerun_requires_confirmation(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerChunkRerunProject",
@@ -246,7 +226,6 @@ def test_text_chunking_ui_controller_completed_rerun_requires_confirmation(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -283,9 +262,6 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerAiChunkDispatchProject",
@@ -308,7 +284,6 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [
                 {
@@ -375,9 +350,6 @@ def test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmatio
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerAiChunkResumeProject",
@@ -406,7 +378,6 @@ def test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmatio
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [
                 {
@@ -474,9 +445,6 @@ def test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerAiChunkSelectedProfileResumeProject",
@@ -505,7 +473,6 @@ def test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [
                 {
@@ -560,9 +527,6 @@ def test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile(
         @brief      Provide the start operation test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         kwargs["worker_callable"](project_root, project_workspace_service.load_manifest(project_root))
 
@@ -587,9 +551,6 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerChunkEditProject",
@@ -608,7 +569,6 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,

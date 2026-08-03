@@ -11,9 +11,6 @@
 @brief Tests for the shared shell UI helpers.
 @details Verifies the operator completion-beep emitter honors the persisted
          preference without producing an audible side effect during tests.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -32,9 +29,6 @@ def test_play_completion_beep_emits_one_beep_when_enabled(monkeypatch, qtbot) ->
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = _build_window(qtbot, {"play_completion_beep": True})
     beeps = _record_beeps(monkeypatch)
@@ -52,9 +46,6 @@ def test_play_completion_beep_stays_silent_for_disabled_or_missing_preference(mo
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     assert config.DEFAULT_PLAY_COMPLETION_BEEP is False
     beeps = _record_beeps(monkeypatch)
@@ -80,9 +71,6 @@ def _build_window(qtbot, settings_payload) -> QWidget:
     @param[in]  settings_payload Settings payload attached to the widget.
     @return     Window-like QWidget test double.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     window = QWidget()
     qtbot.addWidget(window)
@@ -96,9 +84,6 @@ def _record_beeps(monkeypatch) -> list[bool]:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     Recorded beep invocations.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     beeps: list[bool] = []
     monkeypatch.setattr(misc_ui_controller.QApplication, "beep", lambda: beeps.append(True))

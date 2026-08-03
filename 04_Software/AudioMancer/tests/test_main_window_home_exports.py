@@ -11,9 +11,6 @@
 @brief Main-window Home export refresh tests for AudioMancer.
 @details Verifies the main-window project refresh pushes export readiness into
          the Home export panel.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -33,9 +30,6 @@ def test_main_window_refreshes_home_export_readiness(qtbot, tmp_path, default_se
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("HomeExportProject", tmp_path)
     manifest["source_document"] = {

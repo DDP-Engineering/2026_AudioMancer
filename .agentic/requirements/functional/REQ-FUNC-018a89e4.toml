@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-018a89e4"
+title = "The Text Chunking document API shall reject incompatible root and chunk"
+status = "active"
+
+requirement = """
+The Text Chunking document API shall reject incompatible root and chunk shapes.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
+]
+
+priority = "high"
+rationale = """
+Only the current document contract may be loaded.
+"""
+created = 2026-07-24
+updated = 2026-07-24

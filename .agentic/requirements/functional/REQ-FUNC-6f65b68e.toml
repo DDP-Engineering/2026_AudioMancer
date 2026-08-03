@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-6f65b68e"
+title = "Speech Blocks resume shall read next_chunk_index, active_chunk_id"
+status = "active"
+
+requirement = """
+Speech Blocks resume shall read next_chunk_index, active_chunk_id, next_segment_index, completed_segment_count, run_token and source.fingerprint from document.checkpoint.
+"""
+
+verification = "Resume cursors read from document.checkpoint."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_resume_reads_segment_cursor_from_document_checkpoint",
+]
+
+priority = "high"
+rationale = """
+Persisted chunk and segment cursors allow interrupted generation to continue without repeating completed work.
+"""
+created = 2026-07-24
+updated = 2026-07-24

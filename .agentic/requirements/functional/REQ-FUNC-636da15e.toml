@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-636da15e"
+title = "VoiceWeaver probing shall normalize models and capabilities, map auth"
+status = "active"
+
+requirement = """
+VoiceWeaver probing shall normalize models and capabilities, map auth failures, and reject an invalid models payload.
+"""
+
+verification = "Automated: 3 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_normalizes_models_and_capabilities",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_maps_auth_failures",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_rejects_invalid_models_payload",
+]
+
+priority = "high"
+rationale = """
+Only a validated, normalized runtime view may be exposed.
+"""
+created = 2026-07-19
+updated = 2026-07-24

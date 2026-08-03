@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-50c26cce"
+title = "Speech-block operation state shall shape paths, metadata, and the"
+status = "active"
+
+requirement = """
+Speech-block operation state shall shape paths, metadata, and the resume checkpoint.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint",
+]
+
+priority = "high"
+rationale = """
+Operation state must carry the correct resume information.
+"""
+created = 2026-07-19
+updated = 2026-07-24

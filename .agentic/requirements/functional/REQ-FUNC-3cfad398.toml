@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-3cfad398"
+title = "The Home page export buttons shall follow readiness state"
+status = "active"
+
+requirement = """
+The Home page export buttons shall follow readiness state.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_export_buttons_follow_readiness_state",
+]
+
+priority = "high"
+rationale = """
+Export controls must reflect which deliverables are currently available.
+"""
+created = 2026-07-18
+updated = 2026-07-24

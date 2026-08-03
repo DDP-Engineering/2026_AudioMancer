@@ -12,9 +12,6 @@
 @details Builds Speech Blocks page state from Character Voices language
          selection, resolved chunk sources, persisted Speech Blocks output,
          current operation state, and enabled AI profile settings.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.7.3
 """
 
 # IMPORTS
@@ -46,9 +43,6 @@ def build_speech_blocks_profile_state(
     @param[in]  selected_profile_id Preferred profile identifier if available.
     @return     Selector entries plus one resolved selected profile id.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -90,9 +84,6 @@ def build_speech_blocks_state(
     @param[in]  settings_payload Persisted application settings payload.
     @return     Page-state payload consumed by the Speech Blocks page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.5.1
     """
     if project_root is None or manifest is None:
         return {
@@ -170,9 +161,6 @@ def _selected_text_character_limit(settings_payload: dict[str, object] | None) -
     @param[in]  settings_payload Persisted application settings payload.
     @return     Approximate safe character limit for the active TTS model.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-05
-    @version    0.1.0
     """
     discovered_models = []
     if isinstance(settings_payload, dict):
@@ -201,9 +189,6 @@ def build_speech_blocks_notes(
     @param[in]  language Runtime UI language code.
     @return     Ordered Speech Blocks notes for the page.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("speech_blocks.note_no_source", language)]
@@ -290,9 +275,6 @@ def _build_token_usage_notes(
     @param[in]  language Runtime UI language code.
     @return     Ordered token-usage notes.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
 
@@ -304,9 +286,6 @@ def _merge_audio_preview_state(project_root: Path, speech_blocks: list[dict[str,
     @param[in]  speech_blocks Persisted Speech Blocks payload list.
     @return     Speech Blocks payloads with audio preview state flags.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     audio_blocks_by_id = {
         str(audio_block.get("speech_block_id", "")).strip(): audio_block
@@ -331,9 +310,6 @@ def _is_metadata_only_speech_block(speech_block: dict[str, object], audio_block:
     @param[in]  audio_block Matching Audio Blocks payload when available.
     @return     True when no generated WAV should exist for the block.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.0
     """
     if str(speech_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
         return False
@@ -352,9 +328,6 @@ def _audio_path_for_block(project_root: Path, audio_block: dict[str, object]) ->
     @param[in]  audio_block Candidate Audio Blocks payload.
     @return     Existing audio file path or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.1
     """
     if not audio_blocks_service.audio_can_play(audio_block):
         return None
@@ -371,9 +344,6 @@ def _speech_blocks_stage_status(report: dict[str, object] | None, operation_stat
     @param[in]  operation_state Persisted Speech Blocks operation state or `None`.
     @return     Effective Speech Blocks stage token.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if isinstance(operation_state, dict):
         operation_status = str(operation_state.get("status", "")).strip()
@@ -396,9 +366,6 @@ def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object
     @param[in]  manifest Active project manifest payload.
     @return     True when original or approved translated source chunks are available.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     selected_voice_language = character_voices_service.load_selected_voice_language(
         project_root,
@@ -428,9 +395,6 @@ def _persisted_profile_id(report: dict[str, object] | None, operation_state: dic
     @param[in]  operation_state Persisted Speech Blocks operation state or `None`.
     @return     Persisted profile identifier or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if isinstance(report, dict):
         profile_id = report.get("ai_profile_id")
@@ -452,9 +416,6 @@ def _persisted_source_language(report: dict[str, object] | None, operation_state
     @param[in]  operation_state Persisted Speech Blocks operation state or `None`.
     @return     Persisted source language code or one empty string.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     if isinstance(report, dict):
         source_language = str(report.get("source_language", "")).strip()
@@ -476,9 +437,6 @@ def _speaker_catalog_entries(project_root: Path, manifest: dict[str, object]) ->
     @param[in]  manifest Active project manifest payload.
     @return     Ordered speaker selector entries.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     speaker_entries = speech_blocks_service.speaker_catalog_entries(project_root)
     if _voice_assignment_mode(manifest) != "same_narrator":
@@ -496,9 +454,6 @@ def _voice_assignment_mode(manifest: dict[str, object]) -> str:
     @param[in]  manifest Active project manifest payload.
     @return     Supported voice-assignment mode.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     mode = str(manifest.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
     return mode if mode in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS else config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
@@ -510,9 +465,6 @@ def _content_kind_options(language: str) -> list[tuple[str, str]]:
     @param[in]  language Runtime UI language code.
     @return     Ordered content-kind value/label pairs.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     return [
         (

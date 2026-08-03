@@ -11,9 +11,6 @@
 @brief Focused controller tests for monofile AI Translation.
 @details Verifies resume prompting, derived manifest ownership, reset behavior,
          and retained broad downstream invalidation.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-16
-@version 0.6.0
 """
 
 # IMPORTS
@@ -53,7 +50,6 @@ def test_translation_controller_resumes_without_prompt_for_all_resumable_statuse
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  status Operation status token under evaluation.
     @return     None.
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, f"TranslationResume{status}")
     document = _document(status)
@@ -85,7 +81,6 @@ def test_translation_controller_syncs_derived_manifest_summary(qtbot, tmp_path) 
     @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationManifestSummary")
     window = _build_window(qtbot, project_root)
@@ -129,7 +124,6 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationDownstreamReset")
     (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
@@ -170,7 +164,6 @@ def test_translation_controller_reset_removes_monofile_and_preserves_narrator(mo
     @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @return     None.
-    @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationReset")
     ai_translation_service.write_translation_document(project_root, _document("review_pending"))
@@ -202,7 +195,6 @@ def _create_project(tmp_path, name: str):
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
     @param[in]  name Stable name associated with the requested object.
     @return     Created project root and manifest payload.
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -232,12 +224,10 @@ def _build_window(qtbot, project_root):
     @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
     @param[in]  project_root Active project root folder.
     @return     Configured main-window test double.
-    @version    0.1.0
     """
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [
                 {

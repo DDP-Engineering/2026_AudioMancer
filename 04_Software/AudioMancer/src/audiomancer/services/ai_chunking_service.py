@@ -10,18 +10,14 @@
 @file ai_chunking_service.py
 @brief AI-assisted text chunking helpers for AudioMancer.
 @details Consumes canonical cleaned text, asks one configured AI profile to
-         decide semantic chunk boundaries over ordered paragraphs, atomically
-         checkpoints one strict `chunks_text.json` document, and keeps AI
+         decide semantic chunk boundaries over ordered paragraphs, checkpoints
+         validated descriptor prefixes in one strict `chunks_text.json`, and keeps AI
          transaction logs separate from the durable Chunking contract.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.10.0
 """
 
 # IMPORTS
 
 import hashlib
-import json
 from pathlib import Path
 import re
 import unicodedata
@@ -30,6 +26,7 @@ from audiomancer import config
 from audiomancer.services import (
     ai_budget_service,
     chunking_document_service,
+    cleanup_text_analysis_service,
     deterministic_chunking_service,
     llm_provider_service,
     project_workspace_service,
@@ -40,14 +37,11 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     build_operation_output_path,
-    build_operation_state_payload,
-    load_operation_state_file,
     raise_if_cancelled,
 )
 from audiomancer.services.operation_runtime_service import (
     emit_progress_update as _emit_progress,
 )
-from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -71,7 +65,6 @@ ChunkingReportPayload = dict[str, object]
 OperationStatePayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
-ProfileRuntimeMetadataPayload = dict[str, object]
 
 
 # PUBLIC API
@@ -103,9 +96,6 @@ def chunk_text(
     @exception  ValueError Raised on missing profile data or unusable cleaned text.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @exception  IncompatibleChunkingDocumentError Raised when cleaned text changed; reset Chunking first.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -131,6 +121,8 @@ def chunk_text(
     paragraph_records = _build_paragraph_records(input_text, resolved_project_root)
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
+    if not any(_is_narratable_record(record) for record in paragraph_records):
+        raise ValueError("Cleaned text does not contain any narratable paragraphs.")
 
     _ = source_document
     existing_document = chunking_document_service.load_chunking_document(resolved_project_root)
@@ -252,7 +244,7 @@ def chunk_text(
             token_usage = _document_token_usage(
                 token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
             )
-            validated_ranges = _validate_chunk_descriptors(
+            validated_ranges, response_complete = _validate_chunk_descriptor_prefix(
                 response_payload,
                 paragraph_records,
                 window_start_index,
@@ -268,7 +260,11 @@ def chunk_text(
                     semantic_strategy,
                 )
                 next_paragraph = int(validated_ranges[-1]["end_index"]) + 2
-                if is_final_window and next_paragraph <= len(paragraph_records):
+                if (
+                    response_complete
+                    and is_final_window
+                    and next_paragraph <= len(paragraph_records)
+                ):
                     _append_chunks_from_ranges(
                         committed_chunks,
                         paragraph_records,
@@ -276,29 +272,51 @@ def chunk_text(
                         semantic_strategy,
                     )
                     next_paragraph = len(paragraph_records) + 1
+                elif not response_complete:
+                    progress_message = (
+                        "AI chunking accepted a valid descriptor prefix and "
+                        f"will retry from paragraph {next_paragraph}."
+                    )
             elif is_final_window:
+                fallback_ranges = _deterministic_structural_fallback_ranges(
+                    paragraph_records,
+                    window_start_index,
+                    len(paragraph_records) - 1,
+                )
                 _append_chunks_from_ranges(
                     committed_chunks,
                     paragraph_records,
-                    [{"start_index": window_start_index, "end_index": len(paragraph_records) - 1}],
+                    fallback_ranges,
                     semantic_strategy,
                 )
                 next_paragraph = len(paragraph_records) + 1
             else:
+                fallback_ranges = _deterministic_structural_fallback_ranges(
+                    paragraph_records,
+                    window_start_index,
+                    window_end_index,
+                )
                 _append_chunks_from_ranges(
                     committed_chunks,
                     paragraph_records,
-                    [{"start_index": window_start_index, "end_index": window_end_index}],
+                    fallback_ranges,
                     semantic_strategy,
                 )
                 context_window_fallback_count += 1
                 next_paragraph = window_end_index + 2
                 first_paragraph = window_start_index + 1
                 last_paragraph = window_end_index + 1
-                progress_message = (
-                    f"AI chunking returned no valid split for paragraphs {first_paragraph}-{last_paragraph}. "
-                    "AudioMancer saved this text window as one chunk."
-                )
+                if len(fallback_ranges) > 1:
+                    progress_message = (
+                        "AI chunking returned no valid split for paragraphs "
+                        f"{first_paragraph}-{last_paragraph}. AudioMancer used "
+                        "a deterministic structural fallback."
+                    )
+                else:
+                    progress_message = (
+                        f"AI chunking returned no valid split for paragraphs {first_paragraph}-{last_paragraph}. "
+                        "AudioMancer saved this text window as one chunk."
+                    )
 
             completed_window_count += 1
             remaining_windows = _build_windows_from_index(
@@ -348,7 +366,7 @@ def chunk_text(
         )
         warnings.append(
             f"{window_label} saved as a fallback chunk because AI chunking returned no valid internal split. "
-            "A larger AI chunking context may produce more natural boundaries."
+            "Explicit heading and scene-separator boundaries were preserved when available."
         )
     document["status"] = "completed"
     document["chunks"] = chunks
@@ -381,9 +399,6 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @param[in]  project_root Active project root folder.
     @return     Persisted chunking operation-state payload or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     document = chunking_document_service.load_chunking_document(project_root)
     return None if document is None else chunking_document_service.derive_operation_state(document)
@@ -392,43 +407,11 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
 # LOCAL HELPERS
 
 
-def _load_resume_state(state_path: Path) -> OperationStatePayload:
-    """
-    @brief      Load resumable AI chunking state, treating malformed JSON as no state.
-    @param[in]  state_path Operation-state file path.
-    @return     Persisted state payload or an empty dictionary.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
-    """
-    try:
-        return load_operation_state_file(state_path) or {}
-    except (OSError, TypeError, json.JSONDecodeError) as error:
-        _AI_CHUNKING_LOGGER.warning("Restarting AI chunking after unreadable state file: %s", error)
-        return {}
-
-
-def _compute_input_fingerprint(input_text: str) -> str:
-    """
-    @brief      Execute the compute input fingerprint helper.
-    @param[in]  input_text Text value for `input_text`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    return hashlib.sha256(input_text.encode("utf-8")).hexdigest()
-
-
 def _compute_prompt_fingerprint(prompt_text: str) -> str:
     """
     @brief      Compute a stable fingerprint for operator-supplied prompt rules.
     @param[in]  prompt_text Operator prompt-rule text.
     @return     SHA-256 fingerprint for the prompt-rule text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
@@ -444,9 +427,6 @@ def _build_windows(
     @param[in]  semantic_strategy Value for `semantic_strategy`.
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.4.0
     """
     _ = semantic_strategy
     text_budget = int(budget_metadata["text_budget_tokens"])
@@ -490,9 +470,6 @@ def _build_windows_from_index(
     @param[in]  semantic_strategy Value for `semantic_strategy`.
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Absolute-index window payloads for the remaining text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
     """
     resolved_start_index = max(0, min(int(start_index), len(paragraph_records)))
     if resolved_start_index >= len(paragraph_records):
@@ -527,9 +504,6 @@ def _build_budget_metadata(
     @param[in]  chunking_context_mode Optional AI chunking context mode token.
     @return     Context-budget metadata used for request-window construction.
     @exception  ValueError Raised when context and output settings leave too little input room.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.3.1
     """
     prompt_user_shell = _render_chunking_user_prompt(
         {
@@ -575,9 +549,6 @@ def _render_chunking_user_prompt(variables: dict[str, object]) -> str:
     @brief      Render the AI chunking user prompt with optional operator rules.
     @param[in]  variables Prompt variables.
     @return     Rendered AI chunking user prompt.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     template = prompt_template_service.load_prompt("text_chunking_user")
     placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
@@ -596,31 +567,11 @@ def _render_chunking_user_prompt(variables: dict[str, object]) -> str:
     return rendered_prompt
 
 
-def _resolve_additional_chunking_instructions(
-    additional_chunking_instructions: str | None,
-    existing_state: dict[str, object],
-) -> str:
-    """
-    @brief      Resolve the operator chunking rules for a new or resumed AI chunking run.
-    @param[in]  additional_chunking_instructions New operator instructions or None when resuming.
-    @param[in]  existing_state Existing chunking operation state.
-    @return     Normalized operator chunking instructions.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    _ = existing_state
-    return _normalized_additional_chunking_instructions(additional_chunking_instructions)
-
-
 def _normalized_additional_chunking_instructions(value: object) -> str:
     """
     @brief      Normalize optional operator chunking rules for prompt insertion and state storage.
     @param[in]  value Candidate instruction text.
     @return     Trimmed instruction text.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     if value is None:
         return ""
@@ -633,31 +584,10 @@ def _append_additional_chunking_instructions(prompt_text: str, additional_chunki
     @param[in]  prompt_text Rendered prompt template text.
     @param[in]  additional_chunking_instructions Normalized operator rules.
     @return     Prompt text with an additional-rules section.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     if not additional_chunking_instructions:
         return prompt_text
     return f"{prompt_text.rstrip()}\n\nAdditional operator chunking instructions:\n{additional_chunking_instructions}\n"
-
-
-def _build_profile_runtime_metadata(ai_profile_payload: dict[str, object]) -> ProfileRuntimeMetadataPayload:
-    """
-    @brief      Build persisted runtime metadata for the selected AI profile.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @return     JSON-ready profile settings relevant to AI chunking behavior.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    return {
-        "model_name": str(ai_profile_payload.get("model_name", "")).strip(),
-        "context_window": int(ai_profile_payload.get("context_window", 0) or 0),
-        "max_output_tokens": int(ai_profile_payload.get("max_output_tokens", 0) or 0),
-        "temperature": float(ai_profile_payload.get("temperature", 0.0) or 0.0),
-    }
 
 
 def _estimate_text_tokens(text: str) -> int:
@@ -666,9 +596,6 @@ def _estimate_text_tokens(text: str) -> int:
     @param[in]  text Value for `text`.
     @return     Estimated token count.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     return ai_budget_service.estimate_text_tokens(text)
 
@@ -679,9 +606,6 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
     @param[in]  cleaned_text Text value for `cleaned_text`.
     @param[in]  project_root Active project root folder.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
     """
     records = deterministic_chunking_service._build_paragraph_records(cleaned_text, project_root)
     for index, record in enumerate(records, start=1):
@@ -690,141 +614,11 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
     return records
 
 
-def _restore_descriptor_resume_state(
-    existing_state: dict[str, object],
-    output_path: Path,
-    paragraph_count: int,
-    input_fingerprint: str,
-    semantic_strategy: str,
-    additional_chunking_instructions_fingerprint: str,
-) -> tuple[int, int, list[ChunkPayload], int, str | None, TokenUsagePayload]:
-    """
-    @brief      Restore only the descriptor-contract AI chunking checkpoint.
-    @param[in]  existing_state Persisted operation state.
-    @param[in]  output_path Canonical committed chunk artifact path.
-    @param[in]  paragraph_count Current canonical paragraph count.
-    @param[in]  input_fingerprint Current cleaned-text fingerprint.
-    @param[in]  semantic_strategy Current semantic strategy.
-    @param[in]  additional_chunking_instructions_fingerprint Current instruction fingerprint.
-    @return     Completed windows, next paragraph, committed chunks, fallback count, log path, and usage.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
-    """
-    empty_result = (0, 1, [], 0, None, token_usage_service.empty_token_usage())
-    if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
-        return empty_result
-    if str(existing_state.get("mode", "")) != "ai_assisted":
-        return empty_result
-    checkpoint = existing_state.get("resume_checkpoint")
-    expected_fields = {
-        "input_fingerprint",
-        "semantic_strategy",
-        "additional_chunking_instructions_fingerprint",
-        "next_paragraph",
-        "committed_chunk_count",
-        "completed_window_count",
-        "context_window_fallback_count",
-        "token_usage",
-        "log_relative_path",
-    }
-    if not isinstance(checkpoint, dict) or set(checkpoint) != expected_fields:
-        return empty_result
-    if str(checkpoint.get("input_fingerprint", "")) != input_fingerprint:
-        return empty_result
-    if str(checkpoint.get("semantic_strategy", "")) != semantic_strategy:
-        return empty_result
-    if (
-        str(checkpoint.get("additional_chunking_instructions_fingerprint", ""))
-        != additional_chunking_instructions_fingerprint
-    ):
-        return empty_result
-
-    next_paragraph = checkpoint.get("next_paragraph")
-    committed_chunk_count = checkpoint.get("committed_chunk_count")
-    completed_window_count = checkpoint.get("completed_window_count")
-    fallback_count = checkpoint.get("context_window_fallback_count")
-    if any(
-        type(value) is not int
-        for value in (next_paragraph, committed_chunk_count, completed_window_count, fallback_count)
-    ):
-        return empty_result
-    if not 1 <= int(next_paragraph) <= paragraph_count + 1:
-        return empty_result
-    if min(int(committed_chunk_count), int(completed_window_count), int(fallback_count)) < 0:
-        return empty_result
-    try:
-        raw_chunks = json.loads(output_path.read_text(encoding="utf-8"))
-    except (OSError, TypeError, json.JSONDecodeError):
-        return empty_result
-    if not isinstance(raw_chunks, list) or len(raw_chunks) != int(committed_chunk_count):
-        return empty_result
-    committed_chunks = [dict(item) for item in raw_chunks if isinstance(item, dict)]
-    if len(committed_chunks) != int(committed_chunk_count):
-        return empty_result
-    log_relative_path = checkpoint.get("log_relative_path")
-    return (
-        int(completed_window_count),
-        int(next_paragraph),
-        committed_chunks,
-        int(fallback_count),
-        None if log_relative_path in (None, "") else str(log_relative_path),
-        token_usage_service.restore_token_usage(checkpoint.get("token_usage")),
-    )
-
-
-def _restore_profile_usage_history(existing_state: dict[str, object]) -> list[ProfileRuntimeMetadataPayload]:
-    """
-    @brief      Restore persisted AI profile runtime settings used by earlier chunking segments.
-    @param[in]  existing_state Persisted operation-state payload.
-    @return     Ordered profile runtime metadata entries.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return []
-    raw_history = metadata.get("profile_usage_history", [])
-    if not isinstance(raw_history, list):
-        return []
-    profile_usage_history: list[ProfileRuntimeMetadataPayload] = []
-    for item in raw_history:
-        if isinstance(item, dict):
-            profile_usage_history.append(dict(item))
-    return profile_usage_history
-
-
-def _merge_profile_usage_history(
-    existing_history: list[ProfileRuntimeMetadataPayload],
-    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
-) -> list[ProfileRuntimeMetadataPayload]:
-    """
-    @brief      Append the current profile runtime settings when not already represented.
-    @param[in]  existing_history Existing ordered profile runtime metadata entries.
-    @param[in]  profile_runtime_metadata Current selected profile runtime metadata.
-    @return     Ordered profile runtime metadata history.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    resolved_history = [dict(item) for item in existing_history]
-    if dict(profile_runtime_metadata) not in resolved_history:
-        resolved_history.append(dict(profile_runtime_metadata))
-    return resolved_history
-
-
 def _build_response_schema() -> dict[str, object]:
     """
     @brief      Build the strict AI chunk descriptor response schema.
     @return     Provider structured-output schema.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     return {
         "type": "object",
@@ -858,9 +652,6 @@ def _paragraph_start_anchor(paragraph_text: str) -> str:
     @param[in]  paragraph_text Canonical paragraph text.
     @return     First eight normalized words, or the whole shorter paragraph.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     return " ".join(str(paragraph_text).split()[:_ANCHOR_WORD_LIMIT])
 
@@ -871,9 +662,6 @@ def _normalized_anchor_words(anchor_text: str) -> list[str]:
     @param[in]  anchor_text Source or model-returned anchor text.
     @return     Up to eight case-folded compatibility-normalized words without punctuation.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    0.1.0
     """
     normalized_text = unicodedata.normalize("NFKC", str(anchor_text)).casefold()
     normalized_words: list[str] = []
@@ -886,21 +674,34 @@ def _normalized_anchor_words(anchor_text: str) -> list[str]:
     return normalized_words
 
 
+def _normalized_complete_anchor(anchor_text: str) -> str:
+    """
+    @brief      Canonicalize one complete anchor while retaining punctuation.
+    @param[in]  anchor_text Source or model-returned anchor text.
+    @return     Compatibility-normalized, case-folded, whitespace-collapsed anchor.
+    @exception  None.
+    """
+    normalized_text = unicodedata.normalize("NFKC", str(anchor_text)).casefold()
+    return " ".join(normalized_text.split())
+
+
 def _start_anchor_matches(paragraph_text: str, returned_anchor: str) -> bool:
     """
     @brief      Confirm a model anchor against its declared source paragraph.
     @param[in]  paragraph_text Canonical source paragraph text.
     @param[in]  returned_anchor Model-returned start anchor.
-    @return     True for a complete short match or a five-word consecutive match.
+    @return     True for an exact punctuation anchor, a complete short match, or a five-word run.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    0.1.0
     """
     expected_words = _normalized_anchor_words(_paragraph_start_anchor(paragraph_text))
     returned_words = _normalized_anchor_words(returned_anchor)
     if not expected_words:
-        return False
+        expected_anchor = _normalized_complete_anchor(
+            _paragraph_start_anchor(paragraph_text)
+        )
+        return bool(expected_anchor) and (
+            _normalized_complete_anchor(returned_anchor) == expected_anchor
+        )
     if len(expected_words) < _ANCHOR_MIN_CONSECUTIVE_WORDS:
         return returned_words == expected_words
 
@@ -915,52 +716,49 @@ def _start_anchor_matches(paragraph_text: str, returned_anchor: str) -> bool:
     return longest_run >= _ANCHOR_MIN_CONSECUTIVE_WORDS
 
 
-def _validate_chunk_descriptors(
+def _validate_chunk_descriptor_prefix(
     response_payload: dict[str, object],
     paragraph_records: list[dict[str, object]],
     window_start_index: int,
     window_end_index: int,
-) -> list[dict[str, int]] | None:
+) -> tuple[list[dict[str, int]], bool]:
     """
-    @brief      Validate one descriptor response atomically.
+    @brief      Validate the longest consecutive descriptor prefix.
     @param[in]  response_payload Provider JSON response object.
     @param[in]  paragraph_records Full ordered paragraph record list.
     @param[in]  window_start_index Zero-based absolute first paragraph index.
     @param[in]  window_end_index Zero-based absolute last paragraph index.
-    @return     Validated absolute ranges, or None when no valid split exists.
+    @return     Validated absolute prefix ranges and whole-response validity.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.1.0
     """
     if set(response_payload) != {"chunks"}:
-        return None
+        return [], False
     raw_chunks = response_payload.get("chunks")
     if not isinstance(raw_chunks, list) or not raw_chunks:
-        return None
+        return [], False
 
     expected_start_paragraph = window_start_index + 1
     validated_ranges: list[dict[str, int]] = []
     required_fields = {"start_paragraph", "start_text", "break_after_paragraph"}
     for item in raw_chunks:
         if not isinstance(item, dict) or set(item) != required_fields:
-            return None
+            return validated_ranges, False
         start_paragraph = item.get("start_paragraph")
         break_after_paragraph = item.get("break_after_paragraph")
         start_text = item.get("start_text")
         if type(start_paragraph) is not int or type(break_after_paragraph) is not int:
-            return None
+            return validated_ranges, False
         if not isinstance(start_text, str):
-            return None
+            return validated_ranges, False
         if start_paragraph != expected_start_paragraph:
-            return None
+            return validated_ranges, False
         if not window_start_index + 1 <= start_paragraph <= window_end_index + 1:
-            return None
+            return validated_ranges, False
         if not start_paragraph <= break_after_paragraph <= window_end_index + 1:
-            return None
+            return validated_ranges, False
         paragraph_text = str(paragraph_records[start_paragraph - 1]["text"])
         if not _start_anchor_matches(paragraph_text, start_text):
-            return None
+            return validated_ranges, False
         validated_ranges.append(
             {
                 "start_index": start_paragraph - 1,
@@ -968,7 +766,86 @@ def _validate_chunk_descriptors(
             }
         )
         expected_start_paragraph = break_after_paragraph + 1
-    return validated_ranges
+    return validated_ranges, True
+
+
+def _is_structural_boundary_record(record: dict[str, object]) -> bool:
+    """
+    @brief      Identify an explicit heading or scene-separator paragraph.
+    @param[in]  record Canonical Cleanup paragraph record.
+    @return     True when deterministic fallback must preserve this boundary.
+    @exception  None.
+    """
+    role = str(record.get("role") or "body")
+    if role == "heading":
+        return True
+    return not _is_narratable_record(record)
+
+
+def _effective_cleanup_role(record: dict[str, object]) -> str:
+    """
+    @brief      Return the role exposed by an AI chunk after user text edits.
+    @param[in]  record Canonical Cleanup paragraph record.
+    @return     Stored role or a recovered raw scene-separator role.
+    @exception  None.
+    """
+    role = str(record.get("role") or "body")
+    if not _is_narratable_record(record):
+        return "scene_separator"
+    return role
+
+
+def _deterministic_structural_fallback_ranges(
+    paragraph_records: list[dict[str, object]],
+    window_start_index: int,
+    window_end_index: int,
+) -> list[dict[str, int]]:
+    """
+    @brief      Split a rejected AI window around explicit structural paragraphs.
+    @param[in]  paragraph_records Full ordered paragraph record list.
+    @param[in]  window_start_index Zero-based inclusive first paragraph index.
+    @param[in]  window_end_index Zero-based inclusive last paragraph index.
+    @return     Consecutive ranges that preserve headings and scene separators.
+    @exception  None.
+    """
+    structural_indices = [
+        index
+        for index in range(window_start_index, window_end_index + 1)
+        if _is_structural_boundary_record(paragraph_records[index])
+    ]
+    if not structural_indices:
+        return [
+            {
+                "start_index": window_start_index,
+                "end_index": window_end_index,
+            }
+        ]
+
+    ranges: list[dict[str, int]] = []
+    next_index = window_start_index
+    for structural_index in structural_indices:
+        if next_index < structural_index:
+            ranges.append(
+                {
+                    "start_index": next_index,
+                    "end_index": structural_index - 1,
+                }
+            )
+        ranges.append(
+            {
+                "start_index": structural_index,
+                "end_index": structural_index,
+            }
+        )
+        next_index = structural_index + 1
+    if next_index <= window_end_index:
+        ranges.append(
+            {
+                "start_index": next_index,
+                "end_index": window_end_index,
+            }
+        )
+    return ranges
 
 
 def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
@@ -976,9 +853,6 @@ def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
     @brief      Build the units block.
     @param[in]  paragraph_records Value for `paragraph_records`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     blocks: list[str] = []
     for index, record in enumerate(paragraph_records):
@@ -1003,9 +877,6 @@ def _build_chunk_from_range(
     @param[in]  sequence_index One-based canonical chunk sequence number.
     @return     Canonical chunk payload.
     @exception  ValueError Raised when the selected range is empty or invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     selected_records = paragraph_records[start_index : end_index + 1]
     if not selected_records:
@@ -1020,7 +891,68 @@ def _build_chunk_from_range(
             bool(item.get("joined_across_page_break", False)) for item in selected_records
         ),
         "cleanup_warning_flags": _merged_warning_flags(selected_records),
+        "cleanup_role": next(
+            (
+                _effective_cleanup_role(item)
+                for item in selected_records
+                if _effective_cleanup_role(item) != "body"
+            ),
+            _effective_cleanup_role(selected_records[0]),
+        ),
+        "starts_after_scene_separator": _starts_after_scene_separator(
+            paragraph_records,
+            start_index,
+        ),
     }
+
+
+def _is_narratable_record(record: dict[str, object]) -> bool:
+    """Return whether one Cleanup paragraph should be materialized as audio text."""
+    return not cleanup_text_analysis_service.is_scene_separator_artifact(
+        str(record.get("text") or ""),
+        str(record.get("role") or "body"),
+    )
+
+
+def _starts_after_scene_separator(
+    paragraph_records: list[dict[str, object]],
+    start_index: int,
+) -> bool:
+    """Return whether the narratable range starts immediately after a scene separator."""
+    return start_index > 0 and not _is_narratable_record(paragraph_records[start_index - 1])
+
+
+def _narratable_subranges(
+    paragraph_records: list[dict[str, object]],
+    start_index: int,
+    end_index: int,
+) -> list[dict[str, int]]:
+    """Split one selected range at non-narratable scene-separator paragraphs."""
+    if start_index < 0 or end_index < start_index or end_index >= len(paragraph_records):
+        raise ValueError("AI chunk range is outside the available paragraphs.")
+    ranges: list[dict[str, int]] = []
+    segment_start: int | None = None
+    for index in range(start_index, end_index + 1):
+        if _is_narratable_record(paragraph_records[index]):
+            if segment_start is None:
+                segment_start = index
+            continue
+        if segment_start is not None:
+            ranges.append(
+                {
+                    "start_index": segment_start,
+                    "end_index": index - 1,
+                }
+            )
+            segment_start = None
+    if segment_start is not None:
+        ranges.append(
+            {
+                "start_index": segment_start,
+                "end_index": end_index,
+            }
+        )
+    return ranges
 
 
 def _append_chunks_from_ranges(
@@ -1037,33 +969,23 @@ def _append_chunks_from_ranges(
     @param[in]  semantic_strategy Selected semantic strategy.
     @return     None.
     @exception  ValueError Raised when a range is invalid.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
     """
     for range_payload in ranges:
-        chunks.append(
-            _build_chunk_from_range(
-                paragraph_records,
-                int(range_payload["start_index"]),
-                int(range_payload["end_index"]),
-                semantic_strategy,
-                len(chunks) + 1,
-            )
+        narratable_ranges = _narratable_subranges(
+            paragraph_records,
+            int(range_payload["start_index"]),
+            int(range_payload["end_index"]),
         )
-
-
-def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
-    """
-    @brief      Write the chunk payload.
-    @param[in]  output_path Output file path.
-    @param[in]  chunks Value for `chunks`.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    write_json_atomic(output_path, chunks)
+        for narratable_range in narratable_ranges:
+            chunks.append(
+                _build_chunk_from_range(
+                    paragraph_records,
+                    narratable_range["start_index"],
+                    narratable_range["end_index"],
+                    semantic_strategy,
+                    len(chunks) + 1,
+                )
+            )
 
 
 def _merged_warning_flags(paragraph_records: list[dict[str, object]]) -> list[str]:
@@ -1071,9 +993,6 @@ def _merged_warning_flags(paragraph_records: list[dict[str, object]]) -> list[st
     @brief      Merge cleanup warning flags across selected paragraph records.
     @param[in]  paragraph_records Paragraph records in one AI chunk span.
     @return     Ordered unique warning flags.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     flags: list[str] = []
     for record in paragraph_records:
@@ -1084,174 +1003,11 @@ def _merged_warning_flags(paragraph_records: list[dict[str, object]]) -> list[st
     return flags
 
 
-def _write_descriptor_state(
-    state_path: Path,
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    started_at: str,
-    progress_current: int,
-    progress_total: int,
-    chunks: list[ChunkPayload],
-    profile_id: str,
-    semantic_strategy: str,
-    input_fingerprint: str,
-    log_relative_path: str,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
-    profile_usage_history: list[ProfileRuntimeMetadataPayload],
-    next_paragraph: int,
-    additional_chunking_instructions_fingerprint: str,
-    context_window_fallback_count: int,
-    status: str = "running",
-    completed_at: str | None = None,
-) -> None:
-    """
-    @brief      Persist one descriptor-contract AI chunking checkpoint.
-    @param[in]  state_path Filesystem path for state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Filesystem path for input snapshot.
-    @param[in]  output_path Filesystem path for output.
-    @param[in]  started_at ISO-8601 timestamp marking operation start.
-    @param[in]  progress_current Number of processing units completed so far.
-    @param[in]  progress_total Total number of processing units expected.
-    @param[in]  chunks Ordered canonical chunk payloads.
-    @param[in]  profile_id Stable AI profile identifier.
-    @param[in]  semantic_strategy Selected semantic chunking strategy token.
-    @param[in]  input_fingerprint Stable fingerprint of the canonical input text.
-    @param[in]  log_relative_path Filesystem path for log relative.
-    @param[in]  token_usage Cumulative AI token-usage metadata.
-    @param[in]  budget_metadata Context-window budgeting metadata for the selected profile.
-    @param[in]  profile_runtime_metadata Runtime metadata for the selected AI profile.
-    @param[in]  profile_usage_history Ordered AI profile usage history.
-    @param[in]  next_paragraph Absolute index of the next paragraph awaiting processing.
-    @param[in]  additional_chunking_instructions_fingerprint Supplemental-instructions fingerprint.
-    @param[in]  context_window_fallback_count Number of context-window fallback retries.
-    @param[in]  status Operation status token under evaluation.
-    @param[in]  completed_at Optional ISO-8601 operation completion timestamp.
-    @return     None.
-    @exception  OSError Raised when state persistence fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-16
-    @version    1.0.0
-    """
-    _write_chunk_payload(output_path, chunks)
-    state_payload = _build_operation_state(
-        project_root=project_root,
-        input_snapshot_path=input_snapshot_path,
-        output_path=output_path,
-        report_path=None,
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        started_at=started_at,
-        completed_at=completed_at,
-        warnings=[],
-        chunks=chunks,
-        profile_id=profile_id,
-        semantic_strategy=semantic_strategy,
-        log_relative_path=log_relative_path,
-        resume_checkpoint={
-            "input_fingerprint": input_fingerprint,
-            "semantic_strategy": semantic_strategy,
-            "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
-            "next_paragraph": int(next_paragraph),
-            "committed_chunk_count": len(chunks),
-            "completed_window_count": int(progress_current),
-            "context_window_fallback_count": int(context_window_fallback_count),
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-            "log_relative_path": log_relative_path,
-        },
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        profile_runtime_metadata=profile_runtime_metadata,
-        profile_usage_history=profile_usage_history,
-    )
-    write_json_atomic(state_path, state_payload)
-
-
-def _build_operation_state(
-    project_root: Path,
-    input_snapshot_path: Path,
-    output_path: Path,
-    report_path: Path | None,
-    status: str,
-    progress_current: int,
-    progress_total: int,
-    started_at: str,
-    completed_at: str | None,
-    warnings: list[str],
-    chunks: list[ChunkPayload] | None,
-    profile_id: str,
-    semantic_strategy: str,
-    log_relative_path: str,
-    resume_checkpoint: dict[str, object] | None,
-    token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
-    profile_usage_history: list[ProfileRuntimeMetadataPayload],
-) -> OperationStatePayload:
-    """
-    @brief      Build the operation state.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_snapshot_path Input snapshot file path.
-    @param[in]  output_path Output file path.
-    @param[in]  report_path Report file path.
-    @param[in]  status Value for `status`.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  started_at Value for `started_at`.
-    @param[in]  completed_at Value for `completed_at`.
-    @param[in]  warnings Value for `warnings`.
-    @param[in]  chunks Value for `chunks`.
-    @param[in]  profile_id Profile identifier.
-    @param[in]  semantic_strategy Value for `semantic_strategy`.
-    @param[in]  log_relative_path Path for `log_relative_path`.
-    @param[in]  resume_checkpoint Value for `resume_checkpoint`.
-    @param[in]  token_usage Value for `token_usage`.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  profile_runtime_metadata Runtime metadata for the current AI profile.
-    @param[in]  profile_usage_history Runtime metadata entries used across resumed segments.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.5.0
-    """
-    _ = project_root
-    _ = input_snapshot_path
-    _ = output_path
-    _ = report_path
-    return build_operation_state_payload(
-        status=status,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        mode="ai_assisted",
-        warning_count=len(warnings),
-        metadata={
-            "warnings": list(warnings),
-            "chunk_count": 0 if chunks is None else len(chunks),
-            "detected_chapter_count": 0 if chunks is None else _chapter_count_from_chunks(chunks),
-            "ai_profile_id": profile_id,
-            **profile_runtime_metadata,
-            "semantic_strategy": semantic_strategy,
-            "log_relative_path": log_relative_path,
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-            "budget_metadata": dict(budget_metadata),
-            "profile_usage_history": [dict(item) for item in profile_usage_history],
-        },
-        resume_checkpoint=resume_checkpoint,
-    )
-
-
 def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
     """
     @brief      Execute the chapter count from chunks helper.
     @param[in]  chunks Value for `chunks`.
     @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     return deterministic_chunking_service._chapter_count_from_chunks(chunks)
 
@@ -1262,9 +1018,6 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     @param[in]  project_root Active project root folder.
     @param[in]  started_at Value for `started_at`.
     @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
     """
     timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     candidate = build_operation_output_path(
@@ -1289,9 +1042,6 @@ def _document_token_usage(payload: object) -> dict[str, object]:
     @param[in] payload Provider-normalized cumulative usage.
     @return Exact Chunking document usage payload.
     @exception None
-    @author Eng. Dan Dumitru Pasare
-    @date 2026-07-20
-    @version 0.1.0
     """
     if not isinstance(payload, dict) or not bool(payload.get("usage_available", False)):
         return chunking_document_service.empty_token_usage()

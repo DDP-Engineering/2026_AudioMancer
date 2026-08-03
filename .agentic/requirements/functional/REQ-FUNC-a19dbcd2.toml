@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-a19dbcd2"
+title = "The Text Chunking controller shall require confirmation to rerun"
+status = "active"
+
+requirement = """
+The Text Chunking controller shall require confirmation to rerun completed chunking.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_completed_rerun_requires_confirmation",
+]
+
+priority = "high"
+rationale = """
+Rerunning completed work must be confirmed.
+"""
+created = 2026-07-19
+updated = 2026-07-24

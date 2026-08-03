@@ -11,9 +11,6 @@
 @brief Regression guard for runtime UI string catalog completeness.
 @details Verifies every supported UI language exposes the exact same set of
          translation keys so operator-facing text stays language-complete.
-@author Eng. Dan Dumitru Pasare
-@date 2026-05-19
-@version 0.1.0
 """
 
 # IMPORTS
@@ -27,9 +24,6 @@ def test_supported_languages_share_identical_translation_keys() -> None:
     @brief      Verify each supported UI language has the same translation keys.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-19
-    @version    0.1.0
     """
     reference_language = config.DEFAULT_LANGUAGE
     reference_keys = set(ui_state_service.get_ui_strings(reference_language))

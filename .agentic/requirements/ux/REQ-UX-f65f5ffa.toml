@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-UX-f65f5ffa"
+title = "The operator status pane height shall scale with line count"
+status = "active"
+
+requirement = """
+The operator status pane height shall scale with line count.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_operator_status_pane_height_scales_with_line_count",
+]
+
+priority = "high"
+rationale = """
+The status pane must grow to fit its content.
+"""
+created = 2026-07-24
+updated = 2026-07-24

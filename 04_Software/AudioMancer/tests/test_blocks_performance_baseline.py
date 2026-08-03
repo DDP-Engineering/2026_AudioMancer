@@ -11,9 +11,6 @@
 @brief Opt-in performance harness for large Speech Blocks and Audio Blocks projects.
 @details Times representative review operations on a synthetic 3,000-block
          project without making the default test suite depend on timing.
-@author Eng. Dan Dumitru Pasare
-@date 2026-06-10
-@version 0.1.0
 """
 
 # IMPORTS
@@ -43,9 +40,6 @@ def test_large_block_review_performance_baseline(tmp_path, qtbot) -> None:
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     project_root = _build_synthetic_project(tmp_path / "LargeBook")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -88,9 +82,6 @@ def _build_synthetic_project(project_root: Path) -> Path:
     @param[in]  project_root Output project root folder.
     @return     Created project root.
     @exception  AssertionError Raised when the tool module cannot be loaded.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     module_path = _REPO_ROOT / "02_Tools" / "make_synthetic_project.py"
     spec = importlib.util.spec_from_file_location("make_synthetic_project", module_path)
@@ -107,9 +98,6 @@ def _elapsed(callback) -> float:
     @param[in]  callback Callable to execute.
     @return     Elapsed seconds.
     @exception  Any exception raised by the callback.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     started = time.perf_counter()
     callback()
@@ -122,9 +110,6 @@ def _elapsed_with_result(callback):
     @param[in]  callback Callable to execute.
     @return     Tuple of callback result and elapsed seconds.
     @exception  Any exception raised by the callback.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     started = time.perf_counter()
     result = callback()

@@ -11,9 +11,6 @@
 @brief Focused Audio Blocks state-service tests for AudioMancer.
 @details Verifies persisted Audio Blocks state rendering, resumable progress
          notes, and ready-for-assembly summaries.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-23
-@version 0.6.1
 """
 
 # IMPORTS
@@ -38,15 +35,11 @@ from chunking_test_support import build_chunking_document
 def test_scene_ambience_audio_selector_follows_the_placement_setting(tmp_path) -> None:
     """
     @brief      Verify the Audio Blocks ambience selector defaults from Scene Ambience Placement.
-    @details    Placement owns ambience enablement for the whole pipeline. The selector used to
-                read a settings key that had been deprecated and is now stripped on save, so it
-                was permanently off no matter what TTS Settings asked for.
+    @details    Placement owns ambience enablement for the whole pipeline, so the selector
+                follows that value directly.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksAmbienceSelector")
 
@@ -56,9 +49,6 @@ def test_scene_ambience_audio_selector_follows_the_placement_setting(tmp_path) -
         @param[in]  placement Scene Ambience placement value, or None to omit the key entirely.
         @return     Resolved selector state.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-07-26
-        @version    0.1.0
         """
         settings_payload = {} if placement is None else {"scene_ambience_placement": placement}
         state = audio_blocks_state_service.build_audio_blocks_state(
@@ -82,9 +72,6 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksStateRunning")
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -153,9 +140,6 @@ def test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states() -
     @brief      Verify Audio Blocks notes describe resumable failed runs and fully approved completion.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
     """
     speech_blocks = [
         {"speech_block_id": "0001-000001", "speaker_display_name": "Narrator", "text": "Narration one."},
@@ -204,9 +188,6 @@ def test_build_audio_blocks_state_measures_generated_audio_duration(tmp_path) ->
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksDuration")
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -248,9 +229,6 @@ def test_build_audio_blocks_state_does_not_resolve_missing_chunks(monkeypatch, t
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("AudioBlocksNoChunks", tmp_path)
     manifest["source_document"] = {
@@ -267,9 +245,6 @@ def test_build_audio_blocks_state_does_not_resolve_missing_chunks(monkeypatch, t
         @brief      Provide the fail resolve test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         raise AssertionError("resolve_source_chunks should not be called before chunking output exists")
 
@@ -293,9 +268,6 @@ def test_build_audio_blocks_state_does_not_resolve_unapproved_translation(monkey
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksUnapprovedTranslation")
     character_voices_service.save_selected_voice_language(project_root, "ro")
@@ -328,9 +300,6 @@ def test_build_audio_blocks_state_does_not_resolve_unapproved_translation(monkey
         @brief      Provide the fail resolve test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         raise AssertionError("resolve_source_chunks should not be called before translated chunks are approved")
 
@@ -352,9 +321,6 @@ def test_build_audio_blocks_state_starts_when_any_speech_block_is_approved(tmp_p
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksRequiresSpeechApproval")
     speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
@@ -373,9 +339,6 @@ def test_build_audio_blocks_state_disables_start_after_completed_generation(tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCompletedStartDisabled")
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -425,9 +388,6 @@ def test_build_audio_blocks_state_reenables_start_when_completed_report_has_miss
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCompletedWithMissing")
     speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
@@ -492,9 +452,6 @@ def test_build_audio_blocks_state_keeps_reset_disabled_for_default_metadata(tmp_
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksDefaultMetadataNoReset")
     operation_runtime_service.ensure_default_operation_state(project_root, "audio_blocks")
@@ -515,9 +472,6 @@ def test_merge_audio_block_state_uses_persisted_playability_without_file_checks(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
 
     def fail_is_file(_path) -> bool:
@@ -526,9 +480,6 @@ def test_merge_audio_block_state_uses_persisted_playability_without_file_checks(
         @param[in]  _path Ignored filesystem path.
         @return     No return; always raises.
         @exception  AssertionError Always raised when called.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-10
-        @version    0.1.0
         """
         raise AssertionError("Path.is_file should not be called for persisted audio block flags")
 
@@ -570,9 +521,6 @@ def _create_audio_blocks_project(tmp_path, name: str):
     @param[in]  name Project display name.
     @return     Tuple containing project root and loaded manifest payload.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -666,9 +614,6 @@ def _write_json(path, payload: object) -> None:
     @param[in]  payload JSON-serializable payload.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
@@ -680,9 +625,6 @@ def _write_wav(path: Path, frame_count: int) -> None:
     @param[in]  frame_count Number of silent frames to write.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)

@@ -10,10 +10,8 @@
 @file test_home_ui_controller.py
 @brief Home UI controller tests for AudioMancer.
 @details Verifies the Home-page UI controller still drives project creation and
-         activation correctly through the main-window shell.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-25
-@version 0.6.0
+         activation correctly through the main-window shell and presents
+         project-open failures to the operator.
 """
 
 # IMPORTS
@@ -41,9 +39,6 @@ def test_home_ui_controller_creates_and_activates_project(
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
     """
     monkeypatch.setattr(
         home_ui_controller.QFileDialog,
@@ -59,7 +54,6 @@ def test_home_ui_controller_creates_and_activates_project(
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -92,9 +86,6 @@ def test_home_ui_controller_project_dialogs_start_outside_the_install_root(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-25
-    @version    0.1.0
     """
     documents_root = tmp_path / "Documents"
     documents_root.mkdir()
@@ -132,6 +123,70 @@ def test_home_ui_controller_project_dialogs_start_outside_the_install_root(
     assert start_directories == [str(project_root.parent), str(project_root)]
 
 
+def test_home_ui_controller_shows_warning_for_open_project_error(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify expected project-open failures are presented without escaping the UI slot.
+    @details    Covers REQ-UX-da3b47c4-e633-4132-b147-8e28e50ae0db / S-0001.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    """
+    expected_errors = [
+        PermissionError("chunks_text.json is locked"),
+        ValueError("project manifest is invalid"),
+    ]
+    warnings = []
+
+    def raise_expected_error(_selected_folder):
+        """
+        @brief      Raise the next expected project-open failure.
+        @param[in]  _selected_folder Ignored folder selected by the controller.
+        @return     None.
+        @exception  PermissionError Raised for the filesystem-error branch.
+        @exception  ValueError Raised for the invalid-project branch.
+        """
+        raise expected_errors[len(warnings)]
+
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(tmp_path),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.project_workspace_service,
+        "open_project",
+        raise_expected_error,
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **kwargs: warnings.append(args),
+    )
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    home_ui_controller.handle_open_project_requested(window)
+    home_ui_controller.handle_open_project_requested(window)
+
+    assert [warning[0] for warning in warnings] == [window, window]
+    assert [warning[1] for warning in warnings] == [
+        home_ui_controller.ui_state_service.translate("dialog.project_error_title", "en"),
+        home_ui_controller.ui_state_service.translate("dialog.project_error_title", "en"),
+    ]
+    assert [warning[2] for warning in warnings] == [str(error) for error in expected_errors]
+    assert window._current_project_root is None
+    assert window._current_manifest is None
+
+
 def test_home_ui_controller_rejects_export_inside_project(
     monkeypatch,
     qtbot,
@@ -146,9 +201,6 @@ def test_home_ui_controller_rejects_export_inside_project(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ExportRejectProject", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -206,9 +258,6 @@ def test_home_ui_controller_applies_selected_export_extension_and_writes_utf8(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ExportWriteProject", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -263,9 +312,6 @@ def test_home_ui_controller_routes_zip_export_to_archive_writer(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ArchiveExportProject", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -327,9 +373,6 @@ def test_home_ui_controller_rejects_snapshot_inside_project(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotRejectProject", tmp_path)
     manifest = project_workspace_service.lock_project_options(project_root, "en", "narrator_and_characters")
@@ -373,9 +416,6 @@ def test_home_ui_controller_blocks_snapshot_during_active_operation(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotBusyProject", tmp_path)
     manifest = project_workspace_service.lock_project_options(project_root, "en", "narrator_and_characters")
@@ -415,9 +455,6 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotWriteProject", tmp_path)
     (project_root / "runtime.txt").write_text("runtime payload\n", encoding="utf-8")
@@ -464,9 +501,6 @@ def test_home_ui_controller_snapshot_button_click_exports_open_unlocked_project(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotButtonProject", tmp_path)
     (project_root / "draft.txt").write_text("draft payload\n", encoding="utf-8")
@@ -513,9 +547,6 @@ def test_home_ui_controller_snapshot_button_click_exports_locked_source_project(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotLockedSourceProject", tmp_path)
     source_path = tmp_path / "Command Performance.pdf"
@@ -575,9 +606,6 @@ def test_home_ui_controller_locks_project_options_in_manifest(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("LockedOptionsProject", tmp_path)
     manifest["source_document"] = {
@@ -626,9 +654,6 @@ def test_home_ui_controller_import_preserves_unlocked_draft_project_options(
     @param[in]  default_settings_payload Fixture supplying default test settings.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ImportDraftOptionsProject", tmp_path)
     source_path = tmp_path / "story.txt"
@@ -683,9 +708,6 @@ def _run_threaded_operation_synchronously(
     @param[in]  cancellable Progress-dialog cancellation flag.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     _ = operation_kind
     _ = operation_name

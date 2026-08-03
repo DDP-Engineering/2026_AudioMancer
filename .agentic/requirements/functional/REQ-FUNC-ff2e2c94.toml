@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-ff2e2c94"
+title = "Cleanup shall reject predominantly CJK or Hangul source text before"
+status = "active"
+
+requirement = """
+Cleanup shall reject predominantly CJK or Hangul source text before producing an output.
+"""
+
+verification = "Dominant CJK and Hangul rejection test passes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_rejects_predominantly_cjk_or_hangul",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = """
+Unsupported scripts must fail clearly instead of being processed by space-delimited word-boundary rules.
+"""
+created = 2026-07-28
+updated = 2026-07-30

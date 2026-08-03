@@ -11,9 +11,6 @@
 @brief Text Chunking state-service tests for AudioMancer.
 @details Verifies chunking-page notes reflect running and resumable AI chunking
          states and manual selected-chunk edits correctly.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.5.3
 """
 
 # IMPORTS
@@ -30,9 +27,6 @@ def test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunkin
     @brief      Verify running AI chunking shows only the in-progress note instead of the ready note.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     notes = text_chunking_state_service.build_text_chunking_notes(
         manifest={"source_document": {"original_name": "story.txt"}},
@@ -58,9 +52,6 @@ def test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking() ->
     @brief      Verify failed AI chunking shows the resume note instead of the in-progress note.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     notes = text_chunking_state_service.build_text_chunking_notes(
         manifest={"source_document": {"original_name": "story.txt"}},
@@ -86,9 +77,6 @@ def test_build_text_chunking_notes_shows_resume_note_for_cancelled_chunking() ->
     @brief      Verify REQ-FUNC-034 cancelled chunking shows the resumable note.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     notes = text_chunking_state_service.build_text_chunking_notes(
         manifest={"source_document": {"original_name": "story.txt"}},
@@ -114,9 +102,6 @@ def test_build_text_chunking_notes_shows_persisted_token_usage_summary() -> None
     @brief      Verify AI chunking notes include one persisted token-usage summary.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
     """
     notes = text_chunking_state_service.build_text_chunking_notes(
         manifest={"source_document": {"original_name": "story.txt"}},
@@ -152,9 +137,6 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ChunkEditProject",
@@ -262,9 +244,6 @@ def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkInsertProject", tmp_path)
     _write_chunks(project_root, ("First chunk", "Second chunk"))
@@ -303,9 +282,6 @@ def test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist(tmp_path) 
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-13
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ManualChunkStartProject", tmp_path)
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("First line\nSecond line", encoding="utf-8")
@@ -328,7 +304,11 @@ def test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist(tmp_path) 
         "cleanup_boundary_confidence",
         "cleanup_joined_across_page_break",
         "cleanup_warning_flags",
+        "cleanup_role",
+        "starts_after_scene_separator",
     }
+    assert chunks[0]["cleanup_role"] == "body"
+    assert chunks[0]["starts_after_scene_separator"] is False
     assert updated_manifest["current_stage"] == "translation_ready"
 
 
@@ -338,9 +318,6 @@ def test_delete_chunk_removes_only_selected_translation_record(tmp_path) -> None
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkDeleteProject", tmp_path)
     _write_chunks(project_root, ("First chunk", "Second chunk"))
@@ -361,17 +338,59 @@ def test_delete_chunk_removes_only_selected_translation_record(tmp_path) -> None
     assert translated_chunks[0]["translated_text"] == "Al doilea"
 
 
-def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
+def test_manual_chunk_mutations_preserve_leading_scene_boundary(tmp_path) -> None:
+    """Cover S-0017 and REQ-FUNC-2048d415-09d9-44bb-94ec-ba5c822ccff5."""
+    project_root, manifest = project_workspace_service.create_project("SceneBoundaryEdit", tmp_path)
+    _write_chunks(
+        project_root,
+        ("First chunk", "Second chunk", "Third chunk"),
+        starts_after_scene_separator=(False, True, False),
+    )
+
+    manifest = text_chunking_state_service.save_chunk_text_edit(
+        project_root,
+        manifest,
+        "chunk-0002",
+        "Edited second chunk",
+    )
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0002")[
+        "starts_after_scene_separator"
+    ] is True
+
+    manifest = text_chunking_state_service.insert_chunk_after_selected(
+        project_root,
+        manifest,
+        "chunk-0001",
+    )
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0004")[
+        "starts_after_scene_separator"
+    ] is False
+
+    text_chunking_state_service.delete_selected_chunk(project_root, manifest, "chunk-0002")
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0003")[
+        "starts_after_scene_separator"
+    ] is True
+
+
+def _write_chunks(
+    project_root,
+    texts: tuple[str, ...],
+    *,
+    starts_after_scene_separator: tuple[bool, ...] | None = None,
+) -> None:
     """
     @brief      Write deterministic chunk fixture records.
     @param[in]  project_root Project root folder.
     @param[in]  texts Ordered chunk text values.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
+    boundary_flags = starts_after_scene_separator or tuple(False for _text in texts)
+    if len(boundary_flags) != len(texts):
+        raise ValueError("Scene-boundary fixture count must match chunk text count.")
     chunks = [
         {
             "chunk_id": f"chunk-{index:04d}",
@@ -382,6 +401,7 @@ def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
             "chunking_mode": "deterministic",
             "semantic_strategy": None,
             "scene_note": None,
+            "starts_after_scene_separator": boundary_flags[index - 1],
         }
         for index, text in enumerate(texts, start=1)
     ]
@@ -398,9 +418,6 @@ def _write_translations(project_root, records: tuple[tuple[str, str, str], ...])
     @param[in]  records Ordered chunk id, source text, and translated text tuples.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
     """
     translated_chunks = [
         {

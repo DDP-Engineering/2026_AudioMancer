@@ -16,9 +16,6 @@
          pushes past the TTS budget are flagged and left intact, because Audio
          Blocks splits them again at generation time against the real loaded
          model budget.
-@author Eng. Dan Dumitru Pasare
-@date 2026-07-26
-@version 0.1.0
 """
 
 # IMPORTS
@@ -70,9 +67,6 @@ def open_quote_stack(text: str) -> list[str]:
     @param[in]  text Source prefix inspected up to a candidate boundary.
     @return     Closing delimiters the prefix still owes, outermost first.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     stack: list[str] = []
     for character in str(text):
@@ -107,9 +101,6 @@ def plan_narrator_blocks(
     @param[in]  script_name Optional pre-classified dominant writing script.
     @return     Ordered block payloads whose `source_text` values concatenate to the input.
     @exception  ValueError Raised when the planned blocks would not reproduce the input.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     source_text = str(chunk_text)
     if not source_text.strip():
@@ -140,9 +131,6 @@ def _atomic_sentence_spans(source_text: str) -> list[str]:
     @param[in]  source_text Exact source chunk text.
     @return     Ordered spans whose concatenation equals the input.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     sentence_spans = cleanup_text_analysis_service.sentence_spans(source_text)
     atomic_spans: list[str] = []
@@ -173,9 +161,6 @@ def _ends_with_abbreviation(span_text: str) -> bool:
     @param[in]  span_text Candidate sentence span.
     @return     True when the span most likely ends on an abbreviation.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     trimmed = str(span_text).rstrip()
     while trimmed and trimmed[-1] in _TRAILING_CLOSING_MARKS:
@@ -204,9 +189,6 @@ def _pack_spans(atomic_spans: list[str], target_units: int, script_name: str) ->
     @param[in]  script_name Dominant writing script.
     @return     Ordered packed block texts.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.2.0
     """
     total_units = tts_budget_service.estimate_budget_units("".join(atomic_spans), script_name)
     block_count = max(1, math.ceil(total_units / target_units))
@@ -244,9 +226,6 @@ def _absorb_orphan_tail(
     @param[in]  script_name Dominant writing script.
     @return     Ordered packed block texts with any orphan tail absorbed.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     if len(packed_spans) < 2 or minimum_units <= 0:
         return packed_spans
@@ -266,9 +245,6 @@ def _build_block(span_text: str, target_units: int, script_name: str) -> Narrato
     @param[in]  script_name Dominant writing script.
     @return     Block payload with exact source text, spoken text, and warning flags.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     warning_flags: list[str] = []
     if tts_budget_service.estimate_budget_units(span_text, script_name) > target_units:
@@ -289,9 +265,6 @@ def _verify_source_coverage(source_text: str, blocks: list[NarratorBlockPayload]
     @param[in]  blocks Planned block payloads.
     @return     None.
     @exception  ValueError Raised when the blocks do not reproduce the source chunk.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-07-26
-    @version    0.1.0
     """
     rebuilt = "".join(str(block.get("source_text", "")) for block in blocks)
     if rebuilt != source_text:

@@ -11,9 +11,6 @@
 @brief Focused tests for the AudioMancer AI chunking service.
 @details Verifies AI-assisted chunking writes canonical chunk artifacts,
          persists resumable state, and rebuilds chunk spans from AI boundaries.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.6.1
 """
 
 # IMPORTS
@@ -24,7 +21,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
-from chunking_test_support import read_chunking_document, write_chunking_document
+from chunking_test_support import read_chunking_document, write_chunking_document, write_cleanup_input
 
 
 def test_ai_chunking_windows_use_configured_strategy_caps(monkeypatch) -> None:
@@ -33,9 +30,6 @@ def test_ai_chunking_windows_use_configured_strategy_caps(monkeypatch) -> None:
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
     """
     paragraph_records = [{"unit_id": f"paragraph-{index:04d}", "text": "Short paragraph."} for index in range(1, 6)]
     monkeypatch.setattr(
@@ -75,9 +69,6 @@ def test_ai_chunking_large_context_allows_larger_scene_windows(tmp_path, monkeyp
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -109,9 +100,6 @@ def test_ai_chunking_small_context_limits_paragraph_windows(tmp_path, monkeypatc
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -141,9 +129,6 @@ def test_ai_chunking_rejects_profiles_with_no_input_budget(tmp_path, monkeypatch
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -169,9 +154,6 @@ def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragra
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -205,9 +187,6 @@ def test_ai_chunking_context_modes_control_paragraph_caps(tmp_path, monkeypatch)
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-17
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -258,9 +237,6 @@ def test_ai_chunking_keeps_oversized_paragraphs_whole() -> None:
     @brief      Verify budgeted windows never split a single oversized paragraph.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
     """
     paragraph_records = [
         {"unit_id": "paragraph-0001", "text": "x" * 3000},
@@ -293,9 +269,6 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -310,6 +283,7 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
         "CHAPTER I\n\nParagraph one.\n\nParagraph two.\n\nParagraph three.\n",
         encoding="utf-8",
     )
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -359,8 +333,6 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
 
     chunking_root = project_root
     assert (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
-    assert not (chunking_root / "chunking_report.json").exists()
-    assert not (chunking_root / "chunking_state.json").exists()
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in chunking_root.glob("*.log"))
     document = read_chunking_document(chunking_root)
     assert document["mode"] == "ai_assisted"
@@ -380,9 +352,6 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -394,6 +363,7 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -412,9 +382,6 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
         @brief      Provide the fake chat json test helper.
         @return     Fake AI chunking response payload.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-12
-        @version    0.1.0
         """
         captured_user_prompts.append(user_prompt)
         return {
@@ -466,9 +433,6 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -480,6 +444,7 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -541,9 +506,6 @@ def test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata(tmp_pa
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
@@ -552,33 +514,26 @@ def test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata(tmp_pa
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
 
     project_root, manifest = project_workspace_service.create_project("AiChunkingMetadataIds", tmp_path)
-    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "Visible first.\n\nVisible second.\n",
-        encoding="utf-8",
-    )
-    (project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).write_text(
-        json.dumps(
+    cleaned_text = "Visible first.\n\nVisible second.\n"
+    write_cleanup_input(
+        project_root,
+        cleaned_text,
+        paragraphs=[
             {
-                "schema_version": 1,
-                "paragraphs": [
-                    {
-                        "paragraph_id": "paragraph-0042",
-                        "text": "Visible first.\n\nVisible second.",
-                        "source_start_line": 1,
-                        "source_end_line": 3,
-                        "source_page_start": 1,
-                        "source_page_end": 2,
-                        "starts_after_page_break": False,
-                        "joined_across_page_break": True,
-                        "boundary_confidence": "repaired",
-                        "warning_flags": [],
-                    }
-                ],
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+                "paragraph_id": "paragraph-0042",
+                "output_start": 0,
+                "output_end": len(cleaned_text.rstrip("\n")),
+                "role": "body",
+                "confidence": "repaired",
+                "reason_codes": ["page_transition_repaired"],
+                "source_page_start": 1,
+                "source_page_end": 2,
+                "starts_after_page_transition": False,
+                "crosses_page_transition": True,
+                "source_unit_ids": ["u-000001", "u-000002"],
+                "provenance_available": True,
+            }
+        ],
     )
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -598,9 +553,6 @@ def test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata(tmp_pa
         @param[in]  user_prompt Rendered user prompt.
         @return     Fake provider payload with one chunk boundary and token usage.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         captured_prompt["text"] = user_prompt
         return {
@@ -649,9 +601,6 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
     """
     monkeypatch.setattr(
         config,
@@ -672,6 +621,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_text = "\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n"
     cleaned_path.write_text(cleaned_text, encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_text)
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -706,9 +656,6 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
         @param[in]  _kwargs Ignored keyword provider arguments.
         @return     Fake provider payload with chunking boundaries and token usage.
         @exception  OperationCancelledError Raised by queued cancellation response.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         response = next(responses)
         if isinstance(response, Exception):
@@ -802,9 +749,6 @@ def test_ai_running_state_reuses_prebuilt_chunks(tmp_path) -> None:
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-10
-    @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("AiChunkPrebuiltState", tmp_path)
     input_path = project_root / config.CLEANED_TEXT_FILE_NAME
@@ -832,16 +776,13 @@ def test_ai_running_state_reuses_prebuilt_chunks(tmp_path) -> None:
     assert state_payload["next_paragraph"] == 2
 
 
-def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_path, monkeypatch) -> None:
+def test_ai_chunking_rejects_checkpoint_with_unknown_fields(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify old break-ID AI chunking checkpoints are not resumed.
+    @brief      Verify an incompatible AI Chunking document is rejected.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
     """
     monkeypatch.setattr(
         config,
@@ -857,10 +798,11 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
     (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
 
-    project_root, manifest = project_workspace_service.create_project("AiChunkingOldCheckpointProject", tmp_path)
+    project_root, manifest = project_workspace_service.create_project("AiChunkingInvalidCheckpointProject", tmp_path)
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -904,9 +846,6 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
         @brief      Return one response and then cancel to create an interrupted checkpoint.
         @return     Fake provider payload with one chunking boundary.
         @exception  OperationCancelledError Raised by queued cancellation response.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-15
-        @version    0.1.0
         """
         response = next(responses)
         if isinstance(response, Exception):
@@ -922,8 +861,7 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
 
     document_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
     state_payload = read_chunking_document(project_root)
-    state_payload["completed_last_unit_id"] = "paragraph-0020"
-    state_payload["committed_break_ids"] = ["paragraph-0020"]
+    state_payload["unexpected_checkpoint_field"] = "paragraph-0020"
     document_path.write_text(json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     captured_prompts: list[str] = []
@@ -933,9 +871,6 @@ def test_ai_chunking_restarts_when_checkpoint_contains_legacy_break_fields(tmp_p
         @brief      Capture prompts for restart verification.
         @return     Fake provider payload with one chunking boundary.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-15
-        @version    0.1.0
         """
         captured_prompts.append(user_prompt)
         return {
@@ -958,9 +893,6 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.2.0
     """
     monkeypatch.setattr(
         config,
@@ -980,6 +912,7 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n", encoding="utf-8")
+    write_cleanup_input(project_root, cleaned_path.read_text(encoding="utf-8"))
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -1025,9 +958,6 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
         @param[in]  _kwargs Ignored keyword provider arguments.
         @return     Fake provider payload with one chunking boundary.
         @exception  OperationCancelledError Raised by queued cancellation response.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-29
-        @version    0.1.0
         """
         response = next(responses)
         if isinstance(response, Exception):
@@ -1048,9 +978,6 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
         @brief      Provide the second chat json test helper.
         @return     None.
         @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
         """
         captured_prompts.append(user_prompt)
         return {

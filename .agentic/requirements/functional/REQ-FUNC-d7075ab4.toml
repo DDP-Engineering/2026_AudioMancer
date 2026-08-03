@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-d7075ab4"
+title = "TTS settings shall present compact runtime-limit controls with working"
+status = "active"
+
+requirement = """
+TTS settings shall present compact runtime-limit controls with working numeric increments.
+"""
+
+verification = "Automated: 2 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_uses_compact_runtime_limit_controls",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_numeric_increment_arrows_change_values",
+]
+
+priority = "high"
+rationale = """
+Runtime/planning settings must be editable through compact numeric controls.
+"""
+created = 2026-07-19
+updated = 2026-07-24

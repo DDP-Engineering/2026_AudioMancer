@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-b1613487"
+title = "Character discovery shall merge and group candidates, keeping role"
+status = "active"
+
+requirement = """
+Character discovery shall merge and group candidates, keeping role speakers and strongest confidence and reporting rejected non-dialogue candidates.
+"""
+
+verification = "Automated: 4 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_merge_character_candidates_keeps_role_speaker_candidate",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_merge_character_candidates_keeps_strongest_demographic_confidence",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_merge_character_candidates_reports_rejected_non_dialogue_candidates",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_group_character_candidates_preserves_first_match_order",
+]
+
+priority = "high"
+rationale = """
+Candidate merging must produce a truthful, deduplicated character set.
+"""
+created = 2026-07-19
+updated = 2026-07-24

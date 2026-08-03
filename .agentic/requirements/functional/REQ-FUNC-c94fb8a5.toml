@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-c94fb8a5"
+title = "The Characters page shall present evidence-review fields as read-only"
+status = "active"
+
+requirement = """
+The Characters page shall present evidence-review fields as read-only by default.
+"""
+
+verification = "Automated: 1 linked pytest selector(s)."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_fields_are_read_only_by_default",
+]
+
+priority = "high"
+rationale = """
+Review must be a safe read-only boundary until an intentional edit.
+"""
+created = 2026-07-19
+updated = 2026-07-24

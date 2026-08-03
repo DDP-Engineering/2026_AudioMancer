@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-PLAT-0c2009a9"
+title = "Build_default_settings shall include ui_font_size_step and"
+status = "active"
+
+requirement = """
+build_default_settings shall include ui_font_size_step and text_font_size_step, both defaulting to 'normal'.
+"""
+
+verification = "uv run pytest -q (passed)"
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_default_settings_include_font_size_steps",
+]
+
+priority = "high"
+rationale = """
+New installs must persist valid default font-size steps.
+"""
+created = 2026-07-25
+updated = 2026-07-25
