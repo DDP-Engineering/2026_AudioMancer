@@ -36,19 +36,31 @@ requirement alone is not enough to build from.
 5. Write the prose self-contained. A reader with no other context must be
    able to understand and check it: no ticket numbers, no run IDs, no
    "see the other requirement". `check` flags those patterns.
-6. Make `verification` concrete — the observation that settles whether the
-   behavior holds, not a restatement of the requirement.
-7. Set `affected_paths` to your best current guess. Leave `linked_tests`
+6. Prefer an **EARS** shape — the template lists all five. Pick the one
+   that fits:
+   - `The <system> shall <response>.` — always true
+   - `When <trigger>, the <system> shall <response>.` — event
+   - `While <state>, the <system> shall <response>.` — state
+   - `If <condition>, then the <system> shall <response>.` — unwanted
+   - `Where <feature is included>, the <system> shall <response>.`
+   A stated trigger or condition is what the test has to arrange, so
+   naming it here is what makes the behavior testable. Two "shall"
+   clauses means two behaviors — split them. Do not contort prose to fit
+   a pattern: a constraint that reads better plainly is better plainly.
+7. Make `verification` concrete — the observation that settles whether the
+   behavior holds, not a restatement of the requirement. It should follow
+   from the requirement's trigger and response, not add new conditions.
+8. Set `affected_paths` to your best current guess. Leave `linked_tests`
    empty; `build` fills it.
-8. Add a spec only when the requirement alone is not buildable (a format,
+9. Add a spec only when the requirement alone is not buildable (a format,
    a protocol, a non-obvious algorithm). Copy
    `.agentic/templates/spec.md` to `.agentic/specs/<REQ-ID>.md` and set
    `spec = "specs/<REQ-ID>.md"` in the requirement.
-9. Put every requirement ID on the journal's `requirements:` header line,
+10. Put every requirement ID on the journal's `requirements:` header line,
    comma-separated, and log what you created or changed.
-10. Run `python .agentic/aegis.py check` and fix every format error it
+11. Run `python .agentic/aegis.py check` and fix every format error it
     reports. Empty-`linked_tests` warnings are expected at this stage.
-11. Tick the checklist, set `stage: design`, and **replace
+12. Tick the checklist, set `stage: design`, and **replace
     `## Done checklist`** with the design stage's "Done when" list from
     `3_design.md` — the checklist always shows the current stage's items.
 
@@ -73,6 +85,8 @@ itself is a normal task (`--type change`) whose scope says so.
 
 - [ ] every in-scope behavior has exactly one requirement
 - [ ] required fields filled and prose is self-contained
+- [ ] each requirement states one behavior (one "shall"), in an
+      EARS shape where one fits
 - [ ] `affected_paths` set to the best current guess
 - [ ] specs written only where the requirement was not buildable alone
 - [ ] journal `requirements:` line lists every ID
