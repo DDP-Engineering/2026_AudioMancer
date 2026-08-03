@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-94ee11a0 — Prevent manual edits from completing resumable Chunking
 
-stage: deliver
+stage: done
 type: fix
 path: quick
 requirements: REQ-FUNC-18dd9ec2
@@ -48,7 +48,7 @@ opened: 2026-08-03
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed outcome
       delivered (PR by default)
-- [ ] close-out: `stage: done` set and committed only after the outcome
+- [x] close-out: `stage: done` set and committed only after the outcome
       succeeded
 - [x] the project items from `.agentic/PROJECT.md` ("Delivery checklist
       additions") ƒ?? code style, and for a release the four-place version
@@ -70,6 +70,7 @@ opened: 2026-08-03
 - 2026-08-03 deliver: Generated and reviewed the AEGIS delivery report; stopped before commit and push as requested.
 - 2026-08-03 deliver: Final `aegis check --full` reported zero errors and 21 accepted warnings; the additional `unticked-deliver` warning correctly records the required pre-commit and close-out items left open by the requested stop.
 - 2026-08-03 deliver: Human confirmed testing is satisfactory and authorized the scoped delivery commit without a push.
+- 2026-08-03 done: The scoped delivery commit e829071 succeeded, and the user authorized task closure without a push.
 
 ## Delivery report (2026-08-03)
 
