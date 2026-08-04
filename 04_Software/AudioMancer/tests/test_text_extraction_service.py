@@ -17,6 +17,7 @@
 
 import json
 from pathlib import Path
+import zipfile
 
 from docx import Document
 from ebooklib import epub
@@ -29,6 +30,7 @@ from audiomancer import config
 from audiomancer.services import (
     project_workspace_service,
     source_ledger_service,
+    text_extraction_adapters,
     text_extraction_service,
 )
 
@@ -80,6 +82,63 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     ledger = source_ledger_service.load_source_ledger(project_root)
     assert ledger["canonical_text"]["length_codepoints"] == 24
     assert [unit["unit_id"] for unit in ledger["units"]] == ["u-000001", "u-000002"]
+
+
+@pytest.mark.parametrize(
+    ("encoding", "source_text", "expected_ledger_encoding"),
+    [
+        ("utf-8", "Simple UTF-8 story.", "utf-8"),
+        ("utf-8-sig", "BOM-marked story.", "utf-8-sig"),
+        ("cp1250", "Zażółć gęślą jaźń. Příliš žluťoučký kůň.", "cp1250"),
+        ("cp1251", "Привет, мир! Это проверка русского текста.", "cp1251"),
+        ("cp1252", "“Café”—naïve façade. Voilà, déjà vu!", "cp1252"),
+    ],
+)
+def test_extract_text_selects_supported_text_encoding_without_mojibake(
+    tmp_path,
+    encoding: str,
+    source_text: str,
+    expected_ledger_encoding: str,
+) -> None:
+    """Verify public TXT extraction selects supported encodings truthfully."""
+    project_name = f"Encoding_{expected_ledger_encoding.replace('-', '_')}"
+    project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_bytes(source_text.encode(encoding))
+    manifest["source_document"] = _build_source_document(source_path, "txt")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    canonical_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    ledger = source_ledger_service.load_source_ledger(project_root)
+    assert canonical_text == f"{source_text}\n"
+    assert ledger["source"]["encoding"] == expected_ledger_encoding
+
+
+def test_extract_text_honors_rtf_code_page_declaration(tmp_path) -> None:
+    """Verify an RTF code-page declaration takes priority over codec guessing."""
+    project_root, manifest = project_workspace_service.create_project("RtfCp1251", tmp_path)
+    source_text = "Привет из RTF."
+    source_path = project_root / "story.rtf"
+    source_path.write_bytes(b"{\\rtf1\\ansi\\ansicpg1251 " + source_text.encode("cp1251") + b"}")
+    manifest["source_document"] = _build_source_document(source_path, "rtf")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    canonical_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    ledger = source_ledger_service.load_source_ledger(project_root)
+    assert canonical_text == f"{source_text}\n"
+    assert ledger["source"]["encoding"] == "cp1251"
+
+
+def test_text_decoder_uses_explicit_latin1_terminal_fallback() -> None:
+    """Verify Latin-1 is used only after every Windows-code-page decoder rejects."""
+    source_bytes = b"Fallback:\x98\x81"
+
+    decoded, encoding = text_extraction_adapters._decode_bytes_with_fallback(source_bytes)
+
+    assert decoded == source_bytes.decode("latin-1")
+    assert encoding == "latin-1"
 
 
 @pytest.mark.parametrize(
@@ -233,6 +292,109 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
     metadata = text_extraction_service.load_extraction_metadata(project_root)
     assert metadata is not None
     assert metadata["progress_total"] >= 2
+
+
+@pytest.mark.parametrize(
+    ("declared_encoding", "python_encoding", "source_text", "expected_encoding"),
+    [
+        ("utf-16", "utf-16", "UTF-16 chapter: Привет.", "utf-16"),
+        ("windows-1252", "cp1252", "CP1252 chapter: Café naïve.", "cp1252"),
+        ("iso-8859-1", "iso-8859-1", "Latin-1 chapter: déjà vu.", "iso8859-1"),
+    ],
+)
+def test_extract_text_honors_uniform_epub_content_encoding(
+    tmp_path,
+    declared_encoding: str,
+    python_encoding: str,
+    source_text: str,
+    expected_encoding: str,
+) -> None:
+    """Verify a genuine non-UTF-8 EPUB member uses its declaration or BOM."""
+    project_name = f"Epub_{expected_encoding.replace('-', '_')}"
+    project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
+    source_path = project_root / "story.epub"
+    _write_epub_source(source_path)
+    document = (
+        f'<?xml version="1.0" encoding="{declared_encoding}"?>'
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+        f"<p>{source_text}</p></body></html>"
+    )
+    _replace_epub_member(source_path, "chapter_1.xhtml", document.encode(python_encoding))
+    manifest["source_document"] = _build_source_document(source_path, "epub")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    canonical_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    ledger = source_ledger_service.load_source_ledger(project_root)
+    assert canonical_text == f"{source_text}\n"
+    assert ledger["source"]["encoding"] == expected_encoding
+
+
+def test_extract_text_preserves_mixed_encoding_epub_spine_order(tmp_path) -> None:
+    """Verify mixed EPUB encodings remain ordered and are reported truthfully."""
+    project_root, manifest = project_workspace_service.create_project("MixedEncodingEpub", tmp_path)
+    source_path = project_root / "story.epub"
+    _write_two_chapter_epub_source(source_path)
+    first_text = "First UTF-8 chapter."
+    second_text = "Second CP1252 chapter: Café."
+    first_document = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+        f"<p>{first_text}</p></body></html>"
+    ).encode()
+    second_document = (
+        '<html xmlns="http://www.w3.org/1999/xhtml"><head>'
+        '<meta charset="windows-1252"/></head><body>'
+        f"<p>{second_text}</p></body></html>"
+    ).encode("cp1252")
+    _replace_epub_members(
+        source_path,
+        {
+            "chapter_1.xhtml": first_document,
+            "chapter_2.xhtml": second_document,
+        },
+    )
+    manifest["source_document"] = _build_source_document(source_path, "epub")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    canonical_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    ledger = source_ledger_service.load_source_ledger(project_root)
+    assert canonical_text == f"{first_text}\n\n{second_text}\n"
+    assert "AudioMancer Navigation" not in canonical_text
+    assert ledger["source"]["encoding"] == "mixed(cp1252,utf-8)"
+
+
+def test_extract_text_identifies_epub_item_with_invalid_declared_encoding(tmp_path) -> None:
+    """Verify an invalid EPUB declaration fails with the responsible item identity."""
+    project_root, manifest = project_workspace_service.create_project("InvalidEncodingEpub", tmp_path)
+    source_path = project_root / "story.epub"
+    _write_epub_source(source_path)
+    invalid_document = (
+        b'<?xml version="1.0" encoding="not-a-codec"?>'
+        b'<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Story</p></body></html>'
+    )
+    _replace_epub_member(source_path, "chapter_1.xhtml", invalid_document)
+    manifest["source_document"] = _build_source_document(source_path, "epub")
+
+    with pytest.raises(ValueError, match=r"chapter_0.*chapter_1\.xhtml.*not-a-codec"):
+        text_extraction_service.extract_text(project_root, manifest)
+
+
+def test_extract_text_identifies_epub_item_when_declared_decoding_fails(tmp_path) -> None:
+    """Verify strict declared decoding failures name the responsible EPUB item."""
+    project_root, manifest = project_workspace_service.create_project("FailedDecodeEpub", tmp_path)
+    source_path = project_root / "story.epub"
+    _write_epub_source(source_path)
+    invalid_document = (
+        b'<?xml version="1.0" encoding="windows-1252"?>'
+        b'<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Invalid byte: \x81</p></body></html>'
+    )
+    _replace_epub_member(source_path, "chapter_1.xhtml", invalid_document)
+    manifest["source_document"] = _build_source_document(source_path, "epub")
+
+    with pytest.raises(ValueError, match=r"chapter_0.*chapter_1\.xhtml.*declared cp1252"):
+        text_extraction_service.extract_text(project_root, manifest)
 
 
 def test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension(tmp_path) -> None:
@@ -495,6 +657,53 @@ def _write_epub_source(path: Path) -> None:
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
     epub.write_epub(str(path), book, {})
+
+
+def _write_two_chapter_epub_source(path: Path) -> None:
+    """Write one EPUB fixture with two ordered content documents and navigation."""
+    book = epub.EpubBook()
+    book.set_identifier("two-chapter-book")
+    book.set_title("Two chapters")
+    book.set_language("en")
+    first = epub.EpubHtml(title="Chapter 1", file_name="chapter_1.xhtml", lang="en")
+    first.content = "<p>Placeholder one.</p>"
+    second = epub.EpubHtml(title="Chapter 2", file_name="chapter_2.xhtml", lang="en")
+    second.content = "<p>Placeholder two.</p>"
+    book.add_item(first)
+    book.add_item(second)
+    book.toc = (first, second)
+    book.spine = ["nav", first, second]
+    book.add_item(epub.EpubNcx())
+    book.add_item(epub.EpubNav())
+    epub.write_epub(str(path), book, {})
+
+
+def _replace_epub_member(path: Path, file_name: str, content: bytes) -> None:
+    """Replace one EPUB ZIP member selected by its trailing file name."""
+    _replace_epub_members(path, {file_name: content})
+
+
+def _replace_epub_members(path: Path, replacements: dict[str, bytes]) -> None:
+    """Rewrite EPUB ZIP members so tests retain genuine declared source bytes."""
+    replacement_path = path.with_name(f"{path.stem}_replacement.epub")
+    matched_names: set[str] = set()
+    with (
+        zipfile.ZipFile(path, "r") as source_archive,
+        zipfile.ZipFile(replacement_path, "w") as target_archive,
+    ):
+        for member in source_archive.infolist():
+            matching_name = next(
+                (name for name in replacements if member.filename.endswith(name)),
+                None,
+            )
+            if matching_name is None:
+                content = source_archive.read(member.filename)
+            else:
+                content = replacements[matching_name]
+                matched_names.add(matching_name)
+            target_archive.writestr(member, content)
+    assert matched_names == set(replacements)
+    replacement_path.replace(path)
 
 
 def _write_pdf_source(path: Path, page_texts: list[str]) -> None:

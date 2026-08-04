@@ -12,6 +12,15 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Project creation, source import, and confirmed project repair now keep the
+  current Home state intact when the filesystem rejects the operation. The
+  existing localized project-error warning shows the original reason instead
+  of letting the error escape the UI or reporting a false success.
+- Text Extraction now distinguishes Central European, Western European, and
+  cp1251 Russian text without first-success mojibake, honors RTF code-page
+  declarations, and decodes each EPUB spine document from its BOM or XML/HTML
+  charset declaration. Mixed-encoding EPUBs are reported truthfully in the
+  source ledger, and a bad declaration identifies the responsible chapter.
 - Running Cleanup again or saving a manual cleaned-text correction now resets
   Text Chunking and every later workflow result consistently. Reopening the
   project no longer asks to repair stale completed summaries for files that

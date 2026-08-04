@@ -286,6 +286,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Choose a simple project name, such as the book title.</li>
                     <li>Click <strong>Select Source File</strong> on the Home page.</li>
                     <li>Select the book or story file. Supported formats include TXT, PDF, RTF, DOCX, ODT, MD, and EPUB.</li>
+                    <li>TXT and RTF extraction recognizes UTF-8 plus common Central European, Western European, and cp1251 Russian text. EPUB chapters honor their BOM or XML/HTML charset declaration, including UTF-16 and declared legacy encodings.</li>
                     <li>Choose <strong>Translation language</strong> and <strong>Audio output style</strong>.</li>
                     <li>Click <strong>Start Project</strong>. The source, target language, voice language, and narration mode are locked for this project.</li>
                 </ol>
@@ -293,6 +294,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Use <strong>Open Project</strong> to return to an existing project folder. The compact Home
                     dashboard combines the current stage with operation summaries so finished and waiting workflow
                     steps are visible.
+                </p>
+                <p>
+                    If the filesystem blocks project creation, source import, or an accepted repair, AudioMancer
+                    shows the project error and its original reason. It does not switch projects or report success.
                 </p>
                 <p>
                     The Home dashboard also shows completion status for each phase. When a phase is complete, its

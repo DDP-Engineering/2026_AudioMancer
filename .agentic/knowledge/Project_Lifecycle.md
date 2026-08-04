@@ -97,6 +97,12 @@ that repair decision. Declining the repair therefore leaves the project
 unopened without hiding the completed reset; accepting it continues through
 repair and activation without repeating the recovery information.
 
+`REQ-UX-da3b47c4` contains expected workspace failures at the Home boundary.
+Create, open, confirmed repair, and source-import service calls catch
+`OSError` and `ValueError`, show `dialog.project_error_title` with the original
+error text, and return before project activation, current window-state
+replacement, or a success notification. Successful flows are unchanged.
+
 `home_presenter_service` turns manifest summaries and the active operation into
 read-only workflow rows. `HomeUiController` owns the UI orchestration and keeps
 dialogs, project activation, option locking, threaded snapshots, and external
@@ -291,9 +297,10 @@ Primary automated coverage:
 - `04_Software/AudioMancer/tests/test_main_window_home_exports.py`
 - `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
 
-The Home controller suite verifies that expected project-open `OSError` and
-`ValueError` failures use the localized project-error warning and do not
-activate a project. The main-window project-flow suite verifies that Chunking
+The Home controller suite verifies that expected create, open, confirmed-repair,
+and source-import `OSError` failures use the localized project-error warning,
+preserve the current project and manifest, and do not report success. Existing
+open coverage also exercises `ValueError`. The main-window project-flow suite verifies that Chunking
 recovery information precedes both accepted and declined follow-up repair
 decisions and appears exactly once. The workspace-service suite separately
 verifies that a Chunking `OSError` propagates without reset or deletion.

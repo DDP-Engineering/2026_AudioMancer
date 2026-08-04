@@ -192,6 +192,200 @@ def test_home_ui_controller_shows_warning_for_open_project_error(
     assert window._current_manifest is None
 
 
+def test_home_ui_controller_contains_project_creation_filesystem_error(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """Verify a project-creation filesystem failure leaves Home state unchanged."""
+    existing_root, existing_manifest = project_workspace_service.create_project(
+        "ExistingCreationProject",
+        tmp_path,
+    )
+    expected_error = PermissionError("selected project parent is read-only")
+    warnings = []
+    activations = []
+    success_messages = []
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(tmp_path),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QInputDialog,
+        "getText",
+        lambda *args, **kwargs: ("NewProject", True),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.project_workspace_service,
+        "create_project",
+        lambda *_args: (_ for _ in ()).throw(expected_error),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **kwargs: warnings.append(args),
+    )
+    monkeypatch.setattr(
+        home_ui_controller,
+        "activate_project",
+        lambda *args: activations.append(args),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *args: success_messages.append(args),
+    )
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._current_project_root = existing_root
+    window._current_manifest = existing_manifest
+
+    home_ui_controller.handle_new_project_requested(window)
+
+    assert warnings == [
+        (
+            window,
+            home_ui_controller.ui_state_service.translate("dialog.project_error_title", "en"),
+            str(expected_error),
+        )
+    ]
+    assert window._current_project_root == existing_root
+    assert window._current_manifest is existing_manifest
+    assert activations == []
+    assert success_messages == []
+
+
+def test_home_ui_controller_contains_source_import_filesystem_error(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """Verify a source-import filesystem failure preserves the active project."""
+    project_root, manifest = project_workspace_service.create_project("ImportFailureProject", tmp_path)
+    expected_error = PermissionError("source copy is not permitted")
+    warnings = []
+    state_updates = []
+    success_messages = []
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getOpenFileName",
+        lambda *args, **kwargs: (str(tmp_path / "story.txt"), ""),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.import_service,
+        "import_source",
+        lambda *_args: (_ for _ in ()).throw(expected_error),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **kwargs: warnings.append(args),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *args: success_messages.append(args),
+    )
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._current_project_root = project_root
+    window._current_manifest = manifest
+    monkeypatch.setattr(window, "show_project_state", lambda *args: state_updates.append(args))
+
+    home_ui_controller.handle_import_source_requested(window)
+
+    assert warnings == [
+        (
+            window,
+            home_ui_controller.ui_state_service.translate("dialog.project_error_title", "en"),
+            str(expected_error),
+        )
+    ]
+    assert window._current_project_root == project_root
+    assert window._current_manifest is manifest
+    assert state_updates == []
+    assert success_messages == []
+
+
+def test_home_ui_controller_contains_confirmed_repair_filesystem_error(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """Verify a confirmed project-repair filesystem failure preserves Home state."""
+    existing_root, existing_manifest = project_workspace_service.create_project(
+        "ExistingRepairProject",
+        tmp_path,
+    )
+    selected_root = tmp_path / "RepairTarget"
+    expected_error = OSError("project manifest cannot be replaced")
+    warnings = []
+    activations = []
+    success_messages = []
+    open_result = {
+        "status": "repair_required",
+        "project_root": str(selected_root),
+        "manifest": {"display_name": "RepairTarget"},
+    }
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(selected_root),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.project_workspace_service,
+        "open_project",
+        lambda *_args: open_result,
+    )
+    monkeypatch.setattr(
+        home_ui_controller,
+        "confirm_project_repair",
+        lambda *_args: True,
+    )
+    monkeypatch.setattr(
+        home_ui_controller.project_workspace_service,
+        "repair_project",
+        lambda *_args: (_ for _ in ()).throw(expected_error),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **kwargs: warnings.append(args),
+    )
+    monkeypatch.setattr(
+        home_ui_controller,
+        "activate_project",
+        lambda *args: activations.append(args),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *args: success_messages.append(args),
+    )
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._current_project_root = existing_root
+    window._current_manifest = existing_manifest
+
+    home_ui_controller.handle_open_project_requested(window)
+
+    assert warnings == [
+        (
+            window,
+            home_ui_controller.ui_state_service.translate("dialog.project_error_title", "en"),
+            str(expected_error),
+        )
+    ]
+    assert window._current_project_root == existing_root
+    assert window._current_manifest is existing_manifest
+    assert activations == []
+    assert success_messages == []
+
+
 def test_home_ui_controller_rejects_export_inside_project(
     monkeypatch,
     qtbot,

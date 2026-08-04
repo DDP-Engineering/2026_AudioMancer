@@ -86,7 +86,7 @@ def handle_new_project_requested(window: "MainWindow") -> None:
             project_name,
             selected_parent,
         )
-    except (FileExistsError, FileNotFoundError, ValueError) as error:
+    except (OSError, ValueError) as error:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -135,7 +135,15 @@ def handle_open_project_requested(window: "MainWindow") -> None:
         show_project_open_recovery(window, open_result, current_language)
         if not confirm_project_repair(window, open_result, current_language):
             return
-        repaired_result = project_workspace_service.repair_project(open_result)
+        try:
+            repaired_result = project_workspace_service.repair_project(open_result)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(
+                window,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                str(error),
+            )
+            return
         project_root = Path(str(repaired_result["project_root"]))
         manifest = dict(repaired_result["manifest"])
         activate_project(window, project_root, manifest)
@@ -218,7 +226,7 @@ def handle_import_source_requested(window: "MainWindow") -> None:
             selected_file,
             previous_source_document if isinstance(previous_source_document, dict) else None,
         )
-    except (FileNotFoundError, ValueError) as error:
+    except (OSError, ValueError) as error:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),

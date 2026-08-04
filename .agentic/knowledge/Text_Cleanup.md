@@ -17,6 +17,8 @@ ambiguous typed boundaries and may never generate replacement book text.
 ## 2. Responsibilities
 
 - Extract `.txt`, `.md`, `.pdf`, `.rtf`, `.docx`, `.odt`, and `.epub`.
+- Decode text deterministically from signatures and declarations, including
+  cp1250, cp1251, cp1252, and explicit Latin-1 fallback behavior.
 - Build `extracted_text.txt` and `source_ledger.json` simultaneously.
 - Preserve native headings, lists, tables, preformatted blocks, EPUB spine
   order, and PDF geometry where the format exposes them.
@@ -61,6 +63,20 @@ The production boundary is:
 - `text_cleanup_state_service.py`: read-only page state projection.
 - `text_cleanup_ui_controller.py` and `text_cleanup_page.py`: existing UI
   integration.
+
+`REQ-FUNC-c7960ee8` makes undecorated text selection evidence-based rather
+than first-success. BOMs and RTF code-page declarations take priority, strict
+UTF-8 is tried next, and every successfully decoded cp1250/cp1251/cp1252
+candidate is scored for printable text, script coherence, and code-page
+evidence. Latin-1 is an explicit terminal fallback only when all three Windows
+codecs reject the bytes. The selected label is persisted in the source ledger.
+
+`REQ-FUNC-379827ff` applies the same contract per non-navigation EPUB spine
+document after checking its BOM, XML encoding declaration, and applicable HTML
+charset metadata. Declared decoding is strict and an unknown codec or decode
+failure names the spine item and file. Uniform EPUBs record their one encoding;
+mixed EPUBs record `mixed(<sorted-encodings>)` while extracted text remains in
+spine order.
 
 Cleanup runs in four phases: deterministic analysis, optional AI adjudication,
 deterministic validation/rendering, and atomic publication. It is a fixed
@@ -127,6 +143,9 @@ clears Cleanup-owned artifacts.
 unit and boundary. The sorted intervals partition `extracted_text.txt` without
 gaps or overlaps. The ledger includes source/text hashes, adapter/encoding
 metadata, structure quality, units, boundaries, page geometry, and warnings.
+Text and RTF ledgers record the selected declared or evidence-based encoding.
+EPUB ledgers record a normalized uniform label or a deterministic mixed token;
+they no longer claim UTF-8 unconditionally.
 
 Unit operations are restricted to:
 
@@ -254,6 +273,12 @@ Primary coverage:
 - `tests/test_project_workspace_service.py`
 - `tests/test_text_cleanup_ui_controller.py`
 - `tests/test_text_cleanup_page.py`
+
+`test_text_extraction_service.py` uses public Extraction-path TXT/RTF cases for
+UTF-8 with and without BOM, cp1250, cp1251, cp1252, and RTF `ansicpg`. Its EPUB
+fixtures rewrite actual ZIP members with UTF-16, cp1252, and ISO-8859-1 bytes,
+then verify exact text, spine order, uniform/mixed ledger labels, and actionable
+declared-encoding failures.
 
 `test_cleanup_service.py` specifically seeds completed downstream compact
 summaries and every current downstream artifact class for both automatic and

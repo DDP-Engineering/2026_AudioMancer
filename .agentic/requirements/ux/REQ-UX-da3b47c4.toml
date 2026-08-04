@@ -1,19 +1,22 @@
 schema = 1
 id = "REQ-UX-da3b47c4"
-title = "The Home controller shall present each expected project-opening failure"
+title = "Contain expected project workspace failures at the Home UI boundary"
 status = "active"
 
 requirement = """
-The Home controller shall present each expected project-opening failure through the existing localized project-error warning with the original error text.
+When project creation, opening, confirmed repair, or source import raises OSError or ValueError, the Home controller shall show the existing localized project-error warning with the original error text and leave the active project state and success notifications unchanged.
 """
 
-verification = "Focused controller selector passed after red evidence: PermissionError and ValueError show the localized project-error warning and do not activate a project."
+verification = "Focused controller tests inject OSError subclasses at the create, import, repair, and open boundaries plus ValueError during open, then assert the localized warning title and original text are shown without project activation, manifest replacement, or success notification."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_shows_warning_for_open_project_error",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_project_creation_filesystem_error",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_source_import_filesystem_error",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_confirmed_repair_filesystem_error",
 ]
 
 priority = "high"
@@ -21,4 +24,4 @@ rationale = """
 ValueError indicates invalid project content and OSError indicates filesystem access failure; both are recoverable operator-facing failures that must not escape the Qt slot without feedback.
 """
 created = 2026-07-29
-updated = 2026-07-29
+updated = 2026-08-03

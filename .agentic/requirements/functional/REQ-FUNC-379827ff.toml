@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-379827ff"
+title = "Honor EPUB content document encodings"
+status = "active"
+
+requirement = """
+For every non-navigation EPUB spine document, Text Extraction shall decode visible text from its byte-order mark or valid XML/HTML encoding declaration, using deterministic fallback only when none is usable and identifying the item when declared decoding cannot be completed.
+"""
+
+verification = "Real EPUB ZIP fixtures with UTF-8, UTF-16, declared cp1252/ISO-8859-1, mixed encodings, and invalid declarations verify exact spine-ordered text, truthful ledger encoding, navigation filtering, and actionable item-specific failures."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_honors_uniform_epub_content_encoding",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_preserves_mixed_encoding_epub_spine_order",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_identifies_epub_item_with_invalid_declared_encoding",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_identifies_epub_item_when_declared_decoding_fails",
+]
+
+spec = "specs/REQ-FUNC-379827ff.md"
+priority = "high"
+rationale = "EPUB content documents may validly use encodings other than UTF-8, and a raw decode failure without item identity is not actionable."
+created = 2026-08-03
+updated = 2026-08-03
