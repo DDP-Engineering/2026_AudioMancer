@@ -67,6 +67,7 @@ _DEFAULT_PROFILE_TEMPLATE = {
     "discovered_model_name": "",
     "discovered_model_names": [],
     "discovered_context_window": None,
+    "discovered_context_model_name": "",
     "discovery_succeeded": False,
     "discovery_message": "",
     "user_overrode_model_name": False,
@@ -93,6 +94,7 @@ class AiSettingsPage(QWidget):
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
         self._loading_profile = False
+        self._editor_profile_id: str | None = None
         self._current_language = config.DEFAULT_LANGUAGE
         self._discovered_model_options: dict[str, list[tuple[str, str]]] = {}
         self._suspend_override_tracking = False
@@ -304,6 +306,8 @@ class AiSettingsPage(QWidget):
         if not isinstance(source_profiles, list):
             source_profiles = []
 
+        self._editor_profile_id = None
+        self._discovered_model_options = {}
         self._profiles = []
         for profile in source_profiles:
             if isinstance(profile, dict):
@@ -351,6 +355,7 @@ class AiSettingsPage(QWidget):
             settings_payload.get("default_character_extraction_profile_id"),
         )
         self._profile_list.setCurrentRow(0)
+        self._load_profile_into_editor(self._profiles[0])
         self.apply_language(str(settings_payload.get("language", config.DEFAULT_LANGUAGE)))
 
     def build_settings(
@@ -363,7 +368,7 @@ class AiSettingsPage(QWidget):
         @return     Merged settings payload containing AI settings changes.
         @exception  None
         """
-        self._sync_editor_to_current_profile()
+        self._sync_editor_to_owner_profile()
         merged_settings = copy.deepcopy(existing_settings_payload)
         merged_settings["llm_profiles"] = [copy.deepcopy(profile) for profile in self._profiles]
         merged_settings["default_ai_cleanup_profile_id"] = self._optional_combo_value(self._default_cleanup_combo)
@@ -394,7 +399,7 @@ class AiSettingsPage(QWidget):
         @return     Copy of the selected profile payload or None.
         @exception  None
         """
-        self._sync_editor_to_current_profile()
+        self._sync_editor_to_owner_profile()
         current_profile = self._current_profile()
         if current_profile is None:
             return None
@@ -411,9 +416,11 @@ class AiSettingsPage(QWidget):
         if current_profile is None:
             return
 
-        current_profile["discovery_succeeded"] = bool(probe_result.get("success", False))
+        probe_succeeded = bool(probe_result.get("success", False))
+        current_profile["discovery_succeeded"] = probe_succeeded
         current_profile["discovery_message"] = str(probe_result.get("message", ""))
-        current_profile["discovered_context_window"] = probe_result.get("discovered_context_window")
+        if not probe_succeeded:
+            return
 
         model_options = [
             (str(model.get("id", "")), str(model.get("label", "")))
@@ -439,10 +446,25 @@ class AiSettingsPage(QWidget):
         else:
             current_profile["discovered_model_name"] = ""
 
-        if probe_result.get("discovered_context_window") is not None and not bool(
-            current_profile.get("user_overrode_context_window", False)
-        ):
-            current_profile["context_window"] = int(probe_result["discovered_context_window"])
+        discovered_context_window = probe_result.get("discovered_context_window")
+        discovered_context_model_name = str(
+            probe_result.get("discovered_context_model_name", "") or ""
+        ).strip()
+        effective_model_name = str(current_profile.get("model_name", "")).strip()
+        context_is_valid = (
+            not isinstance(discovered_context_window, bool)
+            and isinstance(discovered_context_window, int)
+            and 0 < discovered_context_window <= self._context_window_spin.maximum()
+            and discovered_context_model_name == effective_model_name
+        )
+        if context_is_valid:
+            current_profile["discovered_context_window"] = discovered_context_window
+            current_profile["discovered_context_model_name"] = discovered_context_model_name
+            if not bool(current_profile.get("user_overrode_context_window", False)):
+                current_profile["context_window"] = discovered_context_window
+        else:
+            current_profile["discovered_context_window"] = None
+            current_profile["discovered_context_model_name"] = ""
 
         self._load_profile_into_editor(current_profile)
 
@@ -524,9 +546,9 @@ class AiSettingsPage(QWidget):
             self._profile_list.addItem(item)
             if profile["id"] == current_profile_id:
                 current_row = index
-        self._profile_list.blockSignals(False)
         if self._profiles:
             self._profile_list.setCurrentRow(current_row)
+        self._profile_list.blockSignals(False)
 
     def _reload_default_profile_combos(self) -> None:
         """
@@ -575,6 +597,7 @@ class AiSettingsPage(QWidget):
             return
         if row < 0 or row >= len(self._profiles):
             return
+        self._sync_editor_to_owner_profile()
         self._load_profile_into_editor(self._profiles[row])
 
     def _load_profile_into_editor(self, profile: dict[str, object]) -> None:
@@ -585,6 +608,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         """
         self._loading_profile = True
+        self._editor_profile_id = str(profile["id"])
         self._load_model_options_for_profile(profile)
         self._label_edit.setText(str(profile["label"]))
         self._enabled_checkbox.setChecked(bool(profile["enabled"]))
@@ -599,26 +623,26 @@ class AiSettingsPage(QWidget):
         self._supports_structured_checkbox.setChecked(bool(profile["supports_structured_output"]))
         self._loading_profile = False
 
-    def _sync_editor_to_current_profile(self) -> None:
+    def _sync_editor_to_owner_profile(self) -> None:
         """
-        @brief      Copy the current editor state back into the selected profile.
+        @brief      Copy the editor state back into the stable profile that owns it.
         @return     None.
         @exception  None
         """
-        current_profile = self._current_profile()
-        if current_profile is None or self._loading_profile:
+        owner_profile = self._editor_profile()
+        if owner_profile is None or self._loading_profile:
             return
-        current_profile["label"] = self._label_edit.text().strip() or "Unnamed Profile"
-        current_profile["enabled"] = self._enabled_checkbox.isChecked()
-        current_profile["backend_kind"] = self._backend_combo.currentText()
-        current_profile["base_url"] = self._base_url_edit.text().strip()
-        current_profile["api_key"] = self._api_key_edit.text()
-        current_profile["model_name"] = self._model_combo.currentText().strip()
-        current_profile["context_window"] = self._context_window_spin.value()
-        current_profile["max_output_tokens"] = self._max_output_spin.value()
-        current_profile["request_timeout_seconds"] = self._timeout_spin.value()
-        current_profile["temperature"] = self._temperature_spin.value()
-        current_profile["supports_structured_output"] = self._supports_structured_checkbox.isChecked()
+        owner_profile["label"] = self._label_edit.text().strip() or "Unnamed Profile"
+        owner_profile["enabled"] = self._enabled_checkbox.isChecked()
+        owner_profile["backend_kind"] = self._backend_combo.currentText()
+        owner_profile["base_url"] = self._base_url_edit.text().strip()
+        owner_profile["api_key"] = self._api_key_edit.text()
+        owner_profile["model_name"] = self._model_combo.currentText().strip()
+        owner_profile["context_window"] = self._context_window_spin.value()
+        owner_profile["max_output_tokens"] = self._max_output_spin.value()
+        owner_profile["request_timeout_seconds"] = self._timeout_spin.value()
+        owner_profile["temperature"] = self._temperature_spin.value()
+        owner_profile["supports_structured_output"] = self._supports_structured_checkbox.isChecked()
         self._reload_profile_list()
         self._reload_default_profile_combos()
 
@@ -631,9 +655,9 @@ class AiSettingsPage(QWidget):
         """
         if self._loading_profile or self._suspend_override_tracking:
             return
-        current_profile = self._current_profile()
-        if current_profile is not None:
-            current_profile["user_overrode_model_name"] = True
+        owner_profile = self._editor_profile()
+        if owner_profile is not None:
+            owner_profile["user_overrode_model_name"] = True
 
     def _on_context_window_edited(self, _value: int) -> None:
         """
@@ -644,9 +668,22 @@ class AiSettingsPage(QWidget):
         """
         if self._loading_profile or self._suspend_override_tracking:
             return
-        current_profile = self._current_profile()
-        if current_profile is not None:
-            current_profile["user_overrode_context_window"] = True
+        owner_profile = self._editor_profile()
+        if owner_profile is not None:
+            owner_profile["user_overrode_context_window"] = True
+
+    def _editor_profile(self) -> dict[str, object] | None:
+        """
+        @brief      Return the stable profile currently represented by the editor.
+        @return     Editor-owner profile or `None`.
+        @exception  None
+        """
+        if self._editor_profile_id is None:
+            return None
+        for profile in self._profiles:
+            if str(profile.get("id", "")) == self._editor_profile_id:
+                return profile
+        return None
 
     def _current_profile(self) -> dict[str, object] | None:
         """
@@ -726,7 +763,7 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         """
-        self._sync_editor_to_current_profile()
+        self._sync_editor_to_owner_profile()
         self._profiles.append(self._create_default_profile(f"AI Profile {len(self._profiles) + 1}"))
         self._reload_profile_list()
         self._reload_default_profile_combos()
@@ -738,6 +775,7 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         """
+        self._sync_editor_to_owner_profile()
         row = self._profile_list.currentRow()
         if row < 0 or len(self._profiles) <= 1:
             return
@@ -755,7 +793,9 @@ class AiSettingsPage(QWidget):
                 combo.setCurrentIndex(0)
         self._reload_profile_list()
         self._reload_default_profile_combos()
-        self._profile_list.setCurrentRow(max(0, row - 1))
+        target_row = max(0, row - 1)
+        self._profile_list.setCurrentRow(target_row)
+        self._load_profile_into_editor(self._profiles[target_row])
 
     def eventFilter(self, watched: object, event: object) -> bool:
         """

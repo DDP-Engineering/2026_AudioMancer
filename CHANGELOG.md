@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AI Settings now keeps every unsaved profile edit when switching, adding, or
+  removing profiles. Connect preserves the last successful model/context
+  discovery after a temporary failure, discovers exact-model context limits
+  from compatible providers, respects manually entered context values, and
+  reports interrupted response reads as normal connection failures.
 - Running Cleanup again after completion now truly starts a fresh pass after
   confirmation, removing the old Cleanup and later workflow results instead of
   silently returning the previously completed result. Interrupted Cleanup runs

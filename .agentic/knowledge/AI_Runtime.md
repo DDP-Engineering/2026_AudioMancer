@@ -12,6 +12,9 @@ and lets operators manage AI profiles and defaults.
 
 - Normalize backend discovery responses and connection failures without
   exposing provider-specific payloads to the UI.
+- Associate optional context metadata with its exact effective model and
+  preserve successful profile-local discovery across failed probes
+  (`REQ-FUNC-20817a63`, `REQ-FUNC-e9d13e10`, `REQ-FUNC-6c33e242`).
 - Build conservative context budgets and reject requests whose usable text
   budget is too small.
 - Send JSON-oriented chat completions with structured-output fallbacks,
@@ -28,7 +31,12 @@ semantic validation of a domain's provider response.
 ## 3. Implementation Overview
 
 `ai_backend_service.probe_profile` validates a profile URL/backend kind then
-normalizes `/models` or Ollama tags results. `llm_provider_service.chat_json`
+normalizes `/models` or Ollama tags results. Generic OpenAI-compatible entries
+may carry inline context metadata; LM Studio adds optional native model and
+loaded-instance metadata; Ollama queries `/api/show` only for the confirmed
+effective model. Operating-system and HTTP protocol failures during response
+reading remain inside the normal failed-result boundary.
+`llm_provider_service.chat_json`
 builds a chat endpoint and request payload, supports response-format and token
 parameter compatibility retries, cooperatively cancels waiting requests,
 rejects explicit output-length termination before content parsing or repair,
@@ -39,8 +47,11 @@ transaction logs.
 `prompt_template_service` resolves template files and rejects missing or extra
 placeholders. `token_usage_service` normalizes provider usage into a common
 payload, while `ai_state_note_service` produces localized persisted-usage
-notes. The AI Settings page owns in-memory profile editing/default selectors;
-its controller opens, probes, applies, or saves the dialog.
+notes. The AI Settings page owns in-memory profile editing/default selectors.
+It tracks the stable profile ID represented by the editor, synchronizes that
+owner before selection changes, treats successful probes as authoritative for
+discovery, and lets failed probes update status without erasing prior metadata.
+Its controller opens, probes, applies, or saves the dialog.
 
 ## 4. Dependencies
 
@@ -64,7 +75,15 @@ settings payloads.
 A profile carries enabled state, backend kind, base URL, model identifier,
 context/output/time-out/temperature values, structured-output support, and
 optional API key. Probe results use `success`, `message`, discovered-model
-details/count, optional context window, and selected-model validity. Token
+details/count, optional context window, its exact owning model identifier, and
+selected-model validity. The context and owner are populated together only for
+positive values within the editor-supported range. Successful probes may
+replace profile-local discovery, including with an empty model list; failed
+probes preserve the last successful model list, discovered model/context,
+typed model, and configured context while updating failure status/message.
+Automatically discovered context fills the configured value only when its
+owner matches the effective model and the operator has not overridden context
+(`REQ-FUNC-6f8e52c8`). Token
 usage maps the provider's `prompt_tokens`, `completion_tokens`, and
 `total_tokens` to input/output/total values plus `usage_available`; repair
 usage is merged with the original response usage. Prompt rendering requires
@@ -99,7 +118,10 @@ Domain services call `context_budget_metadata`, `render_prompt`, and
 `chat_json`, passing their own request schema/cancellation/log destination.
 Controllers resolve enabled profiles rather than reading settings directly.
 The App Shell invokes `show_ai_settings_dialog`; users can add/remove profiles,
-probe connectivity, select defaults, and save the resulting settings payload.
+switch among profiles without losing dialog-session edits
+(`REQ-FUNC-8eba808c`), probe connectivity, select defaults, and save the
+resulting settings payload. Reopening after Cancel reloads persisted settings,
+so Cancel continues to discard the dialog session.
 
 ## 9. Validation And Tests
 
@@ -115,7 +137,10 @@ Primary automated coverage:
 - `tests/test_ai_settings_page.py`
 - `tests/test_ai_settings_ui_controller.py`
 
-These cover backend models/failures, context budgets, token
+These cover backend models/failures including response-read containment,
+provider-specific exact-model context discovery, profile switching/mutation
+ownership, failed-probe retention/settings reload, manual context overrides,
+context budgets, token
 normalization/merge/ordered restore and localized notes, prompt placeholder
 rules, chat JSON parsing/retries/cancellation/format fallbacks/redaction, and
 profile dialog editing/probing/persistence. Minimum validation after a change:
@@ -148,6 +173,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/settings_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py`
@@ -161,6 +187,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_ai_settings_page.py`
 - `04_Software/AudioMancer/tests/test_ai_state_note_service.py`
 - `04_Software/AudioMancer/tests/test_llm_provider_service.py`
+- `04_Software/AudioMancer/tests/test_settings_service.py`
 - `04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
 - `04_Software/AudioMancer/tests/test_ai_chunking_service.py`
 - `04_Software/AudioMancer/tests/test_ai_translation_service.py`

@@ -203,6 +203,15 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Use <strong>Connect</strong> to verify the profile, then set default profiles for each operation.</li>
                     <li>Click <strong>Save</strong> to persist without closing the dialog, or <strong>OK</strong> to persist and close.</li>
                 </ol>
+                <p>
+                    You can switch among profiles while editing: each profile keeps its unsaved values inside the
+                    open dialog. Save or OK persists the session; Cancel still discards it. A successful
+                    <strong>Connect</strong> refreshes that profile's model list. When the exact selected model reports
+                    a context window, AudioMancer fills <strong>Context Window</strong> automatically unless you have
+                    entered a value yourself. LM Studio uses the loaded instance's active context when available,
+                    while Ollama reads the selected model's details. If a later connection attempt fails, the error is
+                    shown without removing the last successful model choices or discovered context.
+                </p>
                 <h3>Recommended OpenAI Online Profiles</h3>
                 <table>
                     <thead>

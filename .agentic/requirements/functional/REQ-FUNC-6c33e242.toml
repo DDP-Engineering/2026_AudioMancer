@@ -4,16 +4,19 @@ title = "Backend probing shall map backend failures to safe operator-facing"
 status = "active"
 
 requirement = """
-Backend probing shall map backend failures to safe operator-facing connection errors.
+If an AI backend request fails during connection or response reading, backend probing shall return a safe operator-facing failed result without exposing credentials, headers, or response bodies.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Automated: inject HTTP status, operating-system transport, HTTP protocol, timeout, UTF-8, and JSON failures including during response.read(), then verify a normal failed probe payload and the controller's standard failure popup without an escaping exception."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_maps_backend_failures",
+  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_contains_read_phase_and_decode_failures",
+  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_connect_ai_profile_displays_failure_popup_for_read_transport_error",
 ]
 
 priority = "high"
@@ -21,4 +24,4 @@ rationale = """
 Operators need clear, safe failure messages during provider selection.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-04
