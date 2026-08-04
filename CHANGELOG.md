@@ -12,6 +12,14 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Running Cleanup again after completion now truly starts a fresh pass after
+  confirmation, removing the old Cleanup and later workflow results instead of
+  silently returning the previously completed result. Interrupted Cleanup runs
+  remain resumable.
+- Unsaved manual Cleanup edits now survive ordinary refreshes and cannot be
+  replaced by conflicting Cleanup controls. Switching to a different project
+  asks before discarding a changed draft, and cancelling the project picker
+  keeps the draft intact.
 - PDF import no longer duplicates narrow centered lines such as page numbers,
   footers, or scene ornaments while reconstructing two-column reading order.
   Sparse and unusably sized pages now also keep the same single-column identity

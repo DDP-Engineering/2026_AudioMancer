@@ -65,6 +65,32 @@ def test_cleanup_state_exposes_runtime_quality_and_manual_save(tmp_path) -> None
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == "Operator correction.\n"
 
 
+def test_cleanup_reset_removes_artifacts_and_forces_fresh_analysis(tmp_path) -> None:
+    """Verify Cleanup reset removes completed artifacts before a fresh run starts."""
+    project_root, manifest = _extracted_project(tmp_path, "ResetCleanup")
+    text_cleanup_service.clean_text(project_root, manifest)
+    downstream_artifact = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    downstream_artifact.write_text("[]\n", encoding="utf-8")
+
+    reset_manifest = text_cleanup_state_service.reset_cleanup(project_root, manifest)
+
+    assert not (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).exists()
+    assert not (project_root / config.CLEANED_TEXT_FILE_NAME).exists()
+    assert not downstream_artifact.exists()
+    assert reset_manifest["operations"]["cleanup"]["status"] == "not_started"
+    assert reset_manifest["operations"]["chunking"]["status"] == "not_started"
+
+    progress: list[str] = []
+    text_cleanup_service.clean_text(
+        project_root,
+        reset_manifest,
+        progress_callback=lambda _current, _total, _percent, message: progress.append(message),
+    )
+
+    assert any(message.startswith("Analyzing structural cleanup evidence") for message in progress)
+    assert "Cleanup completed." not in progress
+
+
 def test_ai_profile_state_keeps_profile_optional() -> None:
     """
     @brief      Verify Cleanup profile state keeps AI optional and excludes disabled profiles.

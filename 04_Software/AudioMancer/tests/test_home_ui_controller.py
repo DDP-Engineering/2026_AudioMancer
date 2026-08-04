@@ -20,6 +20,7 @@ from types import SimpleNamespace
 import zipfile
 
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
@@ -74,6 +75,145 @@ def test_home_ui_controller_creates_and_activates_project(
     assert window._current_project_root == tmp_path / "ControllerProject"
     assert window._current_manifest is not None
     assert window._current_manifest["display_name"] == "ControllerProject"
+
+
+def test_new_project_declined_cleanup_draft_discard_keeps_project_and_draft(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """Verify declining the Cleanup-draft warning prevents the New picker."""
+    current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(current_root, current_manifest)
+    window.set_current_page("text_cleanup")
+    cleanup_page = window._text_cleanup_page
+    cleanup_page.set_processing_state("source", "saved draft", [], True, True, True, "passed", 0)
+    cleanup_page._edit_cleaned_button.click()
+    cleanup_page._cleaned_text_edit.setPlainText("exact unsaved draft")
+    questions: list[tuple[object, ...]] = []
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *args: questions.append(args) or QMessageBox.StandardButton.No,
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("picker must not open after declined discard")),
+    )
+
+    home_ui_controller.handle_new_project_requested(window)
+
+    assert len(questions) == 1
+    assert questions[0][3] == QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+    assert questions[0][4] == QMessageBox.StandardButton.No
+    assert window._current_project_root == current_root
+    assert window._current_manifest == current_manifest
+    assert cleanup_page._cleaned_text_edit.toPlainText() == "exact unsaved draft"
+    assert cleanup_page._editing_cleaned_text is True
+
+
+def test_confirmed_new_project_picker_cancel_keeps_cleanup_draft(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """Verify accepting the warning alone does not discard a Cleanup draft."""
+    current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(current_root, current_manifest)
+    window.set_current_page("text_cleanup")
+    cleanup_page = window._text_cleanup_page
+    cleanup_page.set_processing_state("source", "saved draft", [], True, True, True, "passed", 0)
+    cleanup_page._edit_cleaned_button.click()
+    cleanup_page._cleaned_text_edit.setPlainText("exact unsaved draft")
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *_args: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(home_ui_controller.QFileDialog, "getExistingDirectory", lambda *_args: "")
+
+    home_ui_controller.handle_new_project_requested(window)
+
+    assert window._current_project_root == current_root
+    assert window._current_manifest == current_manifest
+    assert cleanup_page._cleaned_text_edit.toPlainText() == "exact unsaved draft"
+    assert cleanup_page._editing_cleaned_text is True
+
+
+def test_open_project_declined_cleanup_draft_discard_keeps_project_and_draft(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """Verify declining the Cleanup-draft warning prevents the Open picker."""
+    current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(current_root, current_manifest)
+    window.set_current_page("text_cleanup")
+    cleanup_page = window._text_cleanup_page
+    cleanup_page.set_processing_state("source", "saved draft", [], True, True, True, "passed", 0)
+    cleanup_page._edit_cleaned_button.click()
+    cleanup_page._cleaned_text_edit.setPlainText("exact unsaved draft")
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *_args: QMessageBox.StandardButton.No,
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("picker must not open after declined discard")),
+    )
+
+    home_ui_controller.handle_open_project_requested(window)
+
+    assert window._current_project_root == current_root
+    assert cleanup_page._cleaned_text_edit.toPlainText() == "exact unsaved draft"
+    assert cleanup_page._editing_cleaned_text is True
+
+
+def test_confirmed_new_project_activation_clears_old_draft_and_loads_new_text(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """Verify a successful confirmed activation replaces the old Cleanup draft."""
+    current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
+    new_root, new_manifest = project_workspace_service.create_project("NewProject", tmp_path)
+    (new_root / config.CLEANED_TEXT_FILE_NAME).write_text("new authoritative text", encoding="utf-8")
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(current_root, current_manifest)
+    window.set_current_page("text_cleanup")
+    cleanup_page = window._text_cleanup_page
+    cleanup_page.set_processing_state("source", "saved draft", [], True, True, True, "passed", 0)
+    cleanup_page._edit_cleaned_button.click()
+    cleanup_page._cleaned_text_edit.setPlainText("exact unsaved draft")
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(home_ui_controller.QFileDialog, "getExistingDirectory", lambda *_args: str(tmp_path))
+    monkeypatch.setattr(home_ui_controller.QInputDialog, "getText", lambda *_args: ("NewProject", True))
+    monkeypatch.setattr(
+        home_ui_controller.project_workspace_service,
+        "create_project",
+        lambda *_args: (new_root, new_manifest),
+    )
+
+    home_ui_controller.handle_new_project_requested(window)
+    window.set_current_page("text_cleanup")
+
+    assert window._current_project_root == new_root
+    assert cleanup_page._editing_cleaned_text is False
+    assert cleanup_page._cleaned_text_edit.toPlainText() == "new authoritative text"
 
 
 def test_home_ui_controller_project_dialogs_start_outside_the_install_root(

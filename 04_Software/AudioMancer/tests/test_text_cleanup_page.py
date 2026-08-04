@@ -71,4 +71,59 @@ def test_page_edit_save_and_cancel_are_optional(qtbot) -> None:
     assert saved == ["saved"]
 
 
+def test_active_cleaned_text_edit_survives_refresh_and_blocks_workflow_actions(qtbot) -> None:
+    """Verify a same-project refresh cannot discard an active Cleanup draft."""
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Local Qwen", "qwen")], "qwen")
+    page.set_processing_state("source", "saved text", [], True, True, True, "passed", 0)
+    signals: list[str] = []
+    page.extract_requested.connect(lambda: signals.append("extract"))
+    page.cleanup_requested.connect(lambda _profile: signals.append("cleanup"))
+    page.reset_cleanup_requested.connect(lambda: signals.append("reset"))
+
+    page._edit_cleaned_button.click()
+    page._cleaned_text_edit.setPlainText("exact unsaved draft")
+    page.set_processing_state("new source", "persisted text", ["refreshed"], True, True, True)
+
+    assert page._editing_cleaned_text is True
+    assert page._cleaned_text_edit.toPlainText() == "exact unsaved draft"
+    assert page._saved_cleaned_text == "saved text"
+    assert page._cleaned_text_edit.isReadOnly() is False
+    assert page._extract_button.isEnabled() is False
+    assert page._cleanup_button.isEnabled() is False
+    assert page._reset_cleanup_button.isEnabled() is False
+    assert page._ai_profile_label.isEnabled() is False
+    assert page._ai_profile_combo.isEnabled() is False
+    assert page._save_cleaned_button.isEnabled() is True
+    assert page._cancel_edit_button.isEnabled() is True
+
+    page._extract_button.click()
+    page._cleanup_button.click()
+    page._reset_cleanup_button.click()
+    assert signals == []
+
+    page._cancel_edit_button.click()
+    assert page._cleaned_text_edit.toPlainText() == "saved text"
+    assert page._editing_cleaned_text is False
+
+
+def test_busy_transition_keeps_active_cleaned_text_draft(qtbot) -> None:
+    """Verify busy-state changes never replace the editable Cleanup buffer."""
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_processing_state("source", "saved", [], True, True, True, "passed", 0)
+
+    page._edit_cleaned_button.click()
+    page._cleaned_text_edit.setPlainText("draft while busy")
+    page.set_busy(True, "Cleanup")
+    page.set_busy(False)
+
+    assert page._editing_cleaned_text is True
+    assert page._cleaned_text_edit.toPlainText() == "draft while busy"
+    assert page._cleaned_text_edit.isReadOnly() is False
+
+
 # END OF FILE

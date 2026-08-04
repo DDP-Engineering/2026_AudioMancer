@@ -51,6 +51,8 @@ def handle_new_project_requested(window: "MainWindow") -> None:
     @exception  None
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if not _confirm_cleanup_draft_discard(window, current_language):
+        return
     selected_parent = QFileDialog.getExistingDirectory(
         window,
         ui_state_service.translate(
@@ -113,6 +115,8 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     @exception  None
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if not _confirm_cleanup_draft_discard(window, current_language):
+        return
     selected_folder = QFileDialog.getExistingDirectory(
         window,
         ui_state_service.translate("dialog.open_project_title", current_language),
@@ -608,6 +612,7 @@ def activate_project(
     """
     window.stop_all_audio_playback()
     audio_blocks_service.reconcile_audio_playability(project_root)
+    window._text_cleanup_page.discard_cleaned_text_edit()
     window.set_project_active(True)
     window._current_page_id = "home"
     home_page = window._page_registry.get("home")
@@ -615,6 +620,20 @@ def activate_project(
         window._stack.setCurrentWidget(home_page)
         window._sidebar.set_current_page("home")
     window.show_project_state(project_root, manifest)
+
+
+def _confirm_cleanup_draft_discard(window: "MainWindow", language: str) -> bool:
+    """Confirm discarding a modified Cleanup draft before project selection."""
+    if not window._text_cleanup_page.has_modified_cleaned_text_draft():
+        return True
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_cleanup_draft_discard_title", language),
+        ui_state_service.translate("project.confirm_cleanup_draft_discard", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
 
 
 def _export_dialog_filter(export_format: str, language: str) -> str:

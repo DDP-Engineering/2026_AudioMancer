@@ -237,7 +237,26 @@ Predominantly CJK or Hangul input is rejected before Cleanup artifacts are
 published.
 
 Cleanup completion promotes the project to `text_chunking_ready` immediately.
-Review and manual editing are optional rather than approval gates. Saving an
+When the operator confirms Cleanup on a completed document, the controller uses
+the canonical Cleanup reset transition before launching the worker; Cleanup and
+all downstream artifacts and compact summaries are removed, and the worker sees
+the returned reset manifest. This prevents the completed-document cache from
+misrepresenting a rerun. Running, paused, finalizing, and failed documents are
+resumable instead: they retain their checkpoint and the service decides whether
+to resume or safely rebuild. These behaviors are covered by `REQ-FUNC-75d5b274`
+and `REQ-REL-43c63d8c`.
+
+Review and manual editing are optional rather than approval gates. While a
+cleaned-text edit is active, ordinary refreshes retain the draft, Cancel
+baseline, writable state, and editor position where Qt preserves it; Extract,
+Cleanup, Reset Cleanup, and the AI-profile selector are disabled, while Save
+and Cancel remain available outside a busy operation. A modified draft prompts
+for explicit discard confirmation before New Project or Open Project; accepting
+the prompt alone does not discard it, and the old edit state clears only after
+the new project is actually activated. These behaviors are covered by
+`REQ-UX-6fb5efc7` and `REQ-UX-e1bb52ba`.
+
+Saving an
 operator edit updates the output hash, marks `user_modified`, and invalidates
 Chunking and later artifacts plus their compact manifest summaries. Automatic
 Cleanup finalization and rerendering apply the same invalidation. Source,
@@ -333,6 +352,9 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/main_window.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
 - `04_Software/AudioMancer/tests/fixtures/cleanup_corpus.json`
@@ -344,4 +366,6 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_home_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_localization_parity.py`
 - `04_Software/AudioMancer/tests/test_text_extraction_service.py`

@@ -17,7 +17,10 @@
 
 from types import SimpleNamespace
 
+import pytest
+
 from audiomancer.ui.controllers import text_cleanup_ui_controller
+from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 
 # PUBLIC API
 
@@ -118,6 +121,180 @@ def test_cleanup_controller_passes_optional_selected_profile(monkeypatch, tmp_pa
     assert captured["kind"] == "cleanup"
     assert captured["worker"].func is text_cleanup_ui_controller.text_cleanup_service.clean_text
     assert captured["worker"].keywords["ai_profile_payload"]["model_name"] == "Qwen3.6-27B"
+
+
+def test_completed_cleanup_rerun_decline_keeps_manifest_and_starts_no_worker(monkeypatch, tmp_path) -> None:
+    """Verify declining completed Cleanup rerun leaves the active state untouched."""
+    manifest = {"source_document": {"original_name": "story.txt"}, "marker": "original"}
+    window = SimpleNamespace(
+        _current_project_root=tmp_path,
+        _current_manifest=manifest,
+        _settings_payload={"language": "en"},
+    )
+    reset_calls: list[object] = []
+    starts: list[object] = []
+    monkeypatch.setattr(text_cleanup_ui_controller, "_completed_extraction_available", lambda _root: True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_service,
+        "load_cleanup_document",
+        lambda _root: {"status": "completed"},
+    )
+    monkeypatch.setattr(text_cleanup_ui_controller, "_confirm", lambda *_args: False)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_state_service,
+        "reset_cleanup",
+        lambda *_args: reset_calls.append("reset"),
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "start_operation",
+        lambda *_args: starts.append("started"),
+    )
+
+    text_cleanup_ui_controller.handle_cleanup_requested(window, None)
+
+    assert window._current_manifest is manifest
+    assert reset_calls == []
+    assert starts == []
+
+
+def test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest(monkeypatch, tmp_path) -> None:
+    """Verify confirmed completed Cleanup rerun installs the reset manifest first."""
+    original_manifest = {"source_document": {"original_name": "story.txt"}, "marker": "original"}
+    reset_manifest = {"source_document": {"original_name": "story.txt"}, "marker": "reset"}
+    window = SimpleNamespace(
+        _current_project_root=tmp_path,
+        _current_manifest=original_manifest,
+        _settings_payload={"language": "en"},
+    )
+    events: list[str] = []
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(text_cleanup_ui_controller, "_completed_extraction_available", lambda _root: True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_service,
+        "load_cleanup_document",
+        lambda _root: {"status": "completed"},
+    )
+    monkeypatch.setattr(text_cleanup_ui_controller, "_confirm", lambda *_args: True)
+
+    def _reset(root, manifest):
+        assert root == tmp_path
+        assert manifest is original_manifest
+        events.append("reset")
+        return reset_manifest
+
+    def _start(_window, operation_kind, _name, _message, worker, _success, _failure):
+        assert operation_kind == "cleanup"
+        assert events == ["reset"]
+        assert window._current_manifest is reset_manifest
+        captured["worker"] = worker
+
+    monkeypatch.setattr(text_cleanup_ui_controller.text_cleanup_state_service, "reset_cleanup", _reset)
+    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", _start)
+
+    text_cleanup_ui_controller.handle_cleanup_requested(window, None)
+
+    assert captured["worker"].func is text_cleanup_ui_controller.text_cleanup_service.clean_text
+    assert window._current_manifest is reset_manifest
+
+
+@pytest.mark.parametrize("status", ["running", "paused", "finalizing", "failed"])
+def test_resumable_cleanup_starts_without_destructive_reset(monkeypatch, tmp_path, status: str) -> None:
+    """Verify an unfinished Cleanup document retains its checkpoint when started."""
+    checkpoint = tmp_path / "cleanup.json"
+    checkpoint.write_text('{"status": "paused"}', encoding="utf-8")
+    window = SimpleNamespace(
+        _current_project_root=tmp_path,
+        _current_manifest={"source_document": {"original_name": "story.txt"}},
+        _settings_payload={"language": "en"},
+    )
+    reset_calls: list[object] = []
+    starts: list[object] = []
+    monkeypatch.setattr(text_cleanup_ui_controller, "_completed_extraction_available", lambda _root: True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_service,
+        "load_cleanup_document",
+        lambda _root: {"status": status},
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "_confirm",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("resumable Cleanup must not confirm rerun")),
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_state_service,
+        "reset_cleanup",
+        lambda *_args: reset_calls.append("reset"),
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "start_operation",
+        lambda *_args: starts.append("started"),
+    )
+
+    text_cleanup_ui_controller.handle_cleanup_requested(window, None)
+
+    assert checkpoint.is_file()
+    assert reset_calls == []
+    assert starts == ["started"]
+
+
+def test_completed_cleanup_rerun_reset_failure_starts_no_worker(monkeypatch, tmp_path) -> None:
+    """Verify a failed completed-rerun reset cannot start or report Cleanup success."""
+    window = SimpleNamespace(
+        _current_project_root=tmp_path,
+        _current_manifest={"source_document": {"original_name": "story.txt"}},
+        _settings_payload={"language": "en"},
+    )
+    starts: list[object] = []
+    warnings: list[tuple[object, ...]] = []
+    monkeypatch.setattr(text_cleanup_ui_controller, "_completed_extraction_available", lambda _root: True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_service,
+        "load_cleanup_document",
+        lambda _root: {"status": "completed"},
+    )
+    monkeypatch.setattr(text_cleanup_ui_controller, "_confirm", lambda *_args: True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_state_service,
+        "reset_cleanup",
+        lambda *_args: (_ for _ in ()).throw(OSError("reset failed")),
+    )
+    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", lambda *_args: starts.append("started"))
+    monkeypatch.setattr(text_cleanup_ui_controller.QMessageBox, "warning", lambda *args: warnings.append(args))
+
+    text_cleanup_ui_controller.handle_cleanup_requested(window, None)
+
+    assert starts == []
+    assert warnings[-1][2] == "reset failed"
+
+
+def test_failed_cleaned_text_save_keeps_editable_draft(monkeypatch, qtbot, tmp_path) -> None:
+    """Verify the controller does not discard a Cleanup draft after save failure."""
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_processing_state("source", "saved", [], True, True, True, "passed", 0)
+    page._edit_cleaned_button.click()
+    page._cleaned_text_edit.setPlainText("draft that failed to save")
+    window = SimpleNamespace(
+        _current_project_root=tmp_path,
+        _current_manifest={"source_document": {"original_name": "story.txt"}},
+        _settings_payload={"language": "en"},
+        _text_cleanup_page=page,
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_state_service,
+        "save_cleaned_text_edit",
+        lambda *_args: (_ for _ in ()).throw(ValueError("save failed")),
+    )
+    monkeypatch.setattr(text_cleanup_ui_controller.QMessageBox, "warning", lambda *_args: None)
+
+    text_cleanup_ui_controller.handle_save_cleaned_text_requested(window, "draft that failed to save")
+
+    assert page._editing_cleaned_text is True
+    assert page._cleaned_text_edit.isReadOnly() is False
+    assert page._cleaned_text_edit.toPlainText() == "draft that failed to save"
 
 
 # END OF FILE

@@ -1,0 +1,79 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-UX-e1bb52ba"
+
+title = "Project activation shall confirm discarding modified Cleanup drafts"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When New Project or Open Project would replace an active project with a modified
+unsaved cleaned-text draft, the application shall require a localized discard
+confirmation whose default answer preserves the current project and draft.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Integration tests prove that declining the warning or cancelling the subsequent picker retains the original project and exact draft, while a confirmed successful activation clears the old edit state and displays the new project's persisted cleaned text; localization parity tests cover the confirmation strings in English and Romanian."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+  "04_Software/AudioMancer/tests/test_main_window_project_flow.py",
+  "04_Software/AudioMancer/tests/test_localization_parity.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_new_project_declined_cleanup_draft_discard_keeps_project_and_draft",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_confirmed_new_project_picker_cancel_keeps_cleanup_draft",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_open_project_declined_cleanup_draft_discard_keeps_project_and_draft",
+  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_confirmed_new_project_activation_clears_old_draft_and_loads_new_text",
+  "04_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "Project activation is the only time an accepted discard may clear a draft; picker cancellation and failure must be non-destructive."
+
+created = 2026-08-04
+updated = 2026-08-04

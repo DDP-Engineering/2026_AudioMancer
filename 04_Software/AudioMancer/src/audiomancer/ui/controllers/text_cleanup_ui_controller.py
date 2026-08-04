@@ -69,12 +69,25 @@ def handle_cleanup_requested(window: MainWindow, profile_id: str | None) -> None
         existing = text_cleanup_service.load_cleanup_document(window._current_project_root)
     except ValueError:
         existing = None
-    if existing is not None and not _confirm(
-        window,
-        ui_state_service.translate("dialog.confirm_cleanup_rerun_title", language),
-        ui_state_service.translate("project.confirm_cleanup_rerun", language),
-    ):
-        return
+    if existing is not None and existing.get("status") == "completed":
+        if not _confirm(
+            window,
+            ui_state_service.translate("dialog.confirm_cleanup_rerun_title", language),
+            ui_state_service.translate("project.confirm_cleanup_rerun", language),
+        ):
+            return
+        try:
+            window._current_manifest = text_cleanup_state_service.reset_cleanup(
+                window._current_project_root,
+                window._current_manifest,
+            )
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(
+                window,
+                ui_state_service.translate("dialog.project_error_title", language),
+                str(error),
+            )
+            return
     profile = _resolve_ai_profile(window._settings_payload, profile_id)
     start_operation(
         window,

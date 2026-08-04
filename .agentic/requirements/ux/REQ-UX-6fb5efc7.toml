@@ -1,0 +1,76 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-UX-6fb5efc7"
+
+title = "Cleanup editing shall preserve drafts across same-project refreshes"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+While a cleaned-text edit is active, the Text Cleanup page shall preserve the
+unsaved buffer and its Cancel baseline across ordinary refreshes and disable
+conflicting Extract Text, Cleanup, Reset Cleanup, and optional AI-profile
+controls while keeping Save and Cancel available whenever the active page is
+not busy.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Page tests edit cleaned text, refresh and toggle busy state, and prove the exact draft, baseline, read/write state, and editing mode remain; they also prove conflicting controls cannot emit operation signals, Save failure leaves the draft editable, and Cancel restores the original saved text."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_active_cleaned_text_edit_survives_refresh_and_blocks_workflow_actions",
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_busy_transition_keeps_active_cleaned_text_draft",
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_failed_cleaned_text_save_keeps_editable_draft",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "Manual Cleanup corrections are operator work and must never disappear through an unrelated refresh or action."
+
+created = 2026-08-04
+updated = 2026-08-04

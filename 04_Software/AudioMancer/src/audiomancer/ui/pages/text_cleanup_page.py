@@ -49,7 +49,7 @@ class TextCleanupPage(QWidget):
         header.addWidget(self._title_label)
         header.addStretch(1)
         self._extract_button = QPushButton("Extract Text", self)
-        self._extract_button.clicked.connect(self.extract_requested.emit)
+        self._extract_button.clicked.connect(self._emit_extract_requested)
         header.addWidget(self._extract_button)
         self._ai_profile_label = QLabel("AI Profile (optional)", self)
         header.addWidget(self._ai_profile_label)
@@ -60,7 +60,7 @@ class TextCleanupPage(QWidget):
         self._cleanup_button.clicked.connect(self._emit_cleanup_requested)
         header.addWidget(self._cleanup_button)
         self._reset_cleanup_button = QPushButton("Reset Cleanup", self)
-        self._reset_cleanup_button.clicked.connect(self.reset_cleanup_requested.emit)
+        self._reset_cleanup_button.clicked.connect(self._emit_reset_cleanup_requested)
         header.addWidget(self._reset_cleanup_button)
         layout.addLayout(header)
 
@@ -124,12 +124,12 @@ class TextCleanupPage(QWidget):
         self._can_extract = bool(can_extract)
         self._can_clean = bool(can_clean)
         self._can_reset_cleanup = bool(can_reset_cleanup)
-        self._has_cleaned_text = bool((cleaned_text or "").strip())
-        self._editing_cleaned_text = False
-        self._saved_cleaned_text = cleaned_text or ""
+        self._has_cleaned_text = bool((cleaned_text or "").strip()) or self._editing_cleaned_text
         self._extracted_text_edit.setPlainText(extracted_text or "")
-        self._cleaned_text_edit.setPlainText(cleaned_text or "")
-        self._cleaned_text_edit.setReadOnly(True)
+        if not self._editing_cleaned_text:
+            self._saved_cleaned_text = cleaned_text or ""
+            self._cleaned_text_edit.setPlainText(cleaned_text or "")
+            self._cleaned_text_edit.setReadOnly(True)
         status_notes = list(notes)
         if validation_state in {"passed", "passed_with_warnings"}:
             status_notes.append(
@@ -212,7 +212,18 @@ class TextCleanupPage(QWidget):
             self._status_edit.setPlainText(ui_state_service.translate("text_cleanup.initial_note", language))
 
     def _emit_cleanup_requested(self) -> None:
-        self.cleanup_requested.emit(self.current_ai_profile_id())
+        if self._workflow_actions_enabled():
+            self.cleanup_requested.emit(self.current_ai_profile_id())
+
+    def _emit_extract_requested(self) -> None:
+        """Emit Extraction only while no Cleanup edit can be discarded."""
+        if self._workflow_actions_enabled():
+            self.extract_requested.emit()
+
+    def _emit_reset_cleanup_requested(self) -> None:
+        """Emit Cleanup reset only while no Cleanup edit can be discarded."""
+        if self._workflow_actions_enabled():
+            self.reset_cleanup_requested.emit()
 
     def _begin_cleaned_text_edit(self) -> None:
         self._saved_cleaned_text = self._cleaned_text_edit.toPlainText()
@@ -230,13 +241,32 @@ class TextCleanupPage(QWidget):
     def _emit_save_cleaned_text_requested(self) -> None:
         self.save_cleaned_text_requested.emit(self._cleaned_text_edit.toPlainText())
 
+    def has_modified_cleaned_text_draft(self) -> bool:
+        """Return whether an active Cleanup edit differs from its saved baseline."""
+        return (
+            self._editing_cleaned_text
+            and self._cleaned_text_edit.toPlainText() != self._saved_cleaned_text
+        )
+
+    def discard_cleaned_text_edit(self) -> None:
+        """Clear an edit only after another project has been activated."""
+        self._editing_cleaned_text = False
+        self._saved_cleaned_text = ""
+        self._cleaned_text_edit.setReadOnly(True)
+        self._apply_button_state()
+
     def _apply_button_state(self) -> None:
         enabled = self._project_active and not self._busy
-        self._extract_button.setEnabled(enabled and self._can_extract)
-        self._cleanup_button.setEnabled(enabled and self._can_clean)
-        self._ai_profile_label.setEnabled(enabled)
-        self._ai_profile_combo.setEnabled(enabled)
-        self._reset_cleanup_button.setEnabled(enabled and self._can_reset_cleanup)
+        workflow_enabled = self._workflow_actions_enabled()
+        self._extract_button.setEnabled(workflow_enabled and self._can_extract)
+        self._cleanup_button.setEnabled(workflow_enabled and self._can_clean)
+        self._ai_profile_label.setEnabled(workflow_enabled)
+        self._ai_profile_combo.setEnabled(workflow_enabled)
+        self._reset_cleanup_button.setEnabled(workflow_enabled and self._can_reset_cleanup)
         self._edit_cleaned_button.setEnabled(enabled and self._has_cleaned_text and not self._editing_cleaned_text)
         self._save_cleaned_button.setEnabled(enabled and self._has_cleaned_text and self._editing_cleaned_text)
         self._cancel_edit_button.setEnabled(enabled and self._has_cleaned_text and self._editing_cleaned_text)
+
+    def _workflow_actions_enabled(self) -> bool:
+        """Return whether a workflow action cannot discard an active Cleanup edit."""
+        return self._project_active and not self._busy and not self._editing_cleaned_text
