@@ -236,6 +236,167 @@ def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
     assert metadata["progress_current"] == 2
 
 
+def test_pdf_ordering_places_centered_spanning_material_once_around_columns() -> None:
+    """Verify centered headers and footers surround clear columns without duplication."""
+    lines = [
+        _pdf_order_line("Centered top", (292.0, 60.0, 320.0, 70.0), 0),
+        *_two_column_pdf_lines(start_index=1),
+        _pdf_order_line("Centered bottom", (288.0, 200.0, 324.0, 210.0), 7),
+    ]
+
+    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+
+    assert [line["text"] for line in ordered] == [
+        "Centered top",
+        "Left 1",
+        "Left 2",
+        "Left 3",
+        "Right 1",
+        "Right 2",
+        "Right 3",
+        "Centered bottom",
+    ]
+    assert layout_mode == "two_column"
+    assert reasons == ["two_column_reading_order_reconstructed"]
+
+
+def test_pdf_ordering_emits_vertical_threshold_overlap_once() -> None:
+    """Verify one spanning line cannot belong to both vertical partitions."""
+    lines = [
+        _pdf_order_line("Left 1", (72.0, 100.0, 250.0, 102.0), 0),
+        _pdf_order_line("Left 2", (72.0, 103.0, 250.0, 105.0), 1),
+        _pdf_order_line("Left 3", (72.0, 106.0, 250.0, 108.0), 2),
+        _pdf_order_line("Right 1", (360.0, 100.0, 540.0, 102.0), 3),
+        _pdf_order_line("Right 2", (360.0, 103.0, 540.0, 105.0), 4),
+        _pdf_order_line("Right 3", (360.0, 106.0, 540.0, 108.0), 5),
+        _pdf_order_line("Threshold overlap", (250.0, 99.0, 360.0, 109.0), 6),
+    ]
+
+    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+
+    assert sum(line is lines[-1] for line in ordered) == 1
+    assert layout_mode == "uncertain_columns"
+    assert reasons == ["multi_column_reading_order_uncertain"]
+
+
+def test_pdf_ordering_is_identity_permutation_for_every_layout_mode() -> None:
+    """Verify every successful PDF ordering contains every input object exactly once."""
+    short_lines = [
+        _pdf_order_line("Short 2", (72.0, 120.0, 250.0, 130.0), 0),
+        _pdf_order_line("Short 1", (72.0, 100.0, 250.0, 110.0), 1),
+    ]
+    single_column_lines = [
+        _pdf_order_line(f"Single {index}", (72.0, 100.0 + index * 20.0, 250.0, 110.0 + index * 20.0), index)
+        for index in range(6)
+    ]
+    two_column_lines = [
+        _pdf_order_line("Top", (292.0, 60.0, 320.0, 70.0), 0),
+        *_two_column_pdf_lines(start_index=1),
+        _pdf_order_line("Bottom", (292.0, 200.0, 320.0, 210.0), 7),
+    ]
+    uncertain_lines = [
+        *_two_column_pdf_lines(),
+        _pdf_order_line("Ambiguous", (250.0, 130.0, 360.0, 140.0), 6),
+    ]
+    modes: set[str] = set()
+
+    for lines in (short_lines, single_column_lines, two_column_lines, uncertain_lines):
+        ordered, layout_mode, _reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+        modes.add(layout_mode)
+        assert len(ordered) == len(lines)
+        assert {id(line) for line in ordered} == {id(line) for line in lines}
+
+    assert modes == {"single_column", "two_column", "uncertain_columns"}
+
+
+def test_pdf_ordering_preserves_uncertain_column_warning() -> None:
+    """Verify a genuinely ambiguous spanning line keeps the established warning."""
+    lines = [
+        *_two_column_pdf_lines(),
+        _pdf_order_line("Ambiguous", (250.0, 130.0, 360.0, 140.0), 6),
+    ]
+
+    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+
+    assert ordered == lines
+    assert layout_mode == "uncertain_columns"
+    assert reasons == ["multi_column_reading_order_uncertain"]
+
+
+@pytest.mark.parametrize(("line_count", "page_width"), [(5, 612.0), (6, 0.0)])
+def test_pdf_ordering_normalizes_early_single_column_identity(
+    line_count: int,
+    page_width: float,
+) -> None:
+    """Verify every early single-column return assigns column identity zero."""
+    lines = [
+        _pdf_order_line(
+            f"Line {index}",
+            (72.0, 100.0 + index * 20.0, 250.0, 110.0 + index * 20.0),
+            index,
+        )
+        for index in reversed(range(line_count))
+    ]
+
+    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, page_width)
+
+    assert [line["text"] for line in ordered] == [f"Line {index}" for index in range(line_count)]
+    assert all(line["column"] == 0 for line in ordered)
+    assert layout_mode == "single_column"
+    assert reasons == []
+
+
+def test_pdf_ordering_preserves_normal_single_column_top_left_order() -> None:
+    """Verify normal single-column pages retain stable top-left ordering."""
+    lines = [
+        _pdf_order_line("Second on first row", (200.0, 100.0, 250.0, 110.0), 0),
+        _pdf_order_line("First on first row", (72.0, 100.0, 150.0, 110.0), 1),
+        _pdf_order_line("Line 3", (72.0, 120.0, 250.0, 130.0), 2),
+        _pdf_order_line("Line 4", (72.0, 140.0, 250.0, 150.0), 3),
+        _pdf_order_line("Line 5", (72.0, 160.0, 250.0, 170.0), 4),
+        _pdf_order_line("Line 6", (72.0, 180.0, 250.0, 190.0), 5),
+    ]
+
+    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+
+    assert [line["text"] for line in ordered] == [
+        "First on first row",
+        "Second on first row",
+        "Line 3",
+        "Line 4",
+        "Line 5",
+        "Line 6",
+    ]
+    assert all(line["column"] == 0 for line in ordered)
+    assert layout_mode == "single_column"
+    assert reasons == []
+
+
+def test_extract_text_emits_centered_pdf_text_once(tmp_path) -> None:
+    """Verify public PDF extraction writes one copy of a centered physical line."""
+    project_root, manifest = project_workspace_service.create_project(
+        "CenteredPdfProject",
+        tmp_path,
+    )
+    source_path = project_root / "centered.pdf"
+    _write_two_column_pdf_source(source_path)
+    manifest["source_document"] = _build_source_document(source_path, "pdf")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    output_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert output_text.count("MID") == 1
+    assert output_text.splitlines() == [
+        "MID",
+        "Left one",
+        "Left two",
+        "Left three",
+        "Right one",
+        "Right two",
+        "Right three",
+    ]
+
+
 def test_extract_text_splits_rtf_into_multiple_progress_units(tmp_path) -> None:
     """
     @brief      Verify RTF extraction exposes paragraph-sized progress units.
@@ -719,6 +880,51 @@ def _write_pdf_source(path: Path, page_texts: list[str]) -> None:
         page = document.new_page()
         if page_text:
             page.insert_text((72, 72), page_text)
+    document.save(path)
+    document.close()
+
+
+def _pdf_order_line(
+    text: str,
+    bbox: tuple[float, float, float, float],
+    index: int,
+) -> dict[str, object]:
+    """Build the minimum visual-line record required by PDF ordering tests."""
+    return {
+        "text": text,
+        "bbox": list(bbox),
+        "block_index": index,
+        "line_index": 0,
+        "column": None,
+    }
+
+
+def _two_column_pdf_lines(*, start_index: int = 0) -> list[dict[str, object]]:
+    """Build three clearly separated lines in each PDF column."""
+    return [
+        _pdf_order_line("Left 1", (72.0, 100.0, 250.0, 110.0), start_index),
+        _pdf_order_line("Left 2", (72.0, 130.0, 250.0, 140.0), start_index + 1),
+        _pdf_order_line("Left 3", (72.0, 160.0, 250.0, 170.0), start_index + 2),
+        _pdf_order_line("Right 1", (360.0, 100.0, 540.0, 110.0), start_index + 3),
+        _pdf_order_line("Right 2", (360.0, 130.0, 540.0, 140.0), start_index + 4),
+        _pdf_order_line("Right 3", (360.0, 160.0, 540.0, 170.0), start_index + 5),
+    ]
+
+
+def _write_two_column_pdf_source(path: Path) -> None:
+    """Write a clear two-column PDF page with one centered narrow header."""
+    document = fitz.open()
+    page = document.new_page(width=612.0, height=792.0)
+    for point, text in (
+        ((297.0, 50.0), "MID"),
+        ((72.0, 100.0), "Left one"),
+        ((72.0, 130.0), "Left two"),
+        ((72.0, 160.0), "Left three"),
+        ((360.0, 100.0), "Right one"),
+        ((360.0, 130.0), "Right two"),
+        ((360.0, 160.0), "Right three"),
+    ):
+        page.insert_text(point, text, fontsize=10.0)
     document.save(path)
     document.close()
 

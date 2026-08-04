@@ -1016,12 +1016,24 @@ def _order_pdf_lines(
 ) -> tuple[list[dict[str, object]], str, list[str]]:
     """Conservatively order a single-column or clearly separated two-column page."""
     if len(lines) < 6 or page_width <= 0:
+        for line in lines:
+            line["column"] = 0
         return sorted(lines, key=_pdf_line_sort_key), "single_column", []
     midpoint = page_width / 2.0
     margin = page_width * 0.04
-    left = [line for line in lines if float(line["bbox"][2]) <= midpoint + margin]
-    right = [line for line in lines if float(line["bbox"][0]) >= midpoint - margin]
-    spanning = [line for line in lines if line not in left and line not in right]
+    left: list[dict[str, object]] = []
+    right: list[dict[str, object]] = []
+    spanning: list[dict[str, object]] = []
+    for line in lines:
+        bbox = line["bbox"]
+        satisfies_left = float(bbox[2]) <= midpoint + margin
+        satisfies_right = float(bbox[0]) >= midpoint - margin
+        if satisfies_left and not satisfies_right:
+            left.append(line)
+        elif satisfies_right and not satisfies_left:
+            right.append(line)
+        else:
+            spanning.append(line)
     stable_two_column = (
         len(left) >= 3
         and len(right) >= 3
@@ -1034,9 +1046,19 @@ def _order_pdf_lines(
 
     first_column_y = min(float(line["bbox"][1]) for line in [*left, *right])
     last_column_y = max(float(line["bbox"][3]) for line in [*left, *right])
-    top_spanning = [line for line in spanning if float(line["bbox"][3]) <= first_column_y + 12.0]
-    bottom_spanning = [line for line in spanning if float(line["bbox"][1]) >= last_column_y - 12.0]
-    ambiguous_spanning = [line for line in spanning if line not in top_spanning and line not in bottom_spanning]
+    top_spanning: list[dict[str, object]] = []
+    bottom_spanning: list[dict[str, object]] = []
+    ambiguous_spanning: list[dict[str, object]] = []
+    for line in spanning:
+        bbox = line["bbox"]
+        satisfies_top = float(bbox[3]) <= first_column_y + 12.0
+        satisfies_bottom = float(bbox[1]) >= last_column_y - 12.0
+        if satisfies_top and not satisfies_bottom:
+            top_spanning.append(line)
+        elif satisfies_bottom and not satisfies_top:
+            bottom_spanning.append(line)
+        else:
+            ambiguous_spanning.append(line)
     if ambiguous_spanning:
         for line in lines:
             line["column"] = None

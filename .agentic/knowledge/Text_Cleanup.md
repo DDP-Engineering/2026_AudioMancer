@@ -78,6 +78,21 @@ failure names the spine item and file. Uniform EPUBs record their one encoding;
 mixed EPUBs record `mixed(<sorted-encodings>)` while extracted text remains in
 spine order.
 
+`REQ-FUNC-6dd114ad` makes PDF reading-order reconstruction an identity-preserving
+permutation of the physical text-line records. Horizontal column classification
+is exclusive: a narrow centered line that satisfies both column predicates is
+treated as spanning instead of contributing to both column populations.
+Spanning material is then assigned exclusively to top, bottom, or conservative
+ambiguity, so no physical line can be emitted twice. Clear two-column pages keep
+top-spanning, left-column, right-column, bottom-spanning order and the existing
+reconstruction reason; unresolved spanning material keeps the existing
+uncertainty mode and warning.
+
+`REQ-FUNC-6c977d3b` gives every line in every `single_column` PDF result column
+identity `0`, including pages with fewer than six lines and pages whose width is
+unusable. Their stable top-left order is unchanged, and Cleanup therefore does
+not infer a page-column transition solely from a sparse page.
+
 Cleanup runs in four phases: deterministic analysis, optional AI adjudication,
 deterministic validation/rendering, and atomic publication. It is a fixed
 service pipeline, not an agent loop. Progress is monotonic: analysis occupies
@@ -278,7 +293,10 @@ Primary coverage:
 UTF-8 with and without BOM, cp1250, cp1251, cp1252, and RTF `ansicpg`. Its EPUB
 fixtures rewrite actual ZIP members with UTF-16, cp1252, and ISO-8859-1 bytes,
 then verify exact text, spine order, uniform/mixed ledger labels, and actionable
-declared-encoding failures.
+declared-encoding failures. Its PDF cases cover exclusive centered and spanning
+classification, identity-preserving ordering across every layout mode,
+single-column identity normalization, established reason codes, and a public
+Extraction regression that proves centered source text is written once.
 
 `test_cleanup_service.py` specifically seeds completed downstream compact
 summaries and every current downstream artifact class for both automatic and

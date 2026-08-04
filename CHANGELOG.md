@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- PDF import no longer duplicates narrow centered lines such as page numbers,
+  footers, or scene ornaments while reconstructing two-column reading order.
+  Sparse and unusably sized pages now also keep the same single-column identity
+  as other pages, avoiding false page-transition decisions during Cleanup.
 - Project creation, source import, and confirmed project repair now keep the
   current Home state intact when the filesystem rejects the operation. The
   existing localized project-error warning shows the original reason instead
