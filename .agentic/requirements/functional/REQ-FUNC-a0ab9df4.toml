@@ -1,0 +1,71 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-a0ab9df4"
+
+title = "Preserve review state when selected-chunk retranslation is interrupted"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When selected-chunk retranslation is cancelled or raises a provider error, the AI Translation service shall preserve the pre-attempt chunk review state while durably recording accrued token usage and re-deriving document status from that unchanged state.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Automated service tests interrupt selected-chunk retranslation from completed, review-pending, and in-progress documents and observe the original exception, unchanged chunk text and approvals, no partial segment text, accrued usage, a derived review status, and unchanged downstream completion availability."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_interruption_preserves_completed_review_state",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_failure_rederives_status_from_unchanged_chunks",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_segment_failure_persists_usage_without_partial_text",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_successful_retranslation_clears_only_selected_approval_and_keeps_general_instructions",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = "specs/REQ-FUNC-a0ab9df4.md"
+
+priority = "high"
+rationale = "A failed one-off improvement attempt must not make unchanged approved translation unavailable to downstream operations."
+
+created = 2026-08-05
+updated = 2026-08-05

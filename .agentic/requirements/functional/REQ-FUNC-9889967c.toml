@@ -1,0 +1,72 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-9889967c"
+
+title = "Honor caller instructions for non-resumable translation starts"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When translation starts or continues, the AI Translation service shall select one normalized instruction value from the caller or persisted document according to resumability and use it consistently for budgeting, rendered requests, and durable document state.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Automated service tests cover every resumable status, non-resumable documents with supplied or absent instructions, and new documents, then compare the selected normalized value in budget inputs, rendered provider requests, and persisted document instructions."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_resumable_translation_status_retains_stored_instructions",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_non_resumable_translation_uses_normalized_new_instructions_everywhere",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_non_resumable_translation_without_new_instructions_retains_stored_value",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_new_translation_normalizes_instructions_for_budget_prompt_and_persistence",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_successful_retranslation_clears_only_selected_approval_and_keeps_general_instructions",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = "specs/REQ-FUNC-9889967c.md"
+
+priority = "high"
+rationale = "Operator instructions must not be discarded on intentional non-resume paths or unexpectedly replace the contract of a resumable operation."
+
+created = 2026-08-05
+updated = 2026-08-05

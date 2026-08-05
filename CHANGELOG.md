@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Failed or cancelled one-chunk AI retranslation attempts now keep the current
+  translated text, approvals, and completed downstream availability while
+  retaining any token usage already spent. Fresh translation passes now honor
+  newly entered rules, resumes keep their stored rules, and one-off chunk rules
+  no longer affect later translation runs.
 - AI Translation review now keeps the active chunk, editing cursor, selection,
   undo history, scroll position, and selected enabled AI profile through normal
   refreshes. Start/Resume saves the latest pending edit before its worker runs,

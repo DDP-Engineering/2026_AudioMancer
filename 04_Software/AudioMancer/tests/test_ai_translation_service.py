@@ -111,6 +111,177 @@ def test_translation_resume_uses_first_empty_chunk_and_current_profile_budget(mo
 
 
 @pytest.mark.parametrize(
+    "persisted_status",
+    [
+        ai_translation_service.TRANSLATION_STATUS_RUNNING,
+        ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS,
+        ai_translation_service.TRANSLATION_STATUS_CANCELLED,
+        ai_translation_service.TRANSLATION_STATUS_FAILED,
+    ],
+)
+def test_resumable_translation_status_retains_stored_instructions(
+    monkeypatch,
+    tmp_path,
+    persisted_status,
+) -> None:
+    """
+    @brief      Verify resumable documents retain their persisted instruction contract.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  persisted_status Resumable status under test.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, f"ResumeInstructions{persisted_status}")
+    _write_translation_document(
+        project_root,
+        persisted_status,
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Traducere existenta", "approved": False},
+            {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
+        ],
+        instructions="Instructiuni pastrate",
+    )
+    prompts = _install_translations(monkeypatch, ["Traducere noua"])
+
+    ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        additional_translation_instructions="Instructiuni noi ignorate",
+    )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["additional_translation_instructions"] == "Instructiuni pastrate"
+    assert "Instructiuni pastrate" in prompts[0]
+    assert "Instructiuni noi ignorate" not in prompts[0]
+
+
+@pytest.mark.parametrize(
+    "persisted_status",
+    [
+        ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
+        ai_translation_service.TRANSLATION_STATUS_COMPLETED,
+    ],
+)
+def test_non_resumable_translation_uses_normalized_new_instructions_everywhere(
+    monkeypatch,
+    tmp_path,
+    persisted_status,
+) -> None:
+    """
+    @brief      Verify a non-resume path uses one normalized caller instruction value.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  persisted_status Non-resumable status under test.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, f"RestartInstructions{persisted_status}")
+    _write_translation_document(
+        project_root,
+        persisted_status,
+        [{"chunk_id": "chunk-0001", "translated_text": "Traducere existenta", "approved": True}],
+        instructions="Instructiuni vechi",
+    )
+    prompts = _install_translations(monkeypatch, ["Traducere noua"])
+    budget_instructions: list[str] = []
+    original_build_budget = ai_translation_service._build_budget_metadata
+
+    def capture_budget_instructions(*args, **kwargs):
+        """Capture the instruction value supplied to budget calculation."""
+        budget_instructions.append(str(args[3]))
+        return original_build_budget(*args, **kwargs)
+
+    monkeypatch.setattr(ai_translation_service, "_build_budget_metadata", capture_budget_instructions)
+
+    ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        additional_translation_instructions="  Instructiuni noi  ",
+    )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert budget_instructions == ["Instructiuni noi"]
+    assert "Instructiuni noi" in prompts[0]
+    assert "Instructiuni vechi" not in prompts[0]
+    assert document["additional_translation_instructions"] == "Instructiuni noi"
+
+
+def test_non_resumable_translation_without_new_instructions_retains_stored_value(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify an absent non-resume argument does not clear stored instructions.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "RestartInstructionsNone")
+    _write_translation_document(
+        project_root,
+        ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
+        [{"chunk_id": "chunk-0001", "translated_text": "Traducere existenta", "approved": False}],
+        instructions="Instructiuni pastrate",
+    )
+    prompts = _install_translations(monkeypatch, ["Traducere noua"])
+
+    ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        additional_translation_instructions=None,
+    )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["additional_translation_instructions"] == "Instructiuni pastrate"
+    assert "Instructiuni pastrate" in prompts[0]
+
+
+def test_new_translation_normalizes_instructions_for_budget_prompt_and_persistence(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify a new document consistently uses normalized caller instructions.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "NewInstructionsNormalized")
+    prompts = _install_translations(monkeypatch, ["Traducere unu", "Traducere doi"])
+    budget_instructions: list[str] = []
+    original_build_budget = ai_translation_service._build_budget_metadata
+
+    def capture_budget_instructions(*args, **kwargs):
+        """Capture the instruction value supplied to budget calculation."""
+        budget_instructions.append(str(args[3]))
+        return original_build_budget(*args, **kwargs)
+
+    monkeypatch.setattr(ai_translation_service, "_build_budget_metadata", capture_budget_instructions)
+
+    ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        additional_translation_instructions="  Instructiuni normalizate  ",
+    )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert budget_instructions == ["Instructiuni normalizate"]
+    assert all("Instructiuni normalizate" in prompt for prompt in prompts)
+    assert document["additional_translation_instructions"] == "Instructiuni normalizate"
+
+
+@pytest.mark.parametrize(
     ("raised_error", "expected_status"),
     [
         (RuntimeError("provider unavailable"), ai_translation_service.TRANSLATION_STATUS_FAILED),
@@ -168,28 +339,99 @@ def test_translation_cancel_and_failure_preserve_completed_chunks(
     assert document["token_usage"]["total_tokens"] == 15
 
 
-def test_retranslate_failure_preserves_previous_translation(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize(
+    "raised_error",
+    [
+        RuntimeError("provider unavailable"),
+        operation_runtime_service.OperationCancelledError("cancelled"),
+    ],
+)
+def test_retranslate_interruption_preserves_completed_review_state(
+    monkeypatch,
+    tmp_path,
+    raised_error,
+) -> None:
     """
-    @brief      Verify REQ-FUNC-004 failed retranslation does not destroy approved text.
+    @brief      Verify interrupted retranslation leaves completed review state available.
     @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
     @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  raised_error Controlled exception used to exercise interruption handling.
     @return     None.
     """
-    project_root, manifest = _create_chunked_project(tmp_path, "TranslationSafeRetranslate")
-    ai_translation_service.write_translation_document(
+    project_root, manifest = _create_chunked_project(tmp_path, f"TranslationSafe{type(raised_error).__name__}")
+    original_chunks = [
+        {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
+        {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
+    ]
+    _write_translation_document(
         project_root,
-        {
-            "target_language": "ro",
-            "status": ai_translation_service.TRANSLATION_STATUS_COMPLETED,
-            "token_usage": _usage(10, 5),
-            "budget_metadata": _budget(4096),
-            "additional_translation_instructions": "Reguli generale",
-            "chunks": [
-                {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
-                {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
-            ],
-        },
+        ai_translation_service.TRANSLATION_STATUS_COMPLETED,
+        original_chunks,
+        instructions="Reguli generale",
     )
+    monkeypatch.setattr(
+        ai_translation_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(raised_error),
+    )
+
+    with pytest.raises(type(raised_error), match=str(raised_error)):
+        ai_translation_service.retranslate_chunk(
+            project_root,
+            manifest,
+            _profile_payload(),
+            "ro",
+            "chunk-0001",
+            additional_translation_instructions="Regula doar pentru retraducere",
+        )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["status"] == ai_translation_service.TRANSLATION_STATUS_COMPLETED
+    assert document["chunks"] == original_chunks
+    assert document["additional_translation_instructions"] == "Reguli generale"
+    assert ai_translation_service.translation_is_completed(project_root) is True
+
+
+@pytest.mark.parametrize(
+    ("persisted_status", "chunks", "expected_status"),
+    [
+        (
+            ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
+            [
+                {"chunk_id": "chunk-0001", "translated_text": "Text unu", "approved": False},
+                {"chunk_id": "chunk-0002", "translated_text": "Text doi", "approved": True},
+            ],
+            ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
+        ),
+        (
+            ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS,
+            [
+                {"chunk_id": "chunk-0001", "translated_text": "Text unu", "approved": True},
+                {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
+            ],
+            ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS,
+        ),
+    ],
+)
+def test_retranslate_failure_rederives_status_from_unchanged_chunks(
+    monkeypatch,
+    tmp_path,
+    persisted_status,
+    chunks,
+    expected_status,
+) -> None:
+    """
+    @brief      Verify failed retranslation derives status from unchanged review records.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  persisted_status Persisted fixture status before the attempt.
+    @param[in]  chunks Complete ordered chunk fixtures under test.
+    @param[in]  expected_status Review-derived status expected after failure.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, f"RetranslateDerived{persisted_status}")
+    _write_translation_document(project_root, persisted_status, chunks)
     monkeypatch.setattr(
         ai_translation_service.llm_provider_service,
         "chat_json",
@@ -203,17 +445,113 @@ def test_retranslate_failure_preserves_previous_translation(monkeypatch, tmp_pat
             _profile_payload(),
             "ro",
             "chunk-0001",
-            additional_translation_instructions="Regula doar pentru retraducere",
         )
 
     document = ai_translation_service.load_translation_document(project_root)
     assert document is not None
-    assert document["status"] == ai_translation_service.TRANSLATION_STATUS_FAILED
+    assert document["status"] == expected_status
+    assert document["chunks"] == chunks
+
+
+def test_retranslate_segment_failure_persists_usage_without_partial_text(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify paid retranslation segments persist usage but not partial text.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "RetranslateSegmentFailure")
+    original_chunks = [
+        {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
+        {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
+    ]
+    _write_translation_document(
+        project_root,
+        ai_translation_service.TRANSLATION_STATUS_COMPLETED,
+        original_chunks,
+    )
+    monkeypatch.setattr(
+        ai_translation_service,
+        "_split_translation_source_text",
+        lambda *_args: ["segment one", "segment two"],
+    )
+    responses = iter(
+        [
+            {"payload": {"translated_text": "segment tradus"}, "usage": _usage(10, 5)},
+            RuntimeError("second segment failed"),
+        ]
+    )
+
+    def fake_chat_json(*_args, **_kwargs):
+        """Return one paid segment and fail the second provider request."""
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
+
+    with pytest.raises(RuntimeError, match="second segment failed"):
+        ai_translation_service.retranslate_chunk(
+            project_root,
+            manifest,
+            _profile_payload(),
+            "ro",
+            "chunk-0001",
+        )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["status"] == ai_translation_service.TRANSLATION_STATUS_COMPLETED
+    assert document["token_usage"]["total_tokens"] == 15
+    assert document["chunks"] == original_chunks
+
+
+def test_successful_retranslation_clears_only_selected_approval_and_keeps_general_instructions(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify successful one-off retranslation preserves unrelated review state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "RetranslateSuccess")
+    _write_translation_document(
+        project_root,
+        ai_translation_service.TRANSLATION_STATUS_COMPLETED,
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
+            {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
+        ],
+        instructions="Reguli generale",
+    )
+    prompts = _install_translations(monkeypatch, ["Text retradus"])
+
+    ai_translation_service.retranslate_chunk(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        "chunk-0001",
+        additional_translation_instructions="Regula unica",
+    )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert document["status"] == ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING
     assert document["chunks"][0] == {
         "chunk_id": "chunk-0001",
-        "translated_text": "Text aprobat",
+        "translated_text": "Text retradus",
+        "approved": False,
+    }
+    assert document["chunks"][1] == {
+        "chunk_id": "chunk-0002",
+        "translated_text": "Alt text aprobat",
         "approved": True,
     }
+    assert "Regula unica" in prompts[0]
     assert document["additional_translation_instructions"] == "Reguli generale"
 
 
@@ -455,6 +793,33 @@ def _install_translations(monkeypatch, translations: list[str]) -> list[str]:
 
     monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
     return captured_prompts
+
+
+def _write_translation_document(
+    project_root,
+    status: str,
+    chunks: list[dict[str, object]],
+    instructions: str = "Instructiuni pastrate",
+) -> None:
+    """
+    @brief      Persist one strict translation-document fixture.
+    @param[in]  project_root Active project root folder.
+    @param[in]  status Persisted translation status token.
+    @param[in]  chunks Ordered translated-chunk fixtures.
+    @param[in]  instructions General persisted translation instructions.
+    @return     None.
+    """
+    ai_translation_service.write_translation_document(
+        project_root,
+        {
+            "target_language": "ro",
+            "status": status,
+            "token_usage": _usage(0, 0),
+            "budget_metadata": _budget(4096),
+            "additional_translation_instructions": instructions,
+            "chunks": chunks,
+        },
+    )
 
 
 def _create_chunked_project(tmp_path, name: str):

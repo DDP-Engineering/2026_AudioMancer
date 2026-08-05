@@ -44,6 +44,12 @@ approval, localization, and busy-state controls.
   starts and while the page is busy.
 - `REQ-FUNC-ee95beb7` - the controller rejects a pre-start retranslation request
   without worker, prompt, error, document, or manifest side effects.
+- `REQ-FUNC-a0ab9df4` - interrupted selected-chunk retranslation preserves all
+  chunk text and approvals, records accrued usage, and derives review status.
+- `REQ-FUNC-9889967c` - start/continue selects one instruction value by
+  persisted resumability and uses it for budgets, requests, and persistence.
+- `REQ-FUNC-d911e006` - interrupted main batch translation keeps its distinct
+  resumable failed/cancelled status and completed chunk checkpoints.
 
 ## 5. Implementation Overview
 
@@ -55,7 +61,10 @@ refresh. Controller methods route valid page actions through the shared runner
 and reject selected retranslation before translation exists. The page merges
 source/translated chunks by stable ID, leaves identical editor documents
 untouched, flushes edits before worker dispatch and review actions, and gates
-retranslation on a started idle state.
+retranslation on a started idle state. The translation service retains stored
+instructions for resumable documents, accepts normalized caller instructions
+for new and non-resumable starts, and treats an interrupted selected
+retranslation as a failed one-off attempt rather than a failed batch.
 
 ## 6. Dependencies
 
@@ -85,7 +94,11 @@ Manual/retranslated text clears approval; malformed/incompatible documents
 raise a translation-document error rather than silently merging data.
 Generation checkpoints only complete chunks: an interrupted chunk's partial
 segments are not persisted. A failed selected retranslation keeps the prior
-text and approval state rather than replacing it with a partial result.
+text and approval state rather than replacing it with a partial result, stores
+any accrued usage, and derives completed/review-pending/in-progress status from
+the unchanged chunks. By contrast, an interrupted main batch stores its
+resumable failed or cancelled status. General start/resume instructions are
+durable; one-off selected-retranslation instructions never replace them.
 
 ## 9. Workflow Integration
 
@@ -100,9 +113,13 @@ approve individual or all chunks. The live enabled profile and selected chunk
 survive ordinary state refreshes; same-content edit persistence does not reset
 the editor cursor, selection, undo history, or scroll positions. Start/Resume
 persists any pending edit before the worker can read the document, and selected
-retranslation is unavailable until translation has started. Controllers call
-start/continue and refresh state after each operation. Direct callers must use
-the authoritative document helpers, never separate report/state files.
+retranslation is unavailable until translation has started. Resume keeps the
+document's original general instructions, while a newly supplied value applies
+to a new or non-resumable start; selected-retranslation instructions apply only
+to that attempt. Cancelling or failing one selected retranslation keeps the
+existing review result available. Controllers call start/continue and refresh
+state after each operation. Direct callers must use the authoritative document
+helpers, never separate report/state files.
 
 ## 11. Validation And Tests
 

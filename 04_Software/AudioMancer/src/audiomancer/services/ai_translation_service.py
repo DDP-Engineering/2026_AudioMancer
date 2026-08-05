@@ -309,10 +309,12 @@ def start_or_continue_translation(
         if str(document["target_language"]) != target_language:
             raise _incompatible_document_error("The saved target language differs from the project.")
         _synchronize_document_chunks(document, source_chunks, ())
-        if str(document["status"]) in _RESUMABLE_STATUSES:
+        if str(document["status"]) in _RESUMABLE_STATUSES or additional_translation_instructions is None:
             instructions = str(document["additional_translation_instructions"])
         else:
-            instructions = str(document["additional_translation_instructions"])
+            instructions = _normalized_additional_translation_instructions(
+                additional_translation_instructions
+            )
     prompt_template_service.validate_required_prompts(["text_translation_system", "text_translation_user"])
     system_prompt = prompt_template_service.render_prompt("text_translation_system", {})
     budget_metadata = _build_budget_metadata(
@@ -450,12 +452,12 @@ def retranslate_chunk(
             cancel_requested=cancel_requested,
         )
     except OperationCancelledError:
-        document["status"] = TRANSLATION_STATUS_CANCELLED
+        document["status"] = _review_status(document["chunks"])
         document["token_usage"] = token_usage
         write_translation_document(resolved_project_root, document)
         raise
     except Exception:
-        document["status"] = TRANSLATION_STATUS_FAILED
+        document["status"] = _review_status(document["chunks"])
         document["token_usage"] = token_usage
         write_translation_document(resolved_project_root, document)
         raise

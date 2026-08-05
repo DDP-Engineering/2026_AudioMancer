@@ -410,11 +410,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Supported translation targets: English, Romanian, Japanese, Korean, Chinese, German, French, Russian, Portuguese, Spanish, and Italian.</li>
                     <li>Generate translation per chunk.</li>
-                    <li>Add optional operator translation rules in the word-wrapped prompt box before fresh translation or selected-chunk retranslation.</li>
+                    <li>Add optional operator translation rules in the word-wrapped prompt box before a fresh translation, a new pass from review, or selected-chunk retranslation. Resume keeps the rules stored with the interrupted run, while selected-chunk rules apply only to that one attempt.</li>
                     <li>Inspect every translated chunk beside its source context.</li>
                     <li>Edit translated chunk text manually before approval. Automatic saves keep the editing cursor, selection, undo history, and scroll position in place, and Start/Resume saves the latest pending edit before translation continues.</li>
                     <li>The selected enabled AI profile stays selected during review refreshes for the current session.</li>
-                    <li>Re-Translate Selected becomes available only after translation has started and is disabled while translation is busy.</li>
+                    <li>Re-Translate Selected becomes available only after translation has started and is disabled while translation is busy. If that one-chunk attempt fails or is cancelled, the current text, approvals, and downstream-ready completed state remain unchanged.</li>
                     <li>Approve individual chunks or continue reviewing until all chunks are approved.</li>
                     <li>Restart translation after changing profile/settings or when you want a fresh literary pass.</li>
                     <li>Interrupt translation and continue later from the same project.</li>
