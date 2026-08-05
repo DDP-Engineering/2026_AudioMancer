@@ -137,6 +137,19 @@ def handle_retranslate_selected_requested(
         return
     if window._current_project_root is None or window._current_manifest is None:
         return
+    try:
+        translation_document = ai_translation_service.load_translation_document(window._current_project_root)
+    except ai_translation_service.TranslationDocumentError as exc:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(exc),
+        )
+        return
+    if translation_document is None or str(translation_document["status"]) == (
+        ai_translation_service.TRANSLATION_STATUS_NOT_STARTED
+    ):
+        return
     target_language = _manifest_target_language(window)
     profile_payload = _resolve_ai_profile(window._settings_payload, profile_id)
     if profile_payload is None:

@@ -70,6 +70,7 @@ def build_ai_translation_state(
     manifest: dict[str, object] | None,
     language: str,
     settings_payload: dict[str, object] | None = None,
+    selected_profile_id: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build page state without writing or repairing translation persistence.
@@ -77,9 +78,10 @@ def build_ai_translation_state(
     @param[in]  manifest Active project manifest payload.
     @param[in]  language Active user-interface language token.
     @param[in]  settings_payload Validated application settings payload.
+    @param[in]  selected_profile_id Optional live AI-profile selection from the page.
     @return     Constructed ai translation state.
     """
-    profile_state = build_ai_translation_profile_state(settings_payload)
+    profile_state = build_ai_translation_profile_state(settings_payload, selected_profile_id)
     if project_root is None or manifest is None:
         return _empty_state(
             [ui_state_service.translate("ai_translation.note_no_project", language)],

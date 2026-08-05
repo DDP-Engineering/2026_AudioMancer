@@ -273,9 +273,13 @@ class AiTranslationPage(QWidget):
             if profile_index >= 0:
                 self._profile_combo.setCurrentIndex(profile_index)
         current_chunk_id = self.selected_chunk_id()
-        self._chunk_list.clear()
-        for translated_chunk in self._display_chunks:
-            self._chunk_list.addItem(_format_chunk_list_item(translated_chunk, self._current_language))
+        self._chunk_list.blockSignals(True)
+        try:
+            self._chunk_list.clear()
+            for translated_chunk in self._display_chunks:
+                self._chunk_list.addItem(_format_chunk_list_item(translated_chunk, self._current_language))
+        finally:
+            self._chunk_list.blockSignals(False)
         self._approved_progress_bar.setRange(0, max(total_count, 1))
         self._approved_progress_bar.setValue(min(approved_count, max(total_count, 1)))
         self._approved_progress_label.setText(
@@ -305,6 +309,8 @@ class AiTranslationPage(QWidget):
         @exception  None
         """
         self._busy = is_busy
+        if is_busy:
+            self._edit_timer.stop()
         self._apply_control_state()
 
     def current_profile_id(self) -> str | None:
@@ -365,8 +371,6 @@ class AiTranslationPage(QWidget):
             str(selected_chunk.get("translated_text", "")).strip()
         )
         selected_profile_id = self.current_profile_id()
-        _ = has_started_translation
-        _ = has_translated_chunks
         self._profile_combo.setEnabled(self._project_active and not self._busy)
         self._start_button.setEnabled(
             self._project_active
@@ -393,7 +397,11 @@ class AiTranslationPage(QWidget):
             )
         )
         self._retranslate_button.setEnabled(
-            self._project_active and not self._busy and selected_chunk is not None and selected_profile_id is not None
+            self._project_active
+            and has_started_translation
+            and not self._busy
+            and selected_chunk is not None
+            and selected_profile_id is not None
         )
         self._approve_selected_button.setEnabled(
             self._project_active
@@ -430,18 +438,28 @@ class AiTranslationPage(QWidget):
         self.flush_pending_translation_edit()
         if row < 0 or row >= len(self._display_chunks):
             self._current_chunk_id = None
-            self._source_text_edit.clear()
-            self._loading_translation_text = True
-            self._translated_text_edit.clear()
-            self._loading_translation_text = False
+            if self._source_text_edit.toPlainText():
+                self._source_text_edit.clear()
+            if self._translated_text_edit.toPlainText():
+                self._loading_translation_text = True
+                try:
+                    self._translated_text_edit.clear()
+                finally:
+                    self._loading_translation_text = False
             self._apply_control_state()
             return
         selected_chunk = self._display_chunks[row]
         self._current_chunk_id = str(selected_chunk.get("chunk_id", ""))
-        self._source_text_edit.setPlainText(str(selected_chunk.get("source_text", "")))
-        self._loading_translation_text = True
-        self._translated_text_edit.setPlainText(str(selected_chunk.get("translated_text", "")))
-        self._loading_translation_text = False
+        source_text = str(selected_chunk.get("source_text", ""))
+        if self._source_text_edit.toPlainText() != source_text:
+            self._source_text_edit.setPlainText(source_text)
+        translated_text = str(selected_chunk.get("translated_text", ""))
+        if self._translated_text_edit.toPlainText() != translated_text:
+            self._loading_translation_text = True
+            try:
+                self._translated_text_edit.setPlainText(translated_text)
+            finally:
+                self._loading_translation_text = False
         self._apply_control_state()
 
     def _emit_start_translation(self) -> None:
@@ -450,6 +468,7 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         """
+        self.flush_pending_translation_edit()
         profile_id = self.current_profile_id()
         if profile_id is not None:
             self.start_translation_requested.emit(profile_id)
@@ -460,6 +479,8 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         """
+        if not self._retranslate_button.isEnabled():
+            return
         self.flush_pending_translation_edit()
         profile_id = self.current_profile_id()
         chunk_id = self.selected_chunk_id()

@@ -1,26 +1,29 @@
 schema = 1
 id = "REQ-FUNC-9a7e98c9"
-title = "The translation page shall debounce and flush operator edits, flushing"
+title = "Flush pending translation edits before worker dispatch"
 status = "active"
 
 requirement = """
-The translation page shall debounce and flush operator edits, flushing pending edits before approval.
+When the operator starts or resumes AI translation, the translation page shall persist the latest pending manual edit exactly once before dispatching the worker and leave no delayed edit callback active.
 """
 
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Automated page and controller tests observe edit persistence before worker dispatch, an inactive timer after dispatch, and no duplicate persistence when no edit is pending."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
   "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_edit_debounce_and_flush",
   "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_approve_selected_flushes_pending_edit_before_signal",
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_start_translation_flushes_pending_edit_before_signal_and_stops_timer",
+  "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_start_worker_observes_latest_pending_page_edit",
 ]
+
+spec = "specs/REQ-FUNC-9a7e98c9.md"
 
 priority = "high"
 rationale = """
-Edits must not be lost between typing and approval.
+Worker startup must observe the operator's latest review text without a later debounce callback racing authoritative worker persistence.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-05

@@ -420,17 +420,19 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         """
+        selected_profile_id = self._ai_translation_page.current_profile_id()
         self._ai_translation_page.set_project_active(project_root is not None)
         translation_state = ai_translation_state_service.build_ai_translation_state(
             project_root,
             manifest,
             current_language,
             self._settings_payload,
+            selected_profile_id,
         )
         self._ai_translation_page.set_ai_profiles(
             **ai_translation_state_service.build_ai_translation_profile_state(
                 self._settings_payload,
-                translation_state.get("selected_profile_id"),
+                selected_profile_id,
             )
         )
         self._ai_translation_page.set_translation_state(**translation_state)

@@ -75,6 +75,48 @@ def test_translation_controller_resumes_without_prompt_for_all_resumable_statuse
     assert len(starts) == 1
 
 
+def test_translation_start_worker_observes_latest_pending_page_edit(monkeypatch, qtbot, tmp_path) -> None:
+    """Verify page persistence completes before the mocked translation worker reads its document."""
+    project_root, manifest = _create_project(tmp_path, "TranslationLatestEditBeforeWorker")
+    source_chunks = [
+        {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original one"},
+        {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Original two"},
+    ]
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(build_chunking_document(source_chunks), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    document = _document(ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS)
+    document["chunks"] = [
+        {"chunk_id": "chunk-0001", "translated_text": "Earlier text", "approved": False},
+        {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
+    ]
+    ai_translation_service.write_translation_document(project_root, document)
+    window = _build_window(qtbot, project_root)
+    window._current_page_id = "ai_translation"
+    window._refresh_ai_translation_page_state(project_root, manifest, "en")
+    observed_by_worker = []
+
+    def observe_persisted_document(_window, **_kwargs) -> None:
+        """Record the authoritative text at the operation-dispatch boundary."""
+        persisted = ai_translation_service.load_translation_document(project_root)
+        assert persisted is not None
+        observed_by_worker.append(str(persisted["chunks"][0]["translated_text"]))
+
+    monkeypatch.setattr(ai_translation_ui_controller, "_start_operation", observe_persisted_document)
+    page = window._ai_translation_page
+    page._translated_text_edit.setPlainText("Latest exact edit")
+    assert page._edit_timer.isActive() is True
+
+    page._emit_start_translation()
+
+    persisted = ai_translation_service.load_translation_document(project_root)
+    assert persisted is not None
+    assert observed_by_worker == ["Latest exact edit"]
+    assert persisted["chunks"][0]["translated_text"] == "Latest exact edit"
+    assert page._edit_timer.isActive() is False
+
+
 def test_translation_controller_syncs_derived_manifest_summary(qtbot, tmp_path) -> None:
     """
     @brief      Verify REQ-UX-003 the controller owns compact manifest synchronization.
@@ -116,6 +158,43 @@ def test_translation_controller_syncs_derived_manifest_summary(qtbot, tmp_path) 
         },
     )
     assert window._current_manifest["current_stage"] == "character_discovery_ready"
+
+
+def test_retranslate_before_translation_start_is_inert(monkeypatch, qtbot, tmp_path) -> None:
+    """Verify an impossible selected-chunk retranslation has no worker, prompt, error, or manifest effects."""
+    project_root, _manifest = _create_project(tmp_path, "TranslationUnavailableRetranslate")
+    window = _build_window(qtbot, project_root)
+    persisted_manifest_before = project_workspace_service.load_manifest(project_root)
+    prompt_calls = []
+    starts = []
+    warning_calls = []
+    monkeypatch.setattr(
+        ai_translation_ui_controller,
+        "prompt_ai_translation_instructions",
+        lambda *_args: prompt_calls.append(True),
+    )
+    monkeypatch.setattr(
+        ai_translation_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: starts.append(kwargs),
+    )
+    monkeypatch.setattr(
+        ai_translation_ui_controller.QMessageBox,
+        "warning",
+        lambda *args: warning_calls.append(args),
+    )
+
+    ai_translation_ui_controller.handle_retranslate_selected_requested(
+        window,
+        "profile-1",
+        "chunk-0001",
+    )
+
+    assert prompt_calls == []
+    assert starts == []
+    assert warning_calls == []
+    assert not (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
+    assert project_workspace_service.load_manifest(project_root) == persisted_manifest_before
 
 
 def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qtbot, tmp_path) -> None:

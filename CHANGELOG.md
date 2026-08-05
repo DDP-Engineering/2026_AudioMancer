@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AI Translation review now keeps the active chunk, editing cursor, selection,
+  undo history, scroll position, and selected enabled AI profile through normal
+  refreshes. Start/Resume saves the latest pending edit before its worker runs,
+  and Re-Translate Selected stays unavailable until translation has started.
 - AI Settings now keeps every unsaved profile edit when switching, adding, or
   removing profiles. Connect preserves the last successful model/context
   discovery after a temporary failure, discovers exact-model context limits

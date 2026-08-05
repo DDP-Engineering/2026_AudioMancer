@@ -42,6 +42,64 @@ def test_build_ai_translation_profile_state_prefers_default_translation_profile(
     assert profile_state["selected_profile_id"] == "profile_b"
 
 
+def test_build_ai_translation_state_preserves_enabled_selection_and_falls_back() -> None:
+    """Verify live profile selection is shared with page state and follows enabled fallback order."""
+    settings_payload = {
+        "llm_profiles": [
+            {"id": "profile_a", "label": "Profile A", "enabled": True},
+            {"id": "profile_b", "label": "Profile B", "enabled": True},
+            {"id": "profile_c", "label": "Profile C", "enabled": True},
+        ],
+        "default_ai_translation_profile_id": "profile_a",
+    }
+
+    state = ai_translation_state_service.build_ai_translation_state(
+        None,
+        None,
+        "en",
+        settings_payload,
+        "profile_b",
+    )
+    profile_state = ai_translation_state_service.build_ai_translation_profile_state(
+        settings_payload,
+        "profile_b",
+    )
+    assert state["selected_profile_id"] == "profile_b"
+    assert profile_state["selected_profile_id"] == state["selected_profile_id"]
+
+    removed_profile_state = ai_translation_state_service.build_ai_translation_state(
+        None,
+        None,
+        "en",
+        {
+            **settings_payload,
+            "llm_profiles": [settings_payload["llm_profiles"][0], settings_payload["llm_profiles"][2]],
+        },
+        "profile_b",
+    )
+    assert removed_profile_state["selected_profile_id"] == "profile_a"
+
+    settings_payload["llm_profiles"][1]["enabled"] = False
+    fallback_state = ai_translation_state_service.build_ai_translation_state(
+        None,
+        None,
+        "en",
+        settings_payload,
+        "profile_b",
+    )
+    assert fallback_state["selected_profile_id"] == "profile_a"
+
+    settings_payload["llm_profiles"][0]["enabled"] = False
+    first_enabled_state = ai_translation_state_service.build_ai_translation_state(
+        None,
+        None,
+        "en",
+        settings_payload,
+        "profile_b",
+    )
+    assert first_enabled_state["selected_profile_id"] == "profile_c"
+
+
 def test_build_ai_translation_state_is_read_only(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-005 page-state construction never persists translation data.
