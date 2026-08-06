@@ -16,6 +16,7 @@
 
 # IMPORTS
 
+import math
 from typing import Any
 
 TokenUsagePayload = dict[str, object]
@@ -45,11 +46,15 @@ def normalize_provider_usage(response_payload: dict[str, object]) -> TokenUsageP
     raw_usage = response_payload.get("usage")
     if not isinstance(raw_usage, dict):
         return empty_token_usage()
-    input_tokens = _optional_non_negative_int(raw_usage.get("prompt_tokens"))
-    output_tokens = _optional_non_negative_int(raw_usage.get("completion_tokens"))
-    total_tokens = _optional_non_negative_int(raw_usage.get("total_tokens"))
-    if None in {input_tokens, output_tokens, total_tokens}:
+    normalized_values = _normalize_usage_values(
+        raw_usage,
+        input_field="prompt_tokens",
+        output_field="completion_tokens",
+        total_field="total_tokens",
+    )
+    if normalized_values is None:
         return empty_token_usage()
+    input_tokens, output_tokens, total_tokens = normalized_values
     return {
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
@@ -70,11 +75,15 @@ def coerce_token_usage(payload: object) -> TokenUsagePayload:
     usage_available = bool(payload.get("usage_available", False))
     if not usage_available:
         return empty_token_usage()
-    input_tokens = _optional_non_negative_int(payload.get("input_tokens"))
-    output_tokens = _optional_non_negative_int(payload.get("output_tokens"))
-    total_tokens = _optional_non_negative_int(payload.get("total_tokens"))
-    if None in {input_tokens, output_tokens, total_tokens}:
+    normalized_values = _normalize_usage_values(
+        payload,
+        input_field="input_tokens",
+        output_field="output_tokens",
+        total_field="total_tokens",
+    )
+    if normalized_values is None:
         return empty_token_usage()
+    input_tokens, output_tokens, total_tokens = normalized_values
     return {
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
@@ -157,6 +166,34 @@ def _sum_usage_field(
     return total if has_value else None
 
 
+def _normalize_usage_values(
+    payload: dict[object, object],
+    input_field: str,
+    output_field: str,
+    total_field: str,
+) -> tuple[int, int, int] | None:
+    """
+    @brief      Normalize one complete usage triplet and derive an absent total.
+    @param[in]  payload Usage object containing provider or canonical field names.
+    @param[in]  input_field Field that owns the input-token count.
+    @param[in]  output_field Field that owns the output-token count.
+    @param[in]  total_field Field that owns the optional total-token count.
+    @return     Normalized counts, or None when required values are invalid.
+    @exception  None
+    """
+    input_tokens = _optional_non_negative_int(payload.get(input_field))
+    output_tokens = _optional_non_negative_int(payload.get(output_field))
+    if input_tokens is None or output_tokens is None:
+        return None
+    raw_total = payload.get(total_field)
+    total_tokens = _optional_non_negative_int(raw_total)
+    if total_tokens is None:
+        if raw_total is not None:
+            return None
+        total_tokens = input_tokens + output_tokens
+    return input_tokens, output_tokens, total_tokens
+
+
 def _optional_non_negative_int(value: Any) -> int | None:
     """
     @brief      Resolve the optional non negative int.
@@ -167,6 +204,10 @@ def _optional_non_negative_int(value: Any) -> int | None:
         return None
     if isinstance(value, int):
         return value if value >= 0 else None
+    if isinstance(value, float):
+        if math.isfinite(value) and value >= 0 and value.is_integer():
+            return int(value)
+        return None
     if isinstance(value, str) and value.strip().isdigit():
         return int(value.strip())
     return None

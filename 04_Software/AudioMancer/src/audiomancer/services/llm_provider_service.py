@@ -21,6 +21,7 @@
 import json
 from pathlib import Path
 import threading
+import time
 from urllib import error, parse, request
 
 from audiomancer import config
@@ -33,6 +34,15 @@ from audiomancer.services.time_service import utc_now_iso
 
 # @brief Component logger used by OpenAI-compatible provider requests.
 _LLM_PROVIDER_LOGGER = get_component_logger("llm_provider")
+
+# @brief Initial delay before the first transient outer retry.
+_RETRY_INITIAL_DELAY_SECONDS = 0.5
+
+# @brief Maximum delay applied before any one transient outer retry.
+_RETRY_MAX_DELAY_SECONDS = 4.0
+
+# @brief Maximum sleep slice used while polling retry-backoff cancellation.
+_RETRY_CANCEL_POLL_SECONDS = 0.05
 
 # @brief Placeholder used in AI transaction logs for sensitive fields.
 _REDACTED_LOG_VALUE = "[REDACTED]"
@@ -59,6 +69,14 @@ class _UnsupportedResponseFormatError(RuntimeError):
     @details Allows chat_json to retry one structured-output request without
              response_format while keeping normal permanent HTTP failures
              surfaced unchanged.
+    """
+
+
+class _UnsupportedMaxTokensError(RuntimeError):
+    """
+    @brief Private marker for providers that require max_completion_tokens.
+    @details Allows chat_json to retain the compatible token parameter across
+             later outer attempts in the same invocation.
     """
 
 
@@ -147,36 +165,45 @@ def chat_json(
         + 1,
     )
     last_error: Exception | None = None
+    active_request_payload = request_payload
     for attempt_index in range(1, attempts + 1):
         raw_content: str | None = None
         try:
-            active_request_payload = request_payload
-            try:
-                raw_payload, raw_body = _request_chat_completion_with_cancellation(
-                    profile_payload,
-                    active_request_payload,
-                    cancel_requested=cancel_requested,
-                )
-            except _UnsupportedResponseFormatError as error_object:
-                if "response_format" not in active_request_payload or not allow_unconstrained_fallback:
-                    raise
-                active_request_payload = _build_without_response_format_payload(active_request_payload)
-                _append_ai_log(
-                    log_path,
-                    {
-                        "exchange_event": "request_fallback",
-                        "parsed_status": "response_format_unsupported_retry_without_response_format",
-                        "attempt_index": attempt_index,
-                        "error_text": str(error_object),
-                        "request_payload": active_request_payload,
-                        **dict(log_context or {}),
-                    },
-                )
-                raw_payload, raw_body = _request_chat_completion_with_cancellation(
-                    profile_payload,
-                    active_request_payload,
-                    cancel_requested=cancel_requested,
-                )
+            while True:
+                try:
+                    raw_payload, raw_body = _request_chat_completion_with_cancellation(
+                        profile_payload,
+                        active_request_payload,
+                        cancel_requested=cancel_requested,
+                    )
+                    break
+                except _UnsupportedResponseFormatError as error_object:
+                    if (
+                        "response_format" not in active_request_payload
+                        or not allow_unconstrained_fallback
+                    ):
+                        raise
+                    active_request_payload = _build_without_response_format_payload(
+                        active_request_payload
+                    )
+                    _append_ai_log(
+                        log_path,
+                        {
+                            "exchange_event": "request_fallback",
+                            "parsed_status": "response_format_unsupported_retry_without_response_format",
+                            "attempt_index": attempt_index,
+                            "error_text": str(error_object),
+                            "request_payload": active_request_payload,
+                            **dict(log_context or {}),
+                        },
+                    )
+                except _UnsupportedMaxTokensError:
+                    compatibility_payload = _build_max_completion_tokens_payload(
+                        active_request_payload
+                    )
+                    if compatibility_payload == active_request_payload:
+                        raise
+                    active_request_payload = compatibility_payload
             raw_content = _extract_message_content(raw_payload)
             try:
                 parsed_payload = _parse_json_content(raw_content)
@@ -251,11 +278,36 @@ def chat_json(
             )
             if attempt_index >= attempts or not _is_retryable_error(error_object):
                 break
+            retry_delay = min(
+                _RETRY_MAX_DELAY_SECONDS,
+                _RETRY_INITIAL_DELAY_SECONDS * (2 ** (attempt_index - 1)),
+            )
+            _wait_for_retry_backoff(retry_delay, cancel_requested)
     assert last_error is not None
     raise last_error
 
 
 # LOCAL HELPERS
+
+
+def _wait_for_retry_backoff(delay_seconds: float, cancel_requested=None) -> None:
+    """
+    @brief      Wait for one retry delay while polling cooperative cancellation.
+    @param[in]  delay_seconds Total bounded delay before the next outer attempt.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     None.
+    @exception  OperationCancelledError Raised when cancellation is requested.
+    """
+    if callable(cancel_requested) and bool(cancel_requested()):
+        raise OperationCancelledError("AI operation cancelled during provider retry backoff.")
+    deadline = time.monotonic() + max(0.0, float(delay_seconds))
+    while True:
+        remaining_seconds = deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            return
+        time.sleep(min(_RETRY_CANCEL_POLL_SECONDS, remaining_seconds))
+        if callable(cancel_requested) and bool(cancel_requested()):
+            raise OperationCancelledError("AI operation cancelled during provider retry backoff.")
 
 
 def _request_chat_completion_with_cancellation(
@@ -362,7 +414,7 @@ def _request_chat_completion(
                 _LLM_PROVIDER_LOGGER.info(
                     "Retrying AI provider request with max_completion_tokens compatibility payload."
                 )
-                return _request_chat_completion(profile_payload, compatibility_payload)
+                raise _UnsupportedMaxTokensError(error_body) from http_error
         if http_error.code in {408, 409, 429} or http_error.code >= 500:
             _LLM_PROVIDER_LOGGER.warning("Transient AI provider HTTP failure: status=%s", http_error.code)
             raise RuntimeError(f"Transient AI provider failure: HTTP {http_error.code}: {error_body}") from http_error
@@ -532,14 +584,21 @@ def _extract_message_content(payload: dict[str, object]) -> str:
     message = first_choice.get("message", {})
     if not isinstance(message, dict):
         raise ValueError("AI provider response contains an invalid message payload.")
-    content = message.get("content", "")
+    content = message.get("content")
     if isinstance(content, list):
         joined_content: list[str] = []
         for item in content:
             if isinstance(item, dict):
-                joined_content.append(str(item.get("text", "")))
-        return "".join(joined_content)
-    return str(content)
+                text_content = item.get("text")
+                joined_content.append("" if text_content is None else str(text_content))
+        normalized_content = "".join(joined_content)
+    else:
+        normalized_content = "" if content is None else str(content)
+    if not normalized_content.strip():
+        refusal = message.get("refusal")
+        if isinstance(refusal, str) and refusal.strip():
+            raise ValueError(f"AI provider refused the request: {refusal.strip()}")
+    return normalized_content
 
 
 def _parse_json_content(content: str) -> dict[str, object]:

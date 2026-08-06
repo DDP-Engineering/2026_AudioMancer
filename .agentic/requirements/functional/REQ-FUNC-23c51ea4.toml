@@ -1,13 +1,13 @@
 schema = 1
 id = "REQ-FUNC-23c51ea4"
-title = "The provider client shall perform bounded JSON repair and refuse to"
+title = "The provider client shall reject empty or refused assistant content without repair"
 status = "active"
 
 requirement = """
-The provider client shall perform bounded JSON repair and refuse to repair empty content.
+When the first provider choice contains empty or null assistant content, the provider client shall fail after exactly one provider request without model-based JSON repair. Null multipart text fields count as empty, valid multipart text remains usable, and reasoning-only content is not JSON content. A non-empty refusal string produces a clear refusal ValueError; otherwise the client preserves its generic empty-response ValueError. Explicit finish_reason="length" rejection remains higher priority, and errors and transaction logs must not expose profile credentials or other secrets.
 """
 
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Automated: null content with and without refusal, reasoning-only content, mixed null/valid multipart content, valid multipart content, and output-length responses demonstrate exactly one request for every empty/refused case, refusal-specific or generic safe errors as appropriate, unchanged valid text parsing, and unchanged output-limit precedence."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
@@ -16,6 +16,8 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_invalid_backslash_escapes_in_model_output",
   "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_non_json_output_with_followup_request",
   "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_repair_empty_message_content",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_null_or_refused_content_without_repair",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_joins_multipart_content_with_null_text_parts",
 ]
 
 priority = "high"
@@ -23,4 +25,4 @@ rationale = """
 Malformed output may be repaired within bounds but empty content must not be fabricated.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-05

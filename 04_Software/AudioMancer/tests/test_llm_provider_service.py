@@ -18,7 +18,10 @@
 import io
 import json
 import time
+from types import SimpleNamespace
 from urllib import error
+
+import pytest
 
 from audiomancer.services import llm_provider_service
 from audiomancer.services.operation_runtime_service import OperationCancelledError
@@ -109,6 +112,7 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
     @exception  None
     """
     call_counter = {"count": 0}
+    retry_delays: list[float] = []
 
     def _fake_urlopen(*_args, **_kwargs):
         """
@@ -126,6 +130,12 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
         )
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_wait_for_retry_backoff",
+        lambda delay_seconds, _cancel_requested: retry_delays.append(delay_seconds),
+        raising=False,
+    )
 
     result = llm_provider_service.chat_json(
         {
@@ -142,7 +152,149 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
     )
 
     assert call_counter["count"] == 2
+    assert retry_delays == [0.5]
     assert result["payload"]["results"][0]["unit_id"] == "unit-0001"
+
+
+def test_chat_json_uses_bounded_exponential_retry_delays(monkeypatch) -> None:
+    """
+    @brief      Verify exact bounded delays occur only before remaining outer attempts.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    call_counter = {"count": 0}
+    retry_delays: list[float] = []
+
+    def _transient_failure(*_args, **_kwargs):
+        call_counter["count"] += 1
+        raise RuntimeError("Transient AI provider failure: controlled test failure")
+
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_request_chat_completion_with_cancellation",
+        _transient_failure,
+    )
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_wait_for_retry_backoff",
+        lambda delay_seconds, _cancel_requested: retry_delays.append(delay_seconds),
+        raising=False,
+    )
+
+    with pytest.raises(RuntimeError, match="controlled test failure"):
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+            },
+            "system",
+            "user",
+            retry_count_override=5,
+        )
+
+    assert call_counter["count"] == 6
+    assert retry_delays == [0.5, 1.0, 2.0, 4.0, 4.0]
+
+
+def test_chat_json_cancels_before_retry_backoff_without_another_request(monkeypatch) -> None:
+    """Verify cancellation observed before waiting prevents the next provider dispatch."""
+    call_counter = {"count": 0}
+
+    def _transient_failure(*_args, **_kwargs):
+        call_counter["count"] += 1
+        raise RuntimeError("Transient AI provider failure: controlled test failure")
+
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_request_chat_completion_with_cancellation",
+        _transient_failure,
+    )
+    monkeypatch.setattr(
+        llm_provider_service,
+        "time",
+        SimpleNamespace(
+            monotonic=time.monotonic,
+            sleep=lambda _seconds: pytest.fail("Cancellation before backoff must not sleep."),
+        ),
+        raising=False,
+    )
+
+    with pytest.raises(OperationCancelledError, match="retry backoff"):
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+            },
+            "system",
+            "user",
+            cancel_requested=lambda: True,
+            retry_count_override=3,
+        )
+
+    assert call_counter["count"] == 1
+
+
+def test_chat_json_cancels_during_sliced_retry_backoff(monkeypatch) -> None:
+    """Verify short polling slices stop a backoff before another provider request."""
+    call_counter = {"count": 0}
+    clock = {"now": 0.0}
+    cancellation_checks = {"count": 0}
+    sleep_slices: list[float] = []
+
+    def _transient_failure(*_args, **_kwargs):
+        call_counter["count"] += 1
+        raise RuntimeError("Transient AI provider failure: controlled test failure")
+
+    def _cancel_requested() -> bool:
+        cancellation_checks["count"] += 1
+        return cancellation_checks["count"] >= 3
+
+    def _sleep(seconds: float) -> None:
+        sleep_slices.append(seconds)
+        clock["now"] += seconds
+
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_request_chat_completion_with_cancellation",
+        _transient_failure,
+    )
+    monkeypatch.setattr(
+        llm_provider_service,
+        "time",
+        SimpleNamespace(monotonic=lambda: clock["now"], sleep=_sleep),
+        raising=False,
+    )
+
+    with pytest.raises(OperationCancelledError, match="retry backoff"):
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+            },
+            "system",
+            "user",
+            cancel_requested=_cancel_requested,
+            retry_count_override=3,
+        )
+
+    assert call_counter["count"] == 1
+    assert sleep_slices == [0.05, 0.05]
 
 
 def test_chat_json_sends_response_format_when_structured_output_is_supported(monkeypatch) -> None:
@@ -365,6 +517,7 @@ def test_chat_json_retries_without_response_format_when_provider_rejects_it(monk
     @exception  None
     """
     request_bodies: list[dict[str, object]] = []
+    retry_delays: list[float] = []
 
     def _fake_urlopen(http_request, **_kwargs):
         """
@@ -392,6 +545,12 @@ def test_chat_json_retries_without_response_format_when_provider_rejects_it(monk
         )
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_wait_for_retry_backoff",
+        lambda delay_seconds, _cancel_requested: retry_delays.append(delay_seconds),
+        raising=False,
+    )
     log_path = tmp_path / "transactions.log"
 
     result = llm_provider_service.chat_json(
@@ -416,7 +575,162 @@ def test_chat_json_retries_without_response_format_when_provider_rejects_it(monk
     assert request_bodies[0]["response_format"] == {"type": "json_object"}
     assert "response_format" not in request_bodies[1]
     assert "response_format_unsupported_retry_without_response_format" in log_text
+    assert retry_delays == []
     assert result["payload"]["results"][0]["unit_id"] == "unit-0001"
+
+
+def test_chat_json_retains_response_format_fallback_across_outer_retries(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify learned response-format compatibility survives a transient failure.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    request_bodies: list[dict[str, object]] = []
+    retry_delays: list[float] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_payload = json.loads(http_request.data.decode("utf-8"))
+        request_bodies.append(request_payload)
+        if len(request_bodies) == 1:
+            raise error.HTTPError(
+                http_request.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=io.BytesIO(
+                    b'{"error":{"message":"Unsupported parameter: response_format",'
+                    b'"param":"response_format","code":"unsupported_parameter"}}'
+                ),
+            )
+        if len(request_bodies) == 2:
+            raise error.HTTPError(
+                http_request.full_url,
+                429,
+                "Too Many Requests",
+                hdrs=None,
+                fp=io.BytesIO(b'{"error":{"message":"temporarily rate limited"}}'),
+            )
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"retained-format\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_wait_for_retry_backoff",
+        lambda delay_seconds, _cancel_requested: retry_delays.append(delay_seconds),
+        raising=False,
+    )
+    log_path = tmp_path / "transactions.log"
+
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5.4-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+            "supports_structured_output": True,
+        },
+        "system",
+        "user",
+        log_path=log_path,
+        retry_count_override=1,
+    )
+
+    fallback_records = [
+        json.loads(line)
+        for line in log_path.read_text(encoding="utf-8").splitlines()
+        if json.loads(line).get("exchange_event") == "request_fallback"
+    ]
+    assert len(request_bodies) == 3
+    assert "response_format" in request_bodies[0]
+    assert "response_format" not in request_bodies[1]
+    assert "response_format" not in request_bodies[2]
+    assert len(fallback_records) == 1
+    assert retry_delays == [0.5]
+    assert result["payload"]["results"][0]["unit_id"] == "retained-format"
+
+
+def test_chat_json_resets_response_format_compatibility_for_separate_calls(monkeypatch) -> None:
+    """Verify one invocation's compatibility state never changes a later invocation."""
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_payload = json.loads(http_request.data.decode("utf-8"))
+        request_bodies.append(request_payload)
+        if len(request_bodies) == 1:
+            raise error.HTTPError(
+                http_request.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=io.BytesIO(b'{"error":{"message":"response_format is not supported"}}'),
+            )
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"reset\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    profile_payload = {
+        "id": "profile_1",
+        "backend_kind": "openai_compatible",
+        "base_url": "https://api.openai.com/v1",
+        "model_name": "gpt-5.4-mini",
+        "request_timeout_seconds": 30,
+        "temperature": 0.1,
+        "max_output_tokens": 256,
+        "supports_structured_output": True,
+    }
+
+    llm_provider_service.chat_json(profile_payload, "system", "first")
+    llm_provider_service.chat_json(profile_payload, "system", "second")
+
+    assert ["response_format" in body for body in request_bodies] == [True, False, True]
+
+
+def test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled(monkeypatch) -> None:
+    """Verify policy-disabled response-format fallback stops after the rejection."""
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        raise error.HTTPError(
+            http_request.full_url,
+            400,
+            "Bad Request",
+            hdrs=None,
+            fp=io.BytesIO(b'{"error":{"message":"response_format is not supported"}}'),
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    with pytest.raises(RuntimeError):
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+                "supports_structured_output": True,
+            },
+            "system",
+            "user",
+            allow_unconstrained_fallback=False,
+            retry_count_override=3,
+        )
+
+    assert len(request_bodies) == 1
 
 
 def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> None:
@@ -477,6 +791,7 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
     @exception  None
     """
     request_bodies: list[str] = []
+    retry_delays: list[float] = []
 
     def _fake_urlopen(http_request, **_kwargs):
         """
@@ -506,6 +821,12 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
         )
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_wait_for_retry_backoff",
+        lambda delay_seconds, _cancel_requested: retry_delays.append(delay_seconds),
+        raising=False,
+    )
 
     result = llm_provider_service.chat_json(
         {
@@ -525,7 +846,78 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
     assert '"max_tokens": 256' in request_bodies[0]
     assert '"max_completion_tokens": 256' in request_bodies[1]
     assert '"max_tokens": 256' not in request_bodies[1]
+    assert retry_delays == []
     assert result["payload"]["results"][0]["unit_id"] == "unit-0001"
+
+
+def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatch) -> None:
+    """
+    @brief      Verify learned max-token compatibility survives a transient failure.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    request_bodies: list[dict[str, object]] = []
+    retry_delays: list[float] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_payload = json.loads(http_request.data.decode("utf-8"))
+        request_bodies.append(request_payload)
+        if len(request_bodies) == 1:
+            raise error.HTTPError(
+                http_request.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=io.BytesIO(
+                    b'{"error":{"message":"Use max_completion_tokens instead",'
+                    b'"param":"max_tokens","code":"unsupported_parameter"}}'
+                ),
+            )
+        if len(request_bodies) == 2:
+            raise error.HTTPError(
+                http_request.full_url,
+                503,
+                "Unavailable",
+                hdrs=None,
+                fp=io.BytesIO(b'{"error":{"message":"temporarily unavailable"}}'),
+            )
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"retained-token\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_wait_for_retry_backoff",
+        lambda delay_seconds, _cancel_requested: retry_delays.append(delay_seconds),
+        raising=False,
+    )
+
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "max_output_tokens": 256,
+        },
+        "system",
+        "user",
+        retry_count_override=1,
+    )
+
+    assert len(request_bodies) == 3
+    assert "max_tokens" in request_bodies[0]
+    assert "max_completion_tokens" not in request_bodies[0]
+    assert "max_tokens" not in request_bodies[1]
+    assert request_bodies[1]["max_completion_tokens"] == 256
+    assert "max_tokens" not in request_bodies[2]
+    assert request_bodies[2]["max_completion_tokens"] == 256
+    assert retry_delays == [0.5]
+    assert result["payload"]["results"][0]["unit_id"] == "retained-token"
 
 
 def test_chat_json_repairs_invalid_backslash_escapes_in_model_output(
@@ -668,6 +1060,125 @@ def test_chat_json_does_not_repair_empty_message_content(monkeypatch) -> None:
         assert len(request_bodies) == 1
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected empty provider response to fail.")
+
+
+@pytest.mark.parametrize(
+    ("message_payload", "expected_error"),
+    [
+        (
+            {"content": None, "refusal": "The provider safety policy refused this request."},
+            "AI provider refused the request: The provider safety policy refused this request.",
+        ),
+        ({"content": None}, "AI provider returned an empty response."),
+        (
+            {
+                "content": None,
+                "reasoning_content": "Reasoning was produced without an assistant answer.",
+            },
+            "AI provider returned an empty response.",
+        ),
+        (
+            {"content": [{"type": "text", "text": None}]},
+            "AI provider returned an empty response.",
+        ),
+    ],
+)
+def test_chat_json_rejects_null_or_refused_content_without_repair(
+    monkeypatch,
+    tmp_path,
+    message_payload,
+    expected_error,
+) -> None:
+    """
+    @brief      Verify null, reasoning-only, and refused content fails after one request.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  message_payload Provider message payload under test.
+    @param[in]  expected_error Expected safe failure message.
+    @return     None.
+    @exception  None
+    """
+    request_bodies: list[str] = []
+    secret_value = "sk-private-null-content-secret"
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_bodies.append(http_request.data.decode("utf-8"))
+        return _FakeResponse(json.dumps({"choices": [{"message": message_payload}]}))
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    log_path = tmp_path / "transactions.log"
+
+    with pytest.raises(ValueError) as error_info:
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "api_key": secret_value,
+                "model_name": "qwen3.6-35b-a3b",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+                "supports_structured_output": True,
+            },
+            "system",
+            "user",
+            log_path=log_path,
+        )
+
+    assert str(error_info.value) == expected_error
+    assert len(request_bodies) == 1
+    assert secret_value not in log_path.read_text(encoding="utf-8")
+
+
+def test_chat_json_joins_multipart_content_with_null_text_parts(monkeypatch) -> None:
+    """
+    @brief      Verify null multipart text is empty while valid text remains unchanged.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    request_bodies: list[str] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_bodies.append(http_request.data.decode("utf-8"))
+        return _FakeResponse(
+            json.dumps(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": [
+                                    {"type": "text", "text": None},
+                                    {"type": "text", "text": '{"results":[{"unit_id":"multipart"}]}'},
+                                    {"type": "text", "text": None},
+                                ]
+                            }
+                        }
+                    ]
+                }
+            )
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "qwen3.6-35b-a3b",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+            "supports_structured_output": True,
+        },
+        "system",
+        "user",
+    )
+
+    assert len(request_bodies) == 1
+    assert result["payload"]["results"][0]["unit_id"] == "multipart"
 
 
 def test_chat_json_rejects_output_length_limited_malformed_json(monkeypatch, tmp_path) -> None:
@@ -1001,6 +1512,7 @@ def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
     @exception  None
     """
     call_counter = {"count": 0}
+    retry_delays: list[float] = []
 
     def _fake_urlopen(http_request, **_kwargs):
         """
@@ -1020,6 +1532,12 @@ def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
         )
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(
+        llm_provider_service,
+        "_wait_for_retry_backoff",
+        lambda delay_seconds, _cancel_requested: retry_delays.append(delay_seconds),
+        raising=False,
+    )
 
     try:
         llm_provider_service.chat_json(
@@ -1041,6 +1559,7 @@ def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
         raise AssertionError("Expected permanent HTTP failure to be raised.")
 
     assert call_counter["count"] == 1
+    assert retry_delays == []
 
 
 def test_build_chat_endpoint_keeps_complete_chat_completions_endpoint() -> None:

@@ -1,25 +1,33 @@
 schema = 1
 id = "REQ-FUNC-388c7b18"
-title = "The provider client shall retry transient failures and not retry"
+title = "The provider client shall back off between retryable outer attempts"
 status = "active"
 
 requirement = """
-The provider client shall retry transient failures and not retry permanent HTTP failures.
+After a retryable transient provider failure with another configured outer attempt remaining, the provider client shall wait using a bounded exponential schedule of 0.5 seconds for the first retry, 1.0 second for the second, doubling thereafter to a 4.0-second per-wait cap while polling cooperative cancellation at short intervals. It does not wait after permanent failures, compatibility adaptation, or the final attempt; cancellation before or during the wait raises OperationCancelledError promptly and prevents another provider request; and response-pending cancellation retains its existing behavior.
 """
 
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Automated: controlled waits verify the exact 0.5, 1.0, 2.0, 4.0, 4.0 schedule, no waits for permanent failures, immediate compatibility adaptation, or the final failed attempt, prompt cancellation before and during backoff, no dispatch after cancellation, and retained transient-retry success and response-pending cancellation."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_transient_failure",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_uses_bounded_exponential_retry_delays",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_cancels_before_retry_backoff_without_another_request",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_cancels_during_sliced_retry_backoff",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_can_cancel_while_waiting_for_model_response",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_without_response_format_when_provider_rejects_it",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_with_max_completion_tokens_when_required",
   "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
 ]
+
+spec = "specs/REQ-FUNC-388c7b18.md"
 
 priority = "high"
 rationale = """
 Retries must recover transient errors without hammering permanent ones.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-05

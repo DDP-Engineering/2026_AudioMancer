@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AI providers that return an empty, refused, or reasoning-only response no
+  longer trigger a second JSON-repair request, and compatible multipart text
+  remains usable. Token totals are now recovered when providers report valid
+  input/output counts without a total, provider-specific request fallbacks stay
+  active across retries, and transient retries use short cancellation-aware
+  backoff instead of firing immediately.
 - Failed or cancelled one-chunk AI retranslation attempts now keep the current
   translated text, approvals, and completed downstream availability while
   retaining any token usage already spent. Fresh translation passes now honor

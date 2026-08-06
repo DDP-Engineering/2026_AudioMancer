@@ -18,10 +18,14 @@ and lets operators manage AI profiles and defaults.
 - Build conservative context budgets and reject requests whose usable text
   budget is too small.
 - Send JSON-oriented chat completions with structured-output fallbacks,
-  retries, cancellation, hard output-length failure detection, response repair,
-  transaction logging, and redaction.
+  retained call-local compatibility adaptations, bounded cancellation-aware
+  retries, null/refusal handling, hard output-length failure detection,
+  response repair, transaction logging, and redaction
+  (`REQ-FUNC-23c51ea4`, `REQ-FUNC-18168ed4`, `REQ-FUNC-388c7b18`).
 - Load, render, and validate prompt templates with exact placeholders.
-- Normalize, merge, restore, and localize provider token usage.
+- Normalize, merge, restore, and localize provider token usage, deriving a
+  missing total from valid input/output counts without changing the durable
+  schema (`REQ-FUNC-a0ea278d`).
 - Present editable, localized AI profiles/default selectors and persist their
   merged settings through the shared settings controller.
 
@@ -38,10 +42,11 @@ effective model. Operating-system and HTTP protocol failures during response
 reading remain inside the normal failed-result boundary.
 `llm_provider_service.chat_json`
 builds a chat endpoint and request payload, supports response-format and token
-parameter compatibility retries, cooperatively cancels waiting requests,
-rejects explicit output-length termination before content parsing or repair,
-parses/repairs bounded non-truncated JSON responses, and redacts sensitive
-transaction logs.
+parameter compatibility retries retained across the current invocation,
+cooperatively cancels both waiting requests and short-sliced exponential retry
+backoff, rejects explicit output-length termination before content parsing or
+repair, treats null/refused assistant content as non-repairable, parses/repairs
+bounded non-truncated JSON responses, and redacts sensitive transaction logs.
 
 `ai_budget_service` calculates prompt, output, safety, and usable-text budgets.
 `prompt_template_service` resolves template files and rejects missing or extra
@@ -85,12 +90,19 @@ Automatically discovered context fills the configured value only when its
 owner matches the effective model and the operator has not overridden context
 (`REQ-FUNC-6f8e52c8`). Token
 usage maps the provider's `prompt_tokens`, `completion_tokens`, and
-`total_tokens` to input/output/total values plus `usage_available`; repair
-usage is merged with the original response usage. Prompt rendering requires
-exact named placeholders. Chat responses must parse to JSON objects. A provider
-that explicitly rejects `response_format` is retried once without it, and one
-that explicitly rejects `max_tokens` is retried with `max_completion_tokens`;
-logging redacts sensitive field names before persistence.
+`total_tokens` to input/output/total values plus `usage_available`. Finite
+non-negative integral floats normalize to integers, and an absent/null total is
+derived only when both input and output exist; a valid reported total remains
+authoritative. Repair usage is merged with the original response usage. Prompt
+rendering requires exact named placeholders. Chat responses must parse to JSON
+objects. Null scalar or multipart text is empty; a refusal explanation becomes
+a clear safe ValueError, while reasoning-only output remains empty and never
+triggers model repair. A provider that explicitly rejects `response_format` is
+retried once without it, and one that explicitly rejects `max_tokens` is
+retried with `max_completion_tokens`; each adapted payload remains active for
+later outer retries in that invocation only. Transient outer retries wait 0.5,
+1.0, 2.0, then at most 4.0 seconds, polling cancellation every 0.05 seconds.
+Logging redacts sensitive field names before persistence.
 
 Callers may opt into a strict schema path. Strict calls require a profile that
 advertises structured output plus a supplied JSON Schema, may disable the
@@ -141,9 +153,11 @@ These cover backend models/failures including response-read containment,
 provider-specific exact-model context discovery, profile switching/mutation
 ownership, failed-probe retention/settings reload, manual context overrides,
 context budgets, token
-normalization/merge/ordered restore and localized notes, prompt placeholder
-rules, chat JSON parsing/retries/cancellation/format fallbacks/redaction, and
-profile dialog editing/probing/persistence. Minimum validation after a change:
+normalization including derived totals and integral floats, merge/ordered
+restore and localized notes, prompt placeholder rules, null/refusal and
+multipart chat content, exact retained compatibility request sequences,
+bounded retry timing/backoff cancellation, response-wait cancellation,
+redaction, and profile dialog editing/probing/persistence. Minimum validation after a change:
 run the focused modules above with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files.
 
@@ -157,7 +171,8 @@ malformed-response model repair available.
 
 Token counts are conservative estimates rather than provider tokenizers.
 Provider networking remains synchronous inside the request worker, so timely
-cancellation depends on polling/timeout behavior. The settings-page suite
+cancellation of an in-flight HTTP operation depends on polling/timeout behavior;
+retry backoff itself is cancellation-aware. The settings-page suite
 covers the current UI contract, but not live remote backend integration; that
 requires controlled manual/provider testing. Domain services must still
 validate output schemas beyond JSON-object parsing.
