@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- EPUB extraction now ignores hidden HTML content without losing visible text
+  after it. Cleanup also warns, without stopping the workflow, when it detects
+  a source language outside its supported English, Romanian, German, French,
+  Russian, Portuguese, Spanish, and Italian set.
 - Resumed AI Cleanup now continues from the exact number of completed provider
   requests instead of counting every answered question as a request. Saved
   batch membership now matches the requests actually run across mixed question

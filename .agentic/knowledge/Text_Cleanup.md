@@ -78,6 +78,13 @@ failure names the spine item and file. Uniform EPUBs record their one encoding;
 mixed EPUBs record `mixed(<sorted-encodings>)` while extracted text remains in
 spine order.
 
+`REQ-FUNC-fb96f028` makes EPUB extraction omit `script`, `style`, `nav`, every
+present `hidden` attribute, and `aria-hidden` values that normalize to `true`.
+The parser tracks ignored non-void tags, so ordinary nested elements remain
+ignored while HTML void tags and XHTML self-closing tags cannot suppress later
+visible blocks. `aria-hidden="false"` remains visible; CSS and JavaScript are
+not interpreted.
+
 `REQ-FUNC-6dd114ad` makes PDF reading-order reconstruction an identity-preserving
 permutation of the physical text-line records. Horizontal column classification
 is exclusive: a narrow centered line that satisfies both column predicates is
@@ -256,6 +263,11 @@ Extraction is mandatory before Cleanup.
 `config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES` defines the supported
 source-content set: English, Romanian, German, French, Russian, Portuguese,
 Spanish, and Italian. This set is independent of the operator interface locale.
+`REQ-FUNC-8f5415b0` compares a non-empty detected language with that tuple at
+deterministic analysis. An unsupported code completes normally with one
+persisted warning that names the code and asks for careful review; it remains in
+state notes and the manifest warning count through AI resume and finalization.
+Unavailable detection is not labelled unsupported.
 Predominantly CJK or Hangul input is rejected before Cleanup artifacts are
 published.
 
@@ -335,10 +347,17 @@ Primary coverage:
 UTF-8 with and without BOM, cp1250, cp1251, cp1252, and RTF `ansicpg`. Its EPUB
 fixtures rewrite actual ZIP members with UTF-16, cp1252, and ISO-8859-1 bytes,
 then verify exact text, spine order, uniform/mixed ledger labels, and actionable
-declared-encoding failures. Its PDF cases cover exclusive centered and spanning
+declared-encoding failures. Hidden-content cases verify HTML boolean `hidden`,
+normalized `aria-hidden`, nested ignored content, HTML/XHTML void tags, and
+exact visible canonical-text and ledger slices. Its PDF cases cover exclusive centered and spanning
 classification, identity-preserving ordering across every layout mode,
 single-column identity normalization, established reason codes, and a public
 Extraction regression that proves centered source text is written once.
+
+`test_cleanup_quality_contract.py` controls language detection to verify that
+all supported codes and unavailable detection remain warning-free, while one
+unsupported detected code completes with exactly one persisted warning across
+state projection, manifest summary, cancelled AI resume, and finalization.
 
 `test_cleanup_service.py` specifically seeds completed downstream compact
 summaries and every current downstream artifact class for both automatic and

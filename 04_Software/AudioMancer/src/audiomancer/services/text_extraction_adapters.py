@@ -68,6 +68,24 @@ _META_ATTRIBUTE_PATTERN = re.compile(
 )
 _RTF_CODE_PAGE_PATTERN = re.compile(br"\\ansicpg(\d{3,5})\b", re.IGNORECASE)
 _PDF_PAGE_EDGE_FRACTION = 0.12
+_HTML_VOID_TAGS = frozenset(
+    (
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    )
+)
 
 
 @dataclass(frozen=True)
@@ -566,41 +584,60 @@ class _StructuredHtmlExtractor(HTMLParser):
         self.warnings: list[str] = []
         self._spine_index = spine_index
         self._item_id = item_id
-        self._ignore_depth = 0
+        self._ignored_tags: list[str] = []
         self._active_tag: str | None = None
         self._active_kind: str | None = None
         self._parts: list[str] = []
         self._block_index = 0
 
     def handle_starttag(self, tag: str, attrs) -> None:
-        attrs_map = {str(key).casefold(): str(value) for key, value in attrs if value is not None}
-        if self._ignore_depth:
-            self._ignore_depth += 1
+        normalized_tag = str(tag).casefold()
+        attrs_map = {
+            str(key).casefold(): "" if value is None else str(value)
+            for key, value in attrs
+        }
+        if self._ignored_tags:
+            if normalized_tag not in _HTML_VOID_TAGS:
+                self._ignored_tags.append(normalized_tag)
             return
-        if tag in {"script", "style", "nav"} or "hidden" in attrs_map or attrs_map.get("aria-hidden") == "true":
-            self._ignore_depth = 1
+        if (
+            normalized_tag in {"script", "style", "nav"}
+            or "hidden" in attrs_map
+            or attrs_map.get("aria-hidden", "").strip().casefold() == "true"
+        ):
+            if normalized_tag not in _HTML_VOID_TAGS:
+                self._ignored_tags.append(normalized_tag)
             return
-        if tag == "hr":
+        if normalized_tag == "hr":
             self._flush_block()
-            self._append_event("***", "separator", tag)
+            self._append_event("***", "separator", normalized_tag)
             return
-        if tag == "br":
+        if normalized_tag == "br":
             self._parts.append("\n")
             return
-        if tag in self._BLOCK_KINDS:
+        if normalized_tag in self._BLOCK_KINDS:
             self._flush_block()
-            self._active_tag = tag
-            self._active_kind = self._BLOCK_KINDS[tag]
+            self._active_tag = normalized_tag
+            self._active_kind = self._BLOCK_KINDS[normalized_tag]
+
+    def handle_startendtag(self, tag: str, attrs) -> None:
+        """Process XHTML self-closing tags without creating a phantom ignored depth."""
+        normalized_tag = str(tag).casefold()
+        self.handle_starttag(normalized_tag, attrs)
+        if normalized_tag not in _HTML_VOID_TAGS:
+            self.handle_endtag(normalized_tag)
 
     def handle_endtag(self, tag: str) -> None:
-        if self._ignore_depth:
-            self._ignore_depth -= 1
+        normalized_tag = str(tag).casefold()
+        if self._ignored_tags:
+            if normalized_tag == self._ignored_tags[-1]:
+                self._ignored_tags.pop()
             return
-        if tag == self._active_tag:
+        if normalized_tag == self._active_tag:
             self._flush_block()
 
     def handle_data(self, data: str) -> None:
-        if self._ignore_depth:
+        if self._ignored_tags:
             return
         if self._active_tag is not None:
             self._parts.append(data)

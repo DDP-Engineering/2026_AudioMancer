@@ -24,10 +24,13 @@ from audiomancer.services import (
     cleanup_ai_adjudication_service,
     cleanup_analysis_service,
     cleanup_renderer_service,
+    cleanup_text_analysis_service,
     operation_runtime_service,
     project_workspace_service,
     source_ledger_service,
     text_cleanup_service,
+    text_cleanup_state_service,
+    token_usage_service,
 )
 from cleanup_test_support import (
     BOUNDARY_CHOICES,
@@ -567,6 +570,115 @@ def test_cleanup_supported_languages_are_exactly_the_approved_eight() -> None:
     @exception  None.
     """
     assert config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES == ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
+
+
+@pytest.mark.parametrize(
+    ("detected_language", "expected_warning"),
+    [
+        *((language, None) for language in config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES),
+        (
+            "el",
+            "Detected source language 'el' is outside the supported Cleanup languages; "
+            "review the result carefully.",
+        ),
+        (None, None),
+    ],
+)
+def test_cleanup_persists_one_warning_only_for_detected_unsupported_language(
+    tmp_path,
+    monkeypatch,
+    detected_language: str | None,
+    expected_warning: str | None,
+) -> None:
+    """Verify supported and unavailable detection do not receive an unsupported-language warning."""
+    canonical_text, ledger = build_ledger(["A reviewable paragraph."])
+    project_root, manifest = build_project(tmp_path, "LanguageWarning", canonical_text, ledger)
+    monkeypatch.setattr(
+        cleanup_text_analysis_service,
+        "detect_language",
+        lambda _text: detected_language,
+    )
+
+    document = text_cleanup_service.clean_text(project_root, manifest)
+
+    assert document["document_profile"]["language"] == detected_language
+    assert document["warnings"] == ([] if expected_warning is None else [expected_warning])
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == (
+        "A reviewable paragraph.\n"
+    )
+    saved_manifest = project_workspace_service.load_manifest(project_root)
+    assert saved_manifest["operations"]["cleanup"]["warning_count"] == len(document["warnings"])
+    state = text_cleanup_state_service.build_text_cleanup_state(project_root, saved_manifest, "en")
+    assert (expected_warning in state["notes"]) if expected_warning else all(
+        "outside the supported Cleanup languages" not in note for note in state["notes"]
+    )
+
+
+def test_cleanup_unsupported_language_warning_survives_resume_and_finalization(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify the warning survives cancelled AI resume and rerendering without duplication."""
+    canonical_text, ledger = build_ledger(["One wrapped line", "continues safely."])
+    project_root, manifest = build_project(tmp_path, "LanguageWarningRecovery", canonical_text, ledger)
+    monkeypatch.setattr(cleanup_text_analysis_service, "detect_language", lambda _text: "el")
+    calls: list[int] = []
+
+    def _adjudicate(questions, profile_payload, **_kwargs):
+        calls.append(len(questions))
+        if len(calls) == 1:
+            raise operation_runtime_service.OperationCancelledError()
+        batches = cleanup_ai_adjudication_service.plan_question_batches(questions, profile_payload)
+        return {
+            "operations": [],
+            "answers": [
+                {
+                    "question_id": str(question["question_id"]),
+                    "primary_choice": None,
+                    "verifier_choice": None,
+                    "accepted": False,
+                    "final_choice": str(question["prior_choice"]),
+                    "state": "fallback",
+                }
+                for question in questions
+            ],
+            "warnings": [],
+            "token_usage": token_usage_service.empty_token_usage(),
+            "failed_batch_count": 0,
+            "batch_order": [
+                [str(question["target_id"]) for question in batch]
+                for batch in batches
+            ],
+            "estimated_request_count": len(batches) * 2,
+        }
+
+    monkeypatch.setattr(cleanup_ai_adjudication_service, "adjudicate_questions", _adjudicate)
+    profile = make_profile()
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        text_cleanup_service.clean_text(project_root, manifest, ai_profile_payload=profile)
+
+    paused = read_cleanup_document(project_root)
+    assert paused["warnings"] == [
+        "Detected source language 'el' is outside the supported Cleanup languages; review the result carefully."
+    ]
+
+    completed = text_cleanup_service.clean_text(project_root, manifest, ai_profile_payload=profile)
+    checkpoint = dict(completed)
+    checkpoint["status"] = "finalizing"
+    checkpoint["phase"] = "rendering"
+    checkpoint["completed_at"] = None
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(checkpoint, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    finalized = text_cleanup_service.clean_text(project_root, manifest, ai_profile_payload=profile)
+
+    assert completed["warnings"] == finalized["warnings"] == [
+        "Detected source language 'el' is outside the supported Cleanup languages; review the result carefully."
+    ]
+    assert calls == [1, 1]
 
 
 def test_cleanup_without_usable_ai_completes_from_deterministic_priors(tmp_path) -> None:

@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-8f5415b0"
+title = "Warn for unsupported Cleanup source languages"
+status = "active"
+
+requirement = """
+When Cleanup detects a non-empty source language outside CLEANUP_SUPPORTED_SOURCE_LANGUAGES, it shall complete normally with one persisted warning that names the detected code and advises careful review.
+"""
+
+verification = "Controlled language-detection tests verify every supported code has no unsupported-language warning, unsupported detection completes and publishes clean text with one retained warning in state notes and the manifest summary, and unavailable detection and CJK/Hangul rejection retain their existing outcomes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_persists_one_warning_only_for_detected_unsupported_language",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_unsupported_language_warning_survives_resume_and_finalization",
+]
+
+spec = "specs/REQ-FUNC-8f5415b0.md"
+priority = "high"
+rationale = "The documented Cleanup language support boundary must be visible to an operator without blocking reviewable output for other detected languages."
+created = 2026-08-06
+updated = 2026-08-06

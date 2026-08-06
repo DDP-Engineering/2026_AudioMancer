@@ -20,10 +20,11 @@ from collections import Counter, defaultdict
 import re
 import statistics
 
+from audiomancer import config
 from audiomancer.services import cleanup_text_analysis_service
 from audiomancer.services.source_ledger_service import unit_text
 
-ANALYSIS_POLICY_ID = "cleanup-typed-boundaries-2026-07-28"
+ANALYSIS_POLICY_ID = "cleanup-typed-boundaries-2026-08-06"
 UNIT_ROLES = frozenset(
     (
         "body",
@@ -191,15 +192,19 @@ def analyze_cleanup(
         )
 
     role_counts = Counter(roles.values())
+    detected_language = cleanup_text_analysis_service.detect_language(canonical_text)
     profile = {
         "source_format": str(ledger["source"]["format"]),
         "structure_quality": str(ledger["structure_quality"]),
         "unit_count": len(units),
         "page_count": len(ledger.get("pages", [])),
         "role_counts": dict(sorted(role_counts.items())),
-        "language": cleanup_text_analysis_service.detect_language(canonical_text),
+        "language": detected_language,
         "dominant_script": cleanup_text_analysis_service.classify_text_script(canonical_text),
     }
+    warning = _unsupported_language_warning(detected_language)
+    if warning is not None and warning not in warnings:
+        warnings.append(warning)
     return {
         "document_profile": profile,
         "unit_operations": unit_operations,
@@ -207,6 +212,19 @@ def analyze_cleanup(
         "questions": questions,
         "warnings": warnings,
     }
+
+
+def _unsupported_language_warning(detected_language: str | None) -> str | None:
+    """Return the one operator warning required for a detected unsupported source language."""
+    if (
+        not detected_language
+        or detected_language in config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES
+    ):
+        return None
+    return (
+        f"Detected source language '{detected_language}' is outside the supported Cleanup languages; "
+        "review the result carefully."
+    )
 
 
 def validate_persisted_boundaries(decisions: object) -> None:

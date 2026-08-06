@@ -456,6 +456,72 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
 
 
 @pytest.mark.parametrize(
+    ("markup", "expected_texts"),
+    [
+        ("<p>Before</p><div hidden>Hidden</div><p>After</p>", ["Before", "After"]),
+        ("<p>Before</p><div hidden=\"\">Hidden</div><p>After</p>", ["Before", "After"]),
+        ("<p>Before</p><div hidden=\"hidden\">Hidden</div><p>After</p>", ["Before", "After"]),
+        ("<p>Before</p><div hidden=\"false\">Hidden</div><p>After</p>", ["Before", "After"]),
+        ("<p>Before</p><div ArIa-HiDdEn=\" TrUe \">Hidden</div><p>After</p>", ["Before", "After"]),
+        ("<p>Before</p><p aria-hidden=\"false\">Visible</p><p>After</p>", ["Before", "Visible", "After"]),
+        (
+            "<p>Before</p><div hidden>Hidden<span>nested</span><br><img src=\"x\"></div><p>After</p>",
+            ["Before", "After"],
+        ),
+        (
+            "<p>Before</p><div hidden>Hidden<br/><img src=\"x\"/></div><p>After</p>",
+            ["Before", "After"],
+        ),
+        ("<p>Before</p><input hidden><p>After</p>", ["Before", "After"]),
+        (
+            "<p>Before</p><script>Hidden</script><style>Hidden</style><nav>Hidden</nav><p>After</p>",
+            ["Before", "After"],
+        ),
+    ],
+)
+def test_structured_html_extractor_omits_ignored_subtrees_without_losing_visible_text(
+    markup: str,
+    expected_texts: list[str],
+) -> None:
+    """Verify HTML hidden semantics and void tags keep ignored-state tracking balanced."""
+    parser = text_extraction_adapters._StructuredHtmlExtractor(
+        spine_index=0,
+        item_id="chapter_1.xhtml",
+    )
+
+    parser.feed(f"<body>{markup}</body>")
+    parser.close()
+
+    assert [event.text for event in parser.events] == expected_texts
+
+
+def test_extract_text_omits_hidden_epub_content_from_canonical_text_and_ledger(tmp_path) -> None:
+    """Verify public EPUB extraction writes only visible blocks in source order."""
+    project_root, manifest = project_workspace_service.create_project("VisibleEpub", tmp_path)
+    source_path = project_root / "story.epub"
+    _write_epub_source(source_path)
+    document = (
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+        "<p>Visible first.</p><div hidden>Hidden <span>nested</span><br><img src=\"x\"/></div>"
+        "<p>Visible last.</p></body></html>"
+    )
+    _replace_epub_member(source_path, "chapter_1.xhtml", document.encode("utf-8"))
+    manifest["source_document"] = _build_source_document(source_path, "epub")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    ledger = source_ledger_service.load_source_ledger(project_root)
+    assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8") == (
+        "Visible first.\n\nVisible last.\n"
+    )
+    canonical_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert [source_ledger_service.unit_text(canonical_text, unit) for unit in ledger["units"]] == [
+        "Visible first.",
+        "Visible last.",
+    ]
+
+
+@pytest.mark.parametrize(
     ("declared_encoding", "python_encoding", "source_text", "expected_encoding"),
     [
         ("utf-16", "utf-16", "UTF-16 chapter: Привет.", "utf-16"),

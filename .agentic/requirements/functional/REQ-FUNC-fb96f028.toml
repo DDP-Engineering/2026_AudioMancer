@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-fb96f028"
+title = "Extract only visible EPUB HTML content"
+status = "active"
+
+requirement = """
+When an EPUB content document contains an ignored HTML subtree, Text Extraction shall omit that subtree while preserving each later visible text unit once and in source order.
+"""
+
+verification = "Public EPUB extraction fixtures with bare and valued hidden attributes, aria-hidden values, ignored nested and void elements, and script/style/nav content verify exact canonical text and source-ledger units contain only the visible text in spine order."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_structured_html_extractor_omits_ignored_subtrees_without_losing_visible_text",
+  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_omits_hidden_epub_content_from_canonical_text_and_ledger",
+]
+
+spec = "specs/REQ-FUNC-fb96f028.md"
+priority = "high"
+rationale = "EPUB content converted from HTML commonly uses boolean hidden attributes and HTML void syntax, neither of which may leak non-narrative content or suppress later narrative text."
+created = 2026-08-06
+updated = 2026-08-06
