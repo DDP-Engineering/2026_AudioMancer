@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Resumed AI Cleanup now continues from the exact number of completed provider
+  requests instead of counting every answered question as a request. Saved
+  batch membership now matches the requests actually run across mixed question
+  types, split requests expand the displayed total truthfully, and malformed
+  Cleanup checkpoints restart safely instead of leaking internal errors.
 - AI providers that return an empty, refused, or reasoning-only response no
   longer trigger a second JSON-repair request, and compatible multipart text
   remains usable. Token totals are now recovered when providers report valid

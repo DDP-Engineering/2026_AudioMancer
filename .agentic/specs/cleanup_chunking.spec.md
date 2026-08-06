@@ -161,6 +161,14 @@ unit IDs. Chunking slices `clean_text.txt` by these offsets after verifying
 }
 ```
 
+`batch_order` is the durable projection of the authoritative top-level AI
+batch plan. The planner groups questions by lexically sorted `question_type`,
+preserves input order within each type, and applies the 4/8/16 context tier.
+Each persisted batch contains the target boundary IDs in exactly the same
+membership and order as its runtime batch, whose stable ID is
+`cleanup-batch-NNNN` in plan order. A profile that cannot perform strict AI
+adjudication produces an empty plan and a zero request estimate.
+
 ### Loaded-document validation
 
 `load_cleanup_document` treats persisted Cleanup data as untrusted input. The
@@ -170,6 +178,17 @@ list of lists of string boundary IDs; and `next_batch_index` does not exceed the
 number of batches. A missing field, extra field, invalid value type, negative
 counter, malformed batch, or out-of-range next index raises
 `CleanupDocumentError`.
+
+Checkpoint reuse applies this strict validation before orchestration reads any
+nested progress or boundary value. Boundary validation covers the complete
+`prior`, `adjudication`, and `final` objects plus every outer field consumed by
+policy hashing, question reconstruction, profile reset, resume-answer recovery,
+and rendering. A readable checkpoint that fails this contract is not partially
+salvaged: the run replaces it through the ordinary fresh deterministic-analysis
+and cancellation path. Direct `load_cleanup_document` remains strict and raises
+`CleanupDocumentError` for the same malformed document. Valid `running`,
+`paused`, `finalizing`, and `completed` lifecycle documents retain their
+existing resume or recovery behavior.
 
 For a completed document, each blocking quality metric
 (`introduced_fusion_count`, `projection_violation_count`,
@@ -230,6 +249,19 @@ authorize generic no-space joining.
   valid choice.
 - Request parameters are emitted only when supported by the backend.
 
+The public planner `plan_question_batches(questions, profile_payload)` is the
+single owner of top-level question grouping and context-tier chunking. It
+returns stable batches of normalized question dictionaries, or an empty list
+when no usable profile exists. Both checkpoint creation/reset and adjudication
+runtime call this interface; orchestration does not import a private batching
+helper, and adjudication does not import orchestration.
+
+Recursive context-budget splits are runtime children of one planned top-level
+batch. They may add provider requests and child batch IDs, but never rewrite
+`batch_order`. When actual completed requests reach or exceed the estimate,
+the displayed and persisted request total expands before progress is emitted,
+so completed work is never clamped or shown above its total.
+
 No global question cap is applied. After deterministic analysis, the existing
 progress dialog reports question, request, and token estimates and continues
 automatically.
@@ -242,8 +274,12 @@ primary/verifier request, on cancellation, and before rendering.
 - Exact source, ledger, policy, prompt, and profile: resume the first incomplete
   request.
 - The first progress update after an exact resume is reconstructed from the
-  persisted completed and estimated request counts. It may not be lower than
-  the last checkpointed request percentage.
+  persisted completed and estimated request counts. The completed counter is a
+  provider-request count: one completed multi-question primary pass is one,
+  and one completed verifier pass over any number of disagreements is one.
+  Answer records are used only to skip completed passes, never to reconstruct
+  the progress baseline. The first resumed percentage exactly matches the last
+  checkpointed AI request position.
 - Conditional verifier requests that are not needed do not prevent the AI phase
   from reaching its reserved completion percentage before rendering begins.
 - Changed model, context, request policy, or prompt: preserve deterministic

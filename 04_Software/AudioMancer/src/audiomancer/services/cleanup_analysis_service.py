@@ -46,6 +46,39 @@ BOUNDARY_CHOICES = frozenset(
         "document_end",
     )
 )
+BOUNDARY_DECISION_FIELDS = frozenset(
+    (
+        "boundary_id",
+        "left_unit_id",
+        "right_unit_id",
+        "kind",
+        "page_transition",
+        "left_role",
+        "right_role",
+        "prior",
+        "adjudication",
+        "final",
+    )
+)
+_PRIOR_FIELDS = frozenset(("choice", "confidence", "reason_codes"))
+_ADJUDICATION_FIELDS = frozenset(
+    (
+        "state",
+        "primary_choice",
+        "verifier_choice",
+        "accepted",
+    )
+)
+_FINAL_FIELDS = frozenset(
+    ("choice", "origin", "confidence", "reason_codes")
+)
+_CONFIDENCE_VALUES = frozenset(("strong", "medium", "low"))
+_ADJUDICATION_STATES = frozenset(
+    ("not_required", "pending", "completed", "fallback")
+)
+_FINAL_ORIGINS = frozenset(
+    ("native", "deterministic", "llm", "fallback", "user")
+)
 
 _PAGE_NUMBER = re.compile(
     r"^(?:page\s+)?(\d{1,5})(?:\s*(?:/|of)\s*\d+)?[.]?$",
@@ -174,6 +207,100 @@ def analyze_cleanup(
         "questions": questions,
         "warnings": warnings,
     }
+
+
+def validate_persisted_boundaries(decisions: object) -> None:
+    """
+    @brief      Validate every nested field used to reuse Cleanup decisions.
+    @param[in]  decisions Candidate persisted boundary decision list.
+    @return     None.
+    @exception  ValueError Raised when the reusable decision shape is invalid.
+    """
+    if not isinstance(decisions, list):
+        raise ValueError("Cleanup boundaries must be a list.")
+    for decision in decisions:
+        if (
+            not isinstance(decision, dict)
+            or set(decision) != BOUNDARY_DECISION_FIELDS
+        ):
+            raise ValueError("Cleanup boundary fields are invalid.")
+        if (
+            not isinstance(decision["boundary_id"], str)
+            or not decision["boundary_id"]
+        ):
+            raise ValueError("Cleanup boundary ID is invalid.")
+        for field in ("left_unit_id", "right_unit_id"):
+            value = decision[field]
+            if value is not None and not isinstance(value, str):
+                raise ValueError("Cleanup boundary unit ID is invalid.")
+        if not isinstance(decision["kind"], str) or not decision["kind"]:
+            raise ValueError("Cleanup boundary kind is invalid.")
+        if type(decision["page_transition"]) is not bool:
+            raise ValueError("Cleanup page-transition flag is invalid.")
+        for field in ("left_role", "right_role"):
+            role = decision[field]
+            if role is not None and role not in UNIT_ROLES:
+                raise ValueError("Cleanup boundary role is invalid.")
+        _validate_prior(decision["prior"])
+        _validate_adjudication(decision["adjudication"])
+        _validate_final(decision["final"])
+
+
+def _validate_prior(prior: object) -> None:
+    """Validate one deterministic boundary prior."""
+    if not isinstance(prior, dict) or set(prior) != _PRIOR_FIELDS:
+        raise ValueError("Cleanup boundary prior is invalid.")
+    _validate_choice(prior["choice"], allow_none=False)
+    _validate_confidence(prior["confidence"])
+    _validate_reason_codes(prior["reason_codes"])
+
+
+def _validate_adjudication(adjudication: object) -> None:
+    """Validate one resumable boundary adjudication record."""
+    if (
+        not isinstance(adjudication, dict)
+        or set(adjudication) != _ADJUDICATION_FIELDS
+    ):
+        raise ValueError("Cleanup boundary adjudication is invalid.")
+    if adjudication["state"] not in _ADJUDICATION_STATES:
+        raise ValueError("Cleanup boundary adjudication state is invalid.")
+    _validate_choice(adjudication["primary_choice"], allow_none=True)
+    _validate_choice(adjudication["verifier_choice"], allow_none=True)
+    if type(adjudication["accepted"]) is not bool:
+        raise ValueError("Cleanup boundary acceptance flag is invalid.")
+
+
+def _validate_final(final: object) -> None:
+    """Validate one final typed boundary choice."""
+    if not isinstance(final, dict) or set(final) != _FINAL_FIELDS:
+        raise ValueError("Cleanup boundary final record is invalid.")
+    _validate_choice(final["choice"], allow_none=False)
+    if final["origin"] not in _FINAL_ORIGINS:
+        raise ValueError("Cleanup boundary final origin is invalid.")
+    _validate_confidence(final["confidence"])
+    _validate_reason_codes(final["reason_codes"])
+
+
+def _validate_choice(value: object, *, allow_none: bool) -> None:
+    """Validate one optional or required boundary choice."""
+    if value is None and allow_none:
+        return
+    if not isinstance(value, str) or value not in BOUNDARY_CHOICES:
+        raise ValueError("Cleanup boundary choice is invalid.")
+
+
+def _validate_confidence(value: object) -> None:
+    """Validate one deterministic or final confidence token."""
+    if not isinstance(value, str) or value not in _CONFIDENCE_VALUES:
+        raise ValueError("Cleanup boundary confidence is invalid.")
+
+
+def _validate_reason_codes(value: object) -> None:
+    """Validate one persisted reason-code list."""
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) for item in value
+    ):
+        raise ValueError("Cleanup boundary reason codes are invalid.")
 
 
 def operation_from_answer(

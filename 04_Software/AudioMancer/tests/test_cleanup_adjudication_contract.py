@@ -66,6 +66,194 @@ def test_context_tiers_use_4_8_and_16_question_batches(monkeypatch) -> None:
     }
 
 
+def test_authoritative_plan_matches_mixed_type_runtime_batches(monkeypatch) -> None:
+    """Verify persisted-plan inputs and runtime top-level requests cannot drift."""
+    questions = [
+        _question(index, question_type=("line_boundary" if index % 3 else "hyphenation"))
+        for index in range(13)
+    ]
+    profile = make_profile(context_window=16_384)
+    planned = cleanup_ai_adjudication_service.plan_question_batches(
+        questions,
+        profile,
+    )
+    runtime: list[tuple[str, list[str]]] = []
+
+    def _chat_json(_profile, _system, user_prompt, **_kwargs):
+        payload = json.loads(user_prompt)
+        return {
+            "payload": {
+                "batch_id": payload["batch_id"],
+                "answers": [
+                    {
+                        "question_id": item["question_id"],
+                        "choice": "join_with_space",
+                    }
+                    for item in payload["questions"]
+                ],
+            },
+            "usage": {},
+        }
+
+    monkeypatch.setattr(
+        cleanup_ai_adjudication_service.llm_provider_service,
+        "chat_json",
+        _chat_json,
+    )
+    result = cleanup_ai_adjudication_service.adjudicate_questions(
+        questions,
+        profile,
+        request_callback=lambda _pass, batch_id, batch, _answers, _usage: runtime.append(
+            (batch_id, [str(item["target_id"]) for item in batch])
+        ),
+    )
+
+    planned_targets = [
+        [str(item["target_id"]) for item in batch]
+        for batch in planned
+    ]
+    assert planned_targets == [
+        ["b-000001", "b-000004", "b-000007", "b-000010"],
+        ["b-000013"],
+        ["b-000002", "b-000003", "b-000005", "b-000006"],
+        ["b-000008", "b-000009", "b-000011", "b-000012"],
+    ]
+    assert runtime == [
+        (f"cleanup-batch-{index:04d}", targets)
+        for index, targets in enumerate(planned_targets, start=1)
+    ]
+    assert result["batch_order"] == planned_targets
+    assert result["estimated_request_count"] == len(planned_targets) * 2
+
+
+def test_unusable_profile_has_no_authoritative_request_plan() -> None:
+    """A deterministic-only run must not advertise fictitious AI work."""
+    questions = [_question(index) for index in range(5)]
+    profile = make_profile(supports_structured_output=False)
+
+    assert cleanup_ai_adjudication_service.plan_question_batches(
+        questions,
+        profile,
+    ) == []
+    result = cleanup_ai_adjudication_service.adjudicate_questions(
+        questions,
+        profile,
+    )
+    assert result["batch_order"] == []
+    assert result["estimated_request_count"] == 0
+
+
+def test_resume_uses_durable_multi_question_request_baseline(monkeypatch) -> None:
+    """One resumed multi-question primary pass contributes one request."""
+    questions = [_question(index) for index in range(4)]
+    resume_answers = {
+        str(item["question_id"]): {
+            "primary_choice": "set_paragraph_break",
+            "verifier_choice": None,
+        }
+        for item in questions
+    }
+    progress: list[tuple[int, int]] = []
+    passes: list[str] = []
+
+    def _chat_json(_profile, _system, user_prompt, **kwargs):
+        passes.append(str(kwargs["log_context"]["pass"]))
+        payload = json.loads(user_prompt)
+        return {
+            "payload": {
+                "batch_id": payload["batch_id"],
+                "answers": [
+                    {
+                        "question_id": item["question_id"],
+                        "choice": "set_paragraph_break",
+                    }
+                    for item in payload["questions"]
+                ],
+            },
+            "usage": {},
+        }
+
+    monkeypatch.setattr(
+        cleanup_ai_adjudication_service.llm_provider_service,
+        "chat_json",
+        _chat_json,
+    )
+    cleanup_ai_adjudication_service.adjudicate_questions(
+        questions,
+        make_profile(context_window=16_384),
+        resume_answers=resume_answers,
+        completed_request_count=1,
+        progress_callback=lambda current, total, _message: progress.append(
+            (current, total)
+        ),
+    )
+
+    assert passes == ["verifier"]
+    assert progress == [(2, 2)]
+
+
+def test_completed_primary_and_verifier_resume_invents_no_requests(monkeypatch) -> None:
+    """A completed two-pass batch resumes without a provider call."""
+    questions = [_question(index) for index in range(4)]
+    resume_answers = {
+        str(item["question_id"]): {
+            "primary_choice": "set_paragraph_break",
+            "verifier_choice": "set_paragraph_break",
+        }
+        for item in questions
+    }
+    monkeypatch.setattr(
+        cleanup_ai_adjudication_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Completed provider passes must not be repeated.")
+        ),
+    )
+
+    result = cleanup_ai_adjudication_service.adjudicate_questions(
+        questions,
+        make_profile(context_window=16_384),
+        resume_answers=resume_answers,
+        completed_request_count=2,
+    )
+
+    assert result["estimated_request_count"] == 2
+    assert all(item["accepted"] for item in result["answers"])
+
+
+def test_recursive_splits_expand_request_progress_total(monkeypatch) -> None:
+    """Actual split requests remain visible when they exceed the estimate."""
+    progress: list[tuple[int, int]] = []
+
+    def _ask(_profile, _batch_id, questions, *, verifier, log_path, cancel_requested):
+        _ = verifier, log_path, cancel_requested
+        if len(questions) > 1:
+            raise cleanup_ai_adjudication_service.ContextBudgetExceededError(
+                "split"
+            )
+        return (
+            [
+                {
+                    "question_id": questions[0]["question_id"],
+                    "choice": questions[0]["prior_choice"],
+                }
+            ],
+            {},
+        )
+
+    monkeypatch.setattr(cleanup_ai_adjudication_service, "_ask", _ask)
+    cleanup_ai_adjudication_service.adjudicate_questions(
+        [_question(index) for index in range(4)],
+        make_profile(context_window=16_384),
+        progress_callback=lambda current, total, _message: progress.append(
+            (current, total)
+        ),
+    )
+
+    assert progress == [(1, 2), (2, 2), (3, 3), (4, 4)]
+    assert all(current <= total for current, total in progress)
+
+
 def test_primary_agreement_keeps_prior_without_verifier(monkeypatch) -> None:
     """Cover S-0006 and REQ-FUNC-809ebb96-da19-4ccf-86ff-1648f7aeb047."""
     passes: list[str] = []
@@ -318,11 +506,16 @@ def test_ai_adjudication_reports_each_primary_and_verifier_request(
     assert "Verifier" in progress[1][2]
 
 
-def _question(index: int, *, prior_choice: str = "join_with_space") -> dict[str, object]:
+def _question(
+    index: int,
+    *,
+    prior_choice: str = "join_with_space",
+    question_type: str = "line_boundary",
+) -> dict[str, object]:
     """Build one medium-confidence boundary question."""
     return {
         "question_id": f"q-{index + 1:06d}",
-        "question_type": "line_boundary",
+        "question_type": question_type,
         "target_id": f"b-{index + 1:06d}",
         "left_text": f"Wrapped line {index}",
         "right_text": "continues here.",

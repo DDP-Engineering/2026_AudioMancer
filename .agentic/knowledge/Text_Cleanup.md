@@ -54,7 +54,7 @@ The production boundary is:
 - `cleanup_text_analysis_service.py`: shared Unicode, sentence, language,
   heading, and conservative scene-separator recognition.
 - `cleanup_ai_adjudication_service.py`: bounded primary/verifier
-  classification.
+  classification and the authoritative top-level AI batch planner.
 - `cleanup_renderer_service.py`: decision validation, pure rendering, paragraph
   offsets, and runtime quality metrics.
 - `cleanup_metadata_service.py`: strict completed-output access for consumers.
@@ -102,6 +102,21 @@ first displayed percentage from persisted completed and estimated AI request
 counts, so cancellation followed by resume never resets the progress display.
 The adjudication phase explicitly reaches 88% even when conditional verifier
 requests are skipped.
+
+`REQ-FUNC-151a9e10` makes `plan_question_batches` the only owner of top-level
+AI batching. It sorts question types deterministically, preserves input order
+within each type, applies the 4/8/16 context tiers, and returns no plan for an
+unusable profile. Checkpoint `batch_order`, runtime `cleanup-batch-NNNN` IDs,
+membership, and the primary-plus-verifier estimate are projections of this
+same plan. Recursive budget splits remain runtime children and never replace
+the durable top-level plan.
+
+`REQ-UX-bb78f412` counts resumed AI progress in completed provider requests,
+not answered questions. Orchestration supplies the durable checkpoint counter
+to adjudication, while per-question answers only skip completed passes. One
+multi-question primary or verifier pass counts once. If recursive splits make
+actual requests exceed the estimate, Cleanup persists and displays the larger
+total before cancellation can interrupt it; completed work is not clamped.
 
 Automatic finalization and manual cleaned-text save share one publication
 helper. It validates the completed Cleanup document before mutation, delegates
@@ -199,11 +214,19 @@ and manual-edit/structure flags. Status is `running`, `paused`, `finalizing`,
 `completed`, or `failed`; only `completed` with phase `done`, zero blocking
 quality counters, and a matching `clean_text.txt` hash unlocks Chunking.
 Loaded documents also require the exact Progress field set, non-boolean
-non-negative integer counters, string-only batch IDs, and a bounded next-batch
-index. Completed blocking quality counters must be present as non-boolean
-integer zeroes. Every violation raises `CleanupDocumentError`; persisted shape
+non-negative integer counters, string-only batch target IDs, and a bounded
+next-batch index. Completed blocking quality counters must be present as
+non-boolean integer zeroes. Every violation raises `CleanupDocumentError`; persisted shape
 or value corruption does not leak `TypeError`, `KeyError`, or `AttributeError`
 to consumers.
+
+`REQ-REL-a6bddb67` applies that strict contract before the run path reads any
+nested checkpoint state. Persisted boundary validation covers every outer,
+prior, adjudication, and final field used by policy hashing, question rebuild,
+AI reset, resume, and rendering. It also verifies that question count and
+`batch_order` match the authoritative plan. A readable but invalid checkpoint
+is replaced through fresh deterministic analysis as one unit; the strict loader
+still raises `CleanupDocumentError`, and no field-level salvage is attempted.
 Online disclosure counts every submitted question fragment, including failed
 retry attempts, separately from completed resumable responses.
 

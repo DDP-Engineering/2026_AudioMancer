@@ -137,7 +137,7 @@ def clean_text(
 
     document: dict[str, object]
     questions: list[dict[str, object]]
-    if _can_reuse_analysis(existing, source_hash, ledger_hash):
+    if _can_reuse_analysis(existing, canonical_text, ledger):
         assert existing is not None
         document = existing
         if (
@@ -197,13 +197,24 @@ def clean_text(
             ledger,
             list(document["boundaries"]),
         )
+        resumed_current = int(
+            document["progress"]["completed_request_count"]
+        )
+        resumed_total = max(
+            resumed_current,
+            int(document["progress"]["estimated_request_count"]),
+        )
+        if resumed_total != document["progress"]["estimated_request_count"]:
+            document["progress"]["estimated_request_count"] = resumed_total
+            document["updated_at"] = utc_now_iso()
+            _write_checkpoint(root, document)
         _emit(
             progress_callback,
-            int(document["progress"]["completed_request_count"]),
-            max(1, int(document["progress"]["estimated_request_count"])),
+            resumed_current,
+            max(1, resumed_total),
             _ai_progress_percent(
-                int(document["progress"]["completed_request_count"]),
-                int(document["progress"]["estimated_request_count"]),
+                resumed_current,
+                resumed_total,
             ),
             (
                 "Cleanup resumed from batch "
@@ -342,8 +353,14 @@ def clean_text(
         _write_checkpoint(root, document)
 
     def _ai_progress(current: int, total: int, message: str) -> None:
-        bounded_total = max(1, int(total))
-        bounded_current = max(0, min(int(current), bounded_total))
+        bounded_current = max(0, int(current))
+        bounded_total = max(1, int(total), bounded_current)
+        if bounded_total > int(
+            document["progress"]["estimated_request_count"]
+        ):
+            document["progress"]["estimated_request_count"] = bounded_total
+            document["updated_at"] = utc_now_iso()
+            _write_checkpoint(root, document)
         _emit(
             progress_callback,
             bounded_current,
@@ -364,6 +381,9 @@ def clean_text(
             progress_callback=_ai_progress,
             cancel_requested=cancel_requested,
             resume_answers=resume_answers,
+            completed_request_count=int(
+                document["progress"]["completed_request_count"]
+            ),
             request_callback=_checkpoint_request,
             submission_callback=_checkpoint_submission,
         )
@@ -551,6 +571,8 @@ def validate_cleanup_document(
         "user_edited",
     }:
         raise CleanupDocumentError("Cleanup structure source is invalid.")
+    if type(payload.get("user_modified")) is not bool:
+        raise CleanupDocumentError("Cleanup user-modified flag is invalid.")
     for list_field in (
         "unit_operations",
         "boundaries",
@@ -568,12 +590,36 @@ def validate_cleanup_document(
     quality_report = payload.get("quality_report")
     if not isinstance(quality_report, dict):
         raise CleanupDocumentError("Cleanup quality report is invalid.")
-    cleanup_renderer_service.validate_operations(
-        canonical_text,
-        ledger,
-        payload["unit_operations"],
-        payload["boundaries"],
-    )
+    if not isinstance(payload.get("document_profile"), dict):
+        raise CleanupDocumentError("Cleanup document profile is invalid.")
+    if payload.get("profile_fingerprint") is not None and not isinstance(
+        payload.get("profile_fingerprint"),
+        dict,
+    ):
+        raise CleanupDocumentError("Cleanup profile fingerprint is invalid.")
+    if not isinstance(payload.get("token_usage"), dict):
+        raise CleanupDocumentError("Cleanup token usage is invalid.")
+    try:
+        cleanup_analysis_service.validate_persisted_boundaries(
+            payload["boundaries"]
+        )
+        cleanup_renderer_service.validate_operations(
+            canonical_text,
+            ledger,
+            payload["unit_operations"],
+            payload["boundaries"],
+        )
+        _validate_checkpoint_plan(payload, canonical_text, ledger)
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+        AttributeError,
+        AssertionError,
+    ) as error:
+        raise CleanupDocumentError(
+            "Cleanup deterministic analysis is invalid."
+        ) from error
     if payload["status"] == "completed":
         if payload.get("phase") != "done" or payload.get("output_hash") is None:
             raise CleanupDocumentError(
@@ -779,9 +825,11 @@ def _apply_ai_result(
             ]
         )
     )
-    document["progress"]["batch_order"] = list(
-        result.get("batch_order") or document["progress"]["batch_order"]
-    )
+    result_batch_order = list(result.get("batch_order") or [])
+    if result_batch_order != document["progress"]["batch_order"]:
+        raise CleanupDocumentError(
+            "Cleanup runtime batch plan differs from its checkpoint plan."
+        )
     document["progress"]["next_batch_index"] = len(
         document["progress"]["batch_order"]
     )
@@ -792,17 +840,19 @@ def _apply_ai_result(
 
 def _can_reuse_analysis(
     document: dict[str, object] | None,
-    source_hash: str,
-    ledger_hash: str,
+    canonical_text: str,
+    ledger: dict[str, object],
 ) -> bool:
     """Return whether a checkpoint's deterministic layer remains compatible."""
+    try:
+        validate_cleanup_document(
+            document,
+            canonical_text=canonical_text,
+            ledger=ledger,
+        )
+    except CleanupDocumentError:
+        return False
     if not isinstance(document, dict):
-        return False
-    if set(document) != CLEANUP_ROOT_FIELDS:
-        return False
-    if document.get("source_hash") != source_hash:
-        return False
-    if document.get("ledger_hash") != ledger_hash:
         return False
     try:
         expected_policy_hash = _policy_hash(
@@ -812,6 +862,43 @@ def _can_reuse_analysis(
     except (KeyError, TypeError, ValueError):
         return False
     return document.get("policy_hash") == expected_policy_hash
+
+
+def _validate_checkpoint_plan(
+    document: dict[str, object],
+    canonical_text: str,
+    ledger: dict[str, object],
+) -> None:
+    """Require checkpoint question counts and batches to match the shared plan."""
+    if document["user_modified"]:
+        return
+    questions = cleanup_analysis_service.questions_from_boundaries(
+        canonical_text,
+        ledger,
+        document["boundaries"],
+    )
+    progress = document["progress"]
+    expected_order = _batch_order(
+        questions,
+        document["profile_fingerprint"],
+    )
+    if progress["question_count"] != len(questions):
+        raise CleanupDocumentError(
+            "Cleanup checkpoint question count is invalid."
+        )
+    if progress["batch_order"] != expected_order:
+        raise CleanupDocumentError(
+            "Cleanup checkpoint batch plan is invalid."
+        )
+    planned_estimate = len(expected_order) * 2
+    estimated_requests = progress["estimated_request_count"]
+    if (
+        estimated_requests < planned_estimate
+        or (not expected_order and estimated_requests != 0)
+    ):
+        raise CleanupDocumentError(
+            "Cleanup checkpoint request estimate is invalid."
+        )
 
 
 def _reset_ai_adjudication(
@@ -1108,15 +1195,13 @@ def _batch_order(
     questions: list[dict[str, object]],
     profile: dict[str, object] | None,
 ) -> list[list[str]]:
-    """Build stable estimated batches for checkpoint progress."""
-    context = int((profile or {}).get("context_window", 16_000) or 16_000)
-    size = 16 if context >= 128_000 else 8 if context >= 32_000 else 4
+    """Project the authoritative runtime plan into durable target IDs."""
     return [
-        [
-            str(item["target_id"])
-            for item in questions[start : start + size]
-        ]
-        for start in range(0, len(questions), size)
+        [str(item["target_id"]) for item in batch]
+        for batch in cleanup_ai_adjudication_service.plan_question_batches(
+            questions,
+            profile,
+        )
     ]
 
 

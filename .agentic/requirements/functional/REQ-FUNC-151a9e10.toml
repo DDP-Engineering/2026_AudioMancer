@@ -1,0 +1,37 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-FUNC-151a9e10"
+title = "Cleanup shall use one authoritative AI batch plan"
+status = "active"
+
+requirement = """
+Where AI adjudication is usable, Cleanup shall derive persisted and runtime top-level request batches from one deterministic question-type-grouped plan.
+"""
+
+verification = "Mixed-type tests crossing context-tier boundaries compare checkpoint membership, ordering, IDs, counts, and estimates with the actual top-level request sequence; deterministic-only, single-type, cancellation, and resume cases retain the same contract."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_context_tiers_use_4_8_and_16_question_batches",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_authoritative_plan_matches_mixed_type_runtime_batches",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_unusable_profile_has_no_authoritative_request_plan",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_without_usable_ai_completes_from_deterministic_priors",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_mixed_type_multi_batch_plan_survives_cancel_and_resume",
+]
+
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = "A persisted resume plan must describe the same stable top-level work that the adjudication runtime actually submits."
+
+created = 2026-08-06
+updated = 2026-08-06

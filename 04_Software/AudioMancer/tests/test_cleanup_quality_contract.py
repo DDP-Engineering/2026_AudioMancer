@@ -21,9 +21,11 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import (
+    cleanup_ai_adjudication_service,
     cleanup_analysis_service,
     cleanup_renderer_service,
     operation_runtime_service,
+    project_workspace_service,
     source_ledger_service,
     text_cleanup_service,
 )
@@ -146,6 +148,164 @@ def test_load_cleanup_document_rejects_malformed_progress(tmp_path, case) -> Non
 
     with pytest.raises(text_cleanup_service.CleanupDocumentError):
         text_cleanup_service.load_cleanup_document(project_root)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing_progress_field",
+        "malformed_progress_counter",
+        "invalid_batch_order",
+        "missing_adjudication",
+        "malformed_adjudication_object",
+        "invalid_adjudication_state",
+        "missing_prior",
+        "missing_final",
+        "non_list_boundaries",
+    ],
+)
+def test_malformed_reuse_checkpoint_starts_fresh_analysis(
+    tmp_path,
+    monkeypatch,
+    case,
+) -> None:
+    """Malformed nested state is rejected strictly and never partially reused."""
+    project_root, document = _build_completed_cleanup(tmp_path)
+    if case == "missing_progress_field":
+        del document["progress"]["completed_request_count"]
+    elif case == "malformed_progress_counter":
+        document["progress"]["completed_request_count"] = "1"
+    elif case == "invalid_batch_order":
+        document["progress"]["batch_order"] = [["unknown-boundary"]]
+    elif case == "missing_adjudication":
+        del document["boundaries"][0]["adjudication"]
+    elif case == "malformed_adjudication_object":
+        document["boundaries"][0]["adjudication"] = []
+    elif case == "invalid_adjudication_state":
+        document["boundaries"][0]["adjudication"]["state"] = "unknown"
+    elif case == "missing_prior":
+        del document["boundaries"][0]["prior"]
+    elif case == "missing_final":
+        del document["boundaries"][0]["final"]
+    else:
+        document["boundaries"] = {"unexpected": "object"}
+    checkpoint_path = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+    checkpoint_path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(text_cleanup_service.CleanupDocumentError):
+        text_cleanup_service.load_cleanup_document(project_root)
+
+    analysis_calls = {"count": 0}
+    original_analyze = cleanup_analysis_service.analyze_cleanup
+
+    def _count_analysis(*args, **kwargs):
+        analysis_calls["count"] += 1
+        return original_analyze(*args, **kwargs)
+
+    monkeypatch.setattr(cleanup_analysis_service, "analyze_cleanup", _count_analysis)
+    rebuilt = text_cleanup_service.clean_text(project_root, _manifest(project_root))
+
+    assert analysis_calls["count"] == 1
+    assert rebuilt["status"] == "completed"
+    assert text_cleanup_service.load_cleanup_document(project_root) == rebuilt
+
+
+def test_malformed_reuse_checkpoint_uses_fresh_cancellation_path(tmp_path) -> None:
+    """Cancellation wins before analysis instead of exposing corrupt internals."""
+    project_root, document = _build_completed_cleanup(tmp_path)
+    del document["progress"]["completed_request_count"]
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        text_cleanup_service.clean_text(
+            project_root,
+            _manifest(project_root),
+            cancel_requested=lambda: True,
+        )
+
+
+def test_profile_change_cannot_reset_invalid_boundary_layer(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Profile invalidation occurs only after deterministic structure validates."""
+    project_root, document = _build_completed_cleanup(tmp_path)
+    del document["boundaries"][0]["adjudication"]
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    analysis_calls = {"count": 0}
+    original_analyze = cleanup_analysis_service.analyze_cleanup
+
+    def _count_analysis(*args, **kwargs):
+        analysis_calls["count"] += 1
+        return original_analyze(*args, **kwargs)
+
+    monkeypatch.setattr(cleanup_analysis_service, "analyze_cleanup", _count_analysis)
+    monkeypatch.setattr(
+        text_cleanup_service,
+        "_reset_ai_adjudication",
+        lambda *_args, **_kwargs: pytest.fail(
+            "Invalid deterministic boundaries must not reach AI-only reset."
+        ),
+    )
+
+    rebuilt = text_cleanup_service.clean_text(
+        project_root,
+        _manifest(project_root),
+        ai_profile_payload=make_profile(supports_structured_output=False),
+    )
+
+    assert analysis_calls["count"] == 1
+    assert rebuilt["status"] == "completed"
+
+
+@pytest.mark.parametrize(
+    ("status", "phase"),
+    [
+        ("running", "adjudication"),
+        ("paused", "adjudication"),
+        ("finalizing", "rendering"),
+        ("completed", "done"),
+    ],
+)
+def test_valid_checkpoint_lifecycle_states_remain_reusable(
+    tmp_path,
+    monkeypatch,
+    status,
+    phase,
+) -> None:
+    """Strict reuse validation preserves every supported recovery branch."""
+    project_root, document = _build_completed_cleanup(tmp_path)
+    document["status"] = status
+    document["phase"] = phase
+    if status != "completed":
+        document["completed_at"] = None
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        cleanup_analysis_service,
+        "analyze_cleanup",
+        lambda *_args, **_kwargs: pytest.fail(
+            f"A valid {status} checkpoint must reuse deterministic analysis."
+        ),
+    )
+
+    recovered = text_cleanup_service.clean_text(
+        project_root,
+        _manifest(project_root),
+    )
+
+    assert recovered["status"] == "completed"
 
 
 def test_analysis_assigns_roles_before_classifying_every_boundary() -> None:
@@ -422,10 +582,225 @@ def test_cleanup_without_usable_ai_completes_from_deterministic_priors(tmp_path)
 
     assert document["status"] == "completed"
     assert document["quality_report"]["fallback_count"] >= 1
+    assert document["progress"]["batch_order"] == []
+    assert document["progress"]["estimated_request_count"] == 0
     assert document["quality_report"]["introduced_fusion_count"] == 0
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == (
         "One wrapped line continues safely.\n"
     )
+
+
+def test_mixed_type_multi_batch_plan_survives_cancel_and_resume(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Checkpoint batches remain identical to runtime requests across resume."""
+    canonical_text, ledger = build_ledger(
+        [
+            "Line-" if index % 3 == 0 else f"Line {index}"
+            for index in range(14)
+        ]
+    )
+    project_root, manifest = build_project(
+        tmp_path,
+        "MixedTypePlanResume",
+        canonical_text,
+        ledger,
+    )
+    captured_questions = list(
+        cleanup_analysis_service.analyze_cleanup(
+            canonical_text,
+            ledger,
+        )["questions"]
+    )
+    prior_by_question = {
+        str(item["question_id"]): str(item["prior_choice"])
+        for item in captured_questions
+    }
+
+    calls: list[tuple[str, list[str]]] = []
+    cancel = {"value": False}
+
+    def _chat_json(_profile, _system, user_prompt, **kwargs):
+        payload = json.loads(user_prompt)
+        assert kwargs["log_context"]["pass"] == "primary"
+        question_ids = [
+            str(item["question_id"])
+            for item in payload["questions"]
+        ]
+        calls.append((str(payload["batch_id"]), question_ids))
+        if len(calls) == 1:
+            cancel["value"] = True
+        return {
+            "payload": {
+                "batch_id": payload["batch_id"],
+                "answers": [
+                    {
+                        "question_id": question_id,
+                        "choice": prior_by_question[question_id],
+                    }
+                    for question_id in question_ids
+                ],
+            },
+            "usage": {},
+        }
+
+    monkeypatch.setattr(
+        "audiomancer.services.cleanup_ai_adjudication_service."
+        "llm_provider_service.chat_json",
+        _chat_json,
+    )
+    profile = make_profile(context_window=16_384)
+    initial_progress: list[tuple[int, int, int]] = []
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        text_cleanup_service.clean_text(
+            project_root,
+            manifest,
+            ai_profile_payload=profile,
+            progress_callback=lambda current, total, percent, _message: initial_progress.append(
+                (current, total, percent)
+            ),
+            cancel_requested=lambda: cancel["value"],
+        )
+
+    paused = read_cleanup_document(project_root)
+    planned_batches = (
+        cleanup_ai_adjudication_service.plan_question_batches(
+            captured_questions,
+            profile,
+        )
+    )
+    planned_targets = [
+        [str(item["target_id"]) for item in batch]
+        for batch in planned_batches
+    ]
+    assert paused["progress"]["batch_order"] == planned_targets
+    cancel["value"] = False
+    resumed_progress: list[tuple[int, int, int]] = []
+
+    completed = text_cleanup_service.clean_text(
+        project_root,
+        manifest,
+        ai_profile_payload=profile,
+        progress_callback=lambda current, total, percent, _message: resumed_progress.append(
+            (current, total, percent)
+        ),
+        cancel_requested=lambda: False,
+    )
+
+    target_by_question = {
+        str(item["question_id"]): str(item["target_id"])
+        for item in captured_questions
+    }
+    runtime_targets = [
+        [target_by_question[question_id] for question_id in question_ids]
+        for _batch_id, question_ids in calls
+    ]
+    assert runtime_targets == planned_targets
+    assert [batch_id for batch_id, _question_ids in calls] == [
+        f"cleanup-batch-{index:04d}"
+        for index in range(1, len(planned_targets) + 1)
+    ]
+    assert completed["progress"]["batch_order"] == planned_targets
+    assert completed["progress"]["completed_request_count"] == len(calls)
+    assert resumed_progress[0][2] == initial_progress[-1][2]
+    combined_percentages = [
+        *(item[2] for item in initial_progress),
+        *(item[2] for item in resumed_progress),
+    ]
+    assert combined_percentages == sorted(combined_percentages)
+    assert all(current <= total for current, total, _percent in resumed_progress)
+
+
+def test_recursive_split_resume_expands_durable_request_total(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Split child requests are counted once across cancellation and resume."""
+    canonical_text, ledger = build_ledger([f"Line {index}" for index in range(5)])
+    project_root, manifest = build_project(
+        tmp_path,
+        "RecursiveSplitResume",
+        canonical_text,
+        ledger,
+    )
+    calls: list[str] = []
+    cancel = {"value": False}
+
+    def _ask(
+        _profile,
+        _batch_id,
+        questions,
+        *,
+        verifier,
+        log_path,
+        cancel_requested,
+        submission_callback=None,
+    ):
+        _ = verifier, log_path, cancel_requested, submission_callback
+        if len(questions) > 1:
+            raise cleanup_ai_adjudication_service.ContextBudgetExceededError(
+                "split"
+            )
+        question_id = str(questions[0]["question_id"])
+        calls.append(question_id)
+        if len(calls) == 1:
+            cancel["value"] = True
+        return (
+            [
+                {
+                    "question_id": question_id,
+                    "choice": str(questions[0]["prior_choice"]),
+                }
+            ],
+            {},
+        )
+
+    monkeypatch.setattr(cleanup_ai_adjudication_service, "_ask", _ask)
+    profile = make_profile(context_window=16_384)
+    initial_progress: list[tuple[int, int, int]] = []
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        text_cleanup_service.clean_text(
+            project_root,
+            manifest,
+            ai_profile_payload=profile,
+            progress_callback=lambda current, total, percent, _message: initial_progress.append(
+                (current, total, percent)
+            ),
+            cancel_requested=lambda: cancel["value"],
+        )
+    paused = read_cleanup_document(project_root)
+    assert paused["progress"]["completed_request_count"] == 1
+    assert paused["progress"]["estimated_request_count"] == 2
+    cancel["value"] = False
+    resumed_progress: list[tuple[int, int, int]] = []
+
+    completed = text_cleanup_service.clean_text(
+        project_root,
+        manifest,
+        ai_profile_payload=profile,
+        progress_callback=lambda current, total, percent, _message: resumed_progress.append(
+            (current, total, percent)
+        ),
+        cancel_requested=lambda: False,
+    )
+
+    assert calls == ["q-000001", "q-000002", "q-000003", "q-000004"]
+    assert completed["progress"]["completed_request_count"] == 4
+    assert completed["progress"]["estimated_request_count"] == 4
+    assert resumed_progress[0][2] == initial_progress[-1][2]
+    assert all(current <= total for current, total, _percent in resumed_progress)
+    combined_percentages = [
+        *(item[2] for item in initial_progress),
+        *(item[2] for item in resumed_progress),
+    ]
+    assert combined_percentages == sorted(combined_percentages)
+    assert resumed_progress[-1][2] == 100
+
+
+def _manifest(project_root):
+    """Load the current project manifest for checkpoint run-path tests."""
+    return project_workspace_service.load_manifest(project_root)
 
 
 def test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requests(

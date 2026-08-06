@@ -41,6 +41,31 @@ class ContextBudgetExceededError(ValueError):
     """Raised when one Cleanup request cannot fit its safe context budget."""
 
 
+def plan_question_batches(
+    questions: list[dict[str, object]],
+    profile_payload: dict[str, object] | None,
+) -> list[list[dict[str, object]]]:
+    """
+    @brief      Build the authoritative top-level Cleanup AI request plan.
+    @param[in]  questions Candidate ambiguous boundary questions.
+    @param[in]  profile_payload Selected provider profile, or None.
+    @return     Stable homogeneous context-tier batches, or no batches when
+                the profile cannot perform strict AI adjudication.
+    @exception  None.
+    """
+    normalized_questions = _normalized_questions(questions)
+    if (
+        not normalized_questions
+        or _compatibility_warning(profile_payload) is not None
+    ):
+        return []
+    assert profile_payload is not None
+    batch_size = _batch_size_for_context(
+        int(profile_payload["context_window"])
+    )
+    return _homogeneous_batches(normalized_questions, batch_size)
+
+
 def adjudicate_questions(
     questions: list[dict[str, object]],
     profile_payload: dict[str, object] | None,
@@ -49,6 +74,7 @@ def adjudicate_questions(
     progress_callback: Callable[[int, int, str], None] | None = None,
     cancel_requested=None,
     resume_answers: dict[str, dict[str, object]] | None = None,
+    completed_request_count: int = 0,
     request_callback: Callable[
         [
             str,
@@ -83,18 +109,16 @@ def adjudicate_questions(
         )
 
     assert profile_payload is not None
-    batch_size = _batch_size_for_context(int(profile_payload["context_window"]))
-    batches = _homogeneous_batches(normalized_questions, batch_size)
+    batches = plan_question_batches(normalized_questions, profile_payload)
     estimated_requests = len(batches) * 2
-    completed_requests = sum(
-        int(item.get("primary_choice") is not None)
-        + int(item.get("verifier_choice") is not None)
-        for item in (resume_answers or {}).values()
-    )
+    completed_requests = max(0, int(completed_request_count))
     answer_records: list[dict[str, object]] = []
     warnings: list[str] = []
     failed_batch_count = 0
-    batch_order: list[list[str]] = []
+    batch_order = [
+        [str(item["target_id"]) for item in batch]
+        for batch in batches
+    ]
     resume = resume_answers or {}
 
     def _request_finished(
@@ -125,7 +149,6 @@ def adjudicate_questions(
     for batch_index, batch in enumerate(batches, start=1):
         raise_if_cancelled(cancel_requested)
         batch_id = f"cleanup-batch-{batch_index:04d}"
-        batch_order.append([str(item["target_id"]) for item in batch])
         records, batch_warnings, batch_usage, batch_failures = _process_batch(
             profile_payload,
             batch_id,
@@ -796,9 +819,11 @@ def _emit_progress(
     total: int,
     message: str,
 ) -> None:
-    """Emit one bounded AI work-unit progress update."""
+    """Emit one truthful AI work-unit update, expanding totals as needed."""
     if callable(callback):
-        callback(max(0, min(current, total)), max(1, total), message)
+        bounded_current = max(0, int(current))
+        bounded_total = max(1, int(total), bounded_current)
+        callback(bounded_current, bounded_total, message)
 
 
 # END OF FILE
