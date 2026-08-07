@@ -12,8 +12,8 @@ inventory through the stable profile projection.
 - Resolve original versus fully approved translated text.
 - Discover candidates in bounded chunk windows and synthesize one character per
   AI request.
-- Persist operation status, resume progress, token usage, characters, and
-  manual edits in one authoritative document.
+- Persist operation status, resume progress, token usage, characters, compact
+  rejected-candidate diagnostics, and manual edits in one authoritative document.
 - Maintain evidence, demographic confidence, voice prompts, and provenance.
 - Invalidate its own and downstream output when the effective source changes.
 - It does not select voices or generate speech/audio.
@@ -63,8 +63,10 @@ record is not reconstructed from stale checkpoint data.
 - Inputs: canonical chunks, optional fully approved translations, the current
   enabled AI profile, optional operator instructions, and manual CRUD requests.
 - Output: `characters.json` in the project artifact root.
-- Diagnostics: per-run `log_ai_character_discovery_*.log` files are separate and
-  are not referenced by the authoritative document.
+- Diagnostics: each start or compatible resume creates a separate
+  `log_ai_character_discovery_*.log` file. The authoritative document never
+  stores a log path, and the established current-and-downstream Reset Discovery
+  flow includes this owned family while preserving upstream operation logs.
 - Side effects: the manifest character-discovery entry is refreshed as a
   reconstructible cache; source changes reset dependent runtime artifacts while
   preserving Narrator Definition.
@@ -75,7 +77,7 @@ The root of `characters.json` contains exactly:
 
 ```text
 status, source, instructions, token_usage, character_profile_id_last_used,
-checkpoint, failure, characters
+rejected_candidates, checkpoint, failure, characters
 ```
 
 `source` contains exactly `kind`, `language`, and `fingerprint`. `kind` is
@@ -87,6 +89,17 @@ language, and ordered chunk ID, sequence index, and selected text.
 start or resume invocation. It is a selection preference, not attribution for
 every accumulated candidate, and never contains credentials or copied provider
 configuration.
+
+`rejected_candidates` is always an array of compact diagnostics. Each entry
+contains exactly `canonical_name`, `reason`, `evidence_count`, and
+`identity_merge_count`; reasons are `missing_evidence` or
+`missing_spoken_dialogue_evidence`. It holds no excerpts, prompts, model
+responses, credentials, or provider configuration. The writer keeps one entry
+per normalized identity and reason, retains the first spelling and greatest
+counts when duplicates meet, then sorts by canonical name and reason. The
+strict reader rejects missing/extra fields, invalid reason/count bounds, or
+duplicate/out-of-order entries. The same unique count drives manifest warning
+count, grouped page notes, and the Characters export warning count.
 
 `checkpoint` is null or one of:
 
@@ -157,6 +170,13 @@ provider failure, manual inventory in varied ordering, edited and deleted AI
 profiles, cursor-based provider-call counts, source mismatch, force rerun,
 explicit reset, token usage, instructions, and atomic document writes.
 
+Diagnostic regressions prove unique rejection records survive repeated synthesis
+resume and completion, strict malformed/duplicate/out-of-order records remain
+Reset-only, and state, manifest, and export warning counts agree. Log-lifecycle
+regressions prove fresh and resumed runs use the `character_discovery` family,
+Reset includes all of those owned logs in its established current-and-downstream
+scope, while upstream Translation logs remain.
+
 Unicode regressions cover manual add/edit and canonical/alias duplicates across
 Cyrillic, Greek, CJK, Japanese, Korean, Hebrew, and Arabic names; composed and
 accent-folded equivalents; distinct base spellings; empty keys; grouping order;
@@ -187,19 +207,25 @@ From the adopted component map:
 - `04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt`
 - `04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py`
 - `04_Software/AudioMancer/tests/test_character_discovery_service.py`
 - `04_Software/AudioMancer/tests/test_character_discovery_state_service.py`
 - `04_Software/AudioMancer/tests/test_characters_page.py`
 - `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_project_export_service.py`
 - `.agentic/requirements/functional/REQ-FUNC-57acf8bd.toml`
 - `.agentic/requirements/functional/REQ-FUNC-df901739.toml`
 - `.agentic/requirements/functional/REQ-FUNC-e3015445.toml`
 - `.agentic/requirements/functional/REQ-FUNC-e3feefa9.toml`
 - `.agentic/requirements/functional/REQ-FUNC-f5fc5dd8.toml`
 - `.agentic/requirements/functional/REQ-FUNC-f878c579.toml`
+- `.agentic/requirements/functional/REQ-FUNC-f5d9667f.toml`
+- `.agentic/requirements/functional/REQ-FUNC-9b951004.toml`
 - `.agentic/requirements/functional/REQ-FUNC-5cd8727a.toml`
 - `.agentic/specs/REQ-FUNC-df901739.md`
 - `.agentic/specs/REQ-FUNC-f5fc5dd8.md`
 - `.agentic/specs/REQ-FUNC-f878c579.md`
+- `.agentic/specs/REQ-FUNC-9b951004.md`

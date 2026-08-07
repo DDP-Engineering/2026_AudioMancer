@@ -479,11 +479,13 @@ def _build_characters_document(project_root: Path, manifest: dict[str, object]) 
     characters = character_discovery_service.load_character_profiles(project_root)
     source = document.get("source", {}) if isinstance(document, dict) else {}
     source = source if isinstance(source, dict) else {}
+    operation_summary = character_discovery_service.character_operation_summary(document)
     parameters = _compact_fields(
         [
             ("Source Kind", source.get("kind")),
             ("Source Language", source.get("language")),
             ("Character Count", len(characters)),
+            ("Warnings Count", operation_summary["warning_count"]),
             *_token_usage_fields(document, {}),
         ]
     )

@@ -136,7 +136,7 @@ def build_character_discovery_state(
         if document is None or document.get("status") != character_discovery_service.CHARACTER_DISCOVERY_STAGE_COMPLETED
         else {
             "token_usage": dict(document["token_usage"]),
-            "warnings": [],
+            "warnings": _rejected_candidate_warning_notes(document, language),
         }
     )
     stage_status = _character_discovery_stage_status(report, operation_state)
@@ -152,17 +152,20 @@ def build_character_discovery_state(
     can_add = has_discovery_result
     can_edit = bool(profiles)
     can_delete = bool(profiles)
+    notes = build_character_discovery_notes(
+        manifest,
+        source_chunks,
+        report,
+        operation_state,
+        profiles,
+        has_ai_profiles,
+        language,
+    )
+    if document is not None and report is None:
+        notes.extend(_rejected_candidate_warning_notes(document, language))
     return {
         "profiles": profiles,
-        "notes": build_character_discovery_notes(
-            manifest,
-            source_chunks,
-            report,
-            operation_state,
-            profiles,
-            has_ai_profiles,
-            language,
-        ),
+        "notes": notes,
         "selected_profile_id": profile_state["selected_profile_id"],
         "stage_status": stage_status,
         "character_count": len(profiles),
@@ -296,6 +299,28 @@ def _build_token_usage_notes(
     @return     Derived helper result.
     """
     return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
+
+
+def _rejected_candidate_warning_notes(document: dict[str, object], language: str) -> list[str]:
+    """Build localized, privacy-preserving rejection-warning groups from persisted diagnostics."""
+    rejected_candidates = document.get("rejected_candidates")
+    if not isinstance(rejected_candidates, list):
+        return []
+    counts_by_reason: dict[str, int] = {}
+    for diagnostic in rejected_candidates:
+        if not isinstance(diagnostic, dict):
+            continue
+        reason = str(diagnostic.get("reason", ""))
+        counts_by_reason[reason] = counts_by_reason.get(reason, 0) + 1
+    localization_keys = {
+        "missing_evidence": "characters.note_rejected_missing_evidence",
+        "missing_spoken_dialogue_evidence": "characters.note_rejected_missing_spoken_dialogue_evidence",
+    }
+    return [
+        ui_state_service.translate(localization_keys[reason], language).format(candidate_count=counts_by_reason[reason])
+        for reason in sorted(counts_by_reason)
+        if reason in localization_keys
+    ]
 
 
 def _character_discovery_stage_status(

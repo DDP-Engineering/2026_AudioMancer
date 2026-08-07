@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Character Discovery now writes transaction logs in its own resettable log
+  family. Rejected candidate diagnostics are saved without source excerpts or
+  AI credentials, survive interrupted resumes without double-counting, and
+  provide matching warning counts on the Characters page and export.
 - Character Discovery now shows truthful completed/planned discovery-window
   progress after an interruption instead of treating source chunks as windows.
   Resume keeps the same progress baseline into character-profile synthesis and

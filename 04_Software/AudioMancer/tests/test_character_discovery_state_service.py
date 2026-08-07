@@ -315,6 +315,66 @@ def test_completed_character_notes_report_only_persisted_character_count(tmp_pat
         assert ui_state_service.translate("characters.note_rerun_replaces_manual", language) in state["notes"]
 
 
+def test_character_state_projects_rejected_candidate_warning_count(tmp_path) -> None:
+    """
+    @brief      Verify persisted rejected candidates become one truthful localized note group.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryRejectedNotes")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document = json.loads(document_path.read_text(encoding="utf-8"))
+    document["rejected_candidates"] = [
+        {
+            "canonical_name": "Narrated Bob",
+            "reason": "missing_spoken_dialogue_evidence",
+            "evidence_count": 2,
+            "identity_merge_count": 1,
+        }
+    ]
+    document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+    state = character_discovery_state_service.build_character_discovery_state(project_root, manifest, "en")
+
+    assert state["stage_status"] == "completed"
+    assert any("spoken dialogue" in note and note.endswith("1.") for note in state["notes"])
+
+
+def test_resumable_character_state_projects_persisted_rejection_notes(tmp_path) -> None:
+    """
+    @brief      Verify interrupted synthesis keeps persisted rejection notes visible before completion.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryResumableRejectedNotes")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document = json.loads(document_path.read_text(encoding="utf-8"))
+    document["status"] = "cancelled"
+    document["checkpoint"] = {
+        "phase": "synthesis",
+        "completed_window_count": 1,
+        "planned_window_count": 1,
+        "next_candidate_index": 0,
+        "candidates": [],
+    }
+    document["rejected_candidates"] = [
+        {
+            "canonical_name": "Narrated Bob",
+            "reason": "missing_evidence",
+            "evidence_count": 0,
+            "identity_merge_count": 1,
+        }
+    ]
+    document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+    state = character_discovery_state_service.build_character_discovery_state(project_root, manifest, "en")
+
+    assert state["stage_status"] == "cancelled"
+    assert any("valid source evidence" in note and note.endswith("1.") for note in state["notes"])
+
+
 def test_character_recovery_and_summary_localizations_share_placeholders() -> None:
     """
     @brief      Verify paired Character Discovery localization templates have equal fields.
@@ -401,6 +461,7 @@ def _create_project(tmp_path, name: str):
                     "usage_available": True,
                 },
                 "character_profile_id_last_used": "profile-1",
+                "rejected_candidates": [],
                 "checkpoint": None,
                 "failure": None,
                 "characters": [

@@ -143,11 +143,13 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
         "instructions",
         "token_usage",
         "character_profile_id_last_used",
+        "rejected_candidates",
         "checkpoint",
         "failure",
         "characters",
     }
     assert document["character_profile_id_last_used"] == "profile-1"
+    assert document["rejected_candidates"] == []
     assert set(document["characters"][0]) == {
         "character_id",
         "canonical_name",
@@ -181,7 +183,8 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
     )
     assert document_path.is_file()
     assert character_discovery_service.load_character_document(project_root) == document
-    assert list(project_root.glob("log_ai_characters_*.log"))
+    assert list(project_root.glob("log_ai_character_discovery_*.log"))
+    assert list(project_root.glob("log_ai_characters_*.log")) == []
     manifest_operation = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]
     assert manifest_operation["status"] == "completed"
     assert "checkpoint" not in manifest_operation
@@ -371,7 +374,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
 
     assert len(call_profiles) == 1
     assert len(log_paths) == 1
-    assert log_paths[0].startswith("log_ai_characters_")
+    assert log_paths[0].startswith("log_ai_character_discovery_")
     assert call_profiles[0]["id"] == "profile-2"
     assert call_profiles[0]["model_name"] == "qwen3-14b"
     assert report["status"] == "completed"
@@ -382,6 +385,13 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
     assert resumed_profile["gender_hint"] == "female"
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
+    upstream_translation_log = project_root / "log_ai_translation_preserved.log"
+    upstream_translation_log.write_text("translation log", encoding="utf-8")
+
+    character_discovery_service.reset_character_discovery(project_root)
+
+    assert list(project_root.glob("log_ai_character_discovery_*.log")) == []
+    assert upstream_translation_log.is_file()
 
 
 def test_character_discovery_strictly_rejects_malformed_and_invalid_root_payloads(tmp_path) -> None:
@@ -404,6 +414,42 @@ def test_character_discovery_strictly_rejects_malformed_and_invalid_root_payload
     [
         lambda payload: payload.pop("character_profile_id_last_used"),
         lambda payload: payload.update({"character_profile_id_last_used": 1}),
+        lambda payload: payload.pop("rejected_candidates"),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("Bob", "unexpected", 0, 1)]}
+        ),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("", "missing_evidence", 0, 1)]}
+        ),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("Bob", "missing_evidence", -1, 1)]}
+        ),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("Bob", "missing_evidence", 0, 0)]}
+        ),
+        lambda payload: payload.update(
+            {
+                "rejected_candidates": [
+                    {**_rejected_candidate_diagnostic("Bob", "missing_evidence", 0, 1), "source_excerpt": "forbidden"}
+                ]
+            }
+        ),
+        lambda payload: payload.update(
+            {
+                "rejected_candidates": [
+                    _rejected_candidate_diagnostic("Bob", "missing_evidence", 0, 1),
+                    _rejected_candidate_diagnostic("Bob", "missing_evidence", 2, 2),
+                ]
+            }
+        ),
+        lambda payload: payload.update(
+            {
+                "rejected_candidates": [
+                    _rejected_candidate_diagnostic("Zoe", "missing_evidence", 0, 1),
+                    _rejected_candidate_diagnostic("Amy", "missing_evidence", 0, 1),
+                ]
+            }
+        ),
         lambda payload: payload.update({"unexpected": True}),
         lambda payload: payload["checkpoint"].pop("planned_window_count"),
         lambda payload: payload["checkpoint"].update({"unexpected": True}),
@@ -512,6 +558,87 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
     assert call_stages == ["character_discovery_window", "character_profile_synthesis"]
     assert resumed_stages == ["character_profile_synthesis"]
     assert len(report["characters"]) == 1
+
+
+def test_rejected_candidate_diagnostics_survive_repeated_synthesis_resume(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify rejected-candidate diagnostics stay unique through repeated synthesis resume.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  OperationCancelledError Raised by the simulated interrupted synthesis calls.
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryRejectedResume")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    synthesis_attempts = 0
+
+    def _reject_then_interrupt(*_args, **kwargs):
+        """Return one accepted and one rejected candidate, then interrupt two synthesis attempts."""
+        nonlocal synthesis_attempts
+        if str(kwargs["log_context"]["stage_label"]) == "character_discovery_window":
+            return {
+                "payload": {
+                    "characters": [
+                        {
+                            "canonical_name": "Alice",
+                            "aliases": [],
+                            "confidence": "high",
+                            "evidence": [
+                                {
+                                    "chunk_id": "chunk-0001",
+                                    "source_excerpt": '\"Hello there,\" said Alice.',
+                                    "reason": "Alice speaks in direct dialogue.",
+                                }
+                            ],
+                        },
+                        {
+                            "canonical_name": "Narrated Bob",
+                            "aliases": [],
+                            "confidence": "low",
+                            "evidence": [],
+                        },
+                    ]
+                },
+                "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+            }
+        synthesis_attempts += 1
+        if synthesis_attempts < 3:
+            raise character_discovery_service.OperationCancelledError("interrupted synthesis")
+        return _synthesis_response_for_name("Alice")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _reject_then_interrupt)
+    for _attempt in range(2):
+        with pytest.raises(character_discovery_service.OperationCancelledError):
+            character_discovery_service.start_or_continue_discovery(
+                project_root,
+                manifest,
+                _profile_payload("profile-1"),
+                cancel_requested=lambda: False,
+            )
+        interrupted_document = character_discovery_service.load_character_document(project_root)
+        assert interrupted_document is not None
+        assert interrupted_document["rejected_candidates"] == [
+            {
+                "canonical_name": "Narrated Bob",
+                "reason": "missing_evidence",
+                "evidence_count": 0,
+                "identity_merge_count": 1,
+            }
+        ]
+        assert character_discovery_service.character_operation_summary(interrupted_document)["warning_count"] == 1
+
+    completed_document = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        cancel_requested=lambda: False,
+    )
+
+    assert synthesis_attempts == 3
+    assert completed_document["rejected_candidates"] == interrupted_document["rejected_candidates"]
+    assert character_discovery_service.character_operation_summary(completed_document)["warning_count"] == 1
+    persisted_manifest = project_workspace_service.load_manifest(project_root)
+    assert persisted_manifest["operations"]["character_discovery"]["warning_count"] == 1
 
 
 def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
@@ -1949,7 +2076,7 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     assert restored[3] == [resume_candidate]
     assert restored[6] == []
     assert restored[7] == 0
-    assert restored[9] == "discovery"
+    assert restored[8] == "discovery"
 
     stale_restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
         {
@@ -1964,7 +2091,7 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         input_fingerprint="abc",
         source_chunks=source_chunks,
     )
-    assert stale_restored == (0, 0, 0, [], [], [], [], 0, None, None)
+    assert stale_restored == (0, 0, 0, [], [], [], [], 0, None)
 
 
 def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeypatch, tmp_path) -> None:
@@ -2517,6 +2644,21 @@ def _empty_token_usage() -> dict[str, object]:
     }
 
 
+def _rejected_candidate_diagnostic(
+    canonical_name: str,
+    reason: str,
+    evidence_count: int,
+    identity_merge_count: int,
+) -> dict[str, object]:
+    """Build one strict rejected-candidate diagnostic test payload."""
+    return {
+        "canonical_name": canonical_name,
+        "reason": reason,
+        "evidence_count": evidence_count,
+        "identity_merge_count": identity_merge_count,
+    }
+
+
 def _character_document(
     source: dict[str, str],
     *,
@@ -2535,6 +2677,7 @@ def _character_document(
         "instructions": "",
         "token_usage": _empty_token_usage(),
         "character_profile_id_last_used": "profile-1",
+        "rejected_candidates": [],
         "checkpoint": persisted_checkpoint,
         "failure": None,
         "characters": list(characters or []),
