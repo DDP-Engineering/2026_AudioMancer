@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-f4d812b8 — Character Discovery log and diagnostics truth
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-FUNC-f5d9667f, REQ-FUNC-9b951004
@@ -44,7 +44,7 @@ opened: 2026-08-07
 - [x] delivery report generated and read; task remains `stage: deliver` with close-out unticked
 - [x] exact requested files staged; no protected planning file is staged
 - [x] project delivery additions satisfied; this task is not a versioned release
-- [ ] close-out: `stage: done` only after an authorized commit and push
+- [x] close-out: `stage: done` only after an authorized commit and push
 
 ## Log
 
@@ -79,6 +79,7 @@ opened: 2026-08-07
 - 2026-08-07 deliver: Accepted the final 49 warnings: one inherited ticket reference, twenty-seven inherited uncovered-source records outside this task, two expected current deliver checklist items before report/staging, and nineteen established protected-planning/layout paths plus the intentional help, changelog, and HowToTest outside-layout notices.
 - 2026-08-07 deliver: Warning-category recount corrected the layout total to twenty (sixteen protected planning files, two help files, CHANGELOG.md, and HowToTest.md); the final pre-staging check has 49 warnings because only the staging checklist item remains unticked.
 - 2026-08-07 deliver: Staged the exact CD-7/CD-8 implementation, tests, requirements/spec, knowledge, English/Romanian help, changelog, and journal; all five protected planning files remain untouched and unstaged, and close-out remains intentionally unticked because no commit or push was authorized.
+- 2026-08-07 deliver: Delivery commit 4115ad0 was pushed successfully to origin, so the task is now closed.
 
 ## Delivery report (2026-08-07)
 
