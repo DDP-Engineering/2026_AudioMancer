@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-c66ef4e5 — Narrator voice script-aware preview budgets
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-2b7862b5, REQ-FUNC-efbb32a4
@@ -44,7 +44,7 @@ opened: 2026-08-07
 - [x] delivery report generated and read; exact task files are staged without commit or push by request
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] this is not a release, so the four-place version workflow does not apply
-- [ ] close-out after the user-approved commit and delivery outcome
+- [x] close-out after the user-approved commit and delivery outcome
 
 ## Log
 
@@ -70,6 +70,7 @@ opened: 2026-08-07
 - 2026-08-08 deliver: Accepted warnings are one pre-existing requirement ticket reference, 31 repository-wide uncovered-source warnings, and 20 configuration layout warnings for documentation and read-only planning evidence outside configured source/test globs.
 - 2026-08-08 deliver: Two independent reviews approved after resolving the pre-probe short-circuit finding; no out-of-scope changes, planning-file modifications, portability, security, or localization findings remain.
 - 2026-08-08 deliver: Accepted the final `unticked-deliver` warning because the user explicitly requires stage `deliver` with only the post-commit close-out item open; the report's merge-base diff count includes predecessor-branch work, while staging is limited to this task's files.
+- 2026-08-08 deliver: Close-out succeeded: delivery commit f9f8ed8 was pushed, merge commit a32bf88 was pushed to bugfix/improvements, and the close-out commit will now follow on this task branch.
 
 ## Design
 
