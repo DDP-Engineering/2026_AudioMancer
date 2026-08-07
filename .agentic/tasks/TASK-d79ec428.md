@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-d79ec428 — Prevent invalid Character Discovery documents from blocking project open
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-5ee17a17
@@ -43,7 +43,7 @@ opened: 2026-08-07
 - [x] requirements re-read: status, prose, verification, and linked tests are true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit and the agreed branch push authorized
-- [ ] close-out: `stage: done` set and committed only after the delivery push succeeds
+- [x] close-out: `stage: done` set and committed only after the delivery push succeeds
 - [x] project delivery additions satisfied; this task is not a versioned release
 
 ## Log
@@ -63,6 +63,7 @@ opened: 2026-08-07
 - 2026-08-07 deliver: The combined delivery full suite later passed with 1395 passed, 62 skipped, and 1 deselected in 1564.10 seconds.
 - 2026-08-07 deliver: `aegis.py check --full` returned zero errors and only the documented inherited ticket and outside-layout warnings.
 - 2026-08-07 deliver: The supervisor reviewed the narrow strict-document recovery change and the human authorized commit and push.
+- 2026-08-07 deliver: Delivery commit 284de99 was pushed successfully, so the task is now closed.
 
 ## Design
 

@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-bf5a9cc2 — Make Character Discovery resume progress and profile selection truthful
 
-stage: deliver
+stage: done
 type: feature
 path: full
 requirements: REQ-FUNC-32f94a76, REQ-FUNC-d9978521
@@ -43,7 +43,7 @@ opened: 2026-08-07
 - [x] requirements re-read: status, prose, verification, and linked tests are true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit and the agreed branch push authorized
-- [ ] close-out: `stage: done` set and committed only after the delivery push succeeds
+- [x] close-out: `stage: done` set and committed only after the delivery push succeeds
 - [x] project delivery additions satisfied; this task is not a versioned release
 
 ## Log
@@ -82,6 +82,7 @@ opened: 2026-08-07
 - 2026-08-07 deliver: `aegis.py check --full` returned zero errors and 21 known ticket/layout warnings, while focused Ruff, py_compile, and diff-check passed.
 - 2026-08-07 deliver: The journal was closed to `stage: done` before staging by supervisor instruction; no commit or push was performed.
 - 2026-08-07 deliver: The journal returned to `stage: deliver` so the authorized delivery commit and push precede close-out as required by the current AEGIS contract.
+- 2026-08-07 deliver: Delivery commit 284de99 was pushed successfully, so the task is now closed.
 
 ## Delivery report (2026-08-07)
 
