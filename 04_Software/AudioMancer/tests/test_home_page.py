@@ -16,9 +16,11 @@
 # IMPORTS
 
 from PySide6.QtWidgets import QScrollArea
+import pytest
 
 from audiomancer import config
 from audiomancer.services import project_export_service, ui_theme_service
+from audiomancer.ui.pages import home_page
 from audiomancer.ui.pages.home_page import HomeProjectPage
 
 # PUBLIC API
@@ -302,6 +304,45 @@ def test_home_page_project_title_uses_serif_font(qtbot) -> None:
     qtbot.addWidget(page)
 
     assert page._name_label.font().family() == "Georgia"
+
+
+@pytest.mark.parametrize(
+    ("has_source", "options_locked", "source_name"),
+    [
+        (False, False, None),
+        (True, False, "draft.txt"),
+        (True, True, "locked.txt"),
+    ],
+)
+def test_home_page_language_switch_preserves_all_source_statuses(
+    qtbot,
+    has_source: bool,
+    options_locked: bool,
+    source_name: str | None,
+) -> None:
+    """
+    @brief      Verify language changes retain truthful source status and controls.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  has_source Whether a source is currently selected.
+    @param[in]  options_locked Whether project options are locked.
+    @param[in]  source_name Current source display name.
+    @return     None.
+    @exception  None
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+    page.set_project_state("Project", "/project", "source_selected")
+    page.set_source_locked(has_source, source_name)
+    page.set_project_options(options_locked, "en", "narrator_and_characters")
+    expected_style = page._source_lock_label.styleSheet()
+
+    page.apply_language("ro")
+
+    assert page._source_lock_label.text() == home_page._build_source_status_text(
+        "ro", has_source, options_locked, source_name
+    )
+    assert page._source_lock_label.styleSheet() == expected_style
+    assert page._import_button.isEnabled() is (not options_locked)
 
 
 # END OF FILE

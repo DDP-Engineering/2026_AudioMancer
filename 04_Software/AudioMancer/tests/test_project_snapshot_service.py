@@ -95,6 +95,8 @@ def test_project_snapshot_service_appends_zip_extension_and_default_name(tmp_pat
     project_root, manifest = project_workspace_service.create_project("Snapshot Helper", tmp_path)
 
     assert project_snapshot_service.ensure_snapshot_extension(tmp_path / "backup").suffix == ".zip"
+    assert project_snapshot_service.ensure_snapshot_extension(tmp_path / "Dune vol. 2").name == "Dune vol. 2.zip"
+    assert project_snapshot_service.ensure_snapshot_extension(tmp_path / "archive.ZIP").name == "archive.ZIP"
     assert (
         project_snapshot_service.default_snapshot_file_name(
             project_root,
@@ -228,6 +230,24 @@ def _build_snapshot_project(tmp_path) -> tuple[Path, dict[str, object]]:
     report_folder.mkdir()
     (report_folder / "details.json").write_text('{"ok": true}\n', encoding="utf-8")
     return project_root, manifest
+
+
+def test_project_snapshot_service_preserves_dotted_destination_name(tmp_path) -> None:
+    """
+    @brief      Verify snapshot extension normalization appends after dotted names.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _build_snapshot_project(tmp_path)
+    requested_path = tmp_path / "snapshots" / "Dune vol. 2"
+
+    result = project_snapshot_service.create_project_snapshot(project_root, requested_path)
+
+    expected_path = requested_path.with_name("Dune vol. 2.zip")
+    assert Path(str(result["snapshot_path"])) == expected_path
+    assert expected_path.is_file()
+    assert not requested_path.with_name("Dune vol.zip").exists()
 
 
 # END OF FILE

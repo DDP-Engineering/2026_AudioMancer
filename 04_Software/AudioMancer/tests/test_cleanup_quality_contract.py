@@ -392,6 +392,188 @@ def test_renderer_allows_only_safe_boundary_join_forms(
     assert metadata["quality_report"]["projection_violation_count"] == 0
 
 
+def test_renderer_rejects_controlled_unauthorized_empty_separator(
+    monkeypatch,
+) -> None:
+    """Reject an alphanumeric join introduced by a regressed separator renderer."""
+    canonical_text, ledger = build_ledger(["alpha", "beta"])
+    analysis = cleanup_analysis_service.analyze_cleanup(canonical_text, ledger)
+
+    def _omit_separator(
+        _parts,
+        _spans,
+        decisions,
+        output_length,
+        *,
+        at_document_start,
+    ):
+        del at_document_start
+        return (
+            output_length,
+            [
+                {
+                    **decision,
+                    "output_start": output_length,
+                    "output_end": output_length,
+                }
+                for decision in decisions
+            ],
+        )
+
+    monkeypatch.setattr(
+        cleanup_renderer_service,
+        "_render_boundary_group",
+        _omit_separator,
+    )
+
+    with pytest.raises(
+        cleanup_renderer_service.CleanupRenderError,
+        match="alphanumeric source adjacency",
+    ):
+        cleanup_renderer_service.render_cleanup(
+            canonical_text,
+            ledger,
+            analysis["unit_operations"],
+            analysis["boundaries"],
+        )
+
+
+@pytest.mark.parametrize(
+    ("cleaned_text", "spans", "boundaries", "expected"),
+    [
+        (
+            "éβ",
+            [
+                {"unit_id": "u-left", "start": 0, "end": 1},
+                {"unit_id": "u-right", "start": 1, "end": 2},
+            ],
+            [],
+            1,
+        ),
+        (
+            "é β",
+            [
+                {"unit_id": "u-left", "start": 0, "end": 1},
+                {"unit_id": "u-right", "start": 2, "end": 3},
+            ],
+            [],
+            0,
+        ),
+        (
+            "é.β",
+            [
+                {"unit_id": "u-left", "start": 0, "end": 2},
+                {"unit_id": "u-right", "start": 2, "end": 3},
+            ],
+            [],
+            0,
+        ),
+        (
+            "éβ",
+            [{"unit_id": "u-left", "start": 0, "end": 2}],
+            [],
+            0,
+        ),
+        (
+            "éβ",
+            [
+                {"unit_id": "u-left", "start": 0, "end": 1},
+                {"unit_id": "u-right", "start": 1, "end": 2},
+            ],
+            [
+                {
+                    "left_unit_id": "u-left",
+                    "output_start": 1,
+                    "output_end": 1,
+                    "dehyphenation_applied": True,
+                    "final": {"choice": "dehyphenate"},
+                }
+            ],
+            0,
+        ),
+        (
+            "éβ",
+            [
+                {"unit_id": "u-left", "start": 0, "end": 1},
+                {"unit_id": "u-right", "start": 1, "end": 2},
+            ],
+            [
+                {
+                    "left_unit_id": "u-dropped",
+                    "output_start": 1,
+                    "output_end": 1,
+                    "dehyphenation_applied": True,
+                    "final": {"choice": "dehyphenate"},
+                }
+            ],
+            1,
+        ),
+    ],
+)
+def test_rendered_projection_fusion_counter_is_not_constant(
+    cleaned_text,
+    spans,
+    boundaries,
+    expected,
+) -> None:
+    """Count only unsafe Unicode-alphanumeric joins across rendered spans."""
+    assert cleanup_renderer_service._introduced_fusion_count(
+        cleaned_text,
+        spans,
+        boundaries,
+    ) == expected
+
+
+@pytest.mark.parametrize(
+    ("left_choice", "dropped_choice", "raises", "expected_text"),
+    [
+        ("join_preserving_hyphen", "dehyphenate", True, None),
+        ("dehyphenate", "join_preserving_hyphen", False, "alphabeta\n"),
+    ],
+)
+def test_renderer_scopes_dropped_chain_dehyphenation_to_retained_left_span(
+    left_choice,
+    dropped_choice,
+    raises,
+    expected_text,
+) -> None:
+    """Authorize a dropped-chain join only from its retained left endpoint."""
+    canonical_text, ledger = build_ledger(["alpha-", "artifact-", "beta"])
+    analysis = cleanup_analysis_service.analyze_cleanup(canonical_text, ledger)
+    unit_ids = [str(item["unit_id"]) for item in ledger["units"]]
+    analysis["unit_operations"].append(
+        {
+            "operation_id": "op-drop-controlled",
+            "action": "drop_page_artifact",
+            "target_id": unit_ids[1],
+        }
+    )
+    analysis["boundaries"][0]["final"]["choice"] = left_choice
+    analysis["boundaries"][1]["final"]["choice"] = dropped_choice
+
+    if raises:
+        with pytest.raises(
+            cleanup_renderer_service.CleanupRenderError,
+            match="alphanumeric source adjacency",
+        ):
+            cleanup_renderer_service.render_cleanup(
+                canonical_text,
+                ledger,
+                analysis["unit_operations"],
+                analysis["boundaries"],
+            )
+        return
+
+    cleaned_text, metadata = cleanup_renderer_service.render_cleanup(
+        canonical_text,
+        ledger,
+        analysis["unit_operations"],
+        analysis["boundaries"],
+    )
+    assert cleaned_text == expected_text
+    assert metadata["quality_report"]["introduced_fusion_count"] == 0
+
+
 @pytest.mark.parametrize(
     ("left_x", "right_x", "left", "expected_choice"),
     [
@@ -1114,11 +1296,14 @@ def test_manual_whitespace_and_lexical_edits_keep_truthful_structure(tmp_path) -
 
     whitespace = text_cleanup_service.save_user_cleaned_text(
         project_root,
-        "First paragraph.\nSecond paragraph.\n",
+        "First paragraph.\n\n\nSecond paragraph.\n",
     )
 
     assert whitespace["structure_source"] == "cleanup_roles"
-    assert all(item["source_unit_ids"] for item in whitespace["paragraphs"])
+    assert [item["source_unit_ids"] for item in whitespace["paragraphs"]] == [
+        [str(ledger["units"][0]["unit_id"])],
+        [str(ledger["units"][1]["unit_id"])],
+    ]
     assert not chunk_path.exists()
 
     lexical = text_cleanup_service.save_user_cleaned_text(

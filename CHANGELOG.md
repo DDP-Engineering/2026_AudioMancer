@@ -12,6 +12,16 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Re-selecting a project's existing source file no longer creates a duplicate
+  copy or clears completed work. Changing the app language now keeps the source
+  status truthful, and export or snapshot names such as `Dune vol. 2` retain
+  their full name when AudioMancer adds `.txt`, `.md`, or `.zip`.
+- Cleanup now blocks alphanumeric word fusion introduced across rendered source
+  spans, including joins exposed by dropped page artifacts, while keeping valid
+  dehyphenation unchanged. Whitespace-only manual edits now retain source,
+  page, confidence, reason, and warning provenance only for uniquely matched
+  paragraphs; merged, split, duplicate, unmatched, and unprovenanced paragraphs
+  are marked unavailable instead of inheriting document-wide source IDs.
 - EPUB extraction now ignores hidden HTML content without losing visible text
   after it. Cleanup also warns, without stopping the workflow, when it detects
   a source language outside its supported English, Romanian, German, French,

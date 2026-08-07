@@ -35,6 +35,7 @@ from audiomancer.services import (
     token_usage_service,
 )
 from audiomancer.services.logging_service import get_component_logger
+from audiomancer.services.operation_runtime_service import append_required_extension
 from audiomancer.services.operation_runtime_service import is_path_inside_project as _is_path_inside_project
 from audiomancer.services.operation_runtime_service import safe_file_stem as _shared_safe_file_stem
 from audiomancer.services.time_service import utc_now_iso
@@ -276,9 +277,7 @@ def create_archive_export(
     if not bool(state.get("can_export", False)):
         _PROJECT_EXPORT_LOGGER.warning("Archive export unavailable kind=%s status=%s", export_kind, state.get("status"))
         raise ValueError("The requested export is not available yet.")
-    archive_path = Path(export_path)
-    if archive_path.suffix.lower() != ".zip":
-        archive_path = archive_path.with_suffix(".zip")
+    archive_path = append_required_extension(export_path, ".zip")
     archive_entries = _build_archive_entries(Path(project_root), manifest, export_kind)
     if not archive_entries:
         raise ValueError("The requested archive has no generated audio assets to export.")

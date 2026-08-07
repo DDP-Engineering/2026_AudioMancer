@@ -23,6 +23,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import (
+    cleanup_metadata_service,
     cleanup_renderer_service,
     deterministic_chunking_service,
     operation_runtime_service,
@@ -284,6 +285,22 @@ def test_whitespace_merge_split_preserves_narratable_prose(tmp_path) -> None:
         "body",
         "body",
     ]
+    assert [item["provenance_available"] for item in edited["paragraphs"]] == [
+        False,
+        True,
+        True,
+        True,
+        False,
+        False,
+    ]
+    assert all(
+        item["source_unit_ids"] == []
+        for item in (
+            edited["paragraphs"][0],
+            edited["paragraphs"][4],
+            edited["paragraphs"][5],
+        )
+    )
 
     deterministic_chunking_service.chunk_text(project_root, manifest)
 
@@ -332,6 +349,127 @@ def test_whitespace_role_realign_falls_back_for_ambiguous_content(tmp_path) -> N
         "body",
         "body",
         "body",
+    ]
+    assert [item["provenance_available"] for item in edited["paragraphs"]] == [
+        False,
+        False,
+        True,
+    ]
+    assert edited["paragraphs"][0]["source_unit_ids"] == []
+    assert edited["paragraphs"][1]["source_unit_ids"] == []
+
+
+def test_whitespace_realign_carries_unique_paragraph_metadata_and_warnings(
+    tmp_path,
+) -> None:
+    """Preserve only truthful local metadata and its downstream warning flags."""
+    canonical_text, ledger = build_ledger(
+        ["Alpha paragraph.", "Beta paragraph.", "Gamma paragraph."],
+        kinds=["heading", "paragraph", "paragraph"],
+        boundaries=[("\n\n", "native_paragraph")] * 2,
+        origins=["native", "native", "native"],
+        structure_quality="native",
+    )
+    project_root, manifest = build_project(
+        tmp_path,
+        "WhitespaceParagraphMetadata",
+        canonical_text,
+        ledger,
+    )
+    document = text_cleanup_service.clean_text(project_root, manifest)
+    unit_ids = [str(item["unit_id"]) for item in ledger["units"]]
+    document["paragraphs"][0].update(
+        {
+            "confidence": "low",
+            "reason_codes": ["deterministic_fallback", "retained_reason"],
+            "source_page_start": 2,
+            "source_page_end": 3,
+            "starts_after_page_transition": True,
+            "crosses_page_transition": True,
+            "source_unit_ids": [unit_ids[0], unit_ids[0]],
+            "provenance_available": True,
+        }
+    )
+    document["paragraphs"][1].update(
+        {
+            "confidence": "medium",
+            "reason_codes": ["unknown_line_boundary", "user_whitespace_realign"],
+            "source_page_start": 5,
+            "source_page_end": 5,
+            "starts_after_page_transition": False,
+            "crosses_page_transition": False,
+            "source_unit_ids": [unit_ids[1]],
+            "provenance_available": True,
+        }
+    )
+    document["paragraphs"][2].update(
+        {
+            "confidence": "low",
+            "reason_codes": ["retained_without_provenance"],
+            "source_page_start": 8,
+            "source_page_end": 9,
+            "starts_after_page_transition": True,
+            "crosses_page_transition": True,
+            "source_unit_ids": [unit_ids[2]],
+            "provenance_available": False,
+        }
+    )
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    edited = text_cleanup_service.save_user_cleaned_text(
+        project_root,
+        "Alpha paragraph.\n\n\nBeta paragraph.\n\n\nGamma paragraph.\n",
+    )
+
+    alpha, beta, gamma = edited["paragraphs"]
+    assert alpha["source_unit_ids"] == [unit_ids[0]]
+    assert beta["source_unit_ids"] == [unit_ids[1]]
+    assert alpha["provenance_available"] is True
+    assert beta["provenance_available"] is True
+    assert (
+        alpha["source_page_start"],
+        alpha["source_page_end"],
+        alpha["starts_after_page_transition"],
+        alpha["crosses_page_transition"],
+        alpha["confidence"],
+    ) == (2, 3, True, True, "low")
+    assert alpha["reason_codes"] == [
+        "deterministic_fallback",
+        "retained_reason",
+        "user_whitespace_realign",
+    ]
+    assert beta["reason_codes"].count("user_whitespace_realign") == 1
+    assert beta["confidence"] == "medium"
+    assert gamma["source_unit_ids"] == []
+    assert gamma["provenance_available"] is False
+    assert gamma["source_page_start"] is None
+    assert gamma["source_page_end"] is None
+    assert gamma["starts_after_page_transition"] is False
+    assert gamma["crosses_page_transition"] is False
+    assert gamma["reason_codes"] == [
+        "retained_without_provenance",
+        "user_whitespace_realign",
+    ]
+
+    cleaned_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
+    )
+    runtime_records = cleanup_metadata_service.load_completed_paragraph_records(
+        project_root,
+        cleaned_text,
+    )
+    assert [item["warning_flags"] for item in runtime_records] == [
+        ["deterministic_fallback"],
+        ["unknown_line_boundary"],
+        [],
+    ]
+    assert [item["text"] for item in runtime_records] == [
+        "Alpha paragraph.",
+        "Beta paragraph.",
+        "Gamma paragraph.",
     ]
 
 

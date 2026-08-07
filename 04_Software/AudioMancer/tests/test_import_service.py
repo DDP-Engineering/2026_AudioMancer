@@ -241,4 +241,65 @@ def test_import_source_rejects_previous_source_traversal_path(tmp_path) -> None:
     assert not (project_root / "new_story.txt").exists()
 
 
+def test_import_source_reselects_existing_project_copy_without_mutation(tmp_path) -> None:
+    """
+    @brief      Verify selecting the registered project source is an exact no-op.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    stored_source = project_root / "story.txt"
+    stored_source.write_text("stored source", encoding="utf-8")
+    previous_source = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-08-07T12:00:00+00:00",
+        "size_bytes": stored_source.stat().st_size,
+    }
+    before = {
+        path.relative_to(project_root).as_posix(): path.read_bytes()
+        for path in project_root.rglob("*")
+        if path.is_file()
+    }
+
+    result = import_service.import_source(project_root, project_root / "." / "story.txt", previous_source)
+
+    after = {
+        path.relative_to(project_root).as_posix(): path.read_bytes()
+        for path in project_root.rglob("*")
+        if path.is_file()
+    }
+    assert result == previous_source
+    assert after == before
+
+
+def test_import_source_replaces_with_different_external_file_of_same_name(tmp_path) -> None:
+    """
+    @brief      Verify a different same-named file remains a real replacement.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    stored_source = project_root / "story.txt"
+    stored_source.write_text("stored source", encoding="utf-8")
+    external_source = tmp_path / "external" / "story.txt"
+    external_source.parent.mkdir()
+    external_source.write_text("replacement source", encoding="utf-8")
+
+    result = import_service.import_source(
+        project_root,
+        external_source,
+        {"stored_relative_path": "story.txt"},
+    )
+
+    assert result["stored_relative_path"] == "story_1.txt"
+    assert not stored_source.exists()
+    assert (project_root / "story_1.txt").read_text(encoding="utf-8") == "replacement source"
+
+
 # END OF FILE

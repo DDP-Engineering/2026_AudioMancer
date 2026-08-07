@@ -205,6 +205,16 @@ alphanumeric adjacency are rejected. When one or more page-artifact units are
 dropped, the renderer collapses their boundary chain to one typed separator
 between the nearest surviving narrative units.
 
+`REQ-FUNC-e42171cc` makes the fusion gate inspect the completed rendered text
+and consecutive retained source spans rather than the original direct unit
+strings. Unicode-alphanumeric endpoints touching across spans are rejected,
+including across dropped-unit chains, unless a projected `dehyphenate`
+decision actually removed the retained left span's source-terminal hyphen at
+that exact join. Preserved hyphens, whitespace, line/paragraph separators,
+punctuation, and adjacency within one source span remain safe. Unsafe output is
+rejected before publication; successful quality reports therefore retain a
+zero introduced-fusion count without treating the metric as constant.
+
 AI is eligible only when a selected profile advertises structured output and
 at least a 16K context window. Batches contain 4 questions at 16-31K, 8 at
 32-127K, and 16 at 128K or above. Oversized requests split recursively.
@@ -307,6 +317,18 @@ lexical edit publishes minimal `user_edited` paragraph structure without
 claiming source provenance. Rebuilt user-edited paragraphs conservatively
 reclassify explicit marker-only scene separators while ambiguous punctuation
 and lexical content remain `body`.
+
+`REQ-FUNC-c30ccde3` also makes whitespace-only provenance paragraph-local. A
+normalized content key must occur exactly once in both the prior and rebuilt
+paragraph sets before metadata can be carried. A prior record with explicitly
+available, nonempty provenance contributes only its ordered deduplicated source
+unit IDs, page fields, transition flags, confidence, and existing reason codes;
+`user_whitespace_realign` is retained once without erasing warning-producing
+reasons. Merged, split, unmatched, duplicate, and previously unprovenanced
+paragraphs keep empty source IDs, cleared page provenance, false transition
+flags, and `provenance_available: false`, so one document may truthfully mix
+resolved and unresolved paragraphs.
+
 If an exact source unit cannot be found during whitespace realignment, the edit
 still persists, the component logger emits a warning, and `cleanup.json`
 records `user_whitespace_realign_incomplete`.
@@ -387,10 +409,12 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py`
+  - renders span/boundary projections and enforces introduced-fusion safety
 - `04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
+  - persists conservative paragraph-local provenance after manual whitespace edits
 - `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py`
 - `04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
@@ -404,7 +428,9 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
 - `04_Software/AudioMancer/tests/test_cleanup_metadata_service.py`
 - `04_Software/AudioMancer/tests/test_cleanup_quality_contract.py`
+  - covers rendered-span fusion, valid joins, and manual-edit structure/provenance
 - `04_Software/AudioMancer/tests/test_cleanup_service.py`
+  - covers unique, mixed, merge/split, duplicate, warning, role, chunk, and offset cases
 - `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`

@@ -568,6 +568,23 @@ def safe_file_stem(value: object, fallback: str = "AudioMancer") -> str:
     return normalized or fallback
 
 
+def append_required_extension(path: str | Path, required_extension: str) -> Path:
+    """
+    @brief      Append one required extension without replacing dotted filename text.
+    @param[in]  path Candidate destination path.
+    @param[in]  required_extension Required extension including the leading dot.
+    @return     Original path when it already has the extension, otherwise appended path.
+    @exception  ValueError Raised when the required extension has no leading dot.
+    """
+    extension = str(required_extension)
+    if not extension.startswith("."):
+        raise ValueError("Required extension must start with a dot.")
+    resolved_path = Path(path)
+    if resolved_path.name.casefold().endswith(extension.casefold()):
+        return resolved_path
+    return resolved_path.with_name(f"{resolved_path.name}{extension}")
+
+
 def is_missing_runtime_value(value: object) -> bool:
     """
     @brief      Return whether one persisted runtime value is missing or null-like.

@@ -25,6 +25,7 @@ from audiomancer.services import (
     audio_blocks_service,
     home_presenter_service,
     import_service,
+    operation_runtime_service,
     project_export_service,
     project_snapshot_service,
     project_workspace_service,
@@ -225,6 +226,12 @@ def handle_import_source_requested(window: "MainWindow") -> None:
 
     try:
         previous_source_document = window._current_manifest.get("source_document")
+        if import_service.is_same_source_selection(
+            window._current_project_root,
+            selected_file,
+            previous_source_document if isinstance(previous_source_document, dict) else None,
+        ):
+            return
         source_document = import_service.import_source(
             window._current_project_root,
             selected_file,
@@ -381,9 +388,10 @@ def handle_export_requested(window: "MainWindow", export_kind: str, export_forma
     if not selected_path:
         return
 
-    export_path = Path(selected_path)
-    if export_path.suffix.lower() != required_extension:
-        export_path = export_path.with_suffix(required_extension)
+    export_path = operation_runtime_service.append_required_extension(
+        selected_path,
+        required_extension,
+    )
     if project_export_service.is_path_inside_project(window._current_project_root, export_path):
         QMessageBox.warning(
             window,

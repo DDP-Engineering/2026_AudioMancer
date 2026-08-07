@@ -224,6 +224,22 @@ unchanged. Generated-artifact names are reserved case-insensitively, so a
 supported source named `extracted_text.txt` or `clean_text.txt` receives the
 normal numeric suffix instead of occupying a reset-owned path.
 
+`REQ-FUNC-3278aae6` makes re-selecting the stored source an exact no-op. Both
+the import service and Home controller compare the resolved filesystem identity
+after project-relative containment validation, so the existing source payload,
+manifest bytes, artifacts, summaries, and stage remain untouched. A different
+external file with the same basename remains a normal collision-safe
+replacement.
+
+`REQ-UX-e4b0be69` keeps `_refresh_summary_labels()` as the only derivation for
+the Home source status. Language changes therefore retain the translated absent,
+selected-unlocked, or locked status, its source name, styling, and controls.
+
+`REQ-FUNC-cfd0a750` uses the shared append-only extension helper before export
+and snapshot containment checks. It compares complete filenames
+case-insensitively and appends the required extension only when absent, so
+`Dune vol. 2` becomes `Dune vol. 2.zip` and `archive.ZIP` remains unchanged.
+
 `REQ-FUNC-2ab78634` defines canonical Cleanup publication as a synchronized
 transition. Cleanup first uses Operation Orchestration to delete Chunking and
 all downstream artifacts, atomically publishes its text and metadata, then
@@ -309,6 +325,11 @@ project tree byte-for-byte, exercise current and case-variant reserved names,
 and replace a processed project through the Home controller while checking all
 root artifacts, generated audio, compact summaries, new-source registration,
 stage reset, and unlocked option preservation.
+They also verify resolved same-source no-ops, different same-named replacements,
+and byte-for-byte preservation through the Home controller. Home-page tests
+cover each source status in English and Romanian. Export and snapshot tests
+cover dotted, extensionless, lowercase, and uppercase destination names at both
+controller and service boundaries.
 `test_cleanup_service.py` covers the shared manifest-reset builder through both
 Cleanup publication paths, including real downstream artifacts, completed
 summaries, preservation checks, coherent reopen, and injected manifest-write
@@ -344,6 +365,7 @@ From the adopted component map:
 
 - `04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/import_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared append-only destination-extension normalization.
 - `04_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`

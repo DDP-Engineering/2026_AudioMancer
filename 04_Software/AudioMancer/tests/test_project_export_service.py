@@ -625,4 +625,47 @@ def _write_ai_log(path) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def test_project_export_service_preserves_dotted_archive_destination_name(tmp_path) -> None:
+    """
+    @brief      Verify archive export appends ZIP without truncating dotted names.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+    requested_path = tmp_path / "Dune vol. 2"
+
+    archive_path = project_export_service.create_archive_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        requested_path,
+    )
+
+    assert archive_path == requested_path.with_name("Dune vol. 2.zip")
+    assert archive_path.is_file()
+    assert not requested_path.with_name("Dune vol.zip").exists()
+
+
+def test_project_export_service_keeps_existing_uppercase_zip_extension(tmp_path) -> None:
+    """
+    @brief      Verify archive export does not duplicate an uppercase ZIP extension.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+    requested_path = tmp_path / "archive.ZIP"
+
+    archive_path = project_export_service.create_archive_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        requested_path,
+    )
+
+    assert archive_path == requested_path
+    assert archive_path.is_file()
+
+
 # END OF FILE

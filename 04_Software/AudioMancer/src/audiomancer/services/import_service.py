@@ -64,6 +64,12 @@ def import_source(
         raise ValueError(f"Unsupported source format: {suffix}")
 
     resolved_project_root = Path(project_root)
+    if is_same_source_selection(
+        resolved_project_root,
+        resolved_source,
+        previous_source_document,
+    ):
+        return previous_source_document
     previous_source_path = _resolve_previous_source_file(
         resolved_project_root,
         previous_source_document,
@@ -111,12 +117,33 @@ def _resolve_previous_source_file(
     if not stored_relative_path:
         return None
     previous_path = resolve_project_relative_path(project_root, stored_relative_path)
-    try:
-        if previous_path == selected_source.resolve():
-            return None
-    except FileNotFoundError:
-        pass
     return previous_path
+
+
+def is_same_source_selection(
+    project_root: str | Path,
+    source_path: str | Path,
+    previous_source_document: dict[str, object] | None,
+) -> bool:
+    """
+    @brief      Determine whether a selected file is the registered project source.
+    @param[in]  project_root Active project root.
+    @param[in]  source_path Operator-selected source file.
+    @param[in]  previous_source_document Existing manifest source payload.
+    @return     True when both paths resolve to the same existing filesystem file.
+    @exception  ValueError Raised when the previous manifest path escapes the project.
+    """
+    if not isinstance(previous_source_document, dict):
+        return False
+    stored_relative_path = str(previous_source_document.get("stored_relative_path") or "").strip()
+    if not stored_relative_path:
+        return False
+    previous_path = resolve_project_relative_path(Path(project_root), stored_relative_path)
+    selected_path = Path(source_path)
+    try:
+        return previous_path.samefile(selected_path)
+    except OSError:
+        return previous_path == selected_path.resolve()
 
 
 def _copy_source_atomically(source_path: Path, destination_path: Path) -> None:

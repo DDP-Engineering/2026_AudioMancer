@@ -657,7 +657,7 @@ def test_home_ui_controller_routes_zip_export_to_archive_writer(
     qtbot.addWidget(window)
     window._current_project_root = project_root
     window._current_manifest = manifest
-    selected_path = tmp_path / "outside" / "voices"
+    selected_path = tmp_path / "outside" / "voices.final"
     archive_calls = []
 
     monkeypatch.setattr(
@@ -695,7 +695,7 @@ def test_home_ui_controller_routes_zip_export_to_archive_writer(
 
     assert archive_calls
     assert archive_calls[0][2] == project_export_service.EXPORT_KIND_NARRATOR_VOICE
-    assert archive_calls[0][3] == selected_path.with_suffix(".zip")
+    assert archive_calls[0][3] == selected_path.with_name("voices.final.zip")
 
 
 def test_home_ui_controller_rejects_snapshot_inside_project(
@@ -1174,6 +1174,108 @@ def _run_threaded_operation_synchronously(
     )
     success_handler(result)
     set_busy(False)
+
+
+def test_home_ui_controller_preserves_dotted_export_destination(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify Home exports append extensions after the requested dotted name.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("DottedExport", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._current_project_root = project_root
+    window._current_manifest = manifest
+    selected_path = tmp_path / "outside" / "draft.final"
+    monkeypatch.setattr(
+        home_ui_controller.project_export_service,
+        "build_export_states",
+        lambda *_args: [
+            {
+                "export_kind": project_export_service.EXPORT_KIND_CLEANED_TEXT,
+                "status": project_export_service.EXPORT_STATUS_AVAILABLE,
+                "can_export": True,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getSaveFileName",
+        lambda *args, **kwargs: (str(selected_path), ""),
+    )
+    monkeypatch.setattr(home_ui_controller.project_export_service, "render_export", lambda *args, **kwargs: "content")
+
+    home_ui_controller.handle_export_requested(
+        window,
+        project_export_service.EXPORT_KIND_CLEANED_TEXT,
+        project_export_service.EXPORT_FORMAT_TXT,
+    )
+
+    assert selected_path.with_name("draft.final.txt").read_text(encoding="utf-8") == "content"
+    assert not selected_path.with_name("draft.txt").exists()
+
+
+def test_home_ui_controller_reselects_stored_source_without_reset(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify selecting the stored source leaves the manifest and artifacts unchanged.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("SameSource", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("stored source", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": source_path.name,
+        "stored_relative_path": source_path.name,
+        "file_type": "txt",
+        "imported_at": "2026-08-07T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["current_stage"] = "source_selected"
+    project_workspace_service.save_manifest(manifest, project_root)
+    artifact_path = project_root / "extracted_text.txt"
+    artifact_path.write_text("preserved artifact", encoding="utf-8")
+    before = {
+        path.relative_to(project_root).as_posix(): path.read_bytes()
+        for path in project_root.rglob("*")
+        if path.is_file()
+    }
+    refreshed_manifests = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest=project_workspace_service.load_manifest(project_root),
+        _home_page=SimpleNamespace(selected_project_options=lambda: ("en", "narrator_and_characters")),
+        show_project_state=lambda _root, updated: refreshed_manifests.append(updated),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getOpenFileName",
+        lambda *args, **kwargs: (str(source_path), ""),
+    )
+    monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: None)
+
+    home_ui_controller.handle_import_source_requested(window)
+
+    after = {
+        path.relative_to(project_root).as_posix(): path.read_bytes()
+        for path in project_root.rglob("*")
+        if path.is_file()
+    }
+    assert after == before
+    assert refreshed_manifests == []
 
 
 # END OF FILE

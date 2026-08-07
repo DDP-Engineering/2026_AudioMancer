@@ -145,10 +145,9 @@ def render_cleanup(
     if not cleaned_text.strip():
         raise CleanupRenderError("Cleanup cannot produce an empty document.")
     introduced_fusions = _introduced_fusion_count(
-        canonical_text,
-        units,
-        drops,
-        boundary_decisions,
+        cleaned_text,
+        spans,
+        rendered_boundaries,
     )
     if introduced_fusions:
         raise CleanupRenderError(
@@ -185,6 +184,7 @@ def _render_boundary_group(
         str(item["final"]["choice"])
         for item in decisions
     ]
+    dehyphenated_left_unit_id: str | None = None
     if at_document_start:
         separator = ""
     elif "document_end" in choices:
@@ -202,6 +202,13 @@ def _render_boundary_group(
             output_length -= 1
             if spans:
                 spans[-1]["end"] = int(spans[-1]["end"]) - 1
+                retained_left_unit_id = str(spans[-1]["unit_id"])
+                if any(
+                    str(item["final"]["choice"]) == "dehyphenate"
+                    and str(item.get("left_unit_id")) == retained_left_unit_id
+                    for item in decisions
+                ):
+                    dehyphenated_left_unit_id = retained_left_unit_id
     start = output_length
     if separator:
         parts.append(separator)
@@ -213,6 +220,12 @@ def _render_boundary_group(
                 **decision,
                 "output_start": start,
                 "output_end": output_length,
+                "dehyphenation_applied": (
+                    dehyphenated_left_unit_id is not None
+                    and str(decision["final"]["choice"]) == "dehyphenate"
+                    and str(decision.get("left_unit_id"))
+                    == dehyphenated_left_unit_id
+                ),
             }
             for decision in decisions
         ],
@@ -340,29 +353,42 @@ def validate_operations(
 
 
 def _introduced_fusion_count(
-    canonical_text: str,
-    units: dict[str, dict[str, object]],
-    drops: set[str],
-    boundary_decisions: list[dict[str, object]],
+    cleaned_text: str,
+    spans: list[dict[str, object]],
+    rendered_boundaries: list[dict[str, object]],
 ) -> int:
-    """Count newly adjacent alphanumeric source slices not authorized by dehyphenation."""
+    """Count unsafe alphanumeric joins across separate rendered source spans."""
     count = 0
-    for decision in boundary_decisions:
-        left_id = decision.get("left_unit_id")
-        right_id = decision.get("right_unit_id")
-        if left_id is None or right_id is None:
+    nonempty_spans = [
+        item
+        for item in spans
+        if int(item["end"]) > int(item["start"])
+    ]
+    for left_span, right_span in zip(
+        nonempty_spans,
+        nonempty_spans[1:],
+        strict=False,
+    ):
+        join_offset = int(left_span["end"])
+        if join_offset != int(right_span["start"]):
             continue
-        if str(left_id) in drops or str(right_id) in drops:
+        if join_offset <= 0 or join_offset >= len(cleaned_text):
             continue
-        choice = str(decision["final"]["choice"])
-        if choice not in {"dehyphenate", "join_preserving_hyphen"}:
+        if not (
+            cleaned_text[join_offset - 1].isalnum()
+            and cleaned_text[join_offset].isalnum()
+        ):
             continue
-        left_text = unit_text(canonical_text, units[str(left_id)])
-        right_text = unit_text(canonical_text, units[str(right_id)])
-        if choice == "dehyphenate":
+        if any(
+            item.get("dehyphenation_applied") is True
+            and str(item["final"]["choice"]) == "dehyphenate"
+            and str(item.get("left_unit_id")) == str(left_span["unit_id"])
+            and int(item["output_start"]) == join_offset
+            and int(item["output_end"]) == join_offset
+            for item in rendered_boundaries
+        ):
             continue
-        if left_text and right_text and left_text[-1].isalnum() and right_text[0].isalnum():
-            count += 1
+        count += 1
     return count
 
 

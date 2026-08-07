@@ -134,6 +134,11 @@ file currently exists. Project Lifecycle compares them case-insensitively when
 choosing a stored source name, which is conservative on case-sensitive hosts
 and consistent with Windows behavior.
 
+The shared `append_required_extension` helper preserves a complete requested
+filename, compares extensions case-insensitively, and appends only a missing
+required extension. Project Lifecycle uses it for export and snapshot paths
+before containment checks, avoiding dotted-name truncation.
+
 ## 7. Workflow Integration
 
 Text extraction/cleanup, chunking, translation, character, voice, speech, TTS,
@@ -202,7 +207,7 @@ for translating their own failure state into operator-facing outcomes.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared runtime artifact, path-containment, and append-only extension helpers.
 - `04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`

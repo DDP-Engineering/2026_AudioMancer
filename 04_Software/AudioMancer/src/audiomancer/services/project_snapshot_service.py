@@ -67,10 +67,10 @@ def ensure_snapshot_extension(snapshot_path: str | Path) -> Path:
     @return     Path with the required snapshot extension.
     @exception  None
     """
-    resolved_path = Path(snapshot_path)
-    if resolved_path.suffix.lower() == SNAPSHOT_EXTENSION:
-        return resolved_path
-    return resolved_path.with_suffix(SNAPSHOT_EXTENSION)
+    return operation_runtime_service.append_required_extension(
+        snapshot_path,
+        SNAPSHOT_EXTENSION,
+    )
 
 
 def is_path_inside_project(project_root: str | Path, snapshot_path: str | Path) -> bool:

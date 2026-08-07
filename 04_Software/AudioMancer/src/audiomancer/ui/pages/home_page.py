@@ -609,10 +609,6 @@ class HomeProjectPage(QWidget):
             ui_state_service.translate("home.mode_narrator_and_characters", language),
         )
         self._refresh_summary_labels()
-        if self._source_locked:
-            self._source_lock_label.setText(_build_locked_source_text(language, self._current_locked_source_name))
-        else:
-            self._source_lock_label.setText(ui_state_service.translate("home.no_source", language))
         self.set_stage_statuses(self._stage_entries)
         self._refresh_export_rows()
         self._refresh_project_options_controls()

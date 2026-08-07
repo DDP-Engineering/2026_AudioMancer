@@ -493,16 +493,7 @@ def save_user_cleaned_text(
         runtime_records = cleanup_metadata_service.build_paragraph_records_from_text(
             edited_text
         )
-        source_ids = [
-            str(unit_id)
-            for item in document["paragraphs"]
-            for unit_id in item.get("source_unit_ids", [])
-        ]
         _realign_whitespace_roles(previous_records, runtime_records)
-        for record in runtime_records:
-            record["source_unit_ids"] = list(dict.fromkeys(source_ids))
-            record["provenance_available"] = True
-            record["reason_codes"] = ["user_whitespace_realign"]
         document["paragraphs"] = (
             cleanup_metadata_service.persisted_paragraph_records(runtime_records)
         )
@@ -982,33 +973,85 @@ def _realign_whitespace_roles(
     current_records: list[dict[str, object]],
 ) -> None:
     """
-    @brief      Carry prior Cleanup roles across unambiguous content matches.
+    @brief      Carry prior Cleanup metadata across unambiguous content matches.
     @param[in]  previous_records Prior runtime paragraph records with text.
-    @param[out] current_records Rebuilt runtime records receiving safe roles.
+    @param[out] current_records Rebuilt runtime records receiving safe metadata.
     @return     None.
     @exception  None
     """
-    roles_by_text: dict[str, list[str]] = {}
+    previous_by_text: dict[str, list[dict[str, object]]] = {}
     for record in previous_records:
         comparison_key = cleanup_text_analysis_service.normalized_compare_key(
             str(record.get("text") or "")
         )
         if comparison_key:
-            roles_by_text.setdefault(comparison_key, []).append(
-                str(record.get("role") or "body")
-            )
+            previous_by_text.setdefault(comparison_key, []).append(record)
+
+    current_by_text: dict[str, list[dict[str, object]]] = {}
+    for record in current_records:
+        comparison_key = cleanup_text_analysis_service.normalized_compare_key(
+            str(record.get("text") or "")
+        )
+        if comparison_key:
+            current_by_text.setdefault(comparison_key, []).append(record)
 
     for record in current_records:
         classified_role = str(record.get("role") or "body")
         record["role"] = classified_role
-        if classified_role == "scene_separator":
-            continue
+        record["reason_codes"] = _reason_codes_with_whitespace_realign(
+            record.get("reason_codes")
+        )
         comparison_key = cleanup_text_analysis_service.normalized_compare_key(
             str(record.get("text") or "")
         )
-        prior_roles = roles_by_text.get(comparison_key, [])
-        if len(prior_roles) == 1 and prior_roles[0] != "scene_separator":
-            record["role"] = prior_roles[0]
+        prior_matches = previous_by_text.get(comparison_key, [])
+        current_matches = current_by_text.get(comparison_key, [])
+        if len(prior_matches) != 1 or len(current_matches) != 1:
+            continue
+
+        prior = prior_matches[0]
+        prior_role = str(prior.get("role") or "body")
+        if classified_role != "scene_separator" and prior_role != "scene_separator":
+            record["role"] = prior_role
+        record["confidence"] = str(prior.get("confidence") or "strong")
+        record["reason_codes"] = _reason_codes_with_whitespace_realign(
+            prior.get("reason_codes")
+        )
+
+        raw_source_ids = prior.get("source_unit_ids")
+        source_ids = (
+            list(
+                dict.fromkeys(
+                    str(unit_id)
+                    for unit_id in raw_source_ids
+                    if str(unit_id)
+                )
+            )
+            if isinstance(raw_source_ids, list)
+            else []
+        )
+        if prior.get("provenance_available") is not True or not source_ids:
+            continue
+        record["source_unit_ids"] = source_ids
+        record["provenance_available"] = True
+        record["source_page_start"] = prior.get("source_page_start")
+        record["source_page_end"] = prior.get("source_page_end")
+        record["starts_after_page_transition"] = bool(
+            prior.get("starts_after_page_transition", False)
+        )
+        record["crosses_page_transition"] = bool(
+            prior.get("crosses_page_transition", False)
+        )
+
+
+def _reason_codes_with_whitespace_realign(value: object) -> list[str]:
+    """Return ordered unique reason codes with the realignment marker."""
+    existing = (
+        [str(item) for item in value]
+        if isinstance(value, list)
+        else []
+    )
+    return list(dict.fromkeys([*existing, "user_whitespace_realign"]))
 
 
 def _realign_whitespace_boundaries(

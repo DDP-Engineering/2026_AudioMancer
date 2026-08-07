@@ -1,26 +1,28 @@
 schema = 1
 id = "REQ-FUNC-e42171cc"
-title = "Cleanup validation shall reject every newly introduced alphanumeric"
+title = "Cleanup shall reject newly introduced rendered alphanumeric fusion"
 status = "active"
 
 requirement = """
-Cleanup validation shall reject every newly introduced alphanumeric adjacency except a source-validated dehyphenation.
+When rendering places alphanumeric endpoints from separate retained source spans directly beside each other, Cleanup shall reject the result unless that exact join removed the left rendered span's source-terminal hyphen through an applicable dehyphenation decision.
 """
 
-verification = "Fusion-blocking and safe join-form tests pass."
+verification = "Rendered-span tests distinguish ordinary separators, preserved punctuation and hyphens, and applicable dehyphenation from unauthorized direct and dropped-unit adjacency, with unsafe renders raising CleanupRenderError before publication."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_rejects_unsupported_boundary_choice",
   "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_rejects_controlled_unauthorized_empty_separator",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_rendered_projection_fusion_counter_is_not_constant",
+  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_scopes_dropped_chain_dehyphenation_to_retained_left_span",
 ]
 
-spec = "specs/cleanup_chunking.spec.md"
+spec = "specs/REQ-FUNC-e42171cc.md"
 priority = "high"
 rationale = """
 The operation must make word fusion impossible by construction across ordinary and dropped-artifact boundaries.
 """
 created = 2026-07-28
-updated = 2026-07-30
+updated = 2026-08-07
