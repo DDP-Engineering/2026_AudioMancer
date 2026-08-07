@@ -21,6 +21,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import unicodedata
 
 from audiomancer import config
 from audiomancer.services import (
@@ -2763,11 +2764,12 @@ def _prompt_has_explicit_age_instruction(prompt_text: str) -> bool:
 
 def _normalize_identity(value: str) -> str:
     """
-    @brief      Normalize the identity.
-    @param[in]  value Candidate value.
-    @return     Derived helper result.
+    @brief      Build the shared Unicode character-identity comparison key.
+    @param[in]  value Candidate canonical name or alias.
+    @return     Case-folded alphanumeric Unicode identity key.
     """
-    return re.sub(r"[^a-z0-9]+", "", value.casefold())
+    decomposed_value = unicodedata.normalize("NFKD", str(value).casefold())
+    return "".join(character for character in decomposed_value if character.isalnum())
 
 
 def _slugify_character_id(name: str, fallback_index: int) -> str:

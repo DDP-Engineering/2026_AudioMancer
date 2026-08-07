@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Character Discovery now accepts manual character names in Unicode scripts and
+  matches equivalent names consistently across accents, composed spellings, and
+  aliases. Repeated non-Latin character mentions are combined before voice
+  synthesis, preventing duplicate character profiles and requests.
 - Resuming Character Discovery now keeps characters added or edited after an
   interruption through later checkpoints, cancellation, provider failure, and
   completion. Manual characters no longer make synthesis skip discovered

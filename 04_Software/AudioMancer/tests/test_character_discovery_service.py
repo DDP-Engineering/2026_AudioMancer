@@ -1592,6 +1592,136 @@ def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -
         )
 
 
+def test_manual_character_names_use_unicode_identity_keys(tmp_path) -> None:
+    """
+    @brief      Verify manual Unicode names persist and compare by identity key.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  AssertionError Raised when Unicode validation or persistence changes.
+    """
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryUnicodeManual")
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(source, status="completed", checkpoint=None, characters=[]),
+    )
+    names = ["Алиса", "Αλέξανδρος", "王小明", "さくら", "민준", "דוד", "ليلى"]
+
+    for name in names:
+        character_discovery_service.add_character_profile(project_root, name)
+
+    profiles = character_discovery_service.load_character_profiles(project_root)
+    assert {str(profile["canonical_name"]) for profile in profiles} == set(names)
+    korean_profile = next(profile for profile in profiles if profile["canonical_name"] == "민준")
+    korean_profile["aliases"] = ["민수"]
+    character_discovery_service.update_character_profile(project_root, korean_profile)
+    document = character_discovery_service.load_character_document(project_root)
+    assert {item["canonical_name"] for item in document["characters"] if item["canonical_name"] in names} == set(names)
+    assert next(item for item in document["characters"] if item["canonical_name"] == "민준")["aliases"] == ["민수"]
+
+    existing_profiles = [
+        {"character_id": "rene", "canonical_name": "René", "aliases": ["Алиса", "José"]},
+    ]
+    for duplicate_name in ["Rene", "Алиса", "José", "A_B"]:
+        with pytest.raises(ValueError, match="duplicate_name"):
+            character_discovery_service.validate_manual_character_name(
+                existing_profiles + [{"character_id": "ab", "canonical_name": "AB", "aliases": []}],
+                duplicate_name,
+            )
+    assert character_discovery_service.validate_manual_character_name(existing_profiles, "Renée") == "Renée"
+    assert character_discovery_service.validate_manual_character_name(existing_profiles, "Jos") == "Jos"
+    assert character_discovery_service.validate_manual_character_name(
+        [{"character_id": "alice", "canonical_name": "Алиса", "aliases": []}],
+        "Алиса",
+        exclude_character_id="alice",
+    ) == "Алиса"
+    for invalid_name in ["   ", "!!!", "😀", "$", "  ́"]:
+        with pytest.raises(ValueError, match="invalid_name"):
+            character_discovery_service.validate_manual_character_name([], invalid_name)
+
+
+def test_group_character_candidates_uses_unicode_identity_keys() -> None:
+    """
+    @brief      Verify Unicode candidate identity grouping preserves distinct names.
+    @return     None.
+    @exception  AssertionError Raised when candidate identities merge incorrectly.
+    """
+    candidates = [
+        {"canonical_name": "Алиса", "aliases": []},
+        {"canonical_name": "АЛИСА", "aliases": []},
+        {"canonical_name": "Αλέξανδρος", "aliases": []},
+        {"canonical_name": "Αλέξανδρος", "aliases": []},
+        {"canonical_name": "王小明", "aliases": ["小明"]},
+        {"canonical_name": "小明", "aliases": []},
+        {"canonical_name": "שרה", "aliases": ["שָׂרָה"]},
+        {"canonical_name": "سارة", "aliases": ["שָׂרָה"]},
+        {"canonical_name": "René", "aliases": []},
+        {"canonical_name": "Rene", "aliases": []},
+        {"canonical_name": "Renée", "aliases": []},
+        {"canonical_name": "José", "aliases": []},
+        {"canonical_name": "Jos", "aliases": []},
+        {"canonical_name": "!!!", "aliases": []},
+        {"canonical_name": "😀", "aliases": []},
+    ]
+
+    groups = character_discovery_service._group_character_candidates_by_identity(candidates)  # noqa: SLF001
+
+    assert [[item["canonical_name"] for item in group] for group in groups] == [
+        ["Алиса", "АЛИСА"],
+        ["Αλέξανδρος", "Αλέξανδρος"],
+        ["王小明", "小明"],
+        ["שרה", "سارة"],
+        ["René", "Rene"],
+        ["Renée"],
+        ["José"],
+        ["Jos"],
+        ["!!!"],
+        ["😀"],
+    ]
+    merged = character_discovery_service._merge_candidate_identity_group(groups[3])  # noqa: SLF001
+    assert merged["identity_alias_keys"] == sorted(  # noqa: SLF001
+        {
+            character_discovery_service._normalize_identity("שרה"),  # noqa: SLF001
+            character_discovery_service._normalize_identity("سارة"),  # noqa: SLF001
+        }
+    )
+
+
+def test_discovery_synthesizes_repeated_unicode_identity_once(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify repeated Unicode discovery candidates trigger one synthesis request.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  AssertionError Raised when repeated identities synthesize more than once.
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryUnicodeGrouping")
+    _set_character_project_chunks(project_root, 10)
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    window_names = iter([("Алиса", "chunk-0001"), ("АЛИСА", "chunk-0009")])
+    synthesis_requests: list[str] = []
+
+    def _discover_then_synthesize(*_args, **kwargs):
+        """Return one repeated Cyrillic mention per window and record synthesis."""
+        if str(kwargs["log_context"]["stage_label"]) == "character_discovery_window":
+            name, chunk_id = next(window_names)
+            return _window_response_for_names([name], chunk_id)
+        synthesis_requests.append("character_profile_synthesis")
+        return _synthesis_response_for_name("Алиса")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _discover_then_synthesize)
+    document = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+
+    assert synthesis_requests == ["character_profile_synthesis"]
+    assert [item["canonical_name"] for item in document["characters"]] == ["Алиса"]
+
+
 def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
     """
     @brief      Validate budgeted chunk windows use eight chunks as cap.

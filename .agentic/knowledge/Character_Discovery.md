@@ -30,6 +30,12 @@ consumers.
 `characters_ui_controller.py` coordinates start, resume, cancellation, reset,
 and manual maintenance.
 
+Manual validation and candidate grouping share one Unicode-aware identity key.
+The key uses NFKD decomposition, case folding, and Unicode alphanumeric
+characters, discarding combining marks and punctuation. It compares accented
+Latin spelling variants without transliterating other scripts; canonical names
+and aliases retain their original display spelling in `characters.json`.
+
 Discovery checkpoints after every successful window. Synthesis remains
 sequential: each candidate is compacted to the current profile budget and sent
 in one AI request, then the resulting character and next index are committed
@@ -128,6 +134,11 @@ provider failure, manual inventory in varied ordering, edited and deleted AI
 profiles, cursor-based provider-call counts, source mismatch, force rerun,
 explicit reset, token usage, instructions, and atomic document writes.
 
+Unicode regressions cover manual add/edit and canonical/alias duplicates across
+Cyrillic, Greek, CJK, Japanese, Korean, Hebrew, and Arabic names; composed and
+accent-folded equivalents; distinct base spellings; empty keys; grouping order;
+and one synthesis request for repeated mentions across discovery windows.
+
 Minimum validation includes focused pytest runs, Python compilation, and Ruff.
 
 ## 10. Limitations And Future Work
@@ -152,5 +163,8 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
 - `.agentic/requirements/functional/REQ-FUNC-57acf8bd.toml`
 - `.agentic/requirements/functional/REQ-FUNC-df901739.toml`
+- `.agentic/requirements/functional/REQ-FUNC-e3015445.toml`
 - `.agentic/requirements/functional/REQ-FUNC-e3feefa9.toml`
+- `.agentic/requirements/functional/REQ-FUNC-f5fc5dd8.toml`
 - `.agentic/specs/REQ-FUNC-df901739.md`
+- `.agentic/specs/REQ-FUNC-f5fc5dd8.md`
