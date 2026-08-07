@@ -26,6 +26,7 @@ from audiomancer.services import (
     narrator_definition_service,
     project_workspace_service,
     speech_blocks_service,
+    ui_state_service,
 )
 from audiomancer.ui.controllers import narator_voice_ui_controller
 from audiomancer.ui.main_window import MainWindow
@@ -658,7 +659,7 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
     )
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
-        "estimated_word_count",
+        "estimate_budget_units",
         lambda _text: 10,
     )
     monkeypatch.setattr(
@@ -771,7 +772,7 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
     )
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
-        "estimated_word_count",
+        "estimate_budget_units",
         lambda _text: 10,
     )
     monkeypatch.setattr(
@@ -814,6 +815,62 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
     sample_metadata = narrator_definition_service.load_profile_sample_metadata(project_root, profile["profile_id"])
     assert sample_metadata is not None
     assert sample_metadata["preview_text"] == "Previous sample text."
+
+
+def test_narator_voice_generate_sample_rejects_compact_script_budget_before_runtime_work(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify compact-script previews stop at the safe budget before VoiceWeaver commands run.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary path fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerCompactBudget")
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Chinese Narrator",
+        "Chinese",
+        "Generated prompt.",
+        narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE["zh"],
+    )
+    progress_messages = {
+        **_sample_progress_messages(),
+        "preview_text_over_budget": ui_state_service.translate(
+            "narator_voice.error_preview_text_over_budget",
+            "en",
+        ),
+    }
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache_from_settings",
+        lambda _settings_payload: pytest.fail("VoiceWeaver was probed after a rejected preview budget."),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "resolve_cached_tts_budget",
+        lambda _models: {},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "estimated_safe_word_count",
+        lambda _payload: 14,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: pytest.fail("VoiceWeaver status was queried after a rejected preview budget."),
+    )
+
+    with pytest.raises(RuntimeError, match=r"15 budget units, safe limit 14"):
+        narator_voice_ui_controller._generate_and_store_sample(
+            project_root,
+            _default_settings_payload(),
+            progress_messages,
+            profile,
+            narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE["zh"],
+            progress_callback=None,
+            cancel_requested=lambda: False,
+        )
 
 
 def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker(
@@ -1176,7 +1233,7 @@ def _sample_progress_messages() -> dict[str, str]:
     return {
         "prepare": "Preparing narator sample generation...",
         "qwen_capabilities_missing": "Missing capabilities: {missing_capabilities}",
-        "preview_text_over_budget": "Preview text has {word_count} words; safe limit is {safe_word_count}.",
+        "preview_text_over_budget": "Preview text has {word_count} budget units; safe limit is {safe_word_count}.",
         "load_model": "Loading voice generation model...",
         "generate": "Generating narator voice sample...",
         "generation_missing_audio": "VoiceWeaver did not return downloadable audio.",

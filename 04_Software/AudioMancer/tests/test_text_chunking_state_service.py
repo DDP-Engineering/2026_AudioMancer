@@ -288,6 +288,8 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
                     "total_tokens": 0,
                     "usage_available": False,
                 },
+                "character_profile_id_last_used": "profile-1",
+                "rejected_candidates": [],
                 "checkpoint": None,
                 "failure": None,
                 "characters": [],

@@ -443,7 +443,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Regenerate dedicated voice-definition text for characters when the description is weak.</li>
                     <li>Approve the character list before narrator and character voice work continues.</li>
                     <li>Drag the divider between the character workspace and evidence; each side keeps at least one third of the page width.</li>
-                    <li>Interrupt discovery and continue later from the same project.</li>
+                    <li>Interrupt discovery and continue later from the same project. The page shows completed and planned discovery windows while discovery is running or resumable, then carries that window baseline into character-profile synthesis progress.</li>
+                    <li>Choose any enabled AI profile before Start or Resume. Normal page refreshes keep that selection; Resume uses the profile currently selected in the list.</li>
+                    <li>When discovery excludes candidates because their source or spoken-dialogue evidence is insufficient, the completed page groups the reasons without storing source excerpts; the Characters export shows the same warning count.</li>
+                    <li>As part of its established current-and-downstream reset, Reset Discovery removes Character Discovery transaction logs while preserving upstream logs such as Translation.</li>
                     <li>If Character Discovery data is invalid, use <strong>Reset Discovery</strong> to remove it and return the page to a ready state.</li>
                 </ul>
                 <figure>
@@ -467,6 +470,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Inspect available narrator profiles and the selected project narrator.</li>
                     <li>Use Generate Narator Profiles to create editable text-only AI profile suggestions, with optional operator profile rules in a word-wrapped prompt box before generation.</li>
                     <li>Edit narrator prompt, preview text, and voice description before generation.</li>
+                    <li>The Preview budget uses script-aware spoken units and must remain within the displayed safe limit before generating a sample.</li>
                     <li>Generate a VoiceWeaver sample for the chosen voice language.</li>
                     <li>Play and stop narrator samples inside the page.</li>
                     <li>Use the Select button above the profile list to choose the final narrator sample used downstream by Speech Blocks and Audio Blocks.</li>

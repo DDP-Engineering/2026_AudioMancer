@@ -1,0 +1,79 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-efbb32a4"
+
+title = "Narrator samples shall enforce script-aware safe TTS budgets"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When Narrator Voice validates or displays a sample-preview TTS budget, it shall use the shared script-aware budget-unit estimate so the displayed count matches the pre-runtime safe-budget decision.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Focused controller, state-service, and page tests prove a space-less over-budget preview fails before VoiceWeaver work with the localized actionable message, and all displayed counters use the same script-aware value while Latin behavior remains unchanged."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_failure_preserves_previous_sample",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_rejects_compact_script_budget_before_runtime_work",
+  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_show_counts_and_qwen_readiness",
+  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_use_compact_script_budget_units",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_preview_budget_uses_compact_script_units",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"
+rationale = "Whitespace counts let space-less previews bypass the safe TTS limit and show operators a false budget value."
+
+created = 2026-08-07
+updated = 2026-08-07

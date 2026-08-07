@@ -22,7 +22,12 @@ from pathlib import Path
 import pytest
 
 from audiomancer import config
-from audiomancer.services import character_discovery_service, narrator_definition_service, project_workspace_service
+from audiomancer.services import (
+    character_discovery_service,
+    character_discovery_state_service,
+    narrator_definition_service,
+    project_workspace_service,
+)
 from chunking_test_support import build_chunking_document
 
 
@@ -137,10 +142,14 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
         "source",
         "instructions",
         "token_usage",
+        "character_profile_id_last_used",
+        "rejected_candidates",
         "checkpoint",
         "failure",
         "characters",
     }
+    assert document["character_profile_id_last_used"] == "profile-1"
+    assert document["rejected_candidates"] == []
     assert set(document["characters"][0]) == {
         "character_id",
         "canonical_name",
@@ -174,13 +183,14 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
     )
     assert document_path.is_file()
     assert character_discovery_service.load_character_document(project_root) == document
-    assert list(project_root.glob("log_ai_characters_*.log"))
+    assert list(project_root.glob("log_ai_character_discovery_*.log"))
+    assert list(project_root.glob("log_ai_characters_*.log")) == []
     manifest_operation = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]
     assert manifest_operation["status"] == "completed"
     assert "checkpoint" not in manifest_operation
     assert "log_relative_path" not in manifest_operation
     serialized_document = document_path.read_text(encoding="utf-8")
-    assert "profile-1" not in serialized_document
+    assert '"character_profile_id_last_used": "profile-1"' in serialized_document
     assert "qwen3-8b" not in serialized_document
     assert "temperature" not in serialized_document
     assert "max_output_tokens" not in serialized_document
@@ -364,7 +374,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
 
     assert len(call_profiles) == 1
     assert len(log_paths) == 1
-    assert log_paths[0].startswith("log_ai_characters_")
+    assert log_paths[0].startswith("log_ai_character_discovery_")
     assert call_profiles[0]["id"] == "profile-2"
     assert call_profiles[0]["model_name"] == "qwen3-14b"
     assert report["status"] == "completed"
@@ -375,6 +385,13 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
     assert resumed_profile["gender_hint"] == "female"
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
+    upstream_translation_log = project_root / "log_ai_translation_preserved.log"
+    upstream_translation_log.write_text("translation log", encoding="utf-8")
+
+    character_discovery_service.reset_character_discovery(project_root)
+
+    assert list(project_root.glob("log_ai_character_discovery_*.log")) == []
+    assert upstream_translation_log.is_file()
 
 
 def test_character_discovery_strictly_rejects_malformed_and_invalid_root_payloads(tmp_path) -> None:
@@ -388,6 +405,80 @@ def test_character_discovery_strictly_rejects_malformed_and_invalid_root_payload
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     document_path = discovery_root / config.CHARACTERS_DOCUMENT_FILE_NAME
     document_path.write_text('{"broken": ', encoding="utf-8")
+    with pytest.raises(character_discovery_service.CharacterDocumentError):
+        character_discovery_service.load_character_document(project_root)
+
+
+@pytest.mark.parametrize(
+    "mutate_document",
+    [
+        lambda payload: payload.pop("character_profile_id_last_used"),
+        lambda payload: payload.update({"character_profile_id_last_used": 1}),
+        lambda payload: payload.pop("rejected_candidates"),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("Bob", "unexpected", 0, 1)]}
+        ),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("", "missing_evidence", 0, 1)]}
+        ),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("Bob", "missing_evidence", -1, 1)]}
+        ),
+        lambda payload: payload.update(
+            {"rejected_candidates": [_rejected_candidate_diagnostic("Bob", "missing_evidence", 0, 0)]}
+        ),
+        lambda payload: payload.update(
+            {
+                "rejected_candidates": [
+                    {**_rejected_candidate_diagnostic("Bob", "missing_evidence", 0, 1), "source_excerpt": "forbidden"}
+                ]
+            }
+        ),
+        lambda payload: payload.update(
+            {
+                "rejected_candidates": [
+                    _rejected_candidate_diagnostic("Bob", "missing_evidence", 0, 1),
+                    _rejected_candidate_diagnostic("Bob", "missing_evidence", 2, 2),
+                ]
+            }
+        ),
+        lambda payload: payload.update(
+            {
+                "rejected_candidates": [
+                    _rejected_candidate_diagnostic("Zoe", "missing_evidence", 0, 1),
+                    _rejected_candidate_diagnostic("Amy", "missing_evidence", 0, 1),
+                ]
+            }
+        ),
+        lambda payload: payload.update({"unexpected": True}),
+        lambda payload: payload["checkpoint"].pop("planned_window_count"),
+        lambda payload: payload["checkpoint"].update({"unexpected": True}),
+        lambda payload: payload["checkpoint"].update({"completed_window_count": "1"}),
+        lambda payload: payload["checkpoint"].update({"planned_window_count": -1}),
+    ],
+)
+def test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields(
+    tmp_path,
+    mutate_document,
+) -> None:
+    """Verify the evolved exact root and checkpoint fields remain a hard break."""
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryStrictNewFields")
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    invalid_document = _character_document(
+        source,
+        status="cancelled",
+        checkpoint={
+            "phase": "discovery",
+            "completed_window_count": 1,
+            "planned_window_count": 2,
+            "next_chunk_index": 8,
+            "candidates": [],
+        },
+    )
+    mutate_document(invalid_document)
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document_path.write_text(json.dumps(invalid_document, indent=2) + "\n", encoding="utf-8")
+
     with pytest.raises(character_discovery_service.CharacterDocumentError):
         character_discovery_service.load_character_document(project_root)
 
@@ -469,6 +560,87 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
     assert len(report["characters"]) == 1
 
 
+def test_rejected_candidate_diagnostics_survive_repeated_synthesis_resume(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify rejected-candidate diagnostics stay unique through repeated synthesis resume.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  OperationCancelledError Raised by the simulated interrupted synthesis calls.
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryRejectedResume")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    synthesis_attempts = 0
+
+    def _reject_then_interrupt(*_args, **kwargs):
+        """Return one accepted and one rejected candidate, then interrupt two synthesis attempts."""
+        nonlocal synthesis_attempts
+        if str(kwargs["log_context"]["stage_label"]) == "character_discovery_window":
+            return {
+                "payload": {
+                    "characters": [
+                        {
+                            "canonical_name": "Alice",
+                            "aliases": [],
+                            "confidence": "high",
+                            "evidence": [
+                                {
+                                    "chunk_id": "chunk-0001",
+                                    "source_excerpt": '\"Hello there,\" said Alice.',
+                                    "reason": "Alice speaks in direct dialogue.",
+                                }
+                            ],
+                        },
+                        {
+                            "canonical_name": "Narrated Bob",
+                            "aliases": [],
+                            "confidence": "low",
+                            "evidence": [],
+                        },
+                    ]
+                },
+                "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+            }
+        synthesis_attempts += 1
+        if synthesis_attempts < 3:
+            raise character_discovery_service.OperationCancelledError("interrupted synthesis")
+        return _synthesis_response_for_name("Alice")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _reject_then_interrupt)
+    for _attempt in range(2):
+        with pytest.raises(character_discovery_service.OperationCancelledError):
+            character_discovery_service.start_or_continue_discovery(
+                project_root,
+                manifest,
+                _profile_payload("profile-1"),
+                cancel_requested=lambda: False,
+            )
+        interrupted_document = character_discovery_service.load_character_document(project_root)
+        assert interrupted_document is not None
+        assert interrupted_document["rejected_candidates"] == [
+            {
+                "canonical_name": "Narrated Bob",
+                "reason": "missing_evidence",
+                "evidence_count": 0,
+                "identity_merge_count": 1,
+            }
+        ]
+        assert character_discovery_service.character_operation_summary(interrupted_document)["warning_count"] == 1
+
+    completed_document = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        cancel_requested=lambda: False,
+    )
+
+    assert synthesis_attempts == 3
+    assert completed_document["rejected_candidates"] == interrupted_document["rejected_candidates"]
+    assert character_discovery_service.character_operation_summary(completed_document)["warning_count"] == 1
+    persisted_manifest = project_workspace_service.load_manifest(project_root)
+    assert persisted_manifest["operations"]["character_discovery"]["warning_count"] == 1
+
+
 def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-012 synthesis failures persist a failed checkpoint.
@@ -547,6 +719,7 @@ def test_discovery_resume_preserves_manual_inventory_through_checkpoints_and_rec
             cancel_requested=lambda: False,
         )
 
+    initial_checkpoint = character_discovery_service.load_character_document(project_root)["checkpoint"]
     character_discovery_service.add_character_profile(project_root, "Ghost")
     manual_record = character_discovery_service.load_character_document(project_root)["characters"][0]
     persisted_documents: list[dict[str, object]] = []
@@ -589,6 +762,15 @@ def test_discovery_resume_preserves_manual_inventory_through_checkpoints_and_rec
     cancelled_document = character_discovery_service.load_character_document(project_root)
     assert cancelled_document["status"] == "cancelled"
     assert cancelled_document["characters"] == [manual_record]
+    assert cancelled_document["checkpoint"]["completed_window_count"] == (
+        initial_checkpoint["completed_window_count"] + 1
+    )
+    assert cancelled_document["checkpoint"]["planned_window_count"] >= (
+        cancelled_document["checkpoint"]["completed_window_count"]
+    )
+    repeated_resume_summary = character_discovery_service.character_operation_summary(cancelled_document)
+    assert repeated_resume_summary["progress_current"] == cancelled_document["checkpoint"]["completed_window_count"]
+    assert repeated_resume_summary["progress_total"] == cancelled_document["checkpoint"]["planned_window_count"]
 
 
 def test_discovery_resume_provider_failure_preserves_current_inventory(monkeypatch, tmp_path) -> None:
@@ -600,6 +782,7 @@ def test_discovery_resume_provider_failure_preserves_current_inventory(monkeypat
     @exception  None
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryManualResumeFailure")
+    _set_character_project_chunks(project_root, 20)
     _patch_character_discovery_prompt_rendering(monkeypatch)
     _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
     manual_record = _nested_character_record(
@@ -619,11 +802,17 @@ def test_discovery_resume_provider_failure_preserves_current_inventory(monkeypat
             characters=[manual_record],
         ),
     )
-    monkeypatch.setattr(
-        character_discovery_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("provider failed")),
-    )
+    provider_call_count = 0
+
+    def _complete_one_window_then_fail(*_args, **_kwargs):
+        """Commit one resumed window before simulating a provider failure."""
+        nonlocal provider_call_count
+        provider_call_count += 1
+        if provider_call_count == 1:
+            return _window_response_for_names(["Alice"], "chunk-0001")
+        raise RuntimeError("provider failed")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _complete_one_window_then_fail)
 
     with pytest.raises(RuntimeError, match="provider failed"):
         character_discovery_service.start_or_continue_discovery(
@@ -637,6 +826,13 @@ def test_discovery_resume_provider_failure_preserves_current_inventory(monkeypat
     failed_document = character_discovery_service.load_character_document(project_root)
     assert failed_document["status"] == "failed"
     assert failed_document["characters"] == [manual_record]
+    assert failed_document["checkpoint"]["completed_window_count"] == 1
+    assert failed_document["checkpoint"]["planned_window_count"] > 1
+    failed_summary = character_discovery_service.character_operation_summary(failed_document)
+    assert (failed_summary["progress_current"], failed_summary["progress_total"]) == (
+        failed_document["checkpoint"]["completed_window_count"],
+        failed_document["checkpoint"]["planned_window_count"],
+    )
 
 
 def test_discovery_resume_manual_inventory_does_not_skip_synthesis_candidates(monkeypatch, tmp_path) -> None:
@@ -1864,6 +2060,8 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
             "characters": [],
             "checkpoint": {
                 "phase": "discovery",
+                "completed_window_count": 1,
+                "planned_window_count": 2,
                 "next_chunk_index": 1,
                 "candidates": [resume_candidate],
             },
@@ -1873,10 +2071,11 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     )
 
     assert restored[0] == 1
-    assert restored[1] == 1
-    assert restored[2] == [resume_candidate]
-    assert restored[5] == []
-    assert restored[6] == 0
+    assert restored[1] == 2
+    assert restored[2] == 1
+    assert restored[3] == [resume_candidate]
+    assert restored[6] == []
+    assert restored[7] == 0
     assert restored[8] == "discovery"
 
     stale_restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
@@ -1892,7 +2091,164 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         input_fingerprint="abc",
         source_chunks=source_chunks,
     )
-    assert stale_restored == (0, 0, [], [], [], [], 0, None, None)
+    assert stale_restored == (0, 0, 0, [], [], [], [], 0, None)
+
+
+def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeypatch, tmp_path) -> None:
+    """Verify cancellation, repeated resume, manifest, page, and synthesis share real window counts."""
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryWindowProgress")
+    _set_character_project_chunks(project_root, 100)
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    budget_metadata = {
+        "text_budget_tokens": 10000,
+        "synthesis_payload_budget_tokens": 10000,
+        "synthesis_max_evidence_items": 8,
+    }
+    monkeypatch.setattr(character_discovery_service, "_build_budget_metadata", lambda *_args: budget_metadata)
+    source_chunks, _source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    planned_windows = character_discovery_service._build_chunk_windows(  # noqa: SLF001
+        source_chunks,
+        config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
+        config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+        budget_metadata,
+    )
+    completed_before_cancel = next(
+        index + 1
+        for index, window in enumerate(planned_windows)
+        if character_discovery_service._next_chunk_index_after_window(source_chunks, window) >= 40  # noqa: SLF001
+    )
+    expected_cursor = character_discovery_service._next_chunk_index_after_window(  # noqa: SLF001
+        source_chunks,
+        planned_windows[completed_before_cancel - 1],
+    )
+    resumed_planned_window_count = completed_before_cancel + len(
+        character_discovery_service._build_chunk_windows(  # noqa: SLF001
+            source_chunks[expected_cursor:],
+            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
+            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+            budget_metadata,
+        )
+    )
+    discovery_call_count = 0
+    progress_updates: list[tuple[int, int]] = []
+
+    def _cancel_near_chunk_forty(*_args, **kwargs):
+        """Return real discovery responses until the planned cursor threshold is checkpointed."""
+        nonlocal discovery_call_count
+        if str(kwargs["log_context"]["stage_label"]) != "character_discovery_window":
+            raise AssertionError("synthesis must not begin before cancellation")
+        discovery_call_count += 1
+        if discovery_call_count > completed_before_cancel:
+            raise character_discovery_service.OperationCancelledError("cancel near chunk 40")
+        names = ["Alice"] if discovery_call_count == 1 else []
+        return _window_response_for_names(names, planned_windows[discovery_call_count - 1][0]["chunk_id"])
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _cancel_near_chunk_forty)
+    with pytest.raises(character_discovery_service.OperationCancelledError):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda current, total, *_args, **_kwargs: progress_updates.append((current, total)),
+            cancel_requested=lambda: False,
+        )
+
+    cancelled_document = character_discovery_service.load_character_document(project_root)
+    assert cancelled_document is not None
+    checkpoint = cancelled_document["checkpoint"]
+    assert checkpoint == {
+        "phase": "discovery",
+        "completed_window_count": completed_before_cancel,
+        "planned_window_count": len(planned_windows),
+        "next_chunk_index": expected_cursor,
+        "candidates": checkpoint["candidates"],
+    }
+    assert (completed_before_cancel, len(planned_windows)) in progress_updates
+    summary = character_discovery_service.character_operation_summary(cancelled_document, len(source_chunks))
+    assert (summary["progress_current"], summary["progress_total"]) == (completed_before_cancel, len(planned_windows))
+    project_workspace_service.sync_manifest_operation_summary(project_root, "character_discovery", summary)
+    manifest_progress = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]
+    assert (manifest_progress["progress_current"], manifest_progress["progress_total"]) == (
+        completed_before_cancel,
+        len(planned_windows),
+    )
+    page_state = character_discovery_state_service.build_character_discovery_state(
+        project_root,
+        manifest,
+        "en",
+        {
+            "llm_profiles": [{"id": "profile-1", "label": "Profile One", "enabled": True}],
+            "default_character_extraction_profile_id": "profile-1",
+        },
+    )
+    assert any(f"{completed_before_cancel}/{len(planned_windows)}" in note for note in page_state["notes"])
+
+    persisted_writes: list[dict[str, object]] = []
+    original_write_json_atomic = character_discovery_service.write_json_atomic
+
+    def _capture_resume_writes(path, payload):
+        """Capture strict checkpoints written while the resumed run transitions to synthesis."""
+        if Path(path).name == config.CHARACTERS_DOCUMENT_FILE_NAME:
+            persisted_writes.append(json.loads(json.dumps(payload)))
+        return original_write_json_atomic(path, payload)
+
+    def _complete_resume(*_args, **kwargs):
+        """Complete remaining discovery windows and the one saved synthesis candidate."""
+        if str(kwargs["log_context"]["stage_label"]) == "character_discovery_window":
+            return _window_response_for_names([], "chunk-0001")
+        return _synthesis_response_for_name("Alice")
+
+    monkeypatch.setattr(character_discovery_service, "write_json_atomic", _capture_resume_writes)
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _complete_resume)
+    completed_document = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-2"),
+        progress_callback=lambda *_args, **_kwargs: None,
+        cancel_requested=lambda: False,
+    )
+
+    synthesis_checkpoint = next(
+        payload["checkpoint"]
+        for payload in persisted_writes
+        if isinstance(payload.get("checkpoint"), dict) and payload["checkpoint"].get("phase") == "synthesis"
+    )
+    assert synthesis_checkpoint["completed_window_count"] == resumed_planned_window_count
+    assert synthesis_checkpoint["planned_window_count"] == resumed_planned_window_count
+    assert completed_document["character_profile_id_last_used"] == "profile-2"
+
+
+def test_resume_state_keeps_window_counts_separate_from_chunk_cursor() -> None:
+    """Verify a persisted variable-window baseline never becomes a chunk count."""
+    source_chunks = [
+        _chunk_payload(f"chunk-{index:04d}", index, '"Hello," said Alice.')
+        for index in range(1, 101)
+    ]
+    checkpoint = {
+        "phase": "discovery",
+        "completed_window_count": 5,
+        "planned_window_count": 12,
+        "next_chunk_index": 40,
+        "candidates": [],
+    }
+    restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
+        {
+            "status": "cancelled",
+            "source": {"kind": "original", "language": "en", "fingerprint": "abc"},
+            "characters": [],
+            "checkpoint": checkpoint,
+        },
+        input_fingerprint="abc",
+        source_chunks=source_chunks,
+    )
+
+    summary = character_discovery_service.character_operation_summary(
+        {"status": "cancelled", "checkpoint": checkpoint, "characters": []}
+    )
+
+    assert restored[0:3] == (5, 12, 40)
+    assert summary["progress_current"] == 5
+    assert summary["progress_total"] == 12
 
 
 def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
@@ -2288,6 +2644,21 @@ def _empty_token_usage() -> dict[str, object]:
     }
 
 
+def _rejected_candidate_diagnostic(
+    canonical_name: str,
+    reason: str,
+    evidence_count: int,
+    identity_merge_count: int,
+) -> dict[str, object]:
+    """Build one strict rejected-candidate diagnostic test payload."""
+    return {
+        "canonical_name": canonical_name,
+        "reason": reason,
+        "evidence_count": evidence_count,
+        "identity_merge_count": identity_merge_count,
+    }
+
+
 def _character_document(
     source: dict[str, str],
     *,
@@ -2296,12 +2667,18 @@ def _character_document(
     characters: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     """Build one strict Character Discovery test document."""
+    persisted_checkpoint = None if checkpoint is None else dict(checkpoint)
+    if isinstance(persisted_checkpoint, dict):
+        persisted_checkpoint.setdefault("completed_window_count", 0)
+        persisted_checkpoint.setdefault("planned_window_count", 0)
     return {
         "status": status,
         "source": dict(source),
         "instructions": "",
         "token_usage": _empty_token_usage(),
-        "checkpoint": checkpoint,
+        "character_profile_id_last_used": "profile-1",
+        "rejected_candidates": [],
+        "checkpoint": persisted_checkpoint,
         "failure": None,
         "characters": list(characters or []),
     }

@@ -68,6 +68,7 @@ def build_character_discovery_state(
     manifest: dict[str, object] | None,
     language: str,
     settings_payload: dict[str, object] | None = None,
+    selected_profile_id: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the full Characters page state from project artifacts.
@@ -75,14 +76,16 @@ def build_character_discovery_state(
     @param[in]  manifest Active project manifest or `None`.
     @param[in]  language Runtime UI language code.
     @param[in]  settings_payload Persisted application settings payload.
+    @param[in]  selected_profile_id Currently live Characters-page profile selection.
     @return     Page-state payload consumed by the Characters page.
     @exception  None
     """
     if project_root is None or manifest is None:
+        profile_state = build_character_discovery_profile_state(settings_payload, selected_profile_id)
         return {
             "profiles": [],
             "notes": [ui_state_service.translate("characters.note_no_project", language)],
-            "selected_profile_id": None,
+            "selected_profile_id": profile_state["selected_profile_id"],
             "stage_status": character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED,
             "character_count": 0,
             "source_chunk_map": {},
@@ -103,7 +106,7 @@ def build_character_discovery_state(
     }
     profile_state = build_character_discovery_profile_state(
         settings_payload,
-        None,
+        selected_profile_id,
     )
     try:
         document = character_discovery_service.load_character_document(project_root)
@@ -114,6 +117,13 @@ def build_character_discovery_state(
             profile_state,
             language,
         )
+    enabled_profile_ids = {profile_id for _label, profile_id in profile_state["entries"]}
+    preferred_profile_id = (
+        selected_profile_id
+        if selected_profile_id in enabled_profile_ids
+        else _persisted_profile_id(document)
+    )
+    profile_state = build_character_discovery_profile_state(settings_payload, preferred_profile_id)
     operation_state = (
         None
         if document is None
@@ -126,7 +136,7 @@ def build_character_discovery_state(
         if document is None or document.get("status") != character_discovery_service.CHARACTER_DISCOVERY_STAGE_COMPLETED
         else {
             "token_usage": dict(document["token_usage"]),
-            "warnings": [],
+            "warnings": _rejected_candidate_warning_notes(document, language),
         }
     )
     stage_status = _character_discovery_stage_status(report, operation_state)
@@ -142,17 +152,20 @@ def build_character_discovery_state(
     can_add = has_discovery_result
     can_edit = bool(profiles)
     can_delete = bool(profiles)
+    notes = build_character_discovery_notes(
+        manifest,
+        source_chunks,
+        report,
+        operation_state,
+        profiles,
+        has_ai_profiles,
+        language,
+    )
+    if document is not None and report is None:
+        notes.extend(_rejected_candidate_warning_notes(document, language))
     return {
         "profiles": profiles,
-        "notes": build_character_discovery_notes(
-            manifest,
-            source_chunks,
-            report,
-            operation_state,
-            profiles,
-            has_ai_profiles,
-            language,
-        ),
+        "notes": notes,
         "selected_profile_id": profile_state["selected_profile_id"],
         "stage_status": stage_status,
         "character_count": len(profiles),
@@ -288,6 +301,28 @@ def _build_token_usage_notes(
     return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
 
 
+def _rejected_candidate_warning_notes(document: dict[str, object], language: str) -> list[str]:
+    """Build localized, privacy-preserving rejection-warning groups from persisted diagnostics."""
+    rejected_candidates = document.get("rejected_candidates")
+    if not isinstance(rejected_candidates, list):
+        return []
+    counts_by_reason: dict[str, int] = {}
+    for diagnostic in rejected_candidates:
+        if not isinstance(diagnostic, dict):
+            continue
+        reason = str(diagnostic.get("reason", ""))
+        counts_by_reason[reason] = counts_by_reason.get(reason, 0) + 1
+    localization_keys = {
+        "missing_evidence": "characters.note_rejected_missing_evidence",
+        "missing_spoken_dialogue_evidence": "characters.note_rejected_missing_spoken_dialogue_evidence",
+    }
+    return [
+        ui_state_service.translate(localization_keys[reason], language).format(candidate_count=counts_by_reason[reason])
+        for reason in sorted(counts_by_reason)
+        if reason in localization_keys
+    ]
+
+
 def _character_discovery_stage_status(
     report: dict[str, object] | None,
     operation_state: dict[str, object] | None,
@@ -311,30 +346,18 @@ def _character_discovery_stage_status(
 
 
 def _persisted_profile_id(
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
+    document: dict[str, object] | None,
 ) -> str | None:
     """
     @brief      Read the last-used AI profile id from persisted discovery artifacts.
-    @param[in]  report Persisted character-discovery report or `None`.
-    @param[in]  operation_state Persisted operation state or `None`.
+    @param[in]  document Persisted authoritative character document or `None`.
     @return     Persisted AI profile identifier or `None`.
     @exception  None
     """
-    if isinstance(report, dict):
-        profile_id = report.get("character_profile_id_last_used")
-        if profile_id not in (None, ""):
-            return str(profile_id)
-    if isinstance(operation_state, dict):
-        profile_id = operation_state.get("ai_profile_id")
-        if profile_id not in (None, ""):
-            return str(profile_id)
-        metadata = operation_state.get("metadata", {})
-        if isinstance(metadata, dict):
-            profile_id = metadata.get("ai_profile_id")
-            if profile_id not in (None, ""):
-                return str(profile_id)
-    return None
+    if not isinstance(document, dict):
+        return None
+    profile_id = document.get("character_profile_id_last_used")
+    return str(profile_id) if profile_id not in (None, "") else None
 
 
 # END OF FILE

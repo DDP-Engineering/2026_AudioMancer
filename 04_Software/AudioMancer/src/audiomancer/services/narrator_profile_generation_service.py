@@ -959,8 +959,8 @@ def _validated_generated_profiles(
     names: set[str] = set()
     gender_counts = {"male": 0, "female": 0}
     preview_limit = max(1, int(preview_text_character_limit or config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
-    min_preview_words = _minimum_preview_word_count()
-    max_preview_words = _maximum_preview_word_count()
+    min_preview_units = _minimum_preview_budget_units()
+    max_preview_units = _maximum_preview_budget_units()
     for index, raw_profile in enumerate(raw_profiles, start=1):
         if not isinstance(raw_profile, dict):
             raise ValueError(f"Generated narrator profile #{index} is not an object.")
@@ -981,18 +981,18 @@ def _validated_generated_profiles(
             raise ValueError(f"Generated narrator profile '{display_name}' prompt_text asks for audio generation.")
         if not preview_text:
             raise ValueError(f"Generated narrator profile '{display_name}' is missing preview_text.")
-        preview_word_count = tts_budget_service.estimated_word_count(preview_text)
-        if preview_word_count < min_preview_words:
+        preview_budget_units = tts_budget_service.estimate_budget_units(preview_text)
+        if preview_budget_units < min_preview_units:
             raise ValueError(
                 f"Generated narrator profile '{display_name}' preview_text is too short for a Qwen TTS reference "
-                f"({preview_word_count} words, minimum {min_preview_words})."
+                f"({preview_budget_units} budget units, minimum {min_preview_units})."
             )
         if "\n" in preview_text:
             raise ValueError(f"Generated narrator profile '{display_name}' preview_text must be one short sentence.")
-        if preview_word_count > max_preview_words:
+        if preview_budget_units > max_preview_units:
             raise ValueError(
                 f"Generated narrator profile '{display_name}' preview_text is too long for a narrator sample "
-                f"({preview_word_count} words, maximum {max_preview_words})."
+                f"({preview_budget_units} budget units, maximum {max_preview_units})."
             )
         if len(preview_text) > preview_limit:
             raise ValueError(
@@ -1015,10 +1015,10 @@ def _validated_generated_profiles(
     return profiles
 
 
-def _minimum_preview_word_count() -> int:
+def _minimum_preview_budget_units() -> int:
     """
-    @brief      Estimate the minimum preview-text word count for useful Qwen TTS references.
-    @return     Minimum preview word count.
+    @brief      Estimate the minimum preview-text budget units for useful Qwen TTS references.
+    @return     Minimum preview budget units.
     @exception  None
     """
     return max(
@@ -1030,10 +1030,10 @@ def _minimum_preview_word_count() -> int:
     )
 
 
-def _maximum_preview_word_count() -> int:
+def _maximum_preview_budget_units() -> int:
     """
-    @brief      Return the bounded maximum accepted narrator preview word estimate.
-    @return     Maximum accepted preview word estimate.
+    @brief      Return the bounded maximum accepted narrator preview budget-unit estimate.
+    @return     Maximum accepted preview budget-unit estimate.
     @exception  None
     """
     return _NARRATOR_PREVIEW_TARGET_MAX_WORDS + _NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE

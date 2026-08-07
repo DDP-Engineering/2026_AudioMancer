@@ -479,11 +479,13 @@ def _build_characters_document(project_root: Path, manifest: dict[str, object]) 
     characters = character_discovery_service.load_character_profiles(project_root)
     source = document.get("source", {}) if isinstance(document, dict) else {}
     source = source if isinstance(source, dict) else {}
+    operation_summary = character_discovery_service.character_operation_summary(document)
     parameters = _compact_fields(
         [
             ("Source Kind", source.get("kind")),
             ("Source Language", source.get("language")),
             ("Character Count", len(characters)),
+            ("Warnings Count", operation_summary["warning_count"]),
             *_token_usage_fields(document, {}),
         ]
     )
@@ -685,7 +687,10 @@ def _artifact_ready(project_root: Path, export_kind: str) -> bool:
             for item in ai_translation_service.load_translated_chunks(project_root)
         )
     if export_kind == EXPORT_KIND_CHARACTERS:
-        return bool(character_discovery_service.load_character_profiles(project_root))
+        try:
+            return bool(character_discovery_service.load_character_profiles(project_root))
+        except character_discovery_service.CharacterDocumentError:
+            return False
     if export_kind == EXPORT_KIND_SPEECH_BLOCKS:
         return bool(speech_blocks_service.load_speech_blocks(project_root))
     return False

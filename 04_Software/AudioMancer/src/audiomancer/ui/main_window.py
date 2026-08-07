@@ -452,11 +452,13 @@ class MainWindow(QMainWindow):
         @exception  None
         """
         self._characters_page.set_project_active(project_root is not None)
+        selected_profile_id = self._characters_page.current_profile_id()
         character_state = character_discovery_state_service.build_character_discovery_state(
             project_root,
             manifest,
             current_language,
             self._settings_payload,
+            selected_profile_id,
         )
         self._characters_page.set_ai_profiles(
             **character_discovery_state_service.build_character_discovery_profile_state(

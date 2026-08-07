@@ -54,6 +54,77 @@ def test_profile_state_prefers_default_character_profile() -> None:
     assert profile_state["selected_profile_id"] == "profile_b"
 
 
+def test_character_state_prefers_live_then_persisted_last_used_profile(tmp_path) -> None:
+    """Verify refresh keeps live choice and a fresh load uses the strict persisted choice."""
+    project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryLastUsedProfile")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document = json.loads(document_path.read_text(encoding="utf-8"))
+    document["character_profile_id_last_used"] = "profile_b"
+    document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    settings_payload = {
+        "llm_profiles": [
+            {"id": "profile_a", "label": "Profile A", "enabled": True},
+            {"id": "profile_b", "label": "Profile B", "enabled": True},
+        ],
+        "default_character_extraction_profile_id": "profile_a",
+    }
+
+    fresh_state = character_discovery_state_service.build_character_discovery_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+    )
+    live_state = character_discovery_state_service.build_character_discovery_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+        selected_profile_id="profile_a",
+    )
+
+    assert fresh_state["selected_profile_id"] == "profile_b"
+    assert live_state["selected_profile_id"] == "profile_a"
+
+    settings_payload["llm_profiles"][1]["enabled"] = False
+    disabled_persisted_state = character_discovery_state_service.build_character_discovery_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+    )
+    settings_payload["default_character_extraction_profile_id"] = "missing"
+    first_enabled_fallback_state = character_discovery_state_service.build_character_discovery_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+    )
+
+    assert disabled_persisted_state["selected_profile_id"] == "profile_a"
+    assert first_enabled_fallback_state["selected_profile_id"] == "profile_a"
+
+
+def test_character_state_recovers_from_invalid_last_used_profile_field(tmp_path) -> None:
+    """Verify a malformed evolved root field stays Reset-only without document repair."""
+    project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryInvalidLastUsedProfile")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document = json.loads(document_path.read_text(encoding="utf-8"))
+    document["character_profile_id_last_used"] = {"profile": "profile_a"}
+    document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+    state = character_discovery_state_service.build_character_discovery_state(
+        project_root,
+        manifest,
+        "en",
+        {"llm_profiles": [{"id": "profile_a", "label": "Profile A", "enabled": True}]},
+    )
+
+    assert state["stage_status"] == "failed"
+    assert state["can_reset"] is True
+    assert state["can_start"] is False
+
+
 def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> None:
     """
     @brief      Validate build character state exposes manual maintenance flags.
@@ -244,6 +315,66 @@ def test_completed_character_notes_report_only_persisted_character_count(tmp_pat
         assert ui_state_service.translate("characters.note_rerun_replaces_manual", language) in state["notes"]
 
 
+def test_character_state_projects_rejected_candidate_warning_count(tmp_path) -> None:
+    """
+    @brief      Verify persisted rejected candidates become one truthful localized note group.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryRejectedNotes")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document = json.loads(document_path.read_text(encoding="utf-8"))
+    document["rejected_candidates"] = [
+        {
+            "canonical_name": "Narrated Bob",
+            "reason": "missing_spoken_dialogue_evidence",
+            "evidence_count": 2,
+            "identity_merge_count": 1,
+        }
+    ]
+    document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+    state = character_discovery_state_service.build_character_discovery_state(project_root, manifest, "en")
+
+    assert state["stage_status"] == "completed"
+    assert any("spoken dialogue" in note and note.endswith("1.") for note in state["notes"])
+
+
+def test_resumable_character_state_projects_persisted_rejection_notes(tmp_path) -> None:
+    """
+    @brief      Verify interrupted synthesis keeps persisted rejection notes visible before completion.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryResumableRejectedNotes")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document = json.loads(document_path.read_text(encoding="utf-8"))
+    document["status"] = "cancelled"
+    document["checkpoint"] = {
+        "phase": "synthesis",
+        "completed_window_count": 1,
+        "planned_window_count": 1,
+        "next_candidate_index": 0,
+        "candidates": [],
+    }
+    document["rejected_candidates"] = [
+        {
+            "canonical_name": "Narrated Bob",
+            "reason": "missing_evidence",
+            "evidence_count": 0,
+            "identity_merge_count": 1,
+        }
+    ]
+    document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+    state = character_discovery_state_service.build_character_discovery_state(project_root, manifest, "en")
+
+    assert state["stage_status"] == "cancelled"
+    assert any("valid source evidence" in note and note.endswith("1.") for note in state["notes"])
+
+
 def test_character_recovery_and_summary_localizations_share_placeholders() -> None:
     """
     @brief      Verify paired Character Discovery localization templates have equal fields.
@@ -329,6 +460,8 @@ def _create_project(tmp_path, name: str):
                     "total_tokens": 175,
                     "usage_available": True,
                 },
+                "character_profile_id_last_used": "profile-1",
+                "rejected_candidates": [],
                 "checkpoint": None,
                 "failure": None,
                 "characters": [

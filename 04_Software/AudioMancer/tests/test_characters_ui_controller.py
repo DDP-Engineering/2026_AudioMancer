@@ -78,6 +78,17 @@ def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatc
     @exception  None
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerResumeCurrentProfile")
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    state_payload["status"] = "cancelled"
+    state_payload["checkpoint"] = {
+        "phase": "discovery",
+        "completed_window_count": 0,
+        "planned_window_count": 1,
+        "next_chunk_index": 0,
+        "candidates": [],
+    }
+    state_path.write_text(json.dumps(state_payload, indent=2) + "\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     start_calls = []
     used_profiles = []
@@ -123,6 +134,8 @@ def test_character_ui_controller_cancelled_state_resumes_without_prompt(monkeypa
     state_payload["status"] = "cancelled"
     state_payload["checkpoint"] = {
         "phase": "discovery",
+        "completed_window_count": 1,
+        "planned_window_count": 2,
         "next_chunk_index": 1,
         "candidates": [],
     }
@@ -862,6 +875,8 @@ def _characters_document(
             "total_tokens": 0,
             "usage_available": False,
         },
+        "character_profile_id_last_used": "profile-1",
+        "rejected_candidates": [],
         "checkpoint": None,
         "failure": None,
         "characters": [

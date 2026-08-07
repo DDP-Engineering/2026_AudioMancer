@@ -12,6 +12,7 @@ required before speech generation.
 - Own the strict Narrator Voice document and profile-owned WAV contract.
 - Persist Character Voices targets and target-specific sample metadata.
 - Generate resumable AI narrator suggestions without exposing partial profiles.
+- Validate narrator preview duration and sample budgets with shared script-aware spoken units.
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
 
@@ -89,6 +90,7 @@ Primary automated coverage:
 - `tests/test_character_voices_page.py`
 - `tests/test_character_voices_ui_controller.py`
 - `tests/test_voice_sample_import_service.py`
+- `tests/test_tts_budget_service.py`
 
 Adjacent Audio Blocks, workspace, export, and snapshot suites also consume the
 narrator/character voice contracts. Minimum validation after a change: run the
@@ -113,6 +115,8 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py`
@@ -128,4 +132,5 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_narrator_definition_state_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py`
+- `04_Software/AudioMancer/tests/test_tts_budget_service.py`
 - `04_Software/AudioMancer/tests/test_voice_sample_import_service.py`

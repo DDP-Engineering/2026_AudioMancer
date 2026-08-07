@@ -12,6 +12,16 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Narrator Voice now measures generated previews, safe sample limits, and visible preview counters with script-aware spoken units, so Japanese, Chinese, and Korean previews follow the same safe duration rules as space-separated languages.
+- Character Discovery now writes transaction logs in its own resettable log
+  family. Rejected candidate diagnostics are saved without source excerpts or
+  AI credentials, survive interrupted resumes without double-counting, and
+  provide matching warning counts on the Characters page and export.
+- Character Discovery now shows truthful completed/planned discovery-window
+  progress after an interruption instead of treating source chunks as windows.
+  Resume keeps the same progress baseline into character-profile synthesis and
+  uses the AI profile currently selected by the operator; the page retains that
+  enabled selection across normal refreshes.
 - Characters page can now safely show an invalid Character Discovery document
   and keeps Reset Discovery available to recover it; completed summaries report
   the discovered speaking-character count without a false analysis-window count.

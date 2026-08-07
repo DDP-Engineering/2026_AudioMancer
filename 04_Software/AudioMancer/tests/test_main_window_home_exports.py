@@ -50,4 +50,25 @@ def test_main_window_refreshes_home_export_readiness(qtbot, tmp_path, default_se
     assert window._home_page._export_rows[project_export_service.EXPORT_KIND_TEXT_CHUNKS]["button"].isEnabled() is False
 
 
+def test_main_window_opens_project_with_invalid_character_document(qtbot, tmp_path, default_settings_payload) -> None:
+    """
+    @brief      Verify an invalid Character Discovery artifact leaves its Home export unavailable.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("InvalidCharacters", tmp_path)
+    manifest["operations"]["character_discovery"]["status"] = "completed"
+    (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text("{}\n", encoding="utf-8")
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(project_root, manifest)
+
+    assert window._current_project_root == project_root
+    assert window._home_page._export_rows[project_export_service.EXPORT_KIND_CHARACTERS]["button"].isEnabled() is False
+
+
 # END OF FILE
