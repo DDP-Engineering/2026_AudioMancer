@@ -128,4 +128,31 @@ def test_main_window_translation_refresh_preserves_live_profile_selection(qtbot,
     assert page.current_profile_id() == "profile_a"
 
 
+def test_main_window_character_refresh_preserves_live_profile_selection(qtbot, default_settings_payload) -> None:
+    """Verify Characters refresh keeps an enabled live profile and falls back when it is disabled."""
+    settings_payload = dict(default_settings_payload)
+    base_profile = dict(settings_payload["llm_profiles"][0])
+    profile_a = dict(base_profile, id="profile_a", label="Profile A")
+    profile_b = dict(base_profile, id="profile_b", label="Profile B")
+    settings_payload["llm_profiles"] = [profile_a, profile_b]
+    settings_payload["default_character_extraction_profile_id"] = "profile_a"
+    window = MainWindow(settings_payload=settings_payload)
+    qtbot.addWidget(window)
+    page = window._characters_page
+    page.set_ai_profiles(
+        [("Profile A", "profile_a"), ("Profile B", "profile_b")],
+        "profile_b",
+    )
+    assert page.current_profile_id() == "profile_b"
+
+    window._refresh_characters_page_state(None, None, "en")
+
+    assert page.current_profile_id() == "profile_b"
+
+    window._settings_payload["llm_profiles"][1]["enabled"] = False
+    window._refresh_characters_page_state(None, None, "en")
+
+    assert page.current_profile_id() == "profile_a"
+
+
 # END OF FILE

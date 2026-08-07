@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Character Discovery now shows truthful completed/planned discovery-window
+  progress after an interruption instead of treating source chunks as windows.
+  Resume keeps the same progress baseline into character-profile synthesis and
+  uses the AI profile currently selected by the operator; the page retains that
+  enabled selection across normal refreshes.
 - Characters page can now safely show an invalid Character Discovery document
   and keeps Reset Discovery available to recover it; completed summaries report
   the discovered speaking-character count without a false analysis-window count.

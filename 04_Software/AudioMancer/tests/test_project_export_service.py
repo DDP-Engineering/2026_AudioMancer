@@ -75,6 +75,30 @@ def test_project_export_service_reports_not_ready_and_missing_artifact(tmp_path)
     )
 
 
+def test_project_export_service_invalid_character_document_is_unavailable(tmp_path) -> None:
+    """
+    @brief      Verify an invalid Character Discovery document does not prevent export-state construction.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+    characters_path = project_root / config.CHARACTERS_DOCUMENT_FILE_NAME
+    characters_document = json.loads(characters_path.read_text(encoding="utf-8"))
+    del characters_document["character_profile_id_last_used"]
+    _write_json(characters_path, characters_document)
+
+    states = {
+        str(state["export_kind"]): str(state["status"])
+        for state in project_export_service.build_export_states(project_root, manifest)
+    }
+
+    assert (
+        states[project_export_service.EXPORT_KIND_CHARACTERS]
+        == project_export_service.EXPORT_STATUS_MISSING_ARTIFACT
+    )
+
+
 def test_project_export_service_preserves_utf8_and_source_header(tmp_path) -> None:
     """
     @brief      Verify exported content preserves Romanian text and source metadata.
@@ -560,6 +584,7 @@ def _characters_document(voice_prompt: str) -> dict[str, object]:
             "total_tokens": 0,
             "usage_available": False,
         },
+        "character_profile_id_last_used": "profile-1",
         "checkpoint": None,
         "failure": None,
         "characters": [

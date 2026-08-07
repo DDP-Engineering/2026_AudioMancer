@@ -685,7 +685,10 @@ def _artifact_ready(project_root: Path, export_kind: str) -> bool:
             for item in ai_translation_service.load_translated_chunks(project_root)
         )
     if export_kind == EXPORT_KIND_CHARACTERS:
-        return bool(character_discovery_service.load_character_profiles(project_root))
+        try:
+            return bool(character_discovery_service.load_character_profiles(project_root))
+        except character_discovery_service.CharacterDocumentError:
+            return False
     if export_kind == EXPORT_KIND_SPEECH_BLOCKS:
         return bool(speech_blocks_service.load_speech_blocks(project_root))
     return False

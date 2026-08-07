@@ -111,6 +111,7 @@ _CHARACTER_DOCUMENT_FIELDS = frozenset(
         "source",
         "instructions",
         "token_usage",
+        "character_profile_id_last_used",
         "checkpoint",
         "failure",
         "characters",
@@ -183,14 +184,16 @@ def character_operation_summary(
     """Derive the shared manifest operation summary from one character document."""
     checkpoint = document.get("checkpoint")
     if isinstance(checkpoint, dict) and checkpoint.get("phase") == "discovery":
-        progress_current = int(checkpoint.get("next_chunk_index", 0))
-        progress_total = max(int(source_chunk_count), progress_current)
+        progress_current = int(checkpoint.get("completed_window_count", 0))
+        progress_total = int(checkpoint.get("planned_window_count", 0))
     elif isinstance(checkpoint, dict) and checkpoint.get("phase") == "synthesis":
-        progress_current = int(checkpoint.get("next_candidate_index", 0))
-        progress_total = len(checkpoint.get("candidates", []))
+        progress_current = int(checkpoint.get("completed_window_count", 0)) + int(
+            checkpoint.get("next_candidate_index", 0)
+        )
+        progress_total = int(checkpoint.get("planned_window_count", 0)) + len(checkpoint.get("candidates", []))
     else:
-        progress_current = len(document.get("characters", []))
-        progress_total = progress_current
+        progress_current = 0
+        progress_total = 0
     return {
         "status": str(document.get("status", "not_started")),
         "progress_current": progress_current,
@@ -316,6 +319,7 @@ def start_or_continue_discovery(
     run_token = _utc_now_iso()
     (
         completed_window_count,
+        planned_window_count,
         next_discovery_start_chunk_index,
         raw_candidates,
         merged_candidates,
@@ -349,7 +353,9 @@ def start_or_continue_discovery(
     )
     if not merged_candidates and not windows and not raw_candidates:
         raise ValueError("Character discovery requires at least one chunk window.")
-    discovery_progress_total = completed_window_count + len(windows)
+    if not merged_candidates:
+        planned_window_count = completed_window_count + len(windows)
+    discovery_progress_total = planned_window_count
     token_usage = (
         _restore_token_usage(existing_document)
         if resume_is_compatible
@@ -380,6 +386,7 @@ def start_or_continue_discovery(
         additional_character_discovery_instructions=additional_character_discovery_instructions,
         checkpoint={
             "completed_window_count": completed_window_count,
+            "planned_window_count": planned_window_count,
             "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
@@ -408,6 +415,7 @@ def start_or_continue_discovery(
     discovery_progress_current = completed_window_count
     discovery_checkpoint = {
         "completed_window_count": completed_window_count,
+        "planned_window_count": planned_window_count,
         "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
         "raw_candidates": list(raw_candidates),
         "merged_candidates": [],
@@ -459,6 +467,7 @@ def start_or_continue_discovery(
             discovery_progress_current = progress_window_index + 1
             discovery_checkpoint = {
                 "completed_window_count": discovery_progress_current,
+                "planned_window_count": discovery_progress_total,
                 "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": [],
@@ -539,6 +548,7 @@ def start_or_continue_discovery(
         additional_character_discovery_instructions=additional_character_discovery_instructions,
         checkpoint={
             "completed_window_count": discovery_progress_total,
+            "planned_window_count": discovery_progress_total,
             "next_discovery_start_chunk_index": len(source_chunks),
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
@@ -550,6 +560,7 @@ def start_or_continue_discovery(
     synthesis_progress_current = discovery_progress_total + next_candidate_index
     synthesis_checkpoint = {
         "completed_window_count": discovery_progress_total,
+        "planned_window_count": discovery_progress_total,
         "next_discovery_start_chunk_index": len(source_chunks),
         "raw_candidates": list(raw_candidates),
         "merged_candidates": list(merged_candidates),
@@ -609,6 +620,7 @@ def start_or_continue_discovery(
             synthesis_progress_current = discovery_progress_total + next_candidate_index
             synthesis_checkpoint = {
                 "completed_window_count": discovery_progress_total,
+                "planned_window_count": discovery_progress_total,
                 "next_discovery_start_chunk_index": len(source_chunks),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": list(merged_candidates),
@@ -879,6 +891,8 @@ def _validate_character_document(payload: object) -> None:
         raise CharacterDocumentError("Character Discovery source fields must be strings.")
     if not isinstance(payload.get("instructions"), str):
         raise CharacterDocumentError("Character Discovery instructions must be a string.")
+    if not isinstance(payload.get("character_profile_id_last_used"), str):
+        raise CharacterDocumentError("Character Discovery last-used profile id must be a string.")
     token_usage = payload.get("token_usage")
     if not isinstance(token_usage, dict) or set(token_usage) != _TOKEN_USAGE_FIELDS:
         raise CharacterDocumentError("Character Discovery token_usage has an invalid contract.")
@@ -959,15 +973,22 @@ def _validate_character_checkpoint(payload: object) -> None:
         raise CharacterDocumentError("Character Discovery checkpoint must be an object.")
     phase = str(payload.get("phase", ""))
     expected_fields = (
-        {"phase", "next_chunk_index", "candidates"}
+        {"phase", "completed_window_count", "planned_window_count", "next_chunk_index", "candidates"}
         if phase == "discovery"
-        else {"phase", "next_candidate_index", "candidates"}
+        else {"phase", "completed_window_count", "planned_window_count", "next_candidate_index", "candidates"}
     )
     if phase not in {"discovery", "synthesis"} or set(payload) != expected_fields:
         raise CharacterDocumentError("Character Discovery checkpoint has an invalid phase contract.")
     index_field = "next_chunk_index" if phase == "discovery" else "next_candidate_index"
     if type(payload.get(index_field)) is not int or int(payload[index_field]) < 0:
         raise CharacterDocumentError("Character Discovery checkpoint index must be non-negative.")
+    for field in ("completed_window_count", "planned_window_count"):
+        if type(payload.get(field)) is not int or int(payload[field]) < 0:
+            raise CharacterDocumentError("Character Discovery window counts must be non-negative integers.")
+    if int(payload["completed_window_count"]) > int(payload["planned_window_count"]):
+        raise CharacterDocumentError("Character Discovery completed windows cannot exceed planned windows.")
+    if phase == "synthesis" and int(payload["completed_window_count"]) != int(payload["planned_window_count"]):
+        raise CharacterDocumentError("Character Discovery synthesis requires all discovery windows to be complete.")
     if not isinstance(payload.get("candidates"), list):
         raise CharacterDocumentError("Character Discovery checkpoint candidates must be an array.")
 
@@ -1075,8 +1096,11 @@ def _new_character_document(
         "token_usage": _persisted_character_token_usage(
             token_usage_service.empty_token_usage()
         ),
+        "character_profile_id_last_used": "",
         "checkpoint": {
             "phase": "discovery",
+            "completed_window_count": 0,
+            "planned_window_count": 0,
             "next_chunk_index": 0,
             "candidates": [],
         },
@@ -1640,6 +1664,7 @@ def _restore_resume_state(
 ) -> tuple[
     int,
     int,
+    int,
     list[dict[str, object]],
     list[dict[str, object]],
     list[dict[str, object]],
@@ -1656,24 +1681,33 @@ def _restore_resume_state(
     @return     Derived helper result.
     """
     if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
-        return 0, 0, [], [], [], [], 0, None, None
+        return 0, 0, 0, [], [], [], [], 0, None, None
     source = existing_state.get("source", {})
     if not isinstance(source, dict) or str(source.get("fingerprint", "")) != input_fingerprint:
-        return 0, 0, [], [], [], [], 0, None, None
+        return 0, 0, 0, [], [], [], [], 0, None, None
     checkpoint = existing_state.get("checkpoint")
     if not isinstance(checkpoint, dict):
-        return 0, 0, [], [], [], [], 0, None, None
+        return 0, 0, 0, [], [], [], [], 0, None, None
     phase = str(checkpoint.get("phase", ""))
     candidates = _restore_mapping_list(checkpoint.get("candidates"))
     if phase == "discovery":
-        if type(checkpoint.get("next_chunk_index")) is not int:
-            return 0, 0, [], [], [], [], 0, None, None
+        if (
+            type(checkpoint.get("next_chunk_index")) is not int
+            or type(checkpoint.get("completed_window_count")) is not int
+            or type(checkpoint.get("planned_window_count")) is not int
+        ):
+            return 0, 0, 0, [], [], [], [], 0, None, None
+        completed_window_count = int(checkpoint["completed_window_count"])
+        planned_window_count = int(checkpoint["planned_window_count"])
+        if completed_window_count < 0 or planned_window_count < completed_window_count:
+            return 0, 0, 0, [], [], [], [], 0, None, None
         next_chunk_index = max(
             0,
             min(int(checkpoint.get("next_chunk_index", 0)), len(source_chunks)),
         )
         return (
-            next_chunk_index,
+            completed_window_count,
+            planned_window_count,
             next_chunk_index,
             candidates,
             [],
@@ -1684,9 +1718,21 @@ def _restore_resume_state(
             "discovery",
         )
     if phase != "synthesis":
-        return 0, 0, [], [], [], [], 0, None, None
-    if type(checkpoint.get("next_candidate_index")) is not int:
-        return 0, 0, [], [], [], [], 0, None, None
+        return 0, 0, 0, [], [], [], [], 0, None, None
+    if (
+        type(checkpoint.get("next_candidate_index")) is not int
+        or type(checkpoint.get("completed_window_count")) is not int
+        or type(checkpoint.get("planned_window_count")) is not int
+    ):
+        return 0, 0, 0, [], [], [], [], 0, None, None
+    completed_window_count = int(checkpoint["completed_window_count"])
+    planned_window_count = int(checkpoint["planned_window_count"])
+    if (
+        completed_window_count < 0
+        or planned_window_count < completed_window_count
+        or completed_window_count != planned_window_count
+    ):
+        return 0, 0, 0, [], [], [], [], 0, None, None
     next_candidate_index = max(
         0,
         min(int(checkpoint.get("next_candidate_index", 0)), len(candidates)),
@@ -1705,7 +1751,8 @@ def _restore_resume_state(
         if (candidate_id := str(candidate.get("character_id", ""))) in current_ai_by_id
     ]
     return (
-        len(source_chunks),
+        completed_window_count,
+        planned_window_count,
         len(source_chunks),
         [],
         candidates,
@@ -1850,7 +1897,6 @@ def _write_operation_state(
         progress_current,
         progress_total,
         run_token,
-        profile_id,
         input_fingerprint,
         log_relative_path,
     )
@@ -1867,6 +1913,14 @@ def _write_operation_state(
     if phase == "discovery" and legacy_checkpoint is not None:
         persisted_checkpoint: dict[str, object] | None = {
             "phase": "discovery",
+            "completed_window_count": max(
+                0,
+                int(legacy_checkpoint.get("completed_window_count", 0)),
+            ),
+            "planned_window_count": max(
+                0,
+                int(legacy_checkpoint.get("planned_window_count", 0)),
+            ),
             "next_chunk_index": max(
                 0,
                 int(legacy_checkpoint.get("next_discovery_start_chunk_index", 0)),
@@ -1876,6 +1930,14 @@ def _write_operation_state(
     elif phase == "synthesis" and legacy_checkpoint is not None:
         persisted_checkpoint = {
             "phase": "synthesis",
+            "completed_window_count": max(
+                0,
+                int(legacy_checkpoint.get("completed_window_count", 0)),
+            ),
+            "planned_window_count": max(
+                0,
+                int(legacy_checkpoint.get("planned_window_count", 0)),
+            ),
             "next_candidate_index": max(
                 0,
                 int(legacy_checkpoint.get("next_candidate_index", 0)),
@@ -1891,6 +1953,7 @@ def _write_operation_state(
             additional_character_discovery_instructions
         ),
         "token_usage": _persisted_character_token_usage(token_usage),
+        "character_profile_id_last_used": profile_id,
         "checkpoint": persisted_checkpoint,
         "failure": (
             {"phase": str(phase), "message": f"Character Discovery {phase} failed."}

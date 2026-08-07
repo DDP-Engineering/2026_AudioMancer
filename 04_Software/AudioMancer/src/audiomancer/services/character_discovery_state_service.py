@@ -68,6 +68,7 @@ def build_character_discovery_state(
     manifest: dict[str, object] | None,
     language: str,
     settings_payload: dict[str, object] | None = None,
+    selected_profile_id: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the full Characters page state from project artifacts.
@@ -75,14 +76,16 @@ def build_character_discovery_state(
     @param[in]  manifest Active project manifest or `None`.
     @param[in]  language Runtime UI language code.
     @param[in]  settings_payload Persisted application settings payload.
+    @param[in]  selected_profile_id Currently live Characters-page profile selection.
     @return     Page-state payload consumed by the Characters page.
     @exception  None
     """
     if project_root is None or manifest is None:
+        profile_state = build_character_discovery_profile_state(settings_payload, selected_profile_id)
         return {
             "profiles": [],
             "notes": [ui_state_service.translate("characters.note_no_project", language)],
-            "selected_profile_id": None,
+            "selected_profile_id": profile_state["selected_profile_id"],
             "stage_status": character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED,
             "character_count": 0,
             "source_chunk_map": {},
@@ -103,7 +106,7 @@ def build_character_discovery_state(
     }
     profile_state = build_character_discovery_profile_state(
         settings_payload,
-        None,
+        selected_profile_id,
     )
     try:
         document = character_discovery_service.load_character_document(project_root)
@@ -114,6 +117,13 @@ def build_character_discovery_state(
             profile_state,
             language,
         )
+    enabled_profile_ids = {profile_id for _label, profile_id in profile_state["entries"]}
+    preferred_profile_id = (
+        selected_profile_id
+        if selected_profile_id in enabled_profile_ids
+        else _persisted_profile_id(document)
+    )
+    profile_state = build_character_discovery_profile_state(settings_payload, preferred_profile_id)
     operation_state = (
         None
         if document is None
@@ -311,30 +321,18 @@ def _character_discovery_stage_status(
 
 
 def _persisted_profile_id(
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
+    document: dict[str, object] | None,
 ) -> str | None:
     """
     @brief      Read the last-used AI profile id from persisted discovery artifacts.
-    @param[in]  report Persisted character-discovery report or `None`.
-    @param[in]  operation_state Persisted operation state or `None`.
+    @param[in]  document Persisted authoritative character document or `None`.
     @return     Persisted AI profile identifier or `None`.
     @exception  None
     """
-    if isinstance(report, dict):
-        profile_id = report.get("character_profile_id_last_used")
-        if profile_id not in (None, ""):
-            return str(profile_id)
-    if isinstance(operation_state, dict):
-        profile_id = operation_state.get("ai_profile_id")
-        if profile_id not in (None, ""):
-            return str(profile_id)
-        metadata = operation_state.get("metadata", {})
-        if isinstance(metadata, dict):
-            profile_id = metadata.get("ai_profile_id")
-            if profile_id not in (None, ""):
-                return str(profile_id)
-    return None
+    if not isinstance(document, dict):
+        return None
+    profile_id = document.get("character_profile_id_last_used")
+    return str(profile_id) if profile_id not in (None, "") else None
 
 
 # END OF FILE
