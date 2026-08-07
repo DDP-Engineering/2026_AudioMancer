@@ -18,7 +18,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLineEdit
 
-from audiomancer.services import ui_state_service
+from audiomancer.services import narrator_definition_service, tts_budget_service, ui_state_service
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
 
 
@@ -240,6 +240,41 @@ def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) ->
 
     assert page.current_voice_language() == "ro"
     assert "Profiles: 3" in page._status_edit.toPlainText()
+
+
+def test_narator_voice_page_preview_budget_uses_compact_script_units(qtbot) -> None:
+    """
+    @brief      Verify the live preview counter agrees with the shared compact-script estimate.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = NaratorVoicePage()
+    qtbot.addWidget(page)
+    preview_text = narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE["zh"]
+    preview_units = tts_budget_service.estimate_budget_units(preview_text)
+    page.set_project_active(True)
+    page.set_narator_voice_state(
+        profiles=[],
+        notes=[],
+        current_profile_id=None,
+        selected_profile_id=None,
+        effective_language="zh",
+        selected_voice_language="zh",
+        profile_name="",
+        prompt_text="",
+        preview_text=preview_text,
+        is_editable=False,
+        can_edit=False,
+        can_delete=False,
+        can_generate=False,
+        can_select=False,
+        preview_available=False,
+        status_lines=[],
+        preview_text_safe_word_limit=81,
+    )
+
+    assert page._preview_budget_label.text() == f"Preview budget: {preview_units}/81 safe budget units"
 
 
 def test_narator_voice_page_renders_ai_profile_selector_and_generation_button(qtbot) -> None:

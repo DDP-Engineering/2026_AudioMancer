@@ -957,6 +957,18 @@ def _generate_and_store_sample(
         2,
         progress_messages["prepare"],
     )
+    cached_models_payload = settings_payload.get("tts_runtime_discovered_models", [])
+    cached_models = cached_models_payload if isinstance(cached_models_payload, list) else []
+    cached_budget_payload = tts_budget_service.resolve_cached_tts_budget(cached_models)
+    cached_safe_budget_units = tts_budget_service.estimated_safe_word_count(cached_budget_payload)
+    preview_budget_units = tts_budget_service.estimate_budget_units(preview_text)
+    if preview_budget_units > cached_safe_budget_units:
+        raise RuntimeError(
+            progress_messages["preview_text_over_budget"].format(
+                word_count=preview_budget_units,
+                safe_word_count=cached_safe_budget_units,
+            )
+        )
     probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache_from_settings(settings_payload)
     if not bool(probe_result.get("success", False)):
         raise RuntimeError(str(probe_result.get("message", "")))
@@ -976,13 +988,12 @@ def _generate_and_store_sample(
         discovered_models,
     )
     budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
-    safe_word_count = tts_budget_service.estimated_safe_word_count(budget_payload)
-    preview_word_count = tts_budget_service.estimated_word_count(preview_text)
-    if preview_word_count > safe_word_count:
+    safe_budget_units = tts_budget_service.estimated_safe_word_count(budget_payload)
+    if preview_budget_units > safe_budget_units:
         raise RuntimeError(
             progress_messages["preview_text_over_budget"].format(
-                word_count=preview_word_count,
-                safe_word_count=safe_word_count,
+                word_count=preview_budget_units,
+                safe_word_count=safe_budget_units,
             )
         )
     if not bool(generation_request.get("can_generate", False)):

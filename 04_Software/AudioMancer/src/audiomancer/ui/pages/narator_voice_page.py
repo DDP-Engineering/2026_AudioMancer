@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services import ui_state_service
+from audiomancer.services import tts_budget_service, ui_state_service
 
 _PROFILE_PANE_INITIAL_WIDTH = 400
 _PROFILE_PANE_MAXIMUM_WIDTH = 560
@@ -156,7 +156,7 @@ class NaratorVoicePage(QWidget):
         self._preview_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._preview_text_edit.textChanged.connect(self._handle_preview_text_changed)
         preview_layout.addWidget(self._preview_text_edit, 1)
-        self._preview_budget_label = QLabel("Preview budget: 0/0 safe words", self)
+        self._preview_budget_label = QLabel("Preview budget: 0/0 safe budget units", self)
         preview_layout.addWidget(self._preview_budget_label)
         actions_row = QHBoxLayout()
         self._create_profile_button = QPushButton("Create", self)
@@ -605,12 +605,12 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @exception  None
         """
-        word_count = len([word for word in self._preview_text_edit.toPlainText().split() if word.strip()])
-        safe_word_count = max(0, int(self._preview_text_safe_word_limit))
+        preview_budget_units = tts_budget_service.estimate_budget_units(self._preview_text_edit.toPlainText())
+        safe_budget_units = max(0, int(self._preview_text_safe_word_limit))
         self._preview_budget_label.setText(
             ui_state_service.translate("narator_voice.preview_budget", self._ui_language).format(
-                word_count=word_count,
-                safe_word_count=safe_word_count,
+                word_count=preview_budget_units,
+                safe_word_count=safe_budget_units,
             )
         )
 

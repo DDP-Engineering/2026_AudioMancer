@@ -319,8 +319,8 @@ def build_status_lines(
         )
     )
     active_model_id = _active_model_id_from_settings(settings_payload)
-    preview_word_count = (
-        tts_budget_service.estimated_word_count(str(current_profile.get("preview_text", "")))
+    preview_budget_units = (
+        tts_budget_service.estimate_budget_units(str(current_profile.get("preview_text", "")))
         if isinstance(current_profile, dict)
         else 0
     )
@@ -341,7 +341,7 @@ def build_status_lines(
             language,
         ).format(model_id=active_model_id or ""),
         ui_state_service.translate("narator_voice.status_preview_budget", language).format(
-            word_count=preview_word_count,
+            word_count=preview_budget_units,
             safe_word_count=max(0, int(preview_safe_word_limit)),
         ),
         qwen_status,

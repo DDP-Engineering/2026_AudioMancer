@@ -1,0 +1,73 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-2b7862b5"
+
+title = "AI narrator previews shall use script-aware duration units"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When an AI-generated narrator profile supplies preview text, the Narrator Voice service shall apply the shared script-aware budget-unit estimate to its existing minimum and maximum preview-duration bounds.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Focused narrator-profile generation tests prove a realistic space-less Japanese preview that meets the duration budget succeeds, while existing Latin short, boundary, and bounded-overage tests remain unchanged."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_short_preview_text",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_preview_text_below_six_seconds",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_default_compact_script_preview_at_minimum_budget",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_preserves_latin_preview_budget_boundaries",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"
+rationale = "Whitespace token counts falsely reject valid previews in scripts written without spaces after paid AI style analysis."
+
+created = 2026-08-07
+updated = 2026-08-07

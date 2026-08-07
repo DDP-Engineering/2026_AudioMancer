@@ -354,6 +354,79 @@ def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
     assert all(profile["preview_text"] == preview_text for profile in profiles)
 
 
+@pytest.mark.parametrize(
+    ("preview_units", "expected_error"),
+    ((15, None), (30, None), (31, "maximum 30")),
+)
+def test_narrator_profile_generation_preserves_latin_preview_budget_boundaries(
+    preview_units: int,
+    expected_error: str | None,
+) -> None:
+    """
+    @brief      Verify Latin previews retain the established minimum and maximum budget boundaries.
+    @param[in]  preview_units Number of short Latin word-equivalent units to validate.
+    @param[in]  expected_error Expected validation error, when the preview is over budget.
+    @return     None.
+    @exception  None
+    """
+    preview_text = " ".join("word" for _index in range(preview_units))
+    validation_arguments = (
+        _profiles_payload(2, preview_text=preview_text),
+        2,
+        {"male": 1, "female": 1, "random": 0, "random_gender": ""},
+        "en",
+        config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+    )
+
+    if expected_error is not None:
+        with pytest.raises(ValueError, match=expected_error):
+            narrator_profile_generation_service._validated_generated_profiles(*validation_arguments)
+        return
+
+    profiles = narrator_profile_generation_service._validated_generated_profiles(*validation_arguments)
+
+    assert len(profiles) == 2
+
+
+@pytest.mark.parametrize("voice_language", ("zh", "ko"))
+def test_narrator_profile_generation_accepts_default_compact_script_preview_at_minimum_budget(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+    voice_language: str,
+) -> None:
+    """
+    @brief      Verify compact-script default previews satisfy the existing minimum duration budget.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @param[in]  voice_language Narrator voice language under test.
+    @return     None.
+    @exception  None
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A multilingual chronicle moves through memory, ritual, and political consequence.")
+    preview_text = narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE[voice_language]
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory([], _profiles_payload(2, preview_text=preview_text)),
+    )
+
+    narrator_profile_generation_service.generate_narrator_profiles(
+        project_root,
+        {},
+        _MOCK_AI_PROFILE,
+        2,
+        voice_language,
+        220,
+    )
+
+    assert narrator_definition_service.load_profiles(project_root)
+
+
 def test_narrator_profile_generation_merges_token_usage_into_report_and_state(
     tmp_path,
     monkeypatch,

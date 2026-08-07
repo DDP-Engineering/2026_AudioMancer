@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Narrator Voice now measures generated previews, safe sample limits, and visible preview counters with script-aware spoken units, so Japanese, Chinese, and Korean previews follow the same safe duration rules as space-separated languages.
 - Character Discovery now writes transaction logs in its own resettable log
   family. Rejected candidate diagnostics are saved without source excerpts or
   AI credentials, survive interrupted resumes without double-counting, and
