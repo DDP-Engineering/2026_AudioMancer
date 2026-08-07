@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Characters page can now safely show an invalid Character Discovery document
+  and keeps Reset Discovery available to recover it; completed summaries report
+  the discovered speaking-character count without a false analysis-window count.
 - Character Discovery now accepts manual character names in Unicode scripts and
   matches equivalent names consistently across accents, composed spellings, and
   aliases. Repeated non-Latin character mentions are combined before voice

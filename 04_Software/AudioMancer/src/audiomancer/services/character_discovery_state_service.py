@@ -96,8 +96,24 @@ def build_character_discovery_state(
             "dirty": False,
         }
     source_chunks = character_discovery_service.load_input_chunks(project_root)
-    document = character_discovery_service.load_character_document(project_root)
-    profiles = character_discovery_service.load_character_profiles(project_root)
+    source_chunk_map = {
+        str(chunk.get("chunk_id", "")): str(chunk.get("text", ""))
+        for chunk in source_chunks
+        if str(chunk.get("chunk_id", "")).strip()
+    }
+    profile_state = build_character_discovery_profile_state(
+        settings_payload,
+        None,
+    )
+    try:
+        document = character_discovery_service.load_character_document(project_root)
+        profiles = character_discovery_service.load_character_profiles(project_root)
+    except character_discovery_service.CharacterDocumentError:
+        return _invalid_character_document_state(
+            source_chunk_map,
+            profile_state,
+            language,
+        )
     operation_state = (
         None
         if document is None
@@ -112,15 +128,6 @@ def build_character_discovery_state(
             "token_usage": dict(document["token_usage"]),
             "warnings": [],
         }
-    )
-    source_chunk_map = {
-        str(chunk.get("chunk_id", "")): str(chunk.get("text", ""))
-        for chunk in source_chunks
-        if str(chunk.get("chunk_id", "")).strip()
-    }
-    profile_state = build_character_discovery_profile_state(
-        settings_payload,
-        None,
     )
     stage_status = _character_discovery_stage_status(report, operation_state)
     has_ai_profiles = bool(profile_state["entries"])
@@ -161,6 +168,37 @@ def build_character_discovery_state(
     }
 
 
+def _invalid_character_document_state(
+    source_chunk_map: dict[str, str],
+    profile_state: dict[str, object],
+    language: str,
+) -> dict[str, object]:
+    """
+    @brief      Build the read-only recovery state for a strict-invalid document.
+    @param[in]  source_chunk_map Valid chunk text keyed by `chunk_id`.
+    @param[in]  profile_state Resolved available AI-profile selector state.
+    @param[in]  language Runtime UI language code.
+    @return     Complete Characters page recovery payload.
+    @exception  None
+    """
+    return {
+        "profiles": [],
+        "notes": [ui_state_service.translate("characters.note_invalid_document", language)],
+        "selected_profile_id": profile_state["selected_profile_id"],
+        "stage_status": "failed",
+        "character_count": 0,
+        "source_chunk_map": source_chunk_map,
+        "can_start": False,
+        "can_reset": True,
+        "can_add": False,
+        "can_edit": False,
+        "can_save": False,
+        "can_delete": False,
+        "edit_mode": False,
+        "dirty": False,
+    }
+
+
 def build_character_discovery_notes(
     manifest: dict[str, object],
     source_chunks: list[dict[str, object]],
@@ -191,7 +229,6 @@ def build_character_discovery_notes(
         notes.append(
             ui_state_service.translate("characters.note_summary", language).format(
                 character_count=len(profiles),
-                analyzed_window_count=int(report.get("analyzed_window_count", 0)),
             )
         )
         notes.extend(_build_token_usage_notes(report, operation_state, language))

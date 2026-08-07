@@ -501,6 +501,40 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
     assert window._characters_page._character_list.currentRow() == 0
 
 
+def test_character_ui_controller_reset_recovers_invalid_character_document(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify reset removes an invalid document and restores ordinary page state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "InvalidCharacterDiscoveryReset")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    window = _build_window(qtbot, project_root)
+    document_path.write_text("{", encoding="utf-8")
+    message_calls = []
+    monkeypatch.setattr(
+        characters_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *_args: message_calls.append(True),
+    )
+
+    window._refresh_characters_page_state(project_root, window._current_manifest, "en")
+
+    assert window._characters_page._reset_button.isEnabled() is True
+    assert window._characters_page._start_button.isEnabled() is False
+    characters_ui_controller.handle_reset_discovery_requested(window)
+
+    refreshed_manifest = project_workspace_service.load_manifest(project_root)
+    assert document_path.exists() is False
+    assert refreshed_manifest["operations"]["character_discovery"]["status"] == "not_started"
+    assert window._characters_page._reset_button.isEnabled() is False
+    assert window._characters_page._start_button.isEnabled() is True
+    assert message_calls == [True]
+
+
 def _create_project(tmp_path, name: str):
     """
     @brief      Provide the create project test helper.

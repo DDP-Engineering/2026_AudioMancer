@@ -56,6 +56,40 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert page._status_edit.toPlainText() == "Completed."
 
 
+def test_characters_page_renders_invalid_document_recovery_controls(qtbot) -> None:
+    """
+    @brief      Verify recovery state leaves only Reset Discovery available.
+    @return     None.
+    @exception  None
+    """
+    page = _build_page(qtbot)
+    page.set_character_state(
+        profiles=[],
+        notes=["Character Discovery data is invalid. Reset Discovery to recover this page."],
+        selected_profile_id="profile-1",
+        stage_status="failed",
+        character_count=0,
+        source_chunk_map={"chunk-0001": '"Hello there," said Alice.'},
+        can_start=False,
+        can_reset=True,
+        can_add=False,
+        can_edit=False,
+        can_save=False,
+        can_delete=False,
+        edit_mode=False,
+        dirty=False,
+    )
+
+    assert page._reset_button.isEnabled() is True
+    assert page._start_button.isEnabled() is False
+    assert page._add_character_button.isEnabled() is False
+    assert page._edit_character_button.isEnabled() is False
+    assert page._save_character_button.isEnabled() is False
+    assert page._delete_character_button.isEnabled() is False
+    assert page.is_edit_mode() is False
+    assert page.is_dirty() is False
+
+
 def test_characters_page_evidence_splitter_keeps_twenty_percent_minimums(qtbot) -> None:
     """
     @brief      Verify Evidence list and preview keep a twenty-percent splitter minimum.

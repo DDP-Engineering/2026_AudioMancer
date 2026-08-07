@@ -17,9 +17,17 @@
 # IMPORTS
 
 import json
+import string
+
+import pytest
 
 from audiomancer import config
-from audiomancer.services import character_discovery_state_service, project_workspace_service
+from audiomancer.services import (
+    character_discovery_service,
+    character_discovery_state_service,
+    project_workspace_service,
+    ui_state_service,
+)
 from chunking_test_support import build_chunking_document
 
 
@@ -156,6 +164,106 @@ def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
 
     assert state["can_start"] is False
     assert any("Enable at least one AI profile" in note for note in state["notes"])
+
+
+@pytest.mark.parametrize("invalid_document", ["{", {"status": "completed"}, {"characters": [{}]}])
+def test_invalid_character_documents_remain_strict_but_build_recovery_state(tmp_path, invalid_document) -> None:
+    """
+    @brief      Verify invalid documents are strict service errors but safe page states.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @param[in]  invalid_document Invalid authoritative document test payload.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project(tmp_path, "InvalidCharacterDiscoveryState")
+    document_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTERS_DOCUMENT_FILE_NAME
+    document_path.write_text(
+        invalid_document if isinstance(invalid_document, str) else json.dumps(invalid_document),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(character_discovery_service.CharacterDocumentError):
+        character_discovery_service.load_character_document(project_root)
+
+    original_text = document_path.read_text(encoding="utf-8")
+    localized_notes = (
+        ("en", "Character Discovery data is invalid"),
+        ("ro", "Datele Descoperirii Personajelor sunt nevalide"),
+    )
+    for language, note_fragment in localized_notes:
+        state = character_discovery_state_service.build_character_discovery_state(
+            project_root,
+            manifest,
+            language,
+            {
+                "llm_profiles": [{"id": "profile-1", "label": "Profile One", "enabled": True}],
+                "default_character_extraction_profile_id": "profile-1",
+            },
+        )
+
+        assert state["profiles"] == []
+        assert state["character_count"] == 0
+        assert state["source_chunk_map"] == {"chunk-0001": '"Hello there," said Alice.'}
+        assert state["stage_status"] == "failed"
+        assert state["selected_profile_id"] == "profile-1"
+        assert state["can_reset"] is True
+        disabled_flags = (
+            "can_start",
+            "can_add",
+            "can_edit",
+            "can_save",
+            "can_delete",
+            "edit_mode",
+            "dirty",
+        )
+        assert all(state[flag] is False for flag in disabled_flags)
+        assert any(note_fragment in note for note in state["notes"])
+
+    assert document_path.read_text(encoding="utf-8") == original_text
+
+
+def test_completed_character_notes_report_only_persisted_character_count(tmp_path) -> None:
+    """
+    @brief      Verify completed notes never invent an analyzed-window count.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project(tmp_path, "TruthfulCharacterSummary")
+
+    expected_notes = (
+        ("en", "Discovered 1 speaking characters."),
+        ("ro", "Au fost descoperite 1 personaje vorbitoare."),
+    )
+    for language, expected_note in expected_notes:
+        state = character_discovery_state_service.build_character_discovery_state(project_root, manifest, language)
+
+        assert expected_note in state["notes"]
+        assert not any("window" in note.casefold() or "fereastr" in note.casefold() for note in state["notes"])
+        assert any("Input tokens" in note or "Tokeni intrare" in note for note in state["notes"])
+        assert ui_state_service.translate("characters.note_rerun_replaces_manual", language) in state["notes"]
+
+
+def test_character_recovery_and_summary_localizations_share_placeholders() -> None:
+    """
+    @brief      Verify paired Character Discovery localization templates have equal fields.
+    @return     None.
+    @exception  None
+    """
+    for key in ("characters.note_invalid_document", "characters.note_summary"):
+        english = ui_state_service.translate(key, "en")
+        romanian = ui_state_service.translate(key, "ro")
+
+        assert _format_fields(english) == _format_fields(romanian)
+
+
+def _format_fields(template: str) -> set[str]:
+    """Return named Python-format fields used by one localization template."""
+    return {
+        field_name
+        for _literal, field_name, _format_spec, _conversion in string.Formatter().parse(template)
+        if field_name
+    }
 
 
 def _create_project(tmp_path, name: str):

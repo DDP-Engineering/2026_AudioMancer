@@ -100,6 +100,11 @@ Characters contain exactly `character_id`, `canonical_name`, `aliases`,
 The file is absent before the first run. Persisted statuses are `running`,
 `cancelled`, `failed`, and `completed`. Invalid JSON, arrays, extra root fields,
 or incompatible nested records are rejected by the strict document reader.
+Characters-page state catches only that expected document error and remains
+read-only: it preserves valid chunk evidence, disables Start and all manual
+mutations, and leaves Reset available to remove the invalid artifact through
+the established reset policy. Completed page summaries state only the persisted
+speaking-character count; they do not invent an analyzed-window count.
 
 ## 7. Workflow Integration
 
@@ -139,6 +144,12 @@ Cyrillic, Greek, CJK, Japanese, Korean, Hebrew, and Arabic names; composed and
 accent-folded equivalents; distinct base spellings; empty keys; grouping order;
 and one synthesis request for repeated mentions across discovery windows.
 
+Recovery regressions prove malformed, invalid-root, and invalid-nested
+documents remain strict direct-read errors while the Characters page and
+MainWindow refresh render an English or Romanian Reset-only state. Completed
+summary regressions prove token usage, warnings, rerun notice, and localization
+format placeholders remain intact without a fabricated window count.
+
 Minimum validation includes focused pytest runs, Python compilation, and Ruff.
 
 ## 10. Limitations And Future Work
@@ -166,5 +177,8 @@ From the adopted component map:
 - `.agentic/requirements/functional/REQ-FUNC-e3015445.toml`
 - `.agentic/requirements/functional/REQ-FUNC-e3feefa9.toml`
 - `.agentic/requirements/functional/REQ-FUNC-f5fc5dd8.toml`
+- `.agentic/requirements/functional/REQ-FUNC-f878c579.toml`
+- `.agentic/requirements/functional/REQ-FUNC-5cd8727a.toml`
 - `.agentic/specs/REQ-FUNC-df901739.md`
 - `.agentic/specs/REQ-FUNC-f5fc5dd8.md`
+- `.agentic/specs/REQ-FUNC-f878c579.md`
