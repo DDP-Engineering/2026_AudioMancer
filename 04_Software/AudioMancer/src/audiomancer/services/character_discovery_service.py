@@ -319,15 +319,20 @@ def start_or_continue_discovery(
         raw_candidates,
         merged_candidates,
         rejected_candidates,
-        synthesized_profiles,
+        _restored_synthesized_profiles,
+        next_candidate_index,
         log_relative_path,
+        resume_phase,
     ) = _restore_resume_state(
         existing_document,
         input_fingerprint,
         source_chunks,
     )
-    resume_is_compatible = bool(
-        completed_window_count > 0 or raw_candidates or merged_candidates or synthesized_profiles or log_relative_path
+    resume_is_compatible = resume_phase is not None
+    character_inventory = (
+        _restore_mapping_list(existing_document.get("characters"))
+        if resume_is_compatible
+        else []
     )
     if not resume_is_compatible:
         log_relative_path = None
@@ -346,7 +351,7 @@ def start_or_continue_discovery(
     discovery_progress_total = completed_window_count + len(windows)
     token_usage = (
         _restore_token_usage(existing_document)
-        if completed_window_count > 0 or raw_candidates or merged_candidates or synthesized_profiles
+        if resume_is_compatible
         else token_usage_service.empty_token_usage()
     )
     log_path = _resolve_log_path(resolved_project_root, run_token, log_relative_path)
@@ -355,7 +360,7 @@ def start_or_continue_discovery(
         str(chunk.get("chunk_id", "")): dict(chunk) for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip()
     }
     initial_progress_current = (
-        discovery_progress_total + len(synthesized_profiles) if merged_candidates else completed_window_count
+        discovery_progress_total + next_candidate_index if merged_candidates else completed_window_count
     )
     initial_progress_total = (
         discovery_progress_total + len(merged_candidates) if merged_candidates else discovery_progress_total
@@ -378,9 +383,10 @@ def start_or_continue_discovery(
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
             "rejected_candidates": list(rejected_candidates),
-            "synthesized_profiles": list(synthesized_profiles),
+            "next_candidate_index": next_candidate_index,
         },
         source=source_metadata,
+        character_inventory=character_inventory,
     )
     _emit_progress(
         progress_callback,
@@ -405,7 +411,7 @@ def start_or_continue_discovery(
         "raw_candidates": list(raw_candidates),
         "merged_candidates": [],
         "rejected_candidates": [],
-        "synthesized_profiles": [],
+        "next_candidate_index": 0,
     }
     try:
         for relative_window_index, window_records in enumerate(windows):
@@ -456,7 +462,7 @@ def start_or_continue_discovery(
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": [],
                 "rejected_candidates": [],
-                "synthesized_profiles": [],
+                "next_candidate_index": 0,
             }
             _write_operation_state(
                 state_path=document_path,
@@ -471,6 +477,7 @@ def start_or_continue_discovery(
                 token_usage=token_usage,
                 additional_character_discovery_instructions=additional_character_discovery_instructions,
                 checkpoint=discovery_checkpoint,
+                character_inventory=character_inventory,
             )
             _emit_progress(
                 progress_callback,
@@ -493,6 +500,7 @@ def start_or_continue_discovery(
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=discovery_checkpoint,
+            character_inventory=character_inventory,
         )
         raise
     except Exception:
@@ -509,6 +517,7 @@ def start_or_continue_discovery(
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=discovery_checkpoint,
+            character_inventory=character_inventory,
         )
         raise
 
@@ -519,7 +528,7 @@ def start_or_continue_discovery(
         state_path=document_path,
         status="running",
         phase="synthesis",
-        progress_current=discovery_progress_total + len(synthesized_profiles),
+        progress_current=discovery_progress_total + next_candidate_index,
         progress_total=total_progress,
         run_token=run_token,
         profile_id=profile_id,
@@ -533,20 +542,21 @@ def start_or_continue_discovery(
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
             "rejected_candidates": list(rejected_candidates),
-            "synthesized_profiles": list(synthesized_profiles),
+            "next_candidate_index": next_candidate_index,
         },
+        character_inventory=character_inventory,
     )
-    synthesis_progress_current = discovery_progress_total + len(synthesized_profiles)
+    synthesis_progress_current = discovery_progress_total + next_candidate_index
     synthesis_checkpoint = {
         "completed_window_count": discovery_progress_total,
         "next_discovery_start_chunk_index": len(source_chunks),
         "raw_candidates": list(raw_candidates),
         "merged_candidates": list(merged_candidates),
         "rejected_candidates": list(rejected_candidates),
-        "synthesized_profiles": list(synthesized_profiles),
+        "next_candidate_index": next_candidate_index,
     }
     try:
-        for profile_index in range(len(synthesized_profiles), len(merged_candidates)):
+        for profile_index in range(next_candidate_index, len(merged_candidates)):
             raise_if_cancelled(cancel_requested)
             candidate = _budgeted_synthesis_candidate_payload(
                 dict(merged_candidates[profile_index]),
@@ -589,15 +599,20 @@ def start_or_continue_discovery(
                 token_usage,
                 response_result.get("usage"),
             )
-            synthesized_profiles.append(_build_profile_from_synthesis(response_payload, candidate))
-            synthesis_progress_current = discovery_progress_total + len(synthesized_profiles)
+            synthesized_profile = _build_profile_from_synthesis(response_payload, candidate)
+            character_inventory = _merge_synthesized_profile_into_inventory(
+                character_inventory,
+                synthesized_profile,
+            )
+            next_candidate_index = profile_index + 1
+            synthesis_progress_current = discovery_progress_total + next_candidate_index
             synthesis_checkpoint = {
                 "completed_window_count": discovery_progress_total,
                 "next_discovery_start_chunk_index": len(source_chunks),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": list(merged_candidates),
                 "rejected_candidates": list(rejected_candidates),
-                "synthesized_profiles": list(synthesized_profiles),
+                "next_candidate_index": next_candidate_index,
             }
             _write_operation_state(
                 state_path=document_path,
@@ -612,6 +627,7 @@ def start_or_continue_discovery(
                 token_usage=token_usage,
                 additional_character_discovery_instructions=additional_character_discovery_instructions,
                 checkpoint=synthesis_checkpoint,
+                character_inventory=character_inventory,
             )
             _emit_progress(
                 progress_callback,
@@ -634,6 +650,7 @@ def start_or_continue_discovery(
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=synthesis_checkpoint,
+            character_inventory=character_inventory,
         )
         raise
     except Exception:
@@ -650,10 +667,11 @@ def start_or_continue_discovery(
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=synthesis_checkpoint,
+            character_inventory=character_inventory,
         )
         raise
 
-    ordered_profiles = sorted(synthesized_profiles, key=_profile_sort_key)
+    ordered_inventory = sorted(character_inventory, key=_nested_profile_sort_key)
     _write_operation_state(
         state_path=document_path,
         status="completed",
@@ -667,7 +685,7 @@ def start_or_continue_discovery(
         token_usage=token_usage,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
         checkpoint=None,
-        characters=ordered_profiles,
+        character_inventory=ordered_inventory,
     )
     completed_document = load_character_document(resolved_project_root)
     assert completed_document is not None
@@ -1625,6 +1643,8 @@ def _restore_resume_state(
     list[dict[str, object]],
     list[dict[str, object]],
     list[dict[str, object]],
+    int,
+    str | None,
     str | None,
 ]:
     """
@@ -1635,23 +1655,18 @@ def _restore_resume_state(
     @return     Derived helper result.
     """
     if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
-        return 0, 0, [], [], [], [], None
+        return 0, 0, [], [], [], [], 0, None, None
     source = existing_state.get("source", {})
     if not isinstance(source, dict) or str(source.get("fingerprint", "")) != input_fingerprint:
-        return 0, 0, [], [], [], [], None
+        return 0, 0, [], [], [], [], 0, None, None
     checkpoint = existing_state.get("checkpoint")
     if not isinstance(checkpoint, dict):
-        return 0, 0, [], [], [], [], None
+        return 0, 0, [], [], [], [], 0, None, None
     phase = str(checkpoint.get("phase", ""))
     candidates = _restore_mapping_list(checkpoint.get("candidates"))
-    synthesized_profiles = [
-        _normalize_character_profile(_flat_character_profile(item))
-        for item in existing_state.get("characters", [])
-        if isinstance(item, dict)
-    ]
     if phase == "discovery":
         if type(checkpoint.get("next_chunk_index")) is not int:
-            return 0, 0, [], [], [], [], None
+            return 0, 0, [], [], [], [], 0, None, None
         next_chunk_index = max(
             0,
             min(int(checkpoint.get("next_chunk_index", 0)), len(source_chunks)),
@@ -1662,18 +1677,32 @@ def _restore_resume_state(
             candidates,
             [],
             [],
-            synthesized_profiles,
+            [],
+            0,
             None,
+            "discovery",
         )
     if phase != "synthesis":
-        return 0, 0, [], [], [], [], None
+        return 0, 0, [], [], [], [], 0, None, None
     if type(checkpoint.get("next_candidate_index")) is not int:
-        return 0, 0, [], [], [], [], None
+        return 0, 0, [], [], [], [], 0, None, None
     next_candidate_index = max(
         0,
         min(int(checkpoint.get("next_candidate_index", 0)), len(candidates)),
     )
-    synthesized_profiles = synthesized_profiles[:next_candidate_index]
+    completed_candidates = candidates[:next_candidate_index]
+    current_ai_by_id = {
+        str(item.get("character_id", "")): item
+        for item in existing_state.get("characters", [])
+        if isinstance(item, dict)
+        and isinstance(item.get("provenance"), dict)
+        and str(item["provenance"].get("origin", "")) == "ai"
+    }
+    synthesized_profiles = [
+        _normalize_character_profile(_flat_character_profile(current_ai_by_id[candidate_id]))
+        for candidate in completed_candidates
+        if (candidate_id := str(candidate.get("character_id", ""))) in current_ai_by_id
+    ]
     return (
         len(source_chunks),
         len(source_chunks),
@@ -1681,7 +1710,9 @@ def _restore_resume_state(
         candidates,
         [],
         synthesized_profiles,
+        next_candidate_index,
         None,
+        "synthesis",
     )
 
 
@@ -1732,6 +1763,27 @@ def _restore_mapping_list(payload: object) -> list[dict[str, object]]:
     return [dict(item) for item in payload if isinstance(item, dict)]
 
 
+def _merge_synthesized_profile_into_inventory(
+    character_inventory: list[dict[str, object]],
+    synthesized_profile: CharacterProfilePayload,
+) -> list[dict[str, object]]:
+    """
+    @brief      Add one synthesized profile without replacing current durable data.
+    @param[in]  character_inventory Current authoritative nested character records.
+    @param[in]  synthesized_profile Newly synthesized flat character profile.
+    @return     Updated nested inventory with no duplicate stable identifier.
+    """
+    synthesized_character_id = str(synthesized_profile.get("character_id", ""))
+    preserved_inventory = _restore_mapping_list(character_inventory)
+    if any(
+        str(item.get("character_id", "")) == synthesized_character_id
+        for item in preserved_inventory
+    ):
+        return preserved_inventory
+    preserved_inventory.append(_nested_character_profile(synthesized_profile))
+    return preserved_inventory
+
+
 def _resolve_log_path(
     project_root: Path,
     run_token: str,
@@ -1774,7 +1826,7 @@ def _write_operation_state(
     additional_character_discovery_instructions: str,
     checkpoint: dict[str, object] | None,
     source: dict[str, str] | None = None,
-    characters: list[CharacterProfilePayload] | None = None,
+    character_inventory: list[dict[str, object]] | None = None,
 ) -> None:
     """
     @brief      Write the operation state.
@@ -1790,6 +1842,7 @@ def _write_operation_state(
     @param[in]  token_usage Value for `token_usage`.
     @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
     @param[in]  checkpoint Value for `checkpoint`.
+    @param[in]  character_inventory Current authoritative nested character records.
     @return     None.
     """
     _ = (
@@ -1805,12 +1858,11 @@ def _write_operation_state(
     if not resolved_source:
         raise CharacterDocumentError("Character Discovery source metadata is required.")
     legacy_checkpoint = dict(checkpoint) if isinstance(checkpoint, dict) else None
-    if characters is not None:
-        flat_characters = list(characters)
-    elif legacy_checkpoint is not None:
-        flat_characters = _restore_mapping_list(legacy_checkpoint.get("synthesized_profiles"))
-    else:
-        flat_characters = load_character_profiles(state_path.parent)
+    nested_characters = (
+        _restore_mapping_list(character_inventory)
+        if character_inventory is not None
+        else _restore_mapping_list((existing_document or {}).get("characters"))
+    )
     if phase == "discovery" and legacy_checkpoint is not None:
         persisted_checkpoint: dict[str, object] | None = {
             "phase": "discovery",
@@ -1823,18 +1875,14 @@ def _write_operation_state(
     elif phase == "synthesis" and legacy_checkpoint is not None:
         persisted_checkpoint = {
             "phase": "synthesis",
-            "next_candidate_index": len(
-                _restore_mapping_list(legacy_checkpoint.get("synthesized_profiles"))
+            "next_candidate_index": max(
+                0,
+                int(legacy_checkpoint.get("next_candidate_index", 0)),
             ),
             "candidates": _restore_mapping_list(legacy_checkpoint.get("merged_candidates")),
         }
     else:
         persisted_checkpoint = None
-    existing_by_id = {
-        str(item.get("character_id", "")): item
-        for item in (existing_document or {}).get("characters", [])
-        if isinstance(item, dict)
-    }
     document: CharacterDocumentPayload = {
         "status": str(status),
         "source": resolved_source,
@@ -1848,13 +1896,7 @@ def _write_operation_state(
             if status == "failed"
             else None
         ),
-        "characters": [
-            _nested_character_profile(
-                profile,
-                existing_by_id.get(str(profile.get("character_id", ""))),
-            )
-            for profile in flat_characters
-        ],
+        "characters": nested_characters,
     }
     _validate_character_document(document)
     write_json_atomic(state_path, document)
@@ -2767,6 +2809,15 @@ def _profile_sort_key(profile: CharacterProfilePayload) -> tuple[int, str]:
         min(int(item.get("sequence_index", 0)) for item in evidence),
         str(profile.get("canonical_name", "")).casefold(),
     )
+
+
+def _nested_profile_sort_key(profile: dict[str, object]) -> tuple[int, str]:
+    """
+    @brief      Derive deterministic inventory order without rewriting a nested record.
+    @param[in]  profile Authoritative nested character record.
+    @return     Existing profile order key.
+    """
+    return _profile_sort_key(_flat_character_profile(profile))
 
 
 def _candidate_has_spoken_dialogue(candidate: dict[str, object]) -> bool:

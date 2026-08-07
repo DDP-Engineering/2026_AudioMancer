@@ -35,6 +35,15 @@ sequential: each candidate is compacted to the current profile budget and sent
 in one AI request, then the resulting character and next index are committed
 atomically.
 
+Resume keeps four concepts separate. The root character array is the current
+durable inventory, checkpoint candidates are discovery output, the completed
+candidate prefix identifies prior synthesis results still present by stable
+AI-character ID, and `next_candidate_index` is the only synthesis cursor.
+Manual records and root ordering never advance that cursor. Discovery writes
+preserve current nested records directly, so operator additions and edits
+survive later checkpoints without normalization, while a deleted completed AI
+record is not reconstructed from stale checkpoint data.
+
 ## 4. Dependencies
 
 - Internal: strict Chunking and AI Translation documents, project manifest,
@@ -72,6 +81,12 @@ language, and ordered chunk ID, sequence index, and selected text.
 - discovery: `phase`, `next_chunk_index`, `candidates`
 - synthesis: `phase`, `next_candidate_index`, `candidates`
 
+Discovery checkpoints always represent zero completed synthesis work,
+regardless of root inventory size. For synthesis checkpoints, candidates before
+`next_candidate_index` are complete and are never resubmitted; candidates at or
+after it remain pending. Inventory count and order are presentation state, not
+progress state.
+
 Characters contain exactly `character_id`, `canonical_name`, `aliases`,
 `traits`, `voice`, `discovery_confidence`, `provenance`, and `evidence`.
 `provenance` separates `origin` (`ai` or `manual`) from `edited`.
@@ -94,7 +109,10 @@ Call `start_or_continue_discovery()` with the project root, manifest, and
 current profile. A resumable run retains its saved instructions but always uses
 the current profile configuration. Call `reset_character_discovery()` to delete
 the document and dependent artifacts. Manual add/edit/delete functions update
-the same document atomically.
+the same document atomically. Manual and operator-edited records in a compatible
+cancelled or failed document remain authoritative when the run resumes;
+force-rerun and incompatible-source paths retain their established fresh-run
+behavior.
 
 ## 9. Validation And Tests
 
@@ -104,6 +122,11 @@ Primary coverage is in:
 - `04_Software/AudioMancer/tests/test_character_discovery_state_service.py`
 - `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
 - translation, runtime, export, and text-state consumer tests
+
+The service regressions cover discovery and synthesis cancellation/resume,
+provider failure, manual inventory in varied ordering, edited and deleted AI
+profiles, cursor-based provider-call counts, source mismatch, force rerun,
+explicit reset, token usage, instructions, and atomic document writes.
 
 Minimum validation includes focused pytest runs, Python compilation, and Ruff.
 
@@ -127,3 +150,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_character_discovery_state_service.py`
 - `04_Software/AudioMancer/tests/test_characters_page.py`
 - `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
+- `.agentic/requirements/functional/REQ-FUNC-57acf8bd.toml`
+- `.agentic/requirements/functional/REQ-FUNC-df901739.toml`
+- `.agentic/requirements/functional/REQ-FUNC-e3feefa9.toml`
+- `.agentic/specs/REQ-FUNC-df901739.md`

@@ -509,6 +509,473 @@ def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
     assert failed_document["failure"]["phase"] == "synthesis"
 
 
+def test_discovery_resume_preserves_manual_inventory_through_checkpoints_and_recancellation(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify resumed discovery writes preserve current durable manual records.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryManualResumeCancel")
+    _set_character_project_chunks(project_root, 20)
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    initial_call_count = 0
+
+    def _cancel_second_initial_window(*_args, **_kwargs):
+        """Complete one discovery window and cancel the next model request."""
+        nonlocal initial_call_count
+        initial_call_count += 1
+        if initial_call_count == 2:
+            raise character_discovery_service.OperationCancelledError("cancelled")
+        return _window_response_for_names(["Alice"], "chunk-0001")
+
+    monkeypatch.setattr(
+        character_discovery_service.llm_provider_service,
+        "chat_json",
+        _cancel_second_initial_window,
+    )
+    with pytest.raises(character_discovery_service.OperationCancelledError):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+    character_discovery_service.add_character_profile(project_root, "Ghost")
+    manual_record = character_discovery_service.load_character_document(project_root)["characters"][0]
+    persisted_documents: list[dict[str, object]] = []
+    original_write_json_atomic = character_discovery_service.write_json_atomic
+
+    def _capture_character_writes(path, payload):
+        """Capture authoritative document writes while preserving atomic persistence."""
+        if Path(path).name == config.CHARACTERS_DOCUMENT_FILE_NAME:
+            persisted_documents.append(json.loads(json.dumps(payload)))
+        return original_write_json_atomic(path, payload)
+
+    resumed_call_count = 0
+
+    def _cancel_second_resumed_window(*_args, **_kwargs):
+        """Complete one resumed window and cancel the following request."""
+        nonlocal resumed_call_count
+        resumed_call_count += 1
+        if resumed_call_count == 2:
+            raise character_discovery_service.OperationCancelledError("cancelled again")
+        return _window_response_for_names(["Bob"], "chunk-0009")
+
+    monkeypatch.setattr(character_discovery_service, "write_json_atomic", _capture_character_writes)
+    monkeypatch.setattr(
+        character_discovery_service.llm_provider_service,
+        "chat_json",
+        _cancel_second_resumed_window,
+    )
+
+    with pytest.raises(character_discovery_service.OperationCancelledError):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+    assert len(persisted_documents) >= 3
+    assert all(document["characters"] == [manual_record] for document in persisted_documents)
+    cancelled_document = character_discovery_service.load_character_document(project_root)
+    assert cancelled_document["status"] == "cancelled"
+    assert cancelled_document["characters"] == [manual_record]
+
+
+def test_discovery_resume_provider_failure_preserves_current_inventory(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a provider failure after discovery resume preserves durable records.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryManualResumeFailure")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    manual_record = _nested_character_record(
+        "manual-ghost",
+        "Ghost",
+        origin="manual",
+        edited=True,
+        sequence_index=0,
+        voice_text="Operator-authored voice text.",
+    )
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            source,
+            status="cancelled",
+            checkpoint={"phase": "discovery", "next_chunk_index": 0, "candidates": []},
+            characters=[manual_record],
+        ),
+    )
+    monkeypatch.setattr(
+        character_discovery_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("provider failed")),
+    )
+
+    with pytest.raises(RuntimeError, match="provider failed"):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+    failed_document = character_discovery_service.load_character_document(project_root)
+    assert failed_document["status"] == "failed"
+    assert failed_document["characters"] == [manual_record]
+
+
+def test_discovery_resume_manual_inventory_does_not_skip_synthesis_candidates(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify discovery-phase manual records do not advance synthesis progress.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryManualSynthesisBoundary")
+    _set_character_project_chunks(project_root, 10)
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    discovery_call_count = 0
+
+    def _cancel_second_window(*_args, **_kwargs):
+        """Return three candidates before cancelling the second window."""
+        nonlocal discovery_call_count
+        discovery_call_count += 1
+        if discovery_call_count == 2:
+            raise character_discovery_service.OperationCancelledError("cancelled")
+        return _window_response_for_names(["Alice", "Bob", "Carol"], "chunk-0001")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _cancel_second_window)
+    with pytest.raises(character_discovery_service.OperationCancelledError):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+    character_discovery_service.add_character_profile(project_root, "Manual One")
+    character_discovery_service.add_character_profile(project_root, "Manual Two")
+    synthesis_names = iter(["Alice", "Bob", "Carol"])
+    synthesis_calls: list[str] = []
+
+    def _finish_resumed_run(*_args, **kwargs):
+        """Complete the remaining discovery window and every synthesis request."""
+        stage_label = str(kwargs["log_context"]["stage_label"])
+        if stage_label == "character_discovery_window":
+            return _window_response_for_names([], "chunk-0009")
+        name = next(synthesis_names)
+        synthesis_calls.append(name)
+        return _synthesis_response_for_name(name)
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _finish_resumed_run)
+    completed = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+
+    assert synthesis_calls == ["Alice", "Bob", "Carol"]
+    assert {item["canonical_name"] for item in completed["characters"]} == {
+        "Alice",
+        "Bob",
+        "Carol",
+        "Manual One",
+        "Manual Two",
+    }
+    assert len({item["character_id"] for item in completed["characters"]}) == 5
+
+
+def test_synthesis_resume_preserves_reordered_manual_and_edited_ai_inventory(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify synthesis resume inventory is independent from root ordering.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryReorderedSynthesis")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    candidates = [
+        _merged_candidate(name, index)
+        for index, name in enumerate(["Alice", "Bob", "Carol", "Dave", "Eve"], 1)
+    ]
+    manual_before = _nested_character_record("manual-before", "Manual Before", origin="manual", sequence_index=0)
+    edited_bob = _nested_character_record(
+        "bob",
+        "Bob Operator Edit",
+        origin="ai",
+        edited=True,
+        sequence_index=2,
+        voice_text="Keep this exact edited voice text.",
+    )
+    manual_between = _nested_character_record("manual-between", "Manual Between", origin="manual", sequence_index=2)
+    retained_carol = _nested_character_record("carol", "Carol", origin="ai", sequence_index=3)
+    manual_after = _nested_character_record("manual-after", "Manual After", origin="manual", sequence_index=99)
+    current_inventory = [manual_before, edited_bob, manual_between, retained_carol, manual_after]
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            source,
+            status="cancelled",
+            checkpoint={"phase": "synthesis", "next_candidate_index": 3, "candidates": candidates},
+            characters=current_inventory,
+        ),
+    )
+    pending_names = iter(["Dave", "Eve"])
+    requested_indexes: list[int] = []
+
+    def _synthesize_pending(*_args, **kwargs):
+        """Record the synthesis cursor and return the next pending profile."""
+        requested_indexes.append(int(kwargs["log_context"]["window_index"]))
+        return _synthesis_response_for_name(next(pending_names))
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _synthesize_pending)
+    completed = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+
+    assert requested_indexes == [4, 5]
+    completed_by_id = {item["character_id"]: item for item in completed["characters"]}
+    assert completed_by_id["bob"] == edited_bob
+    assert completed_by_id["carol"] == retained_carol
+    assert all(completed_by_id[item["character_id"]] == item for item in (manual_before, manual_between, manual_after))
+    assert "alice" not in completed_by_id
+    assert set(completed_by_id) == {
+        "manual-before",
+        "bob",
+        "manual-between",
+        "carol",
+        "manual-after",
+        "dave",
+        "eve",
+    }
+
+
+def test_synthesis_resume_does_not_resubmit_or_restore_deleted_prefix_profiles(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify deleted completed profiles stay absent without moving the cursor.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryDeletedSynthesisPrefix")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    candidates = [
+        _merged_candidate(name, index)
+        for index, name in enumerate(["Alice", "Bob", "Carol", "Dave", "Eve"], 1)
+    ]
+    retained_bob = _nested_character_record("bob", "Bob", origin="ai", edited=True, sequence_index=2)
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            source,
+            status="failed",
+            checkpoint={"phase": "synthesis", "next_candidate_index": 3, "candidates": candidates},
+            characters=[retained_bob],
+        ),
+    )
+    pending_names = iter(["Dave", "Eve"])
+    requested_indexes: list[int] = []
+
+    def _synthesize_pending(*_args, **kwargs):
+        """Return only candidates after the durable checkpoint boundary."""
+        requested_indexes.append(int(kwargs["log_context"]["window_index"]))
+        return _synthesis_response_for_name(next(pending_names))
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _synthesize_pending)
+    completed = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+
+    assert requested_indexes == [4, 5]
+    assert {item["character_id"] for item in completed["characters"]} == {"bob", "dave", "eve"}
+    assert next(item for item in completed["characters"] if item["character_id"] == "bob") == retained_bob
+
+
+@pytest.mark.parametrize("interruption_kind", ["cancellation", "failure"])
+def test_resumed_synthesis_interruption_preserves_truthful_inventory_and_cursor(
+    monkeypatch,
+    tmp_path,
+    interruption_kind,
+) -> None:
+    """
+    @brief      Verify resumed synthesis interruption retains durable inventory and cursor.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  interruption_kind Provider interruption to exercise.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_character_project(
+        tmp_path,
+        f"CharacterDiscoverySynthesis{interruption_kind.title()}",
+    )
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    candidates = [_merged_candidate(name, index) for index, name in enumerate(["Alice", "Bob", "Carol"], 1)]
+    manual_record = _nested_character_record("manual-keeper", "Manual Keeper", origin="manual", sequence_index=0)
+    edited_alice = _nested_character_record(
+        "alice",
+        "Alice Edited",
+        origin="ai",
+        edited=True,
+        sequence_index=1,
+        voice_text="Operator-edited Alice voice.",
+    )
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            source,
+            status="cancelled",
+            checkpoint={"phase": "synthesis", "next_candidate_index": 1, "candidates": candidates},
+            characters=[manual_record, edited_alice],
+        ),
+    )
+    requested_indexes: list[int] = []
+
+    def _interrupt_after_bob(*_args, **kwargs):
+        """Synthesize Bob and interrupt Carol."""
+        requested_index = int(kwargs["log_context"]["window_index"])
+        requested_indexes.append(requested_index)
+        if requested_index == 2:
+            return _synthesis_response_for_name("Bob")
+        if interruption_kind == "cancellation":
+            raise character_discovery_service.OperationCancelledError("cancelled")
+        raise RuntimeError("provider failed")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _interrupt_after_bob)
+    expected_error = (
+        character_discovery_service.OperationCancelledError
+        if interruption_kind == "cancellation"
+        else RuntimeError
+    )
+    with pytest.raises(expected_error):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+    interrupted = character_discovery_service.load_character_document(project_root)
+    assert interrupted["status"] == ("cancelled" if interruption_kind == "cancellation" else "failed")
+    assert interrupted["checkpoint"]["next_candidate_index"] == 2
+    interrupted_by_id = {item["character_id"]: item for item in interrupted["characters"]}
+    assert interrupted_by_id["manual-keeper"] == manual_record
+    assert interrupted_by_id["alice"] == edited_alice
+    assert set(interrupted_by_id) == {"manual-keeper", "alice", "bob"}
+
+    resumed_indexes: list[int] = []
+
+    def _finish_carol(*_args, **kwargs):
+        """Complete only the candidate remaining after the interrupted checkpoint."""
+        resumed_indexes.append(int(kwargs["log_context"]["window_index"]))
+        return _synthesis_response_for_name("Carol")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _finish_carol)
+    completed = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+
+    assert requested_indexes == [2, 3]
+    assert resumed_indexes == [3]
+    assert {item["character_id"] for item in completed["characters"]} == {
+        "manual-keeper",
+        "alice",
+        "bob",
+        "carol",
+    }
+
+
+@pytest.mark.parametrize("restart_kind", ["source_mismatch", "force_rerun"])
+def test_incompatible_or_forced_restart_retains_established_fresh_run_behavior(
+    monkeypatch,
+    tmp_path,
+    restart_kind,
+) -> None:
+    """
+    @brief      Verify source mismatch and force rerun still discard resumable inventory.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  restart_kind Fresh-run trigger to exercise.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_character_project(tmp_path, f"CharacterDiscoveryRestart{restart_kind.title()}")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    _chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    persisted_source = dict(source)
+    if restart_kind == "source_mismatch":
+        persisted_source["fingerprint"] = "stale-source-fingerprint"
+    manual_record = _nested_character_record("manual-old", "Manual Old", origin="manual", sequence_index=0)
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            persisted_source,
+            status="cancelled",
+            checkpoint={"phase": "discovery", "next_chunk_index": 0, "candidates": []},
+            characters=[manual_record],
+        ),
+    )
+    requested_stages: list[str] = []
+
+    def _complete_fresh_run(*_args, **kwargs):
+        """Complete one fresh discovery and synthesis request."""
+        stage_label = str(kwargs["log_context"]["stage_label"])
+        requested_stages.append(stage_label)
+        if stage_label == "character_discovery_window":
+            return _window_response_for_names(["Alice"], "chunk-0001")
+        return _synthesis_response_for_name("Alice")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _complete_fresh_run)
+    completed = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+        force_rerun=restart_kind == "force_rerun",
+    )
+
+    assert requested_stages == ["character_discovery_window", "character_profile_synthesis"]
+    assert [item["character_id"] for item in completed["characters"]] == ["alice"]
+
+
 def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-NFR-017 discovery startup avoids duplicate full-window construction.
@@ -1278,6 +1745,9 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     assert restored[0] == 1
     assert restored[1] == 1
     assert restored[2] == [resume_candidate]
+    assert restored[5] == []
+    assert restored[6] == 0
+    assert restored[8] == "discovery"
 
     stale_restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
         {
@@ -1292,7 +1762,7 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         input_fingerprint="abc",
         source_chunks=source_chunks,
     )
-    assert stale_restored == (0, 0, [], [], [], [], None)
+    assert stale_restored == (0, 0, [], [], [], [], 0, None, None)
 
 
 def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
@@ -1394,6 +1864,127 @@ def _synthesis_response_payload() -> dict[str, object]:
         },
         "usage": {"input_tokens": 40, "output_tokens": 20, "total_tokens": 60, "usage_available": True},
     }
+
+
+def _window_response_for_names(names: list[str], chunk_id: str) -> dict[str, object]:
+    """Build one discovery response containing the requested candidate names."""
+    return {
+        "payload": {
+            "characters": [
+                {
+                    "canonical_name": name,
+                    "aliases": [],
+                    "confidence": "high",
+                    "evidence": [
+                        {
+                            "chunk_id": chunk_id,
+                            "source_excerpt": f'"Hello," said {name}.',
+                            "reason": f"{name} speaks in direct dialogue.",
+                        }
+                    ],
+                }
+                for name in names
+            ]
+        },
+        "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+    }
+
+
+def _synthesis_response_for_name(name: str) -> dict[str, object]:
+    """Build one synthesis response for a named candidate."""
+    return {
+        "payload": {
+            "canonical_name": name,
+            "aliases": [],
+            "voice_definition_prompt": f"Create a stable voice for {name}.",
+            "preview_text": f"Hello there, said {name} with a clear and steady voice today.",
+            "confidence": "high",
+        },
+        "usage": {"input_tokens": 8, "output_tokens": 4, "total_tokens": 12, "usage_available": True},
+    }
+
+
+def _merged_candidate(name: str, sequence_index: int) -> dict[str, object]:
+    """Build one merged synthesis candidate with a stable identifier."""
+    return {
+        "character_id": name.casefold(),
+        "canonical_name": name,
+        "aliases": [],
+        "confidence": "high",
+        "identity_merge_count": 1,
+        "evidence": [
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": sequence_index,
+                "dialogue_span_id": "",
+                "source_excerpt": f'"Hello," said {name}.',
+                "reason": f"{name} speaks in direct dialogue.",
+                "confidence": "high",
+            }
+        ],
+    }
+
+
+def _nested_character_record(
+    character_id: str,
+    canonical_name: str,
+    *,
+    origin: str,
+    sequence_index: int,
+    edited: bool = False,
+    voice_text: str = "Stored voice text.",
+) -> dict[str, object]:
+    """Build one strict nested character record for resume-inventory tests."""
+    return {
+        "character_id": character_id,
+        "canonical_name": canonical_name,
+        "aliases": [f"{canonical_name} Alias"],
+        "traits": {
+            "gender": {"value": "unspecified", "confidence": "high"},
+            "age": {"value": "adult", "confidence": "medium"},
+        },
+        "voice": {
+            "definition_prompt": voice_text,
+            "preview_text": f"A preserved preview line for {canonical_name} remains intact.",
+        },
+        "discovery_confidence": "high",
+        "provenance": {"origin": origin, "edited": edited},
+        "evidence": [
+            {
+                "chunk_id": "manual" if origin == "manual" else "chunk-0001",
+                "sequence_index": sequence_index,
+                "source_excerpt": f"Evidence for {canonical_name}.",
+                "reason": "Preserved nested evidence.",
+            }
+        ],
+    }
+
+
+def _set_character_project_chunks(project_root: Path, chunk_count: int) -> None:
+    """Replace the fixture chunk document with a requested number of chunks."""
+    chunk_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
+    chunk_path.write_text(
+        json.dumps(
+            build_chunking_document(
+                [
+                    {
+                        "chunk_id": f"chunk-{index:04d}",
+                        "sequence_index": index,
+                        "text": f'"Hello from chunk {index}," said Speaker {index}.',
+                        "source_start_line": index,
+                        "source_end_line": index,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    }
+                    for index in range(1, chunk_count + 1)
+                ]
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _reference_group_character_candidates_by_identity(

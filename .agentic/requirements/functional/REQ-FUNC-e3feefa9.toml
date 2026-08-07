@@ -1,10 +1,12 @@
 schema = 1
 id = "REQ-FUNC-e3feefa9"
-title = "Character discovery shall preserve resumable, cancelled, and failed"
+title = "Character discovery interruptions shall preserve checkpoint progress"
 status = "active"
 
 requirement = """
-Character discovery shall preserve resumable, cancelled, and failed progress against the current checkpoint boundary.
+When a compatible Character Discovery run is cancelled or fails, the service
+shall atomically persist its current phase checkpoint, instructions, token
+usage, and outcome status for a later resume.
 """
 
 verification = "Automated: 4 linked pytest selector(s)."
@@ -24,4 +26,4 @@ rationale = """
 Completed discovery work must survive interruption and provider failure.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-07

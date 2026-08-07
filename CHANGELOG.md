@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Resuming Character Discovery now keeps characters added or edited after an
+  interruption through later checkpoints, cancellation, provider failure, and
+  completion. Manual characters no longer make synthesis skip discovered
+  candidates, and deleting an already generated character while interrupted no
+  longer causes it to reappear or moves the resume point backward.
 - Re-selecting a project's existing source file no longer creates a duplicate
   copy or clears completed work. Changing the app language now keeps the source
   status truthful, and export or snapshot names such as `Dune vol. 2` retain

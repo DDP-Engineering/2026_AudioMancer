@@ -1,0 +1,76 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-57acf8bd"
+
+title = "Discovery resume shall preserve durable character inventory"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When a compatible Character Discovery checkpoint is resumed, the service shall
+preserve the current durable character inventory through every discovery-phase
+write and subsequent run outcome unless synthesis legitimately creates or
+updates a different character record.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Public run-path tests cancel discovery, add or edit durable records, and resume through initial, window, cancellation, provider-failure, synthesis-transition, and completion writes; each persisted document retains the same nested records and deliberately deleted records remain absent."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_preserves_manual_inventory_through_checkpoints_and_recancellation",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_provider_failure_preserves_current_inventory",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_manual_inventory_does_not_skip_synthesis_candidates",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_synthesis_resume_preserves_reordered_manual_and_edited_ai_inventory",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_resumed_synthesis_interruption_preserves_truthful_inventory_and_cursor",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_incompatible_or_forced_restart_retains_established_fresh_run_behavior",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"
+rationale = "The operator-maintained character inventory is authoritative data and must not be projected from discovery candidates or empty synthesis progress."
+
+created = 2026-08-07
+updated = 2026-08-07
