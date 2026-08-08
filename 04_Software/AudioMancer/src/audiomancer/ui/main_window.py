@@ -487,6 +487,7 @@ class MainWindow(QMainWindow):
             **narrator_definition_state_service.build_narrator_profile_generation_profile_state(
                 self._settings_payload,
                 project_root,
+                self._narator_voice_page.current_ai_profile_id(),
             )
         )
         self._narator_voice_page.set_narator_voice_state(

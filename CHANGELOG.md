@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Narrator Voice now keeps the operator's enabled AI profile selected across
+  page and narrator-list refreshes, while safely returning to the configured
+  default or first enabled profile if that choice is no longer available.
+- Changing the narrator voice language now preserves operator- and AI-authored
+  preview text, localizes only untouched canonical defaults, and avoids
+  rewriting `narrator_voice.json` during unchanged page refreshes.
 - Retrying cancelled or failed narrator profile generation now reopens the
   optional profile-rules dialog with the saved text and restores the saved
   profile count when its checkpoint is valid. Keeping both values can resume

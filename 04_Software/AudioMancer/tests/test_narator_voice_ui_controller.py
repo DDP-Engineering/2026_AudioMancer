@@ -376,7 +376,7 @@ def test_narator_voice_select_profile_progress_clears_after_failure(monkeypatch,
 
 def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtbot, tmp_path) -> None:
     """
-    @brief      Verify switching the inspected narrator profile refreshes delete enablement for the new profile.
+    @brief      Verify narrator inspection refreshes delete state without replacing the live AI profile.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -398,15 +398,28 @@ def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtb
         "Preview text.",
     )
     narrator_definition_service.select_narrator_profile(project_root, first_profile["profile_id"], "English")
-    window = _build_window(qtbot, project_root)
+    profile_a = _ai_profile_payload("profile_a")
+    profile_b = {**_ai_profile_payload("profile_b"), "label": "Profile Two"}
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [profile_a, profile_b],
+            "default_narrator_profile_generation_profile_id": "profile_a",
+        },
+    )
 
     assert window._narator_voice_page.current_profile_id() == first_profile["profile_id"]
     assert window._narator_voice_page._delete_profile_button.isEnabled() is True
+    window._narator_voice_page._ai_profile_combo.setCurrentIndex(1)
+    assert window._narator_voice_page.current_ai_profile_id() == "profile_b"
 
     narator_voice_ui_controller.handle_selection_change_requested(window, custom_profile["profile_id"])
 
     assert window._narator_voice_page.current_profile_id() == custom_profile["profile_id"]
     assert window._narator_voice_page._delete_profile_button.isEnabled() is True
+    assert window._narator_voice_page.current_ai_profile_id() == "profile_b"
 
 
 def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeypatch, qtbot, tmp_path) -> None:

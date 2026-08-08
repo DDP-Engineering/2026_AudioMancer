@@ -155,4 +155,45 @@ def test_main_window_character_refresh_preserves_live_profile_selection(qtbot, d
     assert page.current_profile_id() == "profile_a"
 
 
+def test_main_window_narrator_refresh_preserves_live_profile_selection(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify Narrator Voice refresh keeps an enabled live AI profile and applies safe fallbacks.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Valid baseline application settings fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_payload = dict(default_settings_payload)
+    base_profile = dict(settings_payload["llm_profiles"][0])
+    profile_a = dict(base_profile, id="profile_a", label="Profile A")
+    profile_b = dict(base_profile, id="profile_b", label="Profile B")
+    settings_payload["llm_profiles"] = [profile_a, profile_b]
+    settings_payload["default_narrator_profile_generation_profile_id"] = "profile_a"
+    window = MainWindow(settings_payload=settings_payload)
+    qtbot.addWidget(window)
+    page = window._narator_voice_page
+
+    window._refresh_narator_voice_page_state(None, None, "en")
+
+    assert page.current_ai_profile_id() == "profile_a"
+
+    page._ai_profile_combo.setCurrentIndex(1)
+    assert page.current_ai_profile_id() == "profile_b"
+
+    window._refresh_narator_voice_page_state(None, None, "en")
+
+    assert page.current_ai_profile_id() == "profile_b"
+
+    window._settings_payload["llm_profiles"][1]["enabled"] = False
+    window._refresh_narator_voice_page_state(None, None, "en")
+
+    assert page.current_ai_profile_id() == "profile_a"
+
+    window._settings_payload["llm_profiles"][0]["enabled"] = False
+    window._settings_payload["llm_profiles"][1]["enabled"] = True
+    window._refresh_narator_voice_page_state(None, None, "en")
+
+    assert page.current_ai_profile_id() == "profile_b"
+
+
 # END OF FILE

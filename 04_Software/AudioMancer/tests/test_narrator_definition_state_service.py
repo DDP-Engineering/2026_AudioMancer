@@ -26,6 +26,54 @@ from audiomancer.services import (
 )
 
 
+def test_narrator_profile_state_uses_configured_default_on_initial_load() -> None:
+    """
+    @brief      Verify initial Narrator Voice AI-profile state selects the configured enabled default.
+    @return     None.
+    @exception  None
+    """
+    state = narrator_definition_state_service.build_narrator_profile_generation_profile_state(
+        {
+            "llm_profiles": [
+                {"id": "profile_a", "label": "Profile A", "enabled": True},
+                {"id": "profile_b", "label": "Profile B", "enabled": True},
+            ],
+            "default_narrator_profile_generation_profile_id": "profile_b",
+        }
+    )
+
+    assert state["selected_profile_id"] == "profile_b"
+
+
+def test_narrator_profile_state_falls_back_from_invalid_or_disabled_selection() -> None:
+    """
+    @brief      Verify invalid live/default profiles resolve to the enabled default or first enabled profile.
+    @return     None.
+    @exception  None
+    """
+    settings_payload = {
+        "llm_profiles": [
+            {"id": "profile_a", "label": "Profile A", "enabled": True},
+            {"id": "profile_b", "label": "Profile B", "enabled": False},
+            {"id": "profile_c", "label": "Profile C", "enabled": True},
+        ],
+        "default_narrator_profile_generation_profile_id": "profile_a",
+    }
+
+    disabled_state = narrator_definition_state_service.build_narrator_profile_generation_profile_state(
+        settings_payload,
+        selected_profile_id="profile_b",
+    )
+    assert disabled_state["selected_profile_id"] == "profile_a"
+
+    settings_payload["llm_profiles"][0]["enabled"] = False
+    missing_default_state = narrator_definition_state_service.build_narrator_profile_generation_profile_state(
+        settings_payload,
+        selected_profile_id="missing_profile",
+    )
+    assert missing_default_state["selected_profile_id"] == "profile_c"
+
+
 def test_narrator_state_service_uses_original_language_and_no_default_selection(tmp_path) -> None:
     """
     @brief      Verify narrator state resolves the original voice language and starts with no selected profile.
@@ -198,6 +246,38 @@ def test_narrator_state_service_status_lines_use_compact_script_budget_units() -
     )
 
     assert f"Preview budget: {preview_units}/81 safe budget units" in lines
+
+
+def test_repeated_narrator_state_refresh_does_not_write_or_alter_document(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify repeated effective no-op state refreshes leave narrator persistence untouched.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project(tmp_path, "NarratorStateNoOpRefresh")
+    narrator_definition_service.create_custom_profile(
+        project_root,
+        "Stable Narrator",
+        "English",
+        "Stable prompt.",
+        "Stable authored preview.",
+    )
+    document_path = project_root / config.NARRATOR_VOICE_FILE_NAME
+    original_bytes = document_path.read_bytes()
+    write_calls: list[object] = []
+    monkeypatch.setattr(
+        narrator_definition_service,
+        "write_narrator_voice_document",
+        lambda *_args, **_kwargs: write_calls.append(object()),
+    )
+
+    narrator_definition_state_service.build_narrator_definition_state(project_root, manifest, "en")
+    narrator_definition_state_service.build_narrator_definition_state(project_root, manifest, "en")
+
+    assert write_calls == []
+    assert document_path.read_bytes() == original_bytes
 
 
 def _create_project(tmp_path, name: str):

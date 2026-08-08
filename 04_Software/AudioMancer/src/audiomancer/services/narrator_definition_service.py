@@ -311,11 +311,12 @@ def preview_text_for_language(language_value: object) -> str:
 
 def apply_voice_language_to_profiles(project_root: str | Path, voice_language: object) -> str:
     """
-    @brief      Apply one selected audiobook language to narrator profiles and their default preview text.
+    @brief      Apply one selected audiobook language without replacing authored preview text.
     @param[in]  project_root Active project root folder.
     @param[in]  voice_language Candidate selected audiobook voice language.
     @return     Persisted canonical voice language code.
-    @exception  None
+    @exception  NarratorVoiceDocumentContractError Raised when current or migrated narrator data is invalid.
+    @exception  OSError Raised when changed narrator data cannot be written atomically.
     """
     normalized_language = narrator_language_code(voice_language)
     localized_preview_text = preview_text_for_language(normalized_language)
@@ -323,21 +324,22 @@ def apply_voice_language_to_profiles(project_root: str | Path, voice_language: o
     profiles = []
     for profile in document["profiles"]:
         previous_language = narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE))
+        preview_text = str(profile["preview_text"])
+        if (
+            previous_language != normalized_language
+            and preview_text == preview_text_for_language(previous_language)
+        ):
+            preview_text = localized_preview_text
         profiles.append(
-            _normalize_profile(
-                {
-                    **dict(profile),
-                    "language": normalized_language,
-                    "preview_text": (
-                        localized_preview_text
-                        if previous_language != normalized_language
-                        else profile.get("preview_text", localized_preview_text)
-                    ),
-                }
-            )
+            {
+                **dict(profile),
+                "language": normalized_language,
+                "preview_text": preview_text,
+            }
         )
-    document["profiles"] = profiles
-    write_narrator_voice_document(project_root, document)
+    if profiles != document["profiles"]:
+        document["profiles"] = profiles
+        write_narrator_voice_document(project_root, document)
     return normalized_language
 
 

@@ -482,4 +482,173 @@ def test_narrator_service_normalizes_language_labels_to_runtime_codes(tmp_path) 
     assert narrator_definition_service.narrator_language_label("ro") == "Romanian"
 
 
+def test_narrator_language_migration_preserves_operator_authored_preview(tmp_path) -> None:
+    """
+    @brief      Verify a language migration preserves exact operator-authored narrator preview text.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorAuthoredPreview", tmp_path)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Operator Narrator",
+        "English",
+        "Operator prompt.",
+        "An exact operator-authored preview that must survive.",
+    )
+
+    narrator_definition_service.apply_voice_language_to_profiles(project_root, "ro")
+
+    migrated = narrator_definition_service.profile_by_id(project_root, profile["profile_id"])
+    assert migrated is not None
+    assert migrated["language"] == "ro"
+    assert migrated["preview_text"] == "An exact operator-authored preview that must survive."
+
+
+def test_narrator_language_migration_preserves_ai_authored_preview(tmp_path) -> None:
+    """
+    @brief      Verify a language migration preserves exact AI-authored narrator preview text.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorAiPreview", tmp_path)
+    generated = narrator_definition_service.append_ai_generated_profiles(
+        project_root,
+        [
+            {
+                "display_name": "AI Narrator",
+                "language": "en",
+                "prompt_text": "AI-authored prompt.",
+                "preview_text": "An exact AI-authored preview that must survive.",
+            }
+        ],
+        {},
+    )[0]
+
+    narrator_definition_service.apply_voice_language_to_profiles(project_root, "de")
+
+    migrated = narrator_definition_service.profile_by_id(project_root, generated["profile_id"])
+    assert migrated is not None
+    assert migrated["language"] == "de"
+    assert migrated["preview_text"] == "An exact AI-authored preview that must survive."
+
+
+def test_narrator_language_migration_localizes_prior_canonical_default(tmp_path) -> None:
+    """
+    @brief      Verify a prior-language canonical preview is replaced by the new localized default.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorDefaultPreview", tmp_path)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Default Narrator",
+        "English",
+        "Default prompt.",
+        narrator_definition_service.preview_text_for_language("en"),
+    )
+
+    narrator_definition_service.apply_voice_language_to_profiles(project_root, "fr")
+
+    migrated = narrator_definition_service.profile_by_id(project_root, profile["profile_id"])
+    assert migrated is not None
+    assert migrated["language"] == "fr"
+    assert migrated["preview_text"] == narrator_definition_service.preview_text_for_language("fr")
+
+
+def test_narrator_language_migration_handles_mixed_profiles_and_preserves_sample_metadata(tmp_path) -> None:
+    """
+    @brief      Verify mixed authored/default profiles migrate independently without changing sample provenance.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorMixedPreviews", tmp_path)
+    operator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Operator Narrator",
+        "English",
+        "Operator prompt.",
+        "Operator-authored preview.",
+    )
+    default_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Default Narrator",
+        "English",
+        "Default prompt.",
+        narrator_definition_service.preview_text_for_language("en"),
+    )
+    ai_profile = narrator_definition_service.append_ai_generated_profiles(
+        project_root,
+        [
+            {
+                "display_name": "AI Narrator",
+                "language": "en",
+                "prompt_text": "AI prompt.",
+                "preview_text": "AI-authored preview.",
+            }
+        ],
+        {},
+    )[0]
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        operator_profile,
+        "Recorded sample transcript.",
+        {"language": "en", "model_id": "qwen-designer", "source_model_id": "qwen-designer"},
+        "Generated.",
+        b"RIFF-sample",
+    )
+    original_sample = narrator_definition_service.load_profile_sample_metadata(
+        project_root,
+        operator_profile["profile_id"],
+    )
+
+    narrator_definition_service.apply_voice_language_to_profiles(project_root, "ro")
+
+    migrated_by_id = {
+        profile["profile_id"]: profile for profile in narrator_definition_service.load_profiles(project_root)
+    }
+    assert {profile["language"] for profile in migrated_by_id.values()} == {"ro"}
+    assert migrated_by_id[operator_profile["profile_id"]]["preview_text"] == "Operator-authored preview."
+    assert migrated_by_id[ai_profile["profile_id"]]["preview_text"] == "AI-authored preview."
+    assert migrated_by_id[default_profile["profile_id"]][
+        "preview_text"
+    ] == narrator_definition_service.preview_text_for_language("ro")
+    assert migrated_by_id[operator_profile["profile_id"]]["sample"] == original_sample
+
+
+def test_narrator_language_application_skips_unchanged_document_write(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify applying an unchanged language does not invoke the strict atomic document writer.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorNoOpLanguage", tmp_path)
+    narrator_definition_service.create_custom_profile(
+        project_root,
+        "Stable Narrator",
+        "English",
+        "Stable prompt.",
+        "Stable authored preview.",
+    )
+    document_path = project_root / config.NARRATOR_VOICE_FILE_NAME
+    original_bytes = document_path.read_bytes()
+    write_calls: list[object] = []
+    monkeypatch.setattr(
+        narrator_definition_service,
+        "write_narrator_voice_document",
+        lambda *_args, **_kwargs: write_calls.append(object()),
+    )
+
+    narrator_definition_service.apply_voice_language_to_profiles(project_root, "en")
+
+    assert write_calls == []
+    assert document_path.read_bytes() == original_bytes
+
+
 # END OF FILE

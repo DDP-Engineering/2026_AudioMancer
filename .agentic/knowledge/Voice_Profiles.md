@@ -12,9 +12,15 @@ required before speech generation.
 - Own the strict Narrator Voice document and profile-owned WAV contract.
 - Persist Character Voices targets and target-specific sample metadata.
 - Generate resumable AI narrator suggestions without exposing partial profiles.
+- Preserve the enabled narrator-generation AI profile across page refreshes and
+  apply configured-default then first-enabled fallback when it becomes invalid
+  (`REQ-UX-f6f92026`, `REQ-UX-850b356e`, `REQ-UX-cbed137b`).
 - Restore truthful count and instruction defaults for every narrator-generation
   retry while leaving compatibility decisions to the full service fingerprint.
 - Validate narrator preview duration and sample budgets with shared script-aware spoken units.
+- Migrate profile languages without replacing authored previews or writing an
+  unchanged narrator document (`REQ-FUNC-4f57d7ae`, `REQ-FUNC-0fff5848`,
+  `REQ-FUNC-206af389`).
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
 
@@ -24,10 +30,15 @@ It does not synthesize Speech Blocks or final TTS Audio Blocks.
 
 `narrator_definition_service` is the sole owner of `narrator_voice.json`.
 Profile/sample/selection mutations validate and atomically replace that
-document; WAV writes are atomic and use immutable profile IDs. AI generation
-stores compact checkpoints in the same document and appends profiles only after
-complete validation. Character-voice services keep their independent target
-contract and resolve the selected narrator through the narrator service.
+document; language application compares the fully validated profile list and
+writes only when migration changes it. Exact prior-language canonical defaults
+localize, while authored previews and sample metadata remain intact. WAV writes
+are atomic and use immutable profile IDs. AI generation stores compact
+checkpoints in the same document and appends profiles only after complete
+validation. The main window passes the page-owned live narrator-generation AI
+selection back through the enabled-profile resolver. Character-voice services
+keep their independent target contract and resolve the selected narrator
+through the narrator service.
 
 ## 4. Dependencies
 
@@ -61,6 +72,10 @@ clears resume atomically. AI log paths and raw responses are never persisted.
 The retry UI reads `resume.requested_count` only from a validated unfinished
 checkpoint, bounds it to the supported dialog range, and always passes accepted
 instructions as an explicit string; it stores no duplicate resume data.
+Narrator-generation AI selection remains session-local rather than adding a
+duplicate document field. A voice-language migration changes each profile's
+language, preserves any non-canonical preview exactly, localizes only the exact
+prior canonical default, and retains the sample's recorded provenance.
 
 Character Voices retains its own `characters_voice.json` contract, including
 `copied_narrator` target samples in same-narrator mode.
@@ -82,7 +97,9 @@ assets before starting TTS. A cancelled or failed profile-generation retry
 restores the checkpointed count and saved optional rules. Accepting both
 unchanged permits a compatible resume; changing the count or editing or
 clearing the rules may restart analysis, and cancelling either dialog starts
-no runtime work.
+no runtime work. Selecting another enabled AI profile survives ordinary page
+and narrator-list refreshes. Changing the effective voice language preserves
+authored preview text; untouched canonical defaults follow the new language.
 
 ## 9. Validation And Tests
 
