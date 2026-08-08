@@ -522,22 +522,6 @@ def test_text_chunking_state_projects_resumable_document_without_durable_progres
     assert state["selected_strategy"] == "meaning"
 
 
-def test_text_chunking_component_documentation_describes_current_contract() -> None:
-    """Verify the component documentation describes the implemented document contract."""
-    repository_root = Path(__file__).resolve().parents[3]
-    documentation = (
-        repository_root / ".agentic" / "knowledge" / "Text_Chunking.md"
-    ).read_text(encoding="utf-8")
-    normalized = documentation.lower()
-
-    assert "sole authoritative" in normalized
-    assert "chunks_text.json" in normalized
-    assert "runtime-only" in normalized
-    assert "currently selected profile" in normalized
-    assert "reset chunking" in normalized
-    assert "only the current canonical project-artifact schema is supported" in normalized
-
-
 # LOCAL HELPERS
 
 

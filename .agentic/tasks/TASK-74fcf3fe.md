@@ -31,7 +31,7 @@ Keep each log line to one sentence.
 stage: done
 type: fix
 path: full
-requirements: REQ-DATA-d48fde66, REQ-FUNC-8034d33d, REQ-FUNC-bfa5d6ed, REQ-FUNC-c316e829, REQ-NFR-5b12e005, REQ-NFR-820d3753, REQ-PLAT-9fe6262f, REQ-REL-33fa2b3b, REQ-TEST-1b7844b3, REQ-TEST-64c819ba, REQ-UX-a3f0f73c
+requirements: REQ-DATA-d48fde66, REQ-FUNC-8034d33d, REQ-FUNC-c316e829, REQ-NFR-5b12e005, REQ-NFR-820d3753, REQ-PLAT-9fe6262f, REQ-REL-33fa2b3b, REQ-TEST-1b7844b3, REQ-UX-a3f0f73c
 branch: codex/aegis-2.1-audiomancer-adoption
 opened: 2026-08-02
 
@@ -71,6 +71,7 @@ opened: 2026-08-02
 - 2026-08-03 deliver: The owner corrected the prior stash instruction and confirmed the local review and commit handoff with no push.
 - 2026-08-03 deliver: The report is finalized and task files are prepared for staging, while AEGIS close-out remains pending the owner's successful commit.
 - 2026-08-03 close: Delivery commit 0c9718a succeeded and was pushed by the owner, so the task is now closed.
+- 2026-08-09 amend: REQ-FUNC-bfa5d6ed and REQ-TEST-64c819ba were removed from the repository by owner decision, together with their linked tests, so both were dropped from this journal's `requirements:` header to keep traceability resolvable. The delivery reports below are left exactly as recorded on 2026-08-03: they state what was delivered that day and are not rewritten to match a later removal.
 
 ## Delivery report (2026-08-03)
 

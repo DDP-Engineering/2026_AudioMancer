@@ -40,6 +40,31 @@ python 02_Tools/make_synthetic_project.py --blocks 3000 --chunks 150 --out .tmp\
 
 The tool refuses to overwrite a non-empty output folder.
 
+## Offline Help Screenshots
+
+`regenerate_help_screenshots.py` refreshes the UI screenshots referenced by the
+English and Romanian offline help bundles. It opens a populated sample project,
+renders each documented workflow page and settings dialog, and writes the PNG
+files under `05_SoftwareDocu/UserGuide/assets/screenshots/` and
+`05_SoftwareDocu/UserGuide_ro/assets/screenshots/`.
+
+Run it from the application folder so the Qt dependencies resolve:
+
+```powershell
+uv run python ../../02_Tools/regenerate_help_screenshots.py
+```
+
+Options:
+
+- `--project-root` - use a different populated project for the workflow-page
+  captures. Defaults to `09_Others/Command Performance`.
+- `--english-only` - write only the English folder instead of mirroring the
+  captures to the Romanian bundle.
+
+Run this after UI changes that alter what the help bundles show. The generated
+PNG files are committed, so review the diff before delivering: help-file content
+is part of a release, not an afterthought.
+
 ## Packaging
 
 Release packaging automation is implemented directly in this folder:

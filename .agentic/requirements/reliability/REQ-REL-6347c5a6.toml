@@ -7,7 +7,7 @@ requirement = """
 AudioMancer release surfaces shall declare one identical semantic version.
 """
 
-verification = "Focused release-version consistency test passed on 2026-07-30."
+verification = "An automated test reads the release version from pyproject.toml and confirms that the package runtime metadata, the dependency lock, a single dated changelog release section, and both offline help bundles declare that same version. The test hard-codes no version, so a surface left behind after a release bump fails it."
 
 affected_paths = [
   "04_Software/AudioMancer/pyproject.toml",
@@ -28,4 +28,4 @@ rationale = """
 A release is reproducible and operator-visible only when package metadata, runtime API, dependency lock, changelog, verification, and offline help identify the same build.
 """
 created = 2026-07-30
-updated = 2026-07-30
+updated = 2026-08-09

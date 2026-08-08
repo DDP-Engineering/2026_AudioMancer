@@ -19,43 +19,48 @@ version. Historical changelog headings remain unchanged.
 
 ## Interface / Format
 
-For release `2.0.0`, the authoritative surfaces are:
+`04_Software/AudioMancer/pyproject.toml` carries the reference version, because
+it is what builds the package. For a release `X.Y.Z` dated `YYYY-MM-DD`, the
+authoritative surfaces are:
 
 ```text
+04_Software/AudioMancer/pyproject.toml        (reference)
+  [project].version = "X.Y.Z"
+
 CHANGELOG.md
   ## [Unreleased]
-  ## [2.0.0] - 2026-07-30
-
-04_Software/AudioMancer/pyproject.toml
-  [project].version = "2.0.0"
+  ## [X.Y.Z] - YYYY-MM-DD
 
 04_Software/AudioMancer/uv.lock
-  [[package]] name = "audiomancer", version = "2.0.0"
+  [[package]] name = "audiomancer", version = "X.Y.Z"
 
 04_Software/AudioMancer/src/audiomancer/__init__.py
-  __version__ = "2.0.0"
-
-04_Software/AudioMancer/tests/test_package_import.py
-  EXPECTED_VERSION = "2.0.0"
+  __version__ = "X.Y.Z"
 
 05_SoftwareDocu/UserGuide/index.html
-  title, Help version, and Application version = 2.0.0
+  title, Help version, and Application version = X.Y.Z
 
 05_SoftwareDocu/UserGuide_ro/index.html
-  title, Versiune ajutor, and Versiune aplicatie = 2.0.0
+  title, Versiune ajutor, and Versiune aplicatie = X.Y.Z
 ```
+
+The release-version check is not itself a version surface: it reads the
+reference version and compares the others against it, so a release bump never
+edits the check.
 
 ## Examples
 
 | Input | Expected result |
 | --- | --- |
-| All authoritative surfaces declare `2.0.0` | Release-version check passes. |
+| All authoritative surfaces declare the same version | Release-version check passes. |
 | Any authoritative surface declares another version | Release-version check fails and identifies the inconsistent surface. |
+| Reference version is not a semantic `X.Y.Z` version | Release-version check fails. |
+| Changelog carries no dated release section for the reference version | Release-version check fails. |
 | Historical `## [1.7.0]` changelog heading | Remains unchanged as release history. |
 
 ## Acceptance
 
-- [ ] A fresh `Unreleased` heading precedes `## [2.0.0] - 2026-07-30`.
-- [ ] Package metadata, runtime API, lockfile, smoke test, and offline help bundles declare `2.0.0`.
+- [ ] A fresh `Unreleased` heading precedes the dated release heading.
+- [ ] Package metadata, runtime API, lockfile, and both offline help bundles declare the reference version.
 - [ ] Historical changelog headings remain unchanged.
 - [ ] Focused and full validation pass.

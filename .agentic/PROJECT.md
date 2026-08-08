@@ -57,10 +57,25 @@ in the delivery commit, and record the chosen version in the journal log.
    `<title>Ghid AudioMancer vX.Y.Z</title>`, **Versiune ajutor** and
    **Versiune aplicatie**.
 
-Then verify nothing was missed:
+Then verify nothing was missed. The release-version test is the authoritative
+check: it reads the version from `pyproject.toml` and fails on any surface that
+disagrees, naming the one that drifted.
 
 ```
-git grep -n "X\.Y\.Z"          # the new version: expect 8 hits
+cd 04_Software/AudioMancer && uv run pytest tests/test_package_import.py
+```
+
+To eyeball the surfaces by hand, scope the search to them. A repository-wide
+grep is not a useful count, because task journals record the versions they
+delivered and accumulate over time.
+
+```
+git grep -n "X\.Y\.Z" -- 04_Software/AudioMancer/pyproject.toml \
+  04_Software/AudioMancer/src/audiomancer/__init__.py \
+  04_Software/AudioMancer/uv.lock CHANGELOG.md \
+  05_SoftwareDocu/UserGuide/index.html \
+  05_SoftwareDocu/UserGuide_ro/index.html
+# expect 10 hits: pyproject 1, __init__ 1, uv.lock 1, CHANGELOG 1, each guide 3
 git grep -n "<previous>"       # the old version: expect none outside CHANGELOG.md
 ```
 
