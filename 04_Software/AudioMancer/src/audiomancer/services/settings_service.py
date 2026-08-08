@@ -17,9 +17,12 @@
 
 # IMPORTS
 
+from contextlib import suppress
 import copy
 from functools import partial
 import json
+import os
+from pathlib import Path
 from typing import Any
 from urllib import parse
 
@@ -134,6 +137,50 @@ def _write_settings_file(settings_payload: dict[str, Any]) -> None:
     settings_path = config.APP_SETTINGS_PATH
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     write_json_atomic(settings_path, settings_payload)
+
+
+def _corruption_backup_path(settings_path: Path, backup_number: int) -> Path:
+    """
+    @brief      Build one clearly named same-directory corruption-backup path.
+    @param[in]  settings_path Active settings path.
+    @param[in]  backup_number Zero-based backup sequence number.
+    @return     Candidate corruption-backup path.
+    @exception  None
+    """
+    if backup_number == 0:
+        return settings_path.with_suffix(".corrupt.json")
+    return settings_path.with_suffix(f".corrupt.{backup_number}.json")
+
+
+def _write_corrupt_settings_backup(settings_path: Path, original_bytes: bytes) -> Path:
+    """
+    @brief      Preserve corrupt settings bytes without overwriting an earlier backup.
+    @details    Exclusive binary creation provides collision safety, while flush and
+                fsync make the backup durable before the active settings path changes.
+    @param[in]  settings_path Active settings path.
+    @param[in]  original_bytes Exact bytes read from the active settings file.
+    @return     Path of the completed corruption backup.
+    @exception  OSError Raised when a new backup cannot be written safely.
+    """
+    backup_number = 0
+    while True:
+        backup_path = _corruption_backup_path(settings_path, backup_number)
+        backup_created = False
+        try:
+            with backup_path.open("xb") as backup_file:
+                backup_created = True
+                backup_file.write(original_bytes)
+                backup_file.flush()
+                os.fsync(backup_file.fileno())
+        except FileExistsError:
+            backup_number += 1
+            continue
+        except OSError:
+            if backup_created:
+                with suppress(OSError):
+                    backup_path.unlink(missing_ok=True)
+            raise
+        return backup_path
 
 
 def _seed_settings_payload() -> tuple[dict[str, Any], str]:
@@ -834,12 +881,41 @@ def load_settings() -> dict[str, Any]:
     )
 
     try:
-        persisted_payload = json.loads(settings_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        original_bytes = settings_path.read_bytes()
+    except OSError:
         default_settings = build_default_settings()
-        _write_settings_file(default_settings)
         _SETTINGS_LOGGER.warning(
-            f"Replaced invalid JSON settings file at {settings_path} with defaults.",
+            f"Could not read settings from {settings_path}; "
+            "using built-in defaults for this run without changing the file.",
+            extra={"func_name": "load_settings", "event": "settings-load"},
+        )
+        return default_settings
+
+    try:
+        persisted_payload = json.loads(original_bytes.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        default_settings = build_default_settings()
+        try:
+            backup_path = _write_corrupt_settings_backup(settings_path, original_bytes)
+        except OSError:
+            _SETTINGS_LOGGER.warning(
+                f"Could not preserve invalid settings from {settings_path}; "
+                "using built-in defaults for this run without changing the active file.",
+                extra={"func_name": "load_settings", "event": "settings-heal"},
+            )
+            return default_settings
+        try:
+            _write_settings_file(default_settings)
+        except OSError:
+            _SETTINGS_LOGGER.warning(
+                f"Preserved invalid settings at {backup_path}, but could not write defaults to {settings_path}; "
+                "using built-in defaults for this run.",
+                extra={"func_name": "load_settings", "event": "settings-heal"},
+            )
+            return default_settings
+        _SETTINGS_LOGGER.warning(
+            f"Preserved invalid settings from {settings_path} at {backup_path} "
+            "and replaced the active file with defaults.",
             extra={"func_name": "load_settings", "event": "settings-heal"},
         )
         return default_settings

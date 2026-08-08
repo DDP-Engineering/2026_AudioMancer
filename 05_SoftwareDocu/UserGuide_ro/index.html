@@ -155,6 +155,15 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     mouse-ului si tema vizuala folosita in timpul rularii. Schimbarea limbii actualizeaza interfata si
                     ghidul de ajutor corespunzator.
                 </p>
+                <div class="note">
+                    Un fisier <code>settings.json</code> JSON UTF-8 valid, cu marcaj BOM, se incarca normal. Daca
+                    fisierul este formatat gresit sau foloseste o codare nevalida, AudioMancer pastreaza exact octetii
+                    originali alaturi de el in <code>settings.corrupt.json</code> (sau intr-o copie corupta numerotata
+                    daca numele exista deja), apoi continua cu valorile implicite. Daca fisierul nu poate fi citit sau
+                    copiat in siguranta, AudioMancer foloseste valorile implicite pentru rularea curenta si lasa
+                    fisierul original neschimbat. Pastreaza copiile corupte private, deoarece pot contine aceleasi chei
+                    API ca setarile originale.
+                </div>
                 <ol>
                     <li>Alege limba interfetei.</li>
                     <li>Alege o tema inclusa, de exemplu <strong>Default Light</strong>, <strong>Default Dark</strong> sau <strong>Dark Contrast</strong>.</li>

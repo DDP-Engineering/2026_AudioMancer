@@ -81,9 +81,10 @@ one level below its filesystem anchor. This behavior is covered by
 - Inputs: the configured settings path, persisted JSON payload, operator edits,
   built-in/custom theme payloads, runtime language, wheel-step setting, and
   valid HTTP(S) runtime/provider URLs.
-- Outputs: normalized settings written when repairs occur, component logs,
-  translated strings, a Qt palette/stylesheet/font state, and one global
-  scroll-step event filter.
+- Outputs: normalized settings written when repairs occur, exact-byte corruption
+  backups for malformed or undecodable settings, component logs, translated
+  strings, a Qt palette/stylesheet/font state, and one global scroll-step event
+  filter.
 
 ## 6. Data Contracts
 
@@ -92,7 +93,9 @@ in `chunks_text.json`. A resumable AI Chunking run uses the currently selected
 enabled profile and current runtime budget while retaining strategy and operator
 instructions from the Chunking document.
 
-- Settings remain a UTF-8 JSON object. A missing settings file is seeded from the
+- Settings remain a UTF-8 JSON object, with an optional UTF-8 byte-order mark
+  accepted transparently by `load_settings()` (`REQ-PLAT-2a16daee`). A missing
+  settings file is seeded from the
   validated payload at `APP_DEFAULT_SETTINGS_PATH` (`APP_ROOT/settings.json`, the
   scaffold the packaging script stages beside the executable with API keys and
   discovery cache stripped) when that path differs from the active path and is
@@ -100,6 +103,16 @@ instructions from the Chunking document.
   ever read. `settings.example.json` is placeholder documentation and is never a
   seed source. Invalid supported values are repaired, while unknown future keys
   are preserved unless an explicit migration removes them.
+- Malformed JSON or invalid UTF-8 settings are preserved byte-for-byte before
+  replacement in the first unused same-directory `settings.corrupt.json` or
+  `settings.corrupt.<n>.json` backup (`REQ-PLAT-b950f73c`). Backup creation is
+  exclusive, flushed, and synced before the existing atomic settings writer
+  replaces the active file with built-in defaults.
+- Read, backup, or post-backup default-write `OSError` failures return built-in
+  defaults for the current run and log only paths/outcomes, never settings
+  contents (`REQ-REL-c822b662`). The original bytes remain at the active path
+  when reading or backup fails and remain recoverable in the completed backup
+  when the later default write fails.
 - `config.SUPPORTED_LANGUAGES` is the operator interface allowlist and contains
   exactly `en` and `ro`. `settings_service.validate_settings()` replaces any
   other persisted or submitted interface language with
@@ -190,7 +203,8 @@ Primary automated coverage:
 These cover configuration constants, one-level frozen-root initialization,
 source and packaged Help resolution, writable data-root resolution across
 portable, override and read-only installation layouts, settings
-load/validate/self-heal/seed/save, component logging, URL joining, scroll-step
+load/validate/self-heal/seed/save, BOM acceptance, corruption backup and
+non-destructive I/O fallback, component logging, URL joining, scroll-step
 behavior, runtime language/theme
 application, theme schema validation, Settings-page editing, and completion-beep
 preference resolution and emission. Localization coverage additionally checks
@@ -204,6 +218,9 @@ plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 - Settings are stored as a plaintext UTF-8 JSON object, including any AI or TTS
   API keys; secret hygiene remains the operator's responsibility and is not
   scrubbed by validation.
+- Corruption backups preserve the original plaintext bytes and can therefore
+  contain the same API keys as the active settings file; operators should keep
+  those backups private and delete them only after recovering any needed values.
 - Settings and themes are dictionary-based and not yet modeled with typed
   classes.
 - Unknown extra settings keys are preserved rather than strictly validated.

@@ -100,6 +100,196 @@ def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) 
     assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
 
 
+def test_load_settings_accepts_utf8_bom_without_creating_backup(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify an optional UTF-8 BOM does not classify valid settings as corrupt.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    persisted_settings = settings_service.build_default_settings()
+    persisted_settings["language"] = "ro"
+    persisted_settings["ui_theme_id"] = "warm_reading"
+    persisted_bytes = b"\xef\xbb\xbf" + json.dumps(persisted_settings, indent=2).encode("utf-8")
+    settings_path.write_bytes(persisted_bytes)
+
+    loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == persisted_settings
+    assert settings_path.read_bytes() == persisted_bytes
+    assert list(tmp_path.glob("settings.corrupt*.json")) == []
+
+
+def test_load_settings_backs_up_malformed_json_before_writing_defaults(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify malformed JSON bytes remain recoverable before defaults replace them.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    original_bytes = b'{"language": "ro", trailing-comma: true,}'
+    settings_path.write_bytes(original_bytes)
+
+    loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == settings_service.build_default_settings()
+    assert (tmp_path / "settings.corrupt.json").read_bytes() == original_bytes
+    assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
+
+
+def test_load_settings_backs_up_invalid_utf8_and_returns_defaults(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify undecodable bytes remain recoverable and cannot escape from loading.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    original_bytes = b"\xff\xfe\x00invalid-settings\x80"
+    settings_path.write_bytes(original_bytes)
+
+    loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == settings_service.build_default_settings()
+    assert (tmp_path / "settings.corrupt.json").read_bytes() == original_bytes
+    assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
+
+
+def test_load_settings_uses_distinct_backup_when_corrupt_backup_exists(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify corruption recovery never overwrites an earlier backup.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    previous_backup_path = tmp_path / "settings.corrupt.json"
+    previous_backup_bytes = b"previous-corruption"
+    previous_backup_path.write_bytes(previous_backup_bytes)
+    current_bytes = b"{current-corruption"
+    settings_path.write_bytes(current_bytes)
+
+    loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == settings_service.build_default_settings()
+    assert previous_backup_path.read_bytes() == previous_backup_bytes
+    assert (tmp_path / "settings.corrupt.1.json").read_bytes() == current_bytes
+
+
+def test_load_settings_read_oserror_returns_defaults_without_modifying_file(
+    tmp_path, monkeypatch, caplog
+) -> None:
+    """
+    @brief      Verify a read failure returns safe defaults without touching persisted bytes.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  caplog Pytest log-capture fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    content_marker = "do-not-log-read-marker"
+    original_bytes = json.dumps({"api_key": content_marker}).encode("utf-8")
+    settings_path.write_bytes(original_bytes)
+    original_read_bytes = type(settings_path).read_bytes
+
+    def _raise_for_active_settings(path) -> bytes:
+        if path == settings_path:
+            raise PermissionError("simulated settings read failure")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(type(settings_path), "read_bytes", _raise_for_active_settings)
+
+    with caplog.at_level(logging.WARNING, logger="settings"):
+        loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == settings_service.build_default_settings()
+    with settings_path.open("rb") as settings_file:
+        assert settings_file.read() == original_bytes
+    assert list(tmp_path.glob("settings.corrupt*.json")) == []
+    assert content_marker not in caplog.text
+
+
+def test_load_settings_backup_oserror_returns_defaults_without_modifying_file(
+    tmp_path, monkeypatch, caplog
+) -> None:
+    """
+    @brief      Verify a backup failure leaves corrupt active settings untouched.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  caplog Pytest log-capture fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    content_marker = "do-not-log-backup-marker"
+    original_bytes = f"{{invalid-{content_marker}".encode()
+    settings_path.write_bytes(original_bytes)
+
+    def _raise_backup_error(*_args) -> None:
+        raise PermissionError("simulated settings backup failure")
+
+    monkeypatch.setattr(settings_service, "_write_corrupt_settings_backup", _raise_backup_error)
+
+    with caplog.at_level(logging.WARNING, logger="settings"):
+        loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == settings_service.build_default_settings()
+    assert settings_path.read_bytes() == original_bytes
+    assert list(tmp_path.glob("settings.corrupt*.json")) == []
+    assert content_marker not in caplog.text
+
+
+def test_load_settings_default_write_oserror_preserves_backup_and_returns_defaults(
+    tmp_path, monkeypatch, caplog
+) -> None:
+    """
+    @brief      Verify a failed default write leaves the completed backup recoverable.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  caplog Pytest log-capture fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    content_marker = "do-not-log-write-marker"
+    original_bytes = f"{{invalid-{content_marker}".encode()
+    settings_path.write_bytes(original_bytes)
+
+    def _raise_write_error(_settings_payload) -> None:
+        raise PermissionError("simulated settings defaults write failure")
+
+    monkeypatch.setattr(settings_service, "_write_settings_file", _raise_write_error)
+
+    with caplog.at_level(logging.WARNING, logger="settings"):
+        loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == settings_service.build_default_settings()
+    assert settings_path.read_bytes() == original_bytes
+    assert (tmp_path / "settings.corrupt.json").read_bytes() == original_bytes
+    assert content_marker not in caplog.text
+
+
 def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify invalid persisted settings are healed and rewritten.

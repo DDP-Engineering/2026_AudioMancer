@@ -158,6 +158,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Open <strong>Settings</strong> from the top toolbar before starting a long project. This dialog
                     controls the interface language, completion beep, mouse-wheel scroll steps, and runtime UI theme.
                 </p>
+                <div class="note">
+                    A valid UTF-8 <code>settings.json</code> with a byte-order mark loads normally. If the file is
+                    malformed or uses an invalid encoding, AudioMancer preserves its exact bytes beside it as
+                    <code>settings.corrupt.json</code> (or a numbered corruption backup when that name already exists)
+                    before continuing with built-in defaults. If the file cannot be read or backed up, AudioMancer
+                    uses built-in defaults for that run and leaves the original file unchanged. Keep corruption
+                    backups private because they can contain the same API keys as the original settings.
+                </div>
                 <ol>
                     <li>Choose the interface language.</li>
                     <li>Select one of the built-in themes, such as <strong>Default Light</strong>, <strong>Default Dark</strong>, or <strong>Dark Contrast</strong>.</li>
