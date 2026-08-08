@@ -64,6 +64,22 @@ def test_committed_settings_example_uses_config_defined_factory_defaults() -> No
     assert committed_settings["play_completion_beep"] is config.DEFAULT_PLAY_COMPLETION_BEEP
 
 
+def test_committed_settings_example_uses_strings_for_optional_discovered_model_names() -> None:
+    """
+    @brief      Verify every example profile uses the loader-compatible optional string type.
+    @return     None.
+    @exception  None
+    """
+    settings_example_path = Path(__file__).resolve().parents[1] / "settings.example.json"
+    committed_settings = json.loads(settings_example_path.read_text(encoding="utf-8"))
+
+    assert committed_settings["llm_profiles"]
+    assert all(
+        isinstance(profile["discovered_model_name"], str)
+        for profile in committed_settings["llm_profiles"]
+    )
+
+
 def test_validate_settings_preserves_valid_explicit_scene_and_enabled_beep() -> None:
     """
     @brief      Verify valid explicit operator choices remain authoritative.

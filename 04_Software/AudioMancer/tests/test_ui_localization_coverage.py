@@ -68,6 +68,9 @@ def test_settings_page_localizes_all_visible_text_and_preserves_option_data(qtbo
     assert page._preview_label.text() == "Text exemplu"
     assert page._preview_button.text() == "Buton exemplu"
     assert page._preview_input.toPlainText() == "Fereastra text exemplu"
+    assert _combo_labels(page._language_combo) == ["Engleza", "Romana"]
+    assert [page._language_combo.itemData(index) for index in range(page._language_combo.count())] == ["en", "ro"]
+    assert page._language_combo.currentData() == "ro"
     assert page._theme_combo.itemText(page._theme_combo.findData("high_contrast")) == "Contrast Ridicat"
     assert page._ui_font_size_combo.itemText(page._ui_font_size_combo.findData("extra_small")) == "Foarte mica"
     assert page._ui_font_size_combo.itemText(page._ui_font_size_combo.findData("very_large")) == "Foarte mare"

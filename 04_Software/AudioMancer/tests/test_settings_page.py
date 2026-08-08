@@ -62,10 +62,22 @@ def test_settings_page_offers_exactly_supported_ui_languages(qtbot) -> None:
     page = SettingsPage()
     qtbot.addWidget(page)
 
-    language_items = [page._language_combo.itemText(index) for index in range(page._language_combo.count())]
+    language_labels = [page._language_combo.itemText(index) for index in range(page._language_combo.count())]
+    language_codes = [page._language_combo.itemData(index) for index in range(page._language_combo.count())]
 
     assert config.SUPPORTED_LANGUAGES == ("en", "ro")
-    assert language_items == ["en", "ro"]
+    assert language_codes == list(config.SUPPORTED_LANGUAGES)
+    assert language_labels == [
+        ui_state_service.translate(f"language.{code}", "en") for code in config.SUPPORTED_LANGUAGES
+    ]
+
+    page._language_combo.setCurrentIndex(page._language_combo.findData("ro"))
+    page.apply_language("ro")
+
+    assert page._language_combo.currentData() == "ro"
+    assert [page._language_combo.itemText(index) for index in range(page._language_combo.count())] == [
+        ui_state_service.translate(f"language.{code}", "ro") for code in config.SUPPORTED_LANGUAGES
+    ]
 
 
 def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
@@ -99,14 +111,14 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
         }
     )
 
-    assert page._language_combo.currentText() == "ro"
+    assert page._language_combo.currentData() == "ro"
     assert page._language_combo.minimumWidth() >= 96
     assert page._completion_beep_checkbox.isChecked() is True
     assert page._scroll_steps_spin.value() == 4
     assert page._ui_font_size_combo.currentData() == "large"
     assert page._text_font_size_combo.currentData() == "very_large"
 
-    page._language_combo.setCurrentText("en")
+    page._language_combo.setCurrentIndex(page._language_combo.findData("en"))
     page._completion_beep_checkbox.setChecked(False)
     page._scroll_steps_spin.setValue(2)
 

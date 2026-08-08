@@ -79,7 +79,17 @@ def main() -> int:
             settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID),
             settings_payload.get("ui_themes", []),
         )
-        ui_state_service.apply_theme(application, startup_theme, None)
+        ui_state_service.apply_theme(
+            application,
+            startup_theme,
+            None,
+            ui_font_size_step=str(
+                settings_payload.get("ui_font_size_step", config.DEFAULT_UI_FONT_SIZE_STEP)
+            ),
+            text_font_size_step=str(
+                settings_payload.get("text_font_size_step", config.DEFAULT_TEXT_FONT_SIZE_STEP)
+            ),
+        )
 
         window = MainWindow(settings_payload=settings_payload)
         window.show()

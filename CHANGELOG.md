@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AudioMancer now applies saved interface and text-window font sizes before
+  building the main window, shows localized interface-language names while
+  preserving stable saved codes, and accepts the committed settings example
+  without repairing its optional discovered-model names.
 - Fresh, repaired, and portable settings now use the configured default AI
   chunking strategy and completion-beep preference consistently, while valid
   operator choices already saved in settings remain unchanged.

@@ -124,6 +124,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @return     Fake main window instance.
         @exception  None
         """
+        created.setdefault("construction_order", []).append("main_window")
         created["window_settings_payload"] = kwargs.get("settings_payload")
         created["window"] = _FakeMainWindow()
         return created["window"]
@@ -192,8 +193,30 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         created["loaded_settings_payload"] = {
             "language": "en",
             "ui_scroll_steps_per_wheel_notch": 3,
+            "ui_font_size_step": "large",
+            "text_font_size_step": "very_large",
         }
         return created["loaded_settings_payload"]
+
+    def _apply_theme(application, theme_payload, scale, ui_font_size_step=None, text_font_size_step=None):
+        """
+        @brief      Capture the complete pre-construction theme application.
+        @param[in]  application Fake Qt application receiving the theme.
+        @param[in]  theme_payload Resolved startup theme payload.
+        @param[in]  scale Deprecated text-scale argument.
+        @param[in]  ui_font_size_step Persisted interface font-size step.
+        @param[in]  text_font_size_step Persisted text-window font-size step.
+        @return     None.
+        @exception  None
+        """
+        created.setdefault("construction_order", []).append("theme")
+        created["theme_application"] = (
+            application,
+            theme_payload,
+            scale,
+            ui_font_size_step,
+            text_font_size_step,
+        )
 
     monkeypatch.setattr(app_module, "initialize_logging", _initialize_logging)
     monkeypatch.setattr(app_module, "shutdown_logging", _shutdown_logging)
@@ -205,10 +228,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     monkeypatch.setattr(
         app_module.ui_state_service,
         "apply_theme",
-        lambda application, theme_payload, scale: created.setdefault(
-            "theme_application",
-            (application, theme_payload, scale),
-        ),
+        _apply_theme,
     )
     monkeypatch.setattr(
         app_module.ui_scroll_service,
@@ -226,10 +246,14 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     assert created["window_settings_payload"] == {
         "language": "en",
         "ui_scroll_steps_per_wheel_notch": 3,
+        "ui_font_size_step": "large",
+        "text_font_size_step": "very_large",
     }
     assert created["scroll_filter"] == (created["application"], 3)
     assert created["application"].application_name == app_module.APPLICATION_NAME
     assert created["theme_application"][0] is created["application"]
+    assert created["theme_application"][3:] == ("large", "very_large")
+    assert created["construction_order"] == ["theme", "main_window"]
     assert created["application"].exec_called is True
     assert created["window"].show_called is True
 

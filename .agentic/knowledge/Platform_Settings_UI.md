@@ -55,6 +55,11 @@ text before passing it to Qt. `settings_ui_controller.apply_current_ui_settings`
 also rebuilds the currently visible project page after a language change so
 derived notes do not retain the previous locale.
 
+Startup passes both validated persisted font-size steps into the early theme
+application before constructing `MainWindow`, so newly created widgets inherit
+the operator's interface and text-window size choices from their first layout
+(`REQ-UX-f9cbdc8c`).
+
 `config.py` keeps two roots apart. `APP_ROOT` owns read-only packaged resources
 (prompts, help, licences, icon, `pyproject.toml`). `APP_USER_DATA_ROOT`, produced
 by `resolve_user_data_root()`, owns everything the application writes: the active
@@ -113,6 +118,9 @@ instructions from the Chunking document.
   seeding never reads the example path directly. Invalid supported values are
   repaired, while unknown future keys are preserved unless an explicit migration
   removes them.
+- Every committed example profile represents the optional
+  `discovered_model_name` field as a string, matching the loader contract and
+  avoiding a repair when an operator copies the scaffold (`REQ-PLAT-dd51f8cd`).
 - `build_default_settings()` derives `default_ai_chunking_strategy` and
   `play_completion_beep` from their `config` factory constants, and the committed
   settings scaffold carries the same current values (`REQ-PLAT-ce8e4f6f`). Missing,
@@ -160,6 +168,10 @@ instructions from the Chunking document.
   chunking strategies, built-in theme IDs, and language codes keep
   language-neutral item data while their combo labels are replaced in place;
   relabeling therefore preserves the selected and persisted value.
+- The Settings interface-language selector creates one item for every
+  `config.SUPPORTED_LANGUAGES` entry, displays its active-locale `language.<code>`
+  label, and loads, selects, and persists only the stable code in item data
+  (`REQ-UX-ade084a1`).
 - Settings theme reload clears and rebuilds the combo from
   `merged_theme_catalog(ui_themes)`, so stale, duplicate, built-in-colliding, and
   invalid custom entries cannot remain visible. Built-in display labels are
@@ -271,6 +283,7 @@ From the adopted component map:
 
 - `04_Software/AudioMancer/settings.example.json`
 - `04_Software/AudioMancer/settings.json`
+- `04_Software/AudioMancer/src/audiomancer/app.py`
 - `04_Software/AudioMancer/src/audiomancer/config.py`
 - `04_Software/AudioMancer/src/audiomancer/services/logging_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/settings_service.py`
@@ -281,6 +294,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/url_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py`
+- `04_Software/AudioMancer/tests/test_app_entrypoint.py`
 - `04_Software/AudioMancer/tests/test_config_contract.py`
 - `04_Software/AudioMancer/tests/test_localization_parity.py`
 - `04_Software/AudioMancer/tests/test_logging_service.py`
