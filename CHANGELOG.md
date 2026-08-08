@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Fresh, repaired, and portable settings now use the configured default AI
+  chunking strategy and completion-beep preference consistently, while valid
+  operator choices already saved in settings remain unchanged.
 - Settings now lists valid persisted custom themes after the built-in themes,
   keeps their operator-authored names and preview colors, and preserves the
   selected custom theme and its full payload when unrelated settings are saved.
