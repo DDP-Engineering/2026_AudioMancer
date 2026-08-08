@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Portable builds now start correctly when extracted directly below a drive or
+  filesystem root, such as `D:\AudioMancer` or `/audiomancer`, while retaining
+  packaged and source-checkout English/Romanian offline Help resolution.
 - Narrator Voice now reports a clear localized error when an inspected profile
   is no longer available, clears stale sample metadata even if the operating
   system still holds the WAV file, and releases preview playback before profile

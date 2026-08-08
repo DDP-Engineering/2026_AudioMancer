@@ -60,6 +60,13 @@ while installations under non-writable prefixes such as `C:\Program Files` or
 `/opt` use the per-user location. See
 `.agentic/specs/user_data_location.spec.md`.
 
+Offline Help resolution checks packaged `help/<language>/index.html` content
+before the source-checkout English/Romanian guides. The source fallback root is
+built with depth-safe `Path.parent` traversal rather than indexed ancestors, so
+configuration import also succeeds when a frozen or portable `APP_ROOT` is only
+one level below its filesystem anchor. This behavior is covered by
+`REQ-PLAT-7cd89b15`.
+
 ## 4. Dependencies
 
 - Internal: `config.py` supplies paths/defaults; settings, logging, time, URL,
@@ -98,6 +105,10 @@ instructions from the Chunking document.
   other persisted or submitted interface language with
   `config.DEFAULT_LANGUAGE` before use or persistence. Cleanup source-content
   languages and AI translation targets have separate configuration contracts.
+- Packaged offline Help paths remain relative to `APP_ROOT`, while source
+  checkout Help paths retain the repository's `05_SoftwareDocu/UserGuide` and
+  `05_SoftwareDocu/UserGuide_ro` entry points; shallow installed roots never
+  require a second available ancestor during configuration initialization.
 - Theme payloads have normalized IDs, display names, font and color fields;
   settings validation normalizes AI profile/default IDs and cached TTS runtime
   discovery data before they are consumed.
@@ -176,7 +187,8 @@ Primary automated coverage:
 - `tests/test_localization_parity.py`
 - `tests/test_ui_localization_coverage.py`
 
-These cover configuration constants, writable data-root resolution across
+These cover configuration constants, one-level frozen-root initialization,
+source and packaged Help resolution, writable data-root resolution across
 portable, override and read-only installation layouts, settings
 load/validate/self-heal/seed/save, component logging, URL joining, scroll-step
 behavior, runtime language/theme

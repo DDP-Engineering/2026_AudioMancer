@@ -163,6 +163,24 @@ def _source_tree_root_from_package(package_root: Path) -> Path | None:
     return None
 
 
+def _source_help_index_paths(app_source_root: Path) -> dict[str, Path]:
+    """
+    @brief      Build source-checkout user-guide paths without assuming root depth.
+    @details    `APP_SOURCE_ROOT` falls back to the runtime root outside a source
+                checkout. Repeated `Path.parent` access remains at the filesystem
+                anchor when no higher ancestor exists, so shallow portable roots
+                cannot raise during configuration import.
+    @param[in]  app_source_root Resolved source or fallback runtime root.
+    @return     English and Romanian source user-guide entry points.
+    @exception  None
+    """
+    documentation_root = app_source_root.parent.parent / "05_SoftwareDocu"
+    return {
+        "en": documentation_root / "UserGuide" / "index.html",
+        "ro": documentation_root / "UserGuide_ro" / "index.html",
+    }
+
+
 def _installed_resource_root_from_package(package_root: Path) -> Path | None:
     """
     @brief      Resolve package-adjacent resources for installed wheel layouts.
@@ -344,13 +362,10 @@ APP_HELP_INDEX_RELATIVE_PATHS = {
 }
 
 # @brief Source-tree user-guide HTML entry points used during development.
-APP_HELP_SOURCE_INDEX_PATHS = {
-    "en": APP_SOURCE_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html",
-    "ro": APP_SOURCE_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide_ro" / "index.html",
-}
+APP_HELP_SOURCE_INDEX_PATHS = _source_help_index_paths(APP_SOURCE_ROOT)
 
 # @brief Source-tree English user-guide HTML entry point used during development.
-APP_HELP_SOURCE_INDEX_PATH = APP_SOURCE_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html"
+APP_HELP_SOURCE_INDEX_PATH = APP_HELP_SOURCE_INDEX_PATHS["en"]
 
 # Project Workspace And Artifact Naming
 # @brief Stable manifest file name stored at the project root.

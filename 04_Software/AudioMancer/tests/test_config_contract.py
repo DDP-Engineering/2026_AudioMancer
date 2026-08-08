@@ -89,6 +89,58 @@ def test_settings_json_scaffold_matches_service_defaults(tmp_path, monkeypatch) 
     assert scaffold_path == config.APP_ROOT / "settings.json"
 
 
+def test_config_module_initializes_from_one_level_frozen_runtime_root(monkeypatch) -> None:
+    """
+    @brief      Verify a shallow frozen runtime cannot exhaust available parents at import.
+    @details    Executes the real configuration module initializer with a synthetic
+                one-level application root, matching portable layouts such as
+                `D:\\AudioMancer` or `/AudioMancer` without requiring root access.
+                Covers REQ-PLAT-7cd89b15.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None.
+    """
+    config_source_path = Path(config.__file__).resolve()
+    shallow_runtime_root = Path(config_source_path.anchor) / "AudioMancer"
+    shallow_config_path = shallow_runtime_root / "_internal" / config.PACKAGE_NAME / "config.py"
+    module_globals = {
+        "__file__": str(shallow_config_path),
+        "__name__": "audiomancer._shallow_config_probe",
+        "__package__": "audiomancer",
+    }
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(shallow_runtime_root / "_internal"), raising=False)
+    monkeypatch.setattr(sys, "executable", str(shallow_runtime_root / "AudioMancer.exe"))
+    monkeypatch.setenv("AUDIOMANCER_DATA_DIR", str(shallow_runtime_root / "data"))
+
+    exec(compile(config_source_path.read_bytes(), str(shallow_config_path), "exec"), module_globals)
+
+    assert module_globals["APP_ROOT"] == shallow_runtime_root
+    assert module_globals["APP_HELP_INDEX_RELATIVE_PATHS"] == {
+        "en": Path("help") / "en" / "index.html",
+        "ro": Path("help") / "ro" / "index.html",
+    }
+
+
+def test_config_preserves_source_tree_help_paths() -> None:
+    """
+    @brief      Verify source-checkout Help paths retain their English and Romanian locations.
+    @details    Covers REQ-PLAT-7cd89b15.
+    @return     None.
+    @exception  None.
+    """
+    source_root = config._source_tree_root_from_package(config.APP_PACKAGE_ROOT)
+
+    assert source_root is not None
+    documentation_root = source_root.parent.parent / "05_SoftwareDocu"
+    expected_source_paths = {
+        "en": documentation_root / "UserGuide" / "index.html",
+        "ro": documentation_root / "UserGuide_ro" / "index.html",
+    }
+    assert expected_source_paths == config.APP_HELP_SOURCE_INDEX_PATHS
+    assert expected_source_paths["en"] == config.APP_HELP_SOURCE_INDEX_PATH
+
+
 def test_config_resolves_frozen_packaged_runtime_resources(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify PyInstaller resource lookup resolves files staged beside the executable.
