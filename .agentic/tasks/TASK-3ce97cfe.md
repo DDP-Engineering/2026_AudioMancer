@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-3ce97cfe — Fix platform settings startup, localization, and example contract
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-UX-f9cbdc8c, REQ-UX-ade084a1, REQ-PLAT-dd51f8cd
@@ -44,7 +44,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language
 - [x] no release version assigned and no version or help-file changes made
@@ -85,6 +85,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Reviewed every hunk against all three requirements, startup ordering, settings validation, portability, secrets, and exclusions; planning files, versions, help files, dependencies, packaging, and ignored operator data remain untouched.
 - 2026-08-09 deliver: Updated the Platform Settings UI knowledge page and the Unreleased changelog entry in user language without assigning a release version.
 - 2026-08-09 deliver: Human approved the exact staged 14-file PS-7, PS-8, and PS-9 delivery diff and authorized the delivery and journal-only closeout commits.
+- 2026-08-09 deliver: Delivery commit `bb94074` succeeded locally; no push, merge, or pull request was requested or performed.
 
 ## Delivery report (2026-08-09)
 
