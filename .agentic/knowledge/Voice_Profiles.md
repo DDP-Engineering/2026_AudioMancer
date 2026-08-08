@@ -21,6 +21,10 @@ required before speech generation.
 - Migrate profile languages without replacing authored previews or writing an
   unchanged narrator document (`REQ-FUNC-4f57d7ae`, `REQ-FUNC-0fff5848`,
   `REQ-FUNC-206af389`).
+- Report stale narrator edit targets and release preview playback before
+  profile mutation (`REQ-UX-08439166`, `REQ-REL-c45c0ecb`).
+- Treat sample WAV removal as best-effort while keeping authoritative metadata
+  updates strict (`REQ-REL-870d0b6a`).
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
 
@@ -33,12 +37,14 @@ Profile/sample/selection mutations validate and atomically replace that
 document; language application compares the fully validated profile list and
 writes only when migration changes it. Exact prior-language canonical defaults
 localize, while authored previews and sample metadata remain intact. WAV writes
-are atomic and use immutable profile IDs. AI generation stores compact
-checkpoints in the same document and appends profiles only after complete
-validation. The main window passes the page-owned live narrator-generation AI
-selection back through the enabled-profile resolver. Character-voice services
-keep their independent target contract and resolve the selected narrator
-through the narrator service.
+are atomic and use immutable profile IDs. Sample deletion suppresses only WAV
+filesystem errors before performing the normal strict document update, and the
+controller releases preview playback plus its source before deleting a profile.
+AI generation stores compact checkpoints in the same document and appends
+profiles only after complete validation. The main window passes the page-owned
+live narrator-generation AI selection back through the enabled-profile resolver.
+Character-voice services keep their independent target contract and resolve the
+selected narrator through the narrator service.
 
 ## 4. Dependencies
 
@@ -99,7 +105,10 @@ unchanged permits a compatible resume; changing the count or editing or
 clearing the rules may restart analysis, and cancelling either dialog starts
 no runtime work. Selecting another enabled AI profile survives ordinary page
 and narrator-list refreshes. Changing the effective voice language preserves
-authored preview text; untouched canonical defaults follow the new language.
+authored preview text; untouched canonical defaults follow the new language. If
+an inspected profile disappears before editing, the controller reports a
+localized project error. Edit and delete mutations release active preview media
+before sample cleanup.
 
 ## 9. Validation And Tests
 

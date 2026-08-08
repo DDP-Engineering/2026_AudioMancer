@@ -165,12 +165,16 @@ def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None
         )
         window._narator_voice_page.begin_edit_mode()
     except ValueError as error:
-        if str(error) == "readonly_profile":
-            QMessageBox.warning(
-                window,
-                ui_state_service.translate("dialog.project_error_title", current_language),
-                ui_state_service.translate("narator_voice.error_readonly_profile", current_language),
-            )
+        message_key = (
+            "narator_voice.error_readonly_profile"
+            if str(error) == "readonly_profile"
+            else "narator_voice.error_profile"
+        )
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate(message_key, current_language),
+        )
         return
     finally:
         if progress_callback is not None:
@@ -258,6 +262,7 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
         return
     if not _confirm_delete_profile(window, current_language):
         return
+    _stop_preview_playback(window)
     progress_callback = _start_narator_voice_change_progress(
         window,
         current_language,

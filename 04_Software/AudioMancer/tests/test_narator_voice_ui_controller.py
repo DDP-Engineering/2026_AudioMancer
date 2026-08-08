@@ -16,6 +16,7 @@
 # IMPORTS
 
 import json
+from types import SimpleNamespace
 
 from PySide6.QtWidgets import QMessageBox
 import pytest
@@ -115,6 +116,102 @@ def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeyp
     assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
     assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] is None
     assert window._narator_voice_page.is_edit_mode() is True
+
+
+def test_narator_voice_edit_missing_profile_shows_localized_profile_error(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify a stale narrator edit target reports a localized generic profile error.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerMissingEdit")
+    window = _build_window(qtbot, project_root)
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, title, message: warnings.append((title, message)),
+    )
+
+    def _raise_missing_profile(*_args, **_kwargs) -> None:
+        raise ValueError("missing_profile")
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "begin_profile_edit",
+        _raise_missing_profile,
+    )
+
+    narator_voice_ui_controller.handle_edit_profile_requested(window, "stale-profile-id")
+
+    assert warnings == [
+        (
+            ui_state_service.translate("dialog.project_error_title", "en"),
+            ui_state_service.translate("narator_voice.error_profile", "en"),
+        )
+    ]
+
+
+def test_narator_voice_delete_profile_releases_preview_before_mutation(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify confirmed profile deletion releases preview playback and source before mutation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    events: list[object] = []
+
+    class _RecordingAudioPlayer:
+        def stop(self) -> None:
+            events.append("stop")
+
+        def setSource(self, source) -> None:  # noqa: N802
+            events.append(("source_cleared", source.isEmpty()))
+
+    class _RecordingPage:
+        def set_preview_active(self, is_active: bool) -> None:
+            events.append(("preview_active", is_active))
+
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=tmp_path,
+        _narator_voice_audio_player=_RecordingAudioPlayer(),
+        _narator_voice_page=_RecordingPage(),
+        _narator_voice_inspected_profile_id="profile-id",
+    )
+    monkeypatch.setattr(narator_voice_ui_controller, "_selected_profile_id", lambda _window: None)
+    monkeypatch.setattr(narator_voice_ui_controller, "_confirm_delete_profile", lambda *_args: True)
+    monkeypatch.setattr(narator_voice_ui_controller, "_start_narator_voice_change_progress", lambda *_args: None)
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "delete_profile",
+        lambda _project_root, profile_id: events.append(("delete", profile_id)),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "load_selected_profile_state",
+        lambda _project_root: {"selected_profile_id": None, "selected_language": ""},
+    )
+    monkeypatch.setattr(narator_voice_ui_controller, "_sync_manifest_summary", lambda *_args: None)
+    monkeypatch.setattr(narator_voice_ui_controller.misc_ui_controller, "show_message", lambda *_args: None)
+
+    narator_voice_ui_controller.handle_delete_profile_requested(window, "profile-id")
+
+    assert events == [
+        "stop",
+        ("source_cleared", True),
+        ("preview_active", False),
+        ("delete", "profile-id"),
+    ]
 
 
 def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest(monkeypatch, qtbot, tmp_path) -> None:

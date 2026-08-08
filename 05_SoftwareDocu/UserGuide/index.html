@@ -472,10 +472,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>The enabled AI profile chosen for narrator suggestions remains selected while the page refreshes or you inspect another narrator. If it is removed or disabled, AudioMancer uses the configured narrator-generation default, then the first enabled profile.</li>
                     <li>After a failed or cancelled profile run, retry restores the saved profile count and rules when its checkpoint is valid. Keep both unchanged to permit a compatible resume, or change the count or edit or clear the rules to start clean; cancelling either dialog starts no AI work.</li>
                     <li>Edit narrator prompt, preview text, and voice description before generation.</li>
+                    <li>If an inspected profile is no longer available when you choose Edit, AudioMancer shows a project error so you can refresh the project and try again.</li>
                     <li>When the project voice language changes, AudioMancer updates each profile language but preserves manually or AI-authored preview text. Only an untouched canonical preview default is replaced with the new language's default.</li>
                     <li>The Preview budget uses script-aware spoken units and must remain within the displayed safe limit before generating a sample.</li>
                     <li>Generate a VoiceWeaver sample for the chosen voice language.</li>
                     <li>Play and stop narrator samples inside the page.</li>
+                    <li>Editing or deleting a profile stops preview playback and releases its sample before cleanup; sample metadata is cleared even if the operating system still has the WAV file open.</li>
                     <li>Use the Select button above the profile list to choose the final narrator sample used downstream by Speech Blocks and Audio Blocks.</li>
                     <li>Regenerate samples if the voice does not fit the book.</li>
                     <li>Maximize the application window to give the Voice Designer Prompt and Preview Text panels equal expanded height automatically.</li>
