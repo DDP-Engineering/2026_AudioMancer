@@ -68,4 +68,18 @@ def test_warning_flags_and_identifiers_are_stable() -> None:
     assert speech_blocks_normalization_service.block_text_key(" Hello   THERE ") == "hello there"
 
 
+def test_chunk_identity_preserves_complete_numeric_token_above_four_digits() -> None:
+    """
+    @brief      Verify chunk order and Speech Block IDs remain distinct beyond chunk 9999.
+    @return     None.
+    @exception  None
+    """
+    assert speech_blocks_normalization_service.chunk_order_from_id("chunk-0001") == 1
+    assert speech_blocks_normalization_service.chunk_order_from_id("chunk-10000") == 10000
+    assert speech_blocks_normalization_service.chunk_order_from_id("chunk-10001") == 10001
+    assert speech_blocks_normalization_service.speech_block_id("chunk-0001", 1) == "0001-000001"
+    assert speech_blocks_normalization_service.speech_block_id("chunk-10000", 1) == "10000-000001"
+    assert speech_blocks_normalization_service.speech_block_id("chunk-10001", 1) == "10001-000001"
+
+
 # END OF FILE

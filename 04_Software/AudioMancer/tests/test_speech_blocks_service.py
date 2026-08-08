@@ -918,7 +918,7 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
         None,
         input_fingerprint,
         "en",
-        len(source_chunks),
+        source_chunks,
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
@@ -969,7 +969,7 @@ def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) 
         None,
         input_fingerprint,
         "en",
-        len(source_chunks),
+        source_chunks,
         speech_blocks_service._compute_generation_rules_fingerprint("", current_scene_settings),  # noqa: SLF001
     )
 
@@ -988,10 +988,9 @@ def test_speech_blocks_resume_ignores_source_chunk_count_without_processed_count
 
     restored_index = speech_blocks_service._restore_next_speech_blocks_chunk_index(  # noqa: SLF001
         {"status": "review_pending"},
-        None,
-        {"source_chunks": source_resolution["source_chunks"]},
         {},
-        len(source_resolution["source_chunks"]),
+        list(source_resolution["source_chunks"]),
+        [],
     )
 
     assert restored_index == 0
@@ -1028,7 +1027,7 @@ def test_speech_blocks_resume_restarts_previous_full_cast_state(tmp_path) -> Non
         None,
         input_fingerprint,
         "en",
-        len(source_chunks),
+        source_chunks,
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
@@ -1082,7 +1081,7 @@ def test_same_narrator_resume_depends_on_the_recorded_response_contract(
         None,
         input_fingerprint,
         "en",
-        len(source_chunks),
+        source_chunks,
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
@@ -2304,6 +2303,188 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
     assert report["processed_chunk_count"] == 2
     assert report["approved_block_count"] == 1
     assert report["token_usage"]["total_tokens"] == 22
+
+
+@pytest.mark.parametrize("persisted_status", ["review_pending", "completed"])
+def test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_blocks(
+    monkeypatch,
+    tmp_path,
+    persisted_status,
+) -> None:
+    """
+    @brief      Verify review resume regenerates a deleted middle chunk without duplicating later work.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  persisted_status Compatible persisted review or completion status.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, f"SpeechBlocksGapResume{persisted_status}")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    source_texts = [
+        "The council opened the public hearing.",
+        "Residents requested a safer pedestrian crossing.",
+        "The approved motion funded the crossing improvements.",
+    ]
+    _write_source_chunks(
+        project_root,
+        [
+            {"chunk_id": f"chunk-{chunk_index:04d}", "sequence_index": chunk_index, "text": source_text}
+            for chunk_index, source_text in enumerate(source_texts, start=1)
+        ],
+    )
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+    source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+    source_chunks = list(source_resolution["source_chunks"])
+    existing_blocks = [
+        {
+            "speech_block_id": "0001-000001",
+            "sequence_index": 1,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": "narrator",
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": "narration",
+            "source_text": source_texts[0],
+            "text": source_texts[0],
+            "warning_flags": [],
+            "approved": True,
+            "approved_at": "2026-08-08T12:00:00+00:00",
+        },
+        {
+            "speech_block_id": "0003-000001",
+            "sequence_index": 1,
+            "chunk_id": "chunk-0003",
+            "source_language": "en",
+            "speaker_kind": "narrator",
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": "narration",
+            "source_text": source_texts[2],
+            "text": source_texts[2],
+            "warning_flags": [],
+            "approved": True,
+            "approved_at": "2026-08-08T12:05:00+00:00",
+        },
+    ]
+    fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
+    token_usage = {"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True}
+    budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
+        _profile_payload(),
+        "prompt {}",
+        "speech_blocks_user",
+        "en",
+        speech_blocks_service._speaker_catalog([]),  # noqa: SLF001
+        config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+        speech_blocks_service._resolve_narrator_only_budget(None),  # noqa: SLF001
+    )
+    speech_blocks_service._persist_state(  # noqa: SLF001
+        project_root,
+        source_chunks,
+        existing_blocks,
+        speech_blocks_service._rebuild_report(  # noqa: SLF001
+            existing_blocks,
+            "en",
+            "original",
+            "profile-1",
+            len(source_chunks),
+            len(existing_blocks),
+            [],
+            token_usage,
+            budget_metadata,
+        ),
+        speech_blocks_service._build_operation_state_with_prompt_rules(  # noqa: SLF001
+            project_root,
+            source_chunks,
+            existing_blocks,
+            status=persisted_status,
+            started_at="2026-08-08T11:30:00+00:00",
+            completed_at="2026-08-08T12:05:00+00:00",
+            source_language="en",
+            source_kind="original",
+            profile_id="profile-1",
+            warning_records=[],
+            input_fingerprint=fingerprint,
+            log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_speech_blocks_gap.log",
+            token_usage=token_usage,
+            next_chunk_index=None,
+            budget_metadata=budget_metadata,
+            additional_speech_block_instructions="",
+            speech_blocks_response_contract="direct_blocks",
+        ),
+    )
+    requested_prompts: list[str] = []
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Return the regenerated middle-chunk narration block.
+        @param[in]  _profile Ignored AI profile payload.
+        @param[in]  _system_prompt Ignored system prompt.
+        @param[in]  user_prompt Captured user prompt.
+        @param[in]  _kwargs Ignored provider request arguments.
+        @return     Fake Speech Blocks provider response.
+        @exception  None
+        """
+        requested_prompts.append(str(user_prompt))
+        return {
+            "payload": {
+                "blocks": [
+                    {
+                        "text": source_texts[1],
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "confidence": "high",
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    restored_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert len(requested_prompts) == 1
+    assert source_texts[1] in requested_prompts[0]
+    assert [block["chunk_id"] for block in restored_blocks] == ["chunk-0001", "chunk-0002", "chunk-0003"]
+    assert [block["source_text"] for block in restored_blocks] == source_texts
+    assert len({str(block["speech_block_id"]) for block in restored_blocks}) == len(restored_blocks)
+    assert restored_blocks[2]["speech_block_id"] == "0003-000001"
+    assert restored_blocks[2]["approved"] is True
+    assert restored_blocks[2]["approved_at"] == "2026-08-08T12:05:00+00:00"
+
+    all_covered_snapshot = list(restored_blocks)
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    assert len(requested_prompts) == 1
+    assert speech_blocks_service.load_speech_blocks(project_root) == all_covered_snapshot
+
+
+def test_speech_block_book_sort_uses_complete_chunk_number() -> None:
+    """
+    @brief      Verify canonical Speech Block ordering remains correct beyond chunk 9999.
+    @return     None.
+    @exception  None
+    """
+    unordered_blocks = [
+        {"chunk_id": "chunk-10001", "sequence_index": 1, "speech_block_id": "10001-000001"},
+        {"chunk_id": "chunk-0001", "sequence_index": 1, "speech_block_id": "0001-000001"},
+        {"chunk_id": "chunk-10000", "sequence_index": 1, "speech_block_id": "10000-000001"},
+    ]
+
+    ordered_blocks = speech_blocks_service.sort_speech_blocks(unordered_blocks)
+
+    assert [block["chunk_id"] for block in ordered_blocks] == ["chunk-0001", "chunk-10000", "chunk-10001"]
 
 
 def test_start_generation_preserves_french_dash_and_guillemet_source_spans(monkeypatch, tmp_path) -> None:

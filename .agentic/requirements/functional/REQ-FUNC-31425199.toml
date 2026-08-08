@@ -1,0 +1,70 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-31425199"
+
+title = "Preserve complete numeric Speech Block chunk identity"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+Speech Blocks chunk identity shall use the complete numeric chunk token for book ordering and block-ID namespaces while preserving the existing minimum four-digit representation for chunk numbers up to 9999.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Normalization and service regressions prove chunk-0001, chunk-10000, and chunk-10001 produce orders 1, 10000, and 10001, retain byte-compatible identifiers below the boundary, produce distinct identifiers above it, and sort in source order."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_chunk_identity_preserves_complete_numeric_token_above_four_digits",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_block_book_sort_uses_complete_chunk_number",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "Chunk IDs allow more than four digits, so truncating their numeric token corrupts audiobook order and collides Speech Block identifier namespaces in long projects."
+
+created = 2026-08-09
+updated = 2026-08-09

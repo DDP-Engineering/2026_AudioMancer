@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Resuming Speech Blocks after an operator deletes every block for a middle
+  source chunk now restores that missing passage exactly once while preserving
+  later covered text, approvals, and stable block IDs.
+- Speech Blocks in projects with more than 9,999 source chunks now keep their
+  true book order and use distinct chunk-based ID namespaces without changing
+  existing IDs at or below chunk 9,999.
 - AudioMancer now applies saved interface and text-window font sizes before
   building the main window, shows localized interface-language names while
   preserving stable saved codes, and accepts the committed settings example
