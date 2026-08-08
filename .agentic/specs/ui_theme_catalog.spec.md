@@ -42,10 +42,11 @@ were unrepresented:
 
 The four themes are appended to `_BUILT_IN_THEMES` after
 `audiomancer_parchment`. Placement matters because `built_in_themes()` order is
-the Settings-page combo order (`settings_page.py` iterates the catalog to fill
-`_theme_combo`) and because `_classic_light_theme()` reads index `0`. Appending
-keeps both contracts intact: `classic_light` stays first and no existing theme
-changes position.
+the built-in prefix of the Settings-page combo order and because
+`_classic_light_theme()` reads index `0`. The page rebuilds that combo from
+`merged_theme_catalog(...)`, which retains this complete built-in order before
+appending normalized custom themes. Appending keeps both contracts intact:
+`classic_light` stays first and no existing theme changes position.
 
 All four carry `built_in = True`, `schema_version = THEME_SCHEMA_VERSION`, and
 the default font payload for both `font` and `text_font`, so the operator's
@@ -181,4 +182,4 @@ Measured contrast ratios for the four constrained pairs per theme:
 - [ ] Each new theme uses the default font payload for both `font` and `text_font`.
 - [ ] `default_theme_id()` still returns `audiomancer_dark`, and an unresolved theme id still falls back to it.
 - [ ] `_classic_light_theme()` still resolves `classic_light`, so omitted custom colour roles keep falling back to the classic light values.
-- [ ] The Settings-page theme combo lists all eleven built-in themes without any change to `settings_page.py`.
+- [ ] The Settings-page theme combo lists all eleven built-in themes in this order before any normalized custom themes.

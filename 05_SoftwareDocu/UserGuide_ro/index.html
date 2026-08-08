@@ -69,10 +69,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     previzualiza si include ambience mixat in audiobook-ul final.
                 </p>
                 <p>
-                    Setari include teme luminoase si intunecate, teme personalizate, font separat pentru controalele
-                    interfetei si pentru ferestrele mari de text, pasi configurabili pentru rotita mouse-ului, plus
-                    import si export de teme in format JSON. Voce narator si Voci personaje pot importa esantioane WAV
-                    validate impreuna cu textul introdus de operator. Setari AI si Setari TTS folosesc acelasi flux
+                    Setari include teme luminoase si intunecate incluse, selectarea si previzualizarea temelor
+                    personalizate valide deja salvate in fisierul de setari, font separat pentru controalele interfetei
+                    si pentru ferestrele mari de text, plus pasi configurabili pentru rotita mouse-ului. Voce narator
+                    si Voci personaje pot importa esantioane WAV validate impreuna cu textul introdus de operator.
+                    Setari AI si Setari TTS folosesc acelasi flux
                     <strong>Anuleaza</strong>, <strong>Salveaza</strong> si <strong>OK</strong>.
                 </p>
                 <div class="note">
@@ -166,33 +167,25 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </div>
                 <ol>
                     <li>Alege limba interfetei.</li>
-                    <li>Alege o tema inclusa, de exemplu <strong>Default Light</strong>, <strong>Default Dark</strong> sau <strong>Dark Contrast</strong>.</li>
+                    <li>Alege o tema inclusa, de exemplu <strong>Default Light</strong>, <strong>Default Dark</strong> sau <strong>Dark Contrast</strong>, ori o tema personalizata valida deja salvata in <code>settings.json</code>.</li>
                     <li>Activeaza sau dezactiveaza sunetul de finalizare. Cand este activat, AudioMancer emite un sunet scurt imediat ce o operatie lunga se incheie singura, fie ca a reusit, fie ca a esuat, ca sa poti porni o rulare si sa te indepartezi de calculator. O operatie anulata de tine ramane silentioasa.</li>
                     <li>Seteaza <strong>Pasi derulare</strong> intre <strong>1</strong> si <strong>5</strong> pentru cate linii se misca panourile comune de text si liste la fiecare pas al rotitei mouse-ului. Valoarea implicita este <strong>1</strong>.</li>
                     <li>Foloseste <strong>Apply</strong> pentru salvare si actualizare fara inchiderea ferestrei, sau <strong>OK</strong> pentru salvare si inchidere.</li>
                 </ol>
-                <h3>Teme personalizate</h3>
+                <h3>Teme personalizate salvate</h3>
                 <p>
-                    Temele incluse pot fi duplicate in teme personalizate. O tema personalizata permite schimbarea
-                    numelui, fontului pentru etichete si controale, fontului pentru ferestrele mari de text si rolurilor
-                    de culoare folosite de interfata. Fontul pentru ferestrele de text este util cand textul cartii
-                    trebuie sa fie mai mare sau mai lizibil fara marirea tuturor butoanelor.
+                    Daca <code>settings.json</code> contine deja teme personalizate valide, acestea apar dupa toate
+                    temele incluse. Numele introduse de operator raman neschimbate cand se schimba limba interfetei.
+                    Selectarea unei teme actualizeaza previzualizarea, iar Apply sau OK pastreaza atat tema selectata,
+                    cat si continutul existent al temei atunci cand salveaza campurile paginii Setari.
                 </p>
-                <ol>
-                    <li>Creeaza sau duplica o tema personalizata.</li>
-                    <li>Alege familia si dimensiunea fontului pentru controalele interfetei.</li>
-                    <li>Alege familia si dimensiunea fontului pentru ferestrele de text.</li>
-                    <li>Editeaza rolurile de culoare si verifica zona de previzualizare.</li>
-                    <li>Apasa Apply sau OK pentru a salva tema selectata in <code>settings.json</code>.</li>
-                </ol>
-                <p>
-                    Foloseste <strong>Export</strong> pentru a salva o tema personalizata ca fisier JSON portabil, sau
-                    <strong>Import</strong> pentru a adauga o tema JSON in instalarea curenta. Daca identificatorul
-                    temei exista deja, AudioMancer adauga automat un sufix unic pentru copia importata.
-                </p>
+                <div class="note">
+                    Fereastra Setari curenta nu creeaza, duplica, editeaza, sterge, importa sau exporta teme
+                    personalizate. Intrarile invalide sau duplicate raman filtrate si nu pot fi selectate.
+                </div>
                 <figure>
                     <img src="assets/screenshots/settings-dialog.png" alt="Fereastra Setari">
-                    <figcaption>Setarile controleaza limba, sunetul de finalizare, pasii de derulare, temele incluse, temele personalizate, fonturile, culorile si importul/exportul de teme.</figcaption>
+                    <figcaption>Setarile controleaza limba, sunetul de finalizare, pasii de derulare, selectarea temelor incluse si a temelor personalizate valide deja salvate, plus dimensiunile fonturilor pentru interfata si ferestrele de text.</figcaption>
                 </figure>
             </section>
 

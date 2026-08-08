@@ -9,9 +9,10 @@
 """
 @file settings_page.py
 @brief Simplified appearance settings page for AudioMancer.
-@details Presents runtime language, completion beep, scroll steps, a built-in theme
-         selector, and two font-size step selectors (interface controls and text
-         windows). Colour/custom-theme editing has been intentionally removed.
+@details Presents runtime language, completion beep, scroll steps, a built-in and
+         persisted custom-theme selector, and two font-size step selectors
+         (interface controls and text windows). Colour/custom-theme editing has
+         been intentionally removed.
 """
 
 # IMPORTS
@@ -46,8 +47,9 @@ _PREVIEW_BASE_POINT_SIZE = 10.0
 class SettingsPage(QWidget):
     """
     @brief      Display the simplified appearance settings form.
-    @details    Exposes language, completion beep, scroll steps, a built-in theme
-                selector, and independent interface/text font-size step selectors.
+    @details    Exposes language, completion beep, scroll steps, a built-in and
+                persisted custom-theme selector, and independent interface/text
+                font-size step selectors.
     @exception  None
     """
 
@@ -60,6 +62,7 @@ class SettingsPage(QWidget):
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
+        self._custom_themes: list[dict[str, object]] = []
 
         layout = QVBoxLayout(self)
 
@@ -95,8 +98,7 @@ class SettingsPage(QWidget):
 
         self._theme_label = QLabel("Theme", self)
         self._theme_combo = QComboBox(self)
-        for theme_payload in ui_theme_service.built_in_themes():
-            self._theme_combo.addItem(str(theme_payload["display_name"]), str(theme_payload["theme_id"]))
+        self._rebuild_theme_combo([])
         appearance_form.addRow(self._theme_label, self._theme_combo)
 
         self._ui_font_size_label = QLabel("Interface font size", self)
@@ -171,6 +173,29 @@ class SettingsPage(QWidget):
             index = self._theme_combo.findData(config.DEFAULT_UI_THEME_ID)
         self._theme_combo.setCurrentIndex(max(0, index))
 
+    def _rebuild_theme_combo(self, custom_themes: object) -> None:
+        """
+        @brief      Rebuild the selector from built-in and normalized custom themes.
+        @param[in]  custom_themes Candidate persisted custom-theme collection.
+        @return     None.
+        @exception  None
+        """
+        theme_catalog = ui_theme_service.merged_theme_catalog(custom_themes)
+        self._custom_themes = [
+            theme_payload for theme_payload in theme_catalog if not bool(theme_payload.get("built_in"))
+        ]
+
+        self._theme_combo.clear()
+        for theme_payload in theme_catalog:
+            theme_id = str(theme_payload["theme_id"])
+            display_name = str(theme_payload["display_name"])
+            if bool(theme_payload.get("built_in")):
+                display_name = ui_state_service.translate(
+                    f"settings.theme_name.{theme_id}",
+                    self._current_language,
+                )
+            self._theme_combo.addItem(display_name, theme_id)
+
     def _select_step(self, combo: QComboBox, step: str) -> None:
         """
         @brief      Select the given font-size step in a combo, falling back to normal.
@@ -190,7 +215,7 @@ class SettingsPage(QWidget):
         @return     None.
         @exception  None
         """
-        theme_payload = ui_theme_service.theme_by_id(self._theme_combo.currentData(), [])
+        theme_payload = ui_theme_service.theme_by_id(self._theme_combo.currentData(), self._custom_themes)
         try:
             self._preview_group.setStyleSheet(ui_state_service.build_theme_stylesheet(theme_payload))
         except ValueError:
@@ -227,6 +252,7 @@ class SettingsPage(QWidget):
                 )
             )
         )
+        self._rebuild_theme_combo(settings_payload.get("ui_themes", []))
         self._select_theme(str(settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID)))
         self._select_step(
             self._ui_font_size_combo,
@@ -278,12 +304,16 @@ class SettingsPage(QWidget):
         self._preview_label.setText(ui_state_service.translate("settings.theme_preview_label", language))
         self._preview_button.setText(ui_state_service.translate("settings.theme_preview_button", language))
         self._preview_input.setPlainText(ui_state_service.translate("settings.theme_preview_input", language))
+        custom_display_names = {
+            str(theme_payload["theme_id"]): str(theme_payload["display_name"])
+            for theme_payload in self._custom_themes
+        }
         for index in range(self._theme_combo.count()):
             theme_id = str(self._theme_combo.itemData(index) or "")
-            self._theme_combo.setItemText(
-                index,
-                ui_state_service.translate(f"settings.theme_name.{theme_id}", language),
-            )
+            display_name = custom_display_names.get(theme_id)
+            if display_name is None:
+                display_name = ui_state_service.translate(f"settings.theme_name.{theme_id}", language)
+            self._theme_combo.setItemText(index, display_name)
         for combo in (self._ui_font_size_combo, self._text_font_size_combo):
             for index in range(combo.count()):
                 step = str(combo.itemData(index) or "")
