@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Narrator Voice now reports a clear localized error when an inspected profile
+  is no longer available, clears stale sample metadata even if the operating
+  system still holds the WAV file, and releases preview playback before profile
+  deletion to avoid leaving orphan samples behind.
 - Narrator Voice now keeps the operator's enabled AI profile selected across
   page and narrator-list refreshes, while safely returning to the configured
   default or first enabled profile if that choice is no longer available.

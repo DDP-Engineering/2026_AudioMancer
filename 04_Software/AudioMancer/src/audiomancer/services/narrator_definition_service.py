@@ -751,8 +751,8 @@ def delete_profile_sample(project_root: str | Path, profile_id: str) -> None:
     @exception  None
     """
     audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
-    if audio_path.exists():
-        audio_path.unlink()
+    with suppress(OSError):
+        audio_path.unlink(missing_ok=True)
     _update_profile_sample_metadata(project_root, profile_id, None)
 
 

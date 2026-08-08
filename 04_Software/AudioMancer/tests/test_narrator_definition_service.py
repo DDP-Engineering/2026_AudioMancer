@@ -97,6 +97,54 @@ def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_pat
     assert updated_profile["sample"] is None
 
 
+def test_narrator_service_delete_sample_clears_metadata_when_wav_unlink_fails(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a locked narrator WAV does not prevent strict sample metadata clearing.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorLockedSampleProject", tmp_path)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Locked Sample Voice",
+        "English",
+        "Warm prompt.",
+        "Preview text.",
+    )
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        profile,
+        "Preview text.",
+        {
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
+            "language": "en",
+        },
+        "Generated sample.",
+        b"RIFF-locked-wav",
+    )
+    audio_path, _metadata_path = narrator_definition_service.profile_sample_paths(
+        project_root,
+        profile["profile_id"],
+    )
+    original_unlink = Path.unlink
+
+    def _raise_for_locked_sample(path, *args, **kwargs) -> None:
+        if path == audio_path:
+            raise PermissionError("sample is still held by the media backend")
+        original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", _raise_for_locked_sample)
+
+    narrator_definition_service.delete_profile_sample(project_root, profile["profile_id"])
+
+    assert audio_path.is_file() is True
+    assert narrator_definition_service.load_profile_sample_metadata(project_root, profile["profile_id"]) is None
+
+
 def test_narrator_service_stores_single_profile_sample_and_marks_selected_metadata(tmp_path) -> None:
     """
     @brief      Verify generated narrator sample artifacts persist once per profile
