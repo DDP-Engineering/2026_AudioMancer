@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Settings files saved as valid UTF-8 JSON with a byte-order mark now load
+  normally. Malformed or undecodable settings are preserved byte-for-byte in a
+  collision-safe corruption backup before defaults replace the active file,
+  while access failures use safe defaults for that run without rewriting the
+  original settings.
 - Portable builds now start correctly when extracted directly below a drive or
   filesystem root, such as `D:\AudioMancer` or `/audiomancer`, while retaining
   packaged and source-checkout English/Romanian offline Help resolution.
