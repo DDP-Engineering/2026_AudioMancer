@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-e7f4e9ed — Resolve narrator profile edit and deletion safety
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-UX-08439166, REQ-REL-870d0b6a, REQ-REL-c45c0ecb
@@ -43,7 +43,7 @@ opened: 2026-08-08
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language
 - [x] no release version assigned or bumped
@@ -78,6 +78,7 @@ opened: 2026-08-08
 - 2026-08-08 deliver: Updated the Voice Profiles knowledge page, Unreleased changelog, and English and Romanian help while leaving all project and help version fields unchanged because this task is not a release.
 - 2026-08-08 deliver: Re-read all three active requirements and confirmed their prose, verification, affected paths, and linked green selectors match the implementation.
 - 2026-08-08 deliver: Human approval accepted the staged 13-file delivery, the green direct full suite and strict static audit, and both honestly recorded AEGIS wrapper timeouts, authorizing the delivery and close-out commits only.
+- 2026-08-08 close-out: Delivery commit `57afca003325c4b5d8e4e34374802e87116ed976` succeeded and TASK-e7f4e9ed was marked done without a push, merge, or pull request.
 
 ## Design
 
