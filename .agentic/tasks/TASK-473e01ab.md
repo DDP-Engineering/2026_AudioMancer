@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-473e01ab — Recover settings reads without data loss
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-PLAT-2a16daee, REQ-PLAT-b950f73c, REQ-REL-c822b662
@@ -43,7 +43,7 @@ opened: 2026-08-08
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language
 - [x] both help files updated in English and Romanian without a version change
@@ -106,6 +106,7 @@ opened: 2026-08-08
 - 2026-08-08 deliver: Final strict static audit remained `strict: ok` with one inherited ticket reference, 38 branch-wide uncovered-source warnings, 20 configured outside-layout warnings, and one expected three-item open-delivery warning.
 - 2026-08-08 deliver: Both Help files parsed successfully as HTML, all six Help/application version lines remain 2.0.0, and the temporary credential-free settings scaffold remains absent.
 - 2026-08-08 deliver: Human approval accepted the staged ten-file recovery delivery, independent hunk review, green direct full suite and strict static audit, and authorized the delivery plus journal-only close-out commits without merge, push, or PR.
+- 2026-08-08 close-out: Delivery commit `cbf5e383ab76f49850d478a373e9d7f77f2d05cb` succeeded and TASK-473e01ab was marked done without merge, push, or pull request.
 
 ## Delivery report (2026-08-08)
 
