@@ -69,8 +69,12 @@ class SettingsPage(QWidget):
         selector_row = QHBoxLayout()
         self._language_label = QLabel("Language", self)
         self._language_combo = QComboBox(self)
-        self._language_combo.addItems(config.SUPPORTED_LANGUAGES)
-        self._language_combo.setCurrentText(config.DEFAULT_LANGUAGE)
+        for language_code in config.SUPPORTED_LANGUAGES:
+            self._language_combo.addItem(
+                ui_state_service.translate(f"language.{language_code}", self._current_language),
+                language_code,
+            )
+        self._language_combo.setCurrentIndex(self._language_combo.findData(config.DEFAULT_LANGUAGE))
         self._language_combo.setMinimumWidth(96)
         selector_row.addWidget(self._language_label)
         selector_row.addWidget(self._language_combo)
@@ -240,7 +244,11 @@ class SettingsPage(QWidget):
         @return     None.
         @exception  None
         """
-        self._language_combo.setCurrentText(str(settings_payload.get("language", config.DEFAULT_LANGUAGE)))
+        language_code = str(settings_payload.get("language", config.DEFAULT_LANGUAGE))
+        language_index = self._language_combo.findData(language_code)
+        if language_index < 0:
+            language_index = self._language_combo.findData(config.DEFAULT_LANGUAGE)
+        self._language_combo.setCurrentIndex(max(0, language_index))
         self._completion_beep_checkbox.setChecked(
             bool(settings_payload.get("play_completion_beep", config.DEFAULT_PLAY_COMPLETION_BEEP))
         )
@@ -273,7 +281,7 @@ class SettingsPage(QWidget):
         """
         merged_settings = dict(existing_settings_payload)
         merged_settings.pop("ui_text_scale", None)
-        merged_settings["language"] = self._language_combo.currentText()
+        merged_settings["language"] = str(self._language_combo.currentData() or config.DEFAULT_LANGUAGE)
         merged_settings["ui_theme_id"] = str(self._theme_combo.currentData() or config.DEFAULT_UI_THEME_ID)
         merged_settings["ui_font_size_step"] = str(
             self._ui_font_size_combo.currentData() or config.DEFAULT_UI_FONT_SIZE_STEP
@@ -294,6 +302,12 @@ class SettingsPage(QWidget):
         """
         self._current_language = language
         self._language_label.setText(ui_state_service.translate("settings.language", language))
+        for index in range(self._language_combo.count()):
+            language_code = str(self._language_combo.itemData(index) or "")
+            self._language_combo.setItemText(
+                index,
+                ui_state_service.translate(f"language.{language_code}", language),
+            )
         self._completion_beep_checkbox.setText(ui_state_service.translate("settings.play_beep", language))
         self._scroll_steps_label.setText(ui_state_service.translate("settings.scroll_steps", language))
         self._theme_group.setTitle(ui_state_service.translate("settings.theme_group", language))

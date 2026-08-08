@@ -546,7 +546,9 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
     qtbot.addWidget(window)
 
     window.show_settings_dialog()
-    window._settings_page._language_combo.setCurrentText("ro")
+    window._settings_page._language_combo.setCurrentIndex(
+        window._settings_page._language_combo.findData("ro")
+    )
     warm_reading_index = window._settings_page._theme_combo.findData("warm_reading")
     window._settings_page._theme_combo.setCurrentIndex(warm_reading_index)
     window._settings_page._completion_beep_checkbox.setChecked(True)
@@ -639,10 +641,12 @@ def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, q
     qtbot.addWidget(window)
 
     window.show_settings_dialog()
-    window._settings_page._language_combo.setCurrentText("ro")
+    window._settings_page._language_combo.setCurrentIndex(
+        window._settings_page._language_combo.findData("ro")
+    )
     window._settings_page._cancel_button.click()
     window.show_settings_dialog()
-    assert window._settings_page._language_combo.currentText() == "en"
+    assert window._settings_page._language_combo.currentData() == "en"
 
     window.show_ai_settings_dialog()
     window._ai_settings_page._label_edit.setText("Unsaved Profile Name")
