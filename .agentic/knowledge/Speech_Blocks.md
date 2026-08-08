@@ -46,11 +46,18 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Persistence is one authoritative `speech_blocks.json` document object with a fixed top-level field set (`status`, `source`, `ai_profile_id`, `instructions`, `scene_ambience`, `response_contract`, `token_usage`, `budget_metadata`, `checkpoint`, `failure`, `blocks`).
 - Counts, warnings, stage status, and progress are recomputed on read; the document keeps only `source.fingerprint` (not a copy of source-chunk text) and re-resolves source chunks from upstream (`chunks_text.json` / `translated_text.json`).
 - A non-object, corrupt, or missing document reads as not-started (`None`); reset removes the authoritative document.
-- IDs use a chunk-local `CCCC-BBBBBB` form. Manual insertion creates an
-  unapproved narrator narration row; deletion can remove the final row for a
-  chunk without removing that source chunk. Generated output remains
-  `review_pending` until every persisted block is approved, and resumptions
-  require a compatible source snapshot and response-contract marker.
+- IDs use a chunk-local minimum-width `CCCC-BBBBBB` form and the complete
+  numeric chunk token, so chunks above 9999 retain distinct namespaces and
+  canonical book order while earlier IDs remain unchanged (REQ-FUNC-31425199).
+  Manual insertion creates an unapproved narrator narration row; deletion can
+  remove the final row for a chunk without removing that source chunk.
+  Compatible review/completed resume locates the first uncovered source chunk
+  by ordered identity, regenerates missing chunks exactly once, and skips later
+  covered chunks without changing their blocks or approvals; running/failed
+  checkpoints retain their active chunk and segment cursor semantics
+  (REQ-REL-63e230dd). Generated output remains `review_pending` until every
+  persisted block is approved, and resumptions require a compatible source
+  snapshot and response-contract marker.
 - `same_narrator` segmentation is deterministic and total: concatenating the
   `source_text` of a chunk's blocks reproduces that chunk character for
   character, and the service raises rather than persisting a lossy plan. A

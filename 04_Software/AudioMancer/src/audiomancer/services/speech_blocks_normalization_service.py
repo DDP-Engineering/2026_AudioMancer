@@ -181,7 +181,7 @@ def operation_display_name(content_kind: str) -> str:
 
 def speech_block_id(chunk_id: str, sequence_index: int) -> str:
     """
-    @brief      Build the persisted `CCCC-BBBBBB` Speech Block identifier.
+    @brief      Build the persisted minimum-width `CCCC-BBBBBB` Speech Block identifier.
     @param[in]  chunk_id Source chunk identifier.
     @param[in]  sequence_index Chunk-local Speech Block sequence index.
     @return     Stable Speech Block identifier.
@@ -199,7 +199,7 @@ def chunk_order_from_id(chunk_id: str) -> int:
     @exception  None
     """
     digits = "".join(character for character in str(chunk_id) if character.isdigit())
-    return int(digits[-4:] or "0")
+    return int(digits or "0")
 
 
 def normalize_warning_flags(value: object) -> list[str]:

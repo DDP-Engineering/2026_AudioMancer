@@ -659,7 +659,7 @@ def start_or_continue_generation(
         existing_report,
         input_fingerprint,
         source_language,
-        len(source_chunks),
+        source_chunks,
         additional_speech_block_instructions_fingerprint,
     )
     start_segment_index = _restore_next_speech_blocks_segment_index(existing_state, source_chunks, start_chunk_index)
@@ -745,10 +745,18 @@ def start_or_continue_generation(
 
     all_blocks = list(existing_blocks)
     warning_entries = list(warning_records)
+    covered_chunk_ids = {
+        str(block.get("chunk_id", "")).strip()
+        for block in all_blocks
+        if str(block.get("chunk_id", "")).strip()
+    }
     for chunk_index in range(start_chunk_index, len(source_chunks)):
         raise_if_cancelled(cancel_requested)
         source_chunk = _source_chunk_with_attribution_context(source_chunks, chunk_index)
-        chunk_id = str(source_chunk.get("chunk_id", ""))
+        chunk_id = str(source_chunk.get("chunk_id", "")).strip()
+        resumes_active_segment = chunk_index == start_chunk_index and start_segment_index > 0
+        if chunk_id in covered_chunk_ids and not resumes_active_segment:
+            continue
 
         def _persist_segment_progress(
             segment_blocks: list[SpeechBlockPayload],
@@ -870,6 +878,7 @@ def start_or_continue_generation(
             chunk_blocks = _insert_scene_ambience_blocks(chunk_blocks, ambience_blocks)
         all_blocks.extend(chunk_blocks)
         all_blocks = _renumber_speech_blocks(source_chunks, all_blocks)
+        covered_chunk_ids.add(chunk_id)
         warning_entries.extend(chunk_warnings)
         report = _rebuild_report_with_prompt_rules(
             all_blocks,
@@ -3429,7 +3438,7 @@ def _restore_resume_state(
     existing_report: dict[str, object] | None,
     input_fingerprint: str,
     source_language: str,
-    total_chunk_count: int,
+    source_chunks: list[dict[str, object]],
     additional_speech_block_instructions_fingerprint: str,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], int]:
     """
@@ -3439,7 +3448,7 @@ def _restore_resume_state(
     @param[in]  existing_report Existing Speech Blocks report payload.
     @param[in]  input_fingerprint Current source snapshot fingerprint.
     @param[in]  source_language Active source language code.
-    @param[in]  total_chunk_count Current source chunk count.
+    @param[in]  source_chunks Ordered current source chunk snapshot.
     @param[in]  additional_speech_block_instructions_fingerprint Operator instruction fingerprint.
     @return     Existing blocks, warning entries, and the next chunk index.
     @exception  None
@@ -3466,23 +3475,24 @@ def _restore_resume_state(
     )
     if stored_instruction_fingerprint != additional_speech_block_instructions_fingerprint:
         return [], [], 0
+    existing_blocks = load_speech_blocks(project_root)
     next_chunk_index = _restore_next_speech_blocks_chunk_index(
         existing_state,
-        existing_report,
-        metadata,
         resume_checkpoint_payload,
-        total_chunk_count,
+        source_chunks,
+        existing_blocks,
     )
     next_segment_index = 0
-    if 0 <= next_chunk_index < total_chunk_count:
+    if 0 <= next_chunk_index < len(source_chunks):
         raw_segment_index = resume_checkpoint_payload.get("next_segment_index")
         if raw_segment_index not in (None, ""):
             next_segment_index = max(0, int(raw_segment_index))
-    if next_chunk_index <= 0 and next_segment_index <= 0:
+    active_checkpoint_status = str(existing_state.get("status", "")).strip() in {"running", "failed"}
+    if next_chunk_index <= 0 and next_segment_index <= 0 and (active_checkpoint_status or not existing_blocks):
         return [], [], 0
     warnings = _restore_speech_blocks_warning_records(existing_report, metadata)
     return (
-        load_speech_blocks(project_root),
+        existing_blocks,
         warnings,
         next_chunk_index,
     )
@@ -3515,33 +3525,36 @@ def _is_resumable_speech_blocks_response_contract(
 
 def _restore_next_speech_blocks_chunk_index(
     existing_state: dict[str, object],
-    existing_report: dict[str, object] | None,
-    metadata: dict[str, object],
     resume_checkpoint: dict[str, object],
-    total_chunk_count: int,
+    source_chunks: list[dict[str, object]],
+    existing_blocks: list[SpeechBlockPayload],
 ) -> int:
     """
     @brief      Restore the next Speech Blocks source-chunk index.
     @param[in]  existing_state Existing operation-state payload.
-    @param[in]  existing_report Existing Speech Blocks report payload.
-    @param[in]  metadata Existing operation metadata payload.
     @param[in]  resume_checkpoint Existing resumable checkpoint payload.
-    @param[in]  total_chunk_count Current source chunk count.
+    @param[in]  source_chunks Ordered current source chunk snapshot.
+    @param[in]  existing_blocks Persisted Speech Blocks payload list.
     @return     Clamped next source-chunk index.
     @exception  None
     """
     if str(existing_state.get("status", "")).strip() in {"running", "failed"}:
         raw_checkpoint_index = resume_checkpoint.get("next_chunk_index")
         if raw_checkpoint_index not in (None, ""):
-            return max(0, min(int(raw_checkpoint_index), total_chunk_count))
-    if isinstance(existing_report, dict):
-        raw_report_count = existing_report.get("processed_chunk_count")
-        if raw_report_count not in (None, ""):
-            return max(0, min(int(raw_report_count), total_chunk_count))
-    raw_metadata_count = metadata.get("processed_chunk_count")
-    if raw_metadata_count not in (None, ""):
-        return max(0, min(int(raw_metadata_count), total_chunk_count))
-    return 0
+            return max(0, min(int(raw_checkpoint_index), len(source_chunks)))
+    covered_chunk_ids = {
+        str(block.get("chunk_id", "")).strip()
+        for block in existing_blocks
+        if str(block.get("chunk_id", "")).strip()
+    }
+    return next(
+        (
+            chunk_index
+            for chunk_index, source_chunk in enumerate(source_chunks)
+            if str(source_chunk.get("chunk_id", "")).strip() not in covered_chunk_ids
+        ),
+        len(source_chunks),
+    )
 
 
 def _restore_next_speech_blocks_segment_index(
