@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-3dfb9d10 — Align default settings seed contract
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-PLAT-ce8e4f6f
@@ -43,7 +43,7 @@ opened: 2026-08-08
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language; no release version assigned
 
@@ -66,6 +66,7 @@ opened: 2026-08-08
 - 2026-08-09 deliver: Accepted `ticket-ref` and `uncovered-source` warnings as pre-existing unrelated traceability debt, `outside-layout` warnings as expected repository artifacts including the in-scope scaffold/changelog, and `unticked-deliver` as required by the pre-commit checkpoint.
 - 2026-08-09 deliver: Semantic review confirmed exact PS-6 scope, config ownership, persisted-choice preservation, unchanged error/portability/security behavior, no analysis/version edits, and no secrets; the requirement status, prose, verification, affected paths, and linked tests remain true.
 - 2026-08-09 deliver: Human approval confirmed the exact staged seven-file PS-6 diff and authorized the local delivery commit plus journal-only closeout commit, with no push, merge, PR, version, release, or planning-file changes.
+- 2026-08-09 close-out: Delivery commit `a2a8410` succeeded locally, so the task is marked done for this required journal-only closeout with no publication or integration.
 
 ## Design
 
