@@ -24,6 +24,7 @@ from audiomancer import config
 from audiomancer.services import (
     audio_blocks_service,
     narrator_definition_service,
+    narrator_profile_generation_service,
     project_workspace_service,
     speech_blocks_service,
     ui_state_service,
@@ -901,10 +902,21 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
     monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", lambda *_args, **_kwargs: (4, True))
+    observed_instruction_defaults: list[str] = []
+
+    def _prompt_instructions(_window, _language, initial_instructions=""):
+        """
+        @brief      Capture the normal first-run instruction default.
+        @return     Accepted narrator-profile instructions.
+        @exception  None
+        """
+        observed_instruction_defaults.append(initial_instructions)
+        return "Prefer crisp theatrical-but-not-grandiose profiles."
+
     monkeypatch.setattr(
         narator_voice_ui_controller,
         "prompt_ai_narrator_profile_instructions",
-        lambda _window, _language: "Prefer crisp theatrical-but-not-grandiose profiles.",
+        _prompt_instructions,
     )
     monkeypatch.setattr(narator_voice_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
@@ -992,6 +1004,43 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
     assert captured["voice_language"] == "en"
     assert captured["preview_limit"] == 180
     assert captured["additional_profile_instructions"] == "Prefer crisp theatrical-but-not-grandiose profiles."
+    assert observed_instruction_defaults == [""]
+
+
+def test_narator_voice_profile_instructions_dialog_receives_persisted_prefill(monkeypatch) -> None:
+    """
+    @brief      Verify the multiline dialog receives and returns the persisted instruction text.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    captured: dict[str, object] = {}
+
+    def _prompt_multiline_text(window, title, label, initial_text):
+        """
+        @brief      Capture the multiline dialog arguments and return edited text.
+        @return     Edited instructions with surrounding whitespace.
+        @exception  None
+        """
+        captured.update({"window": window, "title": title, "label": label, "initial_text": initial_text})
+        return "  Edited retry rules.  "
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller.misc_ui_controller,
+        "prompt_multiline_text",
+        _prompt_multiline_text,
+    )
+    window = object()
+
+    result = narator_voice_ui_controller.prompt_ai_narrator_profile_instructions(
+        window,
+        "en",
+        "Stored retry rules.",
+    )
+
+    assert captured["window"] is window
+    assert captured["initial_text"] == "Stored retry rules."
+    assert result == "Edited retry rules."
 
 
 def test_narator_voice_generate_profiles_count_cancel_stops_before_worker(
@@ -1033,6 +1082,410 @@ def test_narator_voice_generate_profiles_count_cancel_stops_before_worker(
     narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
 
     assert start_calls == []
+
+
+def test_narator_voice_generate_profiles_unfinished_checkpoint_seeds_saved_count(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify an unfinished checkpoint seeds its non-default requested profile count.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerResumeCount")
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [_ai_profile_payload("profile_1")],
+            "default_narrator_profile_generation_profile_id": "profile_1",
+        },
+    )
+    observed_defaults: list[int] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "load_operation_state",
+        lambda _project_root: {
+            "status": "cancelled",
+            "mode": narrator_profile_generation_service.NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
+            "metadata": {"additional_profile_instructions": "Stored rules."},
+            "resume_checkpoint": {"requested_count": 12},
+        },
+    )
+
+    def _capture_count_default(*args, **_kwargs):
+        """
+        @brief      Capture the QInputDialog initial count and cancel the dialog.
+        @return     Captured count and false acceptance.
+        @exception  None
+        """
+        observed_defaults.append(args[3])
+        return args[3], False
+
+    monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", _capture_count_default)
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
+
+    assert observed_defaults == [12]
+
+
+@pytest.mark.parametrize(
+    "operation_state",
+    [
+        None,
+        {
+            "status": "completed",
+            "mode": "ai_assisted",
+            "metadata": {"additional_profile_instructions": "Previous completed rules."},
+            "resume_checkpoint": None,
+        },
+        {
+            "status": "failed",
+            "mode": "ai_assisted",
+            "metadata": {"additional_profile_instructions": "Stored rules."},
+            "resume_checkpoint": None,
+        },
+        {
+            "status": "failed",
+            "mode": "ai_assisted",
+            "metadata": {"additional_profile_instructions": "Stored rules."},
+            "resume_checkpoint": {"requested_count": "12"},
+        },
+        {
+            "status": "running",
+            "mode": "ai_assisted",
+            "metadata": {"additional_profile_instructions": "Stored rules."},
+            "resume_checkpoint": {"requested_count": 0},
+        },
+        {
+            "status": "cancelled",
+            "mode": "ai_assisted",
+            "metadata": {"additional_profile_instructions": "Stored rules."},
+            "resume_checkpoint": {"requested_count": config.MAX_NARRATOR_PROFILE_GENERATION_COUNT + 1},
+        },
+    ],
+)
+def test_narator_voice_generate_profiles_nonresumable_state_uses_configured_count(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    operation_state,
+) -> None:
+    """
+    @brief      Verify completed, missing, and invalid checkpoints use the configured count.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  operation_state Missing, completed, or invalid derived operation state.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerFallbackCount")
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [_ai_profile_payload("profile_1")],
+            "default_narrator_profile_generation_profile_id": "profile_1",
+        },
+    )
+    observed_defaults: list[int] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "load_operation_state",
+        lambda _project_root: operation_state,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QInputDialog,
+        "getInt",
+        lambda *args, **_kwargs: (observed_defaults.append(args[3]) or args[3], False),
+    )
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
+
+    assert observed_defaults == [config.DEFAULT_NARRATOR_PROFILE_GENERATION_COUNT]
+
+
+def test_narator_voice_generate_profiles_malformed_state_uses_configured_count(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify unreadable narrator state cannot escape or seed an invalid Qt default.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerMalformedCount")
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [_ai_profile_payload("profile_1")],
+            "default_narrator_profile_generation_profile_id": "profile_1",
+        },
+    )
+    observed_defaults: list[int] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "load_operation_state",
+        lambda _project_root: (_ for _ in ()).throw(
+            narrator_definition_service.NarratorVoiceDocumentContractError("malformed state")
+        ),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QInputDialog,
+        "getInt",
+        lambda *args, **_kwargs: (observed_defaults.append(args[3]) or args[3], False),
+    )
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
+
+    assert observed_defaults == [config.DEFAULT_NARRATOR_PROFILE_GENERATION_COUNT]
+
+
+@pytest.mark.parametrize("status", ["failed", "cancelled"])
+def test_narator_voice_generate_profiles_retry_prompts_with_persisted_instructions(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    status,
+) -> None:
+    """
+    @brief      Verify failed and cancelled retries reopen instructions with persisted text.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  status Unfinished narrator generation status.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, f"NarratorControllerRetryPrompt{status.title()}")
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [_ai_profile_payload("profile_1")],
+            "default_narrator_profile_generation_profile_id": "profile_1",
+        },
+    )
+    prompt_defaults: list[str] = []
+    worker_starts: list[bool] = []
+    persisted_instructions = "Keep the delivery restrained and intimate."
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", lambda *_args, **_kwargs: (6, True))
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "load_operation_state",
+        lambda _project_root: {
+            "status": status,
+            "mode": narrator_profile_generation_service.NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
+            "metadata": {"additional_profile_instructions": persisted_instructions},
+            "resume_checkpoint": {"requested_count": 6},
+        },
+    )
+
+    def _prompt_instructions(_window, _language, initial_instructions=""):
+        """
+        @brief      Capture retry instruction prefill and accept it unchanged.
+        @return     Persisted instructions.
+        @exception  None
+        """
+        prompt_defaults.append(initial_instructions)
+        return initial_instructions
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller,
+        "prompt_ai_narrator_profile_instructions",
+        _prompt_instructions,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        lambda *_args, **_kwargs: worker_starts.append(True),
+    )
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
+
+    assert prompt_defaults == [persisted_instructions]
+    assert worker_starts == [True]
+
+
+@pytest.mark.parametrize("accepted_instructions", ["Use a warmer, slower delivery.", ""])
+def test_narator_voice_generate_profiles_retry_passes_edited_or_cleared_instructions_explicitly(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    accepted_instructions,
+) -> None:
+    """
+    @brief      Verify edited and cleared retry rules reach the generation service as strings.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  accepted_instructions Edited or cleared instructions accepted by the operator.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerRetryInstructions")
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [_ai_profile_payload("profile_1")],
+            "default_narrator_profile_generation_profile_id": "profile_1",
+        },
+    )
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", lambda *_args, **_kwargs: (6, True))
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "load_operation_state",
+        lambda _project_root: {
+            "status": "failed",
+            "mode": narrator_profile_generation_service.NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
+            "metadata": {"additional_profile_instructions": "Old stored rules."},
+            "resume_checkpoint": {"requested_count": 6},
+        },
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller,
+        "prompt_ai_narrator_profile_instructions",
+        lambda _window, _language, _initial="": accepted_instructions,
+    )
+
+    def _generate_narrator_profiles(*_args, additional_profile_instructions=None, **_kwargs):
+        """
+        @brief      Capture the explicit instruction argument passed by the controller worker.
+        @return     Empty successful generation report.
+        @exception  None
+        """
+        captured["additional_profile_instructions"] = additional_profile_instructions
+        return {"generated_profile_ids": []}
+
+    def _start_threaded_operation(window_arg, *_args, **kwargs):
+        """
+        @brief      Run the captured generation worker synchronously.
+        @return     None.
+        @exception  None
+        """
+        kwargs["worker_callable"](
+            window_arg._current_project_root,
+            dict(window_arg._current_manifest),
+            progress_callback=lambda *_args, **_kwargs: None,
+            cancel_requested=lambda: False,
+        )
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "generate_narrator_profiles",
+        _generate_narrator_profiles,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
+    )
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
+
+    assert captured["additional_profile_instructions"] == accepted_instructions
+    assert isinstance(captured["additional_profile_instructions"], str)
+
+
+def test_narator_voice_generate_profiles_instruction_cancel_stops_before_worker(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify cancelling retry instructions prevents all runtime work.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerRetryInstructionCancel")
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [_ai_profile_payload("profile_1")],
+            "default_narrator_profile_generation_profile_id": "profile_1",
+        },
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", lambda *_args, **_kwargs: (6, True))
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "load_operation_state",
+        lambda _project_root: {
+            "status": "cancelled",
+            "mode": narrator_profile_generation_service.NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
+            "metadata": {"additional_profile_instructions": "Stored retry rules."},
+            "resume_checkpoint": {"requested_count": 6},
+        },
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller,
+        "prompt_ai_narrator_profile_instructions",
+        lambda _window, _language, _initial="": None,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        lambda *_args, **_kwargs: pytest.fail("Worker started after the instruction dialog was cancelled."),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "generate_narrator_profiles",
+        lambda *_args, **_kwargs: pytest.fail("Runtime service called after instruction cancellation."),
+    )
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
 
 
 def test_narator_voice_ui_controller_preview_state_change_clears_preview_flag(qtbot, tmp_path) -> None:

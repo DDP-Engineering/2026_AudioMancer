@@ -1,0 +1,72 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-e0f33d10"
+
+title = "Seed narrator profile count from a valid unfinished checkpoint"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+While narrator profile generation has a structurally valid unfinished checkpoint, the Narrator Voice controller shall seed the bounded profile-count dialog from its requested count and otherwise use the configured default.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Controller tests capture the QInputDialog default for an unfinished non-default checkpoint and verify completed, missing, out-of-range, wrong-type, and unreadable state all fall back to DEFAULT_NARRATOR_PROFILE_GENERATION_COUNT without an exception or invalid Qt default."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_unfinished_checkpoint_seeds_saved_count",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_nonresumable_state_uses_configured_count",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_malformed_state_uses_configured_count",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_after_completed_style_window",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_changed_count_or_instructions_restart_style_analysis",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"
+rationale = "A truthful retry default prevents an unchanged acceptance from invalidating a compatible checkpoint and re-spending style-analysis tokens."
+
+created = 2026-08-08
+updated = 2026-08-08

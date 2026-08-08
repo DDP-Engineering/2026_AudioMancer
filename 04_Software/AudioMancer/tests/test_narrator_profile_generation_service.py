@@ -562,12 +562,14 @@ def test_narrator_profile_generation_resumes_after_completed_style_window(
             2,
             "en",
             220,
+            additional_profile_instructions="Keep the delivery restrained.",
         )
 
     state_payload = narrator_profile_generation_service.load_operation_state(project_root)
     assert state_payload is not None
     assert state_payload["progress_current"] == 1
     assert len(state_payload["resume_checkpoint"]["style_observations"]) == 1
+    assert state_payload["metadata"]["additional_profile_instructions"] == "Keep the delivery restrained."
     assert not narrator_definition_service.load_profiles(project_root)
 
     resumed_calls: list[tuple[str, int]] = []
@@ -598,6 +600,7 @@ def test_narrator_profile_generation_resumes_after_completed_style_window(
         2,
         "en",
         220,
+        additional_profile_instructions="Keep the delivery restrained.",
     )
 
     assert ("style_window", 1) not in resumed_calls
@@ -610,6 +613,109 @@ def test_narrator_profile_generation_resumes_after_completed_style_window(
         "total_tokens": 70,
         "usage_available": True,
     }
+
+
+@pytest.mark.parametrize(
+    ("retry_count", "retry_instructions"),
+    [
+        (4, "Keep the delivery restrained."),
+        (2, "Use an energetic close delivery."),
+        (2, ""),
+    ],
+)
+def test_narrator_profile_generation_changed_count_or_instructions_restart_style_analysis(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+    retry_count,
+    retry_instructions,
+) -> None:
+    """
+    @brief      Verify changed count or instructions cannot reuse incompatible style observations.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @param[in]  retry_count Profile count accepted for the retry.
+    @param[in]  retry_instructions Instructions accepted for the retry.
+    @return     None.
+    @exception  None
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunk_records(
+        project_root,
+        [
+            "First style window with political ritual and restrained grief.",
+            "Second style window with imperial memory and quiet tension.",
+            "Third style window with prophecy, consequence, and solemn pacing.",
+        ],
+    )
+    monkeypatch.setattr(narrator_profile_generation_service.config, "DEFAULT_NARRATOR_PROFILE_STYLE_WINDOW_SIZE", 1)
+
+    def _cancel_after_first_window(_profile, _system_prompt, _user_prompt, **kwargs):
+        """
+        @brief      Complete one style observation and cancel before the second.
+        @return     Fake style response.
+        @exception  OperationCancelledError Raised before the second observation.
+        """
+        log_context = dict(kwargs.get("log_context") or {})
+        if int(log_context.get("window_index", 0) or 0) > 1:
+            raise OperationCancelledError("cancelled")
+        return {"payload": _style_observation_payload(), "usage": _style_usage_payload()}
+
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _cancel_after_first_window,
+    )
+    with pytest.raises(OperationCancelledError):
+        narrator_profile_generation_service.generate_narrator_profiles(
+            project_root,
+            {},
+            _MOCK_AI_PROFILE,
+            2,
+            "en",
+            220,
+            additional_profile_instructions="Keep the delivery restrained.",
+        )
+
+    initial_state = narrator_profile_generation_service.load_operation_state(project_root)
+    assert initial_state is not None
+    assert initial_state["resume_checkpoint"]["completed_window_count"] == 1
+    retry_style_windows: list[int] = []
+
+    def _observe_fresh_style_start(_profile, _system_prompt, _user_prompt, **kwargs):
+        """
+        @brief      Capture the first retry style window and cancel immediately.
+        @return     None.
+        @exception  OperationCancelledError Always raised after capture.
+        """
+        log_context = dict(kwargs.get("log_context") or {})
+        retry_style_windows.append(int(log_context.get("window_index", 0) or 0))
+        raise OperationCancelledError("cancelled")
+
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _observe_fresh_style_start,
+    )
+    with pytest.raises(OperationCancelledError):
+        narrator_profile_generation_service.generate_narrator_profiles(
+            project_root,
+            {},
+            _MOCK_AI_PROFILE,
+            retry_count,
+            "en",
+            220,
+            additional_profile_instructions=retry_instructions,
+        )
+
+    retry_state = narrator_profile_generation_service.load_operation_state(project_root)
+    assert retry_style_windows == [1]
+    assert retry_state is not None
+    assert retry_state["resume_checkpoint"]["completed_window_count"] == 0
+    assert retry_state["resume_checkpoint"]["style_observations"] == []
 
 
 def test_narrator_profile_generation_resumes_final_generation_without_reanalyzing_style(
