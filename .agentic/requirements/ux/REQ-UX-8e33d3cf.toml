@@ -1,24 +1,28 @@
 schema = 1
 id = "REQ-UX-8e33d3cf"
-title = "The Settings page shall present a theme selector listing the built-in"
+title = "The Settings page shall select themes from the merged catalog"
 status = "active"
 
 requirement = """
-The Settings page shall present a theme selector listing the built-in themes, load the persisted ui_theme_id into it, and write the chosen theme id back into the built settings payload.
+When settings are loaded, the Settings page shall rebuild its theme selector from the normalized merged theme catalog and use that collection for selection, persistence, preview, and relabeling. Built-in themes appear first with localized labels, followed by valid custom themes whose operator-authored display names remain unchanged. Saving without a theme change preserves the selected custom ui_theme_id and the existing ui_themes payload, while repeated loads remove stale entries and do not create duplicates.
 """
 
-verification = "uv run pytest -q (passed)"
+verification = "Focused Settings-page tests load built-in and valid custom themes, assert catalog order and invalid-theme filtering, round-trip an unchanged custom selection without altering ui_themes, inspect the custom preview stylesheet, preserve custom display names while translating built-ins, and confirm repeated loads contain no stale or duplicate entries."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_theme_selector_loads_and_persists",
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_custom_theme_selection_uses_merged_catalog_and_preserves_payload",
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_custom_theme_preview_uses_loaded_custom_collection",
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_language_change_preserves_custom_theme_display_name",
+  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_reloading_theme_catalog_clears_stale_and_invalid_items",
 ]
 
 priority = "high"
 rationale = """
-Operators need a simple selector for the supported built-in themes.
+Operators must be able to adjust unrelated settings without silently losing a valid persisted custom theme selection.
 """
 created = 2026-07-25
-updated = 2026-07-25
+updated = 2026-08-08

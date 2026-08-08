@@ -40,6 +40,14 @@ normalize settings and theme payloads before the app shell consumes them;
 component provides cross-cutting platform behavior but does not own any domain
 workflow artifact.
 
+The Settings page rebuilds its theme selector from the normalized merged theme
+catalog whenever settings load. Built-ins retain their catalog order and
+localized labels; valid persisted custom themes follow them with their
+operator-authored display names. The page keeps the normalized custom
+collection only for selection and preview resolution. It never replaces the
+caller-owned `ui_themes` payload, so Apply or OK preserves custom fields outside
+this page's responsibilities.
+
 `ui_state_service` owns the complete operator-facing English/Romanian string
 catalog. Persistent pages call `apply_language()` for captions, empty states,
 dynamic choices, and list markers; controllers translate popup and progress
@@ -126,11 +134,12 @@ instructions from the Chunking document.
   settings validation normalizes AI profile/default IDs and cached TTS runtime
   discovery data before they are consumed.
 - `_BUILT_IN_THEMES` order is a contract, not presentation trivia: it is the
-  Settings-page theme-combo order, and index 0 is the `classic_light` payload
-  that supplies fallback values for colour roles a custom theme omits. New
-  built-in themes are appended; existing entries are never reordered. The
-  catalog covers brand (`audiomancer_dark`, the default, and
-  `audiomancer_parchment`), system baselines (`classic_light`, `default_dark`),
+  built-in prefix of the Settings-page theme-combo order, and index 0 is the
+  `classic_light` payload that supplies fallback values for colour roles a
+  custom theme omits. Valid normalized custom themes follow the complete
+  built-in prefix. New built-in themes are appended; existing entries are
+  never reordered. The catalog covers brand (`audiomancer_dark`, the default,
+  and `audiomancer_parchment`), system baselines (`classic_light`, `default_dark`),
   accessibility (`high_contrast`, `dark_contrast`) and reading-comfort
   registers (`warm_reading`, `midnight_studio`, `ember_night`, `nordic_slate`,
   `ink_and_paper`). Colour-role values and their contrast basis are recorded in
@@ -142,6 +151,16 @@ instructions from the Chunking document.
   chunking strategies, built-in theme IDs, and language codes keep
   language-neutral item data while their combo labels are replaced in place;
   relabeling therefore preserves the selected and persisted value.
+- Settings theme reload clears and rebuilds the combo from
+  `merged_theme_catalog(ui_themes)`, so stale, duplicate, built-in-colliding, and
+  invalid custom entries cannot remain visible. Built-in display labels are
+  localized; custom `display_name` values remain operator-authored across
+  language changes (`REQ-UX-8e33d3cf`).
+- Within theme persistence, `SettingsPage.build_settings()` writes the selected
+  `ui_theme_id` and leaves the existing `ui_themes` collection untouched.
+  Preview resolution uses the loaded normalized custom collection, so a
+  selected valid custom theme is shown without giving this page theme editing
+  ownership (`REQ-UX-8e33d3cf`).
 - App-owned popup titles, messages, prompt labels, file filters, progress
   operation names, and initial statuses must be translated before display.
   Brand names, provider/model IDs, file formats, numeric units, project
@@ -207,7 +226,10 @@ load/validate/self-heal/seed/save, BOM acceptance, corruption backup and
 non-destructive I/O fallback, component logging, URL joining, scroll-step
 behavior, runtime language/theme
 application, theme schema validation, Settings-page editing, and completion-beep
-preference resolution and emission. Localization coverage additionally checks
+preference resolution and emission. Settings-page coverage includes merged
+built-in/custom catalog order, custom selection round-trips, preview styles,
+operator-authored names, normalization filtering, and clean repeated reloads.
+Localization coverage additionally checks
 Settings dynamic labels, every audited persistent page, runtime current-page
 refresh, and direct popup/progress API calls. Minimum
 validation after a change: run the focused modules above with `uv run pytest`,
@@ -223,6 +245,9 @@ plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
   those backups private and delete them only after recovering any needed values.
 - Settings and themes are dictionary-based and not yet modeled with typed
   classes.
+- Settings can select and preview valid custom themes already present in
+  `ui_themes`, but custom-theme creation, editing, deletion, import, and export
+  are not exposed by the current Settings page.
 - Unknown extra settings keys are preserved rather than strictly validated.
 - The writable data root is resolved once at `config` import time, so changing
   `AUDIOMANCER_DATA_DIR` or the writability of the application root requires a

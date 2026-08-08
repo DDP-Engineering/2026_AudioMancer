@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Settings now lists valid persisted custom themes after the built-in themes,
+  keeps their operator-authored names and preview colors, and preserves the
+  selected custom theme and its full payload when unrelated settings are saved.
 - Settings files saved as valid UTF-8 JSON with a byte-order mark now load
   normally. Malformed or undecodable settings are preserved byte-for-byte in a
   collision-safe corruption backup before defaults replace the active file,
