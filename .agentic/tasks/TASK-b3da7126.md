@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-b3da7126 — Preserve custom theme selection in Settings
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-UX-8e33d3cf
@@ -43,7 +43,7 @@ opened: 2026-08-08
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` updated under `Unreleased` in user language without a release version
 - [x] both help files updated to match the user-visible Settings behavior without version changes
@@ -82,6 +82,7 @@ opened: 2026-08-08
 - 2026-08-08 deliver: Semantic review found the diff limited to REQ-UX-8e33d3cf, using existing normalization and fallback paths with no new I/O, dependency, platform assumption, secret, editing surface, release version, or analysis-file change.
 - 2026-08-08 deliver: Final focused verification passed 9 tests with changed-file Ruff and `py_compile` green, and the ignored credential-free settings scaffold used only for repository tests was removed.
 - 2026-08-08 deliver: Human checkpoint approved the exact nine-file staged diff and accepted the documented AEGIS timeout plus three unrelated full-suite failures for a commit-only delivery with journal closeout and no push, merge, or PR.
+- 2026-08-08 closeout: Delivery commit `49895a4944e3d996e413eba0a5bf7ed2c2f394b2` succeeded, so the task is done without push, merge, or PR.
 
 ## Delivery report (2026-08-08)
 
