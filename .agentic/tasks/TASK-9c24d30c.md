@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-9c24d30c — Preserve Speech Block resume and chunk identity
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-REL-63e230dd, REQ-FUNC-31425199
@@ -44,7 +44,7 @@ opened: 2026-08-09
 - [x] `CHANGELOG.md` Unreleased section written in user language without a release version
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit after approval
-- [ ] close-out: `stage: done` set only in a journal-only commit after the delivery commit succeeds
+- [x] close-out: `stage: done` set only in a journal-only commit after the delivery commit succeeds
 
 ## Log
 
@@ -88,6 +88,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Human independently reviewed and approved the exact nine-file staged diff, requirements, evidence, knowledge, changelog, and exclusions for two local commits with no push, merge, or pull request.
 - 2026-08-09 deliver: The generated report's 286-file merge-base statistic is an AEGIS base-selection artifact; the authoritative approved and cached delivery diff is nine files with 486 insertions and 39 deletions against HEAD 41e9f55.
 - 2026-08-09 deliver: After adding the mandated report and approval record, the final delivery commit remains the same nine files and totals 498 insertions and 39 deletions; 486 insertions and 39 deletions was the approved pre-report checkpoint.
+- 2026-08-09 deliver: Approved local delivery commit 880aae6 succeeded with both requirement IDs and no push, merge, or pull request.
+- 2026-08-09 close: Set the task to done only after the delivery commit succeeded; this journal is the sole closeout change.
 
 ## Delivery report (2026-08-09)
 
