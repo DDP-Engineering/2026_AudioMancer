@@ -535,24 +535,25 @@ def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) ->
         return
     if not _confirm_generate_profiles(window, current_language):
         return
+    operation_state = _load_profile_generation_dialog_state(window)
     profile_count, accepted = QInputDialog.getInt(
         window,
         ui_state_service.translate("dialog.narator_voice_generate_profiles_title", current_language),
         ui_state_service.translate("dialog.narator_voice_generate_profiles_count_prompt", current_language),
-        config.DEFAULT_NARRATOR_PROFILE_GENERATION_COUNT,
+        _profile_generation_count_default(operation_state),
         1,
         config.MAX_NARRATOR_PROFILE_GENERATION_COUNT,
         1,
     )
     if not accepted:
         return
-    additional_profile_instructions = None
-    if _is_resuming_profile_generation(window):
-        pass
-    else:
-        additional_profile_instructions = prompt_ai_narrator_profile_instructions(window, current_language)
-        if additional_profile_instructions is None:
-            return
+    additional_profile_instructions = prompt_ai_narrator_profile_instructions(
+        window,
+        current_language,
+        _persisted_profile_generation_instructions(operation_state),
+    )
+    if additional_profile_instructions is None:
+        return
     voice_language = window._narator_voice_page.current_voice_language()
     preview_limit = _preview_text_character_limit(window._settings_payload)
     operation_runner_controller.start_threaded_operation(
@@ -1372,11 +1373,16 @@ def _confirm_generate_profiles(window: "MainWindow", language: str) -> bool:
     )
 
 
-def prompt_ai_narrator_profile_instructions(window: "MainWindow", language: str) -> str | None:
+def prompt_ai_narrator_profile_instructions(
+    window: "MainWindow",
+    language: str,
+    initial_instructions: str = "",
+) -> str | None:
     """
     @brief      Ask the operator for optional extra AI narrator profile prompt rules.
     @param[in]  window Main application window.
     @param[in]  language Runtime UI language code.
+    @param[in]  initial_instructions Persisted instructions shown as the editable default.
     @return     Extra narrator profile instructions, an empty string, or None when cancelled.
     @exception  None
     """
@@ -1384,34 +1390,66 @@ def prompt_ai_narrator_profile_instructions(window: "MainWindow", language: str)
         window,
         ui_state_service.translate("dialog.narator_profile_generation_extra_prompt_title", language),
         ui_state_service.translate("dialog.narator_profile_generation_extra_prompt_label", language),
-        "",
+        initial_instructions,
     )
     if instructions is None:
         return None
     return instructions.strip()
 
 
-def _is_resuming_profile_generation(window: "MainWindow") -> bool:
+def _load_profile_generation_dialog_state(window: "MainWindow") -> dict[str, object]:
     """
-    @brief      Return whether the narrator profile generation request resumes saved AI work.
+    @brief      Load persisted narrator-generation state for safe dialog defaults.
     @param[in]  window Main application window.
-    @return     True when a compatible unfinished operation may reuse saved prompt rules.
+    @return     Persisted derived operation state or an empty fallback.
     @exception  None
     """
     if window._current_project_root is None:
-        return False
-    operation_state = narrator_profile_generation_service.load_operation_state(window._current_project_root)
-    if not isinstance(operation_state, dict):
-        return False
-    is_ai_profile_generation = (
-        str(operation_state.get("mode", ""))
-        == narrator_profile_generation_service.NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED
-    )
-    return is_ai_profile_generation and str(operation_state.get("status", "")) in {
-        "running",
-        "failed",
-        "cancelled",
-    }
+        return {}
+    try:
+        operation_state = narrator_profile_generation_service.load_operation_state(window._current_project_root)
+    except narrator_definition_service.NarratorVoiceDocumentContractError:
+        return {}
+    return dict(operation_state) if isinstance(operation_state, dict) else {}
+
+
+def _persisted_profile_generation_instructions(operation_state: dict[str, object]) -> str:
+    """
+    @brief      Resolve the persisted instruction text used to prefill the retry dialog.
+    @param[in]  operation_state Derived narrator-profile-generation operation state.
+    @return     Trimmed persisted instructions or an empty default.
+    @exception  None
+    """
+    metadata = operation_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return ""
+    instructions = metadata.get("additional_profile_instructions")
+    return instructions.strip() if isinstance(instructions, str) else ""
+
+
+def _profile_generation_count_default(operation_state: dict[str, object]) -> int:
+    """
+    @brief      Resolve a bounded profile-count default from one unfinished checkpoint.
+    @param[in]  operation_state Derived narrator-profile-generation operation state.
+    @return     Checkpointed count or the configured default.
+    @exception  None
+    """
+    fallback = config.DEFAULT_NARRATOR_PROFILE_GENERATION_COUNT
+    if (
+        operation_state.get("mode")
+        != narrator_profile_generation_service.NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED
+        or operation_state.get("status") not in {"running", "failed", "cancelled"}
+    ):
+        return fallback
+    resume_checkpoint = operation_state.get("resume_checkpoint")
+    if not isinstance(resume_checkpoint, dict):
+        return fallback
+    requested_count = resume_checkpoint.get("requested_count")
+    if not isinstance(requested_count, int) or isinstance(requested_count, bool):
+        return fallback
+    if not 1 <= requested_count <= config.MAX_NARRATOR_PROFILE_GENERATION_COUNT:
+        return fallback
+    return requested_count
 
 
 def _preview_text_character_limit(settings_payload: dict[str, object] | None) -> int:

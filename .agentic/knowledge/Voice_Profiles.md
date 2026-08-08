@@ -12,6 +12,8 @@ required before speech generation.
 - Own the strict Narrator Voice document and profile-owned WAV contract.
 - Persist Character Voices targets and target-specific sample metadata.
 - Generate resumable AI narrator suggestions without exposing partial profiles.
+- Restore truthful count and instruction defaults for every narrator-generation
+  retry while leaving compatibility decisions to the full service fingerprint.
 - Validate narrator preview duration and sample budgets with shared script-aware spoken units.
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
@@ -56,6 +58,9 @@ Generated samples use `source_kind = "voice_designer"`; imported narrator
 samples use `source_kind = "imported"`. AI cancellation/failure retains compact
 resume state and unchanged profiles. Success appends validated profiles and
 clears resume atomically. AI log paths and raw responses are never persisted.
+The retry UI reads `resume.requested_count` only from a validated unfinished
+checkpoint, bounds it to the supported dialog range, and always passes accepted
+instructions as an explicit string; it stores no duplicate resume data.
 
 Character Voices retains its own `characters_voice.json` contract, including
 `copied_narrator` target samples in same-narrator mode.
@@ -73,7 +78,11 @@ the intended downstream audio.
 Use Narrator Voice to create or generate profiles, import/generate samples,
 audition them, and explicitly select one profile. Use Character Voices to
 inspect derived targets and prepare character samples. Confirm current voice
-assets before starting TTS.
+assets before starting TTS. A cancelled or failed profile-generation retry
+restores the checkpointed count and saved optional rules. Accepting both
+unchanged permits a compatible resume; changing the count or editing or
+clearing the rules may restart analysis, and cancelling either dialog starts
+no runtime work.
 
 ## 9. Validation And Tests
 
@@ -134,3 +143,5 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py`
 - `04_Software/AudioMancer/tests/test_tts_budget_service.py`
 - `04_Software/AudioMancer/tests/test_voice_sample_import_service.py`
+- `05_SoftwareDocu/UserGuide/index.html`
+- `05_SoftwareDocu/UserGuide_ro/index.html`

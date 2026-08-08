@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Retrying cancelled or failed narrator profile generation now reopens the
+  optional profile-rules dialog with the saved text and restores the saved
+  profile count when its checkpoint is valid. Keeping both values can resume
+  compatible style analysis, while changing the count or editing or clearing
+  the rules starts clean and cancelling the dialog starts no AI work.
 - Narrator Voice now measures generated previews, safe sample limits, and visible preview counters with script-aware spoken units, so Japanese, Chinese, and Korean previews follow the same safe duration rules as space-separated languages.
 - Character Discovery now writes transaction logs in its own resettable log
   family. Rejected candidate diagnostics are saved without source excerpts or
