@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-9ac2174d — Correct narrator profile retry prompts and resume count
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-77887760, REQ-FUNC-e0f33d10
@@ -46,7 +46,7 @@ opened: 2026-08-08
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language
 - [x] non-release version remains unchanged and both help files describe visible behavior
-- [ ] close-out: set `stage: done` and commit only after the outcome succeeds
+- [x] close-out: set `stage: done` and commit only after the outcome succeeds
 
 ## Log
 
@@ -82,6 +82,7 @@ opened: 2026-08-08
 - 2026-08-08 deliver: `check --task TASK-9ac2174d --strict --run` exited 0 with the configured test command successful in 1842.2 seconds and `strict: ok`.
 - 2026-08-08 deliver: Accepted inherited ticket-reference, merge-base uncovered-source, and planning/HowToTest outside-layout warnings because they are unchanged at the required 2a38c5b base; required help/changelog outside-layout warnings reflect project-owned delivery files.
 - 2026-08-08 deliver: The temporary AEGIS timeout override was restored, both active requirements and every linked selector were re-read as true, and this remains a non-release delivery with version 2.0.0 unchanged.
+- 2026-08-08 close-out: Delivery commit 7da7080 succeeded; the task is now complete.
 
 ## Delivery report (2026-08-08)
 
