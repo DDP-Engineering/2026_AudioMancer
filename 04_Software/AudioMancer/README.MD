@@ -11,46 +11,57 @@ This folder contains the Python 3.12-3.13/PySide6 desktop application package
 for AudioMancer.
 
 Component behavior, service contracts, persistence formats, UI workflows, and
-runtime architecture are documented under `../../05_SoftwareDocu/`. Keep this
-README focused on local setup, execution, validation, and packaging entry
-points.
+runtime architecture are documented in the knowledge base under
+`../../.agentic/knowledge/`. Keep this README focused on local setup,
+execution, validation, and packaging entry points.
 
 ## Layout
 
 - `pyproject.toml` - package metadata, dependencies, tooling configuration, and
   the `audiomancer` console entry point.
-- `src/audiomancer/__init__.py` - package release metadata exposed to the app
-  shell and import tests.
 - `uv.lock` - locked development environment.
 - `settings.example.json` - committed app-root settings scaffold. Copy it to
   `settings.json` and fill in operator-local endpoints and API keys.
 - `settings.json` - operator-local settings; gitignored and never committed.
   API-key fields must remain blank in any committed example scaffold.
-- `src/audiomancer/` - application package.
-- `src/audiomancer/assets/` - packaged static assets such as the application
-  icon.
+- `LICENSE.txt`, `LICENSE_NC.txt` and their `_ro` counterparts - license texts
+  shipped with the application.
+- `src/audiomancer/__init__.py` - package release metadata (`__version__`)
+  exposed to the app shell and import tests.
+- `src/audiomancer/app.py`, `__main__.py` - application entry points.
+- `src/audiomancer/config.py` - configuration contract and defaults.
+- `src/audiomancer/services/` - service layer (import, extraction, cleanup,
+  chunking, speech blocks, character and narrator voices, AI runtime and
+  translation, TTS audio blocks, audio assembly, persistence, logging).
+- `src/audiomancer/ui/` - main window, navigation sidebar, progress dialog,
+  `pages/` and `controllers/`.
+- `src/audiomancer/assets/icons/` - packaged application icons.
 - `prompts/` - prompt templates loaded by AI-assisted workflows.
 - `tests/` - focused service, UI, and workflow regression tests.
+- `Logs/` - runtime logs written per launch; not committed.
 
 ## Component Documentation
 
-Use `../../05_SoftwareDocu/README.md` as the component-documentation index.
+Per-component implementation documentation lives in
+`../../.agentic/knowledge/`, one page per component. Common entry points:
 
-Common entry points:
+- `../../.agentic/knowledge/App_Shell.md`
+- `../../.agentic/knowledge/Project_Lifecycle.md`
+- `../../.agentic/knowledge/Platform_Settings_UI.md`
+- `../../.agentic/knowledge/Text_Cleanup.md`
+- `../../.agentic/knowledge/Text_Chunking.md`
+- `../../.agentic/knowledge/Speech_Blocks.md`
+- `../../.agentic/knowledge/TTS_Audio_Blocks.md`
+- `../../.agentic/knowledge/Audio_Assembly.md`
+- `../../.agentic/knowledge/AI_Runtime.md`
+- `../../.agentic/knowledge/Operation_Orchestration.md`
 
-- `../../05_SoftwareDocu/AudioMancer_App_Shell.md`
-- `../../05_SoftwareDocu/AudioMancer_Project_Workspace.md`
-- `../../05_SoftwareDocu/AudioMancer_Config_And_Settings.md`
-- `../../05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md`
-- `../../05_SoftwareDocu/AudioMancer_Audio_Blocks_Service.md`
-- `../../05_SoftwareDocu/AudioMancer_Audio_Blocks_State_Service.md`
-- `../../05_SoftwareDocu/AudioMancer_Audio_Assembly_Service.md`
-- `../../05_SoftwareDocu/AudioMancer_Workflow_Impact_Service.md`
+`../../05_SoftwareDocu/README.md` indexes the operator-facing material:
 
-Offline operator help is maintained in:
-
-- `../../05_SoftwareDocu/UserGuide/`
-- `../../05_SoftwareDocu/UserGuide_ro/`
+- `../../05_SoftwareDocu/UserGuide/` - English offline help bundle.
+- `../../05_SoftwareDocu/UserGuide_ro/` - Romanian offline help bundle.
+- `../../05_SoftwareDocu/AudioMancer_OpenAI_Online_Model_Recommendations.md`
+- `../../05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md`
 
 ## Environment Setup
 
@@ -82,6 +93,14 @@ Run the full local test suite:
 uv run pytest
 ```
 
+Tests carry markers so you can scope a run: `service` (fast non-Qt logic),
+`ui` (Qt widget, controller, and main-window), and `performance` (large-project
+responsiveness). `performance` is excluded by default; opt in explicitly:
+
+```powershell
+uv run pytest -m performance
+```
+
 Run changed-file Python hygiene during normal feature work:
 
 ```powershell
@@ -105,16 +124,14 @@ broader validation baseline is tracked in `../../HowToTest.md`.
 Packaging automation lives outside this application package:
 
 - `../../02_Tools/package_windows_release.ps1`
-- `../../02_Tools/package_linux_release.sh`
 - `../../02_Tools/audiomancer_windows.spec`
+- `../../02_Tools/audiomancer_windows_entry.py`
+- `../../02_Tools/package_linux_release.sh`
+- `../../02_Tools/validate_linux_delivery.sh`
 
 Delivery archives are staged under `../../07_Delivery/` and published through
 the project release flow. Generated archives must not be committed.
 
-## Documentation Review Notes
-
-Reviewed for the AI chunking context mode feature. When changing AI Settings or AI chunking behavior, include the focused settings, translation-catalog, settings-page, chunking-service, and text-chunking controller tests in validation.
-
-Reviewed for the 1.6.1 release sync. Keep the package metadata, lockfile,
-`audiomancer.__version__`, version smoke test, and offline help bundle versions
-aligned for release bookkeeping.
+Releases must keep the package metadata, lockfile, `audiomancer.__version__`,
+version smoke test, and offline help bundle versions aligned - see
+`../../.agentic/PROJECT.md`, *Delivery - the version workflow*.

@@ -14,10 +14,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
   <strong>Transform written words into real audio experience!</strong>
 </p>
 
-AudioMancer is a Windows desktop application for preparing translated books and
-audiobook production assets. It combines operator-controlled text processing,
-optional AI-assisted workflow steps, voice preparation, speech block review,
-audio block generation, and final WAV assembly.
+AudioMancer is a cross-platform desktop application for Windows and Linux that
+prepares translated books and audiobook production assets. It combines
+operator-controlled text processing, optional AI-assisted workflow steps, voice
+preparation, speech block review, audio block generation, and final WAV
+assembly.
 
 This repository contains the private source tree, planning material,
 implementation documentation, tooling, delivery scripts, and support files for
@@ -33,22 +34,39 @@ The repository is organized so product planning, source code, implementation
 documentation, tooling, delivery notes, and local support material stay in
 separate folders.
 
+## Supported Platforms
+
+AudioMancer runs from the same source tree on both platforms and ships as a
+portable bundle that needs no installer.
+
+- **Windows x64** - portable zip, built with `02_Tools/package_windows_release.ps1`
+  from PowerShell on Windows.
+- **Linux x64 (Ubuntu)** - portable zip and an AppImage, both built with
+  `02_Tools/package_linux_release.sh` from Bash on Ubuntu.
+
+Each platform is packaged on its own host; there is no cross-compilation step.
+`02_Tools/README.md` documents both packaging flows, and
+`02_Tools/validate_linux_delivery.sh` validates the Linux artifacts.
+
 ## Repository Layout
 
 - `0_Planning/` - planning notes and design drafts.
 - `01_Documentation/` - project-level documentation and media.
 - `02_Tools/` - packaging, audit, and repository utility scripts.
 - `04_Software/` - application source code.
-- `05_SoftwareDocu/` - implementation documentation and offline user help.
+- `05_SoftwareDocu/` - offline user help and model-selection guidance.
 - `07_Delivery/` - delivery metadata and release packaging notes.
 - `09_Others/` - runtime projects, samples, and local support material.
+- `.agentic/` - engineering workflow contract, task journals, and the
+  per-component knowledge base under `.agentic/knowledge/`.
 
 ## Where To Start
 
 - `04_Software/AudioMancer/` contains the runnable desktop application.
 - `04_Software/AudioMancer/README.MD` contains application development,
   runtime, and validation notes.
-- `05_SoftwareDocu/` contains focused implementation documentation.
+- `.agentic/knowledge/` contains focused per-component implementation
+  documentation.
 - `05_SoftwareDocu/UserGuide/` contains the English offline help bundle.
 - `05_SoftwareDocu/UserGuide_ro/` contains the Romanian offline help bundle.
 - `CHANGELOG.md` contains detailed version history.
@@ -60,19 +78,11 @@ separate folders.
 ## Release Notes
 
 Use `CHANGELOG.md` for source-level version history. Generated delivery
-archives are not committed to this repository; Windows release packages are
-published through the configured GitHub Releases delivery flow.
+archives are not committed to this repository; Windows and Linux release
+packages are published through the configured GitHub Releases delivery flow.
 
 ## License
 
 AudioMancer is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with an additional Non-Commercial restriction. See `LICENSE.txt` and
 `LICENSE_NC.txt` for full license details.
-
-## Documentation Review Notes
-
-Reviewed for the AI chunking context mode feature. AI Settings now include controls that let operators keep balanced prompt windows, widen scene context, or rely on the model token budget for large-scene AI chunking runs.
-
-Reviewed for the 1.5.9 release sync. Version-specific details remain in
-`CHANGELOG.md`, package metadata, and the offline help bundles rather than in
-this overview.

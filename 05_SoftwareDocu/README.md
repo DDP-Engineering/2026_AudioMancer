@@ -6,15 +6,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
 # 05_SoftwareDocu
 
-Operator help bundles, model-selection guidance, and the component documentation
-template.
-
-Release-sensitive version history lives in `CHANGELOG.md`, while the packaged
-application version is exposed through the application package metadata and
-`audiomancer.__version__`.
+Operator help bundles and model-selection guidance.
 
 Per-component implementation documentation now lives in the consolidated
-knowledge base under `.agentic/knowledge/components/`.
+knowledge base under `../.agentic/knowledge/`, one page per component.
 
 ## Current Documents
 
@@ -27,8 +22,3 @@ knowledge base under `.agentic/knowledge/components/`.
 
 - `AudioMancer_OpenAI_Online_Model_Recommendations.md`
 - `AudioMancer_LMStudio_Local_Model_Recommendations.md`
-
-## Documentation Review Notes
-
-Offline help bundle versions are maintained in `UserGuide/index.html` and
-`UserGuide_ro/index.html`.

@@ -37,12 +37,12 @@ opened: 2026-08-03
 
 ## Done checklist (current stage)
 
-- [x] `check --strict --run` green ƒ?" where "green" means: no errors, no
+- [x] `check --strict --run` green — where "green" means: no errors, no
       failures the diff introduced, warnings fixed or explained, and any
       pre-existing base-branch failures logged as out-of-scope future tasks;
       the evidence line is in the log
 - [x] diff reviewed against scope, requirements, design, error paths,
-      portability, security ƒ?" no unrequested changes
+      portability, security — no unrequested changes
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit

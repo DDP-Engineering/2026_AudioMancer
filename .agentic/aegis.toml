@@ -7,7 +7,15 @@ schema = 1
 # The application lives in 04_Software/AudioMancer and runs through uv.
 test = "cd 04_Software/AudioMancer && uv run pytest -q"
 test_impacted = "cd 04_Software/AudioMancer && uv run pytest -q {tests}"
-# timeout = 1800                        # seconds allowed per command
+# Repository audits from 02_Tools/audits, scoped to the files this task
+# changed so the advisory report stays proportionate. Drop --changed-only to
+# audit the whole application subtree.
+codestyle = "python 02_Tools/audits/audit_codestyle.py --changed-only"
+logging_coverage = "python 02_Tools/audits/audit_logging_coverage.py --changed-only"
+# Seconds allowed per command. The default is 1800, but the full AudioMancer
+# suite runs roughly 45 minutes, so the default would kill a healthy suite at
+# 30 minutes and report it as a failure. 4200 leaves headroom.
+timeout = 4200
 
 [layout]
 # Globs used by the traceability heuristics of `aegis check`.

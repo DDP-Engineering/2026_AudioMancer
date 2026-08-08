@@ -21,6 +21,8 @@ Current repository structure:
 - `05_SoftwareDocu/`
 - `07_Delivery/`
 - `09_Others/`
+- `.agentic/` - engineering workflow contract, task journals, and the
+  per-component knowledge base under `.agentic/knowledge/`
 
 Current application subtree:
 
@@ -164,7 +166,9 @@ Use `gh` when you need to:
 
 Do not commit executable delivery archives directly into the Git repository.
 GitHub release assets are the preferred location for packaged binaries such as
-`07_Delivery/AudioMancer_Windows_x64.zip`.
+`07_Delivery/AudioMancer_Windows_x64.zip`,
+`07_Delivery/AudioMancer_Linux_x64.zip`, and
+`07_Delivery/AudioMancer_Linux_x64.AppImage`.
 
 ### Windows PowerShell
 
@@ -240,9 +244,19 @@ uv sync --extra dev
 
 This installs the currently declared dependencies, including:
 
-- `PySide6`
-- `PyMuPDF`
-- `langdetect`
+Runtime:
+
+- `PySide6` - desktop UI
+- `PyMuPDF` - `PDF` text extraction
+- `python-docx` - `DOCX` text extraction
+- `striprtf` - `RTF` text extraction
+- `odfpy` - `ODT` text extraction
+- `EbookLib` - `EPUB` text extraction
+- `markdown-it-py` - `Markdown` text extraction
+- `langdetect` - language detection
+
+Development:
+
 - `pytest`
 - `pytest-qt`
 - `PyInstaller`
@@ -339,10 +353,36 @@ uv run ruff format src/audiomancer/app.py tests/test_app_entrypoint.py
 - The project currently uses `uv` as the environment and dependency workflow.
 - `ruff` is installed through the same `uv sync --extra dev` path as the other developer tools.
 - The runnable desktop application lives under `04_Software/AudioMancer/`.
-- Windows packaging scripts and spec files live directly under `02_Tools/`.
+- Windows and Linux packaging scripts and spec files live directly under
+  `02_Tools/`.
 - `07_Delivery/` is used for packaged release artifacts.
-- Windows release packaging is implemented with `PyInstaller`.
+- Release packaging is implemented with `PyInstaller` on both platforms. Each
+  platform is packaged on its own host; there is no cross-compilation step.
 - GitHub CLI is used for publishing workflows such as release creation and
   uploading packaged executable archives to GitHub releases.
-- Linux packaging has a reserved helper script under `02_Tools/`, but it is not
-  fully implemented yet.
+
+## Packaging Prerequisites
+
+Packaging is only needed when producing a release; normal development does not
+require it. `02_Tools/README.md` documents both flows.
+
+### Windows
+
+Run `02_Tools/package_windows_release.ps1` from PowerShell. It needs the same
+`uv` environment used for development and produces
+`07_Delivery/AudioMancer_Windows_x64.zip`.
+
+### Linux (Ubuntu)
+
+Run `02_Tools/package_linux_release.sh` from Bash. It produces both
+`07_Delivery/AudioMancer_Linux_x64.zip` and
+`07_Delivery/AudioMancer_Linux_x64.AppImage`.
+
+The script installs its own build prerequisites into the user's home directory,
+so no `root` or `sudo` access is required. It needs `curl` or `wget` available
+and internet access on the first run, because it fetches `uv` and
+`appimagetool` when they are missing and caches them for later runs.
+
+To validate the produced Linux artifacts, run
+`02_Tools/validate_linux_delivery.sh`, which additionally requires `file`,
+`ldd`, `sha256sum`, `timeout`, and `unzip`.

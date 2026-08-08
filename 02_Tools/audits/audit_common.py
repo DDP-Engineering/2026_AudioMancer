@@ -12,9 +12,6 @@
 @details Provides repository-root discovery, changed-file selection, and
          report formatting helpers used by the documentation, code-style, and
          logging audit tools.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -31,6 +28,11 @@ import sys
 REPO_MARKER_FILE = "AGENTS.md"
 PYTHON_SUFFIX = ".py"
 
+# Audits cover the application subtree only. Repository tooling under 02_Tools
+# is deliberately out of scope: it is not shipped and does not follow the
+# application code style.
+AUDITED_SUBTREE = Path("04_Software") / "AudioMancer"
+
 # DATA MODELS / TYPEDEFINITIONS
 
 
@@ -44,9 +46,6 @@ class AuditIssue:
     @param[in]  message Human-readable issue detail.
     @return     Immutable audit issue record.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
 
     path: Path
@@ -64,9 +63,6 @@ def repository_root(start: Path | None = None) -> Path:
     @param[in]  start Optional starting path.
     @return     Repository root path.
     @exception  RuntimeError Raised when no repository marker is found.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     current = (start or Path.cwd()).resolve()
     for candidate in (current, *current.parents):
@@ -84,9 +80,6 @@ def repo_relative(path: Path, root: Path) -> Path:
     @param[in]  root Repository root path.
     @return     Repository-relative or original path.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     try:
         return path.resolve().relative_to(root.resolve())
@@ -101,9 +94,6 @@ def changed_files(root: Path, suffix: str | None = None) -> list[Path]:
     @param[in]  suffix Optional filename suffix filter.
     @return     Ordered repository-relative changed file paths.
     @exception  RuntimeError Raised when Git status cannot be read.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     result = subprocess.run(
         ["git", "status", "--short"],
@@ -128,6 +118,16 @@ def changed_files(root: Path, suffix: str | None = None) -> list[Path]:
     return paths
 
 
+def _is_audited_path(path: Path) -> bool:
+    """
+    @brief      Determine whether one repository-relative path is in audit scope.
+    @param[in]  path Repository-relative path.
+    @return     True when the path sits inside the audited application subtree.
+    @exception  None
+    """
+    return path.is_relative_to(AUDITED_SUBTREE)
+
+
 def python_files(root: Path, changed_only: bool = False) -> list[Path]:
     """
     @brief      Resolve Python files to audit.
@@ -135,24 +135,17 @@ def python_files(root: Path, changed_only: bool = False) -> list[Path]:
     @param[in]  changed_only True to limit the scan to changed Git files.
     @return     Ordered repository-relative Python file paths.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if changed_only:
         return [
             path
             for path in changed_files(root, PYTHON_SUFFIX)
-            if (root / path).is_file()
+            if (root / path).is_file() and _is_audited_path(path)
         ]
-    search_roots = [root / "04_Software" / "AudioMancer", root / "02_Tools"]
-    files: list[Path] = []
-    for search_root in search_roots:
-        if search_root.is_dir():
-            files.extend(
-                repo_relative(path, root) for path in search_root.rglob("*.py")
-            )
-    return sorted(files)
+    search_root = root / AUDITED_SUBTREE
+    if not search_root.is_dir():
+        return []
+    return sorted(repo_relative(path, root) for path in search_root.rglob("*.py"))
 
 
 def print_report(title: str, issues: list[AuditIssue]) -> int:
@@ -162,9 +155,6 @@ def print_report(title: str, issues: list[AuditIssue]) -> int:
     @param[in]  issues Audit issue list.
     @return     Zero when no issues were found, otherwise one.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     print(title)
     print("=" * len(title))
@@ -185,9 +175,6 @@ def parse_changed_only(argv: list[str]) -> bool:
     @param[in]  argv Command-line argument list.
     @return     True when `--changed-only` is present.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return "--changed-only" in argv
 
@@ -198,9 +185,6 @@ def main_guard(callback) -> None:
     @param[in]  callback Audit callback with no arguments.
     @return     None.
     @exception  SystemExit Raised with the audit status code.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     try:
         raise SystemExit(callback())

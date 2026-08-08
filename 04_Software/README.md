@@ -18,13 +18,10 @@ Implementation sources and runnable software artifacts.
 
 - `AudioMancer/README.MD` covers application setup, run, validation, and
   packaging entry points.
-- `../05_SoftwareDocu/` contains component and workflow documentation.
+- `../.agentic/knowledge/` contains per-component implementation and workflow
+  documentation, one page per component.
+- `../05_SoftwareDocu/` contains the offline operator help bundles and
+  model-selection guidance.
+- `../02_Tools/` contains the packaging and release automation.
 - `../HowToTest.md` contains the broader validation baseline.
 - `../CHANGELOG.md` contains version history.
-
-## Documentation Review Notes
-
-Reviewed for the AI chunking context mode feature. The `AudioMancer/` application settings now include the selected AI chunking strategy and context mode used by AI-assisted chunking prompts.
-
-Reviewed for the 1.5.9 release sync. Application version metadata is maintained
-inside the `AudioMancer/` package files and lockfile.

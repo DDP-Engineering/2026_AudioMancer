@@ -37,12 +37,12 @@ opened: 2026-08-03
 
 ## Done checklist (current stage)
 
-- [ ] `check --strict --run` green ƒ?? where "green" means: no errors, no
+- [ ] `check --strict --run` green — where "green" means: no errors, no
       failures the diff introduced, warnings fixed or explained, and any
       pre-existing base-branch failures logged as out-of-scope future
       tasks; the evidence line is in the log
 - [x] diff reviewed against scope, requirements, design, error paths,
-      portability, security ƒ?? no unrequested changes
+      portability, security — no unrequested changes
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
@@ -51,7 +51,7 @@ opened: 2026-08-03
 - [x] close-out: `stage: done` set and committed only after the outcome
       succeeded
 - [x] the project items from `.agentic/PROJECT.md` ("Delivery checklist
-      additions") ƒ?? code style, and for a release the four-place version
+      additions") — code style, and for a release the four-place version
       workflow
 
 ## Log
@@ -79,4 +79,4 @@ opened: 2026-08-03
   - REQ-FUNC-18dd9ec2 - Manual Chunking mutations require a completed authoritative document
 - diff vs merge base: 47 file(s) changed, 5286 line(s) added
 - checks: errors=0 warnings=28 notes=0
-- checklist: 4/8 done; open: `check --strict --run` green ƒ?? where "green" means: no errors, no; delivery confirmed by the human before the commit; journal and report inside the delivery commit; agreed outcome; close-out: `stage: done` set and committed only after the outcome
+- checklist: 4/8 done; open: `check --strict --run` green — where "green" means: no errors, no; delivery confirmed by the human before the commit; journal and report inside the delivery commit; agreed outcome; close-out: `stage: done` set and committed only after the outcome

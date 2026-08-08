@@ -12,9 +12,6 @@
 @details Scans non-UI implementation modules for service-level functions that
          perform workflow, file, project-state, model, or external operations
          and reports candidates that do not appear to use the logging service.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -103,9 +100,6 @@ def audit_file(path: Path, root: Path) -> list[AuditIssue]:
     @param[in]  root Repository root path.
     @return     Logging coverage issue list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if not _is_service_source(path):
         return []
@@ -126,9 +120,6 @@ def run_audit(changed_only: bool = False) -> int:
     @param[in]  changed_only True to audit only changed Git Python files.
     @return     Process status code.
     @exception  RuntimeError Raised when repository discovery fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     root = repository_root()
     issues: list[AuditIssue] = []
@@ -153,9 +144,6 @@ def _audit_node(
     @param[in]  module_has_logging True when the module imports or names the logging service.
     @return     Logging coverage issue list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if isinstance(node, ast.ClassDef):
         issues: list[AuditIssue] = []
@@ -182,9 +170,6 @@ def _audit_function(
     @param[in]  owner Optional owning class name.
     @return     Logging coverage issue list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if _skip_function(node):
         return []
@@ -206,9 +191,6 @@ def _is_service_source(path: Path) -> bool:
     @param[in]  path Repository-relative Python path.
     @return     True when the path is a service source module.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return (
         path.parts[: len(SERVICE_ROOT.parts)] == SERVICE_ROOT.parts
@@ -222,9 +204,6 @@ def _skip_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     @param[in]  node Parsed function node.
     @return     True when the function should be skipped.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if node.name.startswith("__") and node.name.endswith("__"):
         return True
@@ -242,9 +221,6 @@ def _principal_reason(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str | Non
     @param[in]  node Parsed function node.
     @return     Reason text or `None`.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     lowered_name = node.name.lower()
     if node.name.startswith("_") and not node.name.startswith(
@@ -275,9 +251,6 @@ def _executable_statement_count(node: ast.FunctionDef | ast.AsyncFunctionDef) ->
     @param[in]  node Parsed function node.
     @return     Executable statement count, excluding docstring expressions.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return sum(1 for child in node.body if not isinstance(child, ast.Expr))
 
@@ -288,9 +261,6 @@ def _function_uses_logging(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool
     @param[in]  node Parsed function node.
     @return     True when logging appears to be used.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     for decorator in node.decorator_list:
         if "trace_function" in ast.unparse(decorator):
@@ -311,9 +281,6 @@ def _has_io_or_external_call(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bo
     @param[in]  node Parsed function node.
     @return     True when the function performs an operation worth logging.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     for child in ast.walk(node):
         if isinstance(child, ast.Call):
@@ -331,9 +298,6 @@ def _has_exception_handler(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool
     @param[in]  node Parsed function node.
     @return     True when an exception handler exists.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return any(
         isinstance(child, ast.Try) and child.handlers for child in ast.walk(node)
@@ -345,9 +309,6 @@ def main() -> int:
     @brief      Command-line entrypoint for the logging coverage audit.
     @return     Process status code.
     @exception  RuntimeError Raised when repository discovery fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return run_audit(changed_only=parse_changed_only(sys.argv[1:]))
 

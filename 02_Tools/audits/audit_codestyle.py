@@ -9,12 +9,9 @@
 """
 @file audit_codestyle.py
 @brief Audit Python code style and Doxygen headers for AudioMancer.
-@details Checks repository Python files against the AGENTS.md and
-         Code_Style.md expectations for prologues, module tags, section
+@details Checks repository Python files against the binding code style in
+         01_Documentation/Code_Style.md: prologues, module tags, section
          markers, and callable Doxygen tags.
-@author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.1.0
 """
 
 # IMPORTS
@@ -36,8 +33,13 @@ from audit_common import (
 
 # CONSTANTS
 
-REQUIRED_MODULE_TAGS = ("@file", "@brief", "@details", "@author", "@date", "@version")
-REQUIRED_CALLABLE_TAGS = ("@brief", "@version")
+# Code_Style.md requires @file, @brief and @details in the module docstring, and
+# states that no docstring carries @author, @date or @version: the file-top
+# copyright banner is the sole in-file attribution and versioning is
+# project-level only.
+REQUIRED_MODULE_TAGS = ("@file", "@brief", "@details")
+REQUIRED_CALLABLE_TAGS = ("@brief",)
+FORBIDDEN_DOC_TAGS = ("@author", "@date", "@version")
 REQUIRED_SECTION_MARKERS = ("# IMPORTS", "# END OF FILE")
 EXPECTED_SHEBANG = "#!/usr/bin/env python3"
 EXPECTED_ENCODING_PREFIX = "# -*- coding: utf-8 -*-"
@@ -54,9 +56,6 @@ def audit_file(path: Path, root: Path) -> list[AuditIssue]:
     @param[in]  root Repository root path.
     @return     Code-style issue list for the file.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if any(part in EXCLUDED_PATH_PARTS for part in path.parts):
         return []
@@ -93,6 +92,17 @@ def audit_file(path: Path, root: Path) -> list[AuditIssue]:
                     path, None, "PY-MODULE-DOC", f"Missing module doc tag `{tag}`."
                 )
             )
+    for tag in FORBIDDEN_DOC_TAGS:
+        if tag in module_doc:
+            issues.append(
+                AuditIssue(
+                    path,
+                    None,
+                    "PY-MODULE-DOC",
+                    f"Module doc tag `{tag}` is not allowed; attribution belongs in "
+                    "the file-top copyright banner and versioning is project-level.",
+                )
+            )
     issues.extend(_audit_callable_docs(path, tree))
     return issues
 
@@ -103,9 +113,6 @@ def run_audit(changed_only: bool = False) -> int:
     @param[in]  changed_only True to audit only changed Git Python files.
     @return     Process status code.
     @exception  RuntimeError Raised when repository discovery fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     root = repository_root()
     issues: list[AuditIssue] = []
@@ -125,9 +132,6 @@ def _audit_callable_docs(path: Path, tree: ast.AST) -> list[AuditIssue]:
     @param[in]  tree Parsed Python syntax tree.
     @return     Callable documentation issue list.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     issues: list[AuditIssue] = []
     for node in ast.walk(tree):
@@ -158,6 +162,16 @@ def _audit_callable_docs(path: Path, tree: ast.AST) -> list[AuditIssue]:
                         f"`{node.name}` is missing `{tag}`.",
                     )
                 )
+        for tag in FORBIDDEN_DOC_TAGS:
+            if tag in doc:
+                issues.append(
+                    AuditIssue(
+                        path,
+                        node.lineno,
+                        "PY-CALLABLE-DOC",
+                        f"`{node.name}` carries `{tag}`, which docstrings must not use.",
+                    )
+                )
     return issues
 
 
@@ -169,9 +183,6 @@ def _is_trivial_private_helper(
     @param[in]  node Parsed callable or class node.
     @return     True when the node is a trivial private helper.
     @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     if isinstance(node, ast.ClassDef) or not node.name.startswith("_"):
         return False
@@ -186,9 +197,6 @@ def main() -> int:
     @brief      Command-line entrypoint for the code-style audit.
     @return     Process status code.
     @exception  RuntimeError Raised when repository discovery fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
     """
     return run_audit(changed_only=parse_changed_only(sys.argv[1:]))
 
