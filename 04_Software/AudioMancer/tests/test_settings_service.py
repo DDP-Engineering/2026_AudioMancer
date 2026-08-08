@@ -19,6 +19,7 @@
 import copy
 import json
 import logging
+from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import settings_service, ui_theme_service
@@ -36,6 +37,47 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
 
     assert validated_settings == committed_settings
+
+
+def test_build_default_settings_uses_config_defined_factory_defaults() -> None:
+    """
+    @brief      Verify built-in settings derive shared factory defaults from config.
+    @return     None.
+    @exception  None
+    """
+    default_settings = settings_service.build_default_settings()
+
+    assert default_settings["default_ai_chunking_strategy"] == config.DEFAULT_AI_CHUNKING_STRATEGY
+    assert default_settings["play_completion_beep"] is config.DEFAULT_PLAY_COMPLETION_BEEP
+
+
+def test_committed_settings_example_uses_config_defined_factory_defaults() -> None:
+    """
+    @brief      Verify the shipped settings example agrees with shared factory defaults.
+    @return     None.
+    @exception  None
+    """
+    settings_example_path = Path(__file__).resolve().parents[1] / "settings.example.json"
+    committed_settings = json.loads(settings_example_path.read_text(encoding="utf-8"))
+
+    assert committed_settings["default_ai_chunking_strategy"] == config.DEFAULT_AI_CHUNKING_STRATEGY
+    assert committed_settings["play_completion_beep"] is config.DEFAULT_PLAY_COMPLETION_BEEP
+
+
+def test_validate_settings_preserves_valid_explicit_scene_and_enabled_beep() -> None:
+    """
+    @brief      Verify valid explicit operator choices remain authoritative.
+    @return     None.
+    @exception  None
+    """
+    persisted_settings = settings_service.build_default_settings()
+    persisted_settings["default_ai_chunking_strategy"] = "scene"
+    persisted_settings["play_completion_beep"] = True
+
+    validated_settings = settings_service.validate_settings(persisted_settings)
+
+    assert validated_settings["default_ai_chunking_strategy"] == "scene"
+    assert validated_settings["play_completion_beep"] is True
 
 
 def test_build_default_settings_includes_theme_and_scroll_fields() -> None:

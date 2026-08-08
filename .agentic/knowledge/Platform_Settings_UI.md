@@ -108,9 +108,18 @@ instructions from the Chunking document.
   scaffold the packaging script stages beside the executable with API keys and
   discovery cache stripped) when that path differs from the active path and is
   readable; otherwise it receives built-in defaults. The packaged file is only
-  ever read. `settings.example.json` is placeholder documentation and is never a
-  seed source. Invalid supported values are repaired, while unknown future keys
-  are preserved unless an explicit migration removes them.
+  ever read. The committed `settings.example.json` is the source scaffold copied
+  to that packaged identity or to an operator's active settings file; runtime
+  seeding never reads the example path directly. Invalid supported values are
+  repaired, while unknown future keys are preserved unless an explicit migration
+  removes them.
+- `build_default_settings()` derives `default_ai_chunking_strategy` and
+  `play_completion_beep` from their `config` factory constants, and the committed
+  settings scaffold carries the same current values (`REQ-PLAT-ce8e4f6f`). Missing,
+  invalid, portable, and unusable-scaffold fallbacks therefore share one source of
+  truth. Validation preserves valid explicit operator choices such as `scene` and
+  an enabled completion beep; changing a factory default does not migrate or
+  rewrite those choices.
 - Malformed JSON or invalid UTF-8 settings are preserved byte-for-byte before
   replacement in the first unused same-directory `settings.corrupt.json` or
   `settings.corrupt.<n>.json` backup (`REQ-PLAT-b950f73c`). Backup creation is
@@ -219,7 +228,7 @@ Primary automated coverage:
 - `tests/test_localization_parity.py`
 - `tests/test_ui_localization_coverage.py`
 
-These cover configuration constants, one-level frozen-root initialization,
+These cover configuration constants and default-seed/scaffold parity, one-level frozen-root initialization,
 source and packaged Help resolution, writable data-root resolution across
 portable, override and read-only installation layouts, settings
 load/validate/self-heal/seed/save, BOM acceptance, corruption backup and
