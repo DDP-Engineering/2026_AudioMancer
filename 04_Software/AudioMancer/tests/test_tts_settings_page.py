@@ -141,6 +141,97 @@ def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> Non
     assert page._runtime_status_label.text() == "Connection failed"
 
 
+def test_tts_settings_page_save_without_probe_preserves_persisted_probe_state(
+    qtbot,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify a fresh dialog display does not replace durable probe state on save.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+
+    for probe_succeeded, probe_message in (
+        (True, "Connection successful. Discovered 2 models."),
+        (False, "Connection failed: runtime unavailable."),
+    ):
+        settings_payload = {
+            **default_settings_payload,
+            "tts_runtime_probe_succeeded": probe_succeeded,
+            "tts_runtime_probe_message": probe_message,
+        }
+
+        page.load_state(settings_payload, {}, False)
+        saved_settings = page.build_settings(settings_payload)
+
+        assert page._runtime_status_label.text() == "Not connected"
+        assert saved_settings["tts_runtime_probe_succeeded"] is probe_succeeded
+        assert saved_settings["tts_runtime_probe_message"] == probe_message
+
+
+def test_tts_settings_page_persists_only_probe_results_from_current_loaded_session(
+    qtbot,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify applied probe results persist until a reused page loads a new dialog session.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    original_settings = {
+        **default_settings_payload,
+        "tts_runtime_probe_succeeded": False,
+        "tts_runtime_probe_message": "Earlier durable failure.",
+    }
+    page.load_state(original_settings, {}, False)
+
+    page.apply_probe_result(
+        {
+            "success": True,
+            "message": "Connection successful.",
+            "discovered_models": _minimum_qwen_models(),
+            "active_model_id": None,
+            "device_diagnostics": {},
+        }
+    )
+    successful_settings = page.build_settings(original_settings)
+    assert successful_settings["tts_runtime_probe_succeeded"] is True
+    assert successful_settings["tts_runtime_probe_message"] == "Connection successful."
+
+    page.apply_probe_result(
+        {
+            "success": False,
+            "message": "",
+            "discovered_models": [],
+            "active_model_id": None,
+            "device_diagnostics": {},
+        }
+    )
+    failed_settings = page.build_settings(original_settings)
+    assert failed_settings["tts_runtime_probe_succeeded"] is False
+    assert failed_settings["tts_runtime_probe_message"] == ""
+
+    reloaded_settings = {
+        **default_settings_payload,
+        "tts_runtime_probe_succeeded": True,
+        "tts_runtime_probe_message": "Persisted after another dialog session.",
+    }
+    page.load_state(reloaded_settings, {}, False)
+    saved_after_reload = page.build_settings(reloaded_settings)
+
+    assert page._runtime_status_label.text() == "Not connected"
+    assert saved_after_reload["tts_runtime_probe_succeeded"] is True
+    assert saved_after_reload["tts_runtime_probe_message"] == "Persisted after another dialog session."
+
+
 def test_tts_settings_page_keeps_runtime_limits_available_without_project(qtbot) -> None:
     """
     @brief      Verify runtime audio limits remain editable when no project is open.

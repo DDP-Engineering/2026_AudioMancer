@@ -94,6 +94,16 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - Incremental page updates rebuild the sorted widget when an unseen block is
   inserted, preserving the selected block when present; updates for existing
   block IDs still replace only that row (`REQ-FUNC-50f45095`).
+- TTS Settings intentionally shows Not connected at the start of every loaded
+  dialog session without treating that display reset as a failed probe. Saving
+  before Test Connection preserves the durable probe success and message
+  fields exactly; once the current session applies a probe, its success or
+  failure and exact message become authoritative until the next `load_state`
+  (`REQ-FUNC-77fce48b`, `REQ-FUNC-8749869e`).
+- Generated voice and sound WAV download helpers translate a direct
+  `TimeoutError` to `Connection failed: request timed out.` with the original
+  exception chained, while retaining existing HTTPError and URLError handling
+  (`REQ-FUNC-6606ebfa`).
 
 ## 7. Workflow Integration
 

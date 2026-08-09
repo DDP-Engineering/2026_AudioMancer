@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Saving unrelated TTS settings without testing the runtime now preserves the
+  last durable connection result, while a connection test performed in the
+  current dialog still replaces that result with its exact success or failure.
+- VoiceWeaver voice and sound WAV downloads now report direct request timeouts
+  with the same clear connection-failure message as the other runtime calls.
 - Audio Assembly now validates every included source WAV, including legacy
   path-carrying Scene Ambience rows, before composition; synthesized pauses and
   disabled ambience remain file-free and excluded as intended.

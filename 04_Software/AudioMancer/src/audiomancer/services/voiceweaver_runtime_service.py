@@ -1044,6 +1044,8 @@ def download_generated_voice(
         raise RuntimeError(_runtime_error_message(exception)) from exception
     except error.URLError as exception:
         raise RuntimeError(f"Connection failed: {getattr(exception, 'reason', exception)}.") from exception
+    except TimeoutError as exception:
+        raise RuntimeError("Connection failed: request timed out.") from exception
 
 
 def download_generated_audio(
@@ -1066,6 +1068,8 @@ def download_generated_audio(
         raise RuntimeError(_runtime_error_message(exception)) from exception
     except error.URLError as exception:
         raise RuntimeError(f"Connection failed: {getattr(exception, 'reason', exception)}.") from exception
+    except TimeoutError as exception:
+        raise RuntimeError("Connection failed: request timed out.") from exception
 
 
 def operation_failed_message(status_payload: dict[str, object]) -> str:

@@ -73,6 +73,7 @@ class TtsSettingsPage(QWidget):
         self._discovered_models: list[dict[str, object]] = []
         self._device_diagnostics: dict[str, object] = {}
         self._capability_matrix: dict[str, object] = voiceweaver_runtime_service.build_capability_matrix([])
+        self._probe_ran = False
         self._probe_succeeded = False
         self._probe_message = ""
         self._active_model_id: str | None = None
@@ -259,6 +260,7 @@ class TtsSettingsPage(QWidget):
         # Dialog always opens with a fresh "Not connected" state — the operator must
         # re-run Test Connection in each session so the displayed status reflects the
         # live runtime and not a stale flag persisted from a previous session.
+        self._probe_ran = False
         self._probe_succeeded = False
         self._probe_message = ""
         self._preview_timeout_spin.setValue(
@@ -365,6 +367,7 @@ class TtsSettingsPage(QWidget):
         @return     None.
         @exception  None
         """
+        self._probe_ran = True
         self._probe_succeeded = bool(probe_result.get("success", False))
         self._probe_message = str(probe_result.get("message", ""))
         self._active_model_id = (
@@ -393,8 +396,9 @@ class TtsSettingsPage(QWidget):
         merged_settings = copy.deepcopy(existing_settings_payload)
         merged_settings["tts_runtime_base_url"] = self._base_url_edit.text().strip()
         merged_settings["tts_runtime_api_key"] = self._api_key_edit.text()
-        merged_settings["tts_runtime_probe_succeeded"] = self._probe_succeeded
-        merged_settings["tts_runtime_probe_message"] = self._probe_message
+        if self._probe_ran:
+            merged_settings["tts_runtime_probe_succeeded"] = self._probe_succeeded
+            merged_settings["tts_runtime_probe_message"] = self._probe_message
         merged_settings["tts_runtime_discovered_models"] = [dict(model) for model in self._discovered_models]
         merged_settings["tts_runtime_active_model_id"] = self._active_model_id
         merged_settings["tts_runtime_device_diagnostics"] = dict(self._device_diagnostics)

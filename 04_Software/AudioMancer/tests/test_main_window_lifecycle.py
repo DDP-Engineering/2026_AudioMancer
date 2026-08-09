@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QToolBar,
 )
+import pytest
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service
@@ -747,6 +748,65 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     assert persisted_payload["tts_runtime_base_url"] == "http://127.0.0.1:9001"
     assert window._tts_settings_dialog.isVisible() is False
     assert ui_settings_reapply_calls == []
+
+
+@pytest.mark.parametrize(
+    ("probe_succeeded", "probe_message"),
+    [
+        (True, "Connection successful. Discovered 1 model."),
+        (False, "Connection failed: runtime unavailable."),
+    ],
+)
+def test_main_window_saves_unrelated_tts_setting_without_erasing_probe_state(
+    monkeypatch,
+    qtbot,
+    default_settings_payload,
+    probe_succeeded,
+    probe_message,
+) -> None:
+    """
+    @brief      Verify the real TTS Settings controller preserves an untested durable probe result.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @param[in]  probe_succeeded Persisted probe success case.
+    @param[in]  probe_message Persisted probe message case.
+    @return     None.
+    @exception  None
+    """
+    persisted_payload = {
+        **default_settings_payload,
+        "tts_runtime_probe_succeeded": probe_succeeded,
+        "tts_runtime_probe_message": probe_message,
+    }
+    saved_payloads: list[dict[str, object]] = []
+
+    def _fake_save_settings(payload):
+        """
+        @brief      Capture one persisted settings payload.
+        @param[in]  payload Settings payload being saved.
+        @return     None.
+        """
+        saved_payloads.append(dict(payload))
+        persisted_payload.update(payload)
+
+    monkeypatch.setattr(
+        tts_settings_ui_controller.settings_service,
+        "load_settings",
+        lambda: dict(persisted_payload),
+    )
+    monkeypatch.setattr(tts_settings_ui_controller.settings_service, "save_settings", _fake_save_settings)
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window.show_tts_settings_dialog()
+    window._tts_settings_page._scene_ambience_steps_spin.setValue(61)
+    window._tts_settings_page._save_button.click()
+
+    assert saved_payloads
+    assert saved_payloads[-1]["scene_ambience_num_inference_steps"] == 61
+    assert saved_payloads[-1]["tts_runtime_probe_succeeded"] is probe_succeeded
+    assert saved_payloads[-1]["tts_runtime_probe_message"] == probe_message
 
 
 def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, default_settings_payload) -> None:

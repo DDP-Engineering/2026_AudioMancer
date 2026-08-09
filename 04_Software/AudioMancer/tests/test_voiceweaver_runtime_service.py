@@ -17,6 +17,8 @@
 
 from urllib import error
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import operation_runtime_service, voiceweaver_runtime_service
 
@@ -381,6 +383,129 @@ def test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contra
     ]
     assert observed_byte_urls == ["http://127.0.0.1:8059/v1/audio"]
     assert audio_bytes == b"RIFF....WAVE"
+
+
+@pytest.mark.parametrize(
+    ("download_helper", "endpoint"),
+    [
+        (voiceweaver_runtime_service.download_generated_voice, "/v1/voice"),
+        (voiceweaver_runtime_service.download_generated_audio, "/v1/audio"),
+    ],
+)
+def test_generated_wav_downloads_translate_direct_timeouts(
+    monkeypatch,
+    download_helper,
+    endpoint,
+) -> None:
+    """
+    @brief      Verify both generated-WAV downloads translate and chain direct timeouts.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  download_helper Generated-WAV download function under test.
+    @param[in]  endpoint Expected VoiceWeaver endpoint suffix.
+    @return     None.
+    @exception  None
+    """
+    timeout = TimeoutError("socket read stalled")
+
+    class _TimedOutResponse:
+        """
+        @brief      Provide a response whose body read raises the direct timeout.
+        @exception  None
+        """
+
+        def __enter__(self):
+            """@brief Return the fake opened response."""
+            return self
+
+        def __exit__(self, *_args):
+            """@brief Leave the fake response context without suppressing failures."""
+            return False
+
+        def read(self):
+            """
+            @brief      Raise the simulated socket timeout during response reading.
+            @exception  TimeoutError Always raised for this regression seam.
+            """
+            raise timeout
+
+    def _fake_urlopen(http_request, timeout):
+        """
+        @brief      Verify request construction and return the timed-out response.
+        @return     Fake response context manager.
+        """
+        assert http_request.full_url == f"http://127.0.0.1:8059{endpoint}"
+        assert http_request.get_header("Authorization") == "Bearer secret"
+        assert timeout == 37
+        return _TimedOutResponse()
+
+    monkeypatch.setattr(voiceweaver_runtime_service.request, "urlopen", _fake_urlopen)
+
+    with pytest.raises(RuntimeError) as error_info:
+        download_helper(
+            "http://127.0.0.1:8059",
+            runtime_api_key="secret",
+            timeout_seconds=37,
+        )
+
+    assert str(error_info.value) == "Connection failed: request timed out."
+    assert error_info.value.__cause__ is timeout
+
+
+@pytest.mark.parametrize(
+    ("download_helper", "endpoint"),
+    [
+        (voiceweaver_runtime_service.download_generated_voice, "/v1/voice"),
+        (voiceweaver_runtime_service.download_generated_audio, "/v1/audio"),
+    ],
+)
+def test_generated_wav_downloads_preserve_success_http_and_url_contracts(
+    monkeypatch,
+    download_helper,
+    endpoint,
+) -> None:
+    """
+    @brief      Verify timeout work does not alter successful, HTTP, or URL download behavior.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  download_helper Generated-WAV download function under test.
+    @param[in]  endpoint Expected VoiceWeaver endpoint suffix.
+    @return     None.
+    @exception  None
+    """
+
+    def _return_wav(url, headers, timeout_seconds):
+        """
+        @brief      Return stable WAV bytes after verifying forwarded request values.
+        @return     Fake WAV bytes.
+        """
+        assert url == f"http://127.0.0.1:8059{endpoint}"
+        assert headers == {"Accept": "application/json"}
+        assert timeout_seconds == 41
+        return b"RIFF....WAVE"
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "_read_bytes", _return_wav)
+    assert download_helper("http://127.0.0.1:8059", timeout_seconds=41) == b"RIFF....WAVE"
+
+    http_failure = error.HTTPError(url="", code=401, msg="Unauthorized", hdrs=None, fp=None)
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "_read_bytes",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(http_failure),
+    )
+    with pytest.raises(RuntimeError) as http_error_info:
+        download_helper("http://127.0.0.1:8059")
+    assert str(http_error_info.value) == "Connection failed: invalid or missing runtime credentials."
+    assert http_error_info.value.__cause__ is http_failure
+
+    url_failure = error.URLError(TimeoutError("wrapped timeout"))
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "_read_bytes",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(url_failure),
+    )
+    with pytest.raises(RuntimeError) as url_error_info:
+        download_helper("http://127.0.0.1:8059")
+    assert str(url_error_info.value) == "Connection failed: wrapped timeout."
+    assert url_error_info.value.__cause__ is url_failure
 
 
 def test_voiceweaver_runtime_service_direct_clone_omits_romanian_language(monkeypatch) -> None:
