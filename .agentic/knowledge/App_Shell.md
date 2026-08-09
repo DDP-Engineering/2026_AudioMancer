@@ -41,8 +41,11 @@ startup with no diagnostic. See `.agentic/specs/user_data_location.spec.md`.
 toolbar and settings dialogs. It routes selection to a current page, refreshes
 only that page's derived state, applies language/theme changes, and stops
 active audio playback when it closes. `misc_ui_controller` resolves localized
-help and license resources and builds common dialogs; packaged icons supply the
-window identity.
+help and license resources, builds common dialogs, and owns the exact localized
+Yes-or-No/default-No question construction used by behavior-equivalent
+controller confirmations (`REQ-NFR-0eae9411`); packaged icons supply the window
+identity. Composite, pretranslated, formatted, and different-default dialogs
+remain with their owning controllers.
 
 Settings application first reapplies theme and catalog-backed captions to the
 shell and all persistent pages. If a project is open, the shell then invokes
@@ -73,7 +76,9 @@ the sidebar and stacked-page registration. Theme is applied before widgets are
 constructed at startup; page refreshes are limited to the current workflow page
 to avoid unrelated state work, including after a runtime language change.
 App-owned dialog text comes from the same English/Romanian catalog as persistent
-page text. `initialize_logging()` returns `Path | None`, and
+page text. Shared confirmations retain the caller's window as parent, translate
+the exact caller-provided title and message keys, expose Yes and No, default to
+No, and return true only for Yes. `initialize_logging()` returns `Path | None`, and
 `None` means logging degraded to console output only rather than that startup
 failed.
 

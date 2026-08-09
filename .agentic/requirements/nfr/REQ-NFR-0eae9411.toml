@@ -1,0 +1,85 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-NFR-0eae9411"
+
+title = "Shared confirmation construction shall preserve dialog contracts"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+The shared localized yes-or-no confirmation helper shall preserve each participating caller's title key, message key, parent window, Yes and No button set, default No button, translation behavior, boolean return semantics, and existing QMessageBox patch seam.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "Focused controller tests invoke every participating confirmation path with patched translation and QMessageBox.question seams, then assert exact arguments, No and non-Yes rejection, Yes acceptance, and unchanged translation-error propagation."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_confirm_question_preserves_dialog_arguments_and_boolean_semantics",
+  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_confirm_question_propagates_translation_error_before_showing_dialog",
+  "04_Software/AudioMancer/tests/test_confirmation_consolidation.py::test_confirmation_wrapper_preserves_exact_dialog_contract",
+  "04_Software/AudioMancer/tests/test_confirmation_consolidation.py::test_audio_blocks_conditional_confirmation_preserves_short_circuit_and_dialog",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = "One exact construction point prevents destructive confirmations from drifting while distinct overloads, formatted messages, and default-Yes dialogs remain local."
+
+created = 2026-08-09
+updated = 2026-08-09

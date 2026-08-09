@@ -8,9 +8,9 @@
 # -----------------------------------------------------------------------------
 """
 @file ai_state_note_service.py
-@brief Shared AI workflow state-note helpers.
-@details Provides reusable operator-facing note rendering for AI token usage
-         persisted in reports or operation-state metadata.
+@brief Shared AI workflow state helpers.
+@details Provides reusable LLM profile-selector construction and operator-facing
+         note rendering for AI token usage persisted in workflow state.
 """
 
 # IMPORTS
@@ -18,6 +18,45 @@
 from audiomancer.services import token_usage_service, ui_state_service
 
 # PUBLIC API
+
+
+def build_llm_profile_selector_state(
+    settings_payload: dict[str, object] | None,
+    default_key: str,
+    selected_profile_id: str | None = None,
+) -> dict[str, object]:
+    """
+    @brief      Build one enabled LLM profile-selector state from application settings.
+    @param[in]  settings_payload Persisted application settings payload.
+    @param[in]  default_key Workflow-specific configured-default setting key.
+    @param[in]  selected_profile_id Preferred profile identifier if available.
+    @return     Selector entries plus one resolved selected profile id.
+    @exception  None
+    """
+    if not isinstance(settings_payload, dict):
+        return {"entries": [], "selected_profile_id": None}
+    raw_profiles = settings_payload.get("llm_profiles", [])
+    if not isinstance(raw_profiles, list):
+        return {"entries": [], "selected_profile_id": None}
+    entries: list[tuple[str, str | None]] = []
+    enabled_ids: list[str] = []
+    for profile in raw_profiles:
+        if not isinstance(profile, dict) or not bool(profile.get("enabled", True)):
+            continue
+        profile_id = str(profile.get("id", "")).strip()
+        if not profile_id:
+            continue
+        entries.append((str(profile.get("label", "")).strip() or profile_id, profile_id))
+        enabled_ids.append(profile_id)
+    default_profile_id = settings_payload.get(default_key)
+    resolved_selected_id = (
+        selected_profile_id
+        if selected_profile_id in enabled_ids
+        else (
+            str(default_profile_id) if default_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
+        )
+    )
+    return {"entries": entries, "selected_profile_id": resolved_selected_id}
 
 
 def build_token_usage_notes(

@@ -191,14 +191,12 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
-    decision = QMessageBox.question(
+    if not misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.confirm_translation_reset_title", current_language),
-        ui_state_service.translate("project.confirm_translation_reset", current_language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
-    )
-    if decision != QMessageBox.StandardButton.Yes:
+        current_language,
+        "dialog.confirm_translation_reset_title",
+        "project.confirm_translation_reset",
+    ):
         return
     ai_translation_service.reset_translation(window._current_project_root)
     source_invalidated = character_discovery_service.invalidate_if_source_changed(

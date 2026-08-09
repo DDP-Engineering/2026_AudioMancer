@@ -1363,15 +1363,11 @@ def _confirm_generate_profiles(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts token-consuming AI work.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.narator_voice_generate_profiles_title", language),
-            ui_state_service.translate("dialog.narator_voice_generate_profiles_message", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.narator_voice_generate_profiles_title",
+        "dialog.narator_voice_generate_profiles_message",
     )
 
 

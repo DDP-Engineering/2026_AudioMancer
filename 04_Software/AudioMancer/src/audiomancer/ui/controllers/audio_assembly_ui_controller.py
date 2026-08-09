@@ -535,28 +535,20 @@ def _save_audio_assembly_settings(window: "MainWindow", settings: dict[str, obje
 
 
 def _confirm_audio_assembly(window: "MainWindow", language: str) -> bool:
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_audio_assembly_title", language),
-            ui_state_service.translate("project.confirm_audio_assembly", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_assembly_title",
+        "project.confirm_audio_assembly",
     )
 
 
 def _confirm_audio_assembly_reset(window: "MainWindow", language: str) -> bool:
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_audio_assembly_reset_title", language),
-            ui_state_service.translate("project.confirm_audio_assembly_reset", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_assembly_reset_title",
+        "project.confirm_audio_assembly_reset",
     )
 
 
@@ -568,15 +560,11 @@ def _confirm_audio_assembly_settings_change(window: "MainWindow", language: str)
     @return     True when settings may be saved and assembly outputs reset.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_audio_assembly_settings_change_title", language),
-            ui_state_service.translate("project.confirm_audio_assembly_settings_change", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_assembly_settings_change_title",
+        "project.confirm_audio_assembly_settings_change",
     )
 
 

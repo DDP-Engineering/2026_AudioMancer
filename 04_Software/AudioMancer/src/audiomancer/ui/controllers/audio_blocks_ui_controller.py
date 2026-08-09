@@ -757,16 +757,7 @@ def _confirm_persisted_audio_blocks_invalidation(
         return True
     if not audio_blocks_service.has_persisted_audio_blocks(window._current_project_root):
         return True
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate(title_key, language),
-            ui_state_service.translate(message_key, language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
-    )
+    return misc_ui_controller.confirm_question(window, language, title_key, message_key)
 
 
 def _confirm_audio_approval_change(window: "MainWindow", language: str) -> bool:
@@ -815,16 +806,7 @@ def _confirm_question(window: "MainWindow", language: str, title_key: str, messa
     @return     True when the operator confirms.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate(title_key, language),
-            ui_state_service.translate(message_key, language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
-    )
+    return misc_ui_controller.confirm_question(window, language, title_key, message_key)
 
 
 def _runtime_settings(
@@ -917,15 +899,11 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
     @return     True when the operator confirms the run.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_audio_blocks_title", language),
-            ui_state_service.translate("project.confirm_audio_blocks", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_blocks_title",
+        "project.confirm_audio_blocks",
     )
 
 
@@ -937,15 +915,11 @@ def _confirm_scene_ambience_audio_blocks(window: "MainWindow", language: str) ->
     @return     True when the operator confirms ambience sound generation.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_scene_ambience_audio_blocks_title", language),
-            ui_state_service.translate("project.confirm_scene_ambience_audio_blocks", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_scene_ambience_audio_blocks_title",
+        "project.confirm_scene_ambience_audio_blocks",
     )
 
 
@@ -957,15 +931,11 @@ def _confirm_audio_blocks_reset(window: "MainWindow", language: str) -> bool:
     @return     True when the operator confirms the reset.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_audio_blocks_reset_title", language),
-            ui_state_service.translate("project.confirm_audio_blocks_reset", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_blocks_reset_title",
+        "project.confirm_audio_blocks_reset",
     )
 
 

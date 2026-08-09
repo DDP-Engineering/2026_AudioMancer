@@ -455,14 +455,12 @@ def confirm_chunking_rerun(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts the rerun reset.
     @exception  None
     """
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.confirm_chunking_rerun_title", language),
-        ui_state_service.translate("project.confirm_chunking_rerun", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.confirm_chunking_rerun_title",
+        "project.confirm_chunking_rerun",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
@@ -473,14 +471,12 @@ def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts the rerun reset.
     @exception  None
     """
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.confirm_ai_chunking_rerun_title", language),
-        ui_state_service.translate("project.confirm_ai_chunking_rerun", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.confirm_ai_chunking_rerun_title",
+        "project.confirm_ai_chunking_rerun",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def prompt_ai_chunking_instructions(window: "MainWindow", language: str) -> str | None:
@@ -510,14 +506,12 @@ def confirm_chunk_insert(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts the insert.
     @exception  None
     """
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.confirm_chunk_insert_title", language),
-        ui_state_service.translate("project.confirm_chunk_insert", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.confirm_chunk_insert_title",
+        "project.confirm_chunk_insert",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def confirm_chunk_delete(window: "MainWindow", language: str) -> bool:
@@ -528,14 +522,12 @@ def confirm_chunk_delete(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts the delete.
     @exception  None
     """
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.confirm_chunk_delete_title", language),
-        ui_state_service.translate("project.confirm_chunk_delete", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.confirm_chunk_delete_title",
+        "project.confirm_chunk_delete",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def _reset_chunking_and_downstream(window: "MainWindow") -> None:

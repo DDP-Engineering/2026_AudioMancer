@@ -37,30 +37,11 @@ def build_character_discovery_profile_state(
     @return     Selector entries plus resolved selected profile id.
     @exception  None
     """
-    if not isinstance(settings_payload, dict):
-        return {"entries": [], "selected_profile_id": None}
-    raw_profiles = settings_payload.get("llm_profiles", [])
-    if not isinstance(raw_profiles, list):
-        return {"entries": [], "selected_profile_id": None}
-    entries: list[tuple[str, str | None]] = []
-    enabled_ids: list[str] = []
-    for profile in raw_profiles:
-        if not isinstance(profile, dict) or not bool(profile.get("enabled", True)):
-            continue
-        profile_id = str(profile.get("id", "")).strip()
-        if not profile_id:
-            continue
-        entries.append((str(profile.get("label", "")).strip() or profile_id, profile_id))
-        enabled_ids.append(profile_id)
-    default_profile_id = settings_payload.get("default_character_extraction_profile_id")
-    resolved_selected_id = (
-        selected_profile_id
-        if selected_profile_id in enabled_ids
-        else (
-            str(default_profile_id) if default_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
-        )
+    return ai_state_note_service.build_llm_profile_selector_state(
+        settings_payload,
+        "default_character_extraction_profile_id",
+        selected_profile_id,
     )
-    return {"entries": entries, "selected_profile_id": resolved_selected_id}
 
 
 def build_character_discovery_state(

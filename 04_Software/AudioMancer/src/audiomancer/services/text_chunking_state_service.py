@@ -116,32 +116,10 @@ def build_ai_chunking_profile_state(
     @return     Selector payload with ordered entries and one selected id.
     @exception  None
     """
-    if not isinstance(settings_payload, dict):
-        return {"entries": [], "selected_profile_id": None}
-    raw_profiles = settings_payload.get("llm_profiles", [])
-    if not isinstance(raw_profiles, list):
-        return {"entries": [], "selected_profile_id": None}
-    entries: list[tuple[str, str | None]] = []
-    enabled_ids: list[str] = []
-    for profile in raw_profiles:
-        if not isinstance(profile, dict):
-            continue
-        if not bool(profile.get("enabled", True)):
-            continue
-        profile_id = str(profile.get("id", "")).strip()
-        if not profile_id:
-            continue
-        profile_label = str(profile.get("label", "")).strip() or profile_id
-        entries.append((profile_label, profile_id))
-        enabled_ids.append(profile_id)
-    preferred_profile_id = settings_payload.get("default_ai_chunking_profile_id")
-    selected_profile_id = (
-        str(preferred_profile_id) if preferred_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
+    return ai_state_note_service.build_llm_profile_selector_state(
+        settings_payload,
+        "default_ai_chunking_profile_id",
     )
-    return {
-        "entries": entries,
-        "selected_profile_id": selected_profile_id,
-    }
 
 
 def save_chunk_text_edit(

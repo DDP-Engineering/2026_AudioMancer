@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AI workflow profile selectors and destructive default-No confirmation
+  dialogs now share their common construction while preserving every existing
+  workflow label, selected/default fallback, translation, dialog parent,
+  button default, and cancellation result.
 - Speech Blocks no longer carries the retired source-span and atomic-unit
   generation path; current direct and narrator-only generation is unchanged,
   and projects saved with either legacy response contract remain readable but

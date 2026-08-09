@@ -980,15 +980,11 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
     @return     True when the operator confirms the run.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_speech_blocks_title", language),
-            ui_state_service.translate("project.confirm_speech_blocks", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_speech_blocks_title",
+        "project.confirm_speech_blocks",
     )
 
 
@@ -1000,15 +996,11 @@ def _confirm_scene_ambience_speech_blocks(window: "MainWindow", language: str) -
     @return     True when the operator confirms scene ambience analysis.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_scene_ambience_speech_blocks_title", language),
-            ui_state_service.translate("project.confirm_scene_ambience_speech_blocks", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_scene_ambience_speech_blocks_title",
+        "project.confirm_scene_ambience_speech_blocks",
     )
 
 
@@ -1057,15 +1049,11 @@ def _confirm_speech_blocks_reset(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts the rerun reset.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_speech_blocks_rerun_title", language),
-            ui_state_service.translate("project.confirm_speech_blocks_rerun", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_speech_blocks_rerun_title",
+        "project.confirm_speech_blocks_rerun",
     )
 
 
@@ -1089,15 +1077,11 @@ def _confirm_speech_block_audio_reset_if_needed(
         speech_block_id,
     ):
         return True
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_speech_block_audio_reset_title", language),
-            ui_state_service.translate("project.confirm_speech_block_audio_reset", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_speech_block_audio_reset_title",
+        "project.confirm_speech_block_audio_reset",
     )
 
 
@@ -1109,15 +1093,11 @@ def _confirm_speech_block_sequence_change(window: "MainWindow", language: str) -
     @return     True when the operator accepts the sequence change.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_speech_block_sequence_change_title", language),
-            ui_state_service.translate("project.confirm_speech_block_sequence_change", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_speech_block_sequence_change_title",
+        "project.confirm_speech_block_sequence_change",
     )
 
 
@@ -1129,15 +1109,11 @@ def _confirm_speech_blocks_resplit(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts the selected-chunk re-split.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_speech_blocks_resplit_title", language),
-            ui_state_service.translate("project.confirm_speech_blocks_resplit", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_speech_blocks_resplit_title",
+        "project.confirm_speech_blocks_resplit",
     )
 
 
@@ -1149,15 +1125,11 @@ def _confirm_delete_speech_block(window: "MainWindow", language: str) -> bool:
     @return     True when the operator accepts the deletion.
     @exception  None
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_delete_speech_block_title", language),
-            ui_state_service.translate("project.confirm_delete_speech_block", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.confirm_delete_speech_block_title",
+        "project.confirm_delete_speech_block",
     )
 
 

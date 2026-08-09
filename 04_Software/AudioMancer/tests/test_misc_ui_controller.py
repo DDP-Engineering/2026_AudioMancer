@@ -15,11 +15,86 @@
 
 # IMPORTS
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMessageBox, QWidget
 
 from audiomancer import config
 from audiomancer.services import ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
+
+
+def test_confirm_question_preserves_dialog_arguments_and_boolean_semantics(monkeypatch) -> None:
+    """
+    @brief      Verify the shared confirmation owns exact localization, defaults, and decisions.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    window = object()
+    questions: list[tuple[object, ...]] = []
+    translations: list[tuple[str, str]] = []
+    decisions = iter(
+        (
+            QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
+    )
+    monkeypatch.setattr(
+        misc_ui_controller.ui_state_service,
+        "translate",
+        lambda key, language: translations.append((key, language)) or f"{language}:{key}",
+    )
+    monkeypatch.setattr(
+        misc_ui_controller.QMessageBox,
+        "question",
+        lambda *args: questions.append(args) or next(decisions),
+    )
+
+    outcomes = [
+        misc_ui_controller.confirm_question(window, "ro", "title.key", "message.key")
+        for _index in range(3)
+    ]
+
+    assert outcomes == [False, False, True]
+    assert translations == [("title.key", "ro"), ("message.key", "ro")] * 3
+    assert questions == [
+        (
+            window,
+            "ro:title.key",
+            "ro:message.key",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+    ] * 3
+
+
+def test_confirm_question_propagates_translation_error_before_showing_dialog(monkeypatch) -> None:
+    """
+    @brief      Verify translation failures remain visible and do not open a partial dialog.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  RuntimeError Expected translation failure.
+    """
+    questions: list[tuple[object, ...]] = []
+    monkeypatch.setattr(
+        misc_ui_controller.ui_state_service,
+        "translate",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("translation failed")),
+    )
+    monkeypatch.setattr(
+        misc_ui_controller.QMessageBox,
+        "question",
+        lambda *args: questions.append(args),
+    )
+
+    try:
+        misc_ui_controller.confirm_question(object(), "en", "title.key", "message.key")
+    except RuntimeError as error:
+        assert str(error) == "translation failed"
+    else:
+        raise AssertionError("translation failure should propagate")
+
+    assert questions == []
 
 
 def test_play_completion_beep_emits_one_beep_when_enabled(monkeypatch, qtbot) -> None:

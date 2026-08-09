@@ -53,8 +53,12 @@ bounded non-truncated JSON responses, and redacts sensitive transaction logs.
 `ai_budget_service` calculates prompt, output, safety, and usable-text budgets.
 `prompt_template_service` resolves template files and rejects missing or extra
 placeholders. `token_usage_service` normalizes provider usage into a common
-payload, while `ai_state_note_service` produces localized persisted-usage
-notes. The AI Settings page owns in-memory profile editing/default selectors.
+payload, while `ai_state_note_service` builds the shared enabled-profile
+selector contract for Text Chunking, AI Translation, Character Discovery,
+Speech Blocks, and narrator generation and produces localized persisted-usage
+notes (`REQ-NFR-d559facc`). Cleanup retains its distinct whitespace-label
+projection rather than being forced through that shared normalizer. The AI
+Settings page owns in-memory profile editing/default selectors.
 It tracks the stable profile ID represented by the editor, synchronizes that
 owner before selection changes, treats successful probes as authoritative for
 discovery, and lets failed probes update status without erasing prior metadata.
@@ -132,8 +136,10 @@ other finish reasons keep their existing behavior.
 
 Text Cleanup, Text Chunking, AI Translation, Character Discovery, narrator
 generation, and Speech Blocks obtain their selected profile, budgets, prompts,
-provider request behavior, and usage notes here. Their source coverage and
-artifact semantics remain domain-owned.
+provider request behavior, and usage notes here. The five behavior-equivalent
+strip-normalizing selector wrappers delegate to the shared builder while
+keeping their public workflow-specific names and configured-default keys.
+Their source coverage and artifact semantics remain domain-owned.
 
 ## 8. Usage
 

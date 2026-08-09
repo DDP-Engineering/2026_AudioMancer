@@ -111,6 +111,25 @@ def test_ai_profile_state_keeps_profile_optional() -> None:
         "selected_profile_id": "local",
     }
 
+
+def test_ai_cleanup_profile_state_preserves_nonempty_whitespace_label() -> None:
+    """
+    @brief      Verify Cleanup retains its distinct nonempty whitespace-label behavior.
+    @return     None.
+    @exception  None
+    """
+    state = text_cleanup_state_service.build_ai_cleanup_profile_state(
+        {
+            "default_ai_cleanup_profile_id": "local",
+            "llm_profiles": [{"id": "local", "label": "   ", "enabled": True}],
+        }
+    )
+
+    assert state == {
+        "entries": [("   ", "local")],
+        "selected_profile_id": "local",
+    }
+
 # LOCAL HELPERS
 
 

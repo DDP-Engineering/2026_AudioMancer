@@ -64,6 +64,26 @@ PYPROJECT_PATH = config.APP_ROOT / "pyproject.toml"
 # PUBLIC API
 
 
+def confirm_question(window: "MainWindow", language: str, title_key: str, message_key: str) -> bool:
+    """
+    @brief      Ask one localized Yes-or-No question whose safe default is No.
+    @param[in]  window Active main window shell and dialog parent.
+    @param[in]  language Current UI language code.
+    @param[in]  title_key Translation key for the dialog title.
+    @param[in]  message_key Translation key for the dialog body.
+    @return     True only when the operator selects Yes.
+    @exception  None
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate(title_key, language),
+        ui_state_service.translate(message_key, language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
 def show_message(
     window: "MainWindow",
     message: str,

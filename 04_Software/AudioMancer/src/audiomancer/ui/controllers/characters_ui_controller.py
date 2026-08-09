@@ -861,14 +861,12 @@ def _confirm_add_character(window: "MainWindow", language: str) -> bool:
     @return     `True` when the add was confirmed.
     @exception  None
     """
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.character_add_confirm_title", language),
-        ui_state_service.translate("dialog.character_add_confirm_message", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.character_add_confirm_title",
+        "dialog.character_add_confirm_message",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def _confirm_edit_character(window: "MainWindow", language: str) -> bool:
@@ -879,14 +877,12 @@ def _confirm_edit_character(window: "MainWindow", language: str) -> bool:
     @return     `True` when the edit was confirmed.
     @exception  None
     """
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.character_edit_title", language),
-        ui_state_service.translate("dialog.character_edit_message", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.character_edit_title",
+        "dialog.character_edit_message",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def _confirm_delete_character(window: "MainWindow", language: str) -> bool:
@@ -897,14 +893,12 @@ def _confirm_delete_character(window: "MainWindow", language: str) -> bool:
     @return     `True` when deletion was confirmed.
     @exception  None
     """
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.character_delete_title", language),
-        ui_state_service.translate("dialog.character_delete_message", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.character_delete_title",
+        "dialog.character_delete_message",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def _show_name_validation_error(

@@ -305,14 +305,12 @@ def handle_project_options_lock_requested(
             ui_state_service.translate("project.error_start_project_missing_source", current_language),
         )
         return
-    decision = QMessageBox.question(
+    if not misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.confirm_project_options_title", current_language),
-        ui_state_service.translate("project.confirm_project_options_lock", current_language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
-    )
-    if decision != QMessageBox.StandardButton.Yes:
+        current_language,
+        "dialog.confirm_project_options_title",
+        "project.confirm_project_options_lock",
+    ):
         return
     try:
         manifest = project_workspace_service.lock_project_options(
@@ -641,17 +639,21 @@ def activate_project(
 
 
 def _confirm_cleanup_draft_discard(window: "MainWindow", language: str) -> bool:
-    """Confirm discarding a modified Cleanup draft before project selection."""
+    """
+    @brief      Confirm discarding a modified Cleanup draft before project selection.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when no draft is modified or the operator confirms its discard.
+    @exception  None
+    """
     if not window._text_cleanup_page.has_modified_cleaned_text_draft():
         return True
-    decision = QMessageBox.question(
+    return misc_ui_controller.confirm_question(
         window,
-        ui_state_service.translate("dialog.confirm_cleanup_draft_discard_title", language),
-        ui_state_service.translate("project.confirm_cleanup_draft_discard", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        language,
+        "dialog.confirm_cleanup_draft_discard_title",
+        "project.confirm_cleanup_draft_discard",
     )
-    return decision == QMessageBox.StandardButton.Yes
 
 
 def _export_dialog_filter(export_format: str, language: str) -> str:
