@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech, translation, audio-model loading, and workflow controllers now share
+  behavior-identical internal helpers while preserving existing limits,
+  fallbacks, cancellation, progress, refresh, and error behavior.
 - Project repair, workflow-stage resets, chapter detection, AI chunking resume,
   and Audio Assembly WAV planning now share their canonical internal logic
   while preserving the same validation, fallback, and error behavior.

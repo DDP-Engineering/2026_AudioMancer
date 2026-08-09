@@ -30,6 +30,9 @@ worker lifecycle used by all long-running workflow pages.
   operator who left the machine is told the run is over.
 - Synchronize persisted operation state into the project manifest and resolve
   enabled AI profiles for page controllers.
+- Resolve shared workflow stage ranks and window language, and run synchronous
+  create-or-restart progress-dialog lifecycles without changing caller-specific
+  unknown-stage or existing-dialog behavior (`REQ-NFR-6edd8483`).
 - Keep operation artifact ownership centralized while Project Lifecycle owns
   the corresponding compact-summary reset construction.
 
@@ -84,7 +87,10 @@ request share one idempotent cooperative-cancellation path that leaves the
 application-modal dialog visible; terminal finish/fail paths deactivate and hide
 it, and shared clearing deletes its reference. `workflow_controller_service` is the small
 controller-facing facade for starting operations, syncing a manifest from
-disk, and choosing an enabled AI profile. For `REQ-FUNC-ccc76f34` and
+disk, choosing an enabled AI profile, and resolving workflow rank and window
+language. `misc_ui_controller` owns the shared synchronous progress mechanics,
+while callers explicitly choose create-only or restart-existing behavior
+(`REQ-NFR-6edd8483`). For `REQ-FUNC-ccc76f34` and
 `REQ-FUNC-e45d3577`, it loads the persisted operation state but delegates the
 summary and stage update to Project Lifecycle's canonical manifest writer; it
 then displays the exact manifest reloaded from disk. A missing state with no

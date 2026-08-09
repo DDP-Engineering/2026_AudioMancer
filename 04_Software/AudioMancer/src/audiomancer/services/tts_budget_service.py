@@ -44,6 +44,22 @@ def resolve_cached_tts_budget(discovered_models: list[dict[str, object]] | None)
     return _budget_payload(config.DEFAULT_TTS_NARRATOR_ONLY_TOKEN_BUDGET, "config_default")
 
 
+def selected_text_character_limit(settings_payload: dict[str, object] | None) -> int:
+    """
+    @brief      Resolve an approximate selected speech text limit in characters.
+    @param[in]  settings_payload Persisted application settings payload.
+    @return     Approximate safe character limit for the active TTS model.
+    @exception  None
+    """
+    discovered_models = []
+    if isinstance(settings_payload, dict):
+        raw_models = settings_payload.get("tts_runtime_discovered_models", [])
+        if isinstance(raw_models, list):
+            discovered_models = [model for model in raw_models if isinstance(model, dict)]
+    budget_payload = resolve_cached_tts_budget(discovered_models)
+    return int(budget_payload.get("safe_word_count", 0) or 0) * 6
+
+
 def resolve_block_target_audio_seconds(settings_payload: dict[str, object] | None) -> float:
     """
     @brief      Resolve the operator's preferred narration block duration.

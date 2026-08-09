@@ -57,7 +57,8 @@ def default_snapshot_file_name(
         or Path(project_root).name
         or "AudioMancer"
     )
-    return f"{_safe_file_stem(project_name)}_snapshot_{snapshot_timestamp:%Y%m%d_%H%M%S}{SNAPSHOT_EXTENSION}"
+    safe_project_name = operation_runtime_service.safe_file_stem(project_name)
+    return f"{safe_project_name}_snapshot_{snapshot_timestamp:%Y%m%d_%H%M%S}{SNAPSHOT_EXTENSION}"
 
 
 def ensure_snapshot_extension(snapshot_path: str | Path) -> Path:
@@ -201,16 +202,6 @@ def _raise_if_cancelled(cancel_requested) -> None:
     """
     if cancel_requested is not None and bool(cancel_requested()):
         raise operation_runtime_service.OperationCancelledError("Project ZIP export cancelled.")
-
-
-def _safe_file_stem(value: str) -> str:
-    """
-    @brief      Normalize one operator-facing name into a safe file stem via the shared helper.
-    @param[in]  value Raw project name.
-    @return     Filesystem-safe file stem.
-    @exception  None
-    """
-    return operation_runtime_service.safe_file_stem(value)
 
 
 # END OF FILE

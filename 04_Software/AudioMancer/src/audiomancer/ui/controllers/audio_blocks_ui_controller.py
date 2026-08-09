@@ -575,7 +575,10 @@ def _handle_audio_blocks_success(
     _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate(success_message_key, current_language_from_window(window)),
+        ui_state_service.translate(
+            success_message_key,
+            workflow_controller_service.current_language_from_window(window),
+        ),
     )
 
 
@@ -599,7 +602,10 @@ def _handle_audio_blocks_failure(
     _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
     QMessageBox.warning(
         window,
-        ui_state_service.translate("dialog.project_error_title", current_language_from_window(window)),
+        ui_state_service.translate(
+            "dialog.project_error_title",
+            workflow_controller_service.current_language_from_window(window),
+        ),
         str(error),
     )
 
@@ -625,7 +631,10 @@ def _handle_audio_blocks_cancelled(
     _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.operation_cancelled", current_language_from_window(window)),
+        ui_state_service.translate(
+            "status.operation_cancelled",
+            workflow_controller_service.current_language_from_window(window),
+        ),
     )
 
 
@@ -661,7 +670,9 @@ def _reset_audio_blocks_and_downstream(window: "MainWindow") -> None:
     for operation_kind in ("audio_blocks", "audio_assembly"):
         operations[operation_kind] = default_operations[operation_kind]
     updated_manifest["operations"] = operations
-    if _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("speech_blocks_ready"):
+    if workflow_controller_service.stage_rank(
+        str(updated_manifest.get("current_stage", "")).strip()
+    ) > workflow_controller_service.stage_rank("speech_blocks_ready"):
         updated_manifest["current_stage"] = "speech_blocks_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
@@ -715,7 +726,9 @@ def _sync_manifest_after_selective_audio_invalidation(window: "MainWindow") -> N
         == audio_blocks_service.AUDIO_BLOCKS_STAGE_COMPLETED
     ):
         updated_manifest["current_stage"] = "audio_blocks_ready"
-    elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("speech_blocks_ready"):
+    elif workflow_controller_service.stage_rank(
+        str(updated_manifest.get("current_stage", "")).strip()
+    ) > workflow_controller_service.stage_rank("speech_blocks_ready"):
         updated_manifest["current_stage"] = "speech_blocks_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
@@ -1349,28 +1362,6 @@ def _stop_other_audio_previews(window: "MainWindow") -> None:
     """
     window._narator_voice_audio_player.stop()
     window._character_voices_audio_player.stop()
-
-
-def current_language_from_window(window: "MainWindow") -> str:
-    """
-    @brief      Resolve the active UI language from one main window instance.
-    @param[in]  window Active main window instance.
-    @return     Current UI language code.
-    @exception  None
-    """
-    return ui_state_service.current_language_from_settings(window._settings_payload)
-
-
-def _stage_rank(stage_token: str) -> int:
-    """
-    @brief      Convert one stage token into its sortable workflow order index.
-    @param[in]  stage_token Stage token to resolve.
-    @return     Zero-based stage order index or `-1` when unsupported.
-    @exception  None
-    """
-    if stage_token not in config.PROJECT_WORKFLOW_STAGES:
-        return -1
-    return config.PROJECT_WORKFLOW_STAGES.index(stage_token)
 
 
 # END OF FILE

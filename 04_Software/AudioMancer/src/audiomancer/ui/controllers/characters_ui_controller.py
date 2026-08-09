@@ -373,33 +373,15 @@ def _start_character_save_progress(
     @return     Progress update callback or `None`.
     @exception  None
     """
-    if not show_progress or window._operation_progress_dialog is not None:
-        return None
-    window._characters_page.set_busy(True)
-    misc_ui_controller.create_progress_dialog(
+    return misc_ui_controller.start_synchronous_progress(
         window,
-        ui_state_service.translate("characters.save_character", language),
-        ui_state_service.translate("progress.character_save_prepare", language),
-        lambda: None,
-        cancellable=False,
+        language,
+        show_progress,
+        window._characters_page.set_busy,
+        "characters.save_character",
+        "progress.character_save_prepare",
+        restart_existing=False,
     )
-    misc_ui_controller.process_pending_ui_events()
-
-    def _update(percent: int, message_key: str) -> None:
-        """
-        @brief      Update the active Character Discovery progress dialog.
-        @param[in]  percent Progress percentage displayed to the operator.
-        @param[in]  message_key Translation key for the progress message.
-        @return     None.
-        """
-        misc_ui_controller.update_progress_dialog(
-            window,
-            percent,
-            ui_state_service.translate(message_key, language),
-        )
-        misc_ui_controller.process_pending_ui_events()
-
-    return _update
 
 
 def _update_character_save_progress(progress_callback, percent: int, message_key: str) -> None:
@@ -411,8 +393,7 @@ def _update_character_save_progress(progress_callback, percent: int, message_key
     @return     None.
     @exception  None
     """
-    if progress_callback is not None:
-        progress_callback(percent, message_key)
+    misc_ui_controller.update_synchronous_progress(progress_callback, percent, message_key)
 
 
 def _finish_character_save_progress(window: "MainWindow") -> None:
@@ -422,18 +403,11 @@ def _finish_character_save_progress(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     """
-    misc_ui_controller.update_progress_dialog(
+    misc_ui_controller.finish_synchronous_progress(
         window,
-        100,
-        ui_state_service.translate(
-            "progress.character_save_refresh",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
+        window._characters_page.set_busy,
+        "progress.character_save_refresh",
     )
-    misc_ui_controller.finish_progress_dialog(window)
-    misc_ui_controller.clear_progress_dialog(window)
-    window._characters_page.set_busy(False)
-    misc_ui_controller.process_pending_ui_events()
 
 
 def _start_operation(

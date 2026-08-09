@@ -213,11 +213,11 @@ def build_character_discovery_notes(
                 character_count=len(profiles),
             )
         )
-        notes.extend(_build_token_usage_notes(report, operation_state, language))
+        notes.extend(ai_state_note_service.build_token_usage_notes(report, operation_state, language))
         notes.extend(str(item) for item in list(report.get("warnings", [])) if str(item).strip())
         notes.append(ui_state_service.translate("characters.note_rerun_replaces_manual", language))
     elif operation_state is not None:
-        notes.extend(_build_token_usage_notes(report, operation_state, language))
+        notes.extend(ai_state_note_service.build_token_usage_notes(report, operation_state, language))
     if not has_ai_profiles:
         notes.append(ui_state_service.translate("characters.note_no_profile", language))
         return notes
@@ -253,21 +253,6 @@ def build_character_discovery_notes(
     else:
         notes.append(ui_state_service.translate("characters.note_ready", language))
     return notes
-
-
-def _build_token_usage_notes(
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
-    language: str,
-) -> list[str]:
-    """
-    @brief      Build the token usage notes.
-    @param[in]  report Value for `report`.
-    @param[in]  operation_state Value for `operation_state`.
-    @param[in]  language Language code.
-    @return     Derived helper result.
-    """
-    return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
 
 
 def _rejected_candidate_warning_notes(document: dict[str, object], language: str) -> list[str]:

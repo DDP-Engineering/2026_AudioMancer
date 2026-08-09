@@ -71,7 +71,7 @@ def build_ai_translation_state(
             profile_state["selected_profile_id"],
         )
     source_chunks = chunking_document_service.load_chunks(project_root)
-    target_language = _persisted_target_language(manifest)
+    target_language = ai_translation_service.manifest_target_language(manifest)
     try:
         document = ai_translation_service.load_translation_document(project_root)
     except ai_translation_service.TranslationDocumentError as exc:
@@ -195,18 +195,6 @@ def _empty_state(notes: list[str], language: str, selected_profile_id: object) -
         "approved_count": 0,
         "total_count": 0,
     }
-
-
-def _persisted_target_language(manifest: dict[str, object]) -> str:
-    """
-    @brief      Resolve the locked target language from the project manifest.
-    @param[in]  manifest Active project manifest payload.
-    @return     Persisted target-language token, or an empty string when unavailable.
-    """
-    candidate = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
-    if candidate in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
-        return candidate
-    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
 
 
 def _manifest_original_language(manifest: dict[str, object]) -> str | None:

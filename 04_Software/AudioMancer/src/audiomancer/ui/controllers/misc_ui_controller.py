@@ -410,6 +410,88 @@ def clear_progress_dialog(window: "MainWindow") -> None:
         window._operation_progress_dialog = None
 
 
+def start_synchronous_progress(
+    window: "MainWindow",
+    language: str,
+    show_progress: bool,
+    set_busy,
+    title_key: str,
+    initial_message_key: str,
+    *,
+    restart_existing: bool,
+):
+    """
+    @brief      Start one non-cancellable synchronous progress lifecycle.
+    @param[in]  window Active main window shell.
+    @param[in]  language Runtime UI language code.
+    @param[in]  show_progress True to present progress.
+    @param[in]  set_busy Callable updating the owning page's busy state.
+    @param[in]  title_key Translation key for the operation title.
+    @param[in]  initial_message_key Translation key for the initial status.
+    @param[in]  restart_existing True to restart an existing shared dialog.
+    @return     Progress update callback or `None`.
+    @exception  None
+    """
+    if not show_progress or (window._operation_progress_dialog is not None and not restart_existing):
+        return None
+    set_busy(True)
+    operation_name = ui_state_service.translate(title_key, language)
+    initial_message = ui_state_service.translate(initial_message_key, language)
+    if window._operation_progress_dialog is None:
+        create_progress_dialog(
+            window,
+            operation_name,
+            initial_message,
+            lambda: None,
+            cancellable=False,
+        )
+    else:
+        window._operation_progress_dialog.start(
+            operation_name,
+            initial_message,
+            cancellable=False,
+        )
+    process_pending_ui_events()
+
+    def _update(percent: int, message_key: str) -> None:
+        """Update the active synchronous progress dialog."""
+        update_progress_dialog(
+            window,
+            percent,
+            ui_state_service.translate(message_key, language),
+        )
+        process_pending_ui_events()
+
+    return _update
+
+
+def update_synchronous_progress(progress_callback, percent: int, message_key: str) -> None:
+    """Forward one progress update when a synchronous callback exists."""
+    if progress_callback is not None:
+        progress_callback(percent, message_key)
+
+
+def finish_synchronous_progress(window: "MainWindow", set_busy, final_message_key: str) -> None:
+    """
+    @brief      Complete and clear one synchronous progress lifecycle.
+    @param[in]  window Active main window shell.
+    @param[in]  set_busy Callable updating the owning page's busy state.
+    @param[in]  final_message_key Translation key for the terminal status.
+    @return     None.
+    @exception  None
+    """
+    language = ui_state_service.current_language_from_settings(window._settings_payload)
+    update_progress_dialog(
+        window,
+        100,
+        ui_state_service.translate(final_message_key, language),
+    )
+    finish_progress_dialog(window)
+    clear_progress_dialog(window)
+    set_busy(False)
+    process_pending_ui_events()
+
+
 def load_about_license_text(language: str) -> str:
     """
     @brief      Load the main and addendum license text for the About dialog.

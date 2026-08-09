@@ -84,7 +84,7 @@ def build_speech_blocks_state(
             "can_reset": False,
             "can_approve_all": False,
             "can_resplit_selected": False,
-            "selected_text_character_limit": _selected_text_character_limit(settings_payload),
+            "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
         }
 
     try:
@@ -152,13 +152,13 @@ def build_speech_blocks_state(
         "total_chunk_count": len(source_chunks),
         "approved_block_count": 0 if report is None else int(report.get("approved_block_count", 0)),
         "total_block_count": len(speech_blocks),
-        "voice_assignment_mode": _voice_assignment_mode(manifest),
+        "voice_assignment_mode": speech_blocks_service.voice_assignment_mode(manifest),
         "speaker_catalog": _speaker_catalog_entries(project_root, manifest),
         "content_kind_options": _content_kind_options(language),
         "can_reset": bool(speech_blocks),
         "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
         "can_resplit_selected": bool(source_chunks),
-        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
+        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
     }
 
 
@@ -192,30 +192,14 @@ def _invalid_block_document_state(
         "total_chunk_count": 0,
         "approved_block_count": 0,
         "total_block_count": 0,
-        "voice_assignment_mode": _voice_assignment_mode(manifest),
+        "voice_assignment_mode": speech_blocks_service.voice_assignment_mode(manifest),
         "speaker_catalog": [],
         "content_kind_options": _content_kind_options(language),
         "can_reset": can_reset,
         "can_approve_all": False,
         "can_resplit_selected": False,
-        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
+        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
     }
-
-
-def _selected_text_character_limit(settings_payload: dict[str, object] | None) -> int:
-    """
-    @brief      Resolve an approximate selected speech text limit in characters.
-    @param[in]  settings_payload Persisted application settings payload.
-    @return     Approximate safe character limit for the active TTS model.
-    @exception  None
-    """
-    discovered_models = []
-    if isinstance(settings_payload, dict):
-        raw_models = settings_payload.get("tts_runtime_discovered_models", [])
-        if isinstance(raw_models, list):
-            discovered_models = [model for model in raw_models if isinstance(model, dict)]
-    budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
-    return int(budget_payload.get("safe_word_count", 0) or 0) * 6
 
 
 def build_speech_blocks_notes(
@@ -260,7 +244,7 @@ def build_speech_blocks_notes(
                 total_block_count=speech_block_count,
             )
         )
-    notes.extend(_build_token_usage_notes(report, operation_state, language))
+    notes.extend(ai_state_note_service.build_token_usage_notes(report, operation_state, language))
     warning_count = 0 if report is None else int(report.get("warning_count", 0))
     if warning_count > 0:
         notes.append(
@@ -308,22 +292,6 @@ def build_speech_blocks_notes(
     else:
         notes.append(ui_state_service.translate("speech_blocks.note_ready", language))
     return notes
-
-
-def _build_token_usage_notes(
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
-    language: str,
-) -> list[str]:
-    """
-    @brief      Build the token usage notes for Speech Blocks.
-    @param[in]  report Persisted Speech Blocks report or `None`.
-    @param[in]  operation_state Persisted Speech Blocks operation state or `None`.
-    @param[in]  language Runtime UI language code.
-    @return     Ordered token-usage notes.
-    @exception  None
-    """
-    return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
 
 
 def _merge_audio_preview_state(project_root: Path, speech_blocks: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -520,24 +488,13 @@ def _speaker_catalog_entries(project_root: Path, manifest: dict[str, object]) ->
     @exception  None
     """
     speaker_entries = speech_blocks_service.speaker_catalog_entries(project_root)
-    if _voice_assignment_mode(manifest) != "same_narrator":
+    if speech_blocks_service.voice_assignment_mode(manifest) != "same_narrator":
         return speaker_entries
     return [
         entry
         for entry in speaker_entries
         if str(entry.get("speaker_id", "")).strip() == speech_blocks_service.SPEAKER_KIND_NARRATOR
     ]
-
-
-def _voice_assignment_mode(manifest: dict[str, object]) -> str:
-    """
-    @brief      Resolve the current project voice-assignment mode.
-    @param[in]  manifest Active project manifest payload.
-    @return     Supported voice-assignment mode.
-    @exception  None
-    """
-    mode = str(manifest.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
-    return mode if mode in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS else config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
 
 
 def _content_kind_options(language: str) -> list[tuple[str, str]]:

@@ -111,6 +111,19 @@ class _TranslationTextSegment:
 # PUBLIC API
 
 
+def manifest_target_language(manifest: dict[str, object]) -> str:
+    """
+    @brief      Resolve the supported translation target language from a manifest.
+    @param[in]  manifest Active project manifest payload.
+    @return     Supported target-language token or the configured default.
+    @exception  None
+    """
+    candidate = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
+    if candidate in _TRANSLATION_LANGUAGE_LABELS:
+        return candidate
+    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+
+
 @trace_function(_AI_TRANSLATION_LOGGER)
 def load_translation_document(project_root: str | Path) -> TranslationDocumentPayload | None:
     """

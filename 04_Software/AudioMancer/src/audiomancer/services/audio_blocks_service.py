@@ -1630,6 +1630,45 @@ def _runtime_operation_is_busy(status_payload: dict[str, object]) -> bool:
     return operation_status not in {"", "idle", "completed", "failed"}
 
 
+def _ensure_model_active(
+    runtime_settings: dict[str, object],
+    model_id: str,
+    model_label: str,
+    cancel_requested=None,
+) -> dict[str, object]:
+    """
+    @brief      Load one VoiceWeaver model and verify its terminal active state.
+    @param[in]  runtime_settings Runtime connection settings.
+    @param[in]  model_id Required VoiceWeaver model identifier.
+    @param[in]  model_label Operator-facing model kind used in verification errors.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Final normalized VoiceWeaver status payload.
+    @exception  RuntimeError Raised when loading fails or activates the wrong model.
+    @exception  OperationCancelledError Raised when cancellation is requested while waiting.
+    """
+    base_url = str(runtime_settings.get("base_url", "")).strip()
+    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
+    timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
+    voiceweaver_runtime_service.load_model(
+        base_url,
+        runtime_api_key,
+        model_id,
+        timeout_seconds=timeout_seconds,
+    )
+    final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
+        base_url,
+        runtime_api_key,
+        timeout_seconds=timeout_seconds,
+        cancel_requested=cancel_requested,
+    )
+    final_operation = final_status.get("operation", {})
+    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip().lower() != "completed":
+        raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
+    if _active_model_id_from_status(final_status) != model_id:
+        raise RuntimeError(f"VoiceWeaver did not activate the requested {model_label} '{model_id}'.")
+    return final_status
+
+
 def _ensure_clone_model_loaded(
     runtime_settings: dict[str, object],
     clone_model_id: str,
@@ -1672,23 +1711,12 @@ def _ensure_clone_model_loaded(
     initial_budget = _resolve_model_budget(initial_status, clone_model_payload)
     if active_model_id == clone_model_id and initial_budget.get("model_budget_source") == "runtime_effective":
         return initial_budget
-    voiceweaver_runtime_service.load_model(
-        base_url,
-        runtime_api_key,
+    _ensure_model_active(
+        runtime_settings,
         clone_model_id,
-        timeout_seconds=timeout_seconds,
-    )
-    final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
-        base_url,
-        runtime_api_key,
-        timeout_seconds=timeout_seconds,
+        "model",
         cancel_requested=cancel_requested,
     )
-    final_operation = final_status.get("operation", {})
-    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip().lower() != "completed":
-        raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
-    if _active_model_id_from_status(final_status) != clone_model_id:
-        raise RuntimeError(f"VoiceWeaver did not activate the requested model '{clone_model_id}'.")
     loaded_status = voiceweaver_runtime_service.read_status(
         base_url,
         runtime_api_key,
@@ -1740,23 +1768,12 @@ def _ensure_sound_model_loaded(
         )
     if _active_model_id_from_status(initial_status) == normalized_sound_model_id:
         return
-    voiceweaver_runtime_service.load_model(
-        base_url,
-        runtime_api_key,
+    _ensure_model_active(
+        runtime_settings,
         normalized_sound_model_id,
-        timeout_seconds=timeout_seconds,
-    )
-    final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
-        base_url,
-        runtime_api_key,
-        timeout_seconds=timeout_seconds,
+        "sound model",
         cancel_requested=cancel_requested,
     )
-    final_operation = final_status.get("operation", {})
-    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip().lower() != "completed":
-        raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
-    if _active_model_id_from_status(final_status) != normalized_sound_model_id:
-        raise RuntimeError(f"VoiceWeaver did not activate the requested sound model '{normalized_sound_model_id}'.")
 
 
 def _prepare_clone_profile(

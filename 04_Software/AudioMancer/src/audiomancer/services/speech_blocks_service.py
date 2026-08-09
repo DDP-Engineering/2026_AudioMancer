@@ -661,9 +661,9 @@ def start_or_continue_generation(
     source_chunks = list(source_resolution["source_chunks"])
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
-    voice_assignment_mode = _voice_assignment_mode(manifest)
-    narrator_only_mode = str(voice_assignment_mode).strip() == "same_narrator"
-    speech_blocks_response_contract = _speech_blocks_response_contract(voice_assignment_mode)
+    resolved_voice_assignment_mode = voice_assignment_mode(manifest)
+    narrator_only_mode = str(resolved_voice_assignment_mode).strip() == "same_narrator"
+    speech_blocks_response_contract = _speech_blocks_response_contract(resolved_voice_assignment_mode)
     scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
 
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -709,7 +709,7 @@ def start_or_continue_generation(
             prompt_names[1],
             source_language,
             speaker_catalog,
-            voice_assignment_mode,
+            resolved_voice_assignment_mode,
             tts_budget,
             additional_speech_block_instructions,
         )
@@ -895,7 +895,7 @@ def start_or_continue_generation(
             source_chunk,
             source_language,
             speaker_catalog,
-            voice_assignment_mode,
+            resolved_voice_assignment_mode,
             tts_budget,
             prompt_names[1],
             budget_metadata,
@@ -913,7 +913,9 @@ def start_or_continue_generation(
             "Speech Blocks generation cancelled while waiting for the model response.",
             start_segment_index=start_segment_index if chunk_index == start_chunk_index else 0,
             segment_progress_callback=(
-                _persist_segment_progress if str(voice_assignment_mode).strip() != "same_narrator" else None
+                _persist_segment_progress
+                if str(resolved_voice_assignment_mode).strip() != "same_narrator"
+                else None
             ),
         )
         token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
@@ -1367,7 +1369,7 @@ def update_speech_block(
         raise ValueError("The selected Speech Block was not found.")
     normalized_content_kind = _normalize_content_kind(content_kind)
     manifest = project_workspace_service.load_manifest(resolved_project_root)
-    narrator_only = _voice_assignment_mode(manifest) == "same_narrator"
+    narrator_only = voice_assignment_mode(manifest) == "same_narrator"
     if narrator_only and not _is_operation_content_kind(normalized_content_kind):
         normalized_content_kind = CONTENT_KIND_NARRATION
     if _is_operation_content_kind(normalized_content_kind):
@@ -1435,9 +1437,9 @@ def regenerate_chunk_speech_blocks(
     source_chunks = list(source_resolution["source_chunks"])
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
-    voice_assignment_mode = _voice_assignment_mode(manifest)
-    narrator_only_mode = str(voice_assignment_mode).strip() == "same_narrator"
-    speech_blocks_response_contract = _speech_blocks_response_contract(voice_assignment_mode)
+    resolved_voice_assignment_mode = voice_assignment_mode(manifest)
+    narrator_only_mode = str(resolved_voice_assignment_mode).strip() == "same_narrator"
+    speech_blocks_response_contract = _speech_blocks_response_contract(resolved_voice_assignment_mode)
     tts_budget = _resolve_narrator_only_budget(settings_payload)
     scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
 
@@ -1491,7 +1493,7 @@ def regenerate_chunk_speech_blocks(
             prompt_names[1],
             source_language,
             speaker_catalog,
-            voice_assignment_mode,
+            resolved_voice_assignment_mode,
             tts_budget,
             additional_speech_block_instructions,
         )
@@ -1505,7 +1507,7 @@ def regenerate_chunk_speech_blocks(
         dict(selected_chunk),
         source_language,
         speaker_catalog,
-        voice_assignment_mode,
+        resolved_voice_assignment_mode,
         tts_budget,
         prompt_names[1],
         budget_metadata,
@@ -1661,7 +1663,7 @@ def _speaker_catalog_evidence(character_profile: dict[str, object]) -> list[dict
     return evidence_rows
 
 
-def _voice_assignment_mode(manifest: dict[str, object]) -> str:
+def voice_assignment_mode(manifest: dict[str, object]) -> str:
     """
     @brief      Resolve the active Speech Blocks generation mode.
     @param[in]  manifest Active project manifest payload.

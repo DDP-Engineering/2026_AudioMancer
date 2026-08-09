@@ -866,39 +866,15 @@ def _start_narator_voice_change_progress(
     @return     Progress update callback or `None`.
     @exception  None
     """
-    if not show_progress:
-        return None
-    window._narator_voice_page.set_busy(True)
-    operation_name = ui_state_service.translate(operation_name_key, language)
-    initial_message = ui_state_service.translate("progress.narator_voice_change_prepare", language)
-    if window._operation_progress_dialog is None:
-        misc_ui_controller.create_progress_dialog(
-            window,
-            operation_name,
-            initial_message,
-            lambda: None,
-            cancellable=False,
-        )
-    else:
-        window._operation_progress_dialog.start(
-            operation_name,
-            initial_message,
-            cancellable=False,
-        )
-    misc_ui_controller.process_pending_ui_events()
-
-    def _update(percent: int, message_key: str) -> None:
-        """
-        @brief      Update the active non-cancellable narrator-change progress dialog.
-        """
-        misc_ui_controller.update_progress_dialog(
-            window,
-            percent,
-            ui_state_service.translate(message_key, language),
-        )
-        misc_ui_controller.process_pending_ui_events()
-
-    return _update
+    return misc_ui_controller.start_synchronous_progress(
+        window,
+        language,
+        show_progress,
+        window._narator_voice_page.set_busy,
+        operation_name_key,
+        "progress.narator_voice_change_prepare",
+        restart_existing=True,
+    )
 
 
 def _update_narator_voice_change_progress(progress_callback, percent: int, message_key: str) -> None:
@@ -910,8 +886,7 @@ def _update_narator_voice_change_progress(progress_callback, percent: int, messa
     @return     None.
     @exception  None
     """
-    if progress_callback is not None:
-        progress_callback(percent, message_key)
+    misc_ui_controller.update_synchronous_progress(progress_callback, percent, message_key)
 
 
 def _finish_narator_voice_change_progress(window: "MainWindow") -> None:
@@ -921,18 +896,11 @@ def _finish_narator_voice_change_progress(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     """
-    misc_ui_controller.update_progress_dialog(
+    misc_ui_controller.finish_synchronous_progress(
         window,
-        100,
-        ui_state_service.translate(
-            "progress.narator_voice_change_refresh",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
+        window._narator_voice_page.set_busy,
+        "progress.narator_voice_change_refresh",
     )
-    misc_ui_controller.finish_progress_dialog(window)
-    misc_ui_controller.clear_progress_dialog(window)
-    window._narator_voice_page.set_busy(False)
-    misc_ui_controller.process_pending_ui_events()
 
 
 def _generate_and_store_sample(

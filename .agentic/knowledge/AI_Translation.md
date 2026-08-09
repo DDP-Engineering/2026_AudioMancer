@@ -21,7 +21,9 @@ approval, localization, and busy-state controls.
 
 - `ai_translation_service` loads, validates, starts/resumes, retranslates,
   edits, approves, summarizes, synchronizes, and resets the authoritative
-  translation document.
+  translation document; `manifest_target_language(...)` is the canonical
+  supported-value/default resolver shared by translation and chunking state
+  projections (`REQ-NFR-7fcf36ea`).
 - `build_ai_translation_state(...)` and
   `build_ai_translation_profile_state(...)` project persistence, manifest,
   settings, and an optional live profile selection into page state.

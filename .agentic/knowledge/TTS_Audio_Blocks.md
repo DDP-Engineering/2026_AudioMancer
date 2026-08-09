@@ -119,6 +119,11 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   `TimeoutError` to `Connection failed: request timed out.` with the original
   exception chained, while retaining existing HTTPError and URLError handling
   (`REQ-FUNC-6606ebfa`).
+- `tts_budget_service.selected_text_character_limit()` is the shared state
+  projection for selected-text limits, and Audio Blocks uses one load/wait/
+  terminal-status/active-model verification tail for clone and sound models;
+  clone budget selection and its runtime-effective early return remain explicit
+  (`REQ-NFR-7fcf36ea`, `REQ-NFR-5bda19fd`).
 - `voiceweaver_runtime_service.normalize_model()` owns the discovered-model
   cache contract. It normalizes status, capabilities, scalar defaults and
   `generation_parameter_ranges`, while settings calls that exact contract and

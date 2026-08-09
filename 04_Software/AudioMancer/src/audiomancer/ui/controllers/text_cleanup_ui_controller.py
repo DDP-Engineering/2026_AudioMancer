@@ -178,33 +178,13 @@ def start_operation(
 def handle_extraction_success(window: MainWindow, result_payload: object) -> None:
     _ = result_payload
     assert window._current_project_root is not None
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate(
-            "status.text_extracted",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
-    )
+    _refresh_and_notify(window, "status.text_extracted")
 
 
 def handle_cleanup_success(window: MainWindow, result_payload: object) -> None:
     _ = result_payload
     assert window._current_project_root is not None
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate(
-            "status.text_cleaned",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
-    )
+    _refresh_and_notify(window, "status.text_cleaned")
 
 
 def handle_operation_failure(window: MainWindow, error: Exception) -> None:
@@ -220,15 +200,27 @@ def handle_operation_failure(window: MainWindow, error: Exception) -> None:
 
 def handle_operation_cancelled(window: MainWindow, message: str) -> None:
     _ = message
-    if window._current_project_root is not None:
+    _refresh_and_notify(window, "status.operation_cancelled")
+
+
+def _refresh_and_notify(window: MainWindow, message_key: str) -> None:
+    """
+    @brief      Refresh persisted Cleanup state and show one translated status.
+    @param[in]  window Active main window shell.
+    @param[in]  message_key Translation key shown after the optional refresh.
+    @return     None.
+    @exception  None
+    """
+    project_root = window._current_project_root
+    if project_root is not None:
         window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
+            project_root,
+            project_workspace_service.load_manifest(project_root),
         )
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(
-            "status.operation_cancelled",
+            message_key,
             ui_state_service.current_language_from_settings(window._settings_payload),
         ),
     )

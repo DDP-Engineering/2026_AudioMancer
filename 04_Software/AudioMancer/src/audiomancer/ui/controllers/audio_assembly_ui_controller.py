@@ -32,7 +32,11 @@ from audiomancer.services import (
     ui_state_service,
     workflow_impact_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
+from audiomancer.ui.controllers import (
+    misc_ui_controller,
+    operation_runner_controller,
+    workflow_controller_service,
+)
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -354,7 +358,10 @@ def _handle_success(window: "MainWindow", result_payload: object) -> None:
     _sync_manifest_after_audio_assembly_update(window)
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.audio_assembly_generated", current_language_from_window(window)),
+        ui_state_service.translate(
+            "status.audio_assembly_generated",
+            workflow_controller_service.current_language_from_window(window),
+        ),
     )
 
 
@@ -375,7 +382,10 @@ def _handle_scene_mix_success(window: "MainWindow", result_payload: object) -> N
     )
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.audio_assembly_scene_mix_generated", current_language_from_window(window)),
+        ui_state_service.translate(
+            "status.audio_assembly_scene_mix_generated",
+            workflow_controller_service.current_language_from_window(window),
+        ),
     )
 
 
@@ -390,7 +400,10 @@ def _handle_failure(window: "MainWindow", error: Exception) -> None:
     _sync_manifest_from_disk(window)
     QMessageBox.warning(
         window,
-        ui_state_service.translate("dialog.project_error_title", current_language_from_window(window)),
+        ui_state_service.translate(
+            "dialog.project_error_title",
+            workflow_controller_service.current_language_from_window(window),
+        ),
         str(error),
     )
 
@@ -407,7 +420,10 @@ def _handle_cancelled(window: "MainWindow", message: str) -> None:
     _sync_manifest_from_disk(window)
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.operation_cancelled", current_language_from_window(window)),
+        ui_state_service.translate(
+            "status.operation_cancelled",
+            workflow_controller_service.current_language_from_window(window),
+        ),
     )
 
 
@@ -436,7 +452,10 @@ def _sync_manifest_after_audio_assembly_update(window: "MainWindow") -> None:
         == audio_assembly_service.AUDIO_ASSEMBLY_STAGE_COMPLETED
     ):
         updated_manifest["current_stage"] = "audio_assembly_ready"
-    elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("audio_blocks_ready"):
+    elif workflow_controller_service.stage_rank(
+        str(updated_manifest.get("current_stage", "")).strip(),
+        unknown_rank=0,
+    ) > workflow_controller_service.stage_rank("audio_blocks_ready", unknown_rank=0):
         updated_manifest["current_stage"] = "audio_blocks_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -459,7 +478,10 @@ def _sync_manifest_after_audio_assembly_reset(window: "MainWindow") -> None:
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
     operations["audio_assembly"] = default_operations["audio_assembly"]
     updated_manifest["operations"] = operations
-    if _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("audio_blocks_ready"):
+    if workflow_controller_service.stage_rank(
+        str(updated_manifest.get("current_stage", "")).strip(),
+        unknown_rank=0,
+    ) > workflow_controller_service.stage_rank("audio_blocks_ready", unknown_rank=0):
         updated_manifest["current_stage"] = "audio_blocks_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -701,42 +723,6 @@ def _stop_other_audio_previews(window: "MainWindow") -> None:
         player = getattr(window, attr_name, None)
         if player is not None:
             player.stop()
-
-
-def current_language_from_window(window: "MainWindow") -> str:
-    """
-    @brief      Resolve the current runtime language from the main window.
-    @param[in]  window Active main window instance.
-    @return     Runtime language code.
-    @exception  None
-    """
-    return ui_state_service.current_language_from_settings(window._settings_payload)
-
-
-def _stage_rank(stage: str) -> int:
-    """
-    @brief      Resolve one workflow stage token to an ordering rank.
-    @param[in]  stage Workflow stage token.
-    @return     Zero-based stage rank or zero for unknown stages.
-    @exception  None
-    """
-    stages = (
-        "project_created",
-        "source_selected",
-        "text_cleanup_ready",
-        "text_chunking_ready",
-        "translation_ready",
-        "character_discovery_ready",
-        "narrator_definition_ready",
-        "character_voices_ready",
-        "speech_blocks_ready",
-        "audio_blocks_ready",
-        "audio_assembly_ready",
-    )
-    try:
-        return stages.index(stage)
-    except ValueError:
-        return 0
 
 
 def _output_duration_ms(output_record: dict[str, object] | None) -> int:

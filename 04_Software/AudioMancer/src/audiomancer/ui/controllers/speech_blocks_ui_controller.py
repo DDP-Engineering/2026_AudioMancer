@@ -492,7 +492,10 @@ def _handle_speech_blocks_success(
         window._speech_blocks_page.restore_review_position(preserved_speech_blocks_review_position)
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate(success_message_key, current_language_from_window(window)),
+        ui_state_service.translate(
+            success_message_key,
+            workflow_controller_service.current_language_from_window(window),
+        ),
     )
 
 
@@ -507,7 +510,10 @@ def _handle_speech_blocks_failure(window: "MainWindow", error: Exception) -> Non
     _sync_manifest_from_disk(window)
     QMessageBox.warning(
         window,
-        ui_state_service.translate("dialog.project_error_title", current_language_from_window(window)),
+        ui_state_service.translate(
+            "dialog.project_error_title",
+            workflow_controller_service.current_language_from_window(window),
+        ),
         str(error),
     )
 
@@ -524,7 +530,10 @@ def _handle_speech_blocks_cancelled(window: "MainWindow", message: str) -> None:
     _sync_manifest_from_disk(window)
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.operation_cancelled", current_language_from_window(window)),
+        ui_state_service.translate(
+            "status.operation_cancelled",
+            workflow_controller_service.current_language_from_window(window),
+        ),
     )
 
 
@@ -551,7 +560,9 @@ def _sync_manifest_after_speech_blocks_update(window: "MainWindow", refresh_page
         == speech_blocks_service.SPEECH_BLOCKS_STAGE_COMPLETED
     ):
         updated_manifest["current_stage"] = "speech_blocks_ready"
-    elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("character_voices_ready"):
+    elif workflow_controller_service.stage_rank(
+        str(updated_manifest.get("current_stage", "")).strip()
+    ) > workflow_controller_service.stage_rank("character_voices_ready"):
         updated_manifest["current_stage"] = "character_voices_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     reloaded_manifest = project_workspace_service.load_manifest(window._current_project_root)
@@ -937,7 +948,9 @@ def _sync_audio_blocks_manifest_summary(window: "MainWindow", refresh_page: bool
         == audio_blocks_service.AUDIO_BLOCKS_STAGE_COMPLETED
     ):
         updated_manifest["current_stage"] = "audio_blocks_ready"
-    elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("speech_blocks_ready"):
+    elif workflow_controller_service.stage_rank(
+        str(updated_manifest.get("current_stage", "")).strip()
+    ) > workflow_controller_service.stage_rank("speech_blocks_ready"):
         updated_manifest["current_stage"] = "speech_blocks_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     reloaded_manifest = project_workspace_service.load_manifest(window._current_project_root)
@@ -1131,29 +1144,6 @@ def _confirm_delete_speech_block(window: "MainWindow", language: str) -> bool:
         "dialog.confirm_delete_speech_block_title",
         "project.confirm_delete_speech_block",
     )
-
-
-def _stage_rank(stage: str) -> int:
-    """
-    @brief      Resolve one workflow stage rank.
-    @param[in]  stage Workflow stage token.
-    @return     Zero-based workflow rank or -1 for unknown stages.
-    @exception  None
-    """
-    try:
-        return config.PROJECT_WORKFLOW_STAGES.index(stage)
-    except ValueError:
-        return -1
-
-
-def current_language_from_window(window: "MainWindow") -> str:
-    """
-    @brief      Resolve the active UI language from one main window instance.
-    @param[in]  window Active main window instance.
-    @return     Current UI language code.
-    @exception  None
-    """
-    return ui_state_service.current_language_from_settings(window._settings_payload)
 
 
 def _translated_source_error_message(error_text: str, language: str) -> str:

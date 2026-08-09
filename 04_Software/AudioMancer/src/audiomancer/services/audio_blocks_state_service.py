@@ -136,7 +136,7 @@ def build_audio_blocks_state(
         "can_regenerate_selected": current_block is not None
         and audio_blocks_service.audio_can_regenerate(current_block),
         "can_approve_selected": current_block is not None and audio_blocks_service.is_generated(current_block),
-        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
+        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
         "scene_ambience_audio_enabled": scene_ambience_audio_enabled,
     }
 
@@ -311,7 +311,7 @@ def _empty_state(language: str, settings_payload: dict[str, object] | None = Non
         "can_approve_all": False,
         "can_regenerate_selected": False,
         "can_approve_selected": False,
-        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
+        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
         "scene_ambience_audio_enabled": _scene_ambience_audio_enabled(settings_payload),
     }
 
@@ -370,24 +370,6 @@ def _build_full_source_text(
         return "\n\n".join(str(chunk.get("text", "")) for chunk in source_chunks)
     except ValueError:
         return "\n\n".join(str(block.get("text", "")) for block in speech_blocks)
-
-
-def _selected_text_character_limit(
-    settings_payload: dict[str, object] | None,
-) -> int:
-    """
-    @brief      Resolve an approximate selected speech text limit in characters.
-    @param[in]  settings_payload Persisted application settings payload.
-    @return     Approximate safe character limit for the active TTS model.
-    @exception  None
-    """
-    discovered_models = []
-    if isinstance(settings_payload, dict):
-        raw_models = settings_payload.get("tts_runtime_discovered_models", [])
-        if isinstance(raw_models, list):
-            discovered_models = [model for model in raw_models if isinstance(model, dict)]
-    budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
-    return int(budget_payload.get("safe_word_count", 0) or 0) * 6
 
 
 def _merge_audio_block_state(

@@ -19,7 +19,8 @@
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from audiomancer.services import project_workspace_service
+from audiomancer import config
+from audiomancer.services import project_workspace_service, ui_state_service
 from audiomancer.ui.controllers import operation_runner_controller
 
 if TYPE_CHECKING:
@@ -121,6 +122,30 @@ def resolve_enabled_ai_profile(
         if str(profile.get("id", "")).strip() == str(profile_id).strip():
             return dict(profile)
     return None
+
+
+def stage_rank(stage: str, *, unknown_rank: int = -1) -> int:
+    """
+    @brief      Resolve one workflow stage to its ordered rank.
+    @param[in]  stage Workflow stage token.
+    @param[in]  unknown_rank Caller-specific rank returned for an unknown token.
+    @return     Zero-based workflow rank or the requested unknown-stage fallback.
+    @exception  None
+    """
+    try:
+        return config.PROJECT_WORKFLOW_STAGES.index(stage)
+    except ValueError:
+        return int(unknown_rank)
+
+
+def current_language_from_window(window: "MainWindow") -> str:
+    """
+    @brief      Resolve the active UI language from one main window instance.
+    @param[in]  window Active main window instance.
+    @return     Current UI language code.
+    @exception  None
+    """
+    return ui_state_service.current_language_from_settings(window._settings_payload)
 
 
 # END OF FILE

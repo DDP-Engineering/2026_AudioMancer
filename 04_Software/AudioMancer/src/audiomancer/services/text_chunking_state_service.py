@@ -271,7 +271,7 @@ def _persist_manual_chunk_change(
     if document is not None and document["status"] in chunking_document_service.RESUMABLE_STATUSES:
         raise ValueError(_RESUMABLE_CHUNKING_MUTATION_MESSAGE)
     _write_chunk_artifact(project_root, chunks)
-    target_language = _manifest_target_language(manifest)
+    target_language = ai_translation_service.manifest_target_language(manifest)
     ai_translation_service.sync_translation_after_chunk_change(
         project_root,
         target_language,
@@ -455,19 +455,6 @@ def _next_chunk_id(chunks: list[dict[str, object]]) -> str:
     return f"chunk-{max_number + 1:04d}"
 
 
-def _manifest_target_language(manifest: dict[str, object]) -> str:
-    """
-    @brief      Resolve the active translation target language from the manifest.
-    @param[in]  manifest Current project manifest payload.
-    @return     Supported target language code.
-    @exception  None
-    """
-    target_language = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
-    if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
-        return target_language
-    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
-
-
 def build_text_chunking_notes(
     manifest: dict[str, object],
     cleaned_text: str | None,
@@ -514,7 +501,7 @@ def build_text_chunking_notes(
         )
         if chunking_mode == "ai_assisted":
             notes.extend(
-                _build_token_usage_notes(
+                ai_state_note_service.build_token_usage_notes(
                     chunking_report_payload,
                     chunking_operation_state,
                     language,
@@ -533,7 +520,7 @@ def build_text_chunking_notes(
         )
         if chunking_mode == "ai_assisted":
             notes.extend(
-                _build_token_usage_notes(
+                ai_state_note_service.build_token_usage_notes(
                     chunking_report_payload,
                     chunking_operation_state,
                     language,
@@ -560,7 +547,7 @@ def build_text_chunking_notes(
         )
         if chunking_mode == "ai_assisted":
             notes.extend(
-                _build_token_usage_notes(
+                ai_state_note_service.build_token_usage_notes(
                     chunking_report_payload,
                     chunking_operation_state,
                     language,
@@ -615,21 +602,6 @@ def _chunking_state_strategy(chunking_operation_state: dict[str, object]) -> str
         if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
             return semantic_strategy
     return config.DEFAULT_AI_CHUNKING_STRATEGY
-
-
-def _build_token_usage_notes(
-    report_payload: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
-    language: str,
-) -> list[str]:
-    """
-    @brief      Build the token usage notes.
-    @param[in]  report_payload Payload for `report_payload`.
-    @param[in]  operation_state Value for `operation_state`.
-    @param[in]  language Language code.
-    @return     Derived helper result.
-    """
-    return ai_state_note_service.build_token_usage_notes(report_payload, operation_state, language)
 
 
 # END OF FILE

@@ -36,9 +36,13 @@ from audiomancer.services import (
     token_usage_service,
 )
 from audiomancer.services.logging_service import get_component_logger
-from audiomancer.services.operation_runtime_service import append_required_extension
-from audiomancer.services.operation_runtime_service import is_path_inside_project as _is_path_inside_project
-from audiomancer.services.operation_runtime_service import safe_file_stem as _shared_safe_file_stem
+from audiomancer.services.operation_runtime_service import (
+    append_required_extension,
+    safe_file_stem,
+)
+from audiomancer.services.operation_runtime_service import (
+    is_path_inside_project as _is_path_inside_project,
+)
 from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
@@ -179,7 +183,7 @@ def default_export_file_name(manifest: dict[str, object] | None, export_kind: st
     extension = export_extension(export_format)
     project_name = str((manifest or {}).get("display_name") or (manifest or {}).get("project_name") or "AudioMancer")
     kind_name = _EXPORT_KIND_LABELS[export_kind].lower().replace(" ", "_")
-    return f"{_safe_file_stem(project_name)}_{kind_name}{extension}"
+    return f"{safe_file_stem(project_name)}_{kind_name}{extension}"
 
 
 def export_extension(export_format: str) -> str:
@@ -1242,16 +1246,6 @@ def _source_original_name(manifest: dict[str, object]) -> str:
     return str(source_document.get("original_name") or "-")
 
 
-def _safe_file_stem(value: str) -> str:
-    """
-    @brief      Normalize one default export file stem via the shared helper.
-    @param[in]  value Candidate file stem.
-    @return     Filesystem-safe file stem.
-    @exception  None
-    """
-    return _shared_safe_file_stem(value)
-
-
 def _unique_archive_stem(value: object, used_names: set[str]) -> str:
     """
     @brief      Build one unique archive-safe file stem.
@@ -1260,7 +1254,7 @@ def _unique_archive_stem(value: object, used_names: set[str]) -> str:
     @return     Unique archive file stem.
     @exception  None
     """
-    base_name = _safe_file_stem(str(value or "AudioMancer"))
+    base_name = safe_file_stem(str(value or "AudioMancer"))
     candidate_name = base_name
     suffix = 2
     while candidate_name.casefold() in used_names:
@@ -1280,7 +1274,7 @@ def _unique_archive_file_name(value: object, used_names: set[str]) -> str:
     """
     file_name = Path(str(value or "audio.wav")).name
     suffix = Path(file_name).suffix or ".wav"
-    stem = _safe_file_stem(Path(file_name).stem or "audio")
+    stem = safe_file_stem(Path(file_name).stem or "audio")
     candidate_name = f"{stem}{suffix}"
     counter = 2
     while candidate_name.casefold() in used_names:
