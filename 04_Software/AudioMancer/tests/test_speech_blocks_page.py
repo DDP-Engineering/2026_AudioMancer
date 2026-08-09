@@ -697,6 +697,92 @@ def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(q
     assert page._save_button.isEnabled() is False
 
 
+def test_speech_blocks_page_edit_mode_disables_state_replacing_controls(qtbot) -> None:
+    """
+    @brief      Verify an active typed edit locks every control that can replace review state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1"), ("Profile Two", "profile-2")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "First source chunk."},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Second source chunk."},
+        ],
+        speech_blocks=[_speech_block("0001-000001", "Persisted narration.", approved=False)],
+        notes=["Review required."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=2,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
+        can_reset=True,
+        can_approve_all=True,
+        can_resplit_selected=True,
+    )
+    page.begin_editing_selected_block()
+    page._speech_block_text_edit.selectAll()
+    qtbot.keyClicks(page._speech_block_text_edit, "Unsaved narration draft.")
+
+    assert page._speech_block_text_edit.toPlainText() == "Unsaved narration draft."
+    assert page._profile_combo.isEnabled() is False
+    assert page._generate_button.isEnabled() is False
+    assert page._reset_generation_button.isEnabled() is False
+    assert page._approve_all_button.isEnabled() is False
+    assert page._resplit_button.isEnabled() is False
+    assert page._chunk_list.isEnabled() is False
+    assert page._speech_block_list.isEnabled() is False
+
+
+def test_speech_blocks_page_language_change_preserves_typed_speech_edit_and_selection(qtbot) -> None:
+    """
+    @brief      Verify localization leaves a typed Speech Block draft and its selection untouched.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Source narration."}],
+        speech_blocks=[_speech_block("0001-000001", "Persisted narration.", approved=False)],
+        notes=["Review required."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
+    )
+    page.begin_editing_selected_block()
+    page._speech_block_text_edit.selectAll()
+    qtbot.keyClicks(page._speech_block_text_edit, "Unsaved narration draft.")
+    cursor = page._speech_block_text_edit.textCursor()
+    cursor.setPosition(8)
+    cursor.setPosition(17, QTextCursor.MoveMode.KeepAnchor)
+    page._speech_block_text_edit.setTextCursor(cursor)
+    expected_position = cursor.position()
+    expected_anchor = cursor.anchor()
+
+    page.apply_language("ro")
+
+    restored_cursor = page._speech_block_text_edit.textCursor()
+    assert page._speech_block_text_edit.toPlainText() == "Unsaved narration draft."
+    assert restored_cursor.position() == expected_position
+    assert restored_cursor.anchor() == expected_anchor
+    assert page._speech_block_text_edit.isReadOnly() is False
+    assert page._save_button.isEnabled() is True
+
+
 def test_speech_blocks_page_edits_scene_ambience_fields(qtbot) -> None:
     """
     @brief      Verify Scene Ambience blocks expose dedicated edit fields.
@@ -763,6 +849,82 @@ def test_speech_blocks_page_edits_scene_ambience_fields(qtbot) -> None:
         "negative_prompt": "clear speech, singing",
         "duration_seconds": 1.5,
     }
+
+
+def test_speech_blocks_page_language_change_preserves_typed_scene_ambience_payload(qtbot) -> None:
+    """
+    @brief      Verify localization preserves every unsaved Scene Ambience field and text selection.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.show()
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Airport terminal."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "source_language": "en",
+                "speaker_kind": "operation",
+                "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "speaker_display_name": "Scene Ambience",
+                "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "text": "persisted airport ambience",
+                "sound_prompt": "persisted airport ambience",
+                "negative_prompt": "persisted speech",
+                "duration_seconds": 2.0,
+                "warning_flags": ["needs_review"],
+            }
+        ],
+        notes=["Review required."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Scene Ambience")],
+    )
+    qtbot.wait(0)
+    page.begin_editing_selected_block()
+    page._ambient_prompt_edit.selectAll()
+    qtbot.keyClicks(page._ambient_prompt_edit, "unsaved rain against glass")
+    page._ambient_negative_prompt_edit.selectAll()
+    qtbot.keyClicks(page._ambient_negative_prompt_edit, "speech, music")
+    page._ambient_duration_spin.setValue(4.5)
+    prompt_cursor = page._ambient_prompt_edit.textCursor()
+    prompt_cursor.setPosition(8)
+    prompt_cursor.setPosition(12, QTextCursor.MoveMode.KeepAnchor)
+    page._ambient_prompt_edit.setTextCursor(prompt_cursor)
+    negative_cursor = page._ambient_negative_prompt_edit.textCursor()
+    negative_cursor.setPosition(0)
+    negative_cursor.setPosition(6, QTextCursor.MoveMode.KeepAnchor)
+    page._ambient_negative_prompt_edit.setTextCursor(negative_cursor)
+
+    page.apply_language("ro")
+
+    restored_prompt_cursor = page._ambient_prompt_edit.textCursor()
+    restored_negative_cursor = page._ambient_negative_prompt_edit.textCursor()
+    assert page._ambient_prompt_edit.toPlainText() == "unsaved rain against glass"
+    assert page._ambient_negative_prompt_edit.toPlainText() == "speech, music"
+    assert page._ambient_duration_spin.value() == 4.5
+    assert (restored_prompt_cursor.position(), restored_prompt_cursor.anchor()) == (
+        prompt_cursor.position(),
+        prompt_cursor.anchor(),
+    )
+    assert (restored_negative_cursor.position(), restored_negative_cursor.anchor()) == (
+        negative_cursor.position(),
+        negative_cursor.anchor(),
+    )
+    assert page._ambient_prompt_edit.isReadOnly() is False
+    assert page._ambient_negative_prompt_edit.isReadOnly() is False
+    assert page._save_button.isEnabled() is True
 
 
 def test_speech_blocks_page_approve_selected_emits_only_selected_block(qtbot) -> None:

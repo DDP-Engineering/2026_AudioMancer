@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech Blocks now protects typed block and Scene Ambience edits from chunk,
+  generation, approval, reset, profile, and language-refresh actions, and keeps
+  review warnings until an edit is successfully saved.
 - Speech Blocks now preserves attribution in mixed-spacing dash dialogue,
   closes German low-high quotations before splitting later narration, removes
   every supported dialogue quote wrapper from spoken text, and keeps exact

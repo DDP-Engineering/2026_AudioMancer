@@ -188,9 +188,12 @@ def test_speech_blocks_ui_controller_passes_extra_prompt_to_selected_resplit(mon
     assert worker_result == {"additional": "Preserve ellipses in dialogue blocks."}
 
 
-def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatch, tmp_path) -> None:
+def test_speech_blocks_ui_controller_edit_start_preserves_warned_block_without_persistence(
+    monkeypatch,
+    tmp_path,
+) -> None:
     """
-    @brief      Verify accepted block edit clears warnings and unlocks the editor without refreshing the page.
+    @brief      Verify accepted block edit preserves warnings and performs no persistence or summary refresh.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -198,7 +201,6 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
     """
     project_root = tmp_path / "SpeechBlocksEditStart"
     project_root.mkdir()
-    clear_calls = []
     page_calls = []
     window = SimpleNamespace(
         _settings_payload={"language": "en"},
@@ -223,7 +225,12 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
     monkeypatch.setattr(
         speech_blocks_ui_controller.speech_blocks_service,
         "clear_speech_block_warning_flags",
-        lambda *args: clear_calls.append(args),
+        lambda *_args: (_ for _ in ()).throw(AssertionError("edit entry must not persist warning cleanup")),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_refresh_speech_blocks_review_summary",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("edit entry must not refresh persisted review state")),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
@@ -233,7 +240,6 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
 
     speech_blocks_ui_controller.handle_edit_started(window, "0001-000001")
 
-    assert clear_calls == [(project_root, "0001-000001")]
     assert page_calls == ["edit"]
 
 
@@ -359,7 +365,17 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
             restore_source_text_position=lambda position: restore_calls.append(dict(position)),
         ),
     )
-    monkeypatch.setattr(speech_blocks_ui_controller.speech_blocks_service, "update_speech_block", lambda *args: {})
+    update_calls: list[tuple[object, ...]] = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "update_speech_block",
+        lambda *args: update_calls.append(args) or {},
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "clear_speech_block_warning_flags",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("save must use the authoritative update")),
+    )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_speech_block_by_id",
@@ -397,6 +413,67 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
 
     assert restore_calls == [source_position]
     assert window._current_manifest["loaded_after_save"] is True
+    assert update_calls == [
+        (project_root, "0001-000001", "narrator", "narration", "Edited text."),
+    ]
+
+
+def test_speech_blocks_ui_controller_failed_save_preserves_warning_flags(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a rejected authoritative save does not clear persisted warning flags.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "SpeechBlocksFailedSave"
+    project_root.mkdir()
+    warned_block = {
+        "speech_block_id": "0001-000001",
+        "speaker_id": "narrator",
+        "content_kind": "narration",
+        "text": "Original text.",
+        "warning_flags": ["needs_review"],
+    }
+    warning_messages: list[str] = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "speech_blocks_ready"},
+        _speech_blocks_page=SimpleNamespace(),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller, "_speech_block_by_id", lambda *_args: warned_block)
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "update_speech_block",
+        lambda *_args: (_ for _ in ()).throw(ValueError("invalid edit")),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "clear_speech_block_warning_flags",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("failed save must not clear warnings")),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, _title, message: warning_messages.append(str(message)),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_refresh_speech_blocks_review_summary",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("failed save must not refresh review state")),
+    )
+
+    speech_blocks_ui_controller.handle_save_block_requested(
+        window,
+        "0001-000001",
+        "narrator",
+        "narration",
+        "Edited text.",
+    )
+
+    assert warned_block["warning_flags"] == ["needs_review"]
+    assert warning_messages == ["invalid edit"]
 
 
 def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block(monkeypatch, tmp_path) -> None:

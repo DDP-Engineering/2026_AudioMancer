@@ -97,6 +97,14 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Operator edits, warning cleanup, and approval updates preserve the persisted
   `deterministic_narrator_blocks` marker for same-narrator documents
   (REQ-FUNC-10095db1).
+- While a block editor is active, the page disables profile, chunk, generation,
+  approval-all, reset, and re-split controls and applies language changes
+  without replacing the typed speech or Scene Ambience payload, caret, or text
+  selection (REQ-UX-6d27b63d).
+- Entering or declining Edit performs no Speech Blocks persistence and does not
+  clear warning flags; warning cleanup remains owned by a successful
+  `update_speech_block` commit, while failed saves retain the warnings
+  (REQ-FUNC-35098598).
 - Scene-ambience insertion remaps each matched `after_speech_block_id` from the
   spoken row's old identifier to its post-insertion identifier, including when
   opener ambience shifts every spoken row (REQ-DATA-f0eb775c).
@@ -107,7 +115,12 @@ Speech Blocks follows Voice Profiles and is the review gate before TTS Audio Blo
 
 ## 8. Usage
 
-Open Speech Blocks after selecting voices, generate or resume the block plan, inspect list rows and warnings, edit the selected block deliberately, then approve the plan before TTS. Use reset when upstream character, language, or voice changes make the current plan incompatible.
+Open Speech Blocks after selecting voices, generate or resume the block plan,
+inspect list rows and warnings, edit the selected block deliberately, then save
+to commit the edit and clear its warning flags before approval. Active editor
+payloads remain intact when the interface language changes. Use reset when
+upstream character, language, or voice changes make the current plan
+incompatible.
 
 ## 9. Validation And Tests
 

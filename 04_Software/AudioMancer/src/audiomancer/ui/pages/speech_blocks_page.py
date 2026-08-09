@@ -824,8 +824,10 @@ class SpeechBlocksPage(QWidget):
             self._status_edit.setPlainText(ui_state_service.translate("speech_blocks.initial_note", language))
         self._apply_chunk_action_top_margin()
         current_row = self._speech_block_list.currentRow()
-        if current_row >= 0:
+        if current_row >= 0 and not self._editing:
             self._show_selected_block(current_row)
+        elif self._editing:
+            self._apply_control_state()
 
     def _populate_selectors(self) -> None:
         """
@@ -869,6 +871,7 @@ class SpeechBlocksPage(QWidget):
         can_generate = (
             self._project_active
             and not self._busy
+            and not self._editing
             and bool(self._source_chunks)
             and self.current_profile_id() is not None
             and not generated_all_chunks
@@ -890,18 +893,23 @@ class SpeechBlocksPage(QWidget):
             and not self._editing
         )
         can_insert_block = self._project_active and not self._busy and self._current_chunk_id is not None
-        self._profile_combo.setEnabled(self._project_active and not self._busy)
+        self._profile_combo.setEnabled(self._project_active and not self._busy and not self._editing)
         self._generate_button.setEnabled(can_generate)
-        self._reset_generation_button.setEnabled(self._project_active and not self._busy and self._can_reset)
-        self._approve_all_button.setEnabled(self._project_active and not self._busy and self._can_approve_all)
+        self._reset_generation_button.setEnabled(
+            self._project_active and not self._busy and not self._editing and self._can_reset
+        )
+        self._approve_all_button.setEnabled(
+            self._project_active and not self._busy and not self._editing and self._can_approve_all
+        )
         self._resplit_button.setEnabled(
             self._project_active
             and not self._busy
+            and not self._editing
             and self._can_resplit_selected
             and self._current_chunk_id is not None
             and self.current_profile_id() is not None
         )
-        self._chunk_list.setEnabled(self._project_active and not self._busy)
+        self._chunk_list.setEnabled(self._project_active and not self._busy and not self._editing)
         self._insert_block_button.setEnabled(can_insert_block and not self._editing)
         self._delete_block_button.setEnabled(can_edit_selected and not self._editing)
         self._speech_block_list.setEnabled(self._project_active and not self._busy and not self._editing)

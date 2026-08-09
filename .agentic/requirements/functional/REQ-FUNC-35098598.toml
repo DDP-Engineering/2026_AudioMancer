@@ -1,21 +1,26 @@
 schema = 1
 id = "REQ-FUNC-35098598"
-title = "The Speech Blocks controller shall guard edits: start without"
+title = "Persist Speech Block warning cleanup only on successful save"
 status = "active"
 
 requirement = """
-The Speech Blocks controller shall guard edits: start without refreshing, skip warning clear when clean, keep the editor locked on decline, and restore chunk scroll on save.
+When an operator enters, cancels, or unsuccessfully saves a Speech Block edit,
+the controller shall leave persisted warning flags unchanged so that only a
+successful authoritative block update clears them.
 """
 
-verification = "Automated: 4 linked pytest selector(s)."
+verification = "Controller and service-spy regressions open a warned block without persistence or review-summary refresh, decline edit entry and fail a save without clearing warnings, then commit a valid edit and observe warning cleanup through update_speech_block only."
 
 affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_start_does_not_refresh_page",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_update_speech_block_clears_warning_flags_on_successful_commit",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_start_preserves_warned_block_without_persistence",
   "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_start_skips_warning_clear_when_clean",
   "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_decline_keeps_editor_locked",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_failed_save_preserves_warning_flags",
   "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_save_restores_chunk_text_scroll",
 ]
 
@@ -24,4 +29,4 @@ rationale = """
 Editing must be a controlled, reversible boundary.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-09

@@ -1731,6 +1731,31 @@ def test_approve_all_and_edit_preserve_warning_cleared_state(tmp_path) -> None:
     assert edited_blocks[0]["text"] == "Wind against the shutters."
 
 
+def test_update_speech_block_clears_warning_flags_on_successful_commit(tmp_path) -> None:
+    """
+    @brief      Verify the authoritative edit update owns warning cleanup on commit.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksWarnedEdit")
+    _seed_review_speech_blocks(project_root)
+    before_edit = speech_blocks_service.load_speech_blocks(project_root)
+    assert before_edit[0]["warning_flags"]
+
+    speech_blocks_service.update_speech_block(
+        project_root,
+        "0001-000001",
+        "narrator",
+        speech_blocks_service.CONTENT_KIND_NARRATION,
+        "Successfully committed narration.",
+    )
+
+    after_edit = speech_blocks_service.load_speech_blocks(project_root)
+    assert after_edit[0]["warning_flags"] == []
+    assert after_edit[0]["text"] == "Successfully committed narration."
+
+
 def test_approve_selected_speech_block_only_marks_target_block(tmp_path) -> None:
     """
     @brief      Verify selected Speech Block approval does not approve sibling blocks.

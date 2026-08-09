@@ -291,18 +291,9 @@ def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
     )
     if selected_block is None:
         return
-    current_display_block = getattr(window._speech_blocks_page, "_current_display_block", None)
-    selected_display_block = current_display_block() if callable(current_display_block) else selected_block
     if not _confirm_speech_block_audio_reset_if_needed(window, speech_block_id, current_language):
         return
     source_text_position = _source_text_position(window)
-    if selected_block.get("warning_flags"):
-        speech_blocks_service.clear_speech_block_warning_flags(window._current_project_root, speech_block_id)
-        updated_block = _speech_block_by_id(window, speech_block_id)
-        update_block_item = getattr(window._speech_blocks_page, "update_speech_block_item", None)
-        if updated_block is not None and callable(update_block_item):
-            update_block_item(_speech_block_display_payload(selected_display_block or selected_block, updated_block))
-        _refresh_speech_blocks_review_summary(window)
     window._speech_blocks_page.begin_editing_selected_block()
     _restore_source_text_position(window, source_text_position)
 
