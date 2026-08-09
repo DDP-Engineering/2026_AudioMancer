@@ -210,6 +210,7 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
     assert capability_matrix["generate_and_clone_available"] is True
     assert capability_matrix["sound_prompt_available"] is True
     assert [model["model_id"] for model in capability_matrix["sound_prompt_models"]] == ["sound_good"]
+    assert {"definition_models", "clone_models"}.isdisjoint(capability_matrix)
 
 
 def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(monkeypatch) -> None:

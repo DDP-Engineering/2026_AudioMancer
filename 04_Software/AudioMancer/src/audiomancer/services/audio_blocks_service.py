@@ -446,8 +446,6 @@ def start_or_continue_generation(
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
     existing_state = load_operation_state(resolved_project_root) or {}
-    reused_prompt_count = _metadata_int(existing_state, "reused_prompt_count", 0)
-    regenerated_prompt_count = _metadata_int(existing_state, "regenerated_prompt_count", 0)
     started_at = _resolve_started_at(existing_state)
     existing_blocks, existing_clone_profiles, profile_index, block_index = _restore_resume_state(
         resolved_project_root,
@@ -602,10 +600,8 @@ def start_or_continue_generation(
             )
             raise
         if prompt_reused:
-            reused_prompt_count += 1
             progress_message = f"Reused clone prompt for {voice_target['display_name']}."
         else:
-            regenerated_prompt_count += 1
             progress_message = f"Prepared clone prompt for {voice_target['display_name']}."
         report = _persist_document(
             resolved_project_root,
@@ -3501,26 +3497,6 @@ def _resume_checkpoint_field(existing_state: dict[str, object], field_name: str,
         return fallback
     try:
         return int(resume_checkpoint.get(field_name, fallback))
-    except (TypeError, ValueError):
-        return fallback
-
-
-def _metadata_int(existing_state: dict[str, object], field_name: str, fallback: int = 0) -> int:
-    """
-    @brief      Resolve one integer metadata field from an operation-state payload.
-    @param[in]  existing_state Existing operation-state payload.
-    @param[in]  field_name Metadata field name.
-    @param[in]  fallback Fallback integer value.
-    @return     Resolved integer metadata value.
-    @exception  None
-    """
-    if not isinstance(existing_state, dict):
-        return fallback
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return fallback
-    try:
-        return int(metadata.get(field_name, fallback))
     except (TypeError, ValueError):
         return fallback
 

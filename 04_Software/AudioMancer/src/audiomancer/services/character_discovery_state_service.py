@@ -87,16 +87,12 @@ def build_character_discovery_state(
             "notes": [ui_state_service.translate("characters.note_no_project", language)],
             "selected_profile_id": profile_state["selected_profile_id"],
             "stage_status": character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED,
-            "character_count": 0,
             "source_chunk_map": {},
             "can_start": False,
             "can_reset": False,
             "can_add": False,
             "can_edit": False,
-            "can_save": False,
             "can_delete": False,
-            "edit_mode": False,
-            "dirty": False,
         }
     source_chunks = character_discovery_service.load_input_chunks(project_root)
     source_chunk_map = {
@@ -127,7 +123,7 @@ def build_character_discovery_state(
     operation_state = (
         None
         if document is None
-        else character_discovery_service.character_operation_summary(document, len(source_chunks))
+        else character_discovery_service.character_operation_summary(document)
     )
     if operation_state is not None and document is not None:
         operation_state["metadata"] = {"token_usage": dict(document["token_usage"])}
@@ -168,16 +164,12 @@ def build_character_discovery_state(
         "notes": notes,
         "selected_profile_id": profile_state["selected_profile_id"],
         "stage_status": stage_status,
-        "character_count": len(profiles),
         "source_chunk_map": source_chunk_map,
         "can_start": can_start,
         "can_reset": can_reset,
         "can_add": can_add,
         "can_edit": can_edit,
-        "can_save": False,
         "can_delete": can_delete,
-        "edit_mode": False,
-        "dirty": False,
     }
 
 
@@ -199,16 +191,12 @@ def _invalid_character_document_state(
         "notes": [ui_state_service.translate("characters.note_invalid_document", language)],
         "selected_profile_id": profile_state["selected_profile_id"],
         "stage_status": "failed",
-        "character_count": 0,
         "source_chunk_map": source_chunk_map,
         "can_start": False,
         "can_reset": True,
         "can_add": False,
         "can_edit": False,
-        "can_save": False,
         "can_delete": False,
-        "edit_mode": False,
-        "dirty": False,
     }
 
 

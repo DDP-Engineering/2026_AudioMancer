@@ -599,6 +599,26 @@ def test_narrator_language_migration_preserves_operator_authored_preview(tmp_pat
     assert migrated["preview_text"] == "An exact operator-authored preview that must survive."
 
 
+def test_append_ai_generated_profiles_does_not_require_discarded_generation_metadata(tmp_path) -> None:
+    """Verify current callers may omit legacy generation metadata while old calls remain compatible."""
+    project_root, _manifest = project_workspace_service.create_project("NarratorNoGenerationMetadata", tmp_path)
+
+    generated = narrator_definition_service.append_ai_generated_profiles(
+        project_root,
+        [
+            {
+                "display_name": "AI Narrator",
+                "language": "en",
+                "prompt_text": "AI-authored prompt.",
+                "preview_text": "AI-authored preview.",
+            }
+        ],
+    )
+
+    assert len(generated) == 1
+    assert generated[0]["display_name"] == "AI Narrator"
+
+
 def test_narrator_language_migration_preserves_ai_authored_preview(tmp_path) -> None:
     """
     @brief      Verify a language migration preserves exact AI-authored narrator preview text.

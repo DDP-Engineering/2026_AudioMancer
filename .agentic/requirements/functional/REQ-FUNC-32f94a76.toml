@@ -67,6 +67,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields",
   "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_provider_failure_preserves_current_inventory",
   "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_recovers_from_invalid_last_used_profile_field",
+  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_operation_summary_does_not_reload_source_chunks",
 ]
 
 # --- optional below this line ---
@@ -78,4 +79,4 @@ priority = "high"
 rationale = "A source-chunk cursor is not a completed-window count, especially when planned windows have variable bounds from the configured budget."
 
 created = 2026-08-07
-updated = 2026-08-07
+updated = 2026-08-09

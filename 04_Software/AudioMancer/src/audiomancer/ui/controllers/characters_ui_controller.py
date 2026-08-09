@@ -1046,10 +1046,7 @@ def _character_operation_summary(project_root: str | Path) -> dict[str, object] 
     document = character_discovery_service.load_character_document(project_root)
     if document is None:
         return None
-    return character_discovery_service.character_operation_summary(
-        document,
-        len(character_discovery_service.load_input_chunks(project_root)),
-    )
+    return character_discovery_service.character_operation_summary(document)
 
 
 def _resolve_ai_profile(

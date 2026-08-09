@@ -437,8 +437,6 @@ def _audio_blocks_report(
         "approved_block_count": len(audio_blocks),
         "total_block_count": len(speech_blocks),
         "prompt_count": 0,
-        "reused_prompt_count": 0,
-        "regenerated_prompt_count": 0,
         "current_phase": "generate_blocks",
         "warning_count": 0,
         "warnings": [],

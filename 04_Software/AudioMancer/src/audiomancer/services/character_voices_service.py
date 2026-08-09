@@ -317,13 +317,37 @@ def save_target_prompt(
     @return     Persisted updated target payload.
     @exception  ValueError Raised when the prompt is empty or the target is not editable.
     """
-    return _update_target_prompt(
-        project_root,
-        target_id,
-        prompt_text,
-        update_default_prompt=False,
-        preview_text=preview_text,
-    )
+    normalized_prompt = str(prompt_text).strip()
+    if not normalized_prompt:
+        raise ValueError("empty_prompt")
+    normalized_preview_text = None if preview_text is None else str(preview_text).strip()
+    if preview_text is not None and not normalized_preview_text:
+        raise ValueError("empty_preview_text")
+    voice_targets = load_voice_plan(project_root)
+    updated_target = None
+    normalized_targets: list[dict[str, object]] = []
+    for target_payload in voice_targets:
+        if str(target_payload.get("target_id", "")).strip() != str(target_id).strip():
+            normalized_targets.append(target_payload)
+            continue
+        if not bool(target_payload.get("editable", False)):
+            raise ValueError("readonly_target")
+        updated_target = _normalize_voice_target(
+            {
+                **dict(target_payload),
+                "prompt_text": normalized_prompt,
+                "default_prompt_text": target_payload.get("default_prompt_text"),
+                "preview_text": (
+                    target_payload.get("preview_text") if preview_text is None else normalized_preview_text
+                ),
+            }
+        )
+        normalized_targets.append(updated_target)
+    if updated_target is None:
+        raise ValueError("missing_target")
+    save_voice_targets(project_root, normalized_targets)
+    delete_target_sample(project_root, target_id)
+    return updated_target
 
 
 def begin_target_prompt_edit(project_root: str | Path, target_id: str) -> dict[str, object]:
@@ -846,57 +870,6 @@ def selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, obj
 
 
 # LOCAL HELPERS
-
-
-def _update_target_prompt(
-    project_root: str | Path,
-    target_id: str,
-    prompt_text: str,
-    update_default_prompt: bool,
-    preview_text: str | None = None,
-) -> dict[str, object]:
-    """
-    @brief      Update the target prompt.
-    @param[in]  project_root Active project root folder.
-    @param[in]  target_id Target identifier.
-    @param[in]  prompt_text Text value for `prompt_text`.
-    @param[in]  update_default_prompt Value for `update_default_prompt`.
-    @param[in]  preview_text Text value for `preview_text`.
-    @return     Helper result.
-    """
-    normalized_prompt = str(prompt_text).strip()
-    if not normalized_prompt:
-        raise ValueError("empty_prompt")
-    normalized_preview_text = None if preview_text is None else str(preview_text).strip()
-    if preview_text is not None and not normalized_preview_text:
-        raise ValueError("empty_preview_text")
-    voice_targets = load_voice_plan(project_root)
-    updated_target = None
-    normalized_targets: list[dict[str, object]] = []
-    for target_payload in voice_targets:
-        if str(target_payload.get("target_id", "")).strip() != str(target_id).strip():
-            normalized_targets.append(target_payload)
-            continue
-        if not bool(target_payload.get("editable", False)):
-            raise ValueError("readonly_target")
-        updated_target = _normalize_voice_target(
-            {
-                **dict(target_payload),
-                "prompt_text": normalized_prompt,
-                "default_prompt_text": (
-                    normalized_prompt if update_default_prompt else target_payload.get("default_prompt_text")
-                ),
-                "preview_text": (
-                    target_payload.get("preview_text") if preview_text is None else normalized_preview_text
-                ),
-            }
-        )
-        normalized_targets.append(updated_target)
-    if updated_target is None:
-        raise ValueError("missing_target")
-    save_voice_targets(project_root, normalized_targets)
-    delete_target_sample(project_root, target_id)
-    return updated_target
 
 
 def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, object]:

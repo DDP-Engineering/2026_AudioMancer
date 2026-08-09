@@ -283,16 +283,12 @@ class CharactersPage(QWidget):
             notes=["Run text chunking before Character Discovery."],
             selected_profile_id=None,
             stage_status=(character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED),
-            character_count=0,
             source_chunk_map={},
             can_start=False,
             can_reset=False,
             can_add=False,
             can_edit=False,
-            can_save=False,
             can_delete=False,
-            edit_mode=False,
-            dirty=False,
         )
 
     def resizeEvent(self, event) -> None:  # noqa: N802
@@ -349,16 +345,12 @@ class CharactersPage(QWidget):
         notes: list[str],
         selected_profile_id: str | None,
         stage_status: str,
-        character_count: int,
         source_chunk_map: dict[str, str],
         can_start: bool,
         can_reset: bool,
         can_add: bool,
         can_edit: bool,
-        can_save: bool,
         can_delete: bool,
-        edit_mode: bool,
-        dirty: bool,
     ) -> None:
         """
             @brief      Apply one complete character-discovery page state payload.
@@ -366,23 +358,15 @@ class CharactersPage(QWidget):
             @param[in]  notes Operator-facing summary and status notes.
             @param[in]  selected_profile_id Resolved AI profile identifier.
             @param[in]  stage_status Current discovery stage token.
-            @param[in]  character_count Unused summary count from the state service.
             @param[in]  source_chunk_map Chunk text keyed by `chunk_id`.
             @param[in]  can_start True when discovery may start or continue.
             @param[in]  can_reset True when reset may run.
             @param[in]  can_add True when manual add may start.
             @param[in]  can_edit True when edit mode may start.
-            @param[in]  can_save Unused explicit save flag from the state service.
             @param[in]  can_delete True when delete may run.
-            @param[in]  edit_mode Unused edit-mode flag from the state service.
-            @param[in]  dirty Unused dirty flag from the state service.
             @return     None.
             @exception  None
         """
-        del character_count
-        del can_save
-        del edit_mode
-        del dirty
         current_character_id = self._current_character_id
         self._profiles = sorted([_normalize_page_profile(profile) for profile in profiles], key=_profile_sort_key)
         self._source_chunk_map = dict(source_chunk_map)

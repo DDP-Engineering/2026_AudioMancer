@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Character Discovery, Narrator Voice, Character Voices, VoiceWeaver, and
+  Audio Blocks no longer reload, construct, or expose data that their active
+  workflows discard; existing narrator service call forms remain compatible.
 - Internal Cleanup, extraction, project recovery/export, and Audio Blocks state
   paths no longer carry unused results, branches, helpers, or parameters;
   active behavior and persisted formats remain unchanged.

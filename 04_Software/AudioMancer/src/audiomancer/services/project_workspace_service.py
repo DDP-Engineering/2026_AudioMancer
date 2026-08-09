@@ -959,10 +959,7 @@ def _character_discovery_completion_evidence(project_root: Path, warnings: list[
     if document is None or document.get("status") != "completed":
         return None
     return {
-        "operation": character_discovery_service.character_operation_summary(
-            document,
-            len(character_discovery_service.load_input_chunks(project_root)),
-        ),
+        "operation": character_discovery_service.character_operation_summary(document),
         "report": document,
     }
 

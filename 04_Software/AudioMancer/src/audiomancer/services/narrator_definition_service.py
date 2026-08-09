@@ -487,7 +487,7 @@ def create_custom_profile(
 def append_ai_generated_profiles(
     project_root: str | Path,
     profile_payloads: list[dict[str, object]],
-    generation_metadata: dict[str, object],
+    generation_metadata: dict[str, object] | None = None,
     *,
     persist: bool = True,
 ) -> list[dict[str, object]]:
@@ -495,7 +495,7 @@ def append_ai_generated_profiles(
     @brief      Append editable AI-generated narrator profiles without changing selection or samples.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_payloads Validated generated narrator-profile payloads.
-    @param[in]  generation_metadata Shared metadata for the AI generation run.
+    @param[in]  generation_metadata Optional legacy metadata retained for call compatibility.
     @param[in]  persist Whether to write immediately; false lets the caller commit profiles with attempt state.
     @return     Persisted generated narrator-profile payload list.
     @exception  ValueError Raised when no valid generated profiles are provided.
@@ -650,19 +650,19 @@ def display_profile_name(profile_or_name: object) -> str:
 
 def profile_generation_request(
     profile: dict[str, object],
-    tts_plan: dict[str, object],
-    discovered_models: list[dict[str, object]],
+    tts_plan: dict[str, object] | None = None,
+    discovered_models: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     """
     @brief      Resolve the current runtime generation request for one narrator profile.
     @param[in]  profile Narrator-profile payload.
-    @param[in]  tts_plan Normalized project-local TTS plan payload.
+    @param[in]  tts_plan Optional legacy TTS plan retained for call compatibility.
     @param[in]  discovered_models Current normalized discovered runtime models.
     @return     Generation-request payload with availability flags and model ids.
     @exception  None
     """
     _ = tts_plan
-    capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
+    capability_matrix = voiceweaver_runtime_service.build_capability_matrix(list(discovered_models or []))
     language = narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE))
     prompt_text = str(profile.get("prompt_text", "")).strip()
 
@@ -1046,24 +1046,6 @@ def _update_profile_sample_metadata(
             }
         )
     document["profiles"] = updated_profiles
-    write_narrator_voice_document(project_root, document)
-
-
-def _clear_profile_sample_metadata(project_root: str | Path) -> None:
-    """
-    @brief      Clear every narrator profile sample entry in the authoritative document.
-    @param[in]  project_root Active project root folder.
-    @return     None.
-    """
-    document = load_narrator_voice_document(project_root)
-    profiles = [
-        {
-            **dict(profile),
-            "sample": None,
-        }
-        for profile in document["profiles"]
-    ]
-    document["profiles"] = profiles
     write_narrator_voice_document(project_root, document)
 
 

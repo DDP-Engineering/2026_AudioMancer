@@ -522,20 +522,6 @@ class CharacterVoicesPage(QWidget):
             ui_state_service.localized_language_label(self._translated_language, self._ui_language)
         )
 
-    def _current_original_language_text(self) -> str:
-        """
-        @brief      Return the current original language text.
-        @return     Resolved helper result.
-        """
-        return self._original_language_value_label.text().strip()
-
-    def _current_translated_language_text(self) -> str:
-        """
-        @brief      Return the current translated language text.
-        @return     Resolved helper result.
-        """
-        return self._translated_language_value_label.text().strip()
-
     def _language_indicator_title(self, translation_key: str) -> str:
         """
         @brief      Build the boxed language-indicator title from one translated label template.

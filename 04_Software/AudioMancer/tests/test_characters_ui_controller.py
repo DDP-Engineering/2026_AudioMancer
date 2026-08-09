@@ -548,6 +548,21 @@ def test_character_ui_controller_reset_recovers_invalid_character_document(monke
     assert message_calls == [True]
 
 
+def test_character_operation_summary_does_not_reload_source_chunks(monkeypatch, tmp_path) -> None:
+    """Verify manifest summary projection reads only the authoritative character document."""
+    project_root, _manifest = _create_project(tmp_path, "CharacterSummaryWithoutChunkReload")
+    monkeypatch.setattr(
+        character_discovery_service,
+        "load_input_chunks",
+        lambda *_args, **_kwargs: pytest.fail("summary projection reloaded source chunks"),
+    )
+
+    summary = characters_ui_controller._character_operation_summary(project_root)  # noqa: SLF001
+
+    assert summary is not None
+    assert summary["status"] == "completed"
+
+
 def _create_project(tmp_path, name: str):
     """
     @brief      Provide the create project test helper.

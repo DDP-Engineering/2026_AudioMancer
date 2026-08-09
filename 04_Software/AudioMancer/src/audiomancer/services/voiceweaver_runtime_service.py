@@ -413,8 +413,6 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
     if not qwen_voice_designer_models:
         missing_qwen_capabilities.append("voice_designer")
     return {
-        "definition_models": definition_models,
-        "clone_models": clone_models,
         "voice_designer_models": voice_designer_models,
         "base_models": base_models,
         "qwen_voice_designer_models": qwen_voice_designer_models,

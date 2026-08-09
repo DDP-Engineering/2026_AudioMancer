@@ -332,7 +332,6 @@ def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> No
         narrator_definition_service.select_narrator_profile(
             window._current_project_root,
             profile_id,
-            selected_language,
         )
         window._narator_voice_inspected_profile_id = profile_id
         _sync_manifest_summary(window, profile_id, selected_language)
@@ -987,11 +986,9 @@ def _generate_and_store_sample(
             )
         )
     discovered_models = list(probe_result.get("discovered_models", []))
-    tts_plan = narrator_definition_service.load_tts_plan(project_root, discovered_models)
     generation_request = narrator_definition_service.profile_generation_request(
         profile_payload,
-        tts_plan,
-        discovered_models,
+        discovered_models=discovered_models,
     )
     budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
     safe_budget_units = tts_budget_service.estimated_safe_word_count(budget_payload)

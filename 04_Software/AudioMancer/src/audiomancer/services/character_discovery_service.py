@@ -59,8 +59,6 @@ _CHARACTER_DISCOVERY_LOGGER = get_component_logger("character_discovery")
 CHARACTER_DISCOVERY_MODE_AI_ASSISTED = "ai_assisted"
 # @brief Stable not-started stage token used by the Characters page.
 CHARACTER_DISCOVERY_STAGE_NOT_STARTED = "not_started"
-# @brief Stable running stage token used by the Characters page.
-CHARACTER_DISCOVERY_STAGE_IN_PROGRESS = "in_progress"
 # @brief Stable completed stage token used by the Characters page.
 CHARACTER_DISCOVERY_STAGE_COMPLETED = "completed"
 # @brief Stable chunk id used for manual character evidence entries.
@@ -180,10 +178,7 @@ def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePa
     ]
 
 
-def character_operation_summary(
-    document: CharacterDocumentPayload,
-    source_chunk_count: int = 0,
-) -> dict[str, object]:
+def character_operation_summary(document: CharacterDocumentPayload) -> dict[str, object]:
     """Derive the shared manifest operation summary from one character document."""
     checkpoint = document.get("checkpoint")
     if isinstance(checkpoint, dict) and checkpoint.get("phase") == "discovery":
@@ -327,7 +322,6 @@ def start_or_continue_discovery(
         raw_candidates,
         merged_candidates,
         rejected_candidates,
-        _restored_synthesized_profiles,
         next_candidate_index,
         resume_phase,
     ) = _restore_resume_state(
@@ -375,11 +369,7 @@ def start_or_continue_discovery(
         state_path=document_path,
         status="running",
         phase="synthesis" if merged_candidates else "discovery",
-        progress_current=initial_progress_current,
-        progress_total=initial_progress_total,
-        run_token=run_token,
         profile_id=profile_id,
-        input_fingerprint=input_fingerprint,
         token_usage=token_usage,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
         checkpoint={
@@ -477,11 +467,7 @@ def start_or_continue_discovery(
                 state_path=document_path,
                 status="running",
                 phase="discovery",
-                progress_current=discovery_progress_current,
-                progress_total=discovery_progress_total,
-                run_token=run_token,
                 profile_id=profile_id,
-                input_fingerprint=input_fingerprint,
                 token_usage=token_usage,
                 additional_character_discovery_instructions=additional_character_discovery_instructions,
                 checkpoint=discovery_checkpoint,
@@ -500,11 +486,7 @@ def start_or_continue_discovery(
             state_path=document_path,
             status="cancelled",
             phase="discovery",
-            progress_current=discovery_progress_current,
-            progress_total=discovery_progress_total,
-            run_token=run_token,
             profile_id=profile_id,
-            input_fingerprint=input_fingerprint,
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=discovery_checkpoint,
@@ -517,11 +499,7 @@ def start_or_continue_discovery(
             state_path=document_path,
             status="failed",
             phase="discovery",
-            progress_current=discovery_progress_current,
-            progress_total=discovery_progress_total,
-            run_token=run_token,
             profile_id=profile_id,
-            input_fingerprint=input_fingerprint,
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=discovery_checkpoint,
@@ -537,11 +515,7 @@ def start_or_continue_discovery(
         state_path=document_path,
         status="running",
         phase="synthesis",
-        progress_current=discovery_progress_total + next_candidate_index,
-        progress_total=total_progress,
-        run_token=run_token,
         profile_id=profile_id,
-        input_fingerprint=input_fingerprint,
         token_usage=token_usage,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
         checkpoint={
@@ -630,11 +604,7 @@ def start_or_continue_discovery(
                 state_path=document_path,
                 status="running",
                 phase="synthesis",
-                progress_current=synthesis_progress_current,
-                progress_total=total_progress,
-                run_token=run_token,
                 profile_id=profile_id,
-                input_fingerprint=input_fingerprint,
                 token_usage=token_usage,
                 additional_character_discovery_instructions=additional_character_discovery_instructions,
                 checkpoint=synthesis_checkpoint,
@@ -653,11 +623,7 @@ def start_or_continue_discovery(
             state_path=document_path,
             status="cancelled",
             phase="synthesis",
-            progress_current=synthesis_progress_current,
-            progress_total=total_progress,
-            run_token=run_token,
             profile_id=profile_id,
-            input_fingerprint=input_fingerprint,
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=synthesis_checkpoint,
@@ -670,11 +636,7 @@ def start_or_continue_discovery(
             state_path=document_path,
             status="failed",
             phase="synthesis",
-            progress_current=synthesis_progress_current,
-            progress_total=total_progress,
-            run_token=run_token,
             profile_id=profile_id,
-            input_fingerprint=input_fingerprint,
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
             checkpoint=synthesis_checkpoint,
@@ -688,11 +650,7 @@ def start_or_continue_discovery(
         state_path=document_path,
         status="completed",
         phase="completed",
-        progress_current=total_progress,
-        progress_total=total_progress,
-        run_token=run_token,
         profile_id=profile_id,
-        input_fingerprint=input_fingerprint,
         token_usage=token_usage,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
         checkpoint=None,
@@ -704,7 +662,7 @@ def start_or_continue_discovery(
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
         "character_discovery",
-        character_operation_summary(completed_document, len(source_chunks)),
+        character_operation_summary(completed_document),
         current_stage="character_discovery_ready",
     )
     _emit_progress(
@@ -1699,7 +1657,6 @@ def _restore_resume_state(
     list[dict[str, object]],
     list[dict[str, object]],
     list[dict[str, object]],
-    list[dict[str, object]],
     int,
     str | None,
 ]:
@@ -1711,13 +1668,13 @@ def _restore_resume_state(
     @return     Derived helper result.
     """
     if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
-        return 0, 0, 0, [], [], [], [], 0, None
+        return 0, 0, 0, [], [], [], 0, None
     source = existing_state.get("source", {})
     if not isinstance(source, dict) or str(source.get("fingerprint", "")) != input_fingerprint:
-        return 0, 0, 0, [], [], [], [], 0, None
+        return 0, 0, 0, [], [], [], 0, None
     checkpoint = existing_state.get("checkpoint")
     if not isinstance(checkpoint, dict):
-        return 0, 0, 0, [], [], [], [], 0, None
+        return 0, 0, 0, [], [], [], 0, None
     phase = str(checkpoint.get("phase", ""))
     candidates = _restore_mapping_list(checkpoint.get("candidates"))
     if phase == "discovery":
@@ -1726,11 +1683,11 @@ def _restore_resume_state(
             or type(checkpoint.get("completed_window_count")) is not int
             or type(checkpoint.get("planned_window_count")) is not int
         ):
-            return 0, 0, 0, [], [], [], [], 0, None
+            return 0, 0, 0, [], [], [], 0, None
         completed_window_count = int(checkpoint["completed_window_count"])
         planned_window_count = int(checkpoint["planned_window_count"])
         if completed_window_count < 0 or planned_window_count < completed_window_count:
-            return 0, 0, 0, [], [], [], [], 0, None
+            return 0, 0, 0, [], [], [], 0, None
         next_chunk_index = max(
             0,
             min(int(checkpoint.get("next_chunk_index", 0)), len(source_chunks)),
@@ -1742,18 +1699,17 @@ def _restore_resume_state(
             candidates,
             [],
             [],
-            [],
             0,
             "discovery",
         )
     if phase != "synthesis":
-        return 0, 0, 0, [], [], [], [], 0, None
+        return 0, 0, 0, [], [], [], 0, None
     if (
         type(checkpoint.get("next_candidate_index")) is not int
         or type(checkpoint.get("completed_window_count")) is not int
         or type(checkpoint.get("planned_window_count")) is not int
     ):
-        return 0, 0, 0, [], [], [], [], 0, None
+        return 0, 0, 0, [], [], [], 0, None
     completed_window_count = int(checkpoint["completed_window_count"])
     planned_window_count = int(checkpoint["planned_window_count"])
     if (
@@ -1761,24 +1717,11 @@ def _restore_resume_state(
         or planned_window_count < completed_window_count
         or completed_window_count != planned_window_count
     ):
-        return 0, 0, 0, [], [], [], [], 0, None
+        return 0, 0, 0, [], [], [], 0, None
     next_candidate_index = max(
         0,
         min(int(checkpoint.get("next_candidate_index", 0)), len(candidates)),
     )
-    completed_candidates = candidates[:next_candidate_index]
-    current_ai_by_id = {
-        str(item.get("character_id", "")): item
-        for item in existing_state.get("characters", [])
-        if isinstance(item, dict)
-        and isinstance(item.get("provenance"), dict)
-        and str(item["provenance"].get("origin", "")) == "ai"
-    }
-    synthesized_profiles = [
-        _normalize_character_profile(_flat_character_profile(current_ai_by_id[candidate_id]))
-        for candidate in completed_candidates
-        if (candidate_id := str(candidate.get("character_id", ""))) in current_ai_by_id
-    ]
     return (
         completed_window_count,
         planned_window_count,
@@ -1786,7 +1729,6 @@ def _restore_resume_state(
         [],
         candidates,
         _restore_rejected_candidate_diagnostics(existing_state.get("rejected_candidates")),
-        synthesized_profiles,
         next_candidate_index,
         "synthesis",
     )
@@ -1927,11 +1869,7 @@ def _write_operation_state(
     state_path: Path,
     status: str,
     phase: str,
-    progress_current: int,
-    progress_total: int,
-    run_token: str,
     profile_id: str,
-    input_fingerprint: str,
     token_usage: TokenUsagePayload,
     additional_character_discovery_instructions: str,
     checkpoint: dict[str, object] | None,
@@ -1944,11 +1882,7 @@ def _write_operation_state(
     @param[in]  state_path Operation-state file path.
     @param[in]  status Value for `status`.
     @param[in]  phase Character Discovery operation phase.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  run_token Runtime token preserved only inside the resume checkpoint.
     @param[in]  profile_id Profile identifier.
-    @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  token_usage Value for `token_usage`.
     @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
     @param[in]  checkpoint Value for `checkpoint`.
@@ -1956,12 +1890,6 @@ def _write_operation_state(
     @param[in]  rejected_candidates Current compact rejected-candidate diagnostics.
     @return     None.
     """
-    _ = (
-        progress_current,
-        progress_total,
-        run_token,
-        input_fingerprint,
-    )
     existing_document = load_character_document(state_path.parent)
     resolved_source = dict(source or (existing_document or {}).get("source", {}))
     if not resolved_source:
@@ -2196,18 +2124,6 @@ def _normalize_evidence_confidence(
     if _reason_mentions_dialogue(reason):
         return EVIDENCE_CONFIDENCE_MEDIUM
     return EVIDENCE_CONFIDENCE_LOW
-
-
-def _merge_character_candidates(
-    candidates: list[dict[str, object]],
-) -> list[dict[str, object]]:
-    """
-    @brief      Merge the character candidates.
-    @param[in]  candidates Value for `candidates`.
-    @return     Derived helper result.
-    """
-    merged, _rejected = _merge_character_candidates_with_rejections(candidates)
-    return merged
 
 
 def _merge_character_candidates_with_rejections(

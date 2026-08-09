@@ -395,10 +395,7 @@ def _build_manifest_after_selective_chunk_change(
     operations["character_discovery"] = (
         default_operations["character_discovery"]
         if character_document is None
-        else character_discovery_service.character_operation_summary(
-            character_document,
-            len(character_discovery_service.load_input_chunks(project_root)),
-        )
+        else character_discovery_service.character_operation_summary(character_document)
     )
     if character_document is None:
         operations["character_voices"] = default_operations["character_voices"]

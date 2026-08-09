@@ -732,6 +732,11 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
         "start_threaded_operation",
         _start_threaded_operation,
     )
+    monkeypatch.setattr(
+        narrator_definition_service,
+        "load_tts_plan",
+        lambda *_args, **_kwargs: pytest.fail("sample generation reloaded an unused TTS plan"),
+    )
 
     narator_voice_ui_controller.handle_generate_sample_requested(
         window,

@@ -150,6 +150,7 @@ def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> Non
     assert state["can_add"] is True
     assert state["can_edit"] is True
     assert state["can_delete"] is True
+    assert {"character_count", "can_save", "edit_mode", "dirty"}.isdisjoint(state)
     assert state["source_chunk_map"]["chunk-0001"] == '"Hello there," said Alice.'
     assert any("Discovered 1 speaking characters" in note for note in state["notes"])
     assert any("Input tokens: 140 | Output tokens: 35 | Total: 175" in note for note in state["notes"])
@@ -273,7 +274,7 @@ def test_invalid_character_documents_remain_strict_but_build_recovery_state(tmp_
         )
 
         assert state["profiles"] == []
-        assert state["character_count"] == 0
+        assert {"character_count", "can_save", "edit_mode", "dirty"}.isdisjoint(state)
         assert state["source_chunk_map"] == {"chunk-0001": '"Hello there," said Alice.'}
         assert state["stage_status"] == "failed"
         assert state["selected_profile_id"] == "profile-1"
@@ -282,10 +283,7 @@ def test_invalid_character_documents_remain_strict_but_build_recovery_state(tmp_
             "can_start",
             "can_add",
             "can_edit",
-            "can_save",
             "can_delete",
-            "edit_mode",
-            "dirty",
         )
         assert all(state[flag] is False for flag in disabled_flags)
         assert any(note_fragment in note for note in state["notes"])

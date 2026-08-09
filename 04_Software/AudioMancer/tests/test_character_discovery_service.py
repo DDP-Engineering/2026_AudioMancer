@@ -1419,7 +1419,7 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
     @return     None.
     @exception  None
     """
-    merged_candidates = character_discovery_service._merge_character_candidates(  # noqa: SLF001
+    merged_candidates = character_discovery_service._merge_character_candidates_with_rejections(  # noqa: SLF001
         [
             {
                 "canonical_name": "His Agent",
@@ -1435,7 +1435,7 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
                 "has_dialogue_evidence": True,
             }
         ]
-    )
+    )[0]
 
     assert len(merged_candidates) == 1
     assert merged_candidates[0]["character_id"] == "his_agent"
@@ -1448,7 +1448,7 @@ def test_merge_character_candidates_keeps_strongest_demographic_confidence() -> 
     @return     None.
     @exception  None
     """
-    merged_candidates = character_discovery_service._merge_character_candidates(  # noqa: SLF001
+    merged_candidates = character_discovery_service._merge_character_candidates_with_rejections(  # noqa: SLF001
         [
             {
                 "canonical_name": "The Pilot",
@@ -1489,7 +1489,7 @@ def test_merge_character_candidates_keeps_strongest_demographic_confidence() -> 
                 "has_dialogue_evidence": True,
             },
         ]
-    )
+    )[0]
 
     assert len(merged_candidates) == 1
     assert merged_candidates[0]["gender_hint"] == "female"
@@ -2080,9 +2080,8 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     assert restored[1] == 2
     assert restored[2] == 1
     assert restored[3] == [resume_candidate]
-    assert restored[6] == []
-    assert restored[7] == 0
-    assert restored[8] == "discovery"
+    assert restored[6] == 0
+    assert restored[7] == "discovery"
 
     stale_restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
         {
@@ -2097,7 +2096,7 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         input_fingerprint="abc",
         source_chunks=source_chunks,
     )
-    assert stale_restored == (0, 0, 0, [], [], [], [], 0, None)
+    assert stale_restored == (0, 0, 0, [], [], [], 0, None)
 
 
 def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeypatch, tmp_path) -> None:
@@ -2172,7 +2171,7 @@ def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeyp
         "candidates": checkpoint["candidates"],
     }
     assert (completed_before_cancel, len(planned_windows)) in progress_updates
-    summary = character_discovery_service.character_operation_summary(cancelled_document, len(source_chunks))
+    summary = character_discovery_service.character_operation_summary(cancelled_document)
     assert (summary["progress_current"], summary["progress_total"]) == (completed_before_cancel, len(planned_windows))
     project_workspace_service.sync_manifest_operation_summary(project_root, "character_discovery", summary)
     manifest_progress = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]

@@ -178,7 +178,7 @@ def generate_narrator_profiles(
             "narrator_profile_generation_user",
         ]
     )
-    source_units, source_token, source_path = _resolve_source_units(resolved_project_root, normalized_voice_language)
+    source_units, source_token, _ = _resolve_source_units(resolved_project_root, normalized_voice_language)
     input_fingerprint = _build_input_fingerprint(source_units, source_token, normalized_voice_language)
     system_prompt = prompt_template_service.render_prompt("narrator_profile_style_system", {})
     existing_state = load_operation_state(resolved_project_root) or {}
@@ -192,7 +192,6 @@ def generate_narrator_profiles(
     if not windows:
         raise ValueError("Narrator profile generation requires at least one readable text window.")
 
-    state_path = resolved_project_root / config.NARRATOR_VOICE_FILE_NAME
     allocation = _gender_allocation(requested_count)
     model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
     total_progress = len(windows) + 1
@@ -221,23 +220,13 @@ def generate_narrator_profiles(
         completed_window_count = 0
 
     _write_operation_state(
-        state_path,
         resolved_project_root,
-        input_path=source_path,
-        report_path=None,
         status="running",
-        progress_current=completed_window_count,
-        progress_total=total_progress,
-        started_at=started_at,
-        completed_at=None,
         profile_id=profile_id,
         source_token=source_token,
-        source_unit_count=len(source_units),
         requested_count=requested_count,
-        generated_profile_ids=[],
         gender_allocation=allocation,
         input_fingerprint=input_fingerprint,
-        log_path=log_path,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
         model_settings=model_settings,
@@ -261,23 +250,13 @@ def generate_narrator_profiles(
         @exception  None
         """
         _write_operation_state(
-            state_path,
             resolved_project_root,
-            input_path=source_path,
-            report_path=None,
             status=status,
-            progress_current=len(observations),
-            progress_total=total_progress,
-            started_at=started_at,
-            completed_at=None,
             profile_id=profile_id,
             source_token=source_token,
-            source_unit_count=len(source_units),
             requested_count=requested_count,
-            generated_profile_ids=[],
             gender_allocation=allocation,
             input_fingerprint=input_fingerprint,
-            log_path=log_path,
             token_usage=token_usage,
             budget_metadata=budget_metadata,
             model_settings=model_settings,
@@ -331,23 +310,13 @@ def generate_narrator_profiles(
             _write_interrupted_state("failed")
             raise
         _write_operation_state(
-            state_path,
             resolved_project_root,
-            input_path=source_path,
-            report_path=None,
             status="running",
-            progress_current=window_index,
-            progress_total=total_progress,
-            started_at=started_at,
-            completed_at=None,
             profile_id=profile_id,
             source_token=source_token,
-            source_unit_count=len(source_units),
             requested_count=requested_count,
-            generated_profile_ids=[],
             gender_allocation=allocation,
             input_fingerprint=input_fingerprint,
-            log_path=log_path,
             token_usage=token_usage,
             budget_metadata=budget_metadata,
             model_settings=model_settings,
@@ -417,19 +386,9 @@ def generate_narrator_profiles(
     except Exception:
         _write_interrupted_state("failed")
         raise
-    generation_metadata = {
-        "generated_by": "ai_narrator_profile_generation",
-        "ai_profile_id": profile_id,
-        "model_name": model_name,
-        "source": source_token,
-        "input_fingerprint": input_fingerprint,
-        "additional_profile_instructions": additional_profile_instructions,
-        "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
-    }
     created_profiles = narrator_definition_service.append_ai_generated_profiles(
         resolved_project_root,
         validated_profiles,
-        generation_metadata,
         persist=False,
     )
     generated_profile_ids = [str(profile.get("profile_id", "")) for profile in created_profiles]
@@ -1195,24 +1154,14 @@ def _is_valid_gender_allocation(gender_allocation: dict[str, object], requested_
 
 
 def _write_operation_state(
-    state_path: Path,
     project_root: Path,
     *,
-    input_path: Path,
-    report_path: Path | None,
     status: str,
-    progress_current: int,
-    progress_total: int,
-    started_at: str,
-    completed_at: str | None,
     profile_id: str,
     source_token: str,
-    source_unit_count: int,
     requested_count: int,
-    generated_profile_ids: list[str],
     gender_allocation: dict[str, object],
     input_fingerprint: str,
-    log_path: Path,
     token_usage: dict[str, object],
     budget_metadata: dict[str, int],
     model_settings: dict[str, object],
@@ -1222,23 +1171,13 @@ def _write_operation_state(
 ) -> None:
     """
     @brief      Persist one narrator-profile-generation operation state.
-    @param[in]  state_path Runtime state artifact path.
     @param[in]  project_root Active project root folder.
-    @param[in]  input_path Backing input artifact path.
-    @param[in]  report_path Optional completed report artifact path.
     @param[in]  status Runtime operation status token.
-    @param[in]  progress_current Completed work units.
-    @param[in]  progress_total Total work units.
-    @param[in]  started_at Runtime token preserved only inside the resume checkpoint.
-    @param[in]  completed_at Ignored legacy completion timestamp.
     @param[in]  profile_id Selected AI profile identifier.
     @param[in]  source_token Selected input source token.
-    @param[in]  source_unit_count Number of text units analyzed.
     @param[in]  requested_count Requested narrator profile count.
-    @param[in]  generated_profile_ids Generated narrator profile identifiers.
     @param[in]  gender_allocation Requested gender-allocation metadata.
     @param[in]  input_fingerprint Stable source fingerprint.
-    @param[in]  log_path AI transaction log path.
     @param[in]  token_usage Cumulative token usage.
     @param[in]  budget_metadata Context-budget metadata.
     @param[in]  model_settings Selected model settings metadata.
@@ -1248,16 +1187,6 @@ def _write_operation_state(
     @return     None.
     @exception  None
     """
-    _ = state_path
-    _ = input_path
-    _ = report_path
-    _ = progress_current
-    _ = progress_total
-    _ = started_at
-    _ = completed_at
-    _ = source_unit_count
-    _ = generated_profile_ids
-    _ = log_path
     normalized_instructions = _normalized_additional_profile_instructions(additional_profile_instructions)
     instruction_fingerprint = _compute_prompt_fingerprint(normalized_instructions)
     document = narrator_definition_service.load_narrator_voice_document(project_root)

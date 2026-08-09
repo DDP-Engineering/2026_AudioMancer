@@ -68,16 +68,12 @@ def test_characters_page_renders_invalid_document_recovery_controls(qtbot) -> No
         notes=["Character Discovery data is invalid. Reset Discovery to recover this page."],
         selected_profile_id="profile-1",
         stage_status="failed",
-        character_count=0,
         source_chunk_map={"chunk-0001": '"Hello there," said Alice.'},
         can_start=False,
         can_reset=True,
         can_add=False,
         can_edit=False,
-        can_save=False,
         can_delete=False,
-        edit_mode=False,
-        dirty=False,
     )
 
     assert page._reset_button.isEnabled() is True
@@ -256,7 +252,6 @@ def _build_page(qtbot, profiles=None) -> CharactersPage:
         notes=["Completed."],
         selected_profile_id="profile-1",
         stage_status="completed",
-        character_count=1 if profiles is None else len(profiles),
         source_chunk_map={
             "chunk-0001": '"Hello there," said Alice.',
             "manual": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
@@ -265,10 +260,7 @@ def _build_page(qtbot, profiles=None) -> CharactersPage:
         can_reset=True,
         can_add=True,
         can_edit=True,
-        can_save=False,
         can_delete=True,
-        edit_mode=False,
-        dirty=False,
     )
     return page
 
