@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-4ee8b9de — Reset owned Character Discovery logs and Character Voices samples
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-fc51aea2, REQ-FUNC-de9cf536
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language without a version change
 
@@ -76,6 +76,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Semantic diff review confirms no blanket WAV glob, UI/schema/dependency/version/packaging/release/planning changes, and narrator, unrelated, unsafe, unreadable, and explicitly preserved artifacts retain their required behavior.
 - 2026-08-09 deliver: Human checkpoint approved after independent staged-index review of exactly seven scoped files and an independent rerun of all six linked regressions with six passing.
 - 2026-08-09 deliver: Approved outcome is one delivery commit followed by one journal-only closeout commit, with no push or merge.
+- 2026-08-09 close-out: Delivery commit `917ba8e60ea049380f1b3091b3ad2c2fea19d4db` succeeded with seven scoped files after 1537 full-suite tests passed, and this journal-only commit closes the task without a push or merge.
 
 ## Design
 
