@@ -679,12 +679,15 @@ def _build_project_manifest_healing_result(
     @exception  ValueError Raised when non-repairable manifest fields are invalid.
     """
     current_stage_is_invalid = _is_invalid_current_stage(payload)
-    base_stage = (
-        _derive_trustworthy_stage(payload) if current_stage_is_invalid else str(payload["current_stage"])
-    )
     if current_stage_is_invalid:
+        base_stage = (
+            "source_selected"
+            if _normalize_source_document(payload.get("source_document")) is not None
+            else config.DEFAULT_WORKFLOW_STAGE
+        )
         candidate_manifest = _build_repaired_manifest(payload, base_stage)
     else:
+        base_stage = str(payload["current_stage"])
         candidate_manifest = validate_project_manifest(payload)
 
     changes: list[str] = []
@@ -1575,18 +1578,6 @@ def _build_repaired_manifest(
         str(repaired_manifest["current_stage"]),
     )
     return repaired_manifest
-
-
-def _derive_trustworthy_stage(payload: dict[str, object]) -> str:
-    """
-    @brief      Derive the highest workflow stage justified by current manifest metadata.
-    @param[in]  payload Parsed manifest payload.
-    @return     Conservatively trusted stage token.
-    @exception  None
-    """
-    if _normalize_source_document(payload.get("source_document")) is not None:
-        return "source_selected"
-    return config.DEFAULT_WORKFLOW_STAGE
 
 
 def _stage_rank(stage_token: str) -> int:
