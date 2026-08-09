@@ -41,6 +41,11 @@ sequential: each candidate is compacted to the current profile budget and sent
 in one AI request, then the resulting character and next index are committed
 atomically.
 
+Window construction uses `max_window_chunks` and `window_overlap` from the
+selected profile's computed budget metadata. Online profiles use
+`max_window_chunks = 0`, which removes the local chunk-count cap while retaining
+the direct context-budget limit (REQ-FUNC-9f4389c9).
+
 Resume keeps four concepts separate. The root character array is the current
 durable inventory, checkpoint candidates are discovery output, the completed
 candidate prefix identifies prior synthesis results still present by stable

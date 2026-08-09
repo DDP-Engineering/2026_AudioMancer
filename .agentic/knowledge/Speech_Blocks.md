@@ -81,8 +81,9 @@ otherwise it uses the original Chunking document text through its shared reader.
   snapshot and response-contract marker.
 - Multi-segment generation assigns contiguous chunk-local order before every
   checkpoint. Resuming an active segment continues after the already persisted
+  rows, including when Scene Ambience insertion renumbers the new chunk-local
   rows, so intermediate, resumed, and uninterrupted documents preserve the same
-  canonical source order (REQ-REL-0e236c91).
+  canonical source order (REQ-REL-0e236c91, REQ-FUNC-b355f8e6).
 - `same_narrator` segmentation is deterministic and total: concatenating the
   `source_text` of a chunk's blocks reproduces that chunk character for
   character, and the service raises rather than persisting a lossy plan. A

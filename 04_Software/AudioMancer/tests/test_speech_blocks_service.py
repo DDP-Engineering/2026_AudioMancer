@@ -746,9 +746,12 @@ def test_start_generation_direct_malformed_json_falls_back_for_segment_only(monk
     assert speech_blocks[1]["warning_flags"] == []
 
 
-def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypatch, tmp_path) -> None:
+def test_speech_blocks_resume_with_scene_ambience_preserves_unfinished_direct_segment_order(
+    monkeypatch,
+    tmp_path,
+) -> None:
     """
-    @brief      Verify direct Speech Blocks resume skips completed segments in the active chunk.
+    @brief      Verify ambience insertion keeps resumed direct blocks after persisted segment rows.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -758,24 +761,28 @@ def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypat
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    _write_source_chunks(project_root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "First.Second."}])
+    _write_source_chunks(
+        project_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "First A. First B. Second."}],
+    )
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
     existing_blocks = [
         {
-            "speech_block_id": "0001-000001",
-            "sequence_index": 1,
+            "speech_block_id": f"0001-{sequence_index:06d}",
+            "sequence_index": sequence_index,
             "chunk_id": "chunk-0001",
             "source_language": "en",
             "speaker_kind": "narrator",
             "speaker_id": "narrator",
             "speaker_display_name": "Narrator",
             "content_kind": "narration",
-            "source_text": "First.",
-            "text": "First.",
+            "source_text": text,
+            "text": text,
             "warning_flags": [],
             "approved": False,
             "approved_at": None,
         }
+        for sequence_index, text in enumerate(("First A.", "First B."), start=1)
     ]
     fingerprint = speech_blocks_service._build_source_fingerprint(source_resolution["source_chunks"], "en", "original")  # noqa: SLF001
     budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
@@ -840,7 +847,7 @@ def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypat
         speech_blocks_service,
         "_budgeted_source_chunk_segments",
         lambda _source_chunk, _budget_metadata, **_kwargs: [
-            {"chunk_id": "chunk-0001", "text": "First."},
+            {"chunk_id": "chunk-0001", "text": "First A. First B."},
             {"chunk_id": "chunk-0001", "text": "Second."},
         ],
     )
@@ -852,6 +859,20 @@ def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypat
         @return     Fake direct Speech Blocks response.
         @exception  None
         """
+        if str(_kwargs["log_context"]["stage_label"]) == "scene_ambience_chunk":
+            return {
+                "payload": {
+                    "scene_ambience_blocks": [
+                        {
+                            "ambience_position": "closer",
+                            "sound_prompt": "quiet room tone fading away",
+                            "negative_prompt": "speech",
+                            "duration_seconds": 4,
+                        }
+                    ]
+                },
+                "usage": {"input_tokens": 3, "output_tokens": 2, "total_tokens": 5, "usage_available": True},
+            }
         segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
         requested_segments.append(segment_text)
         return {
@@ -871,12 +892,22 @@ def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypat
 
     monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
 
-    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+    speech_blocks_service.start_or_continue_generation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        settings_payload={"scene_ambience_placement": "openers_and_closers"},
+    )
 
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert requested_segments == ["Second."]
-    assert [block["source_text"] for block in speech_blocks] == ["First.", "Second."]
-    assert [block["speech_block_id"] for block in speech_blocks] == ["0001-000001", "0001-000002"]
+    spoken_blocks = [block for block in speech_blocks if block["content_kind"] != "scene_ambience"]
+    assert [block["source_text"] for block in spoken_blocks] == ["First A.", "First B.", "Second."]
+    assert [block["speech_block_id"] for block in spoken_blocks] == [
+        "0001-000001",
+        "0001-000002",
+        "0001-000003",
+    ]
 
 
 def test_multi_segment_checkpoint_and_resume_preserve_block_order(monkeypatch, tmp_path) -> None:

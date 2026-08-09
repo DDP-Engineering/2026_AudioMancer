@@ -346,8 +346,8 @@ def start_or_continue_discovery(
         if merged_candidates
         else _build_chunk_windows(
             source_chunks[next_discovery_start_chunk_index:],
-            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+            int(budget_metadata["max_window_chunks"]),
+            int(budget_metadata["window_overlap"]),
             budget_metadata,
         )
     )

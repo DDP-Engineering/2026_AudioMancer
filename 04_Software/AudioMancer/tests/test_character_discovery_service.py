@@ -1172,9 +1172,9 @@ def test_incompatible_or_forced_restart_retains_established_fresh_run_behavior(
     assert [item["character_id"] for item in completed["characters"]] == ["alice"]
 
 
-def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
+def test_start_discovery_builds_windows_once_with_budget_metadata_parameters(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-NFR-017 discovery startup avoids duplicate full-window construction.
+    @brief      Verify discovery startup builds windows once with profile-derived budget parameters.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -1182,8 +1182,14 @@ def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoverySingleWindowBuild")
     _patch_character_discovery_prompt_rendering(monkeypatch)
+    budget_metadata = character_discovery_service._build_budget_metadata(  # noqa: SLF001
+        _profile_payload("profile-1"),
+        "system prompt",
+    )
+    budget_metadata["max_window_chunks"] = "0"
+    budget_metadata["window_overlap"] = "3"
     original_build_chunk_windows = character_discovery_service._build_chunk_windows  # noqa: SLF001
-    build_call_count = 0
+    build_calls: list[tuple[int, int, bool]] = []
 
     def _count_build_chunk_windows(*args, **kwargs):
         """
@@ -1191,11 +1197,11 @@ def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
         @return     Original window construction result.
         @exception  ValueError Propagated from original window construction.
         """
-        nonlocal build_call_count
-        build_call_count += 1
+        build_calls.append((int(args[1]), int(args[2]), args[3] is budget_metadata))
         return original_build_chunk_windows(*args, **kwargs)
 
     responses = iter([_window_response_payload(), _synthesis_response_payload()])
+    monkeypatch.setattr(character_discovery_service, "_build_budget_metadata", lambda *_args: budget_metadata)
     monkeypatch.setattr(character_discovery_service, "_build_chunk_windows", _count_build_chunk_windows)
     monkeypatch.setattr(
         character_discovery_service.llm_provider_service,
@@ -1211,7 +1217,7 @@ def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
         cancel_requested=lambda: False,
     )
 
-    assert build_call_count == 1
+    assert build_calls == [(0, 3, True)]
 
 
 def test_manual_add_update_delete_and_reset(tmp_path) -> None:
@@ -2103,6 +2109,8 @@ def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeyp
         "text_budget_tokens": 10000,
         "synthesis_payload_budget_tokens": 10000,
         "synthesis_max_evidence_items": 8,
+        "max_window_chunks": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
+        "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
     }
     monkeypatch.setattr(character_discovery_service, "_build_budget_metadata", lambda *_args: budget_metadata)
     source_chunks, _source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001

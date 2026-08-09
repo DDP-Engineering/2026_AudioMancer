@@ -931,7 +931,6 @@ def start_or_continue_generation(
                 _persist_segment_progress if str(voice_assignment_mode).strip() != "same_narrator" else None
             ),
         )
-        chunk_blocks = _continue_chunk_sequence_indices(chunk_blocks, existing_chunk_block_count)
         token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
         if bool(scene_ambience_settings["enabled"]):
             ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
@@ -953,6 +952,7 @@ def start_or_continue_generation(
             )
             token_usage = token_usage_service.merge_token_usage(token_usage, ambience_token_usage)
             chunk_blocks = _insert_scene_ambience_blocks(chunk_blocks, ambience_blocks)
+        chunk_blocks = _continue_chunk_sequence_indices(chunk_blocks, existing_chunk_block_count)
         all_blocks.extend(chunk_blocks)
         all_blocks = _renumber_speech_blocks(source_chunks, all_blocks)
         covered_chunk_ids.add(chunk_id)

@@ -79,6 +79,9 @@ All notable changes to this project will be documented in this file.
 - Speech Blocks checkpoints now preserve the original narration and dialogue
   order across multi-segment generation, so resuming an interrupted chunk
   produces the same ordered plan as an uninterrupted run.
+- Resumed Speech Blocks now keep completed segment rows ahead of newly generated
+  rows when Scene Ambience is enabled, preserving the intended spoken order and
+  stable block IDs within the active chunk.
 - Editing or approving Speech Blocks in a same-narrator project now preserves
   its deterministic segmentation contract instead of changing it to the
   narrator-and-characters contract.
@@ -89,6 +92,9 @@ All notable changes to this project will be documented in this file.
   projects and deletes only Character Voices sample WAVs proven by saved target
   metadata, preserving narrator audio, unrelated WAVs, unsafe paths, and
   explicitly preserved voice data.
+- Character Discovery now builds production source windows from the selected
+  profile's computed chunk cap and overlap, including budget-only packing for
+  online profiles.
 - Character Voices now waits for real persisted voice targets and samples
   before marking the step complete, reports sample-import filesystem failures
   without closing the application, reflects samples completed before a batch
