@@ -112,7 +112,8 @@ otherwise it uses the original Chunking document text through its shared reader.
   selection (REQ-UX-6d27b63d).
 - Entering or declining Edit performs no Speech Blocks persistence and does not
   clear warning flags; warning cleanup remains owned by a successful
-  `update_speech_block` commit, while failed saves retain the warnings
+  `update_speech_block` commit, while failed saves retain the warnings and
+  reproject and reselect the persisted block after the page exits edit mode
   (REQ-FUNC-35098598).
 - Scene-ambience insertion remaps each matched `after_speech_block_id` from the
   spoken row's old identifier to its post-insertion identifier, including when

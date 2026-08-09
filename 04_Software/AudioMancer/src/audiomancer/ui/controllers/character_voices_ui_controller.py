@@ -201,7 +201,17 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     _stop_preview_playback(window)
     try:
         character_voices_service.begin_target_prompt_edit(window._current_project_root, target_id)
-    except ValueError:
+    except ValueError as error:
+        message_key = (
+            "voice_sample_import.error_readonly_target"
+            if str(error) == "readonly_target"
+            else "character_voices.error_target"
+        )
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate(message_key, current_language),
+        )
         return
     window._character_voices_inspected_target_id = target_id
     _sync_manifest_stage(window)

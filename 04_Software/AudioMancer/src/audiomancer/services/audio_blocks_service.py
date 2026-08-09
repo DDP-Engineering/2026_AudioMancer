@@ -934,13 +934,17 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
     existing_audio_blocks = load_audio_blocks(resolved_project_root)
     if not existing_audio_blocks:
         return load_audio_blocks_report(resolved_project_root) or _persist_report_update(resolved_project_root, [])
+    tts_plan = narrator_definition_service.load_tts_plan(resolved_project_root)
+    voice_assignment_mode = str(
+        tts_plan.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)
+    )
     existing_by_speech_block_id = {
         str(block.get("speech_block_id", "")).strip(): dict(block) for block in existing_audio_blocks
     }
     reconciled_blocks: list[AudioBlockPayload] = []
     for speech_block in speech_blocks:
         chunk_id = str(speech_block.get("chunk_id", "")).strip()
-        new_block = _initialize_audio_blocks([speech_block])[0]
+        new_block = _initialize_audio_blocks([speech_block], voice_assignment_mode)[0]
         if chunk_id == str(changed_chunk_id).strip():
             old_block = existing_by_speech_block_id.get(str(speech_block.get("speech_block_id", "")).strip())
             if old_block is not None:

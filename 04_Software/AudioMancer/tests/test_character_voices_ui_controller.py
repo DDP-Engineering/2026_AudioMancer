@@ -28,6 +28,7 @@ from audiomancer.services import (
     narrator_definition_service,
     operation_runtime_service,
     project_workspace_service,
+    ui_state_service,
 )
 from audiomancer.ui.controllers import character_voices_ui_controller
 from audiomancer.ui.main_window import MainWindow
@@ -96,6 +97,60 @@ def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked(monke
     assert window._character_voices_page.is_edit_mode() is True
     assert window._character_voices_page._prompt_edit.isReadOnly() is False
     assert window._character_voices_page._preview_text_edit.isReadOnly() is False
+
+
+@pytest.mark.parametrize(
+    ("error_code", "message_key"),
+    [
+        ("readonly_target", "voice_sample_import.error_readonly_target"),
+        ("missing_target", "character_voices.error_target"),
+    ],
+)
+def test_character_voices_edit_prompt_failure_shows_localized_warning(
+    monkeypatch, qtbot, tmp_path, error_code, message_key
+) -> None:
+    """
+    @brief      Verify rejected Character Voices edit targets produce localized operator feedback.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  error_code Service error token raised after confirmation.
+    @param[in]  message_key Expected localized warning-message key.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesEditFailure")
+    window = _build_window(qtbot, project_root)
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        character_voices_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, title, message: warnings.append((title, message)),
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.character_voices_service,
+        "begin_target_prompt_edit",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError(error_code)),
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller,
+        "_sync_manifest_stage",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("failed edit must not synchronize state")),
+    )
+
+    character_voices_ui_controller.handle_edit_prompt_requested(window, "character_alice")
+
+    assert warnings == [
+        (
+            ui_state_service.translate("dialog.project_error_title", "en"),
+            ui_state_service.translate(message_key, "en"),
+        )
+    ]
 
 
 def test_character_voices_ui_controller_page_activation_warns_when_narrator_sample_is_missing(

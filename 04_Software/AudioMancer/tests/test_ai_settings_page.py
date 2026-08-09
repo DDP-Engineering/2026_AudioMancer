@@ -97,8 +97,10 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
         "Default Speech Blocks Profile",
     ]
     assert page._cancel_button.text() == "Cancel"
-    assert page._save_button.text() == "Save"
+    assert page._save_button.text() == "Apply"
     assert page._ok_button.text() == "OK"
+    page.apply_language("ro")
+    assert page._save_button.text() == "Aplica"
 
 
 def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> None:

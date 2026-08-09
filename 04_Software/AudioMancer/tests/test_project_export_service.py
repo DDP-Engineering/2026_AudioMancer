@@ -55,6 +55,21 @@ def test_project_export_service_detects_readiness_for_all_export_types(tmp_path)
     }
 
 
+def test_project_export_service_narrator_default_filename_uses_user_facing_spelling() -> None:
+    """
+    @brief      Verify narrator archive defaults use the correctly spelled user-facing export label.
+    @return     None.
+    @exception  None
+    """
+    file_name = project_export_service.default_export_file_name(
+        {"display_name": "Demo Project"},
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        project_export_service.EXPORT_FORMAT_ZIP,
+    )
+
+    assert file_name == "Demo_Project_narrator_voice.zip"
+
+
 def test_project_export_service_reports_not_ready_and_missing_artifact(tmp_path) -> None:
     """
     @brief      Verify readiness separates incomplete operations from missing artifacts.

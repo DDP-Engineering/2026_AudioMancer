@@ -12,6 +12,7 @@ verification = "Focused localization coverage, catalog parity, page/controller r
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
   "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
   "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
@@ -26,7 +27,10 @@ affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
 ]
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_default_selectors_are_stacked_in_workflow_order",
+  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_edit_prompt_failure_shows_localized_warning",
   "04_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_loads_runtime_limits_without_project_plan",
   "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_app_owned_dialog_calls_do_not_embed_operator_facing_literals",
   "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_each_persistent_page_localizes_audited_visible_text",
   "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_runtime_language_change_refreshes_current_project_page",
@@ -39,4 +43,4 @@ rationale = """
 Catalog parity alone does not prevent widgets and dialog calls from retaining constructor-time English literals, as confirmed by manual Romanian testing.
 """
 created = 2026-07-29
-updated = 2026-07-29
+updated = 2026-08-09

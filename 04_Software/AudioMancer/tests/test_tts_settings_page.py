@@ -78,8 +78,10 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert "scene_ambience_generation_enabled" not in page.build_settings(default_settings_payload)
     assert "scene_ambience_audio_generation_enabled" not in page.build_settings(default_settings_payload)
     assert page._cancel_button.text() == "Cancel"
-    assert page._save_button.text() == "Save"
+    assert page._save_button.text() == "Apply"
     assert page._ok_button.text() == "OK"
+    page.apply_language("ro")
+    assert page._save_button.text() == "Aplica"
 
 
 def test_tts_settings_page_round_trips_the_narration_block_target(qtbot, default_settings_payload) -> None:

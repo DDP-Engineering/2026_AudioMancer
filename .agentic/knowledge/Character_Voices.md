@@ -28,6 +28,9 @@ batch generation, and preview signals.
   the page and manifest before presenting cancellation status.
 - `REQ-UX-1e55ab3b` — valid edit mode keeps Save reachable and emits unchanged
   prompt and preview text through the established save path.
+- `REQ-UX-aa109e16` — a confirmed prompt edit that reaches a read-only or
+  missing target shows the localized specific or generic project warning and
+  returns before manifest sync, invalidation, refresh, or edit-mode entry.
 - `REQ-REL-ee8f9ed0` — generated, imported, and narrator-copied sample WAV
   bytes publish through the shared atomic persistence contract without changing
   sample metadata ownership or cancellation behavior.

@@ -109,9 +109,11 @@ clearing the rules may restart analysis, and cancelling either dialog starts
 no runtime work. Selecting another enabled AI profile survives ordinary page
 and narrator-list refreshes. Changing the effective voice language preserves
 authored preview text; untouched canonical defaults follow the new language. If
-an inspected profile disappears before editing, the controller reports a
-localized project error. Edit and delete mutations release active preview media
-before sample cleanup.
+an inspected profile disappears before editing or deletion, the controller
+reports a localized project error. The narrator edit service has no read-only
+profile outcome: every existing profile is editable and only a missing profile
+is rejected. Edit and delete mutations release active preview media before
+sample cleanup (`REQ-UX-08439166`).
 
 ## 9. Validation And Tests
 

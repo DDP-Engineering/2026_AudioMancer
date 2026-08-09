@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Audio Blocks re-split reconciliation now preserves same-narrator voice
+  assignment, and rejected Speech Block saves restore the persisted block text
+  after the editor closes.
+- Character Voices and Narrator Voice now report stale or unavailable edit and
+  delete targets instead of making confirmed actions appear unresponsive.
+- AI and TTS Settings now label their non-closing action Apply, and narrator
+  export default filenames use the correctly spelled user-facing label.
 - Rejected Text Chunking edits no longer appear saved in the chunk list or
   read-only editor, and AI Translation no longer inserts paragraph breaks
   between budget-split pieces of the same oversized source paragraph.

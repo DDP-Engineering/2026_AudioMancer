@@ -199,6 +199,9 @@ instructions from the Chunking document.
   operation names, and initial statuses must be translated before display.
   Brand names, provider/model IDs, file formats, numeric units, project
   content, and operator-authored names remain unchanged.
+- AI and TTS Settings use Apply for their non-closing middle action and OK for
+  save-and-close in English and Romanian, matching their unchanged controller
+  wiring (`REQ-UX-aa109e16`).
 - `play_completion_beep` is the persisted operator preference for an audible
   end-of-operation signal. `ui_state_service.completion_beep_enabled_from_settings`
   is the pure resolver (a non-mapping payload and a missing key both yield the

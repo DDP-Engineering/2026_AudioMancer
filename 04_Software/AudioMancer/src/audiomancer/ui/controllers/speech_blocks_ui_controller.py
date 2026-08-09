@@ -354,6 +354,12 @@ def handle_save_block_requested(
             ui_state_service.translate("dialog.project_error_title", current_language),
             str(error),
         )
+        update_block_item = getattr(window._speech_blocks_page, "update_speech_block_item", None)
+        if callable(update_block_item):
+            update_block_item(_speech_block_display_payload(None, original_block))
+        select_block = getattr(window._speech_blocks_page, "select_speech_block", None)
+        if callable(select_block):
+            select_block(speech_block_id)
         return
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
     _reset_audio_block_after_speech_block_change(window, speech_block_id, refresh_page=False)

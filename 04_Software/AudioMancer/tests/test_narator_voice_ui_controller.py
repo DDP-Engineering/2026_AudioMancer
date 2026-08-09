@@ -214,6 +214,44 @@ def test_narator_voice_delete_profile_releases_preview_before_mutation(monkeypat
     ]
 
 
+def test_narator_voice_delete_missing_profile_shows_localized_profile_error(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a stale narrator delete target reports the localized generic profile error.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    warnings: list[tuple[str, str]] = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=tmp_path,
+    )
+    monkeypatch.setattr(narator_voice_ui_controller, "_selected_profile_id", lambda _window: None)
+    monkeypatch.setattr(narator_voice_ui_controller, "_confirm_delete_profile", lambda *_args: True)
+    monkeypatch.setattr(narator_voice_ui_controller, "_stop_preview_playback", lambda *_args: None)
+    monkeypatch.setattr(narator_voice_ui_controller, "_start_narator_voice_change_progress", lambda *_args: None)
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "delete_profile",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("missing_profile")),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, title, message: warnings.append((title, message)),
+    )
+
+    narator_voice_ui_controller.handle_delete_profile_requested(window, "stale-profile-id")
+
+    assert warnings == [
+        (
+            ui_state_service.translate("dialog.project_error_title", "en"),
+            ui_state_service.translate("narator_voice.error_profile", "en"),
+        )
+    ]
+
+
 def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify explicit narrator selection persists when a profile sample exists.

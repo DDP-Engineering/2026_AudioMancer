@@ -95,6 +95,10 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - Cancellation rebuilds use the resolved project voice-assignment mode, so
   same-narrator dialogue rows keep the narrator target used by later voice
   invalidation (`REQ-FUNC-d53b102d`).
+- Re-split reconciliation resolves the project TTS plan once and initializes
+  every changed or newly projected row with that voice-assignment mode, so
+  same-narrator character-speaker rows continue to target the narrator
+  (`REQ-FUNC-f5c39900`).
 - State publishes Play and Re-Generate eligibility per row. Pause rows can Play
   as timed silence but cannot regenerate; indication and metadata-only Scene
   Ambience rows cannot Play; real speech and ambience WAVs remain playable
@@ -108,6 +112,9 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   fields exactly; once the current session applies a probe, its success or
   failure and exact message become authoritative until the next `load_state`
   (`REQ-FUNC-77fce48b`, `REQ-FUNC-8749869e`).
+- The TTS Settings middle action persists changes without closing and is
+  therefore labeled Apply in both supported interface languages; OK retains
+  the save-and-close path (`REQ-UX-aa109e16`).
 - Generated voice and sound WAV download helpers translate a direct
   `TimeoutError` to `Connection failed: request timed out.` with the original
   exception chained, while retaining existing HTTPError and URLError handling

@@ -14,7 +14,7 @@ schema = 1
 # and must match the category folder this file sits in.
 id = "REQ-UX-08439166"
 
-title = "Report unavailable narrator profiles during editing"
+title = "Report unavailable narrator profiles during edit and delete"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
@@ -38,13 +38,13 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When narrator profile editing targets a profile that is no longer available,
-the Narrator Voice controller shall show a localized generic profile error.
+When narrator profile editing or deletion targets a profile that is no longer
+available, the Narrator Voice controller shall show a localized generic profile error.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "A controller test makes profile edit preparation raise `missing_profile` and observes the localized generic profile error warning instead of a silent return."
+verification = "Controller tests make profile edit preparation and deletion raise `missing_profile` and observe the localized generic profile error warning instead of a silent return."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
@@ -56,6 +56,7 @@ affected_paths = [
 # these select the impacted regression set.
 linked_tests = [
   "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_missing_profile_shows_localized_profile_error",
+  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_delete_missing_profile_shows_localized_profile_error",
 ]
 
 # --- optional below this line ---
@@ -64,7 +65,7 @@ linked_tests = [
 spec = ""
 
 priority = "normal"   # low | normal | high
-rationale = "A stale inspected profile must produce actionable operator feedback instead of making the Edit button appear unresponsive."
+rationale = "A stale inspected profile must produce actionable operator feedback instead of making confirmed Edit or Delete actions appear unresponsive."
 
 created = 2026-08-08
-updated = 2026-08-08
+updated = 2026-08-09

@@ -200,7 +200,10 @@ operator-approved stage-reset request and are never normalized into absence.
 Narrator completion evidence and exports are projections of the strict
 `narrator_voice.json` document. The selected profile's language, inline sample
 metadata, and canonical `audio_narator_<profile_id>.wav` are resolved at read
-time. Narrator reset owns only the current document, canonical profile WAVs,
+time. The public export label is `Narrator Voice`, including its derived
+default archive filename, without changing persisted narrator identifiers or
+module and localization-key names (`REQ-FUNC-5e008e3b`). Narrator reset owns
+only the current document, canonical profile WAVs,
 and `log_ai_narrator_profiles_*.log`. Project snapshots include the document
 and WAVs while excluding AI transaction logs.
 

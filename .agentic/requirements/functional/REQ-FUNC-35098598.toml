@@ -6,10 +6,11 @@ status = "active"
 requirement = """
 When an operator enters, cancels, or unsuccessfully saves a Speech Block edit,
 the controller shall leave persisted warning flags unchanged so that only a
-successful authoritative block update clears them.
+successful authoritative block update clears them, and an unsuccessful save
+shall restore the persisted block projection after edit mode ends.
 """
 
-verification = "Controller and service-spy regressions open a warned block without persistence or review-summary refresh, decline edit entry and fail a save without clearing warnings, then commit a valid edit and observe warning cleanup through update_speech_block only."
+verification = "Controller and service-spy regressions open a warned block without persistence or review-summary refresh, decline edit entry, fail a save without clearing warnings while restoring persisted editor text, then commit a valid edit and observe warning cleanup through update_speech_block only."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
@@ -21,6 +22,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_start_skips_warning_clear_when_clean",
   "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_edit_decline_keeps_editor_locked",
   "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_failed_save_preserves_warning_flags",
+  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_failed_save_reprojects_persisted_block",
   "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_save_restores_chunk_text_scroll",
 ]
 

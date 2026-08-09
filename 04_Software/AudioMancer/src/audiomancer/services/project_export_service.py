@@ -94,7 +94,7 @@ _EXPORT_KIND_LABELS = {
     EXPORT_KIND_TEXT_CHUNKS: "Text Chunks",
     EXPORT_KIND_AI_TRANSLATION: "AI Translation",
     EXPORT_KIND_CHARACTERS: "Characters",
-    EXPORT_KIND_NARRATOR_VOICE: "Narator Voice",
+    EXPORT_KIND_NARRATOR_VOICE: "Narrator Voice",
     EXPORT_KIND_CHARACTER_VOICES: "Character Voices",
     EXPORT_KIND_SPEECH_BLOCKS: "Speech Blocks",
     EXPORT_KIND_AUDIO_ASSEMBLY: "Audio Assembly",

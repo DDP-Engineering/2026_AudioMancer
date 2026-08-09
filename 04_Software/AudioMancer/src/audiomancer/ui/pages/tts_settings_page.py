@@ -481,7 +481,7 @@ class TtsSettingsPage(QWidget):
         )
         self._refresh_scene_ambience_placement_labels()
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))
-        self._save_button.setText(ui_state_service.translate("tts_settings.save", language))
+        self._save_button.setText(ui_state_service.translate("settings.apply", language))
         self._ok_button.setText(ui_state_service.translate("tts_settings.ok", language))
         self._runtime_status_label.setText(self._build_runtime_status_text())
         self._rebuild_model_list()

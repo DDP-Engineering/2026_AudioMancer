@@ -141,8 +141,10 @@ Controllers resolve enabled profiles rather than reading settings directly.
 The App Shell invokes `show_ai_settings_dialog`; users can add/remove profiles,
 switch among profiles without losing dialog-session edits
 (`REQ-FUNC-8eba808c`), probe connectivity, select defaults, and save the
-resulting settings payload. Reopening after Cancel reloads persisted settings,
-so Cancel continues to discard the dialog session.
+resulting settings payload. The middle action is labeled Apply because it
+persists without closing; OK persists and closes (`REQ-UX-aa109e16`). Reopening
+after Cancel reloads persisted settings, so Cancel continues to discard the
+dialog session.
 
 ## 9. Validation And Tests
 

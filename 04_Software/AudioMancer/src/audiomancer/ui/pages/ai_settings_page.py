@@ -879,7 +879,7 @@ class AiSettingsPage(QWidget):
         self._remove_profile_button.setText(ui_state_service.translate("ai_settings.remove_profile", language))
         self._connect_button.setText(ui_state_service.translate("ai_settings.connect", language))
         self._cancel_button.setText(ui_state_service.translate("ai_settings.cancel", language))
-        self._save_button.setText(ui_state_service.translate("ai_settings.save", language))
+        self._save_button.setText(ui_state_service.translate("settings.apply", language))
         self._ok_button.setText(ui_state_service.translate("ai_settings.ok", language))
         for combo in (
             self._default_cleanup_combo,

@@ -1557,6 +1557,83 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     assert audio_blocks[1]["audio_relative_path"] == later_audio_path.relative_to(project_root).as_posix()
 
 
+def test_audio_blocks_service_reconcile_after_resplit_preserves_same_narrator_targets(
+    monkeypatch, tmp_path
+) -> None:
+    """
+    @brief      Verify resplit reconciliation initializes every row with the project voice-assignment mode.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSameNarratorReconcile")
+    manifest["voice_assignment_mode"] = "same_narrator"
+    project_workspace_service.save_manifest(manifest, project_root)
+    speech_blocks = [
+        {
+            "speech_block_id": "0001-000001",
+            "sequence_index": 1,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_CHARACTER,
+            "speaker_id": "alice",
+            "speaker_display_name": "Alice",
+            "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
+            "text": "Changed dialogue.",
+            "warning_flags": [],
+        },
+        {
+            "speech_block_id": "0002-000001",
+            "sequence_index": 1,
+            "chunk_id": "chunk-0002",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_CHARACTER,
+            "speaker_id": "bob",
+            "speaker_display_name": "Bob",
+            "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
+            "text": "New dialogue.",
+            "warning_flags": [],
+        },
+    ]
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "same-narrator-reconcile",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": "0001-000001",
+                    "voice_target_id": "character_alice",
+                    "generated": None,
+                    "approved": None,
+                    "audio_can_play": False,
+                    "audio_duration_seconds": None,
+                    "generation_fingerprint": None,
+                }
+            ],
+        },
+    )
+    load_calls: list[object] = []
+    real_load_tts_plan = narrator_definition_service.load_tts_plan
+
+    def _record_load_tts_plan(*args, **kwargs):
+        """@brief Record and delegate one project-local TTS-plan load."""
+        load_calls.append((args, kwargs))
+        return real_load_tts_plan(*args, **kwargs)
+
+    monkeypatch.setattr(narrator_definition_service, "load_tts_plan", _record_load_tts_plan)
+
+    audio_blocks_service.reconcile_after_speech_blocks_resplit(project_root, "chunk-0001")
+
+    reconciled_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert len(load_calls) == 1
+    assert [block["voice_target_id"] for block in reconciled_blocks] == ["narrator", "narrator"]
+
+
 def test_audio_blocks_service_normalize_speaker_name_handles_diacritics() -> None:
     """
     @brief      Verify speaker-name normalization strips punctuation and diacritics into stable ASCII tokens.

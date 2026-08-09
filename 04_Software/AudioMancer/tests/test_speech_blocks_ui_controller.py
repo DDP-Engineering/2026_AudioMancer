@@ -517,6 +517,57 @@ def test_speech_blocks_ui_controller_failed_save_preserves_warning_flags(monkeyp
     assert warning_messages == ["invalid edit"]
 
 
+def test_speech_blocks_ui_controller_failed_save_reprojects_persisted_block(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a rejected save restores the persisted block after the page exits edit mode.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "SpeechBlocksFailedSaveProjection"
+    project_root.mkdir()
+    persisted_block = {
+        "speech_block_id": "0001-000001",
+        "chunk_id": "chunk-0001",
+        "speaker_id": "narrator",
+        "content_kind": "narration",
+        "text": "Persisted text.",
+        "warning_flags": ["needs_review"],
+    }
+    page_calls: list[tuple[str, object]] = []
+    page = SimpleNamespace(
+        update_speech_block_item=lambda payload: page_calls.append(("update", payload)),
+        select_speech_block=lambda block_id: page_calls.append(("select", block_id)),
+    )
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "speech_blocks_ready"},
+        _speech_blocks_page=page,
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller, "_speech_block_by_id", lambda *_args: persisted_block)
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "update_speech_block",
+        lambda *_args: (_ for _ in ()).throw(ValueError("invalid edit")),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.QMessageBox, "warning", lambda *_args: None)
+
+    speech_blocks_ui_controller.handle_save_block_requested(
+        window,
+        "0001-000001",
+        "narrator",
+        "narration",
+        "Rejected editor text.",
+    )
+
+    assert page_calls == [
+        ("update", persisted_block),
+        ("select", "0001-000001"),
+    ]
+
+
 def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify insert-after delegates to service, resets assembly state, and selects edit mode.
