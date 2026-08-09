@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-9bcda895 — Unify VoiceWeaver model and provider URL normalization
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-FUNC-9757d967, REQ-FUNC-1fef6b33, REQ-FUNC-9273a9ed
@@ -43,9 +43,9 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit
-- [ ] delivery commit created on the task branch without push
-- [ ] guarded local fast-forward into `AudioMancer_V2` preserves the six user-owned paths
-- [ ] close-out journal committed only after the delivery outcome succeeds
+- [x] delivery commit created on the task branch without push
+- [x] guarded local fast-forward into `AudioMancer_V2` preserves the six user-owned paths
+- [x] close-out journal committed only after the delivery outcome succeeds
 - [x] `CHANGELOG.md` Unreleased section describes the change in user language
 - [x] release version and help-file workflow not applicable because this task is not a release
 
@@ -87,6 +87,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: scoped logging coverage and Ruff passed; the code-style audit reports only 20 pre-existing missing-docstring findings outside the added test hunks, so its non-zero result is accepted as unchanged test debt.
 - 2026-08-09 deliver: the full suite is intentionally deferred by user direction, and no settings bootstrap, `uv`, worktree virtual environment, push, main-worktree edit, or planning-file edit was performed.
 - 2026-08-09 deliver: independent root review approved cached diff fingerprint `773d6fc4501fc9ba018b17726a3f2d8dbd76f7b9` after independently rerunning all 20 new regression cases successfully.
+- 2026-08-09 deliver: delivery commit `02953a8a6784f822886f0e1251a6c3959fd24340` was created without push and fast-forwarded from the verified base while preserving identical hashes for the six user-owned main-worktree paths.
+- 2026-08-09 close: delivery and guarded local integration succeeded, so the task is done and this journal-only close-out commit completes the AEGIS lifecycle.
 
 ## Delivery report (2026-08-09)
 
