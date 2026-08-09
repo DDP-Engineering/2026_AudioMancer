@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-ac1caa8b — Consolidate behavior-identical DUP-11 through DUP-14 helpers
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-NFR-7fcf36ea, REQ-NFR-5bda19fd, REQ-NFR-6edd8483
@@ -43,7 +43,7 @@ opened: 2026-08-10
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery commit confirmed by the human through standing approval
 - [x] journal and report inside the delivery commit
-- [ ] close-out: `stage: done` set and committed after delivery succeeds
+- [x] close-out: `stage: done` set and committed after delivery succeeds
 - [x] code follows project style, CHANGELOG updated, and no release/version change made
 
 ## Log
@@ -63,16 +63,6 @@ opened: 2026-08-10
 - 2026-08-10 analysis: DUP-14 Cleanup refresh-and-notify is accepted with success assertions retained, manifest load before refresh, refresh before notification, and cancellation's None guard retained.
 - 2026-08-10 analysis: DUP-14 synchronous progress is accepted with explicit create-only versus restart-existing behavior and controller-local named wrappers retained for patch seams.
 
-## Design
-
-- REQ-NFR-7fcf36ea: add canonical public resolvers only in existing owner modules and replace private delegates directly; no storage, schema, or call-result changes.
-- REQ-NFR-5bda19fd: share only Audio Blocks' busy/active/load/wait/verify sequence after each wrapper performs its existing progress, cancellation, status read, and clone-budget work.
-- REQ-NFR-6edd8483: place generic workflow rank/language functions in workflow_controller_service and synchronous dialog mechanics in misc_ui_controller, while named controller handlers and divergent defaults stay explicit.
-- REQ-NFR-7fcf36ea test seams: public helper edge tables plus monkeypatched canonical owner calls from former state-service delegates.
-- REQ-NFR-5bda19fd test seam: direct private wrapper calls with patched VoiceWeaver status/load/wait functions and exact call/result assertions.
-- REQ-NFR-6edd8483 test seams: workflow helper edge tables, ordered Cleanup callbacks, and existing-dialog progress lifecycle assertions through controller module references.
-- Rejected alternative: a generic resolver or controller base abstraction would require behavior flags for divergent runtime tokens, Cleanup profile IDs, paragraph normalization, and page errors, obscuring rather than removing behavior.
-- Expected source files are exactly the affected_paths listed by the three requirements; focused tests and AEGIS artifacts are the only additional files.
 - 2026-08-10 build: REQ-NFR-7fcf36ea service-consolidation regressions red as expected with missing canonical resolvers and retained private delegates.
 - 2026-08-10 build: REQ-NFR-5bda19fd model-activation regressions red as expected because the shared load-and-verify helper does not exist.
 - 2026-08-10 build: REQ-NFR-6edd8483 controller-consolidation regressions red as expected with missing workflow, refresh, and dialog helpers plus retained local copies.
@@ -89,6 +79,18 @@ opened: 2026-08-10
 - 2026-08-10 deliver: final task-scoped strict check reported zero errors and strict ok; the 87 warnings are the three expected unticked delivery items plus the same repository-wide ticket, layout, and uncovered-source warnings.
 - 2026-08-10 deliver: reviewed every source and test hunk against the four findings, public and monkeypatch seams, exact fallbacks, cancellation and error order, Windows paths, and the hard exclusions with no planning, schema, version, or unrelated change.
 - 2026-08-10 deliver: standing approval authorizes the local delivery and close-out commits; push, merge, parent-worktree edits, and pull-request publication remain excluded.
+- 2026-08-10 close-out: delivery commit 34f4927 succeeded locally, so the journal is complete with no push or merge performed.
+
+## Design
+
+- REQ-NFR-7fcf36ea: add canonical public resolvers only in existing owner modules and replace private delegates directly; no storage, schema, or call-result changes.
+- REQ-NFR-5bda19fd: share only Audio Blocks' busy/active/load/wait/verify sequence after each wrapper performs its existing progress, cancellation, status read, and clone-budget work.
+- REQ-NFR-6edd8483: place generic workflow rank/language functions in workflow_controller_service and synchronous dialog mechanics in misc_ui_controller, while named controller handlers and divergent defaults stay explicit.
+- REQ-NFR-7fcf36ea test seams: public helper edge tables plus monkeypatched canonical owner calls from former state-service delegates.
+- REQ-NFR-5bda19fd test seam: direct private wrapper calls with patched VoiceWeaver status/load/wait functions and exact call/result assertions.
+- REQ-NFR-6edd8483 test seams: workflow helper edge tables, ordered Cleanup callbacks, and existing-dialog progress lifecycle assertions through controller module references.
+- Rejected alternative: a generic resolver or controller base abstraction would require behavior flags for divergent runtime tokens, Cleanup profile IDs, paragraph normalization, and page errors, obscuring rather than removing behavior.
+- Expected source files are exactly the affected_paths listed by the three requirements; focused tests and AEGIS artifacts are the only additional files.
 
 ## Delivery report (2026-08-10)
 
