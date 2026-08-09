@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-e2948c9e — Validate and remove DEAD-10 through DEAD-16
 
-stage: deliver
+stage: done
 type: change
 path: quick
 requirements: REQ-FUNC-32f94a76, REQ-FUNC-57acf8bd, REQ-FUNC-b1613487, REQ-FUNC-f878c579, REQ-FUNC-a18bd73e, REQ-FUNC-c1ab4b69, REQ-FUNC-f9a4bf62, REQ-FUNC-b8a50984, REQ-FUNC-c75ae58f, REQ-FUNC-46ec3365, REQ-UX-1e55ab3b, REQ-FUNC-170ed96e, REQ-FUNC-a85c1f52
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] knowledge pages and requirements re-read and updated only where the contract materially changed
 - [x] delivery confirmed by the standing user approval before the commit
 - [x] journal and report are inside the delivery commit
-- [ ] close-out: `stage: done` set and committed only after delivery succeeds
+- [x] close-out: `stage: done` set and committed only after delivery succeeds
 - [x] CHANGELOG Unreleased contains a maintainability note; no release/version/help changes were made
 
 ## Log
@@ -72,6 +72,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: REQ-FUNC-32f94a76 now links the new no-chunk-reload regression; all other linked requirements remain active and accurate without prose changes.
 - 2026-08-09 deliver: Final focused smoke verification passed 7 selectors in 0.33 seconds, and final scoped Ruff, compileall, symbol-absence, whitespace, branch, and status checks passed.
 - 2026-08-09 deliver: No full suite ran by explicit task scope, no settings file was created, and no parent checkout, planning report, remote, merge, or release/version/help surface was touched.
+- 2026-08-09 deliver: Delivery commit a1a8034 succeeded on ddp/dead-10-16 without push or merge.
+- 2026-08-09 close-out: Marked TASK-e2948c9e done after the requested delivery commit succeeded.
 
 ## Delivery report (2026-08-09)
 
