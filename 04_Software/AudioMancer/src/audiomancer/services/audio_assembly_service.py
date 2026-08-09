@@ -19,7 +19,7 @@
 # IMPORTS
 
 from contextlib import ExitStack, suppress
-from functools import partial
+from functools import lru_cache, partial
 import hashlib
 import json
 from pathlib import Path
@@ -68,6 +68,11 @@ _TEMP_SUFFIX = ".tmp"
 _SCENE_MIX_PREVIEW_FOLDER_NAME = "scene_mix_previews"
 _SCENE_MIX_KEY_PREFIX = "scene_mix"
 _WAV_COPY_FRAME_CHUNK_SIZE = 65_536
+# The stat identity in `_cached_file_sha1` invalidates changed sources. The
+# finite `lru_cache` retains only digest strings and supplies synchronized cache
+# access for refreshes from UI or worker threads; source audio bytes are never
+# retained. Keep the bound explicit so tests can prove and clear the cache.
+_FILE_SHA1_CACHE_MAXSIZE = 256
 _RIFF_UINT32_MAX = (1 << 32) - 1
 _WAV_RIFF_DATA_OVERHEAD_BYTES = 36
 _WAV_MAX_DATA_BYTES = _RIFF_UINT32_MAX - _WAV_RIFF_DATA_OVERHEAD_BYTES
@@ -341,11 +346,20 @@ def start_or_continue_composition(
     )
     input_fingerprint = _build_input_fingerprint(resolved_project_root, approved_blocks, settings)
     existing_state = load_operation_state(resolved_project_root) or {}
+    existing_report = load_audio_assembly_report(resolved_project_root) or {}
     if _requires_manual_reset(existing_state, input_fingerprint):
         raise ValueError("Audio Assembly inputs or settings changed. Reset Audio Assembly before continuing.")
 
     output_plan = _build_output_plan(resolved_project_root, approved_blocks, settings)
     completed_records = _completed_records_for_resume(resolved_project_root, existing_state, input_fingerprint)
+    planned_output_keys = {str(output.get("output_key", "")) for output in output_plan}
+    completed_output_keys = {str(output.get("output_key", "")) for output in completed_records}
+    was_already_completed = (
+        str(existing_state.get("status", "")).strip() == "completed"
+        and bool(planned_output_keys)
+        and planned_output_keys.issubset(completed_output_keys)
+    )
+    existing_completed_at = str(existing_report.get("completed_at", "") or "").strip()
     _validate_pending_output_wav_sizes(
         resolved_project_root,
         output_plan,
@@ -416,7 +430,7 @@ def start_or_continue_composition(
         )
         raise
 
-    completed_at = _utc_now_iso()
+    completed_at = existing_completed_at if was_already_completed and existing_completed_at else _utc_now_iso()
     final_report = _build_report(
         settings,
         approved_blocks,
@@ -1609,6 +1623,8 @@ def _build_report(
     return {
         "audio_assembly_stage_status": stage_status,
         "operation_status": status,
+        "started_at": started_at,
+        "completed_at": completed_at,
         "settings": normalize_audio_assembly_settings(settings),
         "input_fingerprint": input_fingerprint,
         "total_audio_block_count": included_audio_block_count,
@@ -1648,7 +1664,7 @@ def _build_operation_state(
             "output_format": OUTPUT_FORMAT_WAV,
             "total_duration_seconds": float(report.get("total_duration_seconds", 0.0)),
         },
-        resume_checkpoint=None,
+        resume_checkpoint={"run_token": str(report["started_at"])},
     )
 
 
@@ -1925,11 +1941,53 @@ def _file_sha1(path: Path | None) -> str | None:
     """
     if path is None or not path.is_file():
         return None
+    resolved_path = path.resolve()
+    file_stat = resolved_path.stat()
+    return _cached_file_sha1(
+        str(resolved_path),
+        file_stat.st_mtime_ns,
+        file_stat.st_size,
+    )
+
+
+@lru_cache(maxsize=_FILE_SHA1_CACHE_MAXSIZE)
+def _cached_file_sha1(resolved_path: str, modified_time_ns: int, file_size: int) -> str:
+    """
+    @brief      Reuse one content digest for an unchanged resolved file identity.
+    @details    The resolved path, nanosecond modification time, and byte size
+                form the cache key. The finite `lru_cache` synchronizes cache
+                access, and exceptions from the byte reader are not cached.
+    @param[in]  resolved_path Canonical local source path.
+    @param[in]  modified_time_ns Source modification time in nanoseconds.
+    @param[in]  file_size Source size in bytes.
+    @return     SHA-1 hex digest.
+    @exception  OSError Raised when the source cannot be read.
+    """
+    _ = (modified_time_ns, file_size)
+    return _hash_file_contents(Path(resolved_path))
+
+
+def _hash_file_contents(path: Path) -> str:
+    """
+    @brief      Compute a SHA-1 digest from one complete local file read.
+    @param[in]  path Existing resolved source path.
+    @return     SHA-1 hex digest.
+    @exception  OSError Raised when the source cannot be read.
+    """
     digest = hashlib.sha1()  # noqa: S324
     with path.open("rb") as file_handle:
         for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _clear_file_sha1_cache() -> None:
+    """
+    @brief      Clear cached file digests for deterministic test isolation.
+    @return     None.
+    @exception  None
+    """
+    _cached_file_sha1.cache_clear()
 
 
 def _normalize_output_record(payload: dict[str, object]) -> dict[str, object]:

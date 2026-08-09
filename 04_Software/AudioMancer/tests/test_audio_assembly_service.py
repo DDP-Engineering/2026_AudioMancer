@@ -15,7 +15,10 @@
 
 # IMPORTS
 
+from datetime import datetime
 import json
+import os
+from pathlib import Path
 import wave
 
 import pytest
@@ -23,6 +26,7 @@ import pytest
 from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
+    audio_assembly_state_service,
     audio_blocks_service,
     project_workspace_service,
     speech_blocks_service,
@@ -50,8 +54,140 @@ def test_audio_assembly_service_composes_per_chunk_outputs(tmp_path) -> None:
     assert (project_root / "audiobook" / "chunk-0002.wav").is_file()
     state = audio_assembly_service.load_operation_state(project_root)
     assert state["status"] == "completed"
-    assert state["resume_checkpoint"] is None
+    assert state["resume_checkpoint"] == {"run_token": report["started_at"]}
     assert "completed_output_keys" not in state["metadata"]
+
+
+def test_audio_assembly_service_persists_truthful_run_timestamps(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify fresh completion persists ordered report timestamps and a matching state token.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    clock_values = iter(("2026-08-09T10:00:00+00:00", "2026-08-09T10:00:05+00:00"))
+    monkeypatch.setattr(audio_assembly_service, "_utc_now_iso", lambda: next(clock_values))
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+    persisted_report = audio_assembly_service.load_audio_assembly_report(project_root)
+    operation_state = audio_assembly_service.load_operation_state(project_root)
+
+    assert report == persisted_report
+    assert report["started_at"] == "2026-08-09T10:00:00+00:00"
+    assert report["completed_at"] == "2026-08-09T10:00:05+00:00"
+    assert datetime.fromisoformat(report["started_at"]) < datetime.fromisoformat(report["completed_at"])
+    assert operation_state["resume_checkpoint"] == {"run_token": report["started_at"]}
+    assert operation_state["metadata"]["input_fingerprint"] == report["input_fingerprint"]
+
+
+def test_audio_assembly_service_cancel_resume_preserves_run_token_and_outputs(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify cancellation and resume keep one start token and reuse completed output work.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_PER_CHUNK,
+    }
+    monkeypatch.setattr(audio_assembly_service, "_utc_now_iso", lambda: "2026-08-09T11:00:00+00:00")
+
+    def cancel_after_first_output() -> bool:
+        """Return cancellation only after the first output has completed."""
+        return (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "chunk-0001.wav").is_file()
+
+    with pytest.raises(audio_assembly_service.operation_runtime_service.OperationCancelledError):
+        audio_assembly_service.start_or_continue_composition(
+            project_root,
+            manifest,
+            cancel_requested=cancel_after_first_output,
+        )
+
+    cancelled_report = audio_assembly_service.load_audio_assembly_report(project_root)
+    cancelled_state = audio_assembly_service.load_operation_state(project_root)
+    first_output = dict(cancelled_report["outputs"][0])
+    assert cancelled_report["started_at"] == "2026-08-09T11:00:00+00:00"
+    assert cancelled_report["completed_at"] is None
+    assert cancelled_state["resume_checkpoint"] == {"run_token": cancelled_report["started_at"]}
+    assert cancelled_state["progress_current"] == 1
+
+    original_compose_output = audio_assembly_service._compose_output_file  # noqa: SLF001
+    resumed_output_keys: list[str] = []
+
+    def record_resumed_output(*args, **kwargs):
+        """Record each output that resume actually composes."""
+        resumed_output_keys.append(str(args[1]["output_key"]))
+        return original_compose_output(*args, **kwargs)
+
+    monkeypatch.setattr(audio_assembly_service, "_compose_output_file", record_resumed_output)
+    monkeypatch.setattr(audio_assembly_service, "_utc_now_iso", lambda: "2026-08-09T11:05:00+00:00")
+
+    resumed_report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+    resumed_state = audio_assembly_service.load_operation_state(project_root)
+
+    assert resumed_report["started_at"] == cancelled_report["started_at"]
+    assert resumed_report["completed_at"] == "2026-08-09T11:05:00+00:00"
+    assert resumed_report["outputs"][0] == first_output
+    assert resumed_output_keys == ["chunk-0002"]
+    assert resumed_state["resume_checkpoint"] == {"run_token": cancelled_report["started_at"]}
+    assert resumed_state["progress_current"] == resumed_state["progress_total"] == 2
+
+
+def test_audio_assembly_service_legacy_state_without_checkpoint_gets_fresh_run_token(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify compatible legacy report and state load and receive one fallback run token.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    settings = audio_assembly_service.normalize_audio_assembly_settings(manifest["audio_assembly_settings"])
+    approved_blocks = audio_assembly_service._load_approved_audio_blocks(  # noqa: SLF001
+        project_root,
+        include_scene_ambience=bool(settings["include_scene_ambience"]),
+    )
+    input_fingerprint = audio_assembly_service._build_input_fingerprint(  # noqa: SLF001
+        project_root,
+        approved_blocks,
+        settings,
+    )
+    legacy_report = {
+        "operation_status": "cancelled",
+        "input_fingerprint": input_fingerprint,
+        "outputs": [],
+        "warnings": [],
+    }
+    legacy_state = {
+        "status": "cancelled",
+        "progress_current": 0,
+        "progress_total": 1,
+        "mode": "audio_composition",
+        "warning_count": 0,
+        "metadata": {"input_fingerprint": input_fingerprint},
+    }
+    audio_assembly_service._persist_state(project_root, legacy_report, legacy_state)  # noqa: SLF001
+
+    loaded_legacy_report = audio_assembly_service.load_audio_assembly_report(project_root)
+    loaded_legacy_state = audio_assembly_service.load_operation_state(project_root)
+    assert "started_at" not in loaded_legacy_report
+    assert "completed_at" not in loaded_legacy_report
+    assert "resume_checkpoint" not in loaded_legacy_state
+
+    clock_values = iter(("2026-08-09T12:00:00+00:00", "2026-08-09T12:00:03+00:00"))
+    monkeypatch.setattr(audio_assembly_service, "_utc_now_iso", lambda: next(clock_values))
+
+    resumed_report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+    resumed_state = audio_assembly_service.load_operation_state(project_root)
+
+    assert resumed_report["started_at"] == "2026-08-09T12:00:00+00:00"
+    assert resumed_report["completed_at"] == "2026-08-09T12:00:03+00:00"
+    assert resumed_state["resume_checkpoint"] == {"run_token": resumed_report["started_at"]}
 
 
 def test_audio_assembly_service_writes_pause_blocks_as_silence(tmp_path) -> None:
@@ -236,13 +372,160 @@ def test_audio_assembly_service_lists_and_generates_scene_mix_preview(tmp_path) 
     assert groups[0]["block_count"] == 2
     assert groups[0]["can_generate_preview"] is True
     assert preview_group["can_play_preview"] is True
+    assert groups[0]["audio_relative_path"] == preview_group["audio_relative_path"]
     preview_path = project_root / str(preview_group["audio_relative_path"])
     assert preview_path.is_file()
     assert refreshed_groups[0]["can_play_preview"] is True
+    assert refreshed_groups[0]["audio_relative_path"] == preview_group["audio_relative_path"]
     assert progress_events[0][:3] == (0, 3, 0)
     assert progress_events[-1][:3] == (3, 3, 100)
     with wave.open(str(preview_path), "rb") as wav_file:
         assert wav_file.getnframes() == 2400
+
+
+def test_audio_assembly_scene_mix_refresh_reuses_unchanged_source_digests(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify repeated list and page-state refreshes hash each unchanged source once.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
+    source_paths = _scene_ambience_source_paths(project_root)
+    audio_assembly_service._clear_file_sha1_cache()  # noqa: SLF001
+    read_counts = _count_source_binary_reads(monkeypatch, source_paths)
+
+    first_groups = audio_assembly_service.list_scene_mix_groups(project_root)
+    page_state = audio_assembly_state_service.build_audio_assembly_state(project_root, manifest, "en")
+    second_groups = audio_assembly_service.list_scene_mix_groups(project_root)
+
+    assert [group["audio_relative_path"] for group in first_groups] == [
+        group["audio_relative_path"] for group in second_groups
+    ]
+    assert page_state["scene_mix_groups"][0]["audio_relative_path"] == first_groups[0]["audio_relative_path"]
+    assert read_counts == {source_path.resolve(): 1 for source_path in source_paths}
+
+
+def test_audio_assembly_scene_mix_shared_source_uses_one_digest(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify multiple Scene Ambience groups sharing one source reuse its digest.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
+    loaded_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    scene_blocks = [block for block in loaded_blocks if block.get("content_kind") == "scene_ambience"]
+    scene_blocks[1]["ambience_position"] = "scene_change"
+    scene_blocks[1]["after_speech_block_id"] = "0001-000001"
+    scene_blocks[1]["audio_relative_path"] = scene_blocks[0]["audio_relative_path"]
+    shared_source = project_root / str(scene_blocks[0]["audio_relative_path"])
+    monkeypatch.setattr(audio_blocks_service, "load_audio_blocks", lambda _project_root: loaded_blocks)
+    audio_assembly_service._clear_file_sha1_cache()  # noqa: SLF001
+    read_counts = _count_source_binary_reads(monkeypatch, [shared_source])
+
+    groups = audio_assembly_service.list_scene_mix_groups(project_root)
+
+    assert len(groups) == 2
+    assert read_counts == {shared_source.resolve(): 1}
+
+
+def test_audio_assembly_scene_mix_digest_cache_invalidates_on_stat_change(tmp_path) -> None:
+    """
+    @brief      Verify mtime or size changes rehash content and change preview identity.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
+    source_path = _scene_ambience_source_paths(project_root)[0]
+    audio_assembly_service._clear_file_sha1_cache()  # noqa: SLF001
+
+    first_preview_path = audio_assembly_service.list_scene_mix_groups(project_root)[0]["audio_relative_path"]
+    first_stat = source_path.stat()
+    changed_bytes = bytearray(source_path.read_bytes())
+    changed_bytes[-1] ^= 1
+    source_path.write_bytes(changed_bytes)
+    os.utime(
+        source_path,
+        ns=(first_stat.st_atime_ns, first_stat.st_mtime_ns + 2_000_000_000),
+    )
+    second_stat = source_path.stat()
+    assert second_stat.st_mtime_ns != first_stat.st_mtime_ns
+
+    second_preview_path = audio_assembly_service.list_scene_mix_groups(project_root)[0]["audio_relative_path"]
+    source_path.write_bytes(source_path.read_bytes() + b"\x01")
+    os.utime(source_path, ns=(second_stat.st_atime_ns, second_stat.st_mtime_ns))
+    third_stat = source_path.stat()
+    assert third_stat.st_mtime_ns == second_stat.st_mtime_ns
+    assert third_stat.st_size != second_stat.st_size
+
+    third_preview_path = audio_assembly_service.list_scene_mix_groups(project_root)[0]["audio_relative_path"]
+
+    assert len({first_preview_path, second_preview_path, third_preview_path}) == 3
+
+
+def test_audio_assembly_scene_mix_digest_failure_is_not_cached(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify a transient source-hash read failure is retried on the next refresh.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
+    source_path = _scene_ambience_source_paths(project_root)[0].resolve()
+    audio_assembly_service._clear_file_sha1_cache()  # noqa: SLF001
+    original_open = Path.open
+    hash_attempts = 0
+
+    def fail_first_hash_open(path, *args, **kwargs):
+        """Raise once for the selected source's binary read, then delegate."""
+        nonlocal hash_attempts
+        mode = str(args[0] if args else kwargs.get("mode", "r"))
+        if path.resolve() == source_path and "r" in mode and "b" in mode:
+            hash_attempts += 1
+            if hash_attempts == 1:
+                raise OSError("transient hash read failure")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", fail_first_hash_open)
+
+    with pytest.raises(OSError, match="transient hash read failure"):
+        audio_assembly_service.list_scene_mix_groups(project_root)
+    groups = audio_assembly_service.list_scene_mix_groups(project_root)
+
+    assert groups
+    assert hash_attempts == 2
+
+
+def test_audio_assembly_scene_mix_digest_cache_is_bounded_and_clearable(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify the digest cache has a finite bound and a deterministic test reset.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    audio_assembly_service._clear_file_sha1_cache()  # noqa: SLF001
+    monkeypatch.setattr(audio_assembly_service, "_hash_file_contents", lambda path: str(path))  # noqa: SLF001
+    cache_size = audio_assembly_service._FILE_SHA1_CACHE_MAXSIZE  # noqa: SLF001
+    for index in range(cache_size + 5):
+        fake_path = str((tmp_path / f"source-{index:04d}.wav").resolve())
+        audio_assembly_service._cached_file_sha1(fake_path, index, index)  # noqa: SLF001
+
+    cache_info = audio_assembly_service._cached_file_sha1.cache_info()  # noqa: SLF001
+    assert cache_info.maxsize == cache_size
+    assert cache_info.currsize == cache_size
+
+    audio_assembly_service._clear_file_sha1_cache()  # noqa: SLF001
+    assert audio_assembly_service._cached_file_sha1.cache_info().currsize == 0  # noqa: SLF001
 
 
 def test_audio_assembly_service_scene_mix_group_not_ready_without_approved_audio(tmp_path) -> None:
@@ -432,10 +715,11 @@ def test_audio_assembly_service_time_limit_counts_inserted_silence(tmp_path) -> 
     assert all(float(output["duration_seconds"]) <= 60.0 for output in report["outputs"])
 
 
-def test_audio_assembly_service_resume_preserves_time_limit_warnings(tmp_path) -> None:
+def test_audio_assembly_service_resume_preserves_time_limit_warnings(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify resumed completed-output runs keep deterministic warnings.
     @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     """
@@ -445,12 +729,29 @@ def test_audio_assembly_service_resume_preserves_time_limit_warnings(tmp_path) -
         "output_mode": audio_assembly_service.OUTPUT_MODE_TIME_LIMIT,
         "max_duration_minutes": 1,
     }
+    clock_values = iter(
+        (
+            "2026-08-09T13:00:00+00:00",
+            "2026-08-09T13:01:00+00:00",
+            "2026-08-09T13:05:00+00:00",
+        )
+    )
+    monkeypatch.setattr(audio_assembly_service, "_utc_now_iso", lambda: next(clock_values))
 
     first_report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    def reject_recomposition(*_args, **_kwargs):
+        """Fail if a completed output is recomposed during a compatible resume."""
+        raise AssertionError("completed output was recomposed")
+
+    monkeypatch.setattr(audio_assembly_service, "_compose_output_file", reject_recomposition)
     resumed_report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
 
     assert first_report["warning_count"] == 3
     assert resumed_report["warning_count"] == 3
+    assert resumed_report["started_at"] == first_report["started_at"]
+    assert resumed_report["completed_at"] == first_report["completed_at"]
+    assert resumed_report["outputs"] == first_report["outputs"]
     assert [warning["output_key"] for warning in resumed_report["warnings"]] == [
         "part-0001",
         "part-0002",
@@ -821,6 +1122,12 @@ def test_audio_assembly_service_reset_deletes_report_state_and_audiobook_folder(
     assert not (project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).exists()
     assert not (project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME).exists()
     assert not list((project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME).glob("*.wav"))
+    assert audio_assembly_service.load_audio_assembly_report(project_root) is None
+    assert audio_assembly_service.load_operation_state(project_root) is None
+    state = audio_assembly_state_service.build_audio_assembly_state(project_root, manifest, "en")
+    assert state["stage_status"] == audio_assembly_service.AUDIO_ASSEMBLY_STAGE_NOT_STARTED
+    assert state["progress_current"] == state["progress_total"] == 0
+    assert state["can_reset"] is False
 
 
 def test_project_manifest_normalizes_audio_assembly_settings(tmp_path) -> None:
@@ -966,6 +1273,43 @@ def _insert_scene_ambience_blocks(
     blocks[2]["sequence_index"] = 1
     blocks[1:1] = ambience_blocks
     _persist_block_fixtures(project_root, blocks)
+
+
+def _scene_ambience_source_paths(project_root) -> list[Path]:
+    """
+    @brief      Resolve generated Scene Ambience source paths for cache tests.
+    @param[in]  project_root Active project root.
+    @return     Ordered source paths.
+    @exception  None
+    """
+    return [
+        project_root / str(block["audio_relative_path"])
+        for block in audio_blocks_service.load_audio_blocks(project_root)
+        if block.get("content_kind") == "scene_ambience"
+    ]
+
+
+def _count_source_binary_reads(monkeypatch, source_paths: list[Path]) -> dict[Path, int]:
+    """
+    @brief      Count binary `Path.open` reads for selected source files.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  source_paths Source paths whose full-hash reads are counted.
+    @return     Mutable resolved-path read counters.
+    @exception  None
+    """
+    resolved_counts = {path.resolve(): 0 for path in source_paths}
+    original_open = Path.open
+
+    def counting_open(path, *args, **kwargs):
+        """Count selected binary reads and delegate to the original opener."""
+        mode = str(args[0] if args else kwargs.get("mode", "r"))
+        resolved_path = path.resolve()
+        if resolved_path in resolved_counts and "r" in mode and "b" in mode:
+            resolved_counts[resolved_path] += 1
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", counting_open)
+    return resolved_counts
 
 
 def _loaded_blocks_with_legacy_scene_ambience(project_root, source_relative_path: str) -> list[dict]:

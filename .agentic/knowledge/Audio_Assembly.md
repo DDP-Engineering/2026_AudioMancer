@@ -32,6 +32,12 @@ The assembly service loads validated block WAVs, applies configured composition/
 ## 6. Data Contracts
 
 - Outputs and referenced inputs remain project-relative and ordered by block identity; state records completed outputs, durations and resumable progress.
+- Every newly persisted report records one UTC ISO `started_at` for the logical
+  run and a nullable `completed_at`; compact state carries the same start as
+  `resume_checkpoint.run_token`. Cancelled resumes and already-completed
+  re-entry preserve their original lifecycle values, while legacy report/state
+  payloads without the added fields remain loadable and receive a fresh token
+  only when continued (`REQ-DATA-94132a27`, `REQ-REL-3ccdf599`).
 - Assembly validates readable compatible WAVs and preserves previously completed work when a later operation cannot complete.
 - Final-composition preflight validates every included non-pause source as a
   safe existing regular readable supported-PCM WAV, including defensive support
@@ -57,6 +63,12 @@ The assembly service loads validated block WAVs, applies configured composition/
   limit guidance (`REQ-REL-607c7bfb`). Failed final-output writes and closes
   remove their temp file without replacing an existing published output
   (`REQ-REL-f3f965de`).
+- Scene Mix preview identity still includes each source WAV content digest, but
+  full-file hashing uses a process-local 256-entry thread-safe LRU keyed by
+  resolved path, nanosecond modification time and byte size. Unchanged and
+  shared sources reuse only their digest string; mtime/size changes rehash,
+  failed reads are not cached, and audio bytes or cache state are never
+  persisted (`REQ-NFR-b6ffe4e8`, `REQ-REL-45ec2fa5`).
 
 ## 7. Workflow Integration
 
@@ -76,7 +88,8 @@ Primary automated coverage:
 - `tests/test_audio_assembly_ui_controller.py`
 
 These cover WAV composition/validation, output/state recovery, controller
-operation flow, and page selection/playback behavior. Minimum validation after a
+operation flow, lifecycle timestamp/resume consistency, bounded Scene Mix
+digest reuse and invalidation, and page selection/playback behavior. Minimum validation after a
 change: run the focused modules above with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files. Manual
 listening remains required.

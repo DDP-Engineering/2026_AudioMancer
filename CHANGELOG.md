@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Audio Assembly reports now retain one truthful start time across cancellation
+  and resume, add a completion time only when work finishes, and preserve both
+  completed outputs and their original lifecycle times on a no-work reopen.
+- Repeated Audio Assembly refreshes now reuse bounded in-memory fingerprints
+  for unchanged Scene Ambience sources instead of rereading every WAV in full;
+  changed files are rehashed and transient read failures remain retryable.
 - Saving unrelated TTS settings without testing the runtime now preserves the
   last durable connection result, while a connection test performed in the
   current dialog still replaces that result with its exact success or failure.
