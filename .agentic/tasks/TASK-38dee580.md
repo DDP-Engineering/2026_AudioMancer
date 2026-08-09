@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-38dee580 — Fix Text Cleanup save exit and Home project activation
 
-stage: deliver
+stage: done
 type: fix
 path: quick
 requirements: REQ-UX-6fb5efc7
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] REQ-UX-6fb5efc7 re-read with active status, current prose, affected paths, and linked tests
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the approved delivery commit
-- [ ] close-out performed only after the agreed outcome succeeds
+- [x] close-out performed only after the agreed outcome succeeds
 - [x] CHANGELOG.md updated under Unreleased in user language; no release or version/help changes made
 
 ## Log
@@ -65,6 +65,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: The full pytest suite and `check --run` are excluded by the delegated task so orchestration can run the suite once after integrating all reviewed findings.
 - 2026-08-09 deliver: Diff review found only the verified Text Cleanup defect relevant; BUG-02 remains unmodified because the requested visible-container behavior already passes through the sidebar navigation signal.
 - 2026-08-09 deliver: Human approval received to commit the validated staged BUG-01 delivery and complete the AEGIS close-out without further approval stops.
+- 2026-08-09 deliver: Delivery commit 26566724e5e9f278a2ec50306bbe227935c04266 succeeded on ddp/fix-text-cleanup-home-activation without push or merge.
+- 2026-08-09 close-out: Task marked done after the approved delivery commit succeeded; the full suite remains assigned to integration orchestration.
 
 ## Delivery report (2026-08-09)
 
