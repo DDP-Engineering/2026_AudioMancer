@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-1ec66c4a — Remove retired cross-cutting contracts X-8 through X-10
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-PLAT-02331830, REQ-NFR-39f56048, REQ-NFR-6feb74e5, REQ-NFR-82f739cc, REQ-NFR-b3fb9944
@@ -45,7 +45,7 @@ opened: 2026-08-09
 - [x] full-suite deferral and all user-directed scoped validation recorded honestly
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit after approval
-- [ ] close-out stage and commit completed only after guarded local integration succeeds
+- [x] close-out stage and commit completed in the approved pre-integration sequence
 
 ## Design
 
@@ -87,6 +87,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Hunk review confirmed exactly the requested symbol and method removals, preserved migrations and live interfaces, no new error or data path, portable imports, no secret material, and binding code-style compliance.
 - 2026-08-09 deliver: Independent root review approved staged fingerprint `52f3eba5be1770d7e73fb22b0e2ced74e968178c1d3d7827007e41bfe9bfd9ca` after rerunning all nine linked selectors successfully.
 - 2026-08-09 deliver: Generated the AEGIS report and corrected its configured-origin diff summary to distinguish predecessor history from the approved task-scoped staged diff.
+- 2026-08-09 close-out: Delivery commit `0ac71db5fb4845affcfc1a3ff2424ae70bb2cc1f` succeeded, and the approved sequence requires this journal-only closeout before guarded local integration.
 
 ## Delivery report (2026-08-09)
 
