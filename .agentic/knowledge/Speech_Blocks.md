@@ -58,6 +58,10 @@ otherwise it uses the original Chunking document text through its shared reader.
   (REQ-REL-63e230dd). Generated output remains `review_pending` until every
   persisted block is approved, and resumptions require a compatible source
   snapshot and response-contract marker.
+- Multi-segment generation assigns contiguous chunk-local order before every
+  checkpoint. Resuming an active segment continues after the already persisted
+  rows, so intermediate, resumed, and uninterrupted documents preserve the same
+  canonical source order (REQ-REL-0e236c91).
 - `same_narrator` segmentation is deterministic and total: concatenating the
   `source_text` of a chunk's blocks reproduces that chunk character for
   character, and the service raises rather than persisting a lossy plan. A
@@ -73,6 +77,12 @@ otherwise it uses the original Chunking document text through its shared reader.
 - A response contract incompatible with deterministic same-narrator
   segmentation is not resumable; generation restarts to avoid mixing two
   segmentations in one document.
+- Operator edits, warning cleanup, and approval updates preserve the persisted
+  `deterministic_narrator_blocks` marker for same-narrator documents
+  (REQ-FUNC-10095db1).
+- Scene-ambience insertion remaps each matched `after_speech_block_id` from the
+  spoken row's old identifier to its post-insertion identifier, including when
+  opener ambience shifts every spoken row (REQ-DATA-f0eb775c).
 
 ## 7. Workflow Integration
 

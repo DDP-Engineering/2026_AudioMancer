@@ -426,6 +426,65 @@ def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
     assert all("ambient_sound_type" not in block for block in speech_blocks)
 
 
+def test_scene_ambience_insertion_remaps_references_after_opener_renumbering() -> None:
+    """
+    @brief      Verify opener insertion keeps scene-change references attached to their spoken rows.
+    @return     None.
+    @exception  None
+    """
+    spoken_blocks = [
+        {
+            "speech_block_id": f"0001-{sequence_index:06d}",
+            "sequence_index": sequence_index,
+            "chunk_id": "chunk-0001",
+            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "text": text,
+        }
+        for sequence_index, text in enumerate(("First.", "Second.", "Third."), start=1)
+    ]
+    ambience_blocks = [
+        {
+            "speech_block_id": "",
+            "sequence_index": 0,
+            "chunk_id": "chunk-0001",
+            "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            "ambience_position": "opener",
+            "after_speech_block_id": "",
+            "text": "Opening room tone.",
+        },
+        {
+            "speech_block_id": "",
+            "sequence_index": 0,
+            "chunk_id": "chunk-0001",
+            "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            "ambience_position": "scene_change",
+            "after_speech_block_id": "0001-000001",
+            "text": "A door closes.",
+        },
+        {
+            "speech_block_id": "",
+            "sequence_index": 0,
+            "chunk_id": "chunk-0001",
+            "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            "ambience_position": "scene_change",
+            "after_speech_block_id": "0001-000002",
+            "text": "Rain begins.",
+        },
+    ]
+
+    combined_blocks = speech_blocks_service._insert_scene_ambience_blocks(  # noqa: SLF001
+        spoken_blocks,
+        ambience_blocks,
+    )
+
+    assert combined_blocks[0]["ambience_position"] == "opener"
+    blocks_by_id = {str(block["speech_block_id"]): block for block in combined_blocks}
+    scene_changes = [block for block in combined_blocks if block.get("ambience_position") == "scene_change"]
+    referenced_blocks = [blocks_by_id[str(block["after_speech_block_id"])] for block in scene_changes]
+    assert [block["text"] for block in referenced_blocks] == ["First.", "Second."]
+    assert all(block["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION for block in referenced_blocks)
+
+
 def test_start_generation_appends_and_persists_operator_speech_block_rules(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify optional operator Speech Blocks rules are sent to AI prompts and persisted.
@@ -818,6 +877,106 @@ def test_speech_blocks_resume_continues_from_unfinished_direct_segment(monkeypat
     assert requested_segments == ["Second."]
     assert [block["source_text"] for block in speech_blocks] == ["First.", "Second."]
     assert [block["speech_block_id"] for block in speech_blocks] == ["0001-000001", "0001-000002"]
+
+
+def test_multi_segment_checkpoint_and_resume_preserve_block_order(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify multi-block segment checkpoints and resume retain uninterrupted source order.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksMultiBlockSegmentResume")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    _write_source_chunks(
+        project_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "A1.A2.B1.B2.C1.C2."}],
+    )
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: (
+            f"Chunk text:\n{variables['chunk_text']}" if "chunk_text" in variables else "system prompt"
+        ),
+    )
+    monkeypatch.setattr(
+        speech_blocks_service,
+        "_budgeted_source_chunk_segments",
+        lambda _source_chunk, _budget_metadata, **_kwargs: [
+            {"chunk_id": "chunk-0001", "text": "A1.A2."},
+            {"chunk_id": "chunk-0001", "text": "B1.B2."},
+            {"chunk_id": "chunk-0001", "text": "C1.C2."},
+        ],
+    )
+    block_texts = {
+        "A1.A2.": ["A1.", "A2."],
+        "B1.B2.": ["B1.", "B2."],
+        "C1.C2.": ["C1.", "C2."],
+    }
+    interrupt_third_segment = True
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Return two blocks per segment and interrupt the first attempt before segment three.
+        @return     Fake direct Speech Blocks response.
+        @exception  OperationCancelledError Raised for the planned interruption.
+        """
+        segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
+        if interrupt_third_segment and segment_text == "C1.C2.":
+            raise speech_blocks_service.OperationCancelledError("planned interruption")
+        return {
+            "payload": {
+                "blocks": [
+                    {
+                        "text": text,
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "confidence": "high",
+                        "warning_flags": [],
+                    }
+                    for text in block_texts[segment_text]
+                ]
+            },
+            "usage": {"input_tokens": 4, "output_tokens": 2, "total_tokens": 6, "usage_available": True},
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    with pytest.raises(speech_blocks_service.OperationCancelledError):
+        speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    checkpoint_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert [block["text"] for block in checkpoint_blocks] == ["A1.", "A2.", "B1.", "B2."]
+    assert [block["sequence_index"] for block in checkpoint_blocks] == [1, 2, 3, 4]
+    checkpoint_state = speech_blocks_service.load_operation_state(project_root)
+    assert checkpoint_state is not None
+    assert checkpoint_state["resume_checkpoint"]["next_segment_index"] == 2
+
+    interrupt_third_segment = False
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    resumed_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert [block["text"] for block in resumed_blocks] == ["A1.", "A2.", "B1.", "B2.", "C1.", "C2."]
+    assert [block["sequence_index"] for block in resumed_blocks] == [1, 2, 3, 4, 5, 6]
+
+    completed_root, completed_manifest = _create_chunked_project(tmp_path, "SpeechBlocksMultiBlockUninterrupted")
+    completed_manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(completed_manifest, completed_root)
+    character_voices_service.save_selected_voice_language(completed_root, "en")
+    _write_source_chunks(
+        completed_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "A1.A2.B1.B2.C1.C2."}],
+    )
+    speech_blocks_service.start_or_continue_generation(completed_root, completed_manifest, _profile_payload())
+    completed_blocks = speech_blocks_service.load_speech_blocks(completed_root)
+    comparable_fields = ("speech_block_id", "sequence_index", "text")
+    assert [[block[field] for field in comparable_fields] for block in resumed_blocks] == [
+        [block[field] for field in comparable_fields] for block in completed_blocks
+    ]
 
 
 def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch, tmp_path) -> None:
@@ -1333,6 +1492,35 @@ def test_same_narrator_edit_forces_narration_but_preserves_operations(tmp_path) 
     assert speech_blocks[0]["sound_prompt"] == "Wind against the shutters."
     assert speech_blocks[0]["negative_prompt"] == "speech, music"
     assert speech_blocks[0]["duration_seconds"] == 3.5
+
+
+def test_same_narrator_operator_updates_preserve_deterministic_response_contract(tmp_path) -> None:
+    """
+    @brief      Verify full-report and compact-review operator updates retain deterministic segmentation metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSameNarratorContractUpdates")
+    manifest["voice_assignment_mode"] = "same_narrator"
+    project_workspace_service.save_manifest(manifest, project_root)
+    _seed_review_speech_blocks(project_root, response_contract="deterministic_narrator_blocks")
+
+    speech_blocks_service.update_speech_block(
+        project_root,
+        "0001-000001",
+        "narrator",
+        speech_blocks_service.CONTENT_KIND_NARRATION,
+        "Narrator edit.",
+    )
+    updated_document = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert updated_document is not None
+    assert updated_document["response_contract"] == "deterministic_narrator_blocks"
+
+    speech_blocks_service.approve_speech_block(project_root, "0001-000001")
+    reviewed_document = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert reviewed_document is not None
+    assert reviewed_document["response_contract"] == "deterministic_narrator_blocks"
 
 
 def test_null_like_started_at_creates_timestamped_speech_blocks_log(tmp_path) -> None:
@@ -3611,10 +3799,11 @@ def _write_source_chunks(project_root, source_chunks: list[dict[str, object]]) -
     )
 
 
-def _seed_review_speech_blocks(project_root) -> None:
+def _seed_review_speech_blocks(project_root, *, response_contract: str = "direct_blocks") -> None:
     """
     @brief      Write a minimal new-schema Speech Blocks review fixture.
     @param[in]  project_root Active project root folder.
+    @param[in]  response_contract Persisted segmentation contract for the fixture.
     @return     None.
     @exception  None
     """
@@ -3658,7 +3847,7 @@ def _seed_review_speech_blocks(project_root) -> None:
             "ai_profile_id": "profile-1",
             "instructions": "",
             "scene_ambience": {"enabled": False},
-            "response_contract": "direct_blocks",
+            "response_contract": response_contract,
             "token_usage": {
                 "input_tokens": 0,
                 "output_tokens": 0,
@@ -3674,7 +3863,7 @@ def _seed_review_speech_blocks(project_root) -> None:
                 "source_language": "en",
                 "ai_profile_id": "profile-1",
                 "additional_speech_block_instructions_fingerprint": "",
-                "speech_blocks_response_contract": "direct_blocks",
+                "speech_blocks_response_contract": response_contract,
             },
             "failure": None,
             "blocks": speech_blocks_payload,

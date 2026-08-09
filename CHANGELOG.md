@@ -12,6 +12,15 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech Blocks checkpoints now preserve the original narration and dialogue
+  order across multi-segment generation, so resuming an interrupted chunk
+  produces the same ordered plan as an uninterrupted run.
+- Editing or approving Speech Blocks in a same-narrator project now preserves
+  its deterministic segmentation contract instead of changing it to the
+  narrator-and-characters contract.
+- Scene Ambience rows inserted at a chunk opener or after spoken rows now keep
+  their after-block references attached to the intended narration or dialogue
+  after block IDs are renumbered.
 - Reset now removes Character Discovery AI logs from both current and older
   projects and deletes only Character Voices sample WAVs proven by saved target
   metadata, preserving narrator audio, unrelated WAVs, unsafe paths, and
