@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-d078bcc1 — Persist assembly run timestamps and cache Scene Mix digests
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-DATA-94132a27, REQ-REL-3ccdf599, REQ-NFR-b6ffe4e8, REQ-REL-45ec2fa5
@@ -44,7 +44,7 @@ opened: 2026-08-09
 - [x] exact staged diff and fingerprint presented; human confirms delivery before commit
 - [x] journal and report included in the delivery commit
 - [x] non-release delivery leaves project/help versions unchanged
-- [ ] close-out journal committed only after the approved delivery outcome succeeds
+- [x] close-out journal committed only after the approved delivery outcome succeeds
 
 ## Log
 
@@ -82,6 +82,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Semantic diff review confirmed legacy raw loading, missing-token fallback, reset emptiness, project containment and symlink resolution, completed output/progress/warning/metadata/fingerprint reuse, deterministic preview naming, uncached failures, and public call signatures remain intact.
 - 2026-08-09 deliver: All four active requirements were re-read against their linked selectors; Audio Assembly knowledge and the Unreleased changelog are current, and this non-release intentionally changes no project or help version.
 - 2026-08-09 deliver: Human approval covers the independently reviewed nine-file patch and 46-test service run at `git diff --cached --binary | git hash-object --stdin` fingerprint `7b7672b109549d529dff8073d92d09792a3b6fea`; the earlier checkpoint's `895e1c70f2f732e25697e29a592c9e06c724fbe5` used the different `--full-index --binary` command and is recorded only as that command's result.
+- 2026-08-09 close-out: Delivery commit `ff110edf065a64bf944796a0865d06ece19144bf` succeeded locally with all approved requirements, and the task journal is closed before the owner-directed guarded local fast-forward.
 
 ## Delivery report (2026-08-09)
 
