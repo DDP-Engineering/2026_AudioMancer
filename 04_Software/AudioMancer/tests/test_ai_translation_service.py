@@ -473,7 +473,10 @@ def test_retranslate_segment_failure_persists_usage_without_partial_text(monkeyp
     monkeypatch.setattr(
         ai_translation_service,
         "_split_translation_source_text",
-        lambda *_args: ["segment one", "segment two"],
+        lambda *_args: [
+            ai_translation_service._TranslationTextSegment("segment one", False),
+            ai_translation_service._TranslationTextSegment("segment two", True),
+        ],
     )
     responses = iter(
         [
@@ -648,6 +651,82 @@ def test_translation_budget_reserves_output_and_rejects_insufficient_input() -> 
         )
 
 
+def test_budgeted_translation_preserves_paragraph_breaks_across_requests(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify separate source paragraphs retain a paragraph break across provider requests.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationParagraphRequests")
+    _replace_source_chunks(
+        project_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "P1 P2 P3 P4\n\nQ1 Q2 Q3 Q4"}],
+    )
+    monkeypatch.setattr(ai_translation_service, "_estimate_text_tokens", lambda text: len(text.split()))
+    monkeypatch.setattr(
+        ai_translation_service,
+        "_build_budget_metadata",
+        lambda *_args, **_kwargs: {**_budget(4096), "text_budget_tokens": 4},
+    )
+    prompts = _install_translations(monkeypatch, ["TP1 TP2 TP3 TP4", "TQ1 TQ2 TQ3 TQ4"])
+
+    ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+    )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert len(prompts) == 2
+    assert "Source text:\nP1 P2 P3 P4\n\nReturn JSON" in prompts[0]
+    assert "Source text:\nQ1 Q2 Q3 Q4\n\nReturn JSON" in prompts[1]
+    assert document["chunks"][0]["translated_text"] == "TP1 TP2 TP3 TP4\n\nTQ1 TQ2 TQ3 TQ4"
+
+
+def test_budgeted_translation_rejoins_oversized_paragraph_continuations(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify oversized continuation requests use spaces while mixed true boundaries remain paragraphs.
+    @param[in]  monkeypatch Pytest monkeypatch fixture used to install controlled test doubles.
+    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
+    @return     None.
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationContinuationRequests")
+    _replace_source_chunks(
+        project_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "A1 A2 A3 A4 A5 A6\n\nB1 B2"}],
+    )
+    monkeypatch.setattr(ai_translation_service, "_estimate_text_tokens", lambda text: len(text.split()))
+    monkeypatch.setattr(
+        ai_translation_service,
+        "_build_budget_metadata",
+        lambda *_args, **_kwargs: {**_budget(4096), "text_budget_tokens": 4},
+    )
+    prompts = _install_translations(monkeypatch, ["TA1 TA2 TA3 TA4", "TA5 TA6\n\nTB1 TB2"])
+
+    ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+    )
+
+    document = ai_translation_service.load_translation_document(project_root)
+    assert document is not None
+    assert len(prompts) == 2
+    assert "Source text:\nA1 A2 A3 A4\n\nReturn JSON" in prompts[0]
+    assert "Source text:\nA5 A6\n\nB1 B2\n\nReturn JSON" in prompts[1]
+    assert document["chunks"][0]["translated_text"] == "TA1 TA2 TA3 TA4 TA5 TA6\n\nTB1 TB2"
+
+
 def test_translation_prompt_has_stable_rules_and_minimal_user_contract(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-004 keeps stable rules separate from per-request translation data.
@@ -732,7 +811,10 @@ def test_partial_segment_failure_preserves_usage_without_partial_chunk(monkeypat
     monkeypatch.setattr(
         ai_translation_service,
         "_split_translation_source_text",
-        lambda *_args: ["segment one", "segment two"],
+        lambda *_args: [
+            ai_translation_service._TranslationTextSegment("segment one", False),
+            ai_translation_service._TranslationTextSegment("segment two", True),
+        ],
     )
     responses = iter(
         [
@@ -819,6 +901,19 @@ def _write_translation_document(
             "additional_translation_instructions": instructions,
             "chunks": chunks,
         },
+    )
+
+
+def _replace_source_chunks(project_root, chunks: list[dict[str, object]]) -> None:
+    """
+    @brief      Replace canonical source chunks for one focused translation-path fixture.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunks Ordered compact chunk payloads.
+    @return     None.
+    """
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(build_chunking_document(chunks), indent=2) + "\n",
+        encoding="utf-8",
     )
 
 

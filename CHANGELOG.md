@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Rejected Text Chunking edits no longer appear saved in the chunk list or
+  read-only editor, and AI Translation no longer inserts paragraph breaks
+  between budget-split pieces of the same oversized source paragraph.
 - Project ZIP exports now replace their destination only after the complete
   archive closes successfully, preserving an existing export and removing the
   temporary archive when a source read or replacement fails.

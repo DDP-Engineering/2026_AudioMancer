@@ -15,6 +15,7 @@
 
 # IMPORTS
 
+from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
@@ -95,6 +96,16 @@ class TranslationDocumentError(ValueError):
     """
     @brief      Raised when persisted translation data does not match the strict contract.
     """
+
+
+@dataclass(frozen=True)
+class _TranslationTextSegment:
+    """
+    @brief      Carry one budgeted text segment and its leading paragraph relationship.
+    """
+
+    text: str
+    continues_previous_paragraph: bool
 
 
 # PUBLIC API
@@ -767,7 +778,7 @@ def _translate_text_in_budgeted_segments(
     @return     Complete translated text and cumulative token-usage payload.
     @exception  ValueError Raised when aI translation returned an invalid or empty translated_text value.
     """
-    translated_segments: list[str] = []
+    translated_segments: list[_TranslationTextSegment] = []
     cumulative_usage = token_usage
     for segment_index, source_segment in enumerate(
         _split_translation_source_text(source_text, int(budget_metadata["text_budget_tokens"])),
@@ -776,7 +787,7 @@ def _translate_text_in_budgeted_segments(
         raise_if_cancelled(cancel_requested)
         user_prompt = _render_translation_user_prompt(
             target_language,
-            source_segment,
+            source_segment.text,
             additional_translation_instructions,
         )
         response_result = llm_provider_service.chat_json(
@@ -807,7 +818,12 @@ def _translate_text_in_budgeted_segments(
         translated_value = response_result["payload"].get("translated_text")
         if not isinstance(translated_value, str) or not translated_value.strip():
             raise ValueError("AI translation returned an invalid or empty translated_text value.")
-        translated_segments.append(translated_value.strip())
+        translated_segments.append(
+            _TranslationTextSegment(
+                text=translated_value.strip(),
+                continues_previous_paragraph=source_segment.continues_previous_paragraph,
+            )
+        )
         _emit_progress(
             progress_callback,
             translated_chunk_count,
@@ -815,7 +831,7 @@ def _translate_text_in_budgeted_segments(
             "AI translation in progress...",
             cumulative_usage,
         )
-    return "\n\n".join(translated_segments), cumulative_usage
+    return _join_translation_text_segments(translated_segments), cumulative_usage
 
 
 def _build_budget_metadata(
@@ -880,7 +896,10 @@ def _normalized_additional_translation_instructions(value: object) -> str:
     return "" if value is None else str(value).strip()
 
 
-def _split_translation_source_text(source_text: str, usable_input_budget: int) -> list[str]:
+def _split_translation_source_text(
+    source_text: str,
+    usable_input_budget: int,
+) -> list[_TranslationTextSegment]:
     """
     @brief      Split source text into paragraph-preserving budget-safe segments.
     @param[in]  source_text Canonical source text processed by the callable.
@@ -889,22 +908,51 @@ def _split_translation_source_text(source_text: str, usable_input_budget: int) -
     """
     paragraphs = [item.strip() for item in re.split(r"\n\s*\n", source_text.strip()) if item.strip()]
     if not paragraphs:
-        return [source_text.strip()]
-    segments: list[str] = []
-    current_segment: list[str] = []
+        return [_TranslationTextSegment(source_text.strip(), False)]
+    segments: list[_TranslationTextSegment] = []
+    current_segment: list[_TranslationTextSegment] = []
     current_budget = 0
     for paragraph in paragraphs:
-        for part in _split_oversized_translation_paragraph(paragraph, usable_input_budget):
+        paragraph_parts = _split_oversized_translation_paragraph(paragraph, usable_input_budget)
+        for part_index, part in enumerate(paragraph_parts):
+            part_segment = _TranslationTextSegment(
+                text=part,
+                continues_previous_paragraph=part_index > 0,
+            )
             next_budget = _estimate_text_tokens(part)
             if current_segment and current_budget + next_budget > usable_input_budget:
-                segments.append("\n\n".join(current_segment))
+                segments.append(
+                    _TranslationTextSegment(
+                        text=_join_translation_text_segments(current_segment),
+                        continues_previous_paragraph=current_segment[0].continues_previous_paragraph,
+                    )
+                )
                 current_segment = []
                 current_budget = 0
-            current_segment.append(part)
+            current_segment.append(part_segment)
             current_budget += next_budget
     if current_segment:
-        segments.append("\n\n".join(current_segment))
-    return segments or [source_text.strip()]
+        segments.append(
+            _TranslationTextSegment(
+                text=_join_translation_text_segments(current_segment),
+                continues_previous_paragraph=current_segment[0].continues_previous_paragraph,
+            )
+        )
+    return segments or [_TranslationTextSegment(source_text.strip(), False)]
+
+
+def _join_translation_text_segments(segments: list[_TranslationTextSegment]) -> str:
+    """
+    @brief      Join text segments using their original paragraph relationships.
+    @param[in]  segments Ordered text segments with leading-boundary metadata.
+    @return     Reconstructed text with true paragraph and continuation delimiters.
+    """
+    joined_text = ""
+    for segment in segments:
+        if joined_text:
+            joined_text += " " if segment.continues_previous_paragraph else "\n\n"
+        joined_text += segment.text
+    return joined_text
 
 
 def _split_oversized_translation_paragraph(paragraph: str, usable_input_budget: int) -> list[str]:

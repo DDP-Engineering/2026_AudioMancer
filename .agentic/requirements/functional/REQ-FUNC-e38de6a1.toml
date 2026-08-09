@@ -4,21 +4,23 @@ title = "AI translation budgeting shall reserve output and reject insufficient"
 status = "active"
 
 requirement = """
-AI translation budgeting shall reserve output and reject insufficient input budget.
+AI translation budgeting shall reserve output, reject insufficient input budget, and reconstruct budget-split translations with true source paragraph boundaries while joining oversized-paragraph continuations with spaces.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Automated service tests cover reserved output, insufficient budget rejection, true paragraph breaks across requests, oversized-paragraph continuation joins, and a mixed continuation/paragraph request segment."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_budget_reserves_output_and_rejects_insufficient_input",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_budgeted_translation_preserves_paragraph_breaks_across_requests",
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_budgeted_translation_rejoins_oversized_paragraph_continuations",
 ]
 
 priority = "high"
 rationale = """
-Requests that cannot fit the profile must be refused.
+Requests that cannot fit the profile must be refused, and fitting a chunk into multiple requests must not invent paragraph structure.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-09

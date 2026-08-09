@@ -223,7 +223,8 @@ def test_text_chunking_page_allows_selected_chunk_edit_and_save(monkeypatch, qtb
 
     assert saved_payloads == [("chunk-0001", "Edited paragraph")]
     assert page._chunk_text_edit.isReadOnly() is True
-    assert page._chunk_list.item(0).text() == "chunk-0001 | Edited paragraph"
+    assert page._chunk_list.item(0).text() == "chunk-0001 | Paragraph text"
+    assert page._chunk_text_edit.toPlainText() == "Paragraph text"
     assert page._edit_chunk_button.isEnabled() is True
     assert page._save_chunk_button.isEnabled() is False
 

@@ -4,10 +4,10 @@ title = "The Text Chunking page shall guard chunk editing: allow selected edit"
 status = "active"
 
 requirement = """
-The Text Chunking page shall guard chunk editing: allow selected edit and save, keep read-only on cancelled confirmation, and emit insert and delete requests.
+The Text Chunking page shall guard chunk editing: allow selected edit and save, keep read-only on cancelled confirmation, emit insert and delete requests, and project only durable chunk text after a save request succeeds or is rejected.
 """
 
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Automated page and page-controller tests cover edit-mode transitions, emitted requests, successful durable refresh, and rejected-save projection."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
@@ -16,11 +16,13 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_allows_selected_chunk_edit_and_save",
   "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_cancelled_edit_confirmation_keeps_read_only",
   "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_emits_insert_and_delete_requests",
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_save_chunk_updates_project_state",
+  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_rejected_save_reprojects_persisted_page_state",
 ]
 
 priority = "high"
 rationale = """
-Chunk edits must be deliberate and reversible.
+Chunk edits must be deliberate and reversible, and rejected drafts must never appear durable.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-09

@@ -50,6 +50,8 @@ approval, localization, and busy-state controls.
   persisted resumability and uses it for budgets, requests, and persistence.
 - `REQ-FUNC-d911e006` - interrupted main batch translation keeps its distinct
   resumable failed/cancelled status and completed chunk checkpoints.
+- `REQ-FUNC-e38de6a1` - budgeted requests preserve true paragraph breaks and
+  rejoin pieces of one oversized paragraph with spaces.
 
 ## 5. Implementation Overview
 
@@ -65,6 +67,10 @@ retranslation on a started idle state. The translation service retains stored
 instructions for resumable documents, accepts normalized caller instructions
 for new and non-resumable starts, and treats an interrupted selected
 retranslation as a failed one-off attempt rather than a failed batch.
+Budgeted source segments carry whether their leading text continues the prior
+paragraph; request text retains mixed internal paragraph boundaries, and the
+same relationship reconstructs completed translated responses without changing
+the provider prompt or JSON schema.
 
 ## 6. Dependencies
 

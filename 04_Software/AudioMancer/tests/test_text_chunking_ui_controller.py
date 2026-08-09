@@ -18,6 +18,8 @@
 
 import json
 
+from PySide6.QtWidgets import QMessageBox
+
 from audiomancer import config
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import text_chunking_ui_controller
@@ -579,6 +581,15 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
     )
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window._current_page_id = "text_chunking"
+    page = window._text_chunking_page
+    page.set_project_active(True)
+    page.set_processing_state(
+        cleaned_text="clean text",
+        chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original chunk"}],
+        notes=["ready"],
+        can_chunk=True,
+    )
     status_messages: list[str] = []
     monkeypatch.setattr(
         text_chunking_ui_controller.misc_ui_controller,
@@ -603,7 +614,13 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
         restored_scroll_states.append,
     )
 
-    text_chunking_ui_controller.handle_save_chunk_requested(window, "chunk-0001", "Edited chunk")
+    monkeypatch.setattr(
+        "audiomancer.ui.pages.text_chunking_page.QMessageBox.question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    page._edit_chunk_button.click()
+    page._chunk_text_edit.setPlainText("Edited chunk")
+    page._save_chunk_button.click()
 
     document = json.loads(chunk_artifact_path.read_text(encoding="utf-8"))
     assert document["chunks"][0]["text"] == "Edited chunk"
@@ -619,6 +636,86 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
         }
     ]
     assert status_messages == ["Chunk saved."]
+    assert page._chunks[0]["text"] == "Edited chunk"
+    assert page._chunk_list.item(0).text() == "chunk-0001 | Edited chunk"
+    assert page._chunk_text_edit.toPlainText() == "Edited chunk"
+
+
+def test_text_chunking_rejected_save_reprojects_persisted_page_state(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify a rejected page save leaves every page projection on durable chunk text.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ControllerRejectedChunkEditProject",
+        tmp_path,
+    )
+    chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    chunking_root.mkdir(exist_ok=True)
+    chunk_artifact_path = write_chunking_document(
+        chunking_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Persisted chunk"}],
+    )
+    manifest["current_stage"] = "character_discovery_ready"
+    manifest["operations"]["chunking"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window._current_page_id = "text_chunking"
+    page = window._text_chunking_page
+    page.set_project_active(True)
+    page.set_processing_state(
+        cleaned_text="clean text",
+        chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Persisted chunk"}],
+        notes=["ready"],
+        can_chunk=True,
+    )
+    monkeypatch.setattr(
+        "audiomancer.ui.pages.text_chunking_page.QMessageBox.question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        text_chunking_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, _title, message: warnings.append(message),
+    )
+    monkeypatch.setattr(
+        text_chunking_ui_controller.text_chunking_state_service,
+        "save_chunk_text_edit",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("Rejected persisted edit.")),
+    )
+    page._edit_chunk_button.click()
+    page._chunk_text_edit.setPlainText("Rejected edit")
+    page._save_chunk_button.click()
+
+    document = json.loads(chunk_artifact_path.read_text(encoding="utf-8"))
+    assert document["chunks"][0]["text"] == "Persisted chunk"
+    assert page._chunks[0]["text"] == "Persisted chunk"
+    assert page._chunk_list.item(0).text() == "chunk-0001 | Persisted chunk"
+    assert page._chunk_text_edit.toPlainText() == "Persisted chunk"
+    assert page._chunk_text_edit.isReadOnly() is True
+    assert page._editing_chunk is False
+    assert warnings == ["Rejected persisted edit."]
 
 
 # END OF FILE

@@ -608,14 +608,10 @@ class TextChunkingPage(QWidget):
         row = self._chunk_list.currentRow()
         if not self._editing_chunk or row < 0 or row >= len(self._chunks):
             return
-        self._editing_chunk = False
-        self._chunk_text_edit.setReadOnly(True)
         chunk_id = str(self._chunks[row].get("chunk_id", ""))
         edited_text = self._chunk_text_edit.toPlainText()
-        self._chunks[row]["text"] = edited_text
-        self._chunk_list.item(row).setText(_format_chunk_list_item(self._chunks[row]))
+        self._show_selected_chunk(row)
         self.save_chunk_requested.emit(chunk_id, edited_text)
-        self._apply_button_state()
 
     def _current_language(self) -> str:
         """

@@ -79,7 +79,11 @@ write or downstream invalidation, preserving the resume checkpoint and all
 artifacts; completed documents retain the existing manual-mutation behavior.
 The controller dispatches work through the
 shared operation runner and refreshes the project state. `TextChunkingPage`
-renders profiles, strategy, previews, edits, and search.
+renders profiles, strategy, previews, edits, and search. Saving leaves edit
+mode and reprojects the current durable page model before the synchronous
+controller request; a successful request refreshes that model from persisted
+state, while a rejected request cannot leave the draft in the model, list, or
+read-only editor.
 
 ## 4. Dependencies
 
