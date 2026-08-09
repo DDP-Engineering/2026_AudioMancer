@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-d7f260b0 — Fix resumed ambience ordering and discovery window budgets
 
-stage: deliver
+stage: done
 type: fix
 path: quick
 requirements: REQ-FUNC-b355f8e6, REQ-FUNC-9f4389c9
@@ -45,7 +45,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] project additions: code style and Unreleased changelog complete; release-only
       version and help-file workflow not applicable
 
@@ -69,6 +69,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: REQ-FUNC-b355f8e6 maps to the resumed ambience order regression and REQ-FUNC-9f4389c9 maps to the production window-parameter regression; both remain active and their linked selectors exist.
 - 2026-08-09 deliver: commit and journal close-out are already approved by the delegation after exact staging and report review; no PR, push, or merge is authorized.
 - 2026-08-09 deliver: the generated report's 408-file merge-base statistic and 91 baseline warnings are repository-history artifacts; the HEAD-relative staged diff is the authoritative delivery scope.
+- 2026-08-09 close-out: delivery commit a1823c0b1d2d41129fbc11137aebe3f4bba50e9a succeeded, so the journal is now done for the approved commit-only outcome.
 
 ## Delivery report (2026-08-09)
 
