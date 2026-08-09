@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-bd433c60 — Validate and consolidate DUP-01 and DUP-02
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-NFR-d559facc, REQ-NFR-0eae9411
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, and links are true
 - [x] delivery confirmed by the standing approval in the delegated request
 - [x] journal and report inside the delivery commit; agreed commit outcome delivered
-- [ ] close-out: stage done set and committed only after the delivery commit succeeds
+- [x] close-out: stage done set and committed only after the delivery commit succeeds
 - [x] code follows project style and the Unreleased changelog is updated without release/version changes
 
 ## Log
@@ -78,6 +78,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Per user direction, no full suite or `check --run` was executed; only focused tests and task-scoped static checks are delivery evidence.
 - 2026-08-09 deliver: Semantic diff review confirmed five selector delegates, 26 exact default-No confirmation delegates, preserved public wrapper names and patch seams, and no changes to distinct dialog or Cleanup label behavior.
 - 2026-08-09 deliver: Standing approval authorizes the reviewed delivery commit and a separate close-out commit without another conversational checkpoint.
+- 2026-08-09 deliver: Delivery committed as c334d06 with no push, merge, PR, release, or parent-worktree edit.
+- 2026-08-09 close-out: Delivery outcome succeeded, so the task is now done and ready for its separate close-out commit.
 
 ## Delivery report (2026-08-09)
 
