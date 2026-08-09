@@ -59,6 +59,15 @@ owner for full Cleanup publication invalidation. It does not edit
 Cleanup asks Project Lifecycle's shared manifest-reset builder to reset the
 matching compact summaries in one manifest value.
 
+Character Discovery reset owns both the current
+`log_ai_character_discovery_*.log` family and the historical
+`log_ai_characters_*.log` family (REQ-FUNC-fc51aea2). Character Voices reset
+loads `characters_voice.json` before deleting it and removes only regular WAVs
+referenced by exact character-target metadata through safe project-relative
+paths (REQ-FUNC-de9cf536). Narrator targets, unreferenced audio, malformed or
+unsafe paths, symlinks, and explicitly preserved operations remain untouched;
+unreadable target metadata cannot prevent the document reset.
+
 `operation_runner_controller` owns `ThreadedOperationWorker` and its UI bridge.
 It disables conflicting project switches, creates the shared dialog, routes
 signals to UI-thread handlers, clears all bookkeeping after thread completion,
@@ -169,7 +178,8 @@ Primary automated coverage:
 
 - `test_operation_runtime_service.py` covers progress, common state/artifact
   IO, malformed/missing data handling, path containment, default state, and
-  reset preservation.
+  reset preservation, including Character Discovery log-family ownership and
+  metadata-scoped Character Voices sample cleanup.
 - `test_workflow_impact_service.py` and `test_workflow_order_consistency.py`
   cover ordering, stable identity, full/selective reset, safe artifact deletion,
   assembly reset, and manifest refresh.

@@ -1,0 +1,76 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-de9cf536"
+
+title = "Reset only metadata-owned Character Voices samples"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When a reset includes Character Voices, the runtime shall delete before the
+targets document only regular project-local WAV files referenced by persisted
+character-target sample metadata while retaining narrator targets, unreferenced
+files, unsafe or outside paths, and all data for explicitly preserved operations.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Focused runtime reset tests seed character and narrator target metadata, multiple referenced samples, unreferenced root WAVs, unsafe and outside references, an undecodable targets document, and preserved operation kinds, then observe deletion ordering and exact retained files and documents."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_deletes_referenced_character_samples_before_targets_document",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_discovery_reset_preserves_narrator_and_deletes_character_samples",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_voice_sample_reset_preserves_unowned_and_unsafe_paths",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_voice_sample_reset_tolerates_non_utf8_targets_document",
+  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_character_voice_document_and_samples",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "Character voice sample names share a broad root-level naming pattern with narrator and unrelated audio, so persisted target kind and safe sample path metadata are the only valid ownership proof."
+
+created = 2026-08-09
+updated = 2026-08-09
