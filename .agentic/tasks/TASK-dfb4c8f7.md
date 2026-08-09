@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-dfb4c8f7 — Harden archive export and settings repair writes
 
-stage: deliver
+stage: done
 type: fix
 path: quick
 requirements: REQ-FUNC-efcaeeed, REQ-REL-c822b662
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed under the standing human approval before the commit
 - [x] journal and report inside the delivery commit; agreed commit outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the delivery commit succeeds
+- [x] close-out: `stage: done` set and committed only after the delivery commit succeeds
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language without a version change
 
@@ -68,6 +68,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Exclusions remain UI, schemas, dependencies, unrelated persistence helpers, release/version/help files, `0_Planning`, full pytest, push, and merge, with no unrequested changes found.
 - 2026-08-09 deliver: Standing human approval authorizes the exact scoped delivery commit followed by the AEGIS journal-only close-out commit.
 - 2026-08-09 deliver: The generated report's 410-file merge-base diff is an ancestral base-selection artifact, so the exact HEAD/staged task diff is authoritative for delivery review.
+- 2026-08-09 close-out: Delivery commit a435092 succeeded with the exact ten-file scoped patch; no push or merge was performed.
 
 ## Delivery report (2026-08-09)
 
