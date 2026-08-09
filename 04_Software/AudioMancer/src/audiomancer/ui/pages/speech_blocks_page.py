@@ -1197,19 +1197,6 @@ class SpeechBlocksPage(QWidget):
                 return row
         return -1
 
-    def _visible_insertion_row(self, speech_block: dict[str, object]) -> int:
-        """
-        @brief      Resolve the visible insertion row for one Speech Block in the selected chunk.
-        @param[in]  speech_block Speech Block payload.
-        @return     Zero-based insertion row.
-        @exception  None
-        """
-        normalized_id = str(speech_block.get("speech_block_id", "")).strip()
-        for row, block in enumerate(self._blocks_for_current_chunk()):
-            if str(block.get("speech_block_id", "")).strip() == normalized_id:
-                return row
-        return self._speech_block_list.count()
-
     def _select_chunk_by_id(self, chunk_id: str) -> None:
         """
         @brief      Restore one source-chunk selection in the chunk list.

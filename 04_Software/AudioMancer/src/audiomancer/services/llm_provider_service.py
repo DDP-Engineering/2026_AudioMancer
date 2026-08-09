@@ -199,12 +199,7 @@ def chat_json(
                         },
                     )
                 except _UnsupportedMaxTokensError:
-                    compatibility_payload = _build_max_completion_tokens_payload(
-                        active_request_payload
-                    )
-                    if compatibility_payload == active_request_payload:
-                        raise
-                    active_request_payload = compatibility_payload
+                    active_request_payload = _build_max_completion_tokens_payload(active_request_payload)
             raw_content = _extract_message_content(raw_payload)
             try:
                 parsed_payload = _parse_json_content(raw_content)

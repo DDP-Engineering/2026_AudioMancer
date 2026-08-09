@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech Blocks, Audio Blocks, Text Chunking, and shared AI internals no longer
+  carry proven-unreachable helpers, branches, aliases, or discarded arguments;
+  documented compatibility and intentional test-support interfaces remain.
 - Character Discovery, Narrator Voice, Character Voices, VoiceWeaver, and
   Audio Blocks no longer reload, construct, or expose data that their active
   workflows discard; existing narrator service call forms remain compatible.

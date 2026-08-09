@@ -46,4 +46,34 @@ def test_build_token_usage_notes_renders_unavailable_only_when_usage_was_persist
     ) == ["Token usage was not reported by the backend."]
 
 
+def test_build_token_usage_notes_ignores_noncanonical_top_level_operation_usage() -> None:
+    """
+    @brief      Verify canonical operation metadata wins over a noncanonical top-level usage field.
+    @return     None.
+    @exception  None
+    """
+    notes = ai_state_note_service.build_token_usage_notes(
+        None,
+        {
+            "token_usage": {
+                "input_tokens": 90,
+                "output_tokens": 9,
+                "total_tokens": 99,
+                "usage_available": True,
+            },
+            "metadata": {
+                "token_usage": {
+                    "input_tokens": 2,
+                    "output_tokens": 1,
+                    "total_tokens": 3,
+                    "usage_available": True,
+                }
+            },
+        },
+        "en",
+    )
+
+    assert notes == ["Input tokens: 2 | Output tokens: 1 | Total: 3"]
+
+
 # END OF FILE

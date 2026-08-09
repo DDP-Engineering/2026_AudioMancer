@@ -631,11 +631,6 @@ def _chunking_state_strategy(chunking_operation_state: dict[str, object]) -> str
     @return     Valid semantic strategy or the configured default.
     @exception  None
     """
-    resume_checkpoint = chunking_operation_state.get("resume_checkpoint")
-    if isinstance(resume_checkpoint, dict):
-        semantic_strategy = str(resume_checkpoint.get("semantic_strategy", "")).strip()
-        if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
-            return semantic_strategy
     metadata = chunking_operation_state.get("metadata")
     if isinstance(metadata, dict):
         semantic_strategy = str(metadata.get("semantic_strategy", "")).strip()

@@ -363,7 +363,6 @@ def _project_speech_blocks_report(
         str(document.get("ai_profile_id", "")),
         total_chunk_count,
         processed_chunk_count,
-        [],
         document.get("token_usage", {}),
         dict(budget_metadata) if isinstance(budget_metadata, dict) else None,
     )
@@ -698,7 +697,6 @@ def start_or_continue_generation(
     )
     additional_speech_block_instructions_fingerprint = _compute_generation_rules_fingerprint(
         additional_speech_block_instructions,
-        scene_ambience_settings,
     )
 
     speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
@@ -750,7 +748,6 @@ def start_or_continue_generation(
                 profile_id,
                 len(source_chunks),
                 len(source_chunks),
-                warning_records,
                 token_usage,
                 budget_metadata,
                 additional_speech_block_instructions,
@@ -760,7 +757,6 @@ def start_or_continue_generation(
 
     _persist_state(
         resolved_project_root,
-        source_chunks,
         existing_blocks,
         _rebuild_report_with_prompt_rules(
             existing_blocks,
@@ -769,7 +765,6 @@ def start_or_continue_generation(
             profile_id,
             len(source_chunks),
             start_chunk_index,
-            warning_records,
             token_usage,
             budget_metadata,
             additional_speech_block_instructions,
@@ -785,7 +780,6 @@ def start_or_continue_generation(
             source_language=source_language,
             source_kind=source_kind,
             profile_id=profile_id,
-            warning_records=warning_records,
             input_fingerprint=input_fingerprint,
             log_path=log_path,
             token_usage=token_usage,
@@ -831,12 +825,11 @@ def start_or_continue_generation(
 
         def _persist_segment_progress(
             segment_blocks: list[SpeechBlockPayload],
-            segment_warnings: list[dict[str, object]],
+            _segment_warnings: list[dict[str, object]],
             segment_token_usage: TokenUsagePayload,
             next_segment_index: int,
             segment_total: int,
             base_blocks: list[SpeechBlockPayload] = all_blocks,
-            base_warnings: list[dict[str, object]] = warning_entries,
             base_token_usage: TokenUsagePayload = token_usage,
             current_chunk_index: int = chunk_index,
             current_chunk_id: str = chunk_id,
@@ -845,7 +838,7 @@ def start_or_continue_generation(
             """
             @brief      Persist resumable Speech Blocks progress after one direct request segment.
             @param[in]  segment_blocks Chunk-local blocks generated so far in this call.
-            @param[in]  segment_warnings Chunk-local warnings generated so far in this call.
+            @param[in]  _segment_warnings Ignored chunk-local warning snapshot supplied by the callback contract.
             @param[in]  segment_token_usage Chunk-local token usage generated so far in this call.
             @param[in]  next_segment_index One-based next segment cursor after the persisted segment.
             @param[in]  segment_total Total segment count for the active chunk.
@@ -857,7 +850,6 @@ def start_or_continue_generation(
                 current_chunk_block_count,
             )
             persisted_blocks = _renumber_speech_blocks(source_chunks, [*base_blocks, *continued_segment_blocks])
-            persisted_warnings = [*base_warnings, *segment_warnings]
             persisted_usage = token_usage_service.merge_token_usage(base_token_usage, segment_token_usage)
             chunk_complete = next_segment_index >= segment_total
             processed_chunk_count = current_chunk_index + 1 if chunk_complete else current_chunk_index
@@ -868,7 +860,6 @@ def start_or_continue_generation(
                 profile_id,
                 len(source_chunks),
                 processed_chunk_count,
-                persisted_warnings,
                 persisted_usage,
                 budget_metadata,
                 additional_speech_block_instructions,
@@ -876,7 +867,6 @@ def start_or_continue_generation(
             )
             _persist_state(
                 resolved_project_root,
-                source_chunks,
                 persisted_blocks,
                 report,
                 _build_operation_state_with_prompt_rules(
@@ -889,7 +879,6 @@ def start_or_continue_generation(
                     source_language=source_language,
                     source_kind=source_kind,
                     profile_id=profile_id,
-                    warning_records=persisted_warnings,
                     input_fingerprint=input_fingerprint,
                     log_path=log_path,
                     token_usage=persisted_usage,
@@ -964,7 +953,6 @@ def start_or_continue_generation(
             profile_id,
             len(source_chunks),
             chunk_index + 1,
-            warning_entries,
             token_usage,
             budget_metadata,
             additional_speech_block_instructions,
@@ -972,7 +960,6 @@ def start_or_continue_generation(
         )
         _persist_state(
             resolved_project_root,
-            source_chunks,
             all_blocks,
             report,
             _build_operation_state_with_prompt_rules(
@@ -985,7 +972,6 @@ def start_or_continue_generation(
                 source_language=source_language,
                 source_kind=source_kind,
                 profile_id=profile_id,
-                warning_records=warning_entries,
                 input_fingerprint=input_fingerprint,
                 log_path=log_path,
                 token_usage=token_usage,
@@ -1012,12 +998,10 @@ def start_or_continue_generation(
         profile_id,
         len(source_chunks),
         len(source_chunks),
-        warning_entries,
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
         scene_ambience_settings=scene_ambience_settings,
-        updated_at=completed_at,
     )
     completed_state = _build_operation_state_with_prompt_rules(
         resolved_project_root,
@@ -1029,7 +1013,6 @@ def start_or_continue_generation(
         source_language=source_language,
         source_kind=source_kind,
         profile_id=profile_id,
-        warning_records=warning_entries,
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
@@ -1041,7 +1024,6 @@ def start_or_continue_generation(
     )
     _persist_state(
         resolved_project_root,
-        source_chunks,
         all_blocks,
         report,
         completed_state,
@@ -1577,12 +1559,10 @@ def regenerate_chunk_speech_blocks(
         profile_id,
         len(source_chunks),
         len({str(block.get("chunk_id", "")).strip() for block in all_blocks}),
-        [],
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
         scene_ambience_settings=scene_ambience_settings,
-        updated_at=completed_at,
     )
     resplit_state = _build_operation_state_with_prompt_rules(
         resolved_project_root,
@@ -1594,7 +1574,6 @@ def regenerate_chunk_speech_blocks(
         source_language=source_language,
         source_kind=source_kind,
         profile_id=profile_id,
-        warning_records=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
@@ -1606,7 +1585,6 @@ def regenerate_chunk_speech_blocks(
     )
     _persist_state(
         resolved_project_root,
-        source_chunks,
         all_blocks,
         report,
         resplit_state,
@@ -1865,18 +1843,13 @@ def _scene_ambience_allowed_positions(placement_policy: str) -> list[str]:
     }.get(str(placement_policy).strip(), [])
 
 
-def _compute_generation_rules_fingerprint(
-    additional_speech_block_instructions: str,
-    scene_ambience_settings: dict[str, object],
-) -> str:
+def _compute_generation_rules_fingerprint(additional_speech_block_instructions: str) -> str:
     """
     @brief      Compute one stable fingerprint for operator prompt rules.
     @param[in]  additional_speech_block_instructions Operator-supplied prompt rules.
-    @param[in]  scene_ambience_settings Ignored legacy scene-ambience settings parameter.
     @return     SHA-256 fingerprint for resumable Speech Blocks runs.
     @exception  None
     """
-    _ = scene_ambience_settings
     return _compute_prompt_fingerprint(additional_speech_block_instructions)
 
 
@@ -2757,16 +2730,6 @@ def _prompt_excerpt(text: str, limit: int, *, tail: bool = False) -> str:
     return normalized[:limit].rstrip()
 
 
-def _estimate_text_tokens(text: str) -> int:
-    """
-    @brief      Estimate token usage for local budget checks.
-    @param[in]  text Value for `text`.
-    @return     Estimated token count.
-    @exception  None
-    """
-    return ai_budget_service.estimate_text_tokens(text)
-
-
 def _positive_float(value: object, fallback: float) -> float:
     """
     @brief      Normalize one positive float with fallback.
@@ -2885,7 +2848,6 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
 
 def _persist_state(
     project_root: Path,
-    source_chunks: list[dict[str, object]],
     speech_blocks: list[SpeechBlockPayload],
     report: SpeechBlocksReportPayload,
     operation_state: OperationStatePayload,
@@ -2893,14 +2855,12 @@ def _persist_state(
     """
     @brief      Persist the Speech Blocks output, report, and state.
     @param[in]  project_root Active project root folder.
-    @param[in]  source_chunks Source snapshot payload list.
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @param[in]  report Current Speech Blocks report payload.
     @param[in]  operation_state Current Speech Blocks operation-state payload.
     @return     None.
     @exception  None
     """
-    _ = source_chunks
     document = _compose_speech_blocks_document(speech_blocks, report, operation_state)
     write_speech_blocks_document(project_root, document)
 
@@ -2912,12 +2872,10 @@ def _rebuild_report_with_prompt_rules(
     profile_id: str,
     total_chunk_count: int,
     processed_chunk_count: int,
-    warning_records: list[dict[str, object]],
     token_usage: dict[str, object],
     budget_metadata: BudgetMetadataPayload | None,
     additional_speech_block_instructions: str,
     scene_ambience_settings: dict[str, object] | None = None,
-    updated_at: str | None = None,
 ) -> SpeechBlocksReportPayload:
     """
     @brief      Rebuild a Speech Blocks report and persist operator prompt-rule metadata.
@@ -2927,11 +2885,9 @@ def _rebuild_report_with_prompt_rules(
     @param[in]  profile_id Active AI profile identifier.
     @param[in]  total_chunk_count Total source chunk count.
     @param[in]  processed_chunk_count Number of processed chunks.
-    @param[in]  warning_records Current warning entry list.
     @param[in]  token_usage Current cumulative token-usage payload.
     @param[in]  budget_metadata Optional context-budget metadata.
     @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
-    @param[in]  updated_at Ignored legacy report timestamp override.
     @return     Rebuilt Speech Blocks report payload.
     @exception  None
     """
@@ -2942,10 +2898,8 @@ def _rebuild_report_with_prompt_rules(
         profile_id,
         total_chunk_count,
         processed_chunk_count,
-        warning_records,
         token_usage,
         budget_metadata,
-        updated_at=updated_at,
     )
     normalized_instructions = _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
     report["additional_speech_block_instructions"] = normalized_instructions
@@ -2953,7 +2907,6 @@ def _rebuild_report_with_prompt_rules(
     report["scene_ambience_generation"] = dict(scene_settings)
     report["additional_speech_block_instructions_fingerprint"] = _compute_generation_rules_fingerprint(
         normalized_instructions,
-        scene_settings,
     )
     return report
 
@@ -2968,7 +2921,6 @@ def _build_operation_state_with_prompt_rules(
     source_language: str,
     source_kind: str,
     profile_id: str,
-    warning_records: list[dict[str, object]],
     input_fingerprint: str,
     log_path: Path,
     token_usage: dict[str, object],
@@ -2993,7 +2945,6 @@ def _build_operation_state_with_prompt_rules(
     @param[in]  source_language Active source language code.
     @param[in]  source_kind Active source-kind token.
     @param[in]  profile_id Active AI profile identifier.
-    @param[in]  warning_records Current warning entry list.
     @param[in]  input_fingerprint Stable source snapshot fingerprint.
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  token_usage Current cumulative token-usage payload.
@@ -3011,11 +2962,9 @@ def _build_operation_state_with_prompt_rules(
         speech_blocks,
         status=status,
         started_at=started_at,
-        completed_at=completed_at,
         source_language=source_language,
         source_kind=source_kind,
         profile_id=profile_id,
-        warning_records=warning_records,
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
@@ -3043,7 +2992,7 @@ def _build_operation_state_with_prompt_rules(
     metadata = dict(metadata) if isinstance(metadata, dict) else {}
     metadata["additional_speech_block_instructions"] = normalized_instructions
     scene_settings = scene_ambience_settings or _resolve_scene_ambience_settings(None, False)
-    instruction_fingerprint = _compute_generation_rules_fingerprint(normalized_instructions, scene_settings)
+    instruction_fingerprint = _compute_generation_rules_fingerprint(normalized_instructions)
     response_contract = str(speech_blocks_response_contract).strip() or _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT
     metadata["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
     metadata["scene_ambience_generation"] = dict(scene_settings)
@@ -3103,7 +3052,6 @@ def _persist_compact_review_update(
         profile_id,
         total_chunk_count,
         processed_chunk_count,
-        [],
         token_usage,
         budget_metadata,
     )
@@ -3116,7 +3064,6 @@ def _persist_compact_review_update(
     updated_report["scene_ambience_generation"] = dict(scene_ambience_settings)
     updated_report["additional_speech_block_instructions_fingerprint"] = _compute_generation_rules_fingerprint(
         additional_speech_block_instructions,
-        scene_ambience_settings,
     )
     updated_state = _build_compact_review_operation_state(
         project_root,
@@ -3292,7 +3239,6 @@ def _persist_report_update(
         profile_id,
         source_chunk_count,
         len({str(block.get("chunk_id", "")).strip() for block in renumbered_blocks}),
-        [],
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
@@ -3315,7 +3261,6 @@ def _persist_report_update(
         source_language=source_language,
         source_kind=source_kind,
         profile_id=profile_id,
-        warning_records=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
@@ -3328,7 +3273,6 @@ def _persist_report_update(
     )
     _persist_state(
         project_root,
-        source_chunks,
         renumbered_blocks,
         updated_report,
         updated_state,

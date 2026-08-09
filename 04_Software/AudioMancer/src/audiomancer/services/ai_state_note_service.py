@@ -10,8 +10,7 @@
 @file ai_state_note_service.py
 @brief Shared AI workflow state-note helpers.
 @details Provides reusable operator-facing note rendering for AI token usage
-         persisted in reports, operation-state metadata, or compact top-level
-         operation state.
+         persisted in reports or operation-state metadata.
 """
 
 # IMPORTS
@@ -35,14 +34,12 @@ def build_token_usage_notes(
     @exception  None
     """
     metadata = {}
-    state_token_usage = None
     if isinstance(operation_state, dict):
         metadata = operation_state.get("metadata", {})
-        state_token_usage = operation_state.get("token_usage")
     metadata_token_usage = metadata.get("token_usage") if isinstance(metadata, dict) else None
     token_usage = token_usage_service.restore_token_usage(
         None if not isinstance(report_payload, dict) else report_payload.get("token_usage"),
-        state_token_usage if state_token_usage is not None else metadata_token_usage,
+        metadata_token_usage,
     )
     if bool(token_usage.get("usage_available", False)):
         return [
@@ -53,7 +50,7 @@ def build_token_usage_notes(
             )
         ]
     if (isinstance(report_payload, dict) and "token_usage" in report_payload) or (
-        (isinstance(metadata, dict) and "token_usage" in metadata) or state_token_usage is not None
+        isinstance(metadata, dict) and "token_usage" in metadata
     ):
         return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
     return []

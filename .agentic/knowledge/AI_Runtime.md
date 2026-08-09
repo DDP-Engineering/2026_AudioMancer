@@ -95,11 +95,13 @@ usage maps the provider's `prompt_tokens`, `completion_tokens`, and
 `total_tokens` to input/output/total values plus `usage_available`. Finite
 non-negative integral floats normalize to integers, and an absent/null total is
 derived only when both input and output exist; a valid reported total remains
-authoritative. Repair usage is merged with the original response usage. Prompt
-rendering requires exact named placeholders. Chat responses must parse to JSON
-objects. Null scalar or multipart text is empty; a refusal explanation becomes
-a clear safe ValueError, while reasoning-only output remains empty and never
-triggers model repair. A provider that explicitly rejects `response_format` is
+authoritative. Persisted usage notes restore only report and operation-metadata
+usage; a noncanonical top-level operation-state field is ignored
+(`REQ-NFR-6634ea30`). Repair usage is merged with the original response usage.
+Prompt rendering requires exact named placeholders. Chat responses must parse
+to JSON objects. Null scalar or multipart text is empty; a refusal explanation
+becomes a clear safe ValueError, while reasoning-only output remains empty and
+never triggers model repair. A provider that explicitly rejects `response_format` is
 retried once without it, and one that explicitly rejects `max_tokens` is
 retried with `max_completion_tokens`; each adapted payload remains active for
 later outer retries in that invocation only. Transient outer retries wait 0.5,

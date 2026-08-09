@@ -44,7 +44,6 @@ def test_ai_chunking_windows_use_configured_strategy_caps(monkeypatch) -> None:
 
     windows = ai_chunking_service._build_windows(
         paragraph_records,
-        "meaning",
         {
             "context_window": 4096,
             "max_output_tokens": 512,
@@ -87,7 +86,7 @@ def test_ai_chunking_large_context_allows_larger_scene_windows(tmp_path, monkeyp
         "",
     )
 
-    windows = ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata)
+    windows = ai_chunking_service._build_windows(paragraph_records, budget_metadata)
 
     assert windows == [{"start_index": 0, "end_index": 19}]
     assert windows[0]["end_index"] > 9
@@ -116,7 +115,7 @@ def test_ai_chunking_small_context_limits_paragraph_windows(tmp_path, monkeypatc
         "",
     )
 
-    windows = ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata)
+    windows = ai_chunking_service._build_windows(paragraph_records, budget_metadata)
 
     assert len(windows) > 1
     assert windows[0]["end_index"] < len(paragraph_records) - 1
@@ -175,7 +174,7 @@ def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragra
 
     assert budget_metadata["text_budget_tokens"] == 3000
     assert budget_metadata["strategy_paragraph_cap"] == 0
-    assert ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata) == [
+    assert ai_chunking_service._build_windows(paragraph_records, budget_metadata) == [
         {"start_index": 0, "end_index": 4}
     ]
 
@@ -225,9 +224,9 @@ def test_ai_chunking_context_modes_control_paragraph_caps(tmp_path, monkeypatch)
     assert balanced_metadata["strategy_paragraph_cap"] == 128
     assert wide_metadata["strategy_paragraph_cap"] == 256
     assert maximum_metadata["strategy_paragraph_cap"] == 0
-    assert ai_chunking_service._build_windows(paragraph_records, "scene", balanced_metadata)[0]["end_index"] == 127
-    assert ai_chunking_service._build_windows(paragraph_records, "scene", wide_metadata)[0]["end_index"] == 255
-    assert ai_chunking_service._build_windows(paragraph_records, "scene", maximum_metadata) == [
+    assert ai_chunking_service._build_windows(paragraph_records, balanced_metadata)[0]["end_index"] == 127
+    assert ai_chunking_service._build_windows(paragraph_records, wide_metadata)[0]["end_index"] == 255
+    assert ai_chunking_service._build_windows(paragraph_records, maximum_metadata) == [
         {"start_index": 0, "end_index": 299}
     ]
 
@@ -245,7 +244,6 @@ def test_ai_chunking_keeps_oversized_paragraphs_whole() -> None:
 
     windows = ai_chunking_service._build_windows(
         paragraph_records,
-        "scene",
         {
             "context_window": 2048,
             "max_output_tokens": 512,

@@ -24,6 +24,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     character_discovery_service,
     character_voices_service,
     chunking_document_service,
@@ -616,9 +617,7 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
     assert [block["speech_block_id"] for block in speech_blocks] == [
         f"0001-{index:06d}" for index in range(1, len(speech_blocks) + 1)
     ]
-    assert report["budget_metadata"]["text_budget_tokens"] < speech_blocks_service._estimate_text_tokens(  # noqa: SLF001
-        long_chunk_text
-    )
+    assert report["budget_metadata"]["text_budget_tokens"] < ai_budget_service.estimate_text_tokens(long_chunk_text)
 
 
 def test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap(monkeypatch, tmp_path) -> None:
@@ -675,7 +674,7 @@ def test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap
 
     assert len(requested_segments) > 1
     assert "".join(requested_segments) == long_chunk_text
-    assert all(speech_blocks_service._estimate_text_tokens(segment) <= 2000 for segment in requested_segments)  # noqa: SLF001
+    assert all(ai_budget_service.estimate_text_tokens(segment) <= 2000 for segment in requested_segments)
 
 
 def test_start_generation_direct_malformed_json_falls_back_for_segment_only(monkeypatch, tmp_path) -> None:
@@ -801,7 +800,6 @@ def test_speech_blocks_resume_with_scene_ambience_preserves_unfinished_direct_se
         "profile-1",
         1,
         0,
-        [],
         {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2, "usage_available": True},
         budget_metadata,
     )
@@ -811,11 +809,9 @@ def test_speech_blocks_resume_with_scene_ambience_preserves_unfinished_direct_se
         existing_blocks,
         status="running",
         started_at="2026-07-07T06:00:00+00:00",
-        completed_at=None,
         source_language="en",
         source_kind="original",
         profile_id="profile-1",
-        warning_records=[],
         input_fingerprint=fingerprint,
         log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_resume.log",
         token_usage={"input_tokens": 1, "output_tokens": 1, "total_tokens": 2, "usage_available": True},
@@ -830,7 +826,6 @@ def test_speech_blocks_resume_with_scene_ambience_preserves_unfinished_direct_se
     operation_state["resume_checkpoint"]["completed_segment_count"] = 1
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
-        source_resolution["source_chunks"],
         existing_blocks,
         report,
         operation_state,
@@ -1126,10 +1121,6 @@ def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) 
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
     source_chunks = list(source_resolution["source_chunks"])
     input_fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
-    current_scene_settings = speech_blocks_service._resolve_scene_ambience_settings(  # noqa: SLF001
-        {"scene_ambience_placement": "openers_and_closers"}
-    )
-
     restored = speech_blocks_service._restore_resume_state(  # noqa: SLF001
         project_root,
         {
@@ -1139,7 +1130,7 @@ def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) 
                 "source_language": "en",
                 "speech_blocks_response_contract": "source_span_selection",
                 "additional_speech_block_instructions_fingerprint": (
-                    speech_blocks_service._compute_generation_rules_fingerprint("", current_scene_settings)  # noqa: SLF001
+                    speech_blocks_service._compute_generation_rules_fingerprint("")  # noqa: SLF001
                 ),
                 "scene_ambience_generation": {
                     "enabled": False,
@@ -1160,7 +1151,7 @@ def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) 
         input_fingerprint,
         "en",
         source_chunks,
-        speech_blocks_service._compute_generation_rules_fingerprint("", current_scene_settings),  # noqa: SLF001
+        speech_blocks_service._compute_generation_rules_fingerprint(""),  # noqa: SLF001
     )
 
     assert restored == ([], [], 0)
@@ -2466,13 +2457,11 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
         "profile-1",
         2,
         1,
-        [],
         {"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True},
         budget_metadata,
     )
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
-        source_resolution["source_chunks"],
         existing_blocks,
         report,
         speech_blocks_service._build_operation_state_with_prompt_rules(  # noqa: SLF001
@@ -2485,7 +2474,6 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
             source_language="en",
             source_kind="original",
             profile_id="profile-1",
-            warning_records=[],
             input_fingerprint=fingerprint,
             log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_resume.log",
             token_usage={"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True},
@@ -2595,7 +2583,6 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
     )
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
-        source_chunks,
         existing_blocks,
         speech_blocks_service._rebuild_report(  # noqa: SLF001
             existing_blocks,
@@ -2604,7 +2591,6 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
             "profile-1",
             len(source_chunks),
             1,
-            [],
             token_usage,
             budget_metadata,
         ),
@@ -2618,7 +2604,6 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
             source_language="en",
             source_kind="original",
             profile_id="profile-1",
-            warning_records=[],
             input_fingerprint=fingerprint,
             log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_review.log",
             token_usage=token_usage,
@@ -2764,7 +2749,6 @@ def test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_b
     )
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
-        source_chunks,
         existing_blocks,
         speech_blocks_service._rebuild_report(  # noqa: SLF001
             existing_blocks,
@@ -2773,7 +2757,6 @@ def test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_b
             "profile-1",
             len(source_chunks),
             len(existing_blocks),
-            [],
             token_usage,
             budget_metadata,
         ),
@@ -2787,7 +2770,6 @@ def test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_b
             source_language="en",
             source_kind="original",
             profile_id="profile-1",
-            warning_records=[],
             input_fingerprint=fingerprint,
             log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_speech_blocks_gap.log",
             token_usage=token_usage,
@@ -3606,7 +3588,7 @@ def test_budgeted_source_chunk_segments_attach_source_spans() -> None:
 
     source_segments = speech_blocks_service._budgeted_source_chunk_segments(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": source_text},
-        {"text_budget_tokens": speech_blocks_service._estimate_text_tokens(source_text) + 10},  # noqa: SLF001
+        {"text_budget_tokens": ai_budget_service.estimate_text_tokens(source_text) + 10},
     )
 
     assert len(source_segments) == 1

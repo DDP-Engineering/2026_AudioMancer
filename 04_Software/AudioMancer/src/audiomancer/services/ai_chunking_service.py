@@ -17,7 +17,6 @@
 
 # IMPORTS
 
-import hashlib
 from pathlib import Path
 import re
 import unicodedata
@@ -63,7 +62,6 @@ ChunkingReportPayload = dict[str, object]
 
 # @brief Persisted AI chunking operation-state payload type.
 OperationStatePayload = dict[str, object]
-TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
 
 
@@ -169,7 +167,6 @@ def chunk_text(
     remaining_windows = _build_windows_from_index(
         paragraph_records,
         next_paragraph - 1,
-        semantic_strategy,
         budget_metadata,
     )
     completed_window_count = 0
@@ -200,7 +197,6 @@ def chunk_text(
             remaining_windows = _build_windows_from_index(
                 paragraph_records,
                 next_paragraph - 1,
-                semantic_strategy,
                 budget_metadata,
             )
             window_payload = remaining_windows[0]
@@ -257,7 +253,6 @@ def chunk_text(
                     committed_chunks,
                     paragraph_records,
                     validated_ranges,
-                    semantic_strategy,
                 )
                 next_paragraph = int(validated_ranges[-1]["end_index"]) + 2
                 if (
@@ -269,7 +264,6 @@ def chunk_text(
                         committed_chunks,
                         paragraph_records,
                         [{"start_index": next_paragraph - 1, "end_index": len(paragraph_records) - 1}],
-                        semantic_strategy,
                     )
                     next_paragraph = len(paragraph_records) + 1
                 elif not response_complete:
@@ -287,7 +281,6 @@ def chunk_text(
                     committed_chunks,
                     paragraph_records,
                     fallback_ranges,
-                    semantic_strategy,
                 )
                 context_window_fallback_count += 1
                 next_paragraph = window_end_index + 2
@@ -309,7 +302,6 @@ def chunk_text(
             remaining_windows = _build_windows_from_index(
                 paragraph_records,
                 next_paragraph - 1,
-                semantic_strategy,
                 budget_metadata,
             )
             total_windows = completed_window_count + len(remaining_windows)
@@ -394,28 +386,16 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
 # LOCAL HELPERS
 
 
-def _compute_prompt_fingerprint(prompt_text: str) -> str:
-    """
-    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
-    @param[in]  prompt_text Operator prompt-rule text.
-    @return     SHA-256 fingerprint for the prompt-rule text.
-    """
-    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
-
-
 def _build_windows(
     paragraph_records: list[dict[str, object]],
-    semantic_strategy: str,
     budget_metadata: BudgetMetadataPayload,
 ) -> list[dict[str, int]]:
     """
     @brief      Build context-budgeted AI request windows.
     @param[in]  paragraph_records Value for `paragraph_records`.
-    @param[in]  semantic_strategy Value for `semantic_strategy`.
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
     """
-    _ = semantic_strategy
     text_budget = int(budget_metadata["text_budget_tokens"])
     paragraph_cap = int(budget_metadata["strategy_paragraph_cap"])
     windows: list[dict[str, int]] = []
@@ -447,14 +427,12 @@ def _build_windows(
 def _build_windows_from_index(
     paragraph_records: list[dict[str, object]],
     start_index: int,
-    semantic_strategy: str,
     budget_metadata: BudgetMetadataPayload,
 ) -> list[dict[str, int]]:
     """
     @brief      Build context-budgeted AI request windows from one absolute paragraph index.
     @param[in]  paragraph_records Value for `paragraph_records`.
     @param[in]  start_index First absolute paragraph index still needing AI processing.
-    @param[in]  semantic_strategy Value for `semantic_strategy`.
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Absolute-index window payloads for the remaining text.
     """
@@ -463,7 +441,6 @@ def _build_windows_from_index(
         return []
     relative_windows = _build_windows(
         paragraph_records[resolved_start_index:],
-        semantic_strategy,
         budget_metadata,
     )
     return [
@@ -852,7 +829,6 @@ def _build_chunk_from_range(
     paragraph_records: list[dict[str, object]],
     start_index: int,
     end_index: int,
-    semantic_strategy: str,
     sequence_index: int,
 ) -> ChunkPayload:
     """
@@ -860,7 +836,6 @@ def _build_chunk_from_range(
     @param[in]  paragraph_records Full ordered paragraph record list.
     @param[in]  start_index Zero-based inclusive first paragraph index.
     @param[in]  end_index Zero-based inclusive last paragraph index.
-    @param[in]  semantic_strategy Selected semantic strategy.
     @param[in]  sequence_index One-based canonical chunk sequence number.
     @return     Canonical chunk payload.
     @exception  ValueError Raised when the selected range is empty or invalid.
@@ -868,7 +843,6 @@ def _build_chunk_from_range(
     selected_records = paragraph_records[start_index : end_index + 1]
     if not selected_records:
         raise ValueError("AI chunk range does not contain any paragraphs.")
-    _ = semantic_strategy
     return {
         "chunk_id": f"chunk-{sequence_index:04d}",
         "sequence_index": sequence_index,
@@ -946,14 +920,12 @@ def _append_chunks_from_ranges(
     chunks: list[ChunkPayload],
     paragraph_records: list[dict[str, object]],
     ranges: list[dict[str, int]],
-    semantic_strategy: str,
 ) -> None:
     """
     @brief      Append canonical chunks for validated absolute paragraph ranges.
     @param[in,out] chunks Existing committed chunk payload list.
     @param[in]  paragraph_records Full ordered paragraph record list.
     @param[in]  ranges Validated absolute paragraph ranges.
-    @param[in]  semantic_strategy Selected semantic strategy.
     @return     None.
     @exception  ValueError Raised when a range is invalid.
     """
@@ -969,7 +941,6 @@ def _append_chunks_from_ranges(
                     paragraph_records,
                     narratable_range["start_index"],
                     narratable_range["end_index"],
-                    semantic_strategy,
                     len(chunks) + 1,
                 )
             )

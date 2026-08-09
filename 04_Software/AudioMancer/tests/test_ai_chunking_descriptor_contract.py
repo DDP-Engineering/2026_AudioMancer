@@ -536,7 +536,6 @@ def test_ai_chunking_omits_and_splits_around_scene_separator_artifacts() -> None
         chunks,
         records,
         [{"start_index": 0, "end_index": len(records) - 1}],
-        "paragraph",
     )
 
     assert [chunk["text"] for chunk in chunks] == [

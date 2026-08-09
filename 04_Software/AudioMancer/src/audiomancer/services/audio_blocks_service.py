@@ -3501,23 +3501,6 @@ def _resume_checkpoint_field(existing_state: dict[str, object], field_name: str,
         return fallback
 
 
-def _normalize_warning_flags(value: object) -> list[str]:
-    """
-    @brief      Normalize one warning-flag list payload.
-    @param[in]  value Candidate warning-flag value.
-    @return     Ordered warning-flag string list.
-    @exception  None
-    """
-    if not isinstance(value, list):
-        return []
-    normalized_flags: list[str] = []
-    for item in value:
-        normalized_item = str(item).strip()
-        if normalized_item and normalized_item not in normalized_flags:
-            normalized_flags.append(normalized_item)
-    return normalized_flags
-
-
 def _optional_int(value: object, fallback: int) -> int:
     """
     @brief      Normalize one optional integer payload field.

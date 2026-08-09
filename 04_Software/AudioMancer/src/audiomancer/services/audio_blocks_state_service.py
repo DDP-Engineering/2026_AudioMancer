@@ -68,7 +68,7 @@ def build_audio_blocks_state(
         operation_metadata = {}
     merged_blocks = _merge_audio_block_state(project_root, speech_blocks, audio_blocks, operation_state)
     scene_ambience_audio_enabled = _scene_ambience_audio_enabled(settings_payload)
-    current_block = _resolve_current_block(merged_blocks, operation_state)
+    current_block = _resolve_current_block(merged_blocks)
     current_block_id = None if current_block is None else str(current_block.get("speech_block_id", "")).strip()
     generated_count = sum(1 for block in merged_blocks if audio_blocks_service.is_generated(block))
     approved_count = sum(1 for block in merged_blocks if audio_blocks_service.is_approved(block))
@@ -126,7 +126,6 @@ def build_audio_blocks_state(
         "can_start_or_continue": _can_start_or_continue_generation(
             speech_blocks,
             merged_blocks,
-            resolved_stage_status,
             scene_ambience_audio_enabled,
         ),
         "can_reset": audio_blocks_service.has_persisted_audio_blocks(project_root),
@@ -145,18 +144,15 @@ def build_audio_blocks_state(
 def _can_start_or_continue_generation(
     speech_blocks: list[dict[str, object]],
     audio_blocks: list[dict[str, object]],
-    stage_status: str,
     scene_ambience_audio_enabled: bool = False,
 ) -> bool:
     """
     @brief      Return whether Audio Blocks generation still has approved source work to process.
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @param[in]  audio_blocks Current merged Audio Blocks display payload list.
-    @param[in]  stage_status Effective Audio Blocks stage token.
     @return     True when at least one approved Speech Block still lacks generated audio.
     @exception  None
     """
-    _ = stage_status
     generated_by_speech_block_id = {
         str(block.get("speech_block_id", "")).strip(): audio_blocks_service.is_generated(block)
         for block in audio_blocks
@@ -534,18 +530,13 @@ def _resolve_persisted_audio_file_name(audio_block: dict[str, object]) -> str:
     return f"{audio_blocks_artifact_service.audio_artifact_file_stem(speech_block_id)}.wav"
 
 
-def _resolve_current_block(
-    merged_blocks: list[dict[str, object]],
-    operation_state: dict[str, object] | None,
-) -> dict[str, object] | None:
+def _resolve_current_block(merged_blocks: list[dict[str, object]]) -> dict[str, object] | None:
     """
     @brief      Resolve the preferred selected Audio Blocks row from current runtime state.
     @param[in]  merged_blocks Current merged Audio Blocks display payload list.
-    @param[in]  operation_state Persisted Audio Blocks operation state or `None`.
     @return     Preferred current block payload or `None`.
     @exception  None
     """
-    _ = operation_state
     for block in merged_blocks:
         if bool(block.get("is_current", False)):
             return block
