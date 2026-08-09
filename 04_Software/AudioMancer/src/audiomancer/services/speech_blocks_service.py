@@ -757,6 +757,9 @@ def start_or_continue_generation(
         resumes_active_segment = chunk_index == start_chunk_index and start_segment_index > 0
         if chunk_id in covered_chunk_ids and not resumes_active_segment:
             continue
+        existing_chunk_block_count = sum(
+            1 for block in all_blocks if str(block.get("chunk_id", "")).strip() == chunk_id
+        )
 
         def _persist_segment_progress(
             segment_blocks: list[SpeechBlockPayload],
@@ -769,6 +772,7 @@ def start_or_continue_generation(
             base_token_usage: TokenUsagePayload = token_usage,
             current_chunk_index: int = chunk_index,
             current_chunk_id: str = chunk_id,
+            current_chunk_block_count: int = existing_chunk_block_count,
         ) -> None:
             """
             @brief      Persist resumable Speech Blocks progress after one direct request segment.
@@ -780,7 +784,11 @@ def start_or_continue_generation(
             @return     None.
             @exception  None
             """
-            persisted_blocks = _renumber_speech_blocks(source_chunks, [*base_blocks, *segment_blocks])
+            continued_segment_blocks = _continue_chunk_sequence_indices(
+                segment_blocks,
+                current_chunk_block_count,
+            )
+            persisted_blocks = _renumber_speech_blocks(source_chunks, [*base_blocks, *continued_segment_blocks])
             persisted_warnings = [*base_warnings, *segment_warnings]
             persisted_usage = token_usage_service.merge_token_usage(base_token_usage, segment_token_usage)
             chunk_complete = next_segment_index >= segment_total
@@ -855,6 +863,7 @@ def start_or_continue_generation(
                 _persist_segment_progress if str(voice_assignment_mode).strip() != "same_narrator" else None
             ),
         )
+        chunk_blocks = _continue_chunk_sequence_indices(chunk_blocks, existing_chunk_block_count)
         token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
         if bool(scene_ambience_settings["enabled"]):
             ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
@@ -1863,6 +1872,7 @@ def _restore_persisted_speech_blocks_response_contract(operation_state: dict[str
     if response_contract in {
         _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT,
         _SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT,
+        _SPEECH_BLOCKS_DETERMINISTIC_NARRATOR_CONTRACT,
     }:
         return response_contract
     return _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT
@@ -2050,6 +2060,10 @@ def _generate_budgeted_chunk_blocks(
             tts_budget=tts_budget,
         )
         combined_blocks.extend(segment_blocks)
+        combined_blocks = _renumber_single_chunk_blocks(
+            str(source_chunk.get("chunk_id", "")).strip(),
+            combined_blocks,
+        )
         combined_warnings.extend(segment_warnings)
         if segment_progress_callback is not None:
             segment_progress_callback(
@@ -2549,8 +2563,12 @@ def _insert_scene_ambience_blocks(
         dict(block) for block in scene_ambience_blocks if str(block.get("ambience_position", "")) == "scene_change"
     ]
     ordered_blocks: list[SpeechBlockPayload] = [*opener_blocks]
+    spoken_block_positions: list[tuple[str, int]] = []
     pending_scene_changes = list(scene_change_blocks)
     for speech_block in speech_blocks:
+        spoken_block_positions.append(
+            (str(speech_block.get("speech_block_id", "")).strip(), len(ordered_blocks))
+        )
         ordered_blocks.append(dict(speech_block))
         speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
         matching_changes = [
@@ -2563,7 +2581,19 @@ def _insert_scene_ambience_blocks(
     ordered_blocks.extend(pending_scene_changes)
     ordered_blocks.extend(closer_blocks)
     chunk_id = str(speech_blocks[0].get("chunk_id", "") if speech_blocks else "").strip()
-    return _renumber_single_chunk_blocks(chunk_id, ordered_blocks)
+    renumbered_blocks = _renumber_single_chunk_blocks(chunk_id, ordered_blocks)
+    spoken_id_remap = {
+        old_id: str(renumbered_blocks[position].get("speech_block_id", "")).strip()
+        for old_id, position in spoken_block_positions
+        if old_id
+    }
+    for block in renumbered_blocks:
+        if str(block.get("content_kind", "")).strip() != CONTENT_KIND_SCENE_AMBIENCE:
+            continue
+        after_speech_block_id = str(block.get("after_speech_block_id", "")).strip()
+        if after_speech_block_id in spoken_id_remap:
+            block["after_speech_block_id"] = spoken_id_remap[after_speech_block_id]
+    return renumbered_blocks
 
 
 def _budgeted_source_chunk_segments(
@@ -3306,6 +3336,26 @@ def _renumber_single_chunk_blocks(
         renumbered_block["speech_block_id"] = _stable_speech_block_id(renumbered_block, normalized_chunk_id, used_ids)
         renumbered_blocks.append(renumbered_block)
     return renumbered_blocks
+
+
+def _continue_chunk_sequence_indices(
+    speech_blocks: list[SpeechBlockPayload],
+    existing_block_count: int,
+) -> list[SpeechBlockPayload]:
+    """
+    @brief      Continue new chunk-local sequence indices after already persisted rows.
+    @param[in]  speech_blocks New Speech Blocks in canonical list order.
+    @param[in]  existing_block_count Number of earlier rows retained for the same chunk.
+    @return     Copied blocks with contiguous continued sequence indices.
+    @exception  None
+    """
+    sequence_offset = max(0, int(existing_block_count))
+    continued_blocks: list[SpeechBlockPayload] = []
+    for sequence_index, block in enumerate(speech_blocks, start=sequence_offset + 1):
+        continued_block = dict(block)
+        continued_block["sequence_index"] = sequence_index
+        continued_blocks.append(continued_block)
+    return continued_blocks
 
 
 def _stable_speech_block_id(block: SpeechBlockPayload, chunk_id: str, used_ids: set[str]) -> str:
