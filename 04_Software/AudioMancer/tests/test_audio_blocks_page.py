@@ -15,6 +15,8 @@
 
 # IMPORTS
 
+import pytest
+
 from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
 
@@ -515,6 +517,89 @@ def test_audio_blocks_page_single_item_update_preserves_sibling_items(qtbot) -> 
     assert page._speech_block_list.item(0) is first_item
     assert page._speech_block_list.item(1) is second_item
     assert "[approved]" in second_item.text()
+    assert page.selected_block_id() == "0001-000001"
+    assert page._block_text_edit.toPlainText() == "First."
+
+
+@pytest.mark.parametrize(
+    ("incoming_id", "incoming_text", "expected_ids", "expected_next_id"),
+    [
+        ("0001-000001", "Before.", ["0001-000001", "0001-000002", "0001-000004"], "0001-000002"),
+        ("0001-000003", "Between.", ["0001-000002", "0001-000003", "0001-000004"], "0001-000004"),
+        ("0001-000005", "After.", ["0001-000002", "0001-000004", "0001-000005"], "0001-000005"),
+    ],
+)
+def test_audio_blocks_page_inserts_unseen_item_with_aligned_rows_and_selection(
+    qtbot,
+    incoming_id: str,
+    incoming_text: str,
+    expected_ids: list[str],
+    expected_next_id: str,
+) -> None:
+    """
+    @brief      Verify unseen incremental rows rebuild sorted model and widget state together.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  incoming_id Unseen Speech Block identifier to insert.
+    @param[in]  incoming_text Text attached to the unseen row.
+    @param[in]  expected_ids Expected sorted row identifiers.
+    @param[in]  expected_next_id Expected selection after advancing from the inserted row.
+    @return     None.
+    @exception  None
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_blocks_state(
+        full_source_text="Second.\nFourth.",
+        speech_blocks=[
+            _audio_block("0001-000002", "Alice", "Second.", generated=True, approved=False),
+            _audio_block("0001-000004", "Narrator", "Fourth.", generated=True, approved=False),
+        ],
+        current_block_id="0001-000004",
+        current_block_speaker="Narrator",
+        current_block_text="Fourth.",
+        notes=["Ready."],
+        status_lines=["Generated audio: 2/2"],
+        progress_current=2,
+        progress_total=2,
+        progress_percent=100,
+        stage_status="in_progress",
+        can_start_or_continue=True,
+        can_reset=True,
+        can_approve_all=True,
+        can_regenerate_selected=True,
+        can_approve_selected=True,
+    )
+
+    page.update_audio_block_item(
+        _audio_block(incoming_id, "Inserted", incoming_text, generated=True, approved=False)
+    )
+
+    assert [str(block["speech_block_id"]) for block in page._speech_blocks] == expected_ids
+    assert page._speech_block_list.count() == len(expected_ids)
+    expected_text_by_id = {
+        "0001-000001": "Before.",
+        "0001-000002": "Second.",
+        "0001-000003": "Between.",
+        "0001-000004": "Fourth.",
+        "0001-000005": "After.",
+    }
+    for row, speech_block_id in enumerate(expected_ids):
+        assert expected_text_by_id[speech_block_id] in page._speech_block_list.item(row).text()
+    assert page.selected_block_id() == "0001-000004"
+    assert page._speech_block_list.currentRow() == expected_ids.index("0001-000004")
+    assert page._speaker_label.text() == "Speaker: Narrator"
+    assert page._block_text_edit.toPlainText() == "Fourth."
+
+    page.select_block_id(incoming_id)
+
+    assert page.selected_block_id() == incoming_id
+    assert page._block_text_edit.toPlainText() == incoming_text
+
+    page.advance_to_next_block()
+
+    assert page.selected_block_id() == expected_next_id
+    assert page._block_text_edit.toPlainText() == expected_text_by_id[expected_next_id]
 
 
 def _audio_block(

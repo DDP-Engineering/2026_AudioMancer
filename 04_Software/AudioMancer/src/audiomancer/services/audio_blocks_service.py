@@ -624,6 +624,12 @@ def start_or_continue_generation(
         str(profile.get("voice_target_id", "")).strip(): profile for profile in existing_clone_profiles
     }
     active_generation_model_id = str(generation_context["clone_model_id"]).strip()
+    resume_metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
+    resume_block_id = (
+        str(resume_metadata.get("current_block_id", "") or "").strip() if isinstance(resume_metadata, dict) else ""
+    )
+    resume_order_index = _resume_checkpoint_field(existing_state, "next_speech_block_index", -1)
+    resume_split_part_index = _resume_checkpoint_field(existing_state, "next_split_part_index", 0)
     generation_order_indices = _audio_generation_order_indices(
         existing_blocks,
         bool(generation_context.get("generate_scene_ambience_audio", False)),
@@ -755,12 +761,18 @@ def start_or_continue_generation(
                 runtime_settings,
                 cancel_requested=cancel_requested,
                 checkpoint_callback=_checkpoint_current_spoken_block,
+                next_split_part_index=(
+                    resume_split_part_index
+                    if current_block_id == resume_block_id and current_order_index == resume_order_index
+                    else 0
+                ),
             )
         except operation_runtime_service.OperationCancelledError:
             latest_state = load_operation_state(resolved_project_root) or {}
             latest_blocks = _merge_existing_audio_blocks(
                 generation_context["speech_blocks"],
                 load_audio_blocks(resolved_project_root) or existing_blocks,
+                voice_assignment_mode,
             )
             _persist_cancelled_state(
                 resolved_project_root,
@@ -1832,6 +1844,7 @@ def _generate_audio_block(
     runtime_settings: dict[str, object],
     cancel_requested=None,
     checkpoint_callback=None,
+    next_split_part_index: int = 0,
     force_restart: bool = False,
 ) -> AudioBlockPayload:
     """
@@ -1843,6 +1856,7 @@ def _generate_audio_block(
     @param[in]  runtime_settings Runtime connection plus discovered-model settings.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @param[in]  checkpoint_callback Optional callback persisted after each completed split part.
+    @param[in]  next_split_part_index Persisted next split part to generate for resume.
     @param[in]  force_restart True to discard any prior split-part checkpoint for this block.
     @return     Updated Audio Blocks payload.
     @exception  RuntimeError Raised when VoiceWeaver does not expose downloadable audio.
@@ -1860,7 +1874,13 @@ def _generate_audio_block(
         str(audio_block.get("speech_block_id", "")).strip(),
     )
     audio_path.parent.mkdir(parents=True, exist_ok=True)
-    part_paths = _existing_part_paths(project_root, audio_block, split_plan, force_restart)
+    part_paths = _existing_part_paths(
+        project_root,
+        audio_block,
+        split_plan,
+        force_restart,
+        next_split_part_index=next_split_part_index,
+    )
     if force_restart:
         _delete_audio_block_artifacts(project_root, audio_block)
     runtime_result_summary = ""
@@ -1939,6 +1959,9 @@ def _generate_audio_block(
             )
     if len(split_plan["parts"]) > 1:
         _stitch_wav_parts(part_paths, audio_path)
+        for part_path in part_paths:
+            if part_path.is_file():
+                part_path.unlink()
     generated_at = _utc_now_iso()
     audio_duration_seconds = _wav_duration_seconds(audio_path)
     _AUDIO_BLOCKS_LOGGER.info(
@@ -2162,6 +2185,7 @@ def _existing_part_paths(
     audio_block: AudioBlockPayload,
     split_plan: dict[str, object],
     force_restart: bool,
+    next_split_part_index: int = 0,
 ) -> list[Path]:
     """
     @brief      Resolve completed split-part paths that can be reused for resume.
@@ -2169,6 +2193,7 @@ def _existing_part_paths(
     @param[in]  audio_block Persisted Audio Blocks entry.
     @param[in]  split_plan Current split plan.
     @param[in]  force_restart True to ignore persisted part checkpoints.
+    @param[in]  next_split_part_index Persisted next split part to generate.
     @return     Existing part paths in completed order.
     @exception  None
     """
@@ -2178,14 +2203,17 @@ def _existing_part_paths(
     if persisted_split_fingerprint != _split_plan_fingerprint(split_plan):
         return []
     persisted_part_count = _optional_int(audio_block.get("split_part_count"), 0) or 0
-    if persisted_part_count <= 1 or persisted_part_count > len(split_plan["parts"]):
+    planned_part_count = len(split_plan["parts"])
+    if persisted_part_count <= 1 or persisted_part_count != planned_part_count:
+        return []
+    if next_split_part_index <= 0 or next_split_part_index > planned_part_count:
         return []
     speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
     existing_paths: list[Path] = []
-    for part_index in range(persisted_part_count):
+    for part_index in range(next_split_part_index):
         expected_path = _audio_part_artifact_path(project_root, speech_block_id, part_index)
         if not expected_path.is_file() or not _is_valid_wav_path(expected_path):
-            return []
+            break
         existing_paths.append(expected_path)
     return existing_paths
 

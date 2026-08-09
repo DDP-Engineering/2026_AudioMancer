@@ -262,6 +262,90 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     assert [block["voice_target_id"] for block in audio_blocks] == ["narrator", "narrator"]
 
 
+def test_audio_blocks_service_same_narrator_cancellation_preserves_voice_targets(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify speech-generation cancellation retains narrator identity for every row.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSameNarratorCancel")
+    narrator_definition_service.save_tts_plan(
+        project_root,
+        {"voice_assignment_mode": "same_narrator"},
+        _runtime_settings()["discovered_models"],
+    )
+    character_voices_service.delete_target_sample(project_root, "character_alice")
+    manifest = project_workspace_service.load_manifest(project_root)
+    active_model = {
+        "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+        "status": "ready",
+        "supported_generation_modes": ["clone"],
+        "effective_model_parameters": {"max_new_tokens": 512},
+    }
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": dict(active_model), "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    wait_count = {"value": 0}
+
+    def _cancel_during_speech_generation(*_args, **_kwargs):
+        wait_count["value"] += 1
+        if wait_count["value"] == 1:
+            return {
+                "operation": {
+                    "status": "completed",
+                    "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+                },
+                "result": {},
+            }
+        raise operation_runtime_service.OperationCancelledError("cancel speech generation")
+
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        _cancel_during_speech_generation,
+    )
+    observed_generation_targets: list[str] = []
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        lambda _base_url, _api_key, voice_clone_prompt, *_args, **_kwargs: (
+            observed_generation_targets.append(str(dict(voice_clone_prompt).get("speaker", ""))),
+            {"status": "running"},
+        )[1],
+    )
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError, match="cancel speech generation"):
+        audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
+
+    cancelled_document = audio_blocks_service.load_audio_blocks_document(project_root)
+    cancelled_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert cancelled_document is not None
+    assert cancelled_document["status"] == "cancelled"
+    assert cancelled_document["checkpoint"]["current_phase"] == "generate_blocks"
+    assert observed_generation_targets == ["narrator"]
+    assert [block["voice_target_id"] for block in cancelled_blocks] == ["narrator", "narrator"]
+
+    audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        project_root,
+        (),
+        voice_target_ids=(character_voices_service.TARGET_ID_NARRATOR,),
+    )
+
+    assert audio_blocks_service.load_audio_blocks(project_root) == []
+
+
 def test_audio_blocks_service_requires_selected_narrator_sample_metadata(tmp_path) -> None:
     """
     @brief      Verify Audio Blocks requires current selected narrator sample metadata.
@@ -707,14 +791,200 @@ def test_audio_blocks_generation_checkpoints_a_split_block_without_error(monkeyp
     assert report["generated_block_count"] == len(audio_blocks)
 
 
-def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(tmp_path) -> None:
+def test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_in_order(
+    monkeypatch,
+    tmp_path,
+) -> None:
     """
-    @brief      Verify split resume ignores corrupt or mismatched persisted part checkpoints.
+    @brief      Verify split cancellation resumes after the completed same-plan prefix.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSplitResume")
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)[:1]
+    long_narration = " ".join(f"Sentence number {index} of the long narration block." for index in range(1, 61))
+    speech_blocks[0]["text"] = long_narration
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
+
+    active_model = {
+        "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+        "status": "ready",
+        "supported_generation_modes": ["clone"],
+        "effective_model_parameters": {"max_new_tokens": 128},
+    }
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": dict(active_model), "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    wait_count = {"value": 0}
+
+    def _wait_for_terminal_operation(*_args, **_kwargs):
+        wait_count["value"] += 1
+        if wait_count["value"] == 1:
+            return {
+                "operation": {
+                    "status": "completed",
+                    "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+                },
+                "result": {},
+            }
+        return {"operation": {"status": "completed"}, "result": {"available": True, "summary": "ready"}}
+
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        _wait_for_terminal_operation,
+    )
+    generated_texts: list[str] = []
+    generated_payloads: list[bytes] = []
+
+    def _generate_voice_clone_from_prompt(
+        _base_url,
+        _api_key,
+        _voice_clone_prompt,
+        _language,
+        text,
+        **_kwargs,
+    ):
+        generated_texts.append(text)
+        generated_payloads.append(_wav_bytes(f"split-part-{len(generated_payloads) + 1}"))
+        return {"status": "running"}
+
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        _generate_voice_clone_from_prompt,
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: generated_payloads[-1],
+    )
+    planned_parts: list[str] = []
+    original_split_planner = audio_blocks_service._plan_audio_block_splits  # noqa: SLF001
+
+    def _capture_split_plan(text, generation_context):
+        split_plan = original_split_planner(text, generation_context)
+        planned_parts[:] = [str(part) for part in split_plan["parts"]]
+        return split_plan
+
+    monkeypatch.setattr(audio_blocks_service, "_plan_audio_block_splits", _capture_split_plan)
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        audio_blocks_service.start_or_continue_generation(
+            project_root,
+            manifest,
+            _runtime_settings(),
+            cancel_requested=lambda: len(generated_texts) >= 3,
+        )
+
+    cancelled_document = audio_blocks_service.load_audio_blocks_document(project_root)
+    assert cancelled_document is not None
+    cancelled_block = cancelled_document["blocks"][0]
+    assert len(planned_parts) > 3
+    assert generated_texts == planned_parts[:3]
+    assert cancelled_document["checkpoint"]["current_block_id"] == "0001-000001"
+    assert cancelled_document["checkpoint"]["next_split_part_index"] == 3
+    assert cancelled_block["split_part_count"] == len(planned_parts)
+    part_paths = [
+        audio_blocks_service._audio_part_artifact_path(project_root, "0001-000001", part_index)  # noqa: SLF001
+        for part_index in range(len(planned_parts))
+    ]
+    assert all(path.is_file() for path in part_paths[:3])
+    assert all(not path.exists() for path in part_paths[3:])
+
+    report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
+
+    completed_document = audio_blocks_service.load_audio_blocks_document(project_root)
+    completed_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert completed_document is not None
+    assert report["generated_block_count"] == 1
+    assert generated_texts == planned_parts
+    assert completed_document["checkpoint"]["current_block_id"] is None
+    assert completed_document["checkpoint"]["next_split_part_index"] == 0
+    assert completed_blocks[0]["split_part_count"] == len(planned_parts)
+    final_audio_path = project_root / str(completed_blocks[0]["audio_relative_path"])
+    with wave.open(str(final_audio_path), "rb") as final_wav:
+        final_frames = final_wav.readframes(final_wav.getnframes())
+    expected_frames = b""
+    for payload in generated_payloads:
+        with wave.open(io.BytesIO(payload), "rb") as part_wav:
+            expected_frames += part_wav.readframes(part_wav.getnframes())
+    assert final_frames == expected_frames
+    assert all(not path.exists() for path in part_paths)
+
+
+@pytest.mark.parametrize("unusable_part_kind", ["missing", "corrupt"])
+def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(
+    tmp_path,
+    unusable_part_kind: str,
+) -> None:
+    """
+    @brief      Verify split resume stops its reusable prefix at a missing or corrupt part.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  unusable_part_kind Missing or corrupt second-prefix part condition.
+    @return     None.
+    @exception  None
+    """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSplitCheckpoint")
+    audio_block = audio_blocks_service._initialize_audio_blocks(  # noqa: SLF001
+        speech_blocks_service.load_speech_blocks(project_root)
+    )[0]
+    split_plan = {"parts": ["Part one.", "Part two.", "Part three."], "strategy": "sentence"}
+    valid_part_path = audio_blocks_service._audio_part_artifact_path(  # noqa: SLF001
+        project_root,
+        str(audio_block["speech_block_id"]),
+        0,
+    )
+    corrupt_part_path = audio_blocks_service._audio_part_artifact_path(  # noqa: SLF001
+        project_root,
+        str(audio_block["speech_block_id"]),
+        1,
+    )
+    valid_part_path.parent.mkdir(parents=True, exist_ok=True)
+    valid_part_path.write_bytes(_wav_bytes("valid-prefix"))
+    if unusable_part_kind == "corrupt":
+        corrupt_part_path.write_bytes(b"not-a-wav")
+    audio_block["split_part_count"] = 3
+    audio_block["split_plan_fingerprint"] = audio_blocks_service._split_plan_fingerprint(split_plan)  # noqa: SLF001
+
+    assert audio_blocks_service._existing_part_paths(  # noqa: SLF001
+        project_root,
+        audio_block,
+        split_plan,
+        force_restart=False,
+        next_split_part_index=2,
+    ) == [valid_part_path]
+
+
+@pytest.mark.parametrize(
+    ("split_part_count", "next_split_part_index", "fingerprint_matches"),
+    [(2, -1, True), (2, 3, True), (3, 1, True), (2, 1, False)],
+)
+def test_audio_blocks_service_split_resume_rejects_inconsistent_checkpoint_counts(
+    tmp_path,
+    split_part_count: int,
+    next_split_part_index: int,
+    fingerprint_matches: bool,
+) -> None:
+    """
+    @brief      Verify invalid indices, planned totals, and fingerprints restart from part zero.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  split_part_count Persisted planned split-part total.
+    @param[in]  next_split_part_index Persisted next part index.
+    @param[in]  fingerprint_matches True to persist the current plan fingerprint.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSplitCheckpointCounts")
     audio_block = audio_blocks_service._initialize_audio_blocks(  # noqa: SLF001
         speech_blocks_service.load_speech_blocks(project_root)
     )[0]
@@ -725,19 +995,19 @@ def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(tmp_p
         0,
     )
     part_path.parent.mkdir(parents=True, exist_ok=True)
-    part_path.write_bytes(b"not-a-wav")
-    audio_block["generated_part_relative_paths"] = [part_path.relative_to(project_root).as_posix()]
-    audio_block["split_plan_fingerprint"] = audio_blocks_service._split_plan_fingerprint(split_plan)  # noqa: SLF001
+    part_path.write_bytes(_wav_bytes("valid-prefix"))
+    audio_block["split_part_count"] = split_part_count
+    audio_block["split_plan_fingerprint"] = (
+        audio_blocks_service._split_plan_fingerprint(split_plan) if fingerprint_matches else "wrong-plan"
+    )  # noqa: SLF001
 
-    assert (
-        audio_blocks_service._existing_part_paths(  # noqa: SLF001
-            project_root,
-            audio_block,
-            split_plan,
-            force_restart=False,
-        )
-        == []
-    )
+    assert audio_blocks_service._existing_part_paths(  # noqa: SLF001
+        project_root,
+        audio_block,
+        split_plan,
+        force_restart=False,
+        next_split_part_index=next_split_part_index,
+    ) == []
 
 
 @pytest.mark.parametrize("path_kind", ["parent_traversal", "absolute", "unc_like"])
@@ -756,9 +1026,8 @@ def test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint(tmp_
         speech_blocks_service.load_speech_blocks(project_root)
     )[0]
     split_plan = {"parts": ["Part one.", "Part two."], "strategy": "sentence"}
-    audio_block["generated_part_relative_paths"] = [
-        _escaping_artifact_path(path_kind, "outside_part.wav", outside_path)
-    ]
+    audio_block["speech_block_id"] = _escaping_artifact_path(path_kind, "outside_part.wav", outside_path)
+    audio_block["split_part_count"] = 2
     audio_block["split_plan_fingerprint"] = audio_blocks_service._split_plan_fingerprint(split_plan)  # noqa: SLF001
 
     assert (
@@ -767,6 +1036,7 @@ def test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint(tmp_
             audio_block,
             split_plan,
             force_restart=False,
+            next_split_part_index=1,
         )
         == []
     )

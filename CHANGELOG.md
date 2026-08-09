@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Interrupted long Audio Blocks now resume at the first unfinished split part,
+  reject stale or inconsistent part checkpoints, preserve same-narrator voice
+  identity on cancellation, and keep incrementally inserted review rows aligned
+  with the selected block.
 - Audio Blocks now keeps metadata-only Scene Ambience rows pathless and out of
   playback and scene mixing while preserving real generated ambience WAVs.
 - Audio Blocks now prevents pause and indication rows from running speech

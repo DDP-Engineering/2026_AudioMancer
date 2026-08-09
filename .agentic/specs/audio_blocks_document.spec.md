@@ -87,9 +87,16 @@ Two further fields are emitted **only** when the block was actually split, that
 is when `split_part_count > 1`:
 
 ```text
-split_part_count        int          number of generated WAV parts
+split_part_count        int          planned total number of WAV parts
 split_plan_fingerprint  str | null   guards reuse of existing part files
 ```
+
+For a cancelled split block, `next_split_part_index` is the completed-prefix
+length for the current split plan. Resume validates part files from index zero
+up to that value and reuses only the valid contiguous prefix. An invalid index,
+planned-count mismatch, fingerprint mismatch, missing file, corrupt WAV, or
+unsafe derived path makes that part the resume position; no later part is
+skipped or merged. `split_part_count` retains its planned-total meaning.
 
 ### Worked example
 

@@ -53,7 +53,11 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - Runtime progress is persisted in `document.checkpoint` (`run_token`,
   `current_phase`, `current_block_id`, `next_speech_block_index`,
   `next_split_part_index`) for truthful resume rather than inferred from a
-  partially generated plan.
+  partially generated plan. For a split block, the next-part index is the
+  completed-prefix length: resume reuses only contiguous valid WAVs belonging
+  to the same split fingerprint and planned total, starts at the first missing
+  or corrupt part, and removes temporary part WAVs after the ordered final WAV
+  is stitched (`REQ-FUNC-9e6c2465`).
 - Audio Block identity is its `speech_block_id`; each persisted entry carries
   only that id, `voice_target_id`, boolean `generated` and `approved` flags,
   cached `audio_can_play`, measured `audio_duration_seconds`, and a
@@ -80,10 +84,16 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - Direct selected regeneration rejects metadata-only pause and indication rows
   before model or artifact work, while ordinary speech and Scene Ambience keep
   their existing regeneration paths (`REQ-FUNC-94720d7e`).
+- Cancellation rebuilds use the resolved project voice-assignment mode, so
+  same-narrator dialogue rows keep the narrator target used by later voice
+  invalidation (`REQ-FUNC-d53b102d`).
 - State publishes Play and Re-Generate eligibility per row. Pause rows can Play
   as timed silence but cannot regenerate; indication and metadata-only Scene
   Ambience rows cannot Play; real speech and ambience WAVs remain playable
   (`REQ-UX-1d1e98a7`, `REQ-UX-cc9b04c0`).
+- Incremental page updates rebuild the sorted widget when an unseen block is
+  inserted, preserving the selected block when present; updates for existing
+  block IDs still replace only that row (`REQ-FUNC-50f45095`).
 
 ## 7. Workflow Integration
 

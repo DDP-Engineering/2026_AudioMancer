@@ -283,31 +283,11 @@ class AudioBlocksPage(QWidget):
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
         self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
         previously_selected_id = self._current_block_id
-        self._speech_block_list.setUpdatesEnabled(False)
-        with QSignalBlocker(self._speech_block_list):
-            self._speech_block_list.clear()
-            self._speech_block_list.addItems(
-                [
-                    _format_audio_block_list_item(speech_block, self._current_language)
-                    for speech_block in self._speech_blocks
-                ]
-            )
-        row_to_select = 0
         desired_block_id = current_block_id or previously_selected_id
-        if desired_block_id is not None:
-            for index, speech_block in enumerate(self._speech_blocks):
-                if str(speech_block.get("speech_block_id", "")).strip() == desired_block_id:
-                    row_to_select = index
-                    break
-        if self._speech_blocks:
-            with QSignalBlocker(self._speech_block_list):
-                self._speech_block_list.setCurrentRow(row_to_select)
-            self._show_selected_block(row_to_select)
-        else:
+        if not self._rebuild_audio_block_list(desired_block_id):
             self._current_block_id = current_block_id
             self._speaker_label.setText(current_block_speaker)
             self._block_text_edit.setPlainText(current_block_text)
-        self._speech_block_list.setUpdatesEnabled(True)
         self._apply_control_state()
 
     def update_audio_block_item(self, audio_block: dict[str, object]) -> None:
@@ -326,9 +306,12 @@ class AudioBlocksPage(QWidget):
                 row = index
                 break
         else:
+            selected_block_id = self._current_block_id
             self._speech_blocks.append(dict(audio_block))
             self._speech_blocks = speech_blocks_service.sort_speech_blocks(self._speech_blocks)
-            row = self._visible_block_row(normalized_id)
+            self._rebuild_audio_block_list(selected_block_id)
+            self._apply_control_state()
+            return
         if row >= 0:
             item = self._speech_block_list.item(row)
             if item is not None:
@@ -336,6 +319,35 @@ class AudioBlocksPage(QWidget):
             if self._current_block_id == normalized_id:
                 self._show_selected_block(row)
         self._apply_control_state()
+
+    def _rebuild_audio_block_list(self, preferred_block_id: str | None) -> bool:
+        """
+        @brief      Rebuild list rows from the sorted model and restore a preferred selection.
+        @param[in]  preferred_block_id Speech Block id to keep selected when present.
+        @return     True when the rebuilt list contains at least one row.
+        @exception  None
+        """
+        self._speech_block_list.setUpdatesEnabled(False)
+        try:
+            with QSignalBlocker(self._speech_block_list):
+                self._speech_block_list.clear()
+                self._speech_block_list.addItems(
+                    [
+                        _format_audio_block_list_item(speech_block, self._current_language)
+                        for speech_block in self._speech_blocks
+                    ]
+                )
+            if not self._speech_blocks:
+                return False
+            row_to_select = self._visible_block_row(preferred_block_id or "")
+            if row_to_select < 0:
+                row_to_select = 0
+            with QSignalBlocker(self._speech_block_list):
+                self._speech_block_list.setCurrentRow(row_to_select)
+            self._show_selected_block(row_to_select)
+            return True
+        finally:
+            self._speech_block_list.setUpdatesEnabled(True)
 
     def set_review_summary(
         self,
