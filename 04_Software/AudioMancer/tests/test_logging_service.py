@@ -11,7 +11,7 @@
 @brief Focused tests for the AudioMancer logging service.
 @details Verifies per-run log creation under the resolved writable data root,
          per-process log file uniqueness, graceful degradation to console-only
-         output, cleanup, formatting, component-level overrides, and optional
+         output, cleanup, formatting, component-level selection, and optional
          function-trace behavior.
 """
 
@@ -124,17 +124,31 @@ def test_initialize_logging_removes_only_expired_log_files(tmp_path, monkeypatch
     assert log_file_path.exists()
 
 
-def test_get_component_logger_applies_component_level_override(monkeypatch) -> None:
+def test_get_component_logger_uses_global_default_level(monkeypatch) -> None:
     """
-    @brief      Verify configured component-level overrides are applied.
+    @brief      Verify component loggers use the global default when no level is supplied.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     """
-    monkeypatch.setattr(config, "DEFAULT_LOG_LEVEL", "INFO")
-    monkeypatch.setattr(config, "DEFAULT_LOG_LEVEL_OVERRIDES", {"main_window": "DEBUG"})
+    monkeypatch.setattr(config, "DEFAULT_LOG_LEVEL", "WARNING")
 
     logger = logging_service.get_component_logger("main_window")
+
+    assert logger.name == "main_window"
+    assert logger.level == logging.WARNING
+
+
+def test_get_component_logger_explicit_level_wins_over_global_default(monkeypatch) -> None:
+    """
+    @brief      Verify an explicit per-call level wins over the global default.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    monkeypatch.setattr(config, "DEFAULT_LOG_LEVEL", "WARNING")
+
+    logger = logging_service.get_component_logger("main_window", "DEBUG")
 
     assert logger.name == "main_window"
     assert logger.level == logging.DEBUG

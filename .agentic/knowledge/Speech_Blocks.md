@@ -116,6 +116,10 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Scene-ambience insertion remaps each matched `after_speech_block_id` from the
   spoken row's old identifier to its post-insertion identifier, including when
   opener ambience shifts every spoken row (REQ-DATA-f0eb775c).
+- The page accepts controller-owned full state through
+  `set_speech_blocks_state()` and retains the live single-row update path, but
+  exposes no unused incremental insert or remove methods
+  (`REQ-NFR-b3fb9944`).
 
 ## 7. Workflow Integration
 

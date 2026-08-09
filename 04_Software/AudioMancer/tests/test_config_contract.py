@@ -60,8 +60,29 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512
     assert config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
-    assert "ai_chunking" in config.AVAILABLE_LOG_COMPONENTS
-    assert "text_extraction" in config.AVAILABLE_LOG_COMPONENTS
+
+
+def test_config_omits_retired_scene_ambience_enablement_switch() -> None:
+    """
+    @brief      Verify configuration omits the retired global Scene Ambience switch.
+    @details    Scene Ambience placement remains the authoritative configured policy.
+    @return     None.
+    @exception  None
+    """
+    assert not hasattr(config, "DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED")
+    assert config.DEFAULT_SCENE_AMBIENCE_PLACEMENT in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS
+
+
+def test_config_omits_retired_component_logging_overrides() -> None:
+    """
+    @brief      Verify configuration omits the inert per-component logging surface.
+    @details    The global default remains a supported logging level.
+    @return     None.
+    @exception  None
+    """
+    assert not hasattr(config, "DEFAULT_LOG_LEVEL_OVERRIDES")
+    assert not hasattr(config, "AVAILABLE_LOG_COMPONENTS")
+    assert config.DEFAULT_LOG_LEVEL in config.LOG_LEVEL_OPTIONS
 
 
 def test_settings_json_scaffold_matches_service_defaults(tmp_path, monkeypatch) -> None:

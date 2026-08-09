@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AudioMancer no longer exposes inactive Scene Ambience and per-component
+  logging configuration or unused workflow-page update APIs; active placement,
+  logging, and page-state behavior remains unchanged.
 - Speech Blocks and Audio Blocks now distinguish an absent optional stage
   document from an existing corrupt one, show the exact reset recovery action,
   and prevent damaged work from being treated as a new generation opportunity.

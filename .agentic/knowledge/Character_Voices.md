@@ -38,6 +38,9 @@ batch generation, and preview signals.
 - `REQ-UX-f80d35c2` — expected manifest failures become read-only recovery
   state or the existing project-error warning, without target synchronization
   or partial normal page application.
+- `REQ-NFR-b3fb9944` — the page applies selection through its controller-owned
+  full-state payload and exposes `current_target_id()` without a stale direct
+  selection-application method.
 - Narrator targets are preview-only; character targets retain stable IDs across
   character renames and store sample metadata with their project-local WAVs.
 - Readiness requires the selected narrator WAV and metadata plus every character

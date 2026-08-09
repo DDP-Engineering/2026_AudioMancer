@@ -309,32 +309,6 @@ class CharacterVoicesPage(QWidget):
         self._original_payload = self.current_editor_payload()
         self._apply_control_state()
 
-    def apply_selected_target(self, target_id: str | None) -> None:
-        """
-        @brief      Apply one selected character-voices target to the current editor view.
-        @param[in]  target_id Selected character-voices target identifier.
-        @return     None.
-        @exception  None
-        """
-        self._current_target_id = target_id
-        target_payload = self._current_target()
-        self._edit_mode = False
-        self._dirty = False
-        self._original_payload = None
-        if target_payload is None:
-            self._load_editor("", "")
-        else:
-            self._load_editor(
-                str(target_payload.get("prompt_text", "") or ""),
-                str(target_payload.get("preview_text", "") or ""),
-            )
-            self._current_target_is_editable = bool(target_payload.get("editable", False))
-            self._can_import_sample = bool(target_payload.get("can_import_sample", False))
-            self._can_edit_prompt = bool(target_payload.get("can_edit_prompt", False))
-            self._can_generate_sample = bool(target_payload.get("can_generate_sample", False))
-            self._preview_available = bool(target_payload.get("can_preview", False))
-        self._apply_control_state()
-
     def current_target_id(self) -> str | None:
         """
             @brief      Read the currently selected character-voices target identifier.

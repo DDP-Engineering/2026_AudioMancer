@@ -354,28 +354,6 @@ class NaratorVoicePage(QWidget):
         self._original_profile = self.current_editor_payload()
         self._apply_control_state()
 
-    def apply_selected_profile(self, profile_id: str | None) -> None:
-        """
-        @brief      Apply one selected profile to the current editor view.
-        @param[in]  profile_id Selected narrator-profile identifier.
-        @return     None.
-        @exception  None
-        """
-        self._current_profile_id = profile_id
-        profile = self._current_profile()
-        self._dirty = False
-        self._edit_mode = False
-        self._original_profile = None
-        if profile is None:
-            self._load_profile_into_editor("", "", "")
-        else:
-            self._load_profile_into_editor(
-                _display_profile_name(str(profile.get("display_name", ""))),
-                str(profile.get("prompt_text", "")),
-                str(profile.get("preview_text", "")),
-            )
-        self._apply_control_state()
-
     def current_profile_id(self) -> str | None:
         """
         @brief      Read the currently selected narrator-profile identifier.

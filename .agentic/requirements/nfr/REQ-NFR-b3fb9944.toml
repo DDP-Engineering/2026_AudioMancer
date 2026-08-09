@@ -1,0 +1,28 @@
+schema = 1
+id = "REQ-NFR-b3fb9944"
+title = "Keep retired workflow page methods absent"
+status = "active"
+
+requirement = """
+The Speech Blocks, Character Voices, and Narrator Voice page classes shall omit
+the four retired incremental or selection-application methods while retaining
+their current selection getters and controller-driven full-state application
+methods.
+"""
+
+verification = "A structural page-contract regression observes the four retired method names absent and the current selection getters plus full-state application methods callable on their owning classes."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ui_page_contract.py::test_workflow_pages_omit_retired_methods_and_keep_live_state_interfaces",
+]
+
+spec = ""
+priority = "normal"
+rationale = "Removing stale half-refactored APIs keeps controller ownership and supported full-page state flows unambiguous."
+created = 2026-08-09
+updated = 2026-08-09

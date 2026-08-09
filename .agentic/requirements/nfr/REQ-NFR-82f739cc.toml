@@ -1,0 +1,28 @@
+schema = 1
+id = "REQ-NFR-82f739cc"
+title = "Resolve component logger levels without overrides"
+status = "active"
+
+requirement = """
+When a component logger is requested, the logging service shall use an explicit
+per-call level when supplied and otherwise use the global default level while
+retaining the requested logger identity.
+"""
+
+verification = "Two logging-service regressions request a component logger with and without an explicit level, then compare its identity and resolved level with the explicit value or global default."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_omits_retired_component_logging_overrides",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_get_component_logger_uses_global_default_level",
+  "04_Software/AudioMancer/tests/test_logging_service.py::test_get_component_logger_explicit_level_wins_over_global_default",
+]
+
+spec = ""
+priority = "normal"
+rationale = "Only runtime inputs that can affect logger levels should appear in the logging contract."
+created = 2026-08-09
+updated = 2026-08-09

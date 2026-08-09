@@ -27,6 +27,9 @@ required before speech generation.
   updates strict (`REQ-REL-870d0b6a`).
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
+- Keep Narrator Voice selection application controller-owned through the full
+  page-state payload while exposing `current_profile_id()` for live reads
+  (`REQ-NFR-b3fb9944`).
 
 It does not synthesize Speech Blocks or final TTS Audio Blocks.
 

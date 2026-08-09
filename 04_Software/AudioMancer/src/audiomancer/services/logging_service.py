@@ -11,9 +11,8 @@
 @brief Centralized application logging helpers for AudioMancer.
 @details Initializes per-run logging under the resolved writable data root,
          degrading to console-only output instead of raising when no log file
-         can be created, supports text and JSON formatting, applies
-         per-component log-level overrides, and provides optional function
-         tracing decorators for selected call sites.
+         can be created, supports text and JSON formatting, and provides
+         optional function tracing decorators for selected call sites.
 """
 
 # IMPORTS
@@ -132,18 +131,6 @@ def _collect_parameters(
             "args": _safe_value(args),
             "kwargs": _safe_value(kwargs),
         }
-
-
-def _resolve_component_level(component_name: str, level_name: str | None) -> int:
-    """
-    @brief      Resolve the effective log level for one component logger.
-    @param[in]  component_name Stable component logger identifier.
-    @param[in]  level_name Explicit caller-supplied level override.
-    @return     Effective numeric log level for the component.
-    @exception  None
-    """
-    component_override = config.DEFAULT_LOG_LEVEL_OVERRIDES.get(component_name)
-    return _resolve_level(level_name or component_override or config.DEFAULT_LOG_LEVEL)
 
 
 def _log_directory_path() -> Path:
@@ -361,7 +348,7 @@ def get_component_logger(
     @exception  None
     """
     logger = logging.getLogger(component_name)
-    logger.setLevel(_resolve_component_level(component_name, level_name))
+    logger.setLevel(_resolve_level(level_name))
     logger.propagate = True
     return logger
 

@@ -118,6 +118,10 @@ instructions from the Chunking document.
   seeding never reads the example path directly. Invalid supported values are
   repaired, while unknown future keys are preserved unless an explicit migration
   removes them.
+- Scene Ambience placement is the sole configured enablement policy; the retired
+  global enablement constant is absent, and settings validation deliberately
+  removes the deprecated `scene_ambience_generation_enabled` key
+  (`REQ-PLAT-02331830`).
 - Every committed example profile represents the optional
   `discovered_model_name` field as a string, matching the loader contract and
   avoiding a repair when an operator copies the scaffold (`REQ-PLAT-dd51f8cd`).
@@ -199,6 +203,9 @@ instructions from the Chunking document.
   `misc_ui_controller.play_completion_beep(window)` is the only emitter. Consumers
   call the emitter rather than reading the settings key or `QApplication.beep()`
   directly, so the preference has exactly one interpretation.
+- Component loggers use an explicit per-call level when supplied and otherwise
+  use `DEFAULT_LOG_LEVEL`; there is no inert per-component override registry
+  (`REQ-NFR-82f739cc`).
 - Each run writes one log file named
   `<APP_NAME>_<YYYYMMDD>_<HHMMSS>_<pid>.log` under `Logs/`. The process id is
   part of the name because the run handler opens with `mode="w"`: without it two

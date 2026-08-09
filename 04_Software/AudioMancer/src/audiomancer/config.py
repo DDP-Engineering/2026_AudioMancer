@@ -711,9 +711,6 @@ SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM = 5.0
 # @brief Longest operator-selectable narration block duration, in generated audio seconds.
 SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM = 300.0
 
-# @brief Default Scene Ambience Speech Blocks generation enablement.
-DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED = False
-
 # @brief Scene Ambience placement options used by Speech Blocks generation.
 SCENE_AMBIENCE_PLACEMENT_OPTIONS = (
     "none",
@@ -910,36 +907,10 @@ DEFAULT_LOG_LEVEL = "DEBUG"
 # @brief Default number of days that app execution logs are retained.
 DEFAULT_LOG_RETENTION_DAYS = 14
 
-# @brief Default per-component app execution log-level overrides.
-DEFAULT_LOG_LEVEL_OVERRIDES: dict[str, str] = {}
-
 # @brief Supported app-log serialization formats.
 LOG_FORMAT_OPTIONS = ("text", "json")
 
 # @brief Supported log level names accepted by the logging layer.
 LOG_LEVEL_OPTIONS = ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET")
-
-# @brief Stable component logger identifiers used for per-component overrides.
-AVAILABLE_LOG_COMPONENTS = (
-    "app",
-    "ai_backend",
-    "ai_cleanup",
-    "ai_chunking",
-    "ai_translation",
-    "audio_assembly",
-    "audio_blocks",
-    "character_discovery",
-    "deterministic_cleanup",
-    "deterministic_chunking",
-    "llm_provider",
-    "main_window",
-    "operation_runtime",
-    "prompt_template",
-    "settings",
-    "project_workspace",
-    "text_extraction",
-    "ui_state",
-    "voiceweaver_runtime",
-)
 
 # END OF FILE

@@ -466,56 +466,6 @@ class SpeechBlocksPage(QWidget):
                 self._show_selected_block(visible_row)
         self._apply_control_state()
 
-    def insert_speech_block_item(self, speech_block: dict[str, object], row: int | None = None) -> None:
-        """
-        @brief      Insert one Speech Block row without rebuilding the whole page.
-        @param[in]  speech_block Inserted Speech Block display payload.
-        @param[in]  row Optional visible row override inside the selected chunk.
-        @return     None.
-        @exception  None
-        """
-        normalized_id = str(speech_block.get("speech_block_id", "")).strip()
-        if not normalized_id:
-            return
-        self._speech_blocks = speech_blocks_service.sort_speech_blocks([*self._speech_blocks, dict(speech_block)])
-        self.refresh_chunk_count(str(speech_block.get("chunk_id", "")).strip())
-        if str(speech_block.get("chunk_id", "")).strip() != self._current_chunk_id:
-            return
-        insert_row = self._visible_insertion_row(speech_block) if row is None else max(0, int(row))
-        self._speech_block_list.insertItem(
-            insert_row,
-            _format_speech_block_list_item(speech_block, self._current_language),
-        )
-        self._speech_block_list.setCurrentRow(insert_row)
-
-    def remove_speech_block_item(self, speech_block_id: str) -> None:
-        """
-        @brief      Remove one Speech Block row without rebuilding the whole page.
-        @param[in]  speech_block_id Removed Speech Block identifier.
-        @return     None.
-        @exception  None
-        """
-        normalized_id = str(speech_block_id).strip()
-        removed_chunk_id = ""
-        visible_row = self._visible_block_row(normalized_id)
-        remaining_blocks: list[dict[str, object]] = []
-        for block in self._speech_blocks:
-            if str(block.get("speech_block_id", "")).strip() == normalized_id:
-                removed_chunk_id = str(block.get("chunk_id", "")).strip()
-                continue
-            remaining_blocks.append(block)
-        self._speech_blocks = remaining_blocks
-        self.refresh_chunk_count(removed_chunk_id)
-        if visible_row >= 0:
-            self._speech_block_list.takeItem(visible_row)
-        if self._current_block_id == normalized_id:
-            replacement_row = min(visible_row, self._speech_block_list.count() - 1)
-            if replacement_row >= 0:
-                self._speech_block_list.setCurrentRow(replacement_row)
-            else:
-                self._clear_block_details()
-        self._apply_control_state()
-
     def refresh_chunk_count(self, chunk_id: str | None) -> None:
         """
         @brief      Refresh one chunk-list row count label.
