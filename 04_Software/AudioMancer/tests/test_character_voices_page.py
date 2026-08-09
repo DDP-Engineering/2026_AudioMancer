@@ -120,6 +120,62 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
     assert page._save_prompt_button.isEnabled() is True
 
 
+def test_character_voices_page_unchanged_valid_edit_can_save_current_payload(qtbot) -> None:
+    """
+    @brief      Verify unchanged valid prompt edit mode can exit through the established Save signal.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_character_voices_state(
+        targets=[
+            {
+                "target_id": "character_alice",
+                "target_kind": "character",
+                "display_name": "Alice",
+                "sample_status_label": "Sample missing",
+                "has_sample": False,
+            }
+        ],
+        notes=["Ready."],
+        current_target_id="character_alice",
+        selected_voice_language="en",
+        language_entries=[("English", "en")],
+        original_language="English",
+        translated_language="Not translated",
+        assignment_mode_label="Narrator + character voices",
+        target_name="Alice",
+        target_kind_label="Character",
+        prompt_text="Original prompt.",
+        preview_text="Line one.\nLine two.",
+        is_editable=True,
+        can_import_sample=True,
+        can_edit_prompt=True,
+        can_generate_sample=True,
+        preview_available=False,
+        status_lines=["Total targets: 1"],
+        missing_narrator_sample=False,
+    )
+    emitted_payloads: list[dict[str, object]] = []
+    page.save_prompt_requested.connect(emitted_payloads.append)
+
+    page.begin_edit_mode()
+
+    assert page.is_edit_mode() is True
+    assert page.is_dirty() is False
+    assert page._save_prompt_button.isEnabled() is True
+
+    page._save_prompt_button.click()
+
+    assert len(emitted_payloads) == 1
+    assert emitted_payloads[0]["target_id"] == "character_alice"
+    assert emitted_payloads[0]["prompt_text"] == "Original prompt."
+    assert emitted_payloads[0]["preview_text"] == "Line one.\nLine two."
+
+
 def test_character_voices_page_import_button_emits_for_character_targets(qtbot) -> None:
     """
     @brief      Verify Import Sample is available for editable character targets.

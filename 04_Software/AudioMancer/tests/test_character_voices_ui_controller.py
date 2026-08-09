@@ -21,6 +21,7 @@ from types import SimpleNamespace
 from PySide6.QtWidgets import QMessageBox
 import pytest
 
+from audiomancer import config
 from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
@@ -209,6 +210,144 @@ def test_character_voices_page_activation_uses_persisted_targets_before_page_loa
     assert operation_summary["progress_current"] == 2
     assert operation_summary["progress_total"] == 2
     assert operation_summary["mode"] == "manual"
+
+
+def test_character_voices_first_entry_waits_for_persisted_targets_and_sample_evidence(qtbot, tmp_path) -> None:
+    """
+    @brief      Verify real first-page entry cannot promote Character Voices before targets and samples exist.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project_with_character_and_selected_narrator(
+        tmp_path,
+        "CharacterVoicesFirstEntry",
+        initialize_voice_plan=False,
+    )
+    character_discovery_service.add_character_profile(project_root, "Bob")
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    assert targets_path.is_file() is False
+
+    window = MainWindow(settings_payload=_default_settings_payload())
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    window.set_current_page("character_voices")
+
+    first_entry_manifest = project_workspace_service.load_manifest(project_root)
+    first_entry_summary = first_entry_manifest["operations"]["character_voices"]
+    assert targets_path.is_file() is True
+    assert first_entry_manifest["current_stage"] == "narrator_definition_ready"
+    assert first_entry_summary["status"] != "completed"
+
+    character_voices_ui_controller.handle_page_activated(window)
+
+    initialized_manifest = project_workspace_service.load_manifest(project_root)
+    initialized_summary = initialized_manifest["operations"]["character_voices"]
+    assert initialized_manifest["current_stage"] == "narrator_definition_ready"
+    assert initialized_summary["status"] == "in_progress"
+    assert initialized_summary["progress_current"] == 1
+    assert initialized_summary["progress_total"] == 3
+
+    for target_id in ("character_alice", "character_bob"):
+        target_payload = character_voices_service.voice_target_by_id(project_root, target_id)
+        assert target_payload is not None
+        character_voices_service.store_target_sample(
+            project_root,
+            target_payload,
+            "en",
+            "Preview text.",
+            {"generation_mode": "definition", "source_model_id": "qwen-designer"},
+            "Character sample ready.",
+            b"RIFF-character",
+        )
+    window._character_voices_page._targets = []
+
+    character_voices_ui_controller.handle_page_activated(window)
+
+    ready_manifest = project_workspace_service.load_manifest(project_root)
+    ready_summary = ready_manifest["operations"]["character_voices"]
+    assert ready_manifest["current_stage"] == "character_voices_ready"
+    assert ready_summary["status"] == "completed"
+    assert ready_summary["progress_current"] == 3
+    assert ready_summary["progress_total"] == 3
+
+
+def test_character_voices_import_oserror_stays_in_slot_without_success_side_effects(
+    monkeypatch, qtbot, tmp_path
+) -> None:
+    """
+    @brief      Verify a filesystem import failure is warned and cannot enter success handling.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesImportOSError")
+    window = _build_window(qtbot, project_root)
+    warning_calls: list[tuple[object, ...]] = []
+    success_calls: list[str] = []
+    monkeypatch.setattr(
+        character_voices_ui_controller.QFileDialog,
+        "getOpenFileName",
+        lambda *_args, **_kwargs: (str(tmp_path / "selected.wav"), "WAV"),
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.voice_sample_import_service,
+        "validate_imported_wav_sample",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.QInputDialog,
+        "getMultiLineText",
+        lambda *_args, **_kwargs: ("Imported transcript.", True),
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "confirm_single_voice_target_invalidation",
+        lambda *_args, **_kwargs: True,
+    )
+    monkeypatch.setattr(character_voices_ui_controller, "_stop_preview_playback", lambda *_args: None)
+
+    def _raise_import_oserror(*_args, **_kwargs) -> None:
+        """
+        @brief      Raise the filesystem failure injected at the service boundary.
+        @return     None.
+        @exception  OSError Always raised.
+        """
+        raise OSError("Unable to copy selected sample.")
+
+    monkeypatch.setattr(character_voices_service, "import_target_sample", _raise_import_oserror)
+    monkeypatch.setattr(
+        character_voices_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **_kwargs: warning_calls.append(args),
+    )
+    monkeypatch.setattr(window, "show_project_state", lambda *_args, **_kwargs: success_calls.append("refresh"))
+    monkeypatch.setattr(
+        character_voices_ui_controller,
+        "_sync_manifest_stage",
+        lambda *_args, **_kwargs: success_calls.append("manifest"),
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_for_voice_targets",
+        lambda *_args, **_kwargs: success_calls.append("invalidate"),
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *_args, **_kwargs: success_calls.append("notification"),
+    )
+
+    character_voices_ui_controller.handle_import_sample_requested(window, "character_alice")
+
+    assert len(warning_calls) == 1
+    assert warning_calls[0][1] == "Project Error"
+    assert warning_calls[0][2] == "Unable to copy selected sample."
+    assert success_calls == []
 
 
 def test_character_voices_ui_controller_save_prompt_persists_preview_text(monkeypatch, qtbot, tmp_path) -> None:
@@ -554,6 +693,82 @@ def test_character_voices_ui_controller_batch_targets_only_generatable_character
     assert [target_payload["target_id"] for target_payload in target_payloads] == ["character_bob"]
 
 
+def test_cancelled_character_sample_batch_refreshes_partial_page_and_manifest(
+    monkeypatch, qtbot, tmp_path
+) -> None:
+    """
+    @brief      Verify cancellation refreshes durably stored partial batch progress before status.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesPartialCancel")
+    character_discovery_service.add_character_profile(project_root, "Bob")
+    selected_narrator_id = narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
+    selected_narrator = narrator_definition_service.profile_by_id(project_root, selected_narrator_id)
+    character_voices_service.sync_voice_plan(
+        project_root,
+        character_discovery_service.load_character_profiles(project_root),
+        selected_narrator,
+    )
+    window = _build_window(qtbot, project_root)
+    assert all(
+        target["has_sample"] is False
+        for target in window._character_voices_page._targets
+        if target["target_kind"] == character_voices_service.TARGET_KIND_CHARACTER
+    )
+    alice_target = character_voices_service.voice_target_by_id(project_root, "character_alice")
+    assert alice_target is not None
+    character_voices_service.store_target_sample(
+        project_root,
+        alice_target,
+        "en",
+        "Alice preview.",
+        {"generation_mode": "definition", "source_model_id": "qwen-designer"},
+        "Alice sample ready.",
+        b"RIFF-alice",
+    )
+    message_observations: list[tuple[dict[str, bool], dict[str, object]]] = []
+    monkeypatch.setattr(
+        character_voices_ui_controller.settings_service,
+        "load_settings",
+        lambda: _default_settings_payload(),
+    )
+
+    def _capture_message(*_args, **_kwargs) -> None:
+        """
+        @brief      Capture page and manifest state when cancellation is presented.
+        @return     None.
+        @exception  None
+        """
+        page_samples = {
+            str(target["target_id"]): bool(target["has_sample"])
+            for target in window._character_voices_page._targets
+            if target["target_kind"] == character_voices_service.TARGET_KIND_CHARACTER
+        }
+        manifest_summary = project_workspace_service.load_manifest(project_root)["operations"]["character_voices"]
+        message_observations.append((page_samples, manifest_summary))
+
+    monkeypatch.setattr(character_voices_ui_controller.misc_ui_controller, "show_message", _capture_message)
+
+    character_voices_ui_controller._handle_generate_sample_cancelled(window, "cancelled", "en")
+
+    assert message_observations == [
+        (
+            {"character_alice": True, "character_bob": False},
+            {
+                "status": "in_progress",
+                "progress_current": 2,
+                "progress_total": 3,
+                "mode": "manual",
+                "warning_count": 0,
+            },
+        )
+    ]
+
+
 def test_character_sample_generation_cancel_during_model_load(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-UX-010 wires cancellation into Character Voices runtime polling.
@@ -770,12 +985,14 @@ def _create_project_with_character_and_selected_narrator(
     tmp_path,
     name: str,
     store_narrator_sample: bool = True,
+    initialize_voice_plan: bool = True,
 ):
     """
     @brief      Create one project containing a selected narrator and one character target.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  name Project display name.
     @param[in]  store_narrator_sample True when the narrator sample should be stored.
+    @param[in]  initialize_voice_plan True when the Character Voices targets file should be initialized.
     @return     Created project root path.
     @exception  None
     """
@@ -825,11 +1042,12 @@ def _create_project_with_character_and_selected_narrator(
     )
     selected_narrator = narrator_definition_service.profile_by_id(project_root, narrator_profile["profile_id"])
     assert selected_narrator is not None
-    character_voices_service.sync_voice_plan(
-        project_root,
-        character_discovery_service.load_character_profiles(project_root),
-        selected_narrator,
-    )
+    if initialize_voice_plan:
+        character_voices_service.sync_voice_plan(
+            project_root,
+            character_discovery_service.load_character_profiles(project_root),
+            selected_narrator,
+        )
     return project_root
 
 

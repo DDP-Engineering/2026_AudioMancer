@@ -250,6 +250,18 @@ def test_import_target_sample_persists_character_sample_metadata(tmp_path) -> No
     assert character_voices_service.sample_runtime_available(metadata, []) is True
 
 
+def test_character_voices_readiness_rejects_empty_target_list(tmp_path) -> None:
+    """
+    @brief      Verify Character Voices readiness requires non-empty persisted target evidence.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesEmptyReadiness")
+
+    assert character_voices_service.character_voices_is_ready(project_root, []) is False
+
+
 def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-014 persists generated character sample WAV bytes atomically.

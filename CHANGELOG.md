@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Character Voices now waits for real persisted voice targets and samples
+  before marking the step complete, reports sample-import filesystem failures
+  without closing the application, reflects samples completed before a batch
+  cancellation, and lets operators save an unchanged valid prompt to leave edit
+  mode.
 - Resuming Speech Blocks after an operator deletes every block for a middle
   source chunk now restores that missing passage exactly once while preserving
   later covered text, approvals, and stable block IDs.

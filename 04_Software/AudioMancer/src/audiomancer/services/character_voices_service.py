@@ -768,7 +768,7 @@ def character_voices_is_ready(
     character_targets = [
         target for target in voice_targets if str(target.get("target_kind", "")).strip() == TARGET_KIND_CHARACTER
     ]
-    return all(
+    return bool(voice_targets) and all(
         has_target_sample(project_root, str(target.get("target_id", "")).strip(), voice_targets)
         for target in character_targets
     )
