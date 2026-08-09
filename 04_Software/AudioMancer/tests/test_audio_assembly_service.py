@@ -126,6 +126,91 @@ def test_audio_assembly_service_can_skip_scene_ambience_blocks(tmp_path) -> None
         assert wav_file.getnframes() == 2400 * 3
 
 
+@pytest.mark.parametrize("source_kind", ["missing", "unsafe", "directory", "invalid_wav"])
+def test_audio_assembly_service_preflights_included_legacy_scene_ambience_source(
+    tmp_path,
+    monkeypatch,
+    source_kind: str,
+) -> None:
+    """
+    @brief      Verify path-carrying metadata-only ambience cannot bypass source preflight.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  source_kind Missing, unsafe, non-file, or invalid-WAV source case.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    source_relative_path = f"audio_blocks/legacy-{source_kind}.wav"
+    source_path = project_root / source_relative_path
+    if source_kind == "unsafe":
+        source_relative_path = "../outside.wav"
+        _write_wav(tmp_path / "outside.wav", 2400)
+    elif source_kind == "directory":
+        source_path.mkdir()
+    elif source_kind == "invalid_wav":
+        source_path.write_bytes(b"not a WAV file")
+    loaded_blocks = _loaded_blocks_with_legacy_scene_ambience(project_root, source_relative_path)
+    monkeypatch.setattr(audio_blocks_service, "load_audio_blocks", lambda _project_root: loaded_blocks)
+
+    with pytest.raises(ValueError, match="Every approved Audio Block"):
+        audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert not (project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME).exists()
+    assert not (project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).exists()
+
+
+def test_audio_assembly_service_composes_valid_legacy_scene_ambience_source(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify included path-carrying metadata-only ambience still composes when its WAV is valid.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    source_relative_path = "audio_blocks/legacy-valid-ambience.wav"
+    _write_wav(project_root / source_relative_path, 2400)
+    loaded_blocks = _loaded_blocks_with_legacy_scene_ambience(project_root, source_relative_path)
+    monkeypatch.setattr(audio_blocks_service, "load_audio_blocks", lambda _project_root: loaded_blocks)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+        "include_scene_ambience": True,
+    }
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert report["outputs"][0]["block_count"] == 4
+    assert (project_root / str(report["outputs"][0]["audio_relative_path"])).is_file()
+
+
+def test_audio_assembly_service_ignores_invalid_legacy_scene_ambience_when_disabled(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify disabled ambience is outside both preflight and composition.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    loaded_blocks = _loaded_blocks_with_legacy_scene_ambience(project_root, "audio_blocks/missing-legacy.wav")
+    monkeypatch.setattr(audio_blocks_service, "load_audio_blocks", lambda _project_root: loaded_blocks)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+        "include_scene_ambience": False,
+    }
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert report["outputs"][0]["block_count"] == 3
+
+
 def test_audio_assembly_service_lists_and_generates_scene_mix_preview(tmp_path) -> None:
     """
     @brief      Verify Scene Ambience groups can be preview-mixed on demand.
@@ -371,6 +456,187 @@ def test_audio_assembly_service_resume_preserves_time_limit_warnings(tmp_path) -
         "part-0002",
         "part-0003",
     ]
+
+
+def test_audio_assembly_service_classic_wav_size_boundary_uses_whole_frames() -> None:
+    """
+    @brief      Verify the exact stdlib RIFF bound permits the last legal whole frame.
+    @return     None.
+    @exception  None
+    """
+    params = wave._wave_params(1, 2, 24_000, 0, "NONE", "not compressed")
+    assert audio_assembly_service._WAV_MAX_DATA_BYTES == (1 << 32) - 1 - 36  # noqa: SLF001
+    assert audio_assembly_service._conservative_resampled_frame_count(1, 24_000, 44_100) == 2  # noqa: SLF001
+    assert audio_assembly_service._silence_frame_count(44_100, 1) == 44  # noqa: SLF001
+    maximum_frames = audio_assembly_service._WAV_MAX_DATA_BYTES // 2  # noqa: SLF001
+
+    audio_assembly_service._validate_classic_wav_data_size(  # noqa: SLF001
+        "legal.wav",
+        maximum_frames,
+        params,
+    )
+
+    with pytest.raises(RuntimeError, match="4 GB classic WAV limit.*Per text chunk or Time limit"):
+        audio_assembly_service._validate_classic_wav_data_size(  # noqa: SLF001
+            "oversized.wav",
+            maximum_frames + 1,
+            params,
+        )
+
+
+def test_audio_assembly_service_size_preflight_precedes_output_work_and_persistence(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify overflow rejection performs no output work and preserves report state.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+    }
+    prior_report = {"sentinel": True, "outputs": []}
+    prior_state = {
+        "status": "not_started",
+        "progress_current": 0,
+        "progress_total": 0,
+        "mode": "audio_composition",
+        "warning_count": 0,
+        "metadata": {"sentinel": True},
+        "resume_checkpoint": None,
+    }
+    audio_assembly_service._persist_state(project_root, prior_report, prior_state)  # noqa: SLF001
+    report_path = project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME
+    state_path = project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME
+    original_report_bytes = report_path.read_bytes()
+    original_state_bytes = state_path.read_bytes()
+    monkeypatch.setattr(audio_assembly_service, "_WAV_MAX_DATA_BYTES", 14_399, raising=False)
+
+    def unexpected_output_work(*_args, **_kwargs):
+        raise AssertionError("Output composition started before the size preflight rejected the plan.")
+
+    monkeypatch.setattr(audio_assembly_service, "_compose_output_file", unexpected_output_work)
+
+    with pytest.raises(RuntimeError, match="audiobook.wav.*4 GB classic WAV limit"):
+        audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert report_path.read_bytes() == original_report_bytes
+    assert state_path.read_bytes() == original_state_bytes
+    assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME).exists()
+
+
+def test_audio_assembly_service_size_preflight_allows_exact_legal_boundary(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify a payload equal to the configured byte boundary reaches composition.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+    }
+    monkeypatch.setattr(audio_assembly_service, "_WAV_MAX_DATA_BYTES", 14_400, raising=False)
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    output_path = project_root / str(report["outputs"][0]["audio_relative_path"])
+    with wave.open(str(output_path), "rb") as output_wav:
+        assert output_wav.getnframes() == 7200
+
+
+def test_audio_assembly_service_size_preflight_treats_per_chunk_outputs_independently(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify separate legal files are not rejected by their aggregate size.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_PER_CHUNK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+    }
+    monkeypatch.setattr(audio_assembly_service, "_WAV_MAX_DATA_BYTES", 9_600, raising=False)
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert [output["file_name"] for output in report["outputs"]] == ["chunk-0001.wav", "chunk-0002.wav"]
+
+
+@pytest.mark.parametrize("failure_point", ["write", "close"])
+def test_audio_assembly_service_removes_temp_after_output_writer_failure(
+    tmp_path,
+    monkeypatch,
+    failure_point: str,
+) -> None:
+    """
+    @brief      Verify failed final-output writes remove temp bytes and preserve publication.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  failure_point Writer operation that raises the simulated error.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    settings = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+    }
+    approved_blocks = audio_assembly_service._load_approved_audio_blocks(  # noqa: SLF001
+        project_root,
+        include_scene_ambience=True,
+    )
+    output_item = audio_assembly_service._build_output_plan(project_root, approved_blocks, settings)[0]  # noqa: SLF001
+    output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
+    output_root.mkdir()
+    output_path = output_root / str(output_item["file_name"])
+    output_path.write_bytes(b"published output")
+    temp_path = output_path.with_name(output_path.name + ".tmp")
+    real_wave_open = wave.open
+
+    class FailingWriter:
+        def __enter__(self):
+            temp_path.write_bytes(b"partial temp")
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            if failure_point == "close" and exc_type is None:
+                raise OSError("simulated close failure")
+            return False
+
+        def setparams(self, _params):
+            return None
+
+        def writeframes(self, _data):
+            if failure_point == "write":
+                raise OSError("simulated write failure")
+
+    def failing_output_open(path, mode=None):
+        if mode == "wb" and str(path) == str(temp_path):
+            return FailingWriter()
+        return real_wave_open(path, mode)
+
+    monkeypatch.setattr(audio_assembly_service.wave, "open", failing_output_open)
+
+    with pytest.raises(OSError, match=f"simulated {failure_point} failure"):
+        audio_assembly_service._compose_output_file(project_root, output_item, settings)  # noqa: SLF001
+
+    assert output_path.read_bytes() == b"published output"
+    assert not temp_path.exists()
 
 
 def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> None:
@@ -700,6 +966,40 @@ def _insert_scene_ambience_blocks(
     blocks[2]["sequence_index"] = 1
     blocks[1:1] = ambience_blocks
     _persist_block_fixtures(project_root, blocks)
+
+
+def _loaded_blocks_with_legacy_scene_ambience(project_root, source_relative_path: str) -> list[dict]:
+    """
+    @brief      Inject one legacy path-carrying metadata-only Scene Ambience row.
+    @param[in]  project_root Active project root.
+    @param[in]  source_relative_path Persisted-style source path to inject.
+    @return     Loaded Audio Blocks including the injected legacy row.
+    @exception  None
+    """
+    loaded_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    loaded_blocks[1]["sequence_index"] = 3
+    loaded_blocks.insert(
+        1,
+        {
+            **loaded_blocks[0],
+            "speech_block_id": "0001-000002-legacy-ambience",
+            "sequence_index": 2,
+            "speaker_id": "scene_ambience",
+            "speaker_display_name": "Scene Ambience",
+            "normalized_speaker_name": "scene_ambience",
+            "content_kind": "scene_ambience",
+            "metadata_only": True,
+            "text": "Legacy rain ambience.",
+            "sound_prompt": "Legacy rain ambience.",
+            "duration_seconds": 0.1,
+            "ambience_position": "opener",
+            "after_speech_block_id": "",
+            "audio_relative_path": source_relative_path,
+            "generated": True,
+            "approved": True,
+        },
+    )
+    return loaded_blocks
 
 
 def _write_wav(path, frame_count: int, channels: int = 1, frame_rate: int = 24_000) -> None:

@@ -33,6 +33,11 @@ The assembly service loads validated block WAVs, applies configured composition/
 
 - Outputs and referenced inputs remain project-relative and ordered by block identity; state records completed outputs, durations and resumable progress.
 - Assembly validates readable compatible WAVs and preserves previously completed work when a later operation cannot complete.
+- Final-composition preflight validates every included non-pause source as a
+  safe existing regular readable supported-PCM WAV, including defensive support
+  for legacy path-carrying metadata-only Scene Ambience rows. Synthesized pauses
+  require no source, and disabled ambience stays outside validation and
+  composition (`REQ-FUNC-7c32fd5e`).
 - Accepted PCM sample widths are 2, 3 and 4 bytes. One-byte PCM is rejected on
   purpose: WAV stores 8-bit samples unsigned while this component and PCM Codec
   read every width as signed, so gap and pause silence would be written as a
@@ -45,7 +50,13 @@ The assembly service loads validated block WAVs, applies configured composition/
   metadata-only ambience rows remain pathless and are not mixed
   (`REQ-FUNC-ee6222b7`). Resume requires the current input/settings fingerprint;
   mismatched persisted state requires explicit reset. Outputs publish through
-  temporary paths, and WAV remains the only supported delivery format.
+  temporary paths, and WAV remains the only supported delivery format. Before
+  running-state persistence or output work, each pending file is sized from
+  integer PCM frames against stdlib `wave`'s exact classic RIFF payload maximum;
+  only the individual overflowing file is rejected, with Per text chunk or Time
+  limit guidance (`REQ-REL-607c7bfb`). Failed final-output writes and closes
+  remove their temp file without replacing an existing published output
+  (`REQ-REL-f3f965de`).
 
 ## 7. Workflow Integration
 

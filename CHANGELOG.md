@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Audio Assembly now validates every included source WAV, including legacy
+  path-carrying Scene Ambience rows, before composition; synthesized pauses and
+  disabled ambience remain file-free and excluded as intended.
+- Audio Assembly now rejects any single output that would exceed the classic
+  4 GB WAV limit before writing, recommends a split output mode, and removes
+  temporary output files after unexpected WAV write or close failures.
 - Interrupted long Audio Blocks now resume at the first unfinished split part,
   reject stale or inconsistent part checkpoints, preserve same-narrator voice
   identity on cancellation, and keep incrementally inserted review rows aligned

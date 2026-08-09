@@ -1,0 +1,74 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-7c32fd5e"
+
+title = "Validate every opened Audio Assembly source"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When Audio Assembly includes an approved row in final composition and the row
+is not a synthesized pause, the service shall preflight its source as a safe
+existing regular readable supported-PCM WAV before composition opens it.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Service regressions inject path-carrying metadata-only Scene Ambience rows with missing, unsafe, non-file, and invalid WAV sources and observe the user-facing preflight error, while valid included ambience, synthesized pauses, and disabled ambience retain their established composition behavior."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_preflights_included_legacy_scene_ambience_source",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_valid_legacy_scene_ambience_source",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_ignores_invalid_legacy_scene_ambience_when_disabled",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "The composition boundary must defend against legacy or corrupt rows even when current Audio Blocks loading normally keeps metadata-only ambience pathless."
+
+created = 2026-08-09
+updated = 2026-08-09
