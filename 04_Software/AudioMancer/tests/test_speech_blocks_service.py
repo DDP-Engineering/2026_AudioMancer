@@ -3591,7 +3591,8 @@ def test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries() -> None
     )
 
     assert [block["text"] for block in blocks] == ["One two.", "Three four.", "Five six."]
-    assert [block["source_text"] for block in blocks] == ["One two.", "Three four.", "Five six."]
+    assert [block["source_text"] for block in blocks] == ["One two. ", "Three four. ", "Five six."]
+    assert "".join(str(block["source_text"]) for block in blocks) == source_text
     assert [block["speaker_id"] for block in blocks] == ["narrator", "narrator", "narrator"]
     assert [block["content_kind"] for block in blocks] == ["narration", "narration", "narration"]
     assert all("tts_hard_split" not in block["warning_flags"] for block in blocks)

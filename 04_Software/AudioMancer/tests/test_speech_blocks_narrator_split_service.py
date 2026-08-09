@@ -145,6 +145,30 @@ def test_every_supported_quote_pair_keeps_its_passage_intact(opening_quote: str,
         assert closing_quote in str(block["source_text"])
 
 
+@pytest.mark.parametrize(
+    "quotation",
+    [
+        "„Guten Tag. «Bleib bitte hier.» Wir warten.“",
+        "„Bună ziua. «Rămâi aici.» Așteptăm.”",
+    ],
+)
+def test_low_quote_closers_end_nested_quotation_before_budget_splitting(quotation: str) -> None:
+    """
+    @brief      Verify German and Romanian low-open quotes close before later narration is split.
+    @param[in]  quotation Nested low-open quotation under test.
+    @return     None.
+    @exception  None
+    """
+    source_text = f"{quotation} Er ging weiter. Die Sonne schien hell. Niemand folgte ihm."
+
+    blocks = _plan(source_text, target_units=8)
+
+    assert not narrator_split.open_quote_stack(quotation)
+    assert _rebuild(blocks) == source_text
+    assert len(blocks) > 1
+    assert all(narrator_split.NARRATOR_BUDGET_EXCEEDED_FLAG not in block["warning_flags"] for block in blocks[1:])
+
+
 def test_single_oversized_sentence_stays_whole_and_is_flagged() -> None:
     """
     @brief      Verify an over-budget sentence is preserved and marked instead of cut.

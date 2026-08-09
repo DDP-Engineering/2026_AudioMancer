@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech Blocks now preserves attribution in mixed-spacing dash dialogue,
+  closes German low-high quotations before splitting later narration, removes
+  every supported dialogue quote wrapper from spoken text, and keeps exact
+  source whitespace and provenance across TTS-budget splits even when model
+  audio wording differs.
 - Speech Blocks review reads, approvals, edits, insertions, and deletions now
   resolve the source corpus only once per operation while preserving report and
   progress counts when upstream artifacts are temporarily unavailable.

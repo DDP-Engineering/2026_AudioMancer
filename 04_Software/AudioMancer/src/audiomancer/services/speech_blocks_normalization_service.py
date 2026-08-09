@@ -19,7 +19,7 @@ from dataclasses import dataclass
 import re
 
 from audiomancer import config
-from audiomancer.services import cleanup_text_analysis_service, tts_budget_service
+from audiomancer.services import speech_blocks_text_split_service, tts_budget_service
 from audiomancer.services.logging_service import get_component_logger
 
 # CONSTANTS
@@ -113,7 +113,7 @@ def normalize_block_text(text: str, content_kind: str) -> str:
         return str(text).strip()
     normalized_text = text.strip()
     normalized_text = re.sub(r"^[-–—]\s+", "", normalized_text, count=1)
-    for opening_quote, closing_quote in (('"', '"'), ("“", "”"), ("‘", "’"), ("«", "»")):
+    for opening_quote, closing_quote in speech_blocks_text_split_service.dialogue_quote_pairs():
         if (
             len(normalized_text) >= 2
             and normalized_text.startswith(opening_quote)
@@ -1343,15 +1343,19 @@ def split_over_budget_ai_blocks(
 
         source_audio_text = normalize_block_text(source_text, content_kind)
         source_text_matches_audio = block_text_key(source_audio_text) == block_text_key(audio_text)
-        split_basis_text = source_text if source_text_matches_audio else audio_text
-        split_text_parts, used_hard_split = split_text_for_tts_budget(
-            split_basis_text,
+        audio_parts, used_hard_split = split_text_for_tts_budget(
+            source_text if source_text_matches_audio else audio_text,
             content_kind,
             safe_word_count,
         )
-        if len(split_text_parts) <= 1:
+        if len(audio_parts) <= 1:
             split_blocks.append(ai_block)
             continue
+        source_parts = (
+            audio_parts
+            if source_text_matches_audio
+            else _partition_source_provenance(source_text, [len(audio_part) for audio_part in audio_parts])
+        )
 
         warning_entries.append(
             {
@@ -1361,10 +1365,10 @@ def split_over_budget_ai_blocks(
                 ),
             }
         )
-        for text_part in split_text_parts:
+        for source_part, audio_part in zip(source_parts, audio_parts, strict=True):
             split_block = dict(ai_block)
-            split_block["source_text"] = text_part
-            split_block["text"] = normalize_block_text(text_part, content_kind)
+            split_block["source_text"] = source_part
+            split_block["text"] = normalize_block_text(audio_part, content_kind)
             if used_hard_split:
                 warning_flags = list(split_block.get("warning_flags", []))
                 append_warning_flag(warning_flags, "tts_hard_split")
@@ -1388,15 +1392,15 @@ def split_text_for_tts_budget(
     @return     Tuple of split text spans and whether a hard fallback was used.
     @exception  None
     """
-    normalized_text = str(text).strip()
-    if not normalized_text:
-        return [], False
-    if tts_budget_unit_count(normalize_block_text(normalized_text, content_kind)) <= safe_word_count:
-        return [normalized_text], False
+    source_text = str(text)
+    if not source_text.strip():
+        return [source_text], False
+    if tts_budget_unit_count(normalize_block_text(source_text, content_kind)) <= safe_word_count:
+        return [source_text], False
 
     boundary_splitters = (split_paragraph_spans, split_sentence_spans)
     for splitter in boundary_splitters[boundary_index:]:
-        spans = splitter(normalized_text)
+        spans = splitter(source_text)
         if len(spans) <= 1:
             boundary_index += 1
             continue
@@ -1414,7 +1418,7 @@ def split_text_for_tts_budget(
             used_hard_split = used_hard_split or span_used_hard_split
         return pack_tts_split_parts(split_parts, content_kind, safe_word_count), used_hard_split
 
-    return hard_split_text_for_tts_budget(normalized_text, content_kind, safe_word_count), True
+    return hard_split_text_for_tts_budget(source_text, content_kind, safe_word_count), True
 
 
 def split_paragraph_spans(text: str) -> list[str]:
@@ -1424,7 +1428,17 @@ def split_paragraph_spans(text: str) -> list[str]:
     @return     Non-empty paragraph spans.
     @exception  None
     """
-    return [part.strip() for part in re.split(r"\n\s*\n+", str(text)) if part.strip()]
+    source_text = str(text)
+    spans: list[str] = []
+    cursor = 0
+    for separator in re.finditer(r"\n\s*\n+", source_text):
+        if separator.start() <= cursor:
+            continue
+        spans.append(source_text[cursor : separator.end()])
+        cursor = separator.end()
+    if cursor < len(source_text):
+        spans.append(source_text[cursor:])
+    return spans if spans else [source_text]
 
 
 def split_sentence_spans(text: str) -> list[str]:
@@ -1434,13 +1448,9 @@ def split_sentence_spans(text: str) -> list[str]:
     @return     Non-empty sentence-like spans.
     @exception  None
     """
-    normalized_text = str(text).strip()
-    sentence_parts = [
-        span.strip()
-        for span in cleanup_text_analysis_service.sentence_spans(normalized_text, include_clause_marks=True)
-        if span.strip()
-    ]
-    return sentence_parts if len(sentence_parts) > 1 else [normalized_text]
+    source_text = str(text)
+    sentence_parts = speech_blocks_text_split_service.ai_sentence_spans(source_text)
+    return sentence_parts if len(sentence_parts) > 1 else [source_text]
 
 
 def pack_tts_split_parts(parts: list[str], content_kind: str, safe_word_count: int) -> list[str]:
@@ -1455,10 +1465,10 @@ def pack_tts_split_parts(parts: list[str], content_kind: str, safe_word_count: i
     packed_parts: list[str] = []
     current_part = ""
     for part in parts:
-        candidate_part = part.strip()
+        candidate_part = str(part)
         if not candidate_part:
             continue
-        merged_part = f"{current_part} {candidate_part}".strip() if current_part else candidate_part
+        merged_part = f"{current_part}{candidate_part}" if current_part else candidate_part
         if tts_budget_unit_count(normalize_block_text(merged_part, content_kind)) <= safe_word_count:
             current_part = merged_part
             continue
@@ -1479,32 +1489,32 @@ def hard_split_text_for_tts_budget(text: str, content_kind: str, safe_word_count
     @return     Hard-split text spans.
     @exception  None
     """
-    word_spans = re.findall(r"\S+", str(text))
+    source_text = str(text)
+    word_spans = [match.group(0) for match in re.finditer(r"\s*\S+\s*", source_text)]
     if len(word_spans) <= 1:
-        return hard_split_text_by_characters(str(text), safe_word_count)
+        return hard_split_text_by_characters(source_text, safe_word_count)
 
     split_parts: list[str] = []
-    current_words: list[str] = []
+    current_part = ""
     for word_span in word_spans:
         word_units = tts_budget_unit_count(normalize_block_text(word_span, content_kind))
         if word_units > safe_word_count:
-            if current_words:
-                split_parts.append(" ".join(current_words))
-                current_words = []
+            if current_part:
+                split_parts.append(current_part)
+                current_part = ""
             split_parts.extend(hard_split_text_by_characters(word_span, safe_word_count))
             continue
 
-        candidate_words = [*current_words, word_span]
-        candidate_text = " ".join(candidate_words)
+        candidate_text = f"{current_part}{word_span}"
         if tts_budget_unit_count(normalize_block_text(candidate_text, content_kind)) <= safe_word_count:
-            current_words = candidate_words
+            current_part = candidate_text
             continue
-        if current_words:
-            split_parts.append(" ".join(current_words))
-        current_words = [word_span]
+        if current_part:
+            split_parts.append(current_part)
+        current_part = word_span
 
-    if current_words:
-        split_parts.append(" ".join(current_words))
+    if current_part:
+        split_parts.append(current_part)
     return split_parts
 
 
@@ -1516,13 +1526,34 @@ def hard_split_text_by_characters(text: str, safe_word_count: int) -> list[str]:
     @return     Character chunks.
     @exception  None
     """
-    normalized_text = str(text).strip()
+    source_text = str(text)
     max_characters = max(1, int(safe_word_count) * 6)
     return [
-        normalized_text[start_index : start_index + max_characters]
-        for start_index in range(0, len(normalized_text), max_characters)
-        if normalized_text[start_index : start_index + max_characters].strip()
+        source_text[start_index : start_index + max_characters]
+        for start_index in range(0, len(source_text), max_characters)
+        if source_text[start_index : start_index + max_characters]
     ]
+
+
+def _partition_source_provenance(source_text: str, part_weights: list[int]) -> list[str]:
+    """
+    @brief      Partition source provenance into exact ordered slices for independently split audio.
+    @param[in]  source_text Original block source provenance.
+    @param[in]  part_weights Relative lengths of independently split spoken parts.
+    @return     One contiguous source slice per spoken part without loss or duplication.
+    @exception  None
+    """
+    source = str(source_text)
+    if not part_weights:
+        return []
+    total_weight = max(1, sum(max(0, int(weight)) for weight in part_weights))
+    boundaries = [0]
+    cumulative_weight = 0
+    for weight in part_weights[:-1]:
+        cumulative_weight += max(0, int(weight))
+        boundaries.append(round(len(source) * cumulative_weight / total_weight))
+    boundaries.append(len(source))
+    return [source[start:end] for start, end in zip(boundaries[:-1], boundaries[1:], strict=True)]
 
 
 def safe_tts_word_count(tts_budget: dict[str, object] | None) -> int:

@@ -43,7 +43,19 @@ otherwise it uses the original Chunking document text through its shared reader.
 
 - Each block has a stable `speech_block_id`, content/speaker kind and identifiers, text or ambience prompt, duration, warning flags, and approval state.
 - Speech Block identifiers are unique within the authoritative current document, not across deleted history. A deleted identifier may be allocated again; the controller therefore removes the deleted Audio Blocks row and generated WAV before manifest refresh or any later insertion can reuse it. Service-only deletion callers must provide the same downstream cleanup.
-- Source selection preserves canonical ordering; normalization and splits preserve usable text while keeping blocks within configured TTS limits.
+- Source selection preserves canonical ordering; normalization and splits preserve usable spoken text while keeping blocks within configured TTS limits.
+- Dash-led paragraphs retain contiguous source-span and atomic-unit offsets even
+  when the opening turn has no whitespace after its dash and later replies do;
+  attribution units remain selectable instead of forcing a narrator fallback
+  (REQ-FUNC-6292ab33).
+- Every TTS-budget split stores exact, ordered `source_text` slices whose
+  concatenation reproduces the original block character-for-character,
+  including leading or trailing whitespace-only spans. When model audio text
+  differs, spoken parts retain that audio wording while source provenance is
+  partitioned monotonically without duplication or loss (REQ-FUNC-15a96219).
+- Source parsing and spoken dialogue unwrapping share one authoritative quote
+  pair table, including alternative German/Romanian low-quote closers, Polish
+  low quotes, reversed guillemets, and CJK pairs (REQ-FUNC-5e94d565).
 - Persistence is one authoritative `speech_blocks.json` document object with a fixed top-level field set (`status`, `source`, `ai_profile_id`, `instructions`, `scene_ambience`, `response_contract`, `token_usage`, `budget_metadata`, `checkpoint`, `failure`, `blocks`).
 - Counts, warnings, stage status, and progress are recomputed on read; the document keeps only `source.fingerprint` (not a copy of source-chunk text) and re-resolves source chunks from upstream (`chunks_text.json` / `translated_text.json`).
 - A non-object, corrupt, or missing document reads as not-started (`None`); reset removes the authoritative document.
@@ -71,6 +83,10 @@ otherwise it uses the original Chunking document text through its shared reader.
   alone exceeds the TTS budget is kept whole and flagged `tts_budget_exceeded`,
   because TTS Audio Blocks splits it again at generation time against the real
   loaded-model budget.
+- Same-narrator quotation tracking tests a pending closer before treating the
+  same glyph as another opener, so German `„…“` and Romanian `„…”` quotations
+  close correctly and later narration can resume budget splitting
+  (REQ-FUNC-c13373e7).
 - Chunking records how confident Text Cleanup was about a paragraph rebuilt
   across a page break. Speech Blocks carries that verdict through, so a chunk
   with a non-`strong` `cleanup_boundary_confidence` marks its blocks

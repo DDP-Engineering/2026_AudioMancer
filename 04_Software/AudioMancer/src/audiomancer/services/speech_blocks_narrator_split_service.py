@@ -22,29 +22,29 @@
 
 import math
 
-from audiomancer.services import cleanup_text_analysis_service, tts_budget_service
+from audiomancer.services import (
+    cleanup_text_analysis_service,
+    speech_blocks_text_split_service,
+    tts_budget_service,
+)
 
 # CONSTANTS
 
 # @brief Warning flag raised when one sentence alone exceeds the safe TTS budget.
 NARRATOR_BUDGET_EXCEEDED_FLAG = "tts_budget_exceeded"
 
-# @brief Opening delimiters mapped to the closing delimiter they expect.
-# @details A same-narrator block must never begin or end inside an open quotation, so the
-#          splitter tracks nesting rather than counting characters.
-_OPENING_TO_CLOSING_QUOTE = {
-    "“": "”",
-    "„": "”",
-    "«": "»",
-    "‹": "›",
-    "「": "」",
-    "『": "』",
-    "《": "》",
-    "〈": "〉",
-}
-
 # @brief Straight quote handled as a toggle because it opens and closes with one character.
 _TOGGLE_QUOTE = '"'
+
+# @brief Opening delimiters mapped to all closing delimiters they accept.
+# @details A same-narrator block must never begin or end inside an open quotation, so the
+#          splitter tracks nesting rather than counting characters.
+_OPENING_TO_CLOSING_QUOTES: dict[str, tuple[str, ...]] = {}
+for _opening_quote, _closing_quote in speech_blocks_text_split_service.dialogue_quote_pairs():
+    if _opening_quote in {_TOGGLE_QUOTE, "'"}:
+        continue
+    _OPENING_TO_CLOSING_QUOTES.setdefault(_opening_quote, ())
+    _OPENING_TO_CLOSING_QUOTES[_opening_quote] += (_closing_quote,)
 
 # @brief Closing marks that belong to the sentence they follow.
 _TRAILING_CLOSING_MARKS = "\"'»”’)]}）】》」』〉"
@@ -68,19 +68,29 @@ def open_quote_stack(text: str) -> list[str]:
     @return     Closing delimiters the prefix still owes, outermost first.
     @exception  None
     """
-    stack: list[str] = []
+    return [closers[0] for closers in _open_quote_closer_stack(text)]
+
+
+def _open_quote_closer_stack(text: str) -> list[tuple[str, ...]]:
+    """
+    @brief      Return acceptable closer sets for quotations left open by text.
+    @param[in]  text Source text prefix to inspect.
+    @return     Ordered acceptable-closer tuples for pending quotations.
+    @exception  None
+    """
+    stack: list[tuple[str, ...]] = []
     for character in str(text):
         if character == _TOGGLE_QUOTE:
-            if stack and stack[-1] == _TOGGLE_QUOTE:
+            if stack and _TOGGLE_QUOTE in stack[-1]:
                 stack.pop()
             else:
-                stack.append(_TOGGLE_QUOTE)
+                stack.append((_TOGGLE_QUOTE,))
             continue
-        if character in _OPENING_TO_CLOSING_QUOTE:
-            stack.append(_OPENING_TO_CLOSING_QUOTE[character])
-            continue
-        if stack and character == stack[-1]:
+        if stack and character in stack[-1]:
             stack.pop()
+            continue
+        if character in _OPENING_TO_CLOSING_QUOTES:
+            stack.append(_OPENING_TO_CLOSING_QUOTES[character])
     return stack
 
 

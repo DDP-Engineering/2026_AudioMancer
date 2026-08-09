@@ -15,7 +15,13 @@
 
 # IMPORTS
 
-from audiomancer.services import speech_blocks_text_split_service, tts_budget_service
+import pytest
+
+from audiomancer.services import (
+    speech_blocks_normalization_service,
+    speech_blocks_text_split_service,
+    tts_budget_service,
+)
 
 
 def test_build_source_spans_preserves_exact_text_and_paragraph_boundaries() -> None:
@@ -142,6 +148,40 @@ def test_split_text_for_ai_context_budget_preserves_ordered_segments() -> None:
 
     assert "".join(split_parts) == source_text
     assert len(split_parts) > 1
+
+
+@pytest.mark.parametrize(
+    "source_text",
+    [
+        "—Bună. — Ce faci? — Bine.",
+        "—Bună ziua. — Ce faci? întrebă Ana. — Bine.",
+    ],
+)
+def test_unspaced_dash_opener_preserves_contiguous_span_and_atomic_coverage(source_text: str) -> None:
+    """
+    @brief      Verify an unspaced first dash turn retains exact coverage before spaced replies.
+    @param[in]  source_text Mixed-spacing dash-dialogue paragraph.
+    @return     None.
+    @exception  None
+    """
+    source_spans = speech_blocks_text_split_service.build_source_spans(source_text)
+    atomic_units = speech_blocks_text_split_service.build_atomic_speech_units(source_text, source_spans)
+    source_chunk = {
+        "chunk_id": "chunk-0001",
+        "source_spans": source_spans,
+        "atomic_units": atomic_units,
+    }
+    parsed_spans, source_span_error = speech_blocks_normalization_service.parse_source_spans(source_chunk, source_text)
+    parsed_units, atomic_unit_error = speech_blocks_normalization_service.parse_atomic_units(source_chunk, source_text)
+
+    _assert_source_spans_reconstruct_text(source_text, source_spans)
+    _assert_atomic_units_reconstruct_text(source_text, atomic_units)
+    assert parsed_spans and not source_span_error
+    assert parsed_units and not atomic_unit_error
+    assert source_spans[0]["start_offset"] == 0
+    assert atomic_units[0]["start_offset"] == 0
+    if "întrebă" in source_text:
+        assert "attribution" in [unit["structural_kind"] for unit in atomic_units]
 
 
 def test_estimate_budget_units_handles_words_and_compact_scripts() -> None:

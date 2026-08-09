@@ -33,48 +33,13 @@ _ATOMIC_KIND_NARRATION = "narration"
 _ATOMIC_KIND_SEPARATOR = "separator"
 _ATOMIC_KIND_MIXED = "mixed"
 
-_DIALOGUE_QUOTE_PAIRS = {
-    '"': '"',
-    "'": "'",
-    "“": "”",
-    "‘": "’",
-    "«": "»",
-    "»": "«",
-    "„": "“",
-    "‚": "‘",
-    "「": "」",
-    "『": "』",
-    "《": "》",
-    "〈": "〉",
-}
-_DIALOGUE_DASHES = ("-", "–", "—", "―")
-_DIALOGUE_TRAILING_PUNCTUATION = set(',.!?;:，。！？；：、"”’»«」』》〉')
-
-_MAX_NARRATION_SENTENCE_SOURCE_SPANS = 24
-
-_ATOMIC_DIALOGUE_QUOTE_PAIRS = {
-    '"': '"',
-    "'": "'",
-    "“": "”",
-    "‘": "’",
-    "„": "”",
-    "‚": "‘",
-    "«": "»",
-    "»": "«",
-    "‹": "›",
-    "「": "」",
-    "『": "』",
-    "《": "》",
-    "〈": "〉",
-}
-
-_ATOMIC_DIALOGUE_QUOTE_CLOSERS = {
+_DIALOGUE_QUOTE_CLOSERS = {
     '"': ('"',),
     "'": ("'",),
     "“": ("”",),
     "‘": ("’",),
-    "„": ("”", "“"),
-    "‚": ("‘",),
+    "„": ("“", "”"),
+    "‚": ("‘", "'"),
     "«": ("»",),
     "»": ("«",),
     "‹": ("›",),
@@ -83,6 +48,10 @@ _ATOMIC_DIALOGUE_QUOTE_CLOSERS = {
     "《": ("》",),
     "〈": ("〉",),
 }
+_DIALOGUE_DASHES = ("-", "–", "—", "―")
+_DIALOGUE_TRAILING_PUNCTUATION = set(',.!?;:，。！？；：、"”’»«」』》〉')
+
+_MAX_NARRATION_SENTENCE_SOURCE_SPANS = 24
 
 _ATTRIBUTION_VERBS = (
     "said",
@@ -129,6 +98,19 @@ _ATTRIBUTION_VERBS = (
 )
 
 # PUBLIC API
+
+
+def dialogue_quote_pairs() -> tuple[tuple[str, str], ...]:
+    """
+    @brief      Return every dialogue quote pair recognized by source splitting.
+    @return     Ordered opening and closing quote pairs.
+    @exception  None
+    """
+    return tuple(
+        (opening_quote, closing_quote)
+        for opening_quote, closing_quotes in _DIALOGUE_QUOTE_CLOSERS.items()
+        for closing_quote in closing_quotes
+    )
 
 
 def build_source_spans(text: str) -> list[dict[str, object]]:
@@ -394,6 +376,8 @@ def _dash_atomic_ranges(text: str) -> list[tuple[int, int, str]]:
         segment_start = marker_offset
         while segment_start > 0 and source_text[segment_start - 1].isspace():
             segment_start -= 1
+        if index == 0:
+            segment_start = 0
         segment_text = source_text[segment_start:segment_end]
         split_offset = _dash_dialogue_attribution_split_offset(segment_text)
         if split_offset <= 0:
@@ -432,7 +416,7 @@ def _atomic_quote_dialogue_ranges(text: str) -> list[tuple[int, int]]:
     cursor = 0
     while cursor < len(source_text):
         opener = source_text[cursor]
-        closers = _ATOMIC_DIALOGUE_QUOTE_CLOSERS.get(opener)
+        closers = _DIALOGUE_QUOTE_CLOSERS.get(opener)
         if not closers or not _quote_opener_is_plausible(source_text, cursor):
             cursor += 1
             continue
@@ -715,7 +699,7 @@ def _dash_dialogue_ranges(paragraph: str) -> list[tuple[int, int]]:
         boundary_start = marker_offset
         while boundary_start > 0 and paragraph_text[boundary_start - 1].isspace():
             boundary_start -= 1
-        if not boundary_starts and not paragraph_text[:marker_offset].strip():
+        if not boundary_starts:
             boundary_start = 0
         boundary_starts.append(boundary_start)
 
@@ -816,11 +800,16 @@ def _quote_dialogue_ranges(paragraph: str) -> list[tuple[int, int]]:
     cursor = 0
     while cursor < len(source_text):
         opener = source_text[cursor]
-        closer = _DIALOGUE_QUOTE_PAIRS.get(opener)
-        if closer is None or not _quote_opener_is_plausible(source_text, cursor):
+        closers = _DIALOGUE_QUOTE_CLOSERS.get(opener)
+        if not closers or not _quote_opener_is_plausible(source_text, cursor):
             cursor += 1
             continue
-        close_index = source_text.find(closer, cursor + 1)
+        close_indices = [
+            close_index
+            for close_index in (source_text.find(closer, cursor + 1) for closer in closers)
+            if close_index >= 0
+        ]
+        close_index = min(close_indices) if close_indices else -1
         if close_index < 0:
             cursor += 1
             continue
