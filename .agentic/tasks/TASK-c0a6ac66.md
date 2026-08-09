@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-c0a6ac66 — Preserve Speech Blocks ordering contracts
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-REL-0e236c91, REQ-FUNC-10095db1, REQ-DATA-f0eb775c
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit
-- [ ] close-out: `stage: done` set only after the delivery commit succeeds
+- [x] close-out: `stage: done` set only after the delivery commit succeeds
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` updated under `Unreleased` in user language
 - [x] no release version workflow applies to this non-release delivery
@@ -75,6 +75,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Final task-scoped static AEGIS check exited zero with the accepted baseline advisories plus the expected three pre-approval unticked items; unstaged diff whitespace validation also passed.
 - 2026-08-09 deliver: Human delivery approval received after independent review of the eight staged files, cached diff check, requirements, journal, changelog, planning exclusion, settings cleanup, ignored environment, and three linked regressions.
 - 2026-08-09 deliver: Approved outcome is two local commits with no push or merge; the AEGIS report was generated and its inflated merge-base statistic was corrected to the eight-file task diff.
+- 2026-08-09 close-out: Delivery commit `aa9b927bf0fae1ff616ba823927e3472f6767fbe` succeeded locally, so the task is done with no push or merge performed.
 
 ## Design
 
