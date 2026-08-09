@@ -247,6 +247,25 @@ def handle_selected_playback_toggle_requested(window: "MainWindow", speech_block
     if window._current_project_root is None:
         return
     audio_block = _audio_block_by_id(window, speech_block_id)
+    if _is_preview_pause_block(audio_block):
+        normalized_block_id = str(speech_block_id).strip()
+        _stop_other_audio_previews(window)
+        window._audio_blocks_audio_player.stop()
+        window._audio_blocks_audio_player.setSource(QUrl())
+        window._audio_blocks_playback_mode = "selected"
+        window._audio_blocks_playback_block_ids = [normalized_block_id]
+        window._audio_blocks_playback_index = 0
+        window._audio_blocks_page.select_block_id(normalized_block_id)
+        window._audio_blocks_page.set_selected_playback_active(True)
+        _set_speech_blocks_selected_audio_playback_active(window, True)
+        QTimer.singleShot(
+            _preview_pause_duration_ms(audio_block),
+            lambda expected_block_id=normalized_block_id: _finish_selected_pause_playback(
+                window,
+                expected_block_id,
+            ),
+        )
+        return
     audio_path = _audio_path_for_block(window, audio_block)
     if audio_path is None:
         QMessageBox.warning(
@@ -1216,6 +1235,21 @@ def _continue_audiobook_after_pause(window: "MainWindow", expected_index: int) -
     if int(window._audio_blocks_playback_index) != int(expected_index):
         return
     _play_audio_block_at_index(window, expected_index + 1)
+
+
+def _finish_selected_pause_playback(window: "MainWindow", expected_block_id: str) -> None:
+    """
+    @brief      Finish selected playback after one metadata-only pause duration.
+    @param[in]  window Active main window instance.
+    @param[in]  expected_block_id Pause block id that scheduled the completion.
+    @return     None.
+    @exception  None
+    """
+    if window._audio_blocks_playback_mode != "selected":
+        return
+    if _current_audio_blocks_playback_block_id(window) != str(expected_block_id).strip():
+        return
+    _stop_audio_blocks_playback(window, preserved_block_id=expected_block_id)
 
 
 def _current_audio_blocks_playback_block_id(window: "MainWindow") -> str | None:

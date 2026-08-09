@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Audio Blocks now keeps metadata-only Scene Ambience rows pathless and out of
+  playback and scene mixing while preserving real generated ambience WAVs.
+- Audio Blocks now prevents pause and indication rows from running speech
+  regeneration, disables unsupported selected-row actions, and previews a
+  selected pause as timed silence instead of reporting missing audio.
 - Speech Blocks now protects typed block and Scene Ambience edits from chunk,
   generation, approval, reset, profile, and language-refresh actions, and keeps
   review warnings until an edit is successfully saved.

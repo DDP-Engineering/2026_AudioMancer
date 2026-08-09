@@ -470,6 +470,97 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_selected_play
     assert window._speech_blocks_page._selected_audio_playback_active is True
 
 
+def test_audio_blocks_ui_controller_selected_pause_uses_timed_silence_and_stops_cleanly(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify selected pause playback schedules silence without a missing-audio warning.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None.
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerSelectedPause")
+    _seed_audio_blocks_run(project_root, approved=True)
+    speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
+    speech_blocks.append(
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 3,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+            "speaker_id": speech_blocks_service.CONTENT_KIND_PAUSE,
+            "speaker_display_name": "Pause",
+            "content_kind": speech_blocks_service.CONTENT_KIND_PAUSE,
+            "text": "Pause between sections for 1250 ms.",
+            "approved": True,
+            "approved_at": "2026-04-23T12:04:00+00:00",
+            "warning_flags": [],
+        }
+    )
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
+    document = audio_blocks_service.load_audio_blocks_document(project_root)
+    assert document is not None
+    document["blocks"].append(
+        {
+            "speech_block_id": "0001-000003",
+            "voice_target_id": "narrator",
+            "generated": True,
+            "approved": True,
+            "audio_can_play": True,
+            "audio_duration_seconds": 1.25,
+            "generation_fingerprint": None,
+        }
+    )
+    audio_blocks_service.write_audio_blocks_document(project_root, document)
+    window = _build_window(qtbot, project_root, default_settings_payload)
+    window._audio_blocks_page.select_block_id("0001-000003")
+    scheduled_pauses: list[tuple[int, object]] = []
+    warnings: list[tuple[object, ...]] = []
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.QTimer,
+        "singleShot",
+        lambda duration_ms, callback: scheduled_pauses.append((int(duration_ms), callback)),
+    )
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **_kwargs: warnings.append(args),
+    )
+
+    audio_blocks_ui_controller.handle_selected_playback_toggle_requested(window, "0001-000003")
+
+    assert warnings == []
+    assert [(duration_ms) for duration_ms, _callback in scheduled_pauses] == [1250]
+    assert window._audio_blocks_playback_mode == "selected"
+    assert window._audio_blocks_playback_block_ids == ["0001-000003"]
+    assert window._audio_blocks_playback_index == 0
+    assert window._audio_blocks_audio_player.source().isEmpty()
+    assert window._audio_blocks_page._selected_playback_active is True
+
+    first_completion = scheduled_pauses[0][1]
+    audio_blocks_ui_controller.handle_selected_playback_toggle_requested(window, "0001-000003")
+    assert window._audio_blocks_playback_mode is None
+    assert window._audio_blocks_page._selected_playback_active is False
+    first_completion()
+    assert window._audio_blocks_playback_mode is None
+
+    audio_blocks_ui_controller.handle_selected_playback_toggle_requested(window, "0001-000003")
+    assert len(scheduled_pauses) == 2
+    second_completion = scheduled_pauses[1][1]
+    second_completion()
+    assert window._audio_blocks_playback_mode is None
+    assert window._audio_blocks_page._selected_playback_active is False
+    assert window._audio_blocks_page.selected_block_id() == "0001-000003"
+    assert warnings == []
+
+
 def test_audio_blocks_ui_controller_audiobook_playback_includes_current_pause_without_audio_block(
     qtbot, tmp_path, default_settings_payload
 ) -> None:

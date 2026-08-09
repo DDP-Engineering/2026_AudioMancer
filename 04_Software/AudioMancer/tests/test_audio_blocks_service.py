@@ -24,6 +24,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_assembly_service,
     audio_blocks_service,
     character_voices_service,
     narrator_definition_service,
@@ -1894,6 +1895,114 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
     assert ambience_block["audio_relative_path"]
 
 
+def test_audio_blocks_service_projects_only_real_scene_ambience_wav_ownership(tmp_path) -> None:
+    """
+    @brief      Verify metadata-only ambience stays pathless while real ambience owns its WAV.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSceneAmbienceOwnership")
+    speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
+    for sequence_index, speech_block_id in enumerate(("0001-000003", "0001-000004"), start=3):
+        speech_blocks.append(
+            {
+                "speech_block_id": speech_block_id,
+                "sequence_index": sequence_index,
+                "chunk_id": "chunk-0001",
+                "source_language": "en",
+                "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+                "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "speaker_display_name": "Scene Ambience",
+                "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "text": f"ambience {sequence_index}",
+                "sound_prompt": f"ambience {sequence_index}",
+                "negative_prompt": "speech",
+                "duration_seconds": 5,
+                "ambience_position": "closer",
+                "approved": True,
+                "approved_at": "2026-04-23T12:04:00+00:00",
+                "warning_flags": [],
+            }
+        )
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
+    real_audio_path = audio_blocks_service._audio_artifact_path(project_root, "0001-000004")  # noqa: SLF001
+    real_audio_path.parent.mkdir(parents=True, exist_ok=True)
+    real_audio_path.write_bytes(_wav_bytes("real ambience"))
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "ambience-ownership",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": speech_block_id,
+                    "voice_target_id": "",
+                    "generated": True,
+                    "approved": True,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": 5.0,
+                    "generation_fingerprint": None,
+                }
+                for speech_block_id in ("0001-000003", "0001-000004")
+            ],
+        },
+    )
+
+    loaded_by_id = {
+        str(block["speech_block_id"]): block for block in audio_blocks_service.load_audio_blocks(project_root)
+    }
+    metadata_only_ambience = loaded_by_id["0001-000003"]
+    real_ambience = loaded_by_id["0001-000004"]
+
+    assert not audio_blocks_service._audio_artifact_path(project_root, "0001-000003").exists()  # noqa: SLF001
+    assert metadata_only_ambience["metadata_only"] is True
+    assert metadata_only_ambience["audio_relative_path"] is None
+    assert metadata_only_ambience["audio_can_play"] is False
+    assert audio_blocks_service.audio_can_play(metadata_only_ambience) is False
+    assert audio_assembly_service._is_assembly_block(metadata_only_ambience, True) is False  # noqa: SLF001
+
+    assert real_ambience["metadata_only"] is False
+    assert real_ambience["audio_relative_path"] == real_audio_path.relative_to(project_root).as_posix()
+    assert (project_root / str(real_ambience["audio_relative_path"])).is_file()
+    assert real_ambience["audio_can_play"] is True
+    assert audio_blocks_service.audio_can_play(real_ambience) is True
+    assert audio_assembly_service._is_assembly_block(real_ambience, True) is True  # noqa: SLF001
+
+    generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
+        project_root,
+        manifest,
+        {**_runtime_settings(), "generate_scene_ambience_audio": False},
+    )
+    policy_blocks = audio_blocks_service._merge_existing_audio_blocks(  # noqa: SLF001
+        speech_blocks,
+        [metadata_only_ambience, real_ambience],
+        generation_context=generation_context,
+        project_root=project_root,
+    )
+    policy_by_id = {str(block["speech_block_id"]): block for block in policy_blocks}
+    assert policy_by_id["0001-000003"]["metadata_only"] is True
+    assert policy_by_id["0001-000003"]["audio_can_play"] is False
+    assert policy_by_id["0001-000004"]["metadata_only"] is False
+    assert policy_by_id["0001-000004"]["audio_can_play"] is True
+
+    enabled_policy = audio_blocks_service._apply_scene_ambience_audio_policy(  # noqa: SLF001
+        [metadata_only_ambience, real_ambience],
+        {"generate_scene_ambience_audio": True},
+    )
+    enabled_by_id = {str(block["speech_block_id"]): block for block in enabled_policy}
+    assert enabled_by_id["0001-000003"]["metadata_only"] is False
+    assert audio_blocks_service.is_generated(enabled_by_id["0001-000003"]) is False
+    assert audio_blocks_service.is_approved(enabled_by_id["0001-000003"]) is False
+    assert enabled_by_id["0001-000003"]["audio_can_play"] is False
+    assert enabled_by_id["0001-000004"]["metadata_only"] is False
+    assert audio_blocks_service.is_generated(enabled_by_id["0001-000004"]) is True
+    assert audio_blocks_service.is_approved(enabled_by_id["0001-000004"]) is True
+    assert enabled_by_id["0001-000004"]["audio_can_play"] is True
+
+
 def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify selected Scene Ambience regeneration bypasses stale TTS run fingerprint checks.
@@ -2017,6 +2126,134 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     assert sound_requests[0][1]["seed"] == 321
     assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
     assert (project_root / str(ambience_block["audio_relative_path"])).read_bytes() == _wav_bytes("ambience")
+
+
+@pytest.mark.parametrize(
+    ("content_kind", "speech_block_id", "text"),
+    [
+        (speech_blocks_service.CONTENT_KIND_PAUSE, "0001-000003", "Pause for 1250 ms."),
+        (speech_blocks_service.CONTENT_KIND_INDICATION, "0001-000004", "Chapter heading."),
+    ],
+)
+def test_audio_blocks_service_rejects_metadata_only_regeneration_before_runtime_or_artifacts(
+    monkeypatch,
+    tmp_path,
+    content_kind: str,
+    speech_block_id: str,
+    text: str,
+) -> None:
+    """
+    @brief      Verify pause and indication regeneration cannot reach synthesis or mutate state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  content_kind Metadata-only content-kind under test.
+    @param[in]  speech_block_id Stable target identifier.
+    @param[in]  text Source marker text.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, f"AudioBlocksGuard{content_kind}")
+    speech_blocks = _read_speech_blocks_fixture_blocks(project_root)
+    speech_blocks.append(
+        {
+            "speech_block_id": speech_block_id,
+            "sequence_index": len(speech_blocks) + 1,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+            "speaker_id": content_kind,
+            "speaker_display_name": content_kind.replace("_", " ").title(),
+            "content_kind": content_kind,
+            "text": text,
+            "approved": True,
+            "approved_at": "2026-04-23T12:04:00+00:00",
+            "warning_flags": [],
+        }
+    )
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "voice_language": "en",
+            "input_fingerprint": "metadata-only-guard",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": speech_block_id,
+                    "voice_target_id": "narrator",
+                    "generated": True,
+                    "approved": True,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": (
+                        1.25 if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE else None
+                    ),
+                    "generation_fingerprint": "preserved-fingerprint",
+                }
+            ],
+        },
+    )
+    before_document = audio_blocks_service.load_audio_blocks_document(project_root)
+    before_target = next(
+        block
+        for block in audio_blocks_service.load_audio_blocks(project_root)
+        if block["speech_block_id"] == speech_block_id
+    )
+    guarded_calls: list[str] = []
+
+    def _unexpected_call(call_name: str):
+        """Record and fail one runtime or generation call that the guard must prevent."""
+        guarded_calls.append(call_name)
+        raise AssertionError(f"Unexpected guarded call: {call_name}")
+
+    monkeypatch.setattr(
+        audio_blocks_service,
+        "_ensure_clone_model_loaded",
+        lambda *_args, **_kwargs: _unexpected_call("clone model"),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service,
+        "_ensure_sound_model_loaded",
+        lambda *_args, **_kwargs: _unexpected_call("sound model"),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service,
+        "_prepare_clone_profile",
+        lambda *_args, **_kwargs: _unexpected_call("clone profile"),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service,
+        "_generate_audio_block",
+        lambda *_args, **_kwargs: _unexpected_call("speech generation"),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service,
+        "_generate_scene_ambience_audio_block",
+        lambda *_args, **_kwargs: _unexpected_call("ambience generation"),
+    )
+
+    with pytest.raises(ValueError, match="^The selected metadata-only audio block cannot be regenerated\\.$"):
+        audio_blocks_service.regenerate_audio_block(
+            project_root,
+            manifest,
+            speech_block_id,
+            _runtime_settings(),
+        )
+
+    after_document = audio_blocks_service.load_audio_blocks_document(project_root)
+    after_target = next(
+        block
+        for block in audio_blocks_service.load_audio_blocks(project_root)
+        if block["speech_block_id"] == speech_block_id
+    )
+    preserved_fields = ("generated", "approved", "special_block_status", "voice_target_id")
+    assert guarded_calls == []
+    assert after_document == before_document
+    assert {field: after_target.get(field) for field in preserved_fields} == {
+        field: before_target.get(field) for field in preserved_fields
+    }
+    assert not audio_blocks_service._audio_artifact_path(project_root, speech_block_id).exists()  # noqa: SLF001
+    assert not audio_blocks_service._audio_part_artifact_path(project_root, speech_block_id, 0).exists()  # noqa: SLF001
 
 
 def test_audio_blocks_service_reconciles_playability_for_missing_files(tmp_path) -> None:

@@ -465,6 +465,107 @@ def test_build_audio_blocks_state_keeps_reset_disabled_for_default_metadata(tmp_
     assert state["can_reset"] is False
 
 
+def test_audio_blocks_state_projects_selected_action_eligibility_by_row_kind(tmp_path) -> None:
+    """
+    @brief      Verify selected action state distinguishes preview and regeneration eligibility.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksActionEligibility")
+    row_specs = [
+        ("0001-000001", speech_blocks_service.CONTENT_KIND_PAUSE, "Pause for 900 ms."),
+        ("0001-000002", speech_blocks_service.CONTENT_KIND_INDICATION, "Chapter heading."),
+        ("0001-000003", speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Metadata ambience."),
+        ("0001-000004", speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Generated ambience."),
+        ("0001-000005", speech_blocks_service.CONTENT_KIND_NARRATION, "Spoken narration."),
+    ]
+    _write_speech_blocks_fixture_document(
+        project_root,
+        [
+            {
+                "speech_block_id": speech_block_id,
+                "sequence_index": sequence_index,
+                "chunk_id": "chunk-0001",
+                "source_language": "en",
+                "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION
+                if content_kind
+                in {
+                    speech_blocks_service.CONTENT_KIND_PAUSE,
+                    speech_blocks_service.CONTENT_KIND_INDICATION,
+                    speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                }
+                else speech_blocks_service.SPEAKER_KIND_NARRATOR,
+                "speaker_id": (
+                    content_kind if content_kind != speech_blocks_service.CONTENT_KIND_NARRATION else "narrator"
+                ),
+                "speaker_display_name": content_kind.replace("_", " ").title(),
+                "content_kind": content_kind,
+                "text": text,
+                "sound_prompt": text if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE else "",
+                "approved": True,
+                "approved_at": "2026-04-23T12:04:00+00:00",
+                "warning_flags": [],
+            }
+            for sequence_index, (speech_block_id, content_kind, text) in enumerate(row_specs, start=1)
+        ],
+    )
+    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir(parents=True, exist_ok=True)
+    _write_wav(audio_root / "0001-000004.wav", frame_count=240)
+    _write_wav(audio_root / "0001-000005.wav", frame_count=240)
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "action-eligibility",
+            "checkpoint": {
+                "run_token": "2026-04-23T12:00:00+00:00",
+                "current_phase": "generate_blocks",
+                "current_block_id": "0001-000001",
+                "next_speech_block_index": 5,
+                "next_split_part_index": 0,
+            },
+            "blocks": [
+                {
+                    "speech_block_id": speech_block_id,
+                    "voice_target_id": "narrator",
+                    "generated": True,
+                    "approved": True,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": 0.9
+                    if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE
+                    else 1.0,
+                    "generation_fingerprint": None,
+                }
+                for speech_block_id, content_kind, _text in row_specs
+            ],
+        },
+    )
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
+    rows_by_id = {str(row["speech_block_id"]): row for row in state["speech_blocks"]}
+
+    assert state["current_block_id"] == "0001-000001"
+    assert state["can_regenerate_selected"] is False
+    assert {
+        speech_block_id: (
+            bool(rows_by_id[speech_block_id]["can_play"]),
+            bool(rows_by_id[speech_block_id]["can_regenerate"]),
+        )
+        for speech_block_id, _content_kind, _text in row_specs
+    } == {
+        "0001-000001": (True, False),
+        "0001-000002": (False, False),
+        "0001-000003": (False, True),
+        "0001-000004": (True, True),
+        "0001-000005": (True, True),
+    }
+    assert rows_by_id["0001-000003"]["metadata_only"] is True
+    assert rows_by_id["0001-000004"]["metadata_only"] is False
+
+
 def test_merge_audio_block_state_uses_persisted_playability_without_file_checks(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify Audio Blocks display rows do not stat generated audio paths during state merge.

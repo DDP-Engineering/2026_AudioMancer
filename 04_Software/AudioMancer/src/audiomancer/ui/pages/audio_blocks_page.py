@@ -565,7 +565,12 @@ class AudioBlocksPage(QWidget):
         )
         self._reset_button.setEnabled(self._project_active and not self._busy and self._can_reset)
         self._approve_all_button.setEnabled(self._project_active and not self._busy and self._can_approve_all)
-        self._regenerate_button.setEnabled(self._project_active and not self._busy and selected_block is not None)
+        self._regenerate_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and selected_block is not None
+            and bool(selected_block.get("can_regenerate", self._can_regenerate_selected))
+        )
         self._selected_playback_button.setEnabled(
             self._project_active
             and selected_block is not None

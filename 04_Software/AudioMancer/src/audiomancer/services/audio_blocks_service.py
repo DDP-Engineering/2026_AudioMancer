@@ -308,7 +308,29 @@ def audio_can_play(audio_block: dict[str, object]) -> bool:
     @return     True when the entry is marked playable without filesystem probing.
     @exception  None
     """
+    if bool(audio_block.get("metadata_only", False)):
+        return is_generated(audio_block) and str(audio_block.get("content_kind", "")).strip() == (
+            speech_blocks_service.CONTENT_KIND_PAUSE
+        )
     return _persisted_audio_can_play(audio_block)
+
+
+def audio_can_regenerate(audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one Audio Blocks entry supports selected regeneration.
+    @param[in]  audio_block Audio Blocks payload.
+    @return     False for metadata-only pause and indication rows; otherwise True.
+    @exception  None
+    """
+    content_kind = str(audio_block.get("content_kind", "")).strip()
+    return not (
+        bool(audio_block.get("metadata_only", False))
+        and content_kind
+        in {
+            speech_blocks_service.CONTENT_KIND_PAUSE,
+            speech_blocks_service.CONTENT_KIND_INDICATION,
+        }
+    )
 
 
 def is_approved(audio_block: dict[str, object]) -> bool:
@@ -1086,6 +1108,8 @@ def regenerate_audio_block(
     )
     if target_index is None:
         raise ValueError("The selected audio block was not found.")
+    if not audio_can_regenerate(audio_blocks[target_index]):
+        raise ValueError("The selected metadata-only audio block cannot be regenerated.")
 
     if (
         str(audio_blocks[target_index].get("content_kind", "")).strip()
@@ -2444,6 +2468,7 @@ def _merge_existing_audio_blocks(
             existing_approved_at = existing_approved_at or is_approved(block)
         block.update(
             {
+                "metadata_only": bool(existing_block.get("metadata_only", block.get("metadata_only", False))),
                 "audio_can_play": _persisted_audio_can_play(existing_block),
                 "audio_duration_seconds": existing_block.get("audio_duration_seconds")
                 if existing_block.get("audio_duration_seconds") is not None
@@ -2497,9 +2522,10 @@ def _apply_scene_ambience_audio_policy(
         if fixed_duration_seconds is not None:
             block["duration_seconds"] = fixed_duration_seconds
         if generate_scene_ambience_audio:
+            owns_generated_audio = is_generated(block) and not bool(block.get("metadata_only", False))
             block["metadata_only"] = False
             block["special_block_status"] = None
-            if not is_generated(block):
+            if not owns_generated_audio:
                 block["generated"] = None
                 block["approved"] = None
                 block["generated_at"] = None
@@ -2507,10 +2533,15 @@ def _apply_scene_ambience_audio_policy(
                 block["audio_can_play"] = False
                 block["runtime_result_summary"] = ""
         else:
-            block["metadata_only"] = True
-            block["audio_can_play"] = _persisted_audio_can_play(block)
-            block["special_block_status"] = _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED
-            block["runtime_result_summary"] = _metadata_only_summary(_SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED)
+            owns_generated_audio = is_generated(block) and not bool(block.get("metadata_only", False))
+            if owns_generated_audio:
+                block["special_block_status"] = None
+                block["audio_can_play"] = _persisted_audio_can_play(block)
+            else:
+                block["metadata_only"] = True
+                block["audio_can_play"] = False
+                block["special_block_status"] = _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED
+                block["runtime_result_summary"] = _metadata_only_summary(_SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED)
         updated_blocks.append(block)
     return updated_blocks
 
@@ -2529,10 +2560,7 @@ def _audio_block_has_reusable_audio(audio_block: AudioBlockPayload, project_root
         return True
     if project_root is None:
         return True
-    speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
-    if not speech_block_id:
-        return False
-    return _is_valid_wav_path(_audio_artifact_path(project_root, speech_block_id))
+    return _audio_block_owns_real_artifact(project_root, audio_block, require_valid=True)
 
 
 def _apply_model_budget_to_block(
@@ -3117,39 +3145,44 @@ def _attach_current_speech_block_fields(
             continue
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
         content_kind = str(speech_block.get("content_kind", audio_block.get("content_kind", ""))).strip()
-        enriched_blocks.append(
-            {
-                **audio_block,
-                "special_block_status": _special_block_status(content_kind),
-                "pause_duration_ms": speech_blocks_service.pause_duration_ms(speech_block.get("text", ""))
-                if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE
-                else None,
-                "sequence_index": int(speech_block.get("sequence_index", 0)),
-                "chunk_id": str(speech_block.get("chunk_id", audio_block.get("chunk_id", ""))).strip(),
-                "speaker_id": str(speech_block.get("speaker_id", audio_block.get("speaker_id", ""))).strip(),
-                "speaker_display_name": speaker_display_name,
-                "normalized_speaker_name": normalize_speaker_name(speaker_display_name),
-                "content_kind": content_kind,
-                "metadata_only": bool(audio_block.get("metadata_only", False))
-                or content_kind
-                in {
-                    speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
-                    speech_blocks_service.CONTENT_KIND_PAUSE,
-                    speech_blocks_service.CONTENT_KIND_INDICATION,
-                },
-                "speech_block_approved": _speech_block_is_approved(speech_block),
-                "text": str(speech_block.get("text", "")),
-                "sound_prompt": str(speech_block.get("sound_prompt", speech_block.get("text", ""))).strip()
-                if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-                else "",
-                "negative_prompt": str(speech_block.get("negative_prompt", "")).strip(),
-                "duration_seconds": _optional_float(audio_block.get("duration_seconds"))
-                if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-                and audio_block.get("duration_seconds") is not None
-                else _optional_float(speech_block.get("duration_seconds")),
-                "ambience_position": str(speech_block.get("ambience_position", "")).strip(),
-            }
-        )
+        real_artifact_block = {**audio_block, "content_kind": content_kind, "metadata_only": False}
+        if content_kind in {
+            speech_blocks_service.CONTENT_KIND_PAUSE,
+            speech_blocks_service.CONTENT_KIND_INDICATION,
+        }:
+            metadata_only = True
+        elif content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+            metadata_only = not _audio_block_owns_real_artifact(project_root, real_artifact_block)
+        else:
+            metadata_only = bool(audio_block.get("metadata_only", False))
+        enriched_block: AudioBlockPayload = {
+            **audio_block,
+            "special_block_status": _special_block_status(content_kind) if metadata_only else None,
+            "pause_duration_ms": speech_blocks_service.pause_duration_ms(speech_block.get("text", ""))
+            if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE
+            else None,
+            "sequence_index": int(speech_block.get("sequence_index", 0)),
+            "chunk_id": str(speech_block.get("chunk_id", audio_block.get("chunk_id", ""))).strip(),
+            "speaker_id": str(speech_block.get("speaker_id", audio_block.get("speaker_id", ""))).strip(),
+            "speaker_display_name": speaker_display_name,
+            "normalized_speaker_name": normalize_speaker_name(speaker_display_name),
+            "content_kind": content_kind,
+            "metadata_only": metadata_only,
+            "speech_block_approved": _speech_block_is_approved(speech_block),
+            "text": str(speech_block.get("text", "")),
+            "sound_prompt": str(speech_block.get("sound_prompt", speech_block.get("text", ""))).strip()
+            if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+            else "",
+            "negative_prompt": str(speech_block.get("negative_prompt", "")).strip(),
+            "duration_seconds": _optional_float(audio_block.get("duration_seconds"))
+            if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+            and audio_block.get("duration_seconds") is not None
+            else _optional_float(speech_block.get("duration_seconds")),
+            "ambience_position": str(speech_block.get("ambience_position", "")).strip(),
+        }
+        if metadata_only or content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+            enriched_block["audio_can_play"] = _filesystem_audio_can_play(project_root, enriched_block)
+        enriched_blocks.append(enriched_block)
     return enriched_blocks
 
 
@@ -3167,11 +3200,7 @@ def _attach_derived_audio_path(project_root: Path, audio_block: AudioBlockPayloa
     @exception  None
     """
     speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
-    owns_audio = is_generated(audio_block) and str(audio_block.get("content_kind", "")).strip() not in {
-        speech_blocks_service.CONTENT_KIND_PAUSE,
-        speech_blocks_service.CONTENT_KIND_INDICATION,
-    }
-    if not speech_block_id or not owns_audio:
+    if not speech_block_id or not _audio_block_owns_real_artifact(project_root, audio_block):
         return {**audio_block, "audio_relative_path": None}
     audio_path = _audio_artifact_path(project_root, speech_block_id)
     return {**audio_block, "audio_relative_path": relative_to_project(project_root, audio_path)}
@@ -3236,14 +3265,34 @@ def _filesystem_audio_can_play(project_root: Path, audio_block: dict[str, object
     @return     True when the generated audio entry is playable.
     @exception  None
     """
-    if not is_generated(audio_block):
-        return False
     if bool(audio_block.get("metadata_only", False)):
-        return True
+        return is_generated(audio_block) and str(audio_block.get("content_kind", "")).strip() == (
+            speech_blocks_service.CONTENT_KIND_PAUSE
+        )
+    return _audio_block_owns_real_artifact(project_root, audio_block, require_valid=True)
+
+
+def _audio_block_owns_real_artifact(
+    project_root: Path,
+    audio_block: dict[str, object],
+    *,
+    require_valid: bool = False,
+) -> bool:
+    """
+    @brief      Return whether one Audio Blocks row owns a generated WAV artifact.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_block Candidate Audio Blocks payload.
+    @param[in]  require_valid True when the artifact must also pass WAV validation.
+    @return     True only for generated non-metadata rows with the required artifact.
+    @exception  None
+    """
+    if not is_generated(audio_block) or bool(audio_block.get("metadata_only", False)):
+        return False
     speech_block_id = str(audio_block.get("speech_block_id", "")).strip()
     if not speech_block_id:
         return False
-    return _is_valid_wav_path(_audio_artifact_path(project_root, speech_block_id))
+    audio_path = _audio_artifact_path(project_root, speech_block_id)
+    return _is_valid_wav_path(audio_path) if require_valid else audio_path.is_file()
 
 
 def _normalize_voice_clone_profile(payload: dict[str, object]) -> VoiceCloneProfilePayload:

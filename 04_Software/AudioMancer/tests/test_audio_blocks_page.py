@@ -307,6 +307,110 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
     assert page._speech_block_list.isEnabled() is False
 
 
+def test_audio_blocks_page_tracks_play_and_regenerate_eligibility_per_selected_row(qtbot) -> None:
+    """
+    @brief      Verify selected Play and Re-Generate buttons follow row-level capability state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    rows = [
+        {
+            "speech_block_id": "0001-000001",
+            "sequence_index": 1,
+            "speaker_display_name": "Pause",
+            "content_kind": "pause",
+            "text": "Pause for 900 ms.",
+            "generated": True,
+            "approved": True,
+            "can_play": True,
+            "can_regenerate": False,
+            "is_current": True,
+        },
+        {
+            "speech_block_id": "0001-000002",
+            "sequence_index": 2,
+            "speaker_display_name": "Indication",
+            "content_kind": "indication",
+            "text": "Chapter heading.",
+            "generated": True,
+            "approved": True,
+            "can_play": False,
+            "can_regenerate": False,
+            "is_current": False,
+        },
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 3,
+            "speaker_display_name": "Scene Ambience",
+            "content_kind": "scene_ambience",
+            "text": "Metadata ambience.",
+            "generated": True,
+            "approved": True,
+            "can_play": False,
+            "can_regenerate": True,
+            "is_current": False,
+        },
+        {
+            "speech_block_id": "0001-000004",
+            "sequence_index": 4,
+            "speaker_display_name": "Scene Ambience",
+            "content_kind": "scene_ambience",
+            "text": "Generated ambience.",
+            "generated": True,
+            "approved": True,
+            "can_play": True,
+            "can_regenerate": True,
+            "is_current": False,
+        },
+        {
+            "speech_block_id": "0001-000005",
+            "sequence_index": 5,
+            "speaker_display_name": "Narrator",
+            "content_kind": "narration",
+            "text": "Spoken narration.",
+            "generated": True,
+            "approved": True,
+            "can_play": True,
+            "can_regenerate": True,
+            "is_current": False,
+        },
+    ]
+    page.set_audio_blocks_state(
+        full_source_text="Pause. Heading. Ambience. Narration.",
+        speech_blocks=rows,
+        current_block_id="0001-000001",
+        current_block_speaker="Pause",
+        current_block_text="Pause for 900 ms.",
+        notes=["Ready."],
+        status_lines=["Generated audio: 5/5"],
+        progress_current=5,
+        progress_total=5,
+        progress_percent=100,
+        stage_status="completed",
+        can_start_or_continue=False,
+        can_reset=True,
+        can_approve_all=False,
+        can_regenerate_selected=False,
+        can_approve_selected=True,
+    )
+
+    expected_controls = [
+        (True, False),
+        (False, False),
+        (False, True),
+        (True, True),
+        (True, True),
+    ]
+    for row_index, (can_play, can_regenerate) in enumerate(expected_controls):
+        page._speech_block_list.setCurrentRow(row_index)
+        assert page._selected_playback_button.isEnabled() is can_play
+        assert page._regenerate_button.isEnabled() is can_regenerate
+
+
 def test_audio_blocks_page_advances_block_selection_with_limit(qtbot) -> None:
     """
     @brief      Verify approval navigation advances through Audio Blocks rows without crossing the end.

@@ -126,7 +126,8 @@ def build_audio_blocks_state(
             audio_blocks_service.is_generated(block) and not audio_blocks_service.is_approved(block)
             for block in merged_blocks
         ),
-        "can_regenerate_selected": current_block is not None,
+        "can_regenerate_selected": current_block is not None
+        and audio_blocks_service.audio_can_regenerate(current_block),
         "can_approve_selected": current_block is not None and audio_blocks_service.is_generated(current_block),
         "selected_text_character_limit": _selected_text_character_limit(settings_payload, merged_blocks),
         "scene_ambience_audio_enabled": scene_ambience_audio_enabled,
@@ -387,6 +388,22 @@ def _merge_audio_block_state(
         speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
         persisted_audio_block = audio_by_id.get(speech_block_id, {})
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
+        content_kind = str(speech_block.get("content_kind", "")).strip()
+        metadata_only = (
+            bool(persisted_audio_block.get("metadata_only", False))
+            if persisted_audio_block
+            else content_kind
+            in {
+                speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                speech_blocks_service.CONTENT_KIND_PAUSE,
+                speech_blocks_service.CONTENT_KIND_INDICATION,
+            }
+        )
+        action_audio_block = {
+            **persisted_audio_block,
+            "content_kind": content_kind,
+            "metadata_only": metadata_only,
+        }
         audio_file_name = _resolve_persisted_audio_file_name(persisted_audio_block)
         duration_seconds = _resolve_audio_duration_seconds(persisted_audio_block)
         merged_blocks.append(
@@ -394,7 +411,7 @@ def _merge_audio_block_state(
                 "speech_block_id": speech_block_id,
                 "sequence_index": int(speech_block.get("sequence_index", 0)),
                 "chunk_id": str(speech_block.get("chunk_id", "")).strip(),
-                "content_kind": str(speech_block.get("content_kind", "")).strip(),
+                "content_kind": content_kind,
                 "speaker_display_name": speaker_display_name,
                 "normalized_speaker_name": (
                     str(persisted_audio_block.get("normalized_speaker_name", "")).strip()
@@ -403,17 +420,12 @@ def _merge_audio_block_state(
                 "text": str(speech_block.get("text", "")),
                 "generated": audio_blocks_service.is_generated(persisted_audio_block),
                 "approved": audio_blocks_service.is_approved(persisted_audio_block),
-                "metadata_only": bool(persisted_audio_block.get("metadata_only", False))
-                or str(speech_block.get("content_kind", "")).strip()
-                in {
-                    speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
-                    speech_blocks_service.CONTENT_KIND_PAUSE,
-                    speech_blocks_service.CONTENT_KIND_INDICATION,
-                },
+                "metadata_only": metadata_only,
                 "special_block_status": str(persisted_audio_block.get("special_block_status", "") or ""),
                 "audio_file_name": audio_file_name,
                 "audio_duration_seconds": duration_seconds,
-                "can_play": audio_blocks_service.audio_can_play(persisted_audio_block),
+                "can_play": audio_blocks_service.audio_can_play(action_audio_block),
+                "can_regenerate": audio_blocks_service.audio_can_regenerate(action_audio_block),
                 "is_current": speech_block_id == current_block_id,
             }
         )

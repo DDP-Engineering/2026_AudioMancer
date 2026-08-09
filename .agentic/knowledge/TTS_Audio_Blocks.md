@@ -71,10 +71,19 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   (`pause_duration_ms` by parsing the pause block's text), never read back from
   Audio Blocks storage.
 - The derived `audio_relative_path` exposed to consumers stays `None` for any
-  block that owns no WAV — an ungenerated block, or a pause/indication block
-  handled as metadata only. A set path therefore still means "generated audio
-  exists on disk", which is the condition Audio Assembly inclusion and
-  reusable-audio checks rely on.
+  block that owns no WAV — an ungenerated block, a pause/indication block, or
+  a completed metadata-only Scene Ambience row. A real generated Scene
+  Ambience WAV remains non-metadata-only and keeps its derived path even when
+  later generation policy is Off. A set path therefore still means "generated
+  audio exists on disk", which is the condition Audio Assembly inclusion and
+  reusable-audio checks rely on (`REQ-FUNC-ee6222b7`).
+- Direct selected regeneration rejects metadata-only pause and indication rows
+  before model or artifact work, while ordinary speech and Scene Ambience keep
+  their existing regeneration paths (`REQ-FUNC-94720d7e`).
+- State publishes Play and Re-Generate eligibility per row. Pause rows can Play
+  as timed silence but cannot regenerate; indication and metadata-only Scene
+  Ambience rows cannot Play; real speech and ambience WAVs remain playable
+  (`REQ-UX-1d1e98a7`, `REQ-UX-cc9b04c0`).
 
 ## 7. Workflow Integration
 

@@ -40,10 +40,12 @@ The assembly service loads validated block WAVs, applies configured composition/
   unsigned zero level of 0x80 in the silence writer and unsigned handling in PCM
   Codec, whose current signed behavior is deliberate `audioop` compatibility.
 - Scene-ambience blocks group by chunk/position/anchor and share the same mixing
-  helper for preview and final composition. Resume requires the current
-  input/settings fingerprint; mismatched persisted state requires explicit
-  reset. Outputs publish through temporary paths, and WAV remains the only
-  supported delivery format.
+  helper for preview and final composition. Only a real generated ambience WAV
+  carries the `audio_relative_path` that admits it to a scene group;
+  metadata-only ambience rows remain pathless and are not mixed
+  (`REQ-FUNC-ee6222b7`). Resume requires the current input/settings fingerprint;
+  mismatched persisted state requires explicit reset. Outputs publish through
+  temporary paths, and WAV remains the only supported delivery format.
 
 ## 7. Workflow Integration
 
