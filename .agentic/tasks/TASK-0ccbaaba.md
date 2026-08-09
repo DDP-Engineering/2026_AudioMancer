@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-0ccbaaba — Speech Block identity and projection resolution
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-DATA-af08bfc5, REQ-REL-14f298bd, REQ-NFR-9c867783
@@ -42,8 +42,8 @@ opened: 2026-08-09
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
-- [x] journal and report prepared inside the delivery commit for the approved local integration outcome
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] journal and report included in delivery commit `cec6cb7`; approved local integration succeeded
+- [x] close-out: `stage: done` set after the delivery commit was integrated successfully
 - [x] project delivery items satisfied: binding code style reviewed, `CHANGELOG.md` Unreleased updated, and no release/version/help-file workflow triggered
 
 ## Log
@@ -74,6 +74,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Task-scoped `check --strict` exited 0 with zero errors and 77 advisory warnings; the additional warning is the three intentionally unticked approval, delivery, and close-out items at this pre-commit checkpoint.
 - 2026-08-09 deliver: The human approved delivery and requested local integration into `AudioMancer_V2`; the unrelated dirty files already present in that worktree will be preserved and no push is authorized.
 - 2026-08-09 deliver: Delivery decision is one scoped commit containing the twelve staged implementation, test, requirement, knowledge, changelog, and journal paths, followed by one journal-only closeout commit.
+- 2026-08-09 deliver: Delivery commit `cec6cb7` succeeded and `AudioMancer_V2` fast-forwarded to it without modifying or staging the unrelated dirty delivery and planning files already present there.
+- 2026-08-09 close-out: Local integration succeeded, every delivery checklist item is complete, and this journal-only closeout sets the task stage to done.
 
 ## Design
 
