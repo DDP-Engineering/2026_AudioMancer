@@ -42,18 +42,20 @@ While a cleaned-text edit is active, the Text Cleanup page shall preserve the
 unsaved buffer and its Cancel baseline across ordinary refreshes and disable
 conflicting Extract Text, Cleanup, Reset Cleanup, and optional AI-profile
 controls while keeping Save and Cancel available whenever the active page is
-not busy.
+not busy; a failed save shall keep that editable draft, while a successful save
+shall end the edit session before refreshing the persisted text and controls.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "Page tests edit cleaned text, refresh and toggle busy state, and prove the exact draft, baseline, read/write state, and editing mode remain; they also prove conflicting controls cannot emit operation signals, Save failure leaves the draft editable, and Cancel restores the original saved text."
+verification = "Page tests edit cleaned text, refresh and toggle busy state, and prove the exact draft, baseline, read/write state, and editing mode remain; controller tests prove Save failure leaves the draft editable and successful Save refreshes persisted text in read-only mode; page tests also prove conflicting controls cannot emit operation signals and Cancel restores the original saved text."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
   "04_Software/AudioMancer/tests/test_text_cleanup_page.py",
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
@@ -62,6 +64,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_active_cleaned_text_edit_survives_refresh_and_blocks_workflow_actions",
   "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_busy_transition_keeps_active_cleaned_text_draft",
   "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_failed_cleaned_text_save_keeps_editable_draft",
+  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_successful_cleaned_text_save_exits_edit_mode_before_refresh",
 ]
 
 # --- optional below this line ---
@@ -73,4 +76,4 @@ priority = "high"   # low | normal | high
 rationale = "Manual Cleanup corrections are operator work and must never disappear through an unrelated refresh or action."
 
 created = 2026-08-04
-updated = 2026-08-04
+updated = 2026-08-09

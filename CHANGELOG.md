@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Successfully saving a Text Cleanup correction now closes the edit session
+  and refreshes the persisted text in read-only mode, while a failed save
+  still preserves the editable draft.
 - AudioMancer no longer exposes inactive Scene Ambience and per-component
   logging configuration or unused workflow-page update APIs; active placement,
   logging, and page-state behavior remains unchanged.

@@ -249,7 +249,7 @@ class TextCleanupPage(QWidget):
         )
 
     def discard_cleaned_text_edit(self) -> None:
-        """Clear an edit only after another project has been activated."""
+        """Clear an edit before persisted Cleanup state is refreshed."""
         self._editing_cleaned_text = False
         self._saved_cleaned_text = ""
         self._cleaned_text_edit.setReadOnly(True)

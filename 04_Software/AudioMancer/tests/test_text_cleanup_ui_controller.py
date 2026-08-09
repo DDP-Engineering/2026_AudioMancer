@@ -297,4 +297,61 @@ def test_failed_cleaned_text_save_keeps_editable_draft(monkeypatch, qtbot, tmp_p
     assert page._cleaned_text_edit.toPlainText() == "draft that failed to save"
 
 
+def test_successful_cleaned_text_save_exits_edit_mode_before_refresh(monkeypatch, qtbot, tmp_path) -> None:
+    """Verify a persisted Cleanup correction returns the refreshed editor to read-only mode."""
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_processing_state("source", "saved before edit", [], True, True, True, "passed", 0)
+    page._edit_cleaned_button.click()
+    page._cleaned_text_edit.setPlainText("saved operator correction")
+    updated_manifest = {"source_document": {"original_name": "story.txt"}, "current_stage": "text_chunking_ready"}
+    state_updates: list[tuple[object, object]] = []
+    messages: list[object] = []
+
+    def show_project_state(project_root, manifest) -> None:
+        """Project the persisted correction into the page during the controller refresh."""
+        state_updates.append((project_root, manifest))
+        page.set_processing_state(
+            "source",
+            "saved operator correction",
+            [],
+            True,
+            True,
+            True,
+            "passed",
+            0,
+        )
+
+    window = SimpleNamespace(
+        _current_project_root=tmp_path,
+        _current_manifest={"source_document": {"original_name": "story.txt"}},
+        _settings_payload={"language": "en"},
+        _text_cleanup_page=page,
+        show_project_state=show_project_state,
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_cleanup_state_service,
+        "save_cleaned_text_edit",
+        lambda *_args: updated_manifest,
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *_args: messages.append(_args[-1]),
+    )
+
+    text_cleanup_ui_controller.handle_save_cleaned_text_requested(window, "saved operator correction")
+
+    assert state_updates == [(tmp_path, updated_manifest)]
+    assert page._editing_cleaned_text is False
+    assert page._cleaned_text_edit.isReadOnly() is True
+    assert page._cleaned_text_edit.toPlainText() == "saved operator correction"
+    assert page._saved_cleaned_text == "saved operator correction"
+    assert page._edit_cleaned_button.isEnabled() is True
+    assert page._save_cleaned_button.isEnabled() is False
+    assert page._cancel_edit_button.isEnabled() is False
+    assert messages == ["Cleaned text saved."]
+
+
 # END OF FILE

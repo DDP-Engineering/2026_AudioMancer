@@ -141,6 +141,7 @@ def handle_save_cleaned_text_requested(window: MainWindow, cleaned_text: str) ->
             str(error),
         )
         return
+    window._text_cleanup_page.discard_cleaned_text_edit()
     window.show_project_state(window._current_project_root, updated_manifest)
     window._text_cleanup_page.restore_preview_scroll_state(scroll_state)
     misc_ui_controller.show_message(

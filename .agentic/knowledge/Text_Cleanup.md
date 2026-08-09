@@ -295,11 +295,13 @@ Review and manual editing are optional rather than approval gates. While a
 cleaned-text edit is active, ordinary refreshes retain the draft, Cancel
 baseline, writable state, and editor position where Qt preserves it; Extract,
 Cleanup, Reset Cleanup, and the AI-profile selector are disabled, while Save
-and Cancel remain available outside a busy operation. A modified draft prompts
-for explicit discard confirmation before New Project or Open Project; accepting
-the prompt alone does not discard it, and the old edit state clears only after
-the new project is actually activated. These behaviors are covered by
-`REQ-UX-6fb5efc7` and `REQ-UX-e1bb52ba`.
+and Cancel remain available outside a busy operation. A failed save retains the
+editable draft, while a successful save ends the edit session before persisted
+state refresh restores the saved text and read-only controls. A modified draft
+prompts for explicit discard confirmation before New Project or Open Project;
+accepting the prompt alone does not discard it, and the old edit state clears
+only after the new project is actually activated. These behaviors are covered
+by `REQ-UX-6fb5efc7` and `REQ-UX-e1bb52ba`.
 
 Saving an
 operator edit updates the output hash, marks `user_modified`, and invalidates
