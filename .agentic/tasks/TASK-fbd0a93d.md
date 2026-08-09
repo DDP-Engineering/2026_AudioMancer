@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-fbd0a93d — Complete Character Voices analysis fixes
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-973449a5, REQ-REL-f42cecc0, REQ-FUNC-efab6267, REQ-UX-1e55ab3b
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, paths, and links are true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report included in the delivery commit
-- [ ] close-out: `stage: done` set and committed only after delivery succeeds
+- [x] close-out: `stage: done` set and committed only after delivery succeeds
 - [x] project delivery additions satisfied: code style and Unreleased changelog updated; release-version workflow is not applicable
 
 ## Log
@@ -100,3 +100,4 @@ opened: 2026-08-09
 - The authoritative verification results are the direct full-suite and task-scoped strict-static lines retained in the append-only log above.
 - The final staged strict-static rerun remained `strict: ok` with 0 errors and 75 warnings; the added warning is the expected three unticked human-confirmation, delivery-commit, and close-out items at this mandatory checkpoint.
 - 2026-08-09 deliver: human checkpoint approved the independently reviewed 13-file staged diff and confirmed the five requirement-linked selectors passed; proceed with the scoped delivery commit without push or merge.
+- 2026-08-09 close: delivery commit `5d82f35738f35c6bd892caf91458ec280b6743b5` succeeded, so TASK-fbd0a93d is complete with no push or merge performed.
