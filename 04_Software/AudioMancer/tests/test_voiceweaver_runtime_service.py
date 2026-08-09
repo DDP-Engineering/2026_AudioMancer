@@ -15,6 +15,7 @@
 
 # IMPORTS
 
+import copy
 from urllib import error
 
 import pytest
@@ -78,6 +79,46 @@ def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
     assert result["discovered_models"][0]["supported_generation_modes"] == ["definition"]
     assert result["discovered_models"][1]["supported_generation_modes"] == ["clone"]
     assert result["discovered_models"][0]["default_model_parameters"] == {"temperature": 0.8, "top_k": 42}
+
+
+def test_read_status_filters_non_scalar_effective_parameters_without_mutating_input(monkeypatch) -> None:
+    """
+    @brief      Verify runtime status keeps only scalar model parameters without input mutation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    status_payload = {
+        "active_model": {
+            "model_id": "qwen-base",
+            "effective_model_parameters": {
+                "max_new_tokens": 2048,
+                "nested": {"drop": True},
+                "sequence": [1, 2],
+            },
+            "default_model_parameters": {
+                "temperature": 0.8,
+                "nested": {"drop": True},
+            },
+        },
+        "effective_model_parameters": {
+            "max_new_tokens": 2048,
+            "nested": {"drop": True},
+        },
+    }
+    original_payload = copy.deepcopy(status_payload)
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "_request_json_endpoint",
+        lambda *_args, **_kwargs: status_payload,
+    )
+
+    normalized_status = voiceweaver_runtime_service.read_status("http://runtime")
+
+    assert normalized_status["active_model"]["effective_model_parameters"] == {"max_new_tokens": 2048}
+    assert normalized_status["active_model"]["default_model_parameters"] == {"temperature": 0.8}
+    assert normalized_status["effective_model_parameters"] == {"max_new_tokens": 2048}
+    assert status_payload == original_payload
 
 
 def test_probe_runtime_maps_auth_failures(monkeypatch) -> None:

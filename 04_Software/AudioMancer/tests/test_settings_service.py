@@ -22,7 +22,12 @@ import logging
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import settings_service, ui_theme_service
+from audiomancer.services import (
+    settings_service,
+    tts_budget_service,
+    ui_theme_service,
+    voiceweaver_runtime_service,
+)
 
 # PUBLIC API
 
@@ -668,6 +673,42 @@ def test_validate_settings_preserves_unknown_extra_keys() -> None:
     assert validated_settings["future_key"] == {"enabled": True}
 
 
+def test_validate_settings_preserves_query_and_fragment_provider_base_url() -> None:
+    """
+    @brief      Verify profile normalization preserves gateway query and fragment data.
+    @return     None.
+    @exception  None
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_profile = {
+        "id": "profile_1",
+        "label": "Gateway",
+        "backend_kind": "openai_compatible",
+        "base_url": "https://gateway.example.com/proxy?api-version=2026-08-09#route",
+        "api_key": "",
+        "model_name": "model-a",
+        "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
+        "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+        "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+        "temperature": config.DEFAULT_LLM_TEMPERATURE,
+        "supports_structured_output": False,
+        "enabled": True,
+        "discovered_model_name": "model-a",
+        "discovered_model_names": ["model-a"],
+        "discovered_context_window": None,
+        "discovery_succeeded": True,
+        "discovery_message": "Connection successful.",
+        "user_overrode_model_name": True,
+        "user_overrode_context_window": False,
+    }
+    candidate_settings["llm_profiles"] = [candidate_profile]
+    original_profile = copy.deepcopy(candidate_profile)
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["llm_profiles"][0] == original_profile
+
+
 def test_save_settings_writes_validated_payload_to_disk(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify save_settings validates and persists the payload.
@@ -779,6 +820,111 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
     assert "speaker_count" not in validated_settings["tts_runtime_discovered_models"][0]
     assert validated_settings["tts_runtime_active_model_id"] is None
     assert validated_settings["tts_runtime_device_diagnostics"] == {"status_message": "CUDA active."}
+
+
+def test_validate_settings_uses_canonical_voiceweaver_model_normalization_without_aliases() -> None:
+    """
+    @brief      Verify runtime and settings model normalization share one safe canonical contract.
+    @return     None.
+    @exception  None
+    """
+    messy_model = {
+        "model_id": "  qwen-base  ",
+        "backend_name": "  qwen  ",
+        "status": "  HeAlThY  ",
+        "supported_generation_modes": ["base", "voice_designer", "base", ""],
+        "supported_languages": [" en ", "ro", ""],
+        "default_model_parameters": {
+            "temperature": 0.8,
+            "seed": None,
+            "nested": {"drop": True},
+            "sequence": [1, 2],
+        },
+        "generation_parameter_ranges": {
+            " max_new_tokens ": {
+                "default": 2048,
+                "minimum": 128,
+                "notes": "runtime guidance",
+                "nested": {"drop": True},
+                "sequence": [128, 2048],
+            }
+        },
+        "device_mode": "  cuda  ",
+        "issues": [{"code": "warning", "details": {"retryable": True}}],
+        "future_model_field": {"drop": True},
+    }
+    original_model = copy.deepcopy(messy_model)
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["tts_runtime_discovered_models"] = [messy_model]
+
+    runtime_model = voiceweaver_runtime_service.normalize_model(messy_model)
+    validated_settings = settings_service.validate_settings(candidate_settings)
+    cached_model = validated_settings["tts_runtime_discovered_models"][0]
+
+    assert cached_model == runtime_model
+    assert cached_model == {
+        "model_id": "qwen-base",
+        "backend_name": "qwen",
+        "status": "healthy",
+        "supported_generation_modes": ["clone", "definition"],
+        "supported_languages": ["en", "ro"],
+        "default_model_parameters": {"temperature": 0.8, "seed": None},
+        "generation_parameter_ranges": {
+            "max_new_tokens": {
+                "default": 2048,
+                "minimum": 128,
+                "notes": "runtime guidance",
+            }
+        },
+        "device_mode": "cuda",
+        "issues": [{"code": "warning", "details": {"retryable": True}}],
+    }
+    assert messy_model == original_model
+    runtime_model["issues"][0]["details"]["retryable"] = False
+    assert messy_model == original_model
+
+
+def test_voiceweaver_range_budget_survives_settings_save_and_load(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify persisted range defaults drive the cached TTS budget after reload.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["tts_runtime_discovered_models"] = [
+        {
+            "model_id": "qwen-base",
+            "status": "healthy",
+            "supported_generation_modes": ["clone"],
+            "default_model_parameters": {"temperature": 0.8},
+            "generation_parameter_ranges": {
+                "max_new_tokens": {
+                    "default": 2048,
+                    "minimum": 128,
+                    "recommended_maximum": 4096,
+                }
+            },
+        }
+    ]
+
+    settings_service.save_settings(candidate_settings)
+    loaded_settings = settings_service.load_settings()
+    cached_models = loaded_settings["tts_runtime_discovered_models"]
+    resolved_budget = tts_budget_service.resolve_cached_tts_budget(cached_models)
+
+    assert cached_models[0]["generation_parameter_ranges"] == {
+        "max_new_tokens": {
+            "default": 2048,
+            "minimum": 128,
+            "recommended_maximum": 4096,
+        }
+    }
+    assert resolved_budget["model_token_budget"] == 2048
+    assert resolved_budget["model_budget_source"] == "range_default"
 
 
 def test_load_settings_logs_repair_summary_only_when_repairs_occur(tmp_path, monkeypatch, caplog) -> None:

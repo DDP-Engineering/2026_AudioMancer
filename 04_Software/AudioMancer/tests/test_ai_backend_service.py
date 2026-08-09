@@ -102,6 +102,61 @@ def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    ("base_url", "expected_url"),
+    [
+        ("https://api.example.com", "https://api.example.com/v1/models"),
+        ("https://api.example.com/", "https://api.example.com/v1/models"),
+        ("https://api.example.com/v1", "https://api.example.com/v1/models"),
+        ("https://api.example.com/v1/", "https://api.example.com/v1/models"),
+        ("https://api.example.com/proxy", "https://api.example.com/proxy/v1/models"),
+        (
+            "https://gateway.example.com/proxy/?api-version=2026-08-09",
+            "https://gateway.example.com/proxy/v1/models?api-version=2026-08-09",
+        ),
+        (
+            "https://gateway.example.com/proxy?api-version=2026-08-09#route",
+            "https://gateway.example.com/proxy/v1/models?api-version=2026-08-09#route",
+        ),
+    ],
+)
+def test_openai_compatible_model_probe_uses_shared_versioned_derivation(
+    monkeypatch,
+    base_url,
+    expected_url,
+) -> None:
+    """
+    @brief      Verify Test Connection derives model endpoints with the shared URL policy.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  base_url Candidate provider base URL.
+    @param[in]  expected_url Expected models endpoint.
+    @return     None.
+    @exception  None
+    """
+    observed_urls: list[str] = []
+
+    def _fake_read_json(url, headers, timeout_seconds, **_kwargs):
+        """
+        @brief      Capture one derived model-probe URL and return a valid model list.
+        @return     Minimal OpenAI-compatible model-list payload.
+        @exception  None
+        """
+        observed_urls.append(url)
+        assert headers == {"Accept": "application/json"}
+        assert timeout_seconds == 17
+        return {"data": [{"id": "model-a"}]}
+
+    monkeypatch.setattr(ai_backend_service, "_read_json", _fake_read_json)
+
+    discovered_models = ai_backend_service._probe_openai_compatible_models(  # noqa: SLF001
+        {"base_url": base_url, "api_key": ""},
+        17,
+    )
+
+    assert observed_urls == [expected_url]
+    assert discovered_models == [{"id": "model-a", "label": "model-a"}]
+
+
 def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
     """
     @brief      Verify Ollama model lists are normalized correctly.

@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- VoiceWeaver model discovery now keeps one canonical runtime/settings shape,
+  preserving generation-range defaults for Speech and Audio Blocks budgets
+  while filtering unsupported nested model parameters safely.
+- AI generation and Test Connection now derive versioned provider endpoints
+  consistently from root, proxy-prefixed, query-bearing, and already-versioned
+  base URLs.
 - Audio Assembly reports now retain one truthful start time across cancellation
   and resume, add a completion time only when work finishes, and preserve both
   completed outputs and their original lifecycle times on a no-work reopen.

@@ -149,7 +149,13 @@ instructions from the Chunking document.
   require a second available ancestor during configuration initialization.
 - Theme payloads have normalized IDs, display names, font and color fields;
   settings validation normalizes AI profile/default IDs and cached TTS runtime
-  discovery data before they are consumed.
+  discovery data before they are consumed. Cached VoiceWeaver models use the
+  runtime service's public canonical normalizer, retaining scalar generation
+  ranges/defaults and deep-copy isolation while dropping unknown model fields
+  (`REQ-FUNC-9757d967`, `REQ-FUNC-1fef6b33`).
+- Valid provider base URLs retain their proxy path, query, and fragment data
+  through profile normalization so chat and Test Connection can apply the same
+  shared endpoint policy (`REQ-FUNC-9273a9ed`).
 - `_BUILT_IN_THEMES` order is a contract, not presentation trivia: it is the
   built-in prefix of the Settings-page theme-combo order, and index 0 is the
   `classic_light` payload that supplies fallback values for colour roles a

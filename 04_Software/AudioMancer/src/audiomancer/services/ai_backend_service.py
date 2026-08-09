@@ -181,7 +181,8 @@ def _probe_openai_compatible_models(
     """
     models_url = join_endpoint_url(
         str(profile_payload.get("base_url", "")),
-        "/models",
+        "/v1/models",
+        collapse_duplicate_version=True,
     )
     payload = _read_json(
         models_url,

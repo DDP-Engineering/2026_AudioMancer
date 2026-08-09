@@ -16,6 +16,7 @@
 
 # IMPORTS
 
+import copy
 from functools import partial
 import json
 import time
@@ -326,7 +327,7 @@ def _normalize_status_payload(payload: dict[str, object]) -> dict[str, object]:
     return normalized_payload
 
 
-def _normalize_device_diagnostics(candidate_payload: object) -> dict[str, object]:
+def normalize_device_diagnostics(candidate_payload: object) -> dict[str, object]:
     """
     @brief      Normalize one runtime device-diagnostics payload.
     @param[in]  candidate_payload Candidate diagnostics payload.
@@ -345,7 +346,7 @@ def _normalize_device_diagnostics(candidate_payload: object) -> dict[str, object
     return normalized_payload
 
 
-def _normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
+def normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
     """
     @brief      Normalize one VoiceWeaver discovered-model payload.
     @param[in]  candidate_model Candidate model payload.
@@ -370,7 +371,7 @@ def _normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
             candidate_model.get("generation_parameter_ranges")
         ),
         "device_mode": str(candidate_model.get("device_mode", "")).strip(),
-        "issues": issues if isinstance(issues, (list, type(None))) else None,
+        "issues": copy.deepcopy(issues) if isinstance(issues, list) else None,
     }
 
 
@@ -381,7 +382,7 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
     @return     Capability matrix used by the UI and narrator state shaping.
     @exception  None
     """
-    normalized_models = [_normalize_model(model) for model in discovered_models if isinstance(model, dict)]
+    normalized_models = [normalize_model(model) for model in discovered_models if isinstance(model, dict)]
     healthy_models = [
         model
         for model in normalized_models
@@ -460,7 +461,7 @@ def probe_runtime(
         discovered_models = _normalize_models_payload(models_payload)
         status_payload = _read_json(_endpoint_url(normalized_base_url, "/v1/status"), headers, timeout_seconds)
         active_model_id = _resolve_active_model_id(status_payload.get("active_model"))
-        device_diagnostics = _normalize_device_diagnostics(status_payload.get("device_diagnostics"))
+        device_diagnostics = normalize_device_diagnostics(status_payload.get("device_diagnostics"))
     except error.HTTPError as exception:
         if exception.code == 401:
             return _build_probe_result(
@@ -1121,7 +1122,7 @@ def _normalize_models_payload(models_payload: object) -> list[VoiceWeaverModelPa
         raise ValueError("runtime returned an invalid models payload")
     normalized_models: list[VoiceWeaverModelPayload] = []
     for model_entry in model_entries:
-        normalized_model = _normalize_model(model_entry)
+        normalized_model = normalize_model(model_entry)
         if normalized_model is not None:
             normalized_models.append(normalized_model)
     return normalized_models

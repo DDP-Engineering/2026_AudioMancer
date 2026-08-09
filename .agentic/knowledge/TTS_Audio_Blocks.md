@@ -8,6 +8,7 @@ Generates and manages ordered WAV artifacts from approved speech blocks using th
 ## 2. Responsibilities
 
 - Discover, probe and configure VoiceWeaver runtime capabilities and TTS settings.
+- Canonicalize discovered VoiceWeaver models once for runtime use and settings persistence.
 - Budget work, build resumable generation plans, create deterministic artifact paths, validate WAVs, and preserve completed artifacts on recovery paths.
 - Project generation/playback state and expose settings, progress, cancellation, and playback actions through UI controllers/pages.
 - It does not author speech text or compose final assembled audio.
@@ -104,6 +105,14 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   `TimeoutError` to `Connection failed: request timed out.` with the original
   exception chained, while retaining existing HTTPError and URLError handling
   (`REQ-FUNC-6606ebfa`).
+- `voiceweaver_runtime_service.normalize_model()` owns the discovered-model
+  cache contract. It normalizes status, capabilities, scalar defaults and
+  `generation_parameter_ranges`, while settings calls that exact contract and
+  retains no duplicate model parser (`REQ-FUNC-9757d967`). A persisted
+  `max_new_tokens` range default remains available to `tts_budget_service` when
+  the model has no effective or default token value, so Speech and Audio Blocks
+  use the runtime-reported capacity instead of the configuration fallback
+  (`REQ-FUNC-1fef6b33`).
 
 ## 7. Workflow Integration
 
@@ -126,6 +135,7 @@ Primary automated coverage:
 - `tests/test_audio_blocks_main_window.py`
 - `tests/test_voiceweaver_runtime_service.py`
 - `tests/test_tts_settings_page.py`
+- `tests/test_tts_runtime_ui_support.py`
 - `tests/test_blocks_performance_baseline.py`
 
 These cover artifact paths/WAV validation, orchestration/resume, state, runtime
@@ -162,4 +172,5 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_blocks_performance_baseline.py`
 - `04_Software/AudioMancer/tests/test_tts_settings_page.py`
+- `04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py`
 - `04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py`

@@ -27,7 +27,7 @@ from typing import Any
 from urllib import parse
 
 from .. import config
-from . import ui_theme_service
+from . import ui_theme_service, voiceweaver_runtime_service
 from .logging_service import get_component_logger, trace_function
 from .operation_runtime_service import optional_string as _shared_optional_string
 from .persistence_service import write_json_atomic
@@ -59,19 +59,6 @@ _LLM_PROFILE_DEFAULTS = {
     "user_overrode_model_name": False,
     "user_overrode_context_window": False,
 }
-
-# @brief Default persisted VoiceWeaver runtime discovery cache payload.
-_TTS_RUNTIME_MODEL_DEFAULTS = {
-    "model_id": "",
-    "backend_name": "",
-    "status": "unhealthy",
-    "supported_generation_modes": [],
-    "supported_languages": [],
-    "default_model_parameters": None,
-    "device_mode": "",
-    "issues": None,
-}
-
 
 def _optional_profile_id(value: object) -> str | None:
     """
@@ -625,7 +612,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             repair_tracker=repairs_made,
         )
         normalized_settings["tts_runtime_active_model_id"] = defaults["tts_runtime_active_model_id"]
-    normalized_settings["tts_runtime_device_diagnostics"] = _normalize_tts_device_diagnostics(
+    normalized_settings["tts_runtime_device_diagnostics"] = voiceweaver_runtime_service.normalize_device_diagnostics(
         normalized_settings.get("tts_runtime_device_diagnostics")
     )
 
@@ -672,69 +659,6 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     return normalized_settings, bool(repairs_made)
 
 
-def _normalize_string_list(value: object) -> list[str]:
-    """
-    @brief      Normalize one list-like payload into a list of non-empty strings.
-    @param[in]  value Candidate list payload.
-    @return     Normalized string list.
-    @exception  None
-    """
-    if not isinstance(value, list):
-        return []
-    return [str(item).strip() for item in value if str(item).strip()]
-
-
-def _normalize_tts_generation_modes(value: object) -> list[str]:
-    """
-    @brief      Normalize cached VoiceWeaver generation modes and fold legacy aliases into the current REST contract.
-    @param[in]  value Candidate generation-mode list payload.
-    @return     Normalized generation-mode list.
-    @exception  None
-    """
-    mode_aliases = {
-        "base": "clone",
-        "voice_designer": "definition",
-    }
-    normalized_modes: list[str] = []
-    for mode in _normalize_string_list(value):
-        normalized_mode = mode_aliases.get(mode, mode)
-        if normalized_mode not in normalized_modes:
-            normalized_modes.append(normalized_mode)
-    return normalized_modes
-
-
-def _normalize_tts_runtime_model(candidate_model: object) -> dict[str, object] | None:
-    """
-    @brief      Normalize one cached VoiceWeaver discovered-model payload.
-    @param[in]  candidate_model Candidate discovered-model payload.
-    @return     Normalized model payload or None when invalid.
-    @exception  None
-    """
-    if not isinstance(candidate_model, dict):
-        return None
-    model_id = str(candidate_model.get("model_id", "")).strip()
-    if not model_id:
-        return None
-    issues = candidate_model.get("issues")
-    return {
-        "model_id": model_id,
-        "backend_name": str(candidate_model.get("backend_name", "")).strip(),
-        "status": str(candidate_model.get("status", _TTS_RUNTIME_MODEL_DEFAULTS["status"])).strip()
-        or _TTS_RUNTIME_MODEL_DEFAULTS["status"],
-        "supported_generation_modes": _normalize_tts_generation_modes(
-            candidate_model.get("supported_generation_modes")
-        ),
-        "supported_languages": _normalize_string_list(candidate_model.get("supported_languages")),
-        "default_model_parameters": (
-            dict(candidate_model.get("default_model_parameters"))
-            if isinstance(candidate_model.get("default_model_parameters"), dict)
-            else None
-        ),
-        "device_mode": str(candidate_model.get("device_mode", "")).strip(),
-        "issues": issues if isinstance(issues, (list, type(None))) else None,
-    }
-
-
 def _normalize_tts_runtime_models(candidate_models: object) -> list[dict[str, object]]:
     """
     @brief      Normalize one cached VoiceWeaver discovered-model list.
@@ -746,29 +670,10 @@ def _normalize_tts_runtime_models(candidate_models: object) -> list[dict[str, ob
         return []
     normalized_models: list[dict[str, object]] = []
     for candidate_model in candidate_models:
-        normalized_model = _normalize_tts_runtime_model(candidate_model)
+        normalized_model = voiceweaver_runtime_service.normalize_model(candidate_model)
         if normalized_model is not None:
             normalized_models.append(normalized_model)
     return normalized_models
-
-
-def _normalize_tts_device_diagnostics(candidate_payload: object) -> dict[str, object]:
-    """
-    @brief      Normalize one cached VoiceWeaver device-diagnostics payload.
-    @param[in]  candidate_payload Candidate device-diagnostics payload.
-    @return     Normalized diagnostics payload.
-    @exception  None
-    """
-    if not isinstance(candidate_payload, dict):
-        return {}
-    normalized_payload: dict[str, object] = {}
-    for key, value in candidate_payload.items():
-        normalized_key = str(key).strip()
-        if not normalized_key:
-            continue
-        if value is None or isinstance(value, (bool, int, float, str)):
-            normalized_payload[normalized_key] = value
-    return normalized_payload
 
 
 # PUBLIC API

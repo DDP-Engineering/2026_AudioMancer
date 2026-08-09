@@ -1574,4 +1574,73 @@ def test_build_chat_endpoint_keeps_complete_chat_completions_endpoint() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("base_url", "expected_url"),
+    [
+        ("https://api.example.com", "https://api.example.com/v1/chat/completions"),
+        ("https://api.example.com/", "https://api.example.com/v1/chat/completions"),
+        ("https://api.example.com/v1", "https://api.example.com/v1/chat/completions"),
+        ("https://api.example.com/v1/", "https://api.example.com/v1/chat/completions"),
+        ("https://api.example.com/proxy", "https://api.example.com/proxy/v1/chat/completions"),
+        (
+            "https://gateway.example.com/proxy/?api-version=2026-08-09",
+            "https://gateway.example.com/proxy/v1/chat/completions?api-version=2026-08-09",
+        ),
+        (
+            "https://gateway.example.com/proxy?api-version=2026-08-09#route",
+            "https://gateway.example.com/proxy/v1/chat/completions?api-version=2026-08-09#route",
+        ),
+    ],
+)
+def test_build_chat_endpoint_uses_shared_versioned_derivation(base_url, expected_url) -> None:
+    """
+    @brief      Verify chat endpoint derivation preserves one shared versioned URL policy.
+    @param[in]  base_url Candidate provider base URL.
+    @param[in]  expected_url Expected chat-completions endpoint.
+    @return     None.
+    @exception  None
+    """
+    assert llm_provider_service._build_chat_endpoint(base_url) == expected_url  # noqa: SLF001
+
+
+def test_chat_json_requests_the_shared_versioned_endpoint(monkeypatch) -> None:
+    """
+    @brief      Verify generation sends its request to the shared query-preserving endpoint.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    observed_urls: list[str] = []
+
+    def _fake_urlopen(http_request, timeout):
+        """
+        @brief      Capture the generated request URL and return one valid chat response.
+        @return     Fake successful provider response.
+        @exception  None
+        """
+        observed_urls.append(http_request.full_url)
+        assert timeout == 30
+        return _FakeResponse('{"choices":[{"message":{"content":"{\\"result\\":\\"ok\\"}"}}]}')
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://gateway.example.com/proxy?api-version=2026-08-09",
+            "model_name": "model-a",
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "max_output_tokens": 256,
+        },
+        "system",
+        "user",
+    )
+
+    assert observed_urls == [
+        "https://gateway.example.com/proxy/v1/chat/completions?api-version=2026-08-09"
+    ]
+
+
 # END OF FILE

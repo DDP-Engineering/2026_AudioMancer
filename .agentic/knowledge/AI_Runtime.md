@@ -12,6 +12,8 @@ and lets operators manage AI profiles and defaults.
 
 - Normalize backend discovery responses and connection failures without
   exposing provider-specific payloads to the UI.
+- Derive OpenAI-compatible chat and model-probe endpoints through one shared
+  version-aware URL policy (`REQ-FUNC-9273a9ed`).
 - Associate optional context metadata with its exact effective model and
   preserve successful profile-local discovery across failed probes
   (`REQ-FUNC-20817a63`, `REQ-FUNC-e9d13e10`, `REQ-FUNC-6c33e242`).
@@ -35,13 +37,13 @@ semantic validation of a domain's provider response.
 ## 3. Implementation Overview
 
 `ai_backend_service.probe_profile` validates a profile URL/backend kind then
-normalizes `/models` or Ollama tags results. Generic OpenAI-compatible entries
+normalizes `/v1/models` or Ollama tags results. Generic OpenAI-compatible entries
 may carry inline context metadata; LM Studio adds optional native model and
 loaded-instance metadata; Ollama queries `/api/show` only for the confirmed
 effective model. Operating-system and HTTP protocol failures during response
 reading remain inside the normal failed-result boundary.
 `llm_provider_service.chat_json`
-builds a chat endpoint and request payload, supports response-format and token
+builds a `/v1/chat/completions` endpoint and request payload, supports response-format and token
 parameter compatibility retries retained across the current invocation,
 cooperatively cancels both waiting requests and short-sliced exponential retry
 backoff, rejects explicit output-length termination before content parsing or
@@ -103,6 +105,13 @@ retried with `max_completion_tokens`; each adapted payload remains active for
 later outer retries in that invocation only. Transient outer retries wait 0.5,
 1.0, 2.0, then at most 4.0 seconds, polling cancellation every 0.05 seconds.
 Logging redacts sensitive field names before persistence.
+
+OpenAI-compatible generation and Test Connection append
+`/v1/chat/completions` and `/v1/models` through `join_endpoint_url` with
+duplicate-version collapse enabled. Root and proxy-prefixed bases therefore
+gain one version segment, existing `/v1` bases do not duplicate it, and the
+shared helper preserves query and fragment data identically for both paths
+(`REQ-FUNC-9273a9ed`).
 
 Callers may opt into a strict schema path. Strict calls require a profile that
 advertises structured output plus a supplied JSON Schema, may disable the

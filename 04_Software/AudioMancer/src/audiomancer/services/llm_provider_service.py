@@ -22,13 +22,14 @@ import json
 from pathlib import Path
 import threading
 import time
-from urllib import error, parse, request
+from urllib import error, request
 
 from audiomancer import config
 from audiomancer.services import token_usage_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import OperationCancelledError
 from audiomancer.services.time_service import utc_now_iso
+from audiomancer.services.url_service import join_endpoint_url
 
 # CONSTANTS
 
@@ -436,26 +437,10 @@ def _build_chat_endpoint(base_url: str) -> str:
     @return     Fully qualified chat-completions endpoint.
     @exception  None
     """
-    normalized_base = base_url.rstrip("/")
-    parsed_url = parse.urlparse(normalized_base)
-    base_path = parsed_url.path.rstrip("/")
-    if base_path.endswith("/chat/completions"):
-        full_path = base_path
-    elif base_path.endswith("/v1"):
-        full_path = f"{base_path}/chat/completions"
-    elif base_path:
-        full_path = f"{base_path}/v1/chat/completions"
-    else:
-        full_path = "/v1/chat/completions"
-    return parse.urlunparse(
-        (
-            parsed_url.scheme,
-            parsed_url.netloc,
-            full_path,
-            "",
-            "",
-            "",
-        )
+    return join_endpoint_url(
+        base_url,
+        "/v1/chat/completions",
+        collapse_duplicate_version=True,
     )
 
 

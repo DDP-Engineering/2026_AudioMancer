@@ -44,6 +44,9 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Each block has a stable `speech_block_id`, content/speaker kind and identifiers, text or ambience prompt, duration, warning flags, and approval state.
 - Speech Block identifiers are unique within the authoritative current document, not across deleted history. A deleted identifier may be allocated again; the controller therefore removes the deleted Audio Blocks row and generated WAV before manifest refresh or any later insertion can reuse it. Service-only deletion callers must provide the same downstream cleanup.
 - Source selection preserves canonical ordering; normalization and splits preserve usable spoken text while keeping blocks within configured TTS limits.
+- Cached VoiceWeaver budgets use a persisted `max_new_tokens` generation-range
+  default when effective/default model parameters omit it, preserving the
+  runtime-reported split capacity (`REQ-FUNC-1fef6b33`).
 - Dash-led paragraphs retain contiguous source-span and atomic-unit offsets even
   when the opening turn has no whitespace after its dash and later replies do;
   attribution units remain selectable instead of forcing a narrator fallback
