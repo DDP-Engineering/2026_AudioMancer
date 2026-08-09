@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-da48007a — Consolidate DUP-04 voice sample runtime flow
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-FUNC-47809158, REQ-FUNC-7a68a78e
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] Unreleased changelog entry written in user language
 - [x] journal and report included in the delivery commit
-- [ ] close-out commit sets `stage: done` after delivery succeeds
+- [x] close-out commit sets `stage: done` after delivery succeeds
 
 ## Log
 
@@ -74,6 +74,7 @@ opened: 2026-08-09
 - 2026-08-10 deliver: Ruff and byte-compilation passed on every changed Python file, and AEGIS strict static checking reported zero errors with repository-wide advisory warnings accepted as unrelated baseline findings.
 - 2026-08-10 deliver: reviewed 12 changed implementation, test, requirement, knowledge, and changelog files plus this journal against DUP-04; no planning files, schemas, releases, parent worktrees, remotes, or other duplicate items were changed.
 - 2026-08-10 deliver: standing user approval authorizes the reviewed delivery commit and separate close-out commit without push or merge.
+- 2026-08-10 deliver: delivery commit `8e76639` succeeded on the task branch, so the task is closed without push or merge.
 
 ## Delivery report (2026-08-10)
 
