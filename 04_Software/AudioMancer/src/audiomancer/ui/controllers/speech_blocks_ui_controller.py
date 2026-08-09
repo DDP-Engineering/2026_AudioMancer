@@ -236,6 +236,8 @@ def handle_insert_block_requested(window: "MainWindow", chunk_id: str, after_spe
 def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) -> None:
     """
     @brief      Confirm and delete one selected Speech Block.
+    @details    Remove the deleted id's Audio Blocks state before any later controller work;
+                this cleanup makes current-document Speech Block id reuse safe.
     @param[in]  window Active main window instance.
     @param[in]  speech_block_id Selected Speech Block identifier.
     @return     None.
@@ -257,8 +259,8 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
             str(error),
         )
         return
-    _sync_manifest_after_speech_blocks_update(window)
     _reset_audio_block_after_speech_block_change(window, speech_block_id)
+    _sync_manifest_after_speech_blocks_update(window)
     if replacement_block_id is not None:
         window._speech_blocks_page.select_speech_block(replacement_block_id)
     _restore_source_text_position(window, source_text_position)
@@ -781,6 +783,8 @@ def _reset_audio_block_after_speech_block_change(
 ) -> None:
     """
     @brief      Reset only one stale Audio Block and downstream Audio Assembly.
+    @details    This is load-bearing cleanup for deletion because Speech Block identifiers are
+                unique within the current document and may be reused after deletion.
     @param[in]  window Active main window instance.
     @param[in]  speech_block_id Changed Speech Block identifier.
     @return     None.

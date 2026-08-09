@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech Blocks review reads, approvals, edits, insertions, and deletions now
+  resolve the source corpus only once per operation while preserving report and
+  progress counts when upstream artifacts are temporarily unavailable.
+- Deleting a Speech Block now removes its matching Audio Blocks state and WAV
+  before later controller work, so an identifier reused within the current
+  document cannot inherit stale generated audio.
 - Speech Blocks checkpoints now preserve the original narration and dialogue
   order across multi-segment generation, so resuming an interrupted chunk
   produces the same ordered plan as an uninterrupted run.

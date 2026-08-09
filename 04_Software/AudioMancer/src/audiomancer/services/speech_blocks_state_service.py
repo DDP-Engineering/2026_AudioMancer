@@ -106,26 +106,32 @@ def build_speech_blocks_state(
             "selected_text_character_limit": _selected_text_character_limit(settings_payload),
         }
 
-    report = speech_blocks_service.load_speech_blocks_report(project_root)
-    operation_state = speech_blocks_service.load_operation_state(project_root)
+    source_chunks: list[dict[str, object]] = []
+    selected_source_language = ""
+    source_is_resolvable, translation_document = _source_chunks_are_resolvable(project_root, manifest)
+    if source_is_resolvable:
+        try:
+            if translation_document is None:
+                source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+            else:
+                source_resolution = speech_blocks_service.resolve_source_chunks(
+                    project_root,
+                    manifest,
+                    translation_document=translation_document,
+                )
+            if _resolved_source_matches_page_language(project_root, manifest, source_resolution):
+                source_chunks = list(source_resolution["source_chunks"])
+                selected_source_language = str(source_resolution["selected_source_language"])
+        except (KeyError, TypeError, ValueError):
+            pass
+    source_chunk_count = len(source_chunks)
+    report = speech_blocks_service.load_speech_blocks_report(project_root, source_chunk_count)
+    operation_state = speech_blocks_service.load_operation_state(project_root, source_chunk_count)
     speech_blocks = _merge_audio_preview_state(project_root, speech_blocks_service.load_speech_blocks(project_root))
     selected_profile_id = _persisted_profile_id(report, operation_state)
     profile_state = build_speech_blocks_profile_state(settings_payload, selected_profile_id)
-
-    if not chunking_document_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
-        project_root,
-        manifest,
-    ):
-        source_chunks = []
+    if not selected_source_language:
         selected_source_language = _persisted_source_language(report, operation_state)
-    else:
-        try:
-            source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
-            source_chunks = list(source_resolution["source_chunks"])
-            selected_source_language = str(source_resolution["selected_source_language"])
-        except ValueError:
-            source_chunks = []
-            selected_source_language = _persisted_source_language(report, operation_state)
 
     return {
         "source_chunks": source_chunks,
@@ -359,12 +365,52 @@ def _speech_blocks_stage_status(report: dict[str, object] | None, operation_stat
     return speech_blocks_service.SPEECH_BLOCKS_STAGE_NOT_STARTED
 
 
-def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object]) -> bool:
+def _source_chunks_are_resolvable(
+    project_root: Path,
+    manifest: dict[str, object],
+) -> tuple[bool, dict[str, object] | None]:
     """
     @brief      Determine whether source chunks can be resolved without prerequisite errors.
     @param[in]  project_root Active project root.
     @param[in]  manifest Active project manifest payload.
-    @return     True when original or approved translated source chunks are available.
+    @return     Gate result and an approved translation document already loaded by the gate.
+    @exception  None
+    """
+    if not chunking_document_service.document_path(project_root).is_file():
+        return False, None
+    selected_voice_language = character_voices_service.load_selected_voice_language(
+        project_root,
+        narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
+    )
+    original_language = narrator_definition_service.narrator_language_code(
+        manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
+    )
+    if selected_voice_language == original_language:
+        return True, None
+    try:
+        translation_document = ai_translation_service.load_translation_document(project_root)
+    except ai_translation_service.TranslationDocumentError:
+        return False, None
+    if translation_document is None:
+        return False, None
+    if selected_voice_language != str(translation_document["target_language"]).strip():
+        return False, None
+    if str(translation_document["status"]).strip() != ai_translation_service.TRANSLATION_STATUS_COMPLETED:
+        return False, None
+    return True, translation_document
+
+
+def _resolved_source_matches_page_language(
+    project_root: Path,
+    manifest: dict[str, object],
+    source_resolution: dict[str, object],
+) -> bool:
+    """
+    @brief      Confirm resolved source still satisfies the page's selected-language gate.
+    @param[in]  project_root Active project root.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  source_resolution Source context resolved from canonical chunks.
+    @return     True when the resolved original or translated source remains eligible.
     @exception  None
     """
     selected_voice_language = character_voices_service.load_selected_voice_language(
@@ -376,16 +422,10 @@ def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object
     )
     if selected_voice_language == original_language:
         return True
-
-    try:
-        translation_document = ai_translation_service.load_translation_document(project_root)
-    except ai_translation_service.TranslationDocumentError:
-        return False
-    if translation_document is None:
-        return False
-    if selected_voice_language != str(translation_document["target_language"]).strip():
-        return False
-    return ai_translation_service.translation_is_completed(project_root)
+    return (
+        str(source_resolution.get("source_kind", "")).strip() == "translated"
+        and selected_voice_language == str(source_resolution.get("selected_source_language", "")).strip()
+    )
 
 
 def _persisted_profile_id(report: dict[str, object] | None, operation_state: dict[str, object] | None) -> str | None:

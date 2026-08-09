@@ -18,6 +18,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import (
     audio_blocks_service,
@@ -163,6 +165,109 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     )
     assert any("Generated 1 speech blocks from 1/2 chunks." in note for note in state["notes"])
     assert any("Input tokens: 30 | Output tokens: 10 | Total: 40" in note for note in state["notes"])
+
+
+@pytest.mark.parametrize("selected_voice_language", ("en", "ro"))
+def test_build_speech_blocks_state_resolves_source_chunks_once(
+    monkeypatch,
+    tmp_path,
+    selected_voice_language: str,
+) -> None:
+    """
+    @brief      Verify one page-state read shares a single resolved source context across projections.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  selected_voice_language Original or approved translated page language.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(
+        tmp_path,
+        f"SpeechBlocksStateResolveOnce{selected_voice_language}",
+    )
+    character_voices_service.save_selected_voice_language(project_root, selected_voice_language)
+    (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "target_language": "ro",
+                "status": "completed",
+                "token_usage": {
+                    "input_tokens": 2,
+                    "output_tokens": 2,
+                    "total_tokens": 4,
+                    "usage_available": True,
+                },
+                "budget_metadata": {},
+                "additional_translation_instructions": "",
+                "chunks": [
+                    {"chunk_id": "chunk-0001", "translated_text": "Unu", "approved": True},
+                    {"chunk_id": "chunk-0002", "translated_text": "Doi", "approved": True},
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "review_pending",
+            "source": {"kind": "original", "language": "en", "fingerprint": "state-fingerprint"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {},
+            "budget_metadata": {},
+            "checkpoint": None,
+            "failure": None,
+            "blocks": [],
+        },
+    )
+    original_resolve_source_chunks = speech_blocks_service.resolve_source_chunks
+    original_load_chunks = speech_blocks_service.chunking_document_service.load_chunks
+    original_load_translation_document = speech_blocks_service.ai_translation_service.load_translation_document
+    resolve_call_count = 0
+    load_chunks_call_count = 0
+    translation_document_read_count = 0
+
+    def _count_source_resolution(*args, **kwargs):
+        """@brief Count and delegate one page-state source resolution."""
+        nonlocal resolve_call_count
+        resolve_call_count += 1
+        return original_resolve_source_chunks(*args, **kwargs)
+
+    def _count_chunking_document_read(*args, **kwargs):
+        """@brief Count and delegate one underlying chunking-document read."""
+        nonlocal load_chunks_call_count
+        load_chunks_call_count += 1
+        return original_load_chunks(*args, **kwargs)
+
+    def _count_translation_document_read(*args, **kwargs):
+        """@brief Count and delegate one underlying translation-document read."""
+        nonlocal translation_document_read_count
+        translation_document_read_count += 1
+        return original_load_translation_document(*args, **kwargs)
+
+    monkeypatch.setattr(speech_blocks_service, "resolve_source_chunks", _count_source_resolution)
+    monkeypatch.setattr(
+        speech_blocks_service.chunking_document_service,
+        "load_chunks",
+        _count_chunking_document_read,
+    )
+    monkeypatch.setattr(
+        speech_blocks_service.ai_translation_service,
+        "load_translation_document",
+        _count_translation_document_read,
+    )
+
+    state = speech_blocks_state_service.build_speech_blocks_state(project_root, manifest, "en", {})
+
+    assert state["total_chunk_count"] == 2
+    assert resolve_call_count == 1
+    assert load_chunks_call_count == 1
+    assert translation_document_read_count == 1
 
 
 def test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generation(tmp_path) -> None:
@@ -369,6 +474,14 @@ def test_build_speech_blocks_state_does_not_resolve_unapproved_translation(monke
         + "\n",
         encoding="utf-8",
     )
+    original_load_translation_document = speech_blocks_service.ai_translation_service.load_translation_document
+    translation_document_read_count = 0
+
+    def _count_translation_document_read(*args, **kwargs):
+        """@brief Count and delegate the unapproved translation gate read."""
+        nonlocal translation_document_read_count
+        translation_document_read_count += 1
+        return original_load_translation_document(*args, **kwargs)
 
     def fail_resolve(*_args, **_kwargs):
         """
@@ -378,6 +491,11 @@ def test_build_speech_blocks_state_does_not_resolve_unapproved_translation(monke
         """
         raise AssertionError("resolve_source_chunks should not be called before translated chunks are approved")
 
+    monkeypatch.setattr(
+        speech_blocks_service.ai_translation_service,
+        "load_translation_document",
+        _count_translation_document_read,
+    )
     monkeypatch.setattr(speech_blocks_state_service.speech_blocks_service, "resolve_source_chunks", fail_resolve)
 
     state = speech_blocks_state_service.build_speech_blocks_state(
@@ -389,6 +507,7 @@ def test_build_speech_blocks_state_does_not_resolve_unapproved_translation(monke
 
     assert state["source_chunks"] == []
     assert state["total_chunk_count"] == 0
+    assert translation_document_read_count == 1
     assert any("approve translation" in note for note in state["notes"])
 
 

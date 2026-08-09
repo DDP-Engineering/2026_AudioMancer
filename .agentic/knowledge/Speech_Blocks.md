@@ -14,7 +14,7 @@ Converts approved text and voice context into an ordered, operator-reviewable sp
 
 ## 3. Implementation Overview
 
-The orchestration service resolves source chunks and voice assignments, assembles one authoritative `speech_blocks.json` document (source identity, AI/budget metadata, resume checkpoint, and blocks), and coordinates reset/approval transitions. Normalization and text-split services provide deterministic content/speaker/identifier handling and size-aware splits. Report and operation-state views are recomputed as projections from that single document through `load_speech_blocks_report()` and `load_operation_state()`. The controller and page route operations, guarded edits, selection, warnings, and review actions through the shared runner.
+The orchestration service resolves source chunks and voice assignments, assembles one authoritative `speech_blocks.json` document (source identity, AI/budget metadata, resume checkpoint, and blocks), and coordinates reset/approval transitions. Normalization and text-split services provide deterministic content/speaker/identifier handling and size-aware splits. Report and operation-state views are recomputed as projections from that single document through `load_speech_blocks_report()` and `load_operation_state()`; one public read or mutation shares one resolved source context/count across its projections and log-path work. The controller and page route operations, guarded edits, selection, warnings, and review actions through the shared runner.
 
 The two narration modes take different paths. `narrator_and_characters` sends
 budgeted source segments to the model under the `direct_blocks` contract and
@@ -42,6 +42,7 @@ complete, and every chunk is approved, Speech Blocks uses the translated
 otherwise it uses the original Chunking document text through its shared reader.
 
 - Each block has a stable `speech_block_id`, content/speaker kind and identifiers, text or ambience prompt, duration, warning flags, and approval state.
+- Speech Block identifiers are unique within the authoritative current document, not across deleted history. A deleted identifier may be allocated again; the controller therefore removes the deleted Audio Blocks row and generated WAV before manifest refresh or any later insertion can reuse it. Service-only deletion callers must provide the same downstream cleanup.
 - Source selection preserves canonical ordering; normalization and splits preserve usable text while keeping blocks within configured TTS limits.
 - Persistence is one authoritative `speech_blocks.json` document object with a fixed top-level field set (`status`, `source`, `ai_profile_id`, `instructions`, `scene_ambience`, `response_contract`, `token_usage`, `budget_metadata`, `checkpoint`, `failure`, `blocks`).
 - Counts, warnings, stage status, and progress are recomputed on read; the document keeps only `source.fingerprint` (not a copy of source-chunk text) and re-resolves source chunks from upstream (`chunks_text.json` / `translated_text.json`).
@@ -107,7 +108,10 @@ Primary automated coverage:
 
 These cover source resolution, normalization, splitting, artifact/report/state
 recovery, warning/approval transitions, controller operations, and page
-editing/selection. Minimum validation after a change: run the focused modules
+editing/selection. Instrumented projection tests enforce at most one full source
+resolution per public read or review mutation and one underlying chunking/translation
+document read for original-language and approved-translated page paths, while deletion coverage proves a
+recycled identifier cannot inherit the removed row or WAV. Minimum validation after a change: run the focused modules
 above with `uv run pytest`, plus `uv run python -m py_compile` and
 `uv run ruff check` on changed files. Operators must manually review semantic
 speaker assignment, ambience suitability, and pause interpretation.

@@ -1323,6 +1323,138 @@ def test_insert_speech_block_into_empty_chunk_creates_unapproved_narration(tmp_p
     assert inserted_block["approved"] is False
 
 
+def test_speech_block_id_allocator_promises_current_document_uniqueness() -> None:
+    """
+    @brief      Verify allocation documents current-document uniqueness and permits absent-id reuse.
+    @return     None.
+    @exception  None
+    """
+    allocator_contract = speech_blocks_service._next_unused_speech_block_id.__doc__ or ""
+
+    assert "current Speech Blocks document" in allocator_contract
+    assert speech_blocks_service._next_unused_speech_block_id(
+        "chunk-0001",
+        {"0001-000001", "0001-000002"},
+    ) == "0001-000003"
+    assert speech_blocks_service._next_unused_speech_block_id(
+        "chunk-0001",
+        {"0001-000001"},
+    ) == "0001-000002"
+
+
+@pytest.mark.parametrize(
+    ("operation_name", "expected_processed_chunk_count"),
+    (
+        ("load_report", 2),
+        ("load_state", 2),
+        ("approve", 2),
+        ("edit", 2),
+        ("insert", 2),
+        ("delete", 1),
+    ),
+)
+def test_public_review_operations_resolve_source_chunks_at_most_once(
+    monkeypatch,
+    tmp_path,
+    operation_name: str,
+    expected_processed_chunk_count: int,
+) -> None:
+    """
+    @brief      Verify one public review operation never reparses the source corpus repeatedly.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  operation_name Public operation exercised by this case.
+    @param[in]  expected_processed_chunk_count Expected post-operation processed count.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, f"SpeechBlocksResolveOnce{operation_name}")
+    _seed_review_speech_blocks(project_root)
+    original_resolve_source_chunks = speech_blocks_service.resolve_source_chunks
+    resolve_call_count = 0
+
+    def _count_source_resolution(*args, **kwargs):
+        """@brief Count and delegate one source resolution."""
+        nonlocal resolve_call_count
+        resolve_call_count += 1
+        return original_resolve_source_chunks(*args, **kwargs)
+
+    monkeypatch.setattr(speech_blocks_service, "resolve_source_chunks", _count_source_resolution)
+
+    if operation_name == "load_report":
+        report = speech_blocks_service.load_speech_blocks_report(project_root)
+    elif operation_name == "load_state":
+        state = speech_blocks_service.load_operation_state(project_root)
+        assert state is not None
+        report = {"processed_chunk_count": state["metadata"]["processed_chunk_count"]}
+    elif operation_name == "approve":
+        report = speech_blocks_service.approve_speech_block(project_root, "0001-000001")
+    elif operation_name == "edit":
+        report = speech_blocks_service.update_speech_block(
+            project_root,
+            "0001-000001",
+            "narrator",
+            speech_blocks_service.CONTENT_KIND_NARRATION,
+            "Edited narration.",
+        )
+    elif operation_name == "insert":
+        report, _inserted_id = speech_blocks_service.insert_speech_block(
+            project_root,
+            "chunk-0001",
+            "0001-000001",
+        )
+    else:
+        report = speech_blocks_service.delete_speech_block(project_root, "0001-000001")
+
+    assert report is not None
+    assert report["processed_chunk_count"] == expected_processed_chunk_count
+    assert resolve_call_count <= 1
+
+
+def test_review_update_preserves_projection_counts_when_source_resolution_is_unavailable(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify unavailable upstream artifacts retain persisted projection counts without retries.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksResolveUnavailable")
+    _seed_review_speech_blocks(project_root)
+    resolve_call_count = 0
+
+    def _unavailable_source_resolution(*_args, **_kwargs):
+        """@brief Count one unavailable source-resolution attempt."""
+        nonlocal resolve_call_count
+        resolve_call_count += 1
+        raise ValueError("upstream source unavailable")
+
+    monkeypatch.setattr(speech_blocks_service, "resolve_source_chunks", _unavailable_source_resolution)
+
+    report = speech_blocks_service.update_speech_block(
+        project_root,
+        "0001-000001",
+        "narrator",
+        speech_blocks_service.CONTENT_KIND_NARRATION,
+        "Edited without upstream source.",
+    )
+
+    assert report["processed_chunk_count"] == 2
+    assert report["total_chunk_count"] == 2
+    assert resolve_call_count == 1
+
+    state = speech_blocks_service.load_operation_state(project_root)
+
+    assert state is not None
+    assert state["metadata"]["processed_chunk_count"] == report["processed_chunk_count"]
+    assert state["metadata"]["total_chunk_count"] == report["total_chunk_count"]
+    assert state["progress_total"] == report["total_chunk_count"]
+    assert resolve_call_count == 2
+
+
 def test_insert_speech_block_initializes_manual_state_without_generation(tmp_path) -> None:
     """
     @brief      Verify manual insertion can start Speech Blocks state directly from source chunks.
@@ -2798,6 +2930,14 @@ def test_start_generation_splits_same_narrator_without_calling_a_model(monkeypat
     manifest["project_options_locked"] = True
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
+    original_resolve_source_chunks = speech_blocks_service.resolve_source_chunks
+    resolve_call_count = 0
+
+    def _count_source_resolution(*args, **kwargs):
+        """@brief Count and delegate the generation source resolution."""
+        nonlocal resolve_call_count
+        resolve_call_count += 1
+        return original_resolve_source_chunks(*args, **kwargs)
 
     def _fail_on_model_call(*_args, **_kwargs):
         """
@@ -2807,6 +2947,7 @@ def test_start_generation_splits_same_narrator_without_calling_a_model(monkeypat
         """
         raise AssertionError("same-narrator generation must not call the model")
 
+    monkeypatch.setattr(speech_blocks_service, "resolve_source_chunks", _count_source_resolution)
     monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fail_on_model_call)
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
@@ -2817,6 +2958,7 @@ def test_start_generation_splits_same_narrator_without_calling_a_model(monkeypat
     assert speech_blocks[0]["text"] == 'Narration. "Hello there."'
     assert report["token_usage"]["usage_available"] is False
     assert not report["token_usage"]["total_tokens"]
+    assert resolve_call_count == 1
 
 
 def test_start_generation_allows_same_narrator_without_an_ai_profile(tmp_path) -> None:

@@ -21,7 +21,12 @@ from types import SimpleNamespace
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
-from audiomancer.services import character_voices_service, project_workspace_service, speech_blocks_service
+from audiomancer.services import (
+    audio_blocks_service,
+    character_voices_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 from audiomancer.ui.controllers import speech_blocks_ui_controller
 from audiomancer.ui.main_window import MainWindow
 from chunking_test_support import build_chunking_document
@@ -520,7 +525,7 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
     speech_blocks_ui_controller.handle_delete_block_requested(window, "0001-000001")
 
     assert service_calls == [(project_root, "0001-000001")]
-    assert reset_calls == ["sync", "reset:0001-000001"]
+    assert reset_calls == ["reset:0001-000001", "sync"]
     assert page_calls == [
         ("replacement_for", "0001-000001"),
         ("select", "0001-000002"),
@@ -534,6 +539,78 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
             },
         ),
     ]
+
+
+def test_speech_blocks_controller_deletion_cleans_audio_before_id_reuse(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify controller deletion prevents a recycled Speech Block id inheriting stale audio.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project(tmp_path, "SpeechBlocksDeleteReuseCleanup")
+    _report, speech_block_id = speech_blocks_service.insert_speech_block(project_root, "chunk-0001")
+    audio_blocks_service.write_audio_blocks_document(
+        project_root,
+        {
+            "status": "in_progress",
+            "voice_language": "en",
+            "input_fingerprint": "stale-audio-input",
+            "checkpoint": None,
+            "blocks": [
+                {
+                    "speech_block_id": speech_block_id,
+                    "voice_target_id": "narrator",
+                    "generated": True,
+                    "approved": True,
+                    "audio_can_play": True,
+                    "audio_duration_seconds": 1.0,
+                    "generation_fingerprint": "stale-generation",
+                }
+            ],
+        },
+    )
+    stale_audio_path = audio_blocks_service._audio_artifact_path(project_root, speech_block_id)  # noqa: SLF001
+    stale_audio_path.parent.mkdir(parents=True, exist_ok=True)
+    stale_audio_path.write_bytes(b"stale audio")
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest=project_workspace_service.load_manifest(project_root),
+        _speech_blocks_page=SimpleNamespace(
+            source_text_position=lambda: {},
+            replacement_block_id_after_delete=lambda _speech_block_id: None,
+            restore_source_text_position=lambda _position: None,
+        ),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller, "_sync_manifest_after_speech_blocks_update", lambda *_args: None)
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_sync_audio_blocks_manifest_summary",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.workflow_impact_service,
+        "reset_audio_assembly_outputs",
+        lambda *_args: None,
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *_args: None)
+
+    speech_blocks_ui_controller.handle_delete_block_requested(window, speech_block_id)
+
+    assert audio_blocks_service.load_audio_blocks(project_root) == []
+    assert not stale_audio_path.exists()
+
+    _report, recycled_id = speech_blocks_service.insert_speech_block(project_root, "chunk-0001")
+
+    assert recycled_id == speech_block_id
+    assert audio_blocks_service.load_audio_blocks(project_root) == []
 
 
 def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_assembly(monkeypatch, tmp_path) -> None:
