@@ -28,7 +28,6 @@ from audiomancer.services import (
     ai_budget_service,
     ai_translation_service,
     chunking_document_service,
-    deterministic_chunking_service,
     llm_provider_service,
     project_workspace_service,
     prompt_template_service,
@@ -1289,7 +1288,7 @@ def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, 
     discovery_chunks: list[dict[str, object]] = []
     current_chapter_label: str | None = None
     for source_chunk in source_chunks:
-        detected_chapter_label = deterministic_chunking_service._chapter_label_from_text(
+        detected_chapter_label = chunking_document_service.chapter_label_from_text(
             str(source_chunk.get("text", ""))
         )
         if detected_chapter_label is not None:

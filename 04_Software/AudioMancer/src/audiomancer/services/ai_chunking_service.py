@@ -194,11 +194,6 @@ def chunk_text(
     try:
         while next_paragraph <= len(paragraph_records):
             raise_if_cancelled(cancel_requested)
-            remaining_windows = _build_windows_from_index(
-                paragraph_records,
-                next_paragraph - 1,
-                budget_metadata,
-            )
             window_payload = remaining_windows[0]
             window_start_index = int(window_payload["start_index"])
             window_end_index = int(window_payload["end_index"])
@@ -967,7 +962,12 @@ def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
     @param[in]  chunks Value for `chunks`.
     @return     Helper result.
     """
-    return deterministic_chunking_service._chapter_count_from_chunks(chunks)
+    chapter_labels: list[str] = []
+    for chunk in chunks:
+        chapter_label = chunking_document_service.chapter_label_from_text(str(chunk.get("text", "")))
+        if chapter_label is not None and (not chapter_labels or chapter_labels[-1] != chapter_label):
+            chapter_labels.append(chapter_label)
+    return len(chapter_labels)
 
 
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:

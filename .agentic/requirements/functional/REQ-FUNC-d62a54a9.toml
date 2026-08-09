@@ -15,6 +15,7 @@ affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
 ]
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_resumes_from_saved_window_checkpoint",
   "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile",
 ]
 
@@ -23,4 +24,4 @@ rationale = """
 Resume must continue the same source operation without coupling durable project state to stale provider configuration or a previous log file.
 """
 created = 2026-07-20
-updated = 2026-07-20
+updated = 2026-08-10

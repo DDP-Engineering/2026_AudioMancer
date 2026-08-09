@@ -18,6 +18,7 @@
 
 # IMPORTS
 
+from collections.abc import Callable
 from contextlib import ExitStack, suppress
 from functools import lru_cache, partial
 import hashlib
@@ -821,10 +822,11 @@ def _validate_pending_output_wav_sizes(
         if str(output_item.get("output_key", "")) in completed_keys:
             continue
         blocks = [dict(block) for block in output_item.get("blocks", []) if isinstance(block, dict)]
-        reference_params = _planned_reference_wav_params(
+        reference_params = _reference_wav_params(
             project_root,
             blocks,
             str(output_item.get("reference_audio_relative_path", "")),
+            path_resolver=_planned_block_reference_path,
         )
         planned_frames = _planned_output_frame_count(project_root, blocks, settings, reference_params)
         _validate_classic_wav_data_size(
@@ -832,34 +834,6 @@ def _validate_pending_output_wav_sizes(
             planned_frames,
             reference_params,
         )
-
-
-def _planned_reference_wav_params(
-    project_root: Path,
-    blocks: list[dict[str, object]],
-    fallback_relative_path: str,
-) -> wave._wave_params:
-    """
-    @brief      Resolve output parameters without materializing virtual Scene Mix WAVs.
-    @param[in]  project_root Active project root folder.
-    @param[in]  blocks Planned output Audio Blocks.
-    @param[in]  fallback_relative_path Existing fallback-source path.
-    @return     Reference WAV parameters chosen by the composition policy.
-    @exception  RuntimeError Raised when no source WAV is available.
-    """
-    preferred_blocks = [block for block in blocks if not _is_scene_ambience_block(block)]
-    for candidate_blocks in (preferred_blocks, blocks):
-        for block in candidate_blocks:
-            source_path = _planned_block_reference_path(project_root, block)
-            if source_path is None:
-                continue
-            with wave.open(str(source_path), "rb") as source_wav:
-                return source_wav.getparams()
-    fallback_path = _safe_project_artifact_path(project_root, fallback_relative_path)
-    if fallback_path is not None and fallback_path.is_file():
-        with wave.open(str(fallback_path), "rb") as source_wav:
-            return source_wav.getparams()
-    raise RuntimeError("Audio Assembly cannot write an output file without at least one source WAV.")
 
 
 def _planned_block_reference_path(project_root: Path, block: dict[str, object]) -> Path | None:
@@ -1839,19 +1813,23 @@ def _reference_wav_params(
     project_root: Path,
     blocks: list[dict[str, object]],
     fallback_relative_path: str,
+    *,
+    path_resolver: Callable[[Path, dict[str, object]], Path | None] | None = None,
 ) -> wave._wave_params:
     """
     @brief      Resolve the WAV params used to write an output containing pauses.
     @param[in]  project_root Active project root folder.
     @param[in]  blocks Output Audio Blocks.
     @param[in]  fallback_relative_path Project-relative WAV used when output only contains pauses.
+    @param[in]  path_resolver Optional block-to-path resolver selected by the caller.
     @return     Reference WAV params from a speech-preferred playable source block.
     @exception  RuntimeError Raised when no source WAV exists for the output.
     """
+    resolve_path = _audio_path if path_resolver is None else path_resolver
     preferred_blocks = [block for block in blocks if not _is_scene_ambience_block(block)]
     for candidate_blocks in (preferred_blocks, blocks):
         for block in candidate_blocks:
-            source_path = _audio_path(project_root, block)
+            source_path = resolve_path(project_root, block)
             if source_path is None:
                 continue
             with wave.open(str(source_path), "rb") as source_wav:

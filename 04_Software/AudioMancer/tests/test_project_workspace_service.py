@@ -15,6 +15,7 @@
 
 # IMPORTS
 
+from copy import deepcopy
 import json
 from pathlib import Path
 import subprocess
@@ -489,6 +490,115 @@ def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> N
     assert repaired_result["status"] == "ok"
     assert repaired_result["project_root"] == project_root
     assert repaired_result["manifest"]["current_stage"] == "source_selected"
+
+
+def test_allowed_operations_follow_the_configured_workflow_prefix(monkeypatch) -> None:
+    """
+    @brief      Verify every current and future stage preserves exactly its preceding operations.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    for stage_rank, stage_token in enumerate(config.PROJECT_WORKFLOW_STAGES):
+        assert project_workspace_service._allowed_operations_for_stage(stage_token) == set(  # noqa: SLF001
+            config.WORKFLOW_OPERATION_ORDER[:stage_rank]
+        )
+    assert project_workspace_service._allowed_operations_for_stage("") == set()  # noqa: SLF001
+    assert project_workspace_service._allowed_operations_for_stage("unknown_stage") == set()  # noqa: SLF001
+
+    monkeypatch.setattr(config, "PROJECT_WORKFLOW_STAGES", ("created", "first_ready", "second_ready"))
+    monkeypatch.setattr(config, "WORKFLOW_OPERATION_ORDER", ("first", "second"))
+
+    assert project_workspace_service._allowed_operations_for_stage("second_ready") == {  # noqa: SLF001
+        "first",
+        "second",
+    }
+
+
+def test_repair_manifest_reuses_canonical_normalization_without_mutating_input(monkeypatch) -> None:
+    """
+    @brief      Verify repair delegates normalization while retaining repair-only resets and copy semantics.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    manifest = project_workspace_service.build_project_manifest("RepairNormalization")
+    manifest["current_stage"] = "broken_stage"
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-08-10T09:00:00+00:00",
+        "size_bytes": 42,
+    }
+    manifest["project_options_locked"] = True
+    manifest["target_language"] = "ro"
+    manifest["selected_voice_language"] = "en"
+    manifest["original_language"] = " null "
+    manifest["narrator_profile_name"] = "Narrator"
+    manifest["narrator_language"] = "en"
+    manifest["voice_assignment_mode"] = "unsupported"
+    manifest["audio_assembly_settings"] = {"output_mode": "unsupported"}
+    for operation_kind in ("cleanup", "chunking", "translation", "character_discovery"):
+        manifest["operations"][operation_kind]["status"] = "completed"
+    original_manifest = deepcopy(manifest)
+    original_validator = project_workspace_service.validate_project_manifest
+    validator_inputs: list[dict[str, object]] = []
+
+    def recording_validator(payload):
+        """Record canonical validator input and delegate to its real implementation."""
+        validator_inputs.append(payload)
+        return original_validator(payload)
+
+    monkeypatch.setattr(project_workspace_service, "validate_project_manifest", recording_validator)
+
+    repaired = project_workspace_service._build_repaired_manifest(manifest, "translation_ready")  # noqa: SLF001
+    defaulted = project_workspace_service._build_repaired_manifest(manifest, "unknown_stage")  # noqa: SLF001
+
+    assert manifest == original_manifest
+    assert len(validator_inputs) == 2
+    assert all(candidate is not manifest for candidate in validator_inputs)
+    assert validator_inputs[0]["current_stage"] == "translation_ready"
+    assert validator_inputs[1]["current_stage"] == config.DEFAULT_WORKFLOW_STAGE
+    assert repaired["source_document"] == manifest["source_document"]
+    assert repaired["selected_voice_language"] == "ro"
+    assert repaired["original_language"] is None
+    assert repaired["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+    assert repaired["audio_assembly_settings"] == audio_assembly_service.normalize_audio_assembly_settings(
+        manifest["audio_assembly_settings"]
+    )
+    assert repaired["narrator_profile_name"] is None
+    assert repaired["narrator_language"] is None
+    assert repaired["operations"]["translation"]["status"] == "completed"
+    assert repaired["operations"]["character_discovery"]["status"] == "not_started"
+    assert defaulted["current_stage"] == config.DEFAULT_WORKFLOW_STAGE
+
+
+def test_shared_manifest_reader_validates_identity_and_project_scoped_paths(tmp_path) -> None:
+    """
+    @brief      Verify the shared read boundary parses and validates safe manifest paths.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("SharedManifestRead", tmp_path)
+
+    assert project_workspace_service._read_manifest_payload(project_root) == manifest  # noqa: SLF001
+
+    manifest["source_document"] = {
+        "original_name": "outside.txt",
+        "stored_relative_path": "../outside.txt",
+        "file_type": "txt",
+        "imported_at": "2026-08-10T09:00:00+00:00",
+        "size_bytes": 7,
+    }
+    (project_root / config.PROJECT_MANIFEST_FILE_NAME).write_text(
+        json.dumps(manifest, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError):
+        project_workspace_service._read_manifest_payload(project_root)  # noqa: SLF001
 
 
 def test_validate_project_manifest_accepts_structured_source_document() -> None:

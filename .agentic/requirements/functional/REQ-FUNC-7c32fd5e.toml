@@ -55,6 +55,8 @@ affected_paths = [
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_accepts_a_narrow_path_resolver",
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_resolves_default_path_at_call_time",
   "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
   "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_preflights_included_legacy_scene_ambience_source",
   "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_valid_legacy_scene_ambience_source",
@@ -71,4 +73,4 @@ priority = "high"   # low | normal | high
 rationale = "The composition boundary must defend against legacy or corrupt rows even when current Audio Blocks loading normally keeps metadata-only ambience pathless."
 
 created = 2026-08-09
-updated = 2026-08-09
+updated = 2026-08-10

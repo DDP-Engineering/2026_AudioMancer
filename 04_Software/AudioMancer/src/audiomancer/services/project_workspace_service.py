@@ -234,9 +234,7 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
     if not manifest_path.is_file():
         raise FileNotFoundError(f"Project manifest file was not found: {manifest_path}")
 
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    _validate_manifest_identity_fields(payload)
-    _validate_project_scoped_manifest_paths(payload, resolved_root)
+    payload = _read_manifest_payload(resolved_root)
     legacy_folder = _first_unsupported_legacy_directory(resolved_root)
     if legacy_folder is not None:
         raise ValueError(
@@ -270,10 +268,7 @@ def load_manifest(project_root: str | Path) -> ProjectManifestPayload:
     @exception  None
     """
     resolved_project_root = Path(project_root)
-    manifest_path = resolved_project_root / config.PROJECT_MANIFEST_FILE_NAME
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    _validate_manifest_identity_fields(payload)
-    _validate_project_scoped_manifest_paths(payload, resolved_project_root)
+    payload = _read_manifest_payload(resolved_project_root)
     return validate_project_manifest(payload)
 
 
@@ -372,10 +367,7 @@ def _reset_incompatible_chunking_data(project_root: Path) -> None:
     @return     None.
     @exception  OSError Raised when scoped artifacts or the manifest cannot be updated.
     """
-    manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    _validate_manifest_identity_fields(payload)
-    _validate_project_scoped_manifest_paths(payload, project_root)
+    payload = _read_manifest_payload(project_root)
 
     operation_runtime_service.reset_operation_data(
         project_root,
@@ -392,6 +384,22 @@ def _reset_incompatible_chunking_data(project_root: Path) -> None:
         reset_operations[operation_kind] = default_operations[operation_kind]
     reset_manifest["operations"] = reset_operations
     save_manifest(reset_manifest, project_root)
+
+
+def _read_manifest_payload(project_root: Path) -> dict[str, object]:
+    """
+    @brief      Parse one manifest and enforce its non-repairable identity and scoped paths.
+    @param[in]  project_root Active project root folder.
+    @return     Parsed manifest payload.
+    @exception  OSError Raised when the manifest cannot be read.
+    @exception  ValueError Raised when identity or project-scoped paths are invalid.
+    """
+    manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    _validate_manifest_identity_fields(payload)
+    assert isinstance(payload, dict)
+    _validate_project_scoped_manifest_paths(payload, project_root)
+    return payload
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -1536,37 +1544,13 @@ def _build_repaired_manifest(
     @return     Repaired manifest payload.
     @exception  None
     """
-    from audiomancer.services.audio_assembly_service import normalize_audio_assembly_settings
-
-    repaired_manifest = {
-        "project_id": str(payload["project_id"]),
-        "display_name": str(payload["display_name"]),
-        "created_at": str(payload["created_at"]),
-        "updated_at": str(payload["updated_at"]),
-        "current_stage": (
-            reset_stage if reset_stage in config.PROJECT_WORKFLOW_STAGES else config.DEFAULT_WORKFLOW_STAGE
-        ),
-        "source_document": _normalize_source_document(payload.get("source_document")),
-        "operations": _normalize_operations(payload.get("operations")),
-        "project_options_locked": bool(payload.get("project_options_locked", False)),
-        "target_language": _normalize_target_language(
-            payload.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
-        ),
-        "original_language": _optional_string(payload.get("original_language")),
-        "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
-        "narrator_language": _optional_string(payload.get("narrator_language")),
-        "selected_voice_language": _optional_string(payload.get("selected_voice_language")),
-        "voice_assignment_mode": (
-            str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
-            if str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
-            in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS
-            else config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
-        ),
-        "audio_assembly_settings": normalize_audio_assembly_settings(payload.get("audio_assembly_settings")),
-        "notes": str(payload.get("notes", "")),
-    }
-    if bool(repaired_manifest.get("project_options_locked", False)):
-        repaired_manifest["selected_voice_language"] = repaired_manifest["target_language"]
+    normalization_payload = dict(payload)
+    for field_name in ("project_id", "display_name", "created_at", "updated_at"):
+        normalization_payload[field_name] = str(payload[field_name])
+    normalization_payload["current_stage"] = (
+        reset_stage if reset_stage in config.PROJECT_WORKFLOW_STAGES else config.DEFAULT_WORKFLOW_STAGE
+    )
+    repaired_manifest = validate_project_manifest(normalization_payload)
     if _stage_rank(str(repaired_manifest["current_stage"])) < _stage_rank("narrator_definition_ready"):
         repaired_manifest["narrator_profile_name"] = None
         repaired_manifest["narrator_language"] = None
@@ -1754,78 +1738,7 @@ def _allowed_operations_for_stage(current_stage: str) -> set[str]:
     @return     Set of operation kinds that should be preserved.
     @exception  None
     """
-    if current_stage == "source_selected":
-        return {"extraction"}
-    if current_stage == "text_cleanup_ready":
-        return {"extraction", "cleanup"}
-    if current_stage == "text_chunking_ready":
-        return {"extraction", "cleanup", "chunking"}
-    if current_stage == "translation_ready":
-        return {"extraction", "cleanup", "chunking", "translation"}
-    if current_stage == "character_discovery_ready":
-        return {
-            "extraction",
-            "cleanup",
-            "chunking",
-            "translation",
-            "character_discovery",
-        }
-    if current_stage == "narrator_definition_ready":
-        return {
-            "extraction",
-            "cleanup",
-            "chunking",
-            "translation",
-            "character_discovery",
-            "narrator_definition",
-        }
-    if current_stage == "character_voices_ready":
-        return {
-            "extraction",
-            "cleanup",
-            "chunking",
-            "translation",
-            "character_discovery",
-            "narrator_definition",
-            "character_voices",
-        }
-    if current_stage == "speech_blocks_ready":
-        return {
-            "extraction",
-            "cleanup",
-            "chunking",
-            "translation",
-            "character_discovery",
-            "narrator_definition",
-            "character_voices",
-            "speech_blocks",
-        }
-    if current_stage == "audio_blocks_ready":
-        return {
-            "extraction",
-            "cleanup",
-            "chunking",
-            "translation",
-            "character_discovery",
-            "narrator_definition",
-            "character_voices",
-            "speech_blocks",
-            "audio_blocks",
-        }
-    if current_stage == "audio_assembly_ready":
-        return {
-            "extraction",
-            "cleanup",
-            "chunking",
-            "translation",
-            "character_discovery",
-            "narrator_definition",
-            "character_voices",
-            "speech_blocks",
-            "audio_blocks",
-            "audio_assembly",
-        }
-    return set()
+    return set(config.WORKFLOW_OPERATION_ORDER[: max(_stage_rank(current_stage), 0)])
 
 
 # END OF FILE

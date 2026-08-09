@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Project repair, workflow-stage resets, chapter detection, AI chunking resume,
+  and Audio Assembly WAV planning now share their canonical internal logic
+  while preserving the same validation, fallback, and error behavior.
 - Narrator and character voice sample generation now use one shared
   VoiceWeaver runtime sequence while retaining their distinct preview budgets,
   language inputs, sample ownership, refresh behavior, and cancellation and

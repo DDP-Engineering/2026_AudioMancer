@@ -45,7 +45,10 @@ generic AI transport, or downstream translation/speech semantics.
 ## 3. Implementation Overview
 
 `chunking_document_service` is the strict persistence boundary for the sole authoritative
-`chunks_text.json` document.
+`chunks_text.json` document. Its public `chapter_label_from_text` helper owns
+the shared line scan, length limit, Roman/Arabic grammar, case handling, and
+whitespace normalization used by deterministic Chunking, AI Chunking,
+Character Discovery context, and canonical document chapter counts.
 `cleanup_metadata_service.load_completed_paragraph_records` gates and slices
 the Cleanup input for both chunking modes. `deterministic_chunking_service`
 materializes each narratable paragraph while retaining Cleanup provenance. It
@@ -137,7 +140,8 @@ structural metadata without adding scene-transition runtime behavior.
 `deterministic_fallback`, `unknown_line_boundary`, and
 `page_transition_repaired`. Cleanup reason codes remain provenance and do not
 change the strict Chunking field set. Bare Roman-numeral detection is shared by
-Cleanup analysis, deterministic Chunking, and the canonical report projection:
+Cleanup analysis, deterministic Chunking, AI Chunking, Character Discovery,
+and the canonical report projection:
 it uses uppercase standard subtractive grammar and rejects lowercase or invalid
 forms such as `civil`, `mix`, `did`, `IIII`, and `IC`.
 

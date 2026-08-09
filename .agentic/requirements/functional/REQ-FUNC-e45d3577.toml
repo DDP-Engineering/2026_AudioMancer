@@ -14,6 +14,7 @@ affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
 ]
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_allowed_operations_follow_the_configured_workflow_prefix",
   "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_finished_manifest_claims_no_completed_work_above_its_stage",
   "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_lower_requested_stage_does_not_destroy_completed_downstream_work",
   "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_operation_summary_advances_the_stage",
@@ -26,4 +27,4 @@ rationale = """
 Speech Blocks writes passed an absolute stage, regressing current_stage to character_voices_ready while audio_blocks and audio_assembly stayed completed. That self-contradiction is what triggers the Repair Project dialog on every later open of a finished project. config.OPERATION_STAGE_BY_KIND documents the stage as the milestone promoted by each completed operation, so it is a high-water mark; lowering it here also risked destroying completed operator work, because invalidation is owned by the explicit downstream-reset path that resets artifacts and summaries together.
 """
 created = 2026-07-25
-updated = 2026-08-03
+updated = 2026-08-10

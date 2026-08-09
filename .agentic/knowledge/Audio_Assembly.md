@@ -14,7 +14,7 @@ Validates and composes ordered generated audio blocks into project-local final a
 
 ## 3. Implementation Overview
 
-The assembly service loads validated block WAVs, applies configured composition/ambience behavior, writes resumable outputs and reports, and guards project-relative paths. State service derives readiness and saved-output projections. The controller delegates long work through the shared runner; the page presents output/mix selection, settings, progress and playback.
+The assembly service loads validated block WAVs, applies configured composition/ambience behavior, writes resumable outputs and reports, and guards project-relative paths. Final composition and planned virtual Scene Mix preflight share one WAV-parameter selector with an explicit block-path resolver, preserving speech preference, fallback paths, and runtime monkeypatch seams. State service derives readiness and saved-output projections. The controller delegates long work through the shared runner; the page presents output/mix selection, settings, progress and playback.
 
 ## 4. Dependencies
 

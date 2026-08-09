@@ -56,6 +56,10 @@ CHUNK_FIELDS = frozenset(
 _ROMAN_NUMERAL_PATTERN = re.compile(
     r"(?=[MDCLXVI]+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})"
 )
+_CHAPTER_PATTERNS = (
+    re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
+    _ROMAN_NUMERAL_PATTERN,
+)
 TOKEN_USAGE_FIELDS = frozenset({"input_tokens", "output_tokens", "total_tokens", "usage_available"})
 RESUMABLE_STATUSES = frozenset({"running", "cancelled", "failed"})
 TERMINAL_STATUSES = frozenset({"completed"})
@@ -75,6 +79,22 @@ class IncompatibleChunkingDocumentError(ValueError):
     """
     @brief      Signal that persisted Chunking data requires Reset Chunking.
     """
+
+
+def chapter_label_from_text(chunk_text: str) -> str | None:
+    """
+    @brief      Return the first canonical chapter or scene heading in chunk text.
+    @param[in]  chunk_text Text whose lines should be scanned in order.
+    @return     Normalized first chapter label or `None`.
+    @exception  None
+    """
+    for line in chunk_text.splitlines():
+        normalized = line.strip()
+        if len(normalized) > 100:
+            continue
+        if any(pattern.fullmatch(normalized) for pattern in _CHAPTER_PATTERNS):
+            return normalized
+    return None
 
 
 def empty_token_usage() -> dict[str, object]:
@@ -383,15 +403,9 @@ def _chapter_count(chunks: list[ChunkPayload]) -> int:
     """
     labels: list[str] = []
     for chunk in chunks:
-        for line in str(chunk.get("text", "")).splitlines():
-            normalized = line.strip()
-            if len(normalized) <= 100 and (
-                re.fullmatch(r"(?i)(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*", normalized)
-                or _ROMAN_NUMERAL_PATTERN.fullmatch(normalized)
-            ):
-                if not labels or labels[-1] != normalized:
-                    labels.append(normalized)
-                break
+        chapter_label = chapter_label_from_text(str(chunk.get("text", "")))
+        if chapter_label is not None and (not labels or labels[-1] != chapter_label):
+            labels.append(chapter_label)
     return len(labels)
 
 

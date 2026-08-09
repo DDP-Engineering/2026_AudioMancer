@@ -65,7 +65,12 @@ The implementation boundary is:
 `project_workspace_service` builds and validates the manifest, resolves a
 selected root or child path, rejects invalid project layouts, proposes
 metadata-only repairs from artifact evidence, and saves compact operation
-summaries. Its public `build_manifest_after_operation_reset` resets one
+summaries. Ordinary manifest reads share one parse, identity, and project-path
+validation boundary; repair keeps its identity-only read explicit before its
+repair-specific normalization. Repaired manifests reuse the canonical
+validator before applying narrator-field and downstream-operation resets, and
+allowed operation summaries derive from the workflow-order prefix. Its public
+`build_manifest_after_operation_reset` resets one
 operation and every downstream compact summary, sets the matching readiness
 stage, preserves explicit operation exceptions, and clears narrator shortcuts
 when the reset makes them inapplicable. `import_service.import_source`

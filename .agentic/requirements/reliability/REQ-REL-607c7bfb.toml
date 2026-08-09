@@ -55,6 +55,7 @@ affected_paths = [
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_size_preflight_uses_shared_planned_reference_lookup",
   "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_classic_wav_size_boundary_uses_whole_frames",
   "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_precedes_output_work_and_persistence",
   "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_allows_exact_legal_boundary",
@@ -70,4 +71,4 @@ priority = "high"   # low | normal | high
 rationale = "Classic WAV overflows otherwise surface as a late struct error after multi-gigabyte composition work."
 
 created = 2026-08-09
-updated = 2026-08-09
+updated = 2026-08-10

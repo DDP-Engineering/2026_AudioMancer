@@ -94,12 +94,52 @@ def test_bare_roman_chapter_detection_requires_valid_uppercase_numerals(
 ) -> None:
     """Cover S-0002 and REQ-FUNC-cf65391c-89ba-4787-8df3-33eb22337b74."""
     cleanup_label = cleanup_text_analysis_service.detect_chapter_label(candidate)
-    deterministic_label = deterministic_chunking_service._detect_chapter_label(candidate)
+    shared_label = chunking_document_service.chapter_label_from_text(candidate)
     document_count = chunking_document_service._chapter_count([{"text": candidate}])
 
     assert (cleanup_label is not None) is expected
-    assert (deterministic_label is not None) is expected
+    assert (shared_label is not None) is expected
     assert document_count == int(expected)
+
+
+@pytest.mark.parametrize(
+    ("chunk_text", "expected_label"),
+    [
+        ("Preface\n  cHaPtEr 12: Arrival  \nBody", "cHaPtEr 12: Arrival"),
+        ("Capitolul 7 - Sosire", "Capitolul 7 - Sosire"),
+        ("  XIV  ", "XIV"),
+        ("civil", None),
+        (f"Chapter 1 {'x' * 100}", None),
+    ],
+)
+def test_shared_chapter_label_scans_lines_with_canonical_grammar(
+    chunk_text: str,
+    expected_label: str | None,
+) -> None:
+    """
+    @brief      Verify the public helper preserves line scanning, normalization, grammar, and length limits.
+    @param[in]  chunk_text Candidate multi-line chunk text.
+    @param[in]  expected_label Expected first chapter label.
+    @return     None.
+    @exception  None
+    """
+    assert chunking_document_service.chapter_label_from_text(chunk_text) == expected_label
+
+
+def test_canonical_chapter_count_deduplicates_only_equal_consecutive_labels() -> None:
+    """
+    @brief      Verify document counting uses one label per chunk and preserves case-sensitive deduplication.
+    @return     None.
+    @exception  None
+    """
+    chunks = [
+        {"text": "Chapter 1\nChapter 2"},
+        {"text": "  Chapter 1  \nContinuation"},
+        {"text": "chapter 1\nContinuation"},
+        {"text": "II\nClosing"},
+    ]
+
+    assert chunking_document_service._chapter_count(chunks) == 3
 
 
 def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) -> None:
@@ -270,14 +310,6 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
     )
     writes: list[tuple[str, int | None, int, tuple[str, ...]]] = []
 
-    def _unexpected_full_chapter_scan(_chunks):
-        """
-        @brief      Fail when deterministic chunking falls back to full chapter rescans.
-        @return     None.
-        @exception  AssertionError Always raised.
-        """
-        raise AssertionError("deterministic chunking should use incremental chapter counts")
-
     monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: 0.0)
     monkeypatch.setattr(
         chunking_document_service,
@@ -291,8 +323,6 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
             )
         ),
     )
-    monkeypatch.setattr(deterministic_chunking_service, "_chapter_count_from_chunks", _unexpected_full_chapter_scan)
-
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
     assert report_payload["chunk_count"] == 1000
@@ -467,7 +497,7 @@ def test_incremental_chapter_count_matches_full_scan() -> None:
 
     incremental_count, last_label = deterministic_chunking_service._chapter_count_state_from_chunks(chunks)
 
-    assert incremental_count == deterministic_chunking_service._chapter_count_from_chunks(chunks)
+    assert incremental_count == chunking_document_service._chapter_count(chunks)
     assert last_label == "II"
 
 

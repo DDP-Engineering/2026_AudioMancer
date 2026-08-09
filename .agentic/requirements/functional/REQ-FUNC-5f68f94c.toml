@@ -23,4 +23,4 @@ rationale = """
 8-bit was listed as a supported width while _write_silence emitted 0x00 and pcm_codec read one-byte samples as signed, so gaps and pauses in an 8-bit render would be an audible DC click rather than silence. The TTS pipeline emits 16-bit, so the width was a false capability claim rather than a used path.
 """
 created = 2026-07-25
-updated = 2026-07-25
+updated = 2026-08-10

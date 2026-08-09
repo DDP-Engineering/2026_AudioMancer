@@ -17,6 +17,7 @@ affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_shared_manifest_reader_validates_identity_and_project_scoped_paths",
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_rejects_unsafe_source_document_paths",
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_rejects_source_document_symlink_escape",
   "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_previous_source_traversal_path",
@@ -30,4 +31,4 @@ rationale = """
 Containment prevents untrusted project metadata or operator destinations from reading, deleting, overwriting, or recursively archiving files beyond the intended workspace.
 """
 created = 2026-07-18
-updated = 2026-07-18
+updated = 2026-08-10

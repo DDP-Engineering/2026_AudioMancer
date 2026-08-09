@@ -1044,6 +1044,112 @@ def test_audio_assembly_service_reference_fallback_rejects_escaping_path(tmp_pat
     assert outside_path.is_file()
 
 
+def test_audio_assembly_reference_params_accepts_a_narrow_path_resolver(tmp_path) -> None:
+    """
+    @brief      Verify shared WAV lookup preserves speech precedence with an injected path resolver.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    ambience_path = tmp_path / "ambience.wav"
+    speech_path = tmp_path / "speech.wav"
+    fallback_path = tmp_path / "fallback.wav"
+    _write_wav(ambience_path, 4410, channels=2, frame_rate=44_100)
+    _write_wav(speech_path, 2400)
+    _write_wav(fallback_path, 1600, channels=2, frame_rate=16_000)
+    blocks = [
+        {"id": "ambience", "content_kind": "scene_ambience"},
+        {"id": "speech", "content_kind": "narration"},
+    ]
+    resolved_ids: list[str] = []
+
+    def resolve_path(_project_root, block):
+        """Resolve controlled source paths while recording selection order."""
+        block_id = str(block["id"])
+        resolved_ids.append(block_id)
+        return {"ambience": ambience_path, "speech": speech_path}[block_id]
+
+    params = audio_assembly_service._reference_wav_params(  # noqa: SLF001
+        tmp_path,
+        blocks,
+        fallback_path.name,
+        path_resolver=resolve_path,
+    )
+
+    assert resolved_ids == ["speech"]
+    assert params.nchannels == 1
+    assert params.sampwidth == 2
+    assert params.framerate == 24_000
+
+
+def test_audio_assembly_reference_params_resolves_default_path_at_call_time(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify monkeypatching the default block-path seam remains effective after consolidation.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    source_path = tmp_path / "runtime-source.wav"
+    _write_wav(source_path, 2400)
+    resolved_blocks: list[dict[str, object]] = []
+
+    def resolve_path(_project_root, block):
+        """Return the controlled WAV and record the block passed through the default seam."""
+        resolved_blocks.append(block)
+        return source_path
+
+    monkeypatch.setattr(audio_assembly_service, "_audio_path", resolve_path)
+
+    params = audio_assembly_service._reference_wav_params(  # noqa: SLF001
+        tmp_path,
+        [{"content_kind": "narration"}],
+        "missing.wav",
+    )
+
+    assert len(resolved_blocks) == 1
+    assert params.framerate == 24_000
+
+
+def test_audio_assembly_size_preflight_uses_shared_planned_reference_lookup(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify planned virtual-block lookup is injected into the shared WAV resolver.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    fallback_path = tmp_path / "fallback.wav"
+    _write_wav(fallback_path, 2400)
+    with wave.open(str(fallback_path), "rb") as fallback_wav:
+        fallback_params = fallback_wav.getparams()
+    captured: dict[str, object] = {}
+
+    def shared_reference_lookup(_root, _blocks, _fallback, *, path_resolver=None):
+        """Capture the injected resolver and return controlled WAV parameters."""
+        captured["path_resolver"] = path_resolver
+        return fallback_params
+
+    monkeypatch.setattr(audio_assembly_service, "_reference_wav_params", shared_reference_lookup)
+    monkeypatch.setattr(audio_assembly_service, "_planned_output_frame_count", lambda *_args: 0)
+
+    audio_assembly_service._validate_pending_output_wav_sizes(  # noqa: SLF001
+        tmp_path,
+        [
+            {
+                "output_key": "whole-book",
+                "file_name": "audiobook.wav",
+                "reference_audio_relative_path": fallback_path.name,
+                "blocks": [],
+            }
+        ],
+        audio_assembly_service.default_audio_assembly_settings(),
+        [],
+    )
+
+    assert captured.get("path_resolver") is audio_assembly_service._planned_block_reference_path  # noqa: SLF001
+
+
 def _escaping_artifact_path(path_kind: str, traversal_file_name: str, absolute_path) -> str:
     """
     @brief      Build one escaping persisted artifact path for traversal tests.

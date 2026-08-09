@@ -7,12 +7,13 @@ requirement = """
 Manifest repair shall fix only invalid current-stage metadata and preserve character-discovery state for the narrator and character-voices stages.
 """
 
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Automated: four linked pytest selectors cover metadata-only stage repair, canonical normalization and copy semantics, and character-discovery preservation at narrator and character-voices stages."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_manifest_reuses_canonical_normalization_without_mutating_input",
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_project_fixes_invalid_current_stage_metadata_only",
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_manifest_preserves_character_discovery_for_narrator_stage",
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_manifest_preserves_character_discovery_for_character_voices_stage",
@@ -23,4 +24,4 @@ rationale = """
 Repair must be metadata-only and must not discard valid discovery work.
 """
 created = 2026-07-18
-updated = 2026-07-24
+updated = 2026-08-10

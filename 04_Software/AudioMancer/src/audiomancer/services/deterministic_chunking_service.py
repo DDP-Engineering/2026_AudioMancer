@@ -18,7 +18,6 @@
 
 from functools import partial
 from pathlib import Path
-import re
 from time import monotonic
 
 from audiomancer import config
@@ -40,16 +39,6 @@ from audiomancer.services.operation_runtime_service import (
 # @brief Component logger used by the deterministic chunking workflow.
 _CHUNKING_LOGGER = get_component_logger("deterministic_chunking")
 _emit_progress = partial(emit_progress_update, include_token_usage=False)
-
-# @brief Strict uppercase grammar for bare Roman-numeral chapter headings.
-_ROMAN_NUMERAL_PATTERN = re.compile(
-    r"(?=[MDCLXVI]+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})"
-)
-# @brief Supported chapter-heading detection patterns used for transient chapter-count and prompt context.
-_CHAPTER_PATTERNS = (
-    re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
-    _ROMAN_NUMERAL_PATTERN,
-)
 
 # @brief Maximum deterministic paragraphs processed between resumable checkpoints.
 _CHECKPOINT_PARAGRAPH_INTERVAL = 200
@@ -394,52 +383,10 @@ def _update_chapter_count(
     @return     Updated chapter count and last detected chapter label.
     @exception  None
     """
-    chapter_label = _chapter_label_from_text(str(chunk.get("text", "")))
+    chapter_label = chunking_document_service.chapter_label_from_text(str(chunk.get("text", "")))
     if chapter_label is not None and chapter_label != last_chapter_label:
         return chapter_count + 1, chapter_label
     return chapter_count, last_chapter_label
-
-
-def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
-    """
-    @brief      Count distinct chapter or scene headings from chunk text.
-    @param[in]  chunks Value for `chunks`.
-    @return     Helper result.
-    """
-    chapter_labels: list[str] = []
-    for chunk in chunks:
-        chapter_label = _chapter_label_from_text(str(chunk.get("text", "")))
-        if chapter_label is not None and (not chapter_labels or chapter_labels[-1] != chapter_label):
-            chapter_labels.append(chapter_label)
-    return len(chapter_labels)
-
-
-def _chapter_label_from_text(chunk_text: str) -> str | None:
-    """
-    @brief      Return the first chapter or scene heading found in chunk text.
-    @param[in]  chunk_text Chunk text to scan.
-    @return     Detected chapter label or `None`.
-    """
-    for line in chunk_text.splitlines():
-        chapter_label = _detect_chapter_label(line)
-        if chapter_label is not None:
-            return chapter_label
-    return None
-
-
-def _detect_chapter_label(paragraph_text: str) -> str | None:
-    """
-    @brief      Detect the chapter label.
-    @param[in]  paragraph_text Text value for `paragraph_text`.
-    @return     Derived helper result.
-    """
-    normalized = paragraph_text.strip()
-    if len(normalized) > 100:
-        return None
-    for pattern in _CHAPTER_PATTERNS:
-        if pattern.fullmatch(normalized):
-            return normalized
-    return None
 
 
 # END OF FILE
