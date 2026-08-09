@@ -50,6 +50,11 @@ requirement alone is not enough to build from.
 7. Make `verification` concrete — the observation that settles whether the
    behavior holds, not a restatement of the requirement. It should follow
    from the requirement's trigger and response, not add new conditions.
+   When no test can settle it — a look-and-see judgement, an install on
+   clean hardware — start the field with `Manual:` or `Inspection:` and
+   name the method. `check` then records it as verified by hand rather
+   than as a test still owed. Use it because the behavior is genuinely
+   unautomatable, never to quiet a warning about a test you could write.
 8. Set `affected_paths` to your best current guess. Leave `linked_tests`
    empty; `build` fills it.
 9. Add a spec only when the requirement alone is not buildable (a format,

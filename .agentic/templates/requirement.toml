@@ -43,6 +43,12 @@ State exactly one behavior here.
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
 verification = "How a human or agent confirms this behavior holds."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.

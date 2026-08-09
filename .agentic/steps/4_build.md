@@ -24,7 +24,10 @@ requirement links current so that set stays correct.
    not open several at once.
 2. Write or extend a test that expresses that requirement's
    `verification` and fails for the right reason. Write the test
-   **before** you touch any implementation file.
+   **before** you touch any implementation file. Where `verification`
+   declares a manual method (`Manual:` / `Inspection:`), there is no test
+   to write: carry it out once the change is in, and log what you
+   observed instead of the red-then-green line.
 3. Run the test and watch it fail. Confirm the failure is the one you
    expect (missing behavior), not a typo, an import error, or a bad
    fixture.

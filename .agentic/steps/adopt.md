@@ -62,7 +62,11 @@ ones are not.
 9. Real behavior with no test: write a characterization test now if the
    behavior is load-bearing; otherwise leave `linked_tests` empty. `check`
    will flag it on every run — that standing list is the post-adoption
-   test backlog, and it is meant to stay visible.
+   test backlog, and it is meant to stay visible. A behavior no test
+   could ever settle is different: start its `verification` with
+   `Manual:` or `Inspection:` and name the method, and it is recorded as
+   verified by hand instead of joining that backlog. Keep the two apart
+   honestly — a test you have not written yet is not a manual method.
 10. Behavior that looks *wrong*: still write the requirement — the
     register must describe what the code actually does — but say so
     plainly in its prose (`Adopted as-is <date>; suspected defect: <what

@@ -40,6 +40,14 @@ did. Do the steps honestly and keep the journal true.
 Decide this in `frame`, record `path: quick` in the journal header, and
 say why in the log. Everything else uses the full path.
 
+**Write zones.** Every stage may write under `.agentic/`. Beyond that,
+`frame`, `specify` and `design` write nothing else — they come before the
+code is agreed — while `build` and `deliver` write anywhere. Advisory
+like the rest: `check` reports an edit outside the current stage's zone
+as `stage-zone`, it never blocks one, and a hit usually means the
+journal's `stage:` is stale rather than that the edit was wrong. Change
+the zones in `[zones]` in `aegis.toml`.
+
 **Adopting an existing repo** into this workflow is not a stage — follow
 `.agentic/steps/adopt.md` once, then work normally. Adoption journals use
 their own stage values (`survey → components → close → done`), all

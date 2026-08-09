@@ -28,7 +28,7 @@ touched — refresh the component knowledge, write the report, and publish.
    and a branch mismatch is reported. One
    pass runs every configured command — including the **full** test suite
    (the impacted set was the inner loop; it is not enough here) — plus
-   all fifteen checks. Errors are objectively broken files: fix them.
+   all seventeen checks. Errors are objectively broken files: fix them.
    For each remaining warning, either fix it or accept it with a one-line
    reason in the log:
    `- <date> deliver: accepted <check> on <path> because <reason>`.

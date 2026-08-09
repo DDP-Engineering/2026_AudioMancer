@@ -10,7 +10,6 @@
 """
 @file aegis.py
 @brief The AEGIS Light companion CLI: a scaffolder and a reporter.
-@version 0.1.0
 @details Single file, stdlib only, Python >= 3.11. Invoked as
          `python .agentic/aegis.py <cmd>` from the repo root on Windows and
          Linux alike; it locates its own `.agentic` directory from
@@ -38,7 +37,7 @@ import time
 import tomllib
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 SCHEMA = 1
 
 AGENTIC = Path(__file__).resolve().parent
@@ -86,6 +85,20 @@ test = "pytest -q"
 # Globs used by the traceability heuristics of `aegis check`.
 source = ["src/"]
 tests = ["tests/"]
+
+[zones]
+# What each stage may write besides `.agentic/`, which every stage may
+# always write. Values name the globs above: "source", "tests". A stage
+# left out entirely may write anywhere - that is why build and deliver
+# are not listed. Advisory like everything else: check reports an edit
+# outside the zone, it never stops one. The defaults are shown; uncomment
+# and change a line to widen or narrow one stage.
+# frame = []
+# specify = []
+# design = []
+# survey = []
+# components = ["tests"]
+# close = []
 
 [check]
 secret_patterns_extra = []
@@ -584,7 +597,7 @@ def status_one(task_id: str, as_json: bool = False) -> int:
     return 0
 
 
-# check - the 15-check heuristic catalog
+# check - the 17-check heuristic catalog
 
 #: (slug, one-line description). The slugs are the stable vocabulary the
 #: later `--strict` promotion list will use - never rename one.
@@ -604,7 +617,27 @@ CHECKS: tuple[tuple[str, str], ...] = (
     ("source-no-test-changes", "source changes come with test changes"),
     ("config", "aegis.toml keys have the documented shapes"),
     ("nothing-ran", "--run actually executed at least one command"),
+    ("manual-verification", "a requirement is verified by hand, not by test"),
+    ("stage-zone", "the diff stays inside the current stage's write zone"),
 )
+
+#: the zone names a `[zones]` entry may list; both resolve to the matching
+#: `[layout]` globs, so the globs are configured once and named twice.
+ZONE_NAMES = ("source", "tests")
+
+#: stage -> the zones that stage may write beyond `.agentic/`, which is
+#: always writable because every stage updates its own journal. A stage
+#: absent from this table is unconstrained. The documentation stages come
+#: before any code is agreed, so a source edit under one of them means
+#: either the journal's `stage:` is stale or the work ran ahead of the
+#: agreement it is supposed to be recording - both worth a line of report.
+#: Adoption's `components` phase may write tests, because characterizing
+#: an untested behavior is part of adopting it; it may not write source,
+#: because adoption describes what is there and never changes it.
+DEFAULT_ZONES: dict[str, tuple[str, ...]] = {
+    "frame": (), "specify": (), "design": (),
+    "survey": (), "components": ("tests",), "close": (),
+}
 
 #: [table][key] -> expected python type, for the advisory config check.
 CONFIG_SHAPE: dict[str, dict[str, type]] = {
@@ -612,6 +645,7 @@ CONFIG_SHAPE: dict[str, dict[str, type]] = {
     "layout": {"source": list, "tests": list, "default_branch": str},
     "check": {"ignore": list, "secret_patterns_extra": list,
               "strict_promote": list, "run": list},
+    "zones": {stage: list for stage in DEFAULT_ZONES},
 }
 
 
@@ -635,10 +669,26 @@ def check_config(add, cfg: dict) -> None:
     for key, value in cfg_table(cfg, "commands").items():
         if key != "timeout" and not isinstance(value, str):
             add("WARN", "config", name, f"[commands] {key} should be a string")
+    # an unrecognised zone name expands to no globs, which would silently
+    # narrow the stage to `.agentic/` - the opposite of what a typo intends
+    for stage, names in cfg_table(cfg, "zones").items():
+        for zone in str_list(names):
+            if zone not in ZONE_NAMES:
+                add("WARN", "config", name,
+                    f"[zones] {stage}: unknown zone '{zone}'")
+
+
+def stage_zones(cfg: dict) -> dict[str, tuple[str, ...]]:
+    """@brief DEFAULT_ZONES with any `[zones]` entry from aegis.toml applied."""
+    merged = dict(DEFAULT_ZONES)
+    for stage, names in cfg_table(cfg, "zones").items():
+        merged[stage] = tuple(str_list(names))
+    return merged
+
 
 #: the diff-based subset; each degrades to one NOTE without git/merge base.
 DIFF_CHECKS = ("uncovered-source", "scope-drift", "secret-in-diff",
-               "outside-layout", "source-no-test-changes")
+               "outside-layout", "source-no-test-changes", "stage-zone")
 
 REQUIRED_FIELDS = ("schema", "id", "title", "status", "requirement", "verification")
 CODE_BY_FOLDER = {folder: code for folder, code in CATEGORIES.values()}
@@ -697,7 +747,7 @@ def is_ticket_reference(hit: str) -> bool:
 DIFF_HEADER_RE = re.compile(r"^diff --git a/(.*) b/(.*)$")
 
 CHECK_EPILOG = (
-    "the 15 checks (slug - what silent means):\n"
+    "the 17 checks (slug - what silent means):\n"
     + "\n".join(f"  {slug:<24}{desc}" for slug, desc in CHECKS)
     + """
 
@@ -952,8 +1002,30 @@ def scan_requirements(add, skip) -> list[tuple[str, Path, dict]]:
     return records
 
 
+#: prefixes that declare `verification` as a by-hand method, not a test.
+MANUAL_PREFIXES = ("Manual:", "Inspection:")
+
+
+def manual_method(verification: str) -> str:
+    """
+    @brief The declared by-hand method, or "" when none is declared.
+    @details Some behaviors no test can settle - a look-and-see judgement, an
+             install on clean hardware, a printed page. Naming the method
+             after `Manual:` or `Inspection:` records it as a deliberate
+             choice, and check reports check 16 instead of check 6: still
+             printed, still counted, but a NOTE, so it never fails --strict
+             and never joins the standing list of tests still owed. The
+             prefix alone does not count - it has to name a method.
+    """
+    text = " ".join(verification.split())
+    for prefix in MANUAL_PREFIXES:
+        if text.startswith(prefix) and text[len(prefix):].strip():
+            return text[len(prefix):].strip()
+    return ""
+
+
 def check_requirement_links(add, records) -> None:
-    """@brief Per-requirement checks 4, 6, 7 and 10 over the parsed records."""
+    """@brief Per-requirement checks 4, 6, 7, 10 and 16 over the parsed records."""
     for relpath, _path, data in records:
         spec_ref = str(data.get("spec", "") or "").strip()
         if spec_ref and not repo_relative_ok(spec_ref):
@@ -963,7 +1035,11 @@ def check_requirement_links(add, records) -> None:
         status = str(data.get("status", "") or "")
         if status == "active":
             linked = str_list(data.get("linked_tests"))
-            if not linked:
+            method = manual_method(str(data.get("verification", "") or ""))
+            if not linked and method:  # 16: manual-verification
+                add("NOTE", "manual-verification", relpath,
+                    "by hand: " + method[:60])
+            elif not linked:
                 add("WARN", "no-linked-tests", relpath, "empty linked_tests")
             for entry in linked:
                 file = entry.split("::", 1)[0]
@@ -1037,10 +1113,11 @@ def scan_journals(add, skip, req_ids: set[str]) -> list[tuple[str, dict]]:
 
 def check_diff(add, skip, cfg, records, journals, scope) -> None:
     """
-    @brief Diff-based checks 5, 8, 9, 12 and 13.
+    @brief Diff-based checks 5, 8, 9, 12, 13 and 17.
     @details `scope` is the parsed journal of `--task` or None; it narrows
-             check 5's coverage set and check 8 to that one task. Without a
-             usable diff every check here emits one NOTE and returns.
+             check 5's coverage set and checks 8 and 17 to that one task.
+             Without a usable diff every check here emits one NOTE and
+             returns.
     """
     files, added, gaps, reason = collect_diff(cfg)
     if reason:
@@ -1127,10 +1204,40 @@ def check_diff(add, skip, cfg, records, journals, scope) -> None:
         add("WARN", "source-no-test-changes", "(diff)",  # 13
             f"{len(source_changed)} source file(s) changed, no test changes")
 
+    zones = stage_zones(cfg)
+    current = git_branch()
+    zone_journals = [
+        (relpath, data) for relpath, data in drift_journals
+        if data["header"].get("stage", "") in zones
+    ]
+    if current == "unknown" and scope is None and zone_journals:
+        add("NOTE", "stage-zone", "(diff)",
+            "skipped: current branch unavailable; use --task on detached HEAD")
+        zone_journals = []
+    for relpath, data in zone_journals:  # 17: stage-zone
+        stage = data["header"].get("stage", "")
+        recorded = data["header"].get("branch", "")
+        if recorded and current not in ("unknown", recorded):
+            continue  # this journal describes some other branch's diff
+        allowed: list[str] = []
+        for zone in zones[stage]:
+            # an unrecognised name contributes nothing; check 14 reports it
+            if zone == "source":
+                allowed.extend(source_globs)
+            elif zone == "tests":
+                allowed.extend(tests_globs)
+        named = ", ".join((".agentic/",) + tuple(zones[stage]))
+        for file in files:
+            if not (match_any(file, source_globs) or match_any(file, tests_globs)):
+                continue  # outside the layout entirely - that is check 12
+            if not match_any(file, allowed):
+                add("WARN", "stage-zone", file,
+                    f"edited in stage '{stage}', whose write zone is {named}")
+
 
 def run_checks(cfg: dict, task: str | None) -> list[tuple[str, str, str, str]]:
     """
-    @brief Collect the full findings list of the 15-check catalog.
+    @brief Collect the full findings list of the 17-check catalog.
     @details Shared by `check` and `report`. `task` scopes the diff-based
              checks to that journal exactly as `check --task` does.
     """
