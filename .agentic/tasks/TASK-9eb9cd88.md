@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-9eb9cd88 — Fail closed on corrupt stage documents and manifest language saves
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-ac0451b0, REQ-FUNC-39146520, REQ-REL-c5b666e6, REQ-UX-7982f351, REQ-DATA-52fee282, REQ-UX-f80d35c2
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit; agreed local fast-forward outcome authorized
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set after the delivery commit succeeded; guarded local fast-forward remains authorized
 - [x] the project items from `.agentic/PROJECT.md` ("Delivery checklist additions") — code style, and for a release the four-place version workflow
 
 ## Log
@@ -61,6 +61,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: The human approved cached fingerprint `d9b08dd4eb9ae212fd1e1985581c232f854c34f8` after independent root review and an additional 12-pass missing, null, and invalid boundary rerun.
 - 2026-08-09 deliver: The user-directed validation override remains authoritative: 392 unique scoped tests passed and 1 skipped, the task-scoped strict static AEGIS check exited 0 with zero errors and 80 accepted warnings, and the full suite was intentionally deferred.
 - 2026-08-09 deliver: The approved outcome is a delivery commit, a journal-only closeout commit, and guarded sequential local fast-forward into `F:\2026_AudioMancer` `AudioMancer_V2`, preserving every then-current dirty path byte-for-byte and never pushing.
+- 2026-08-09 closeout: Delivery commit `56a4fdc76681867dff1de07cd4cead307bb54f0b` succeeded; the human authorized this journal-only closeout before the pending guarded local fast-forward, with no push.
 
 ## Design
 
