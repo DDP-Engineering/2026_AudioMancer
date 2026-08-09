@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-0fbcc9b7 — Preserve Speech Block edit integrity
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-UX-6d27b63d, REQ-FUNC-35098598
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, and links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report prepared inside the delivery commit
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased entry written in user language
 
@@ -77,6 +77,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Ruff, py_compile, and diff whitespace checks passed; static AEGIS strict check reported no errors and 80 repository advisory warnings, including the expected open-delivery checkpoint warning.
 - 2026-08-09 deliver: Semantic diff review found only the requested UI/controller behavior, focused tests, AEGIS traceability, Speech Blocks knowledge, and Unreleased changelog changes, with no planning, format, schema, dependency, version, help, or unrelated edits.
 - 2026-08-09 deliver: Human approval confirmed staged fingerprint `bd91c47a8a2e47ce9cce313ab4e788cdd35bfa92`, the exact 10-file scope, and all recorded validation evidence before commit.
+- 2026-08-09 deliver: Approved delivery commit `72b69dd` succeeded locally with no push.
+- 2026-08-09 close-out: Set the task journal to done after the delivery commit succeeded; local `AudioMancer_V2` integration remains the explicitly requested post-closeout operation.
 
 ## Delivery report (2026-08-09)
 
