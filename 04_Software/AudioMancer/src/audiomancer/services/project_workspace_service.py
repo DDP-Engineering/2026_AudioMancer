@@ -246,6 +246,10 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
     extraction_reset_result = _build_extraction_reset_result(payload, resolved_root)
     if extraction_reset_result is not None:
         return extraction_reset_result
+    chunking_document_service.load_chunking_document(resolved_root)
+    block_document_reset_result = _build_block_document_reset_result(resolved_root)
+    if block_document_reset_result is not None:
+        return block_document_reset_result
     repair_result = _build_project_manifest_healing_result(payload, resolved_root)
     if repair_result is not None:
         return repair_result
@@ -318,10 +322,23 @@ def repair_project(
     _validate_manifest_identity_fields(payload)
 
     if not bool(repair_request.get("metadata_only", False)):
-        if str(repair_request.get("corrupted_step", "")) != "extraction":
+        corrupted_step = str(repair_request.get("corrupted_step", ""))
+        if corrupted_step == "extraction":
+            text_extraction_service.reset_extraction_and_downstream(project_root)
+            reset_stage = "source_selected"
+        elif corrupted_step in {"speech_blocks", "audio_blocks"}:
+            operation_runtime_service.reset_operation_data(
+                project_root,
+                corrupted_step,
+                include_current=True,
+            )
+            reset_stage = {
+                "speech_blocks": "character_voices_ready",
+                "audio_blocks": "speech_blocks_ready",
+            }[corrupted_step]
+        else:
             raise ValueError("Folder-based project repair is not supported by the flattened project layout.")
-        text_extraction_service.reset_extraction_and_downstream(project_root)
-        repaired_manifest = _build_repaired_manifest(payload, "source_selected")
+        repaired_manifest = _build_repaired_manifest(payload, reset_stage)
         save_manifest(repaired_manifest, project_root)
         return {
             "status": "ok",
@@ -610,6 +627,46 @@ def _build_extraction_reset_result(
             "warnings": [],
         }
     _ = payload
+    return None
+
+
+def _build_block_document_reset_result(project_root: Path) -> ProjectOpenResult | None:
+    """
+    @brief      Build an explicit reset request for one invalid authoritative block document.
+    @param[in]  project_root Active project root folder.
+    @return     Tagged reset request or `None` when both optional documents are compatible.
+    @exception  None
+    """
+    from audiomancer.services import audio_blocks_service, speech_blocks_service
+
+    document_loaders = (
+        (
+            "speech_blocks",
+            "character_voices_ready",
+            speech_blocks_service.load_speech_blocks_document,
+            speech_blocks_service.SpeechBlocksDocumentError,
+        ),
+        (
+            "audio_blocks",
+            "speech_blocks_ready",
+            audio_blocks_service.load_audio_blocks_document,
+            audio_blocks_service.AudioBlocksDocumentError,
+        ),
+    )
+    for operation_kind, reset_stage, loader, error_type in document_loaders:
+        try:
+            loader(project_root)
+        except error_type as error:
+            return {
+                "status": "repair_required",
+                "project_root": project_root,
+                "corrupted_step": operation_kind,
+                "reset_stage": reset_stage,
+                "message": str(error),
+                "metadata_only": False,
+                "changes": [],
+                "warnings": [],
+            }
     return None
 
 

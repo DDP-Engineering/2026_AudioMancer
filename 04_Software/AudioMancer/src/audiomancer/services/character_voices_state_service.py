@@ -102,7 +102,10 @@ def build_character_voices_state(
             else narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE
         )
     )
-    character_voices_service.save_selected_voice_language(project_root, selected_voice_language)
+    try:
+        character_voices_service.save_selected_voice_language(project_root, selected_voice_language)
+    except (OSError, ValueError) as error:
+        return _manifest_error_state(manifest, language, error)
     voice_targets = character_voices_service.sync_voice_plan(
         project_root,
         character_profiles,
@@ -242,6 +245,25 @@ def _empty_project_state(manifest: dict[str, object], language: str) -> dict[str
         "status_lines": [ui_state_service.translate("character_voices.note_no_characters", language)],
         "missing_narrator_sample": False,
     }
+
+
+def _manifest_error_state(
+    manifest: dict[str, object],
+    language: str,
+    error: Exception,
+) -> dict[str, object]:
+    """
+    @brief      Build non-mutating Character Voices recovery state after a manifest failure.
+    @param[in]  manifest Last validated in-memory project manifest.
+    @param[in]  language Runtime UI language code.
+    @param[in]  error Manifest failure surfaced to the operator.
+    @return     Complete read-only page-state payload.
+    @exception  None
+    """
+    state = _empty_project_state(manifest, language)
+    state["notes"] = [str(error)]
+    state["status_lines"] = [str(error)]
+    return state
 
 
 def build_character_voices_notes(

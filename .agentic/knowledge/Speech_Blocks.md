@@ -61,7 +61,12 @@ otherwise it uses the original Chunking document text through its shared reader.
   low quotes, reversed guillemets, and CJK pairs (REQ-FUNC-5e94d565).
 - Persistence is one authoritative `speech_blocks.json` document object with a fixed top-level field set (`status`, `source`, `ai_profile_id`, `instructions`, `scene_ambience`, `response_contract`, `token_usage`, `budget_metadata`, `checkpoint`, `failure`, `blocks`).
 - Counts, warnings, stage status, and progress are recomputed on read; the document keeps only `source.fingerprint` (not a copy of source-chunk text) and re-resolves source chunks from upstream (`chunks_text.json` / `translated_text.json`).
-- A non-object, corrupt, or missing document reads as not-started (`None`); reset removes the authoritative document.
+- A missing document reads as not-started (`None`). Every existing unreadable,
+  non-object, or contract-invalid document raises `SpeechBlocksDocumentError`
+  with the original failure chained and `Reset Speech Blocks to recover` in the
+  operator message. State and generation boundaries disable generation, expose
+  the same recovery instruction, and leave explicit Speech Blocks reset as the
+  only replacement path (`REQ-REL-c5b666e6`, `REQ-UX-7982f351`).
 - IDs use a chunk-local minimum-width `CCCC-BBBBBB` form and the complete
   numeric chunk token, so chunks above 9999 retain distinct namespaces and
   canonical book order while earlier IDs remain unchanged (REQ-FUNC-31425199).

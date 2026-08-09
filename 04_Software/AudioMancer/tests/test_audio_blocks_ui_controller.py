@@ -68,6 +68,53 @@ def test_audio_blocks_ui_controller_requires_confirmation_before_starting(
     assert start_calls == []
 
 
+def test_audio_blocks_ui_controller_rejects_corrupt_document_before_runtime_probe(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify a corrupt Audio Blocks document is warned before runtime probing or generation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerCorrupt")
+    window = _build_window(qtbot, project_root, default_settings_payload)
+    (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).write_text("{corrupt", encoding="utf-8")
+    warning_calls: list[tuple[object, ...]] = []
+    probe_calls: list[bool] = []
+    start_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **_kwargs: warning_calls.append(args),
+    )
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache",
+        lambda *_args, **_kwargs: probe_calls.append(True) or {"success": True},
+    )
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.No,
+    )
+    monkeypatch.setattr(
+        audio_blocks_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+
+    audio_blocks_ui_controller.handle_start_generation_requested(window)
+
+    assert len(warning_calls) == 1
+    assert "Reset Audio Blocks to recover" in str(warning_calls[0][2])
+    assert probe_calls == []
+    assert start_calls == []
+
+
 def test_audio_blocks_ui_controller_ignores_completed_start_request(
     monkeypatch, qtbot, tmp_path, default_settings_payload
 ) -> None:

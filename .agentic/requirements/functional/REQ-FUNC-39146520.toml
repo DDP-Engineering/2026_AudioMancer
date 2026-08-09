@@ -1,25 +1,25 @@
 schema = 1
 id = "REQ-FUNC-39146520"
-title = "A non-object audio_blocks.json or a missing document shall be treated"
+title = "Treat a missing Audio Blocks document as not started"
 status = "active"
 
 requirement = """
-A non-object audio_blocks.json or a missing document shall be treated as not-started.
+When audio_blocks.json is missing, load_audio_blocks_document() shall return None as the normal not-started state.
 """
 
-verification = "Automated contract test: a non-object payload reads as not-started."
+verification = "A service contract test loads Audio Blocks from a project with no audio_blocks.json and observes None."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_non_object_document_is_treated_as_absent",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_missing_document_is_treated_as_not_started",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"
 priority = "high"
 rationale = """
-Only a document matching the current root contract can represent Audio Blocks state.
+An absent optional stage document is distinct from an existing invalid authoritative document.
 """
 created = 2026-07-25
-updated = 2026-07-26
+updated = 2026-08-09

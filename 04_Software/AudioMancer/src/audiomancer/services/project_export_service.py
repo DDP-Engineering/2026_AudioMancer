@@ -692,7 +692,10 @@ def _artifact_ready(project_root: Path, export_kind: str) -> bool:
         except character_discovery_service.CharacterDocumentError:
             return False
     if export_kind == EXPORT_KIND_SPEECH_BLOCKS:
-        return bool(speech_blocks_service.load_speech_blocks(project_root))
+        try:
+            return bool(speech_blocks_service.load_speech_blocks(project_root))
+        except speech_blocks_service.SpeechBlocksDocumentError:
+            return False
     return False
 
 

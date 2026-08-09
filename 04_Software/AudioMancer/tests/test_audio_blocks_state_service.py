@@ -135,6 +135,26 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     assert any("Reusable prompts: 2" in line for line in state["status_lines"])
 
 
+def test_build_audio_blocks_state_surfaces_corrupt_document_as_reset_only_recovery(tmp_path) -> None:
+    """
+    @brief      Verify corrupt Audio Blocks state renders recovery guidance without generation actions.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCorruptRecovery")
+    (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).write_text("{corrupt", encoding="utf-8")
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en", {})
+
+    assert state["speech_blocks"] == []
+    assert state["can_start_or_continue"] is False
+    assert state["can_reset"] is True
+    assert state["can_approve_all"] is False
+    assert state["can_regenerate_selected"] is False
+    assert "Reset Audio Blocks to recover" in "\n".join(state["notes"])
+
+
 def test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states() -> None:
     """
     @brief      Verify Audio Blocks notes describe resumable failed runs and fully approved completion.

@@ -197,6 +197,46 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
     assert any("narator voice sample" in note.lower() for note in state["notes"])
 
 
+def test_state_manifest_save_failure_returns_recovery_without_target_sync(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a manifest save failure becomes non-mutating Character Voices recovery state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_project_with_narrator_and_character(
+        tmp_path,
+        "CharacterVoicesManifestRecovery",
+    )
+    sync_calls: list[bool] = []
+    monkeypatch.setattr(
+        character_voices_state_service.character_voices_service,
+        "save_selected_voice_language",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("Project manifest is corrupt.")),
+    )
+    monkeypatch.setattr(
+        character_voices_state_service.character_voices_service,
+        "sync_voice_plan",
+        lambda *_args, **_kwargs: sync_calls.append(True) or [],
+    )
+
+    state = character_voices_state_service.build_character_voices_state(
+        project_root,
+        manifest,
+        "en",
+        {"tts_runtime_discovered_models": _minimum_qwen_models()},
+        initialize_defaults=True,
+    )
+
+    assert state["targets"] == []
+    assert "Project manifest is corrupt." in "\n".join(state["notes"])
+    assert state["can_import_sample"] is False
+    assert state["can_edit_prompt"] is False
+    assert state["can_generate_sample"] is False
+    assert sync_calls == []
+
+
 def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-015 builds unchanged Character Voices page state without persistence writes.

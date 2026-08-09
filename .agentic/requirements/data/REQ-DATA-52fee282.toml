@@ -1,0 +1,72 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-DATA-52fee282"
+
+title = "Fail closed when saving voice language against an unreadable manifest"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When Character Voices saves its selected language, the service shall load and validate an existing project manifest before creating or changing Character Voices state, preserving the established missing-manifest fallback while propagating corrupt, unreadable, and unexpected manifest failures.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Service tests compare manifest and target bytes across corrupt and injected-failure saves, retain locked-project language semantics, verify unlocked success, and confirm the compatible missing-manifest result and target initialization."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_persists",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_preserves_locked_manifest_language",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_keeps_missing_manifest_fallback",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_rejects_corrupt_manifest_before_target_initialization",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_does_not_swallow_manifest_failures",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "A failed manifest read must never act as an implicit unlock or report a successful language change."
+
+created = 2026-08-09
+updated = 2026-08-09

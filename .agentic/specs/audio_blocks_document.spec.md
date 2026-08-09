@@ -27,7 +27,7 @@ checkpoints do not rewrite the full voice-target inventory.
 `load_audio_blocks_report()` and `load_operation_state()` remain part of the
 service API and return projections computed from the document.
 
-A missing document or non-object payload reads as not-started. A document with
+A missing document reads as not-started. A non-object payload or document with
 an invalid root field set is rejected.
 
 ### Derived artifact paths
@@ -48,7 +48,7 @@ file name stays stable for the lifetime of its `speech_block_id`.
 ### Document contract
 
 The root object has a fixed field set. Any other key set is a contract
-violation and reads as not-started.
+violation raises `AudioBlocksDocumentError` with reset recovery guidance.
 
 ```text
 status              str    not_started | running | in_progress
@@ -132,8 +132,8 @@ states that; it follows from `speech_block_id`.
 ## Verification
 
 - Round-trip: writing and reading a document preserves the field set exactly.
-- Contract rejection: a non-object payload and a missing file read as
-  not-started; a wrong root key set is rejected.
+- Contract rejection: a missing file reads as not-started; a non-object payload
+  and a wrong root key set raise the typed reset-recovery error.
 - Projection compatibility: `load_audio_blocks_report()` and
   `load_operation_state()` return their contracted shapes.
 - Path derivation: the resolved WAV path for a block equals

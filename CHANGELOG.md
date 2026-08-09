@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech Blocks and Audio Blocks now distinguish an absent optional stage
+  document from an existing corrupt one, show the exact reset recovery action,
+  and prevent damaged work from being treated as a new generation opportunity.
+- Character Voices language saves now validate the project manifest before
+  initializing or changing voice targets, so corrupt or unreadable manifests
+  cannot bypass locked-project rules or report a successful update.
 - Generated Character Voices, Narrator, and Audio Blocks WAV files now publish
   through one crash-safe atomic byte writer, preserving an existing complete
   file and cleaning temporary files when replacement fails.

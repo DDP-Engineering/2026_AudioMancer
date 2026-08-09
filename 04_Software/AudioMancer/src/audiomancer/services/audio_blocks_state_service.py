@@ -51,6 +51,14 @@ def build_audio_blocks_state(
     if project_root is None or manifest is None:
         return _empty_state(language, settings_payload)
 
+    try:
+        speech_blocks_service.load_speech_blocks_document(project_root)
+        audio_blocks_service.load_audio_blocks_document(project_root)
+    except speech_blocks_service.SpeechBlocksDocumentError as error:
+        return _invalid_document_state(error, language, settings_payload, can_reset=False)
+    except audio_blocks_service.AudioBlocksDocumentError as error:
+        return _invalid_document_state(error, language, settings_payload, can_reset=True)
+
     speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
     report = audio_blocks_service.load_audio_blocks_report(project_root)
@@ -310,6 +318,33 @@ def _empty_state(language: str, settings_payload: dict[str, object] | None = Non
         "selected_text_character_limit": _selected_text_character_limit(settings_payload, []),
         "scene_ambience_audio_enabled": _scene_ambience_audio_enabled(settings_payload),
     }
+
+
+def _invalid_document_state(
+    error: ValueError,
+    language: str,
+    settings_payload: dict[str, object] | None,
+    *,
+    can_reset: bool,
+) -> dict[str, object]:
+    """
+    @brief      Build a recovery-only Audio Blocks page state for one invalid strict document.
+    @param[in]  error Typed document failure carrying reset guidance.
+    @param[in]  language Runtime UI language code.
+    @param[in]  settings_payload Persisted application settings payload.
+    @param[in]  can_reset True when the Audio Blocks reset on this page owns the failed document.
+    @return     Complete non-generatable page-state payload.
+    @exception  None
+    """
+    state = _empty_state(language, settings_payload)
+    state.update(
+        {
+            "notes": [str(error)],
+            "stage_status": "failed",
+            "can_reset": can_reset,
+        }
+    )
+    return state
 
 
 def _build_full_source_text(

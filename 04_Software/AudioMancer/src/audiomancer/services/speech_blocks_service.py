@@ -191,22 +191,28 @@ def _validate_speech_blocks_document(payload: object) -> None:
 @trace_function(_SPEECH_BLOCKS_LOGGER)
 def load_speech_blocks_document(project_root: str | Path) -> SpeechBlocksDocumentPayload | None:
     """
-    @brief      Load and leniently validate the authoritative single Speech Blocks document.
+    @brief      Load and strictly validate the authoritative single Speech Blocks document.
     @param[in]  project_root Active project root folder.
-    @return     Document payload, or `None` when missing or in an incompatible legacy format.
-    @exception  None
+    @return     Document payload, or `None` when the optional document is missing.
+    @exception  SpeechBlocksDocumentError Raised when an existing document is unreadable or invalid.
     """
     document_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME)
+    document_exists = document_path.exists()
     try:
         payload = load_optional_json_artifact(document_path)
-    except (OSError, ValueError, json.JSONDecodeError):
-        return None
-    if not isinstance(payload, dict):
+    except (OSError, ValueError) as error:
+        raise SpeechBlocksDocumentError(
+            f"Speech Blocks data is unreadable. Reset Speech Blocks to recover: {error}"
+        ) from error
+    if payload is None and not document_exists:
         return None
     try:
         _validate_speech_blocks_document(payload)
-    except SpeechBlocksDocumentError:
-        return None
+    except SpeechBlocksDocumentError as error:
+        raise SpeechBlocksDocumentError(
+            f"Speech Blocks data is invalid. Reset Speech Blocks to recover: {error}"
+        ) from error
+    assert isinstance(payload, dict)
     return dict(payload)
 
 
@@ -436,7 +442,7 @@ def load_operation_state(
     @param[in]  project_root Active project root folder.
     @param[in]  source_chunk_count Optional count already resolved by the public caller.
     @return     Persisted operation-state payload or `None`.
-    @exception  None
+    @exception  SpeechBlocksDocumentError Raised when the authoritative document exists but is unreadable or invalid.
     """
     document = load_speech_blocks_document(project_root)
     if document is None:
@@ -459,7 +465,7 @@ def load_speech_blocks_report(
     @param[in]  project_root Active project root folder.
     @param[in]  source_chunk_count Optional count already resolved by the public caller.
     @return     Persisted report payload or `None`.
-    @exception  None
+    @exception  SpeechBlocksDocumentError Raised when the authoritative document exists but is unreadable or invalid.
     """
     document = load_speech_blocks_document(project_root)
     if document is None:
@@ -495,7 +501,7 @@ def load_speech_blocks(project_root: str | Path) -> list[SpeechBlockPayload]:
     @brief      Load one optional persisted Speech Blocks output payload.
     @param[in]  project_root Active project root folder.
     @return     Ordered Speech Blocks payload list.
-    @exception  None
+    @exception  SpeechBlocksDocumentError Raised when the authoritative document exists but is unreadable or invalid.
     """
     document = load_speech_blocks_document(project_root)
     if document is None:

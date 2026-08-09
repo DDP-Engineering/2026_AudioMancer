@@ -174,25 +174,31 @@ def _validate_audio_blocks_document(payload: object) -> None:
 @trace_function(_AUDIO_BLOCKS_LOGGER)
 def load_audio_blocks_document(project_root: str | Path) -> AudioBlocksDocumentPayload | None:
     """
-    @brief      Load and leniently validate the authoritative single Audio Blocks document.
-    @details    A missing file, unreadable JSON, a legacy list payload, or any
-                contract violation all read as not-started. No legacy report or
-                state artifact is consulted.
+    @brief      Load and strictly validate the authoritative single Audio Blocks document.
+    @details    A missing file reads as not-started. Every existing unreadable,
+                legacy, or contract-invalid document requires explicit reset.
+                No legacy report or state artifact is consulted.
     @param[in]  project_root Active project root folder.
-    @return     Document payload, or `None` when missing or incompatible.
-    @exception  None
+    @return     Document payload, or `None` when the optional document is missing.
+    @exception  AudioBlocksDocumentError Raised when an existing document is unreadable or invalid.
     """
     document_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME)
+    document_exists = document_path.exists()
     try:
         payload = load_optional_json_artifact(document_path)
-    except (OSError, ValueError, json.JSONDecodeError):
-        return None
-    if not isinstance(payload, dict):
+    except (OSError, ValueError) as error:
+        raise AudioBlocksDocumentError(
+            f"Audio Blocks data is unreadable. Reset Audio Blocks to recover: {error}"
+        ) from error
+    if payload is None and not document_exists:
         return None
     try:
         _validate_audio_blocks_document(payload)
-    except AudioBlocksDocumentError:
-        return None
+    except AudioBlocksDocumentError as error:
+        raise AudioBlocksDocumentError(
+            f"Audio Blocks data is invalid. Reset Audio Blocks to recover: {error}"
+        ) from error
+    assert isinstance(payload, dict)
     return dict(payload)
 
 
@@ -223,7 +229,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @brief      Project the Audio Blocks operation state from the single document.
     @param[in]  project_root Active project root folder.
     @return     Projected operation-state payload or `None` when not started.
-    @exception  None
+    @exception  AudioBlocksDocumentError Raised when the authoritative document exists but is unreadable or invalid.
     """
     document = load_audio_blocks_document(project_root)
     if document is None:
@@ -237,7 +243,7 @@ def load_audio_blocks_report(project_root: str | Path) -> AudioBlocksReportPaylo
     @brief      Project the Audio Blocks report from the single document.
     @param[in]  project_root Active project root folder.
     @return     Projected report payload or `None` when not started.
-    @exception  None
+    @exception  AudioBlocksDocumentError Raised when the authoritative document exists but is unreadable or invalid.
     """
     document = load_audio_blocks_document(project_root)
     if document is None:
@@ -251,7 +257,7 @@ def load_audio_blocks(project_root: str | Path) -> list[AudioBlockPayload]:
     @brief      Load the persisted Audio Blocks entries from the single document.
     @param[in]  project_root Active project root folder.
     @return     Ordered Audio Blocks payload list.
-    @exception  None
+    @exception  AudioBlocksDocumentError Raised when the authoritative document exists but is unreadable or invalid.
     """
     document = load_audio_blocks_document(project_root)
     if document is None:

@@ -54,7 +54,16 @@ def handle_page_activated(window: "MainWindow") -> None:
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    _sync_manifest_stage(window)
+    try:
+        _sync_manifest_stage(window)
+    except (OSError, ValueError) as error:
+        current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
     if window._character_voices_missing_narrator_popup_shown:
         return
     if not window._character_voices_page._targets:  # noqa: SLF001

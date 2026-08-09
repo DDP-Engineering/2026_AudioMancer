@@ -17,6 +17,7 @@
 
 import json
 from pathlib import Path
+import wave
 
 import pytest
 
@@ -165,6 +166,31 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     )
     assert any("Generated 1 speech blocks from 1/2 chunks." in note for note in state["notes"])
     assert any("Input tokens: 30 | Output tokens: 10 | Total: 40" in note for note in state["notes"])
+
+
+def test_build_speech_blocks_state_surfaces_corrupt_document_as_reset_only_recovery(tmp_path) -> None:
+    """
+    @brief      Verify corrupt Speech Blocks state renders recovery guidance without generation actions.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksCorruptRecovery")
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("{corrupt", encoding="utf-8")
+
+    state = speech_blocks_state_service.build_speech_blocks_state(
+        project_root,
+        manifest,
+        "en",
+        {"llm_profiles": [{"id": "profile-1", "label": "Profile", "enabled": True}]},
+    )
+
+    assert state["speech_blocks"] == []
+    assert state["source_chunks"] == []
+    assert state["can_reset"] is True
+    assert state["can_approve_all"] is False
+    assert state["can_resplit_selected"] is False
+    assert "Reset Speech Blocks to recover" in "\n".join(state["notes"])
 
 
 @pytest.mark.parametrize("selected_voice_language", ("en", "ro"))
@@ -325,7 +351,7 @@ def test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generati
     )
     audio_root = speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir(parents=True, exist_ok=True)
-    (audio_root / "0001-000001.wav").write_bytes(b"RIFF")
+    _write_wav(audio_root / "0001-000001.wav")
     audio_blocks_service.write_audio_blocks_document(
         project_root,
         {
@@ -589,6 +615,20 @@ def test_merge_audio_preview_state_uses_persisted_playability_without_file_check
     )
 
     assert merged_blocks[0]["audio_can_play"] is True
+
+
+def _write_wav(path: Path) -> None:
+    """
+    @brief      Write one minimal valid WAV fixture.
+    @param[in]  path Destination WAV path.
+    @return     None.
+    @exception  None
+    """
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(24_000)
+        wav_file.writeframes(b"\x00\x00" * 24)
 
 
 def _create_chunked_project(tmp_path, name: str):

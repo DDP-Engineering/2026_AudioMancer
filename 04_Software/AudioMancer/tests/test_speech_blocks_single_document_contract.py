@@ -209,23 +209,116 @@ def test_resume_reads_segment_cursor_from_document_checkpoint(tmp_path: Path) ->
     assert resume_checkpoint["completed_segment_count"] == 4
 
 
-def test_non_object_document_is_treated_as_absent(tmp_path: Path) -> None:
+def test_missing_document_is_treated_as_not_started(tmp_path: Path) -> None:
     """
-    @brief      Verify REQ-FUNC-ac0451b0 treats a non-object payload as not-started.
+    @brief      Verify REQ-FUNC-ac0451b0 treats a missing document as not-started.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
-    document_path = speech_blocks_service.write_speech_blocks_document(project_root, _document())
-    invalid_document = [_block("chunk-0001-000001", "chunk-0001", approved=True)]
-    document_path.write_text(json.dumps(invalid_document), encoding="utf-8")
 
     assert speech_blocks_service.load_speech_blocks_document(project_root) is None
     assert speech_blocks_service.load_speech_blocks(project_root) == []
     assert speech_blocks_service.load_speech_blocks_report(project_root) is None
     assert speech_blocks_service.load_operation_state(project_root) is None
+
+
+@pytest.mark.parametrize(
+    ("invalid_bytes", "cause_type"),
+    [
+        (b"{", json.JSONDecodeError),
+        (b"\xff", UnicodeDecodeError),
+        (b"null", speech_blocks_service.SpeechBlocksDocumentError),
+        (
+            json.dumps([{"speech_block_id": "0001-000001"}]).encode("utf-8"),
+            speech_blocks_service.SpeechBlocksDocumentError,
+        ),
+        (json.dumps({"status": "completed"}).encode("utf-8"), speech_blocks_service.SpeechBlocksDocumentError),
+    ],
+)
+def test_existing_invalid_document_raises_typed_reset_recovery_error(
+    tmp_path: Path,
+    invalid_bytes: bytes,
+    cause_type: type[BaseException],
+) -> None:
+    """
+    @brief      Verify existing unreadable and invalid Speech Blocks documents fail closed with recovery guidance.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  invalid_bytes Existing invalid document bytes.
+    @param[in]  cause_type Expected chained root failure type.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    document_path = project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
+    document_path.write_bytes(invalid_bytes)
+
+    with pytest.raises(speech_blocks_service.SpeechBlocksDocumentError) as captured_error:
+        speech_blocks_service.load_speech_blocks_document(project_root)
+
+    assert "Reset Speech Blocks to recover" in str(captured_error.value)
+    assert isinstance(captured_error.value.__cause__, cause_type)
+
+
+def test_unreadable_existing_document_chains_oserror(monkeypatch, tmp_path: Path) -> None:
+    """
+    @brief      Verify a filesystem read failure is chained into the typed Speech Blocks recovery error.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("{}", encoding="utf-8")
+
+    def _raise_permission_error(_artifact_path) -> None:
+        """Raise the injected artifact read failure."""
+        raise PermissionError("speech blocks denied")
+
+    monkeypatch.setattr(speech_blocks_service, "load_optional_json_artifact", _raise_permission_error)
+
+    with pytest.raises(speech_blocks_service.SpeechBlocksDocumentError) as captured_error:
+        speech_blocks_service.load_speech_blocks_document(project_root)
+
+    assert "Reset Speech Blocks to recover" in str(captured_error.value)
+    assert isinstance(captured_error.value.__cause__, PermissionError)
+
+
+def test_generation_does_not_overwrite_corrupt_speech_blocks_document(monkeypatch, tmp_path: Path) -> None:
+    """
+    @brief      Verify generation rejects corrupt Speech Blocks state before any replacement write.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    document_path = project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
+    corrupt_bytes = b"{corrupt speech blocks"
+    document_path.write_bytes(corrupt_bytes)
+    monkeypatch.setattr(
+        speech_blocks_service,
+        "resolve_source_chunks",
+        lambda *_args, **_kwargs: {
+            "selected_source_language": "en",
+            "source_kind": "original",
+            "source_chunks": [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        },
+    )
+
+    with pytest.raises(speech_blocks_service.SpeechBlocksDocumentError, match="Reset Speech Blocks to recover"):
+        speech_blocks_service.start_or_continue_generation(
+            project_root,
+            {"voice_assignment_mode": "same_narrator"},
+            {},
+        )
+
+    assert document_path.read_bytes() == corrupt_bytes
 
 
 def test_reset_removes_document(tmp_path: Path) -> None:
@@ -258,6 +351,25 @@ def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(speech_blocks_service.SpeechBlocksDocumentError):
         speech_blocks_service.write_speech_blocks_document(project_root, invalid_document)
+
+
+@pytest.mark.parametrize(
+    "reader",
+    [
+        speech_blocks_service.load_operation_state,
+        speech_blocks_service.load_speech_blocks_report,
+        speech_blocks_service.load_speech_blocks,
+    ],
+)
+def test_public_read_projections_do_not_hide_invalid_document(reader, tmp_path: Path) -> None:
+    """Verify every public projection preserves strict document failures."""
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    document_path = project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
+    document_path.write_text("[]\n", encoding="utf-8")
+
+    with pytest.raises(speech_blocks_service.SpeechBlocksDocumentError, match="Reset Speech Blocks to recover"):
+        reader(project_root)
 
 
 # END OF FILE

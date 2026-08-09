@@ -274,27 +274,104 @@ def test_load_operation_state_projection_exposes_checkpoint(tmp_path: Path) -> N
     assert checkpoint["next_split_part_index"] == 0
 
 
-def test_non_object_document_is_treated_as_absent(tmp_path: Path) -> None:
+def test_missing_document_is_treated_as_not_started(tmp_path: Path) -> None:
     """
-    @brief      Verify REQ-FUNC-39146520 treats a non-object payload as not-started.
+    @brief      Verify REQ-FUNC-39146520 treats a missing document as not-started.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     """
     project_root = tmp_path / "project"
     project_root.mkdir()
-    invalid_document = [
-        {
-            "speech_block_id": "0001-000001",
-            "generated": True,
-        }
-    ]
-    (project_root / "audio_blocks.json").write_text(json.dumps(invalid_document), encoding="utf-8")
 
     assert audio_blocks_service.load_audio_blocks_document(project_root) is None
     assert audio_blocks_service.load_audio_blocks(project_root) == []
     assert audio_blocks_service.load_operation_state(project_root) is None
     assert audio_blocks_service.load_audio_blocks_report(project_root) is None
+
+
+@pytest.mark.parametrize(
+    ("invalid_bytes", "cause_type"),
+    [
+        (b"{", json.JSONDecodeError),
+        (b"\xff", UnicodeDecodeError),
+        (b"null", audio_blocks_service.AudioBlocksDocumentError),
+        (
+            json.dumps([{"speech_block_id": "0001-000001"}]).encode("utf-8"),
+            audio_blocks_service.AudioBlocksDocumentError,
+        ),
+        (json.dumps({"status": "completed"}).encode("utf-8"), audio_blocks_service.AudioBlocksDocumentError),
+    ],
+)
+def test_existing_invalid_document_raises_typed_reset_recovery_error(
+    tmp_path: Path,
+    invalid_bytes: bytes,
+    cause_type: type[BaseException],
+) -> None:
+    """
+    @brief      Verify existing unreadable and invalid Audio Blocks documents fail closed with recovery guidance.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  invalid_bytes Existing invalid document bytes.
+    @param[in]  cause_type Expected chained root failure type.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    document_path = project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME
+    document_path.write_bytes(invalid_bytes)
+
+    with pytest.raises(audio_blocks_service.AudioBlocksDocumentError) as captured_error:
+        audio_blocks_service.load_audio_blocks_document(project_root)
+
+    assert "Reset Audio Blocks to recover" in str(captured_error.value)
+    assert isinstance(captured_error.value.__cause__, cause_type)
+
+
+def test_unreadable_existing_document_chains_oserror(monkeypatch, tmp_path: Path) -> None:
+    """
+    @brief      Verify a filesystem read failure is chained into the typed Audio Blocks recovery error.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).write_text("{}", encoding="utf-8")
+
+    def _raise_permission_error(_artifact_path) -> None:
+        """Raise the injected artifact read failure."""
+        raise PermissionError("audio blocks denied")
+
+    monkeypatch.setattr(audio_blocks_service, "load_optional_json_artifact", _raise_permission_error)
+
+    with pytest.raises(audio_blocks_service.AudioBlocksDocumentError) as captured_error:
+        audio_blocks_service.load_audio_blocks_document(project_root)
+
+    assert "Reset Audio Blocks to recover" in str(captured_error.value)
+    assert isinstance(captured_error.value.__cause__, PermissionError)
+
+
+def test_generation_does_not_overwrite_corrupt_audio_blocks_document(monkeypatch, tmp_path: Path) -> None:
+    """
+    @brief      Verify generation rejects corrupt Audio Blocks state before any replacement write.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    document_path = project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME
+    corrupt_bytes = b"{corrupt audio blocks"
+    document_path.write_bytes(corrupt_bytes)
+    monkeypatch.setattr(audio_blocks_service, "_resolve_generation_context", lambda *_args, **_kwargs: {})
+
+    with pytest.raises(audio_blocks_service.AudioBlocksDocumentError, match="Reset Audio Blocks to recover"):
+        audio_blocks_service.start_or_continue_generation(project_root, {}, {})
+
+    assert document_path.read_bytes() == corrupt_bytes
 
 
 def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
@@ -315,7 +392,27 @@ def test_invalid_root_contract_is_rejected(tmp_path: Path) -> None:
     (project_root / "audio_blocks.json").write_text(
         json.dumps({"status": "completed", "unexpected_key": True}), encoding="utf-8"
     )
-    assert audio_blocks_service.load_audio_blocks_document(project_root) is None
+    with pytest.raises(audio_blocks_service.AudioBlocksDocumentError, match="Reset Audio Blocks to recover"):
+        audio_blocks_service.load_audio_blocks_document(project_root)
+
+
+@pytest.mark.parametrize(
+    "reader",
+    [
+        audio_blocks_service.load_operation_state,
+        audio_blocks_service.load_audio_blocks_report,
+        audio_blocks_service.load_audio_blocks,
+    ],
+)
+def test_public_read_projections_do_not_hide_invalid_document(reader, tmp_path: Path) -> None:
+    """Verify every public projection preserves strict document failures."""
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    document_path = project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME
+    document_path.write_text("[]\n", encoding="utf-8")
+
+    with pytest.raises(audio_blocks_service.AudioBlocksDocumentError, match="Reset Audio Blocks to recover"):
+        reader(project_root)
 
 
 def test_reset_removes_document(tmp_path: Path) -> None:

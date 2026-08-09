@@ -106,6 +106,26 @@ def build_speech_blocks_state(
             "selected_text_character_limit": _selected_text_character_limit(settings_payload),
         }
 
+    try:
+        speech_blocks_service.load_speech_blocks_document(project_root)
+        audio_blocks_service.load_audio_blocks_document(project_root)
+    except speech_blocks_service.SpeechBlocksDocumentError as error:
+        return _invalid_block_document_state(
+            manifest,
+            language,
+            settings_payload,
+            error,
+            can_reset=True,
+        )
+    except audio_blocks_service.AudioBlocksDocumentError as error:
+        return _invalid_block_document_state(
+            manifest,
+            language,
+            settings_payload,
+            error,
+            can_reset=False,
+        )
+
     source_chunks: list[dict[str, object]] = []
     selected_source_language = ""
     source_is_resolvable, translation_document = _source_chunks_are_resolvable(project_root, manifest)
@@ -157,6 +177,46 @@ def build_speech_blocks_state(
         "can_reset": bool(speech_blocks),
         "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
         "can_resplit_selected": bool(source_chunks),
+        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
+    }
+
+
+def _invalid_block_document_state(
+    manifest: dict[str, object],
+    language: str,
+    settings_payload: dict[str, object] | None,
+    error: ValueError,
+    *,
+    can_reset: bool,
+) -> dict[str, object]:
+    """
+    @brief      Build a recovery-only Speech Blocks page state for one invalid strict document.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  language Runtime UI language code.
+    @param[in]  settings_payload Persisted application settings payload.
+    @param[in]  error Typed document failure carrying reset guidance.
+    @param[in]  can_reset True when the Speech Blocks reset on this page owns the failed document.
+    @return     Complete non-generatable page-state payload.
+    @exception  None
+    """
+    profile_state = build_speech_blocks_profile_state(settings_payload)
+    return {
+        "source_chunks": [],
+        "speech_blocks": [],
+        "notes": [str(error)],
+        "selected_profile_id": profile_state["selected_profile_id"],
+        "stage_status": "failed",
+        "selected_source_language": "",
+        "processed_chunk_count": 0,
+        "total_chunk_count": 0,
+        "approved_block_count": 0,
+        "total_block_count": 0,
+        "voice_assignment_mode": _voice_assignment_mode(manifest),
+        "speaker_catalog": [],
+        "content_kind_options": _content_kind_options(language),
+        "can_reset": can_reset,
+        "can_approve_all": False,
+        "can_resplit_selected": False,
         "selected_text_character_limit": _selected_text_character_limit(settings_payload),
     }
 

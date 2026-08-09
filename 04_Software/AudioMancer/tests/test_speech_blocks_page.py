@@ -24,6 +24,34 @@ from audiomancer.services import speech_blocks_service
 from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
 
 
+def test_speech_blocks_page_shows_reset_recovery_without_generation(qtbot) -> None:
+    """
+    @brief      Verify the Speech Blocks page renders a reset-only corrupt-document recovery state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[],
+        speech_blocks=[],
+        notes=["Speech Blocks data is unreadable. Reset Speech Blocks to recover."],
+        selected_profile_id="profile-1",
+        stage_status="failed",
+        selected_source_language="",
+        processed_chunk_count=0,
+        total_chunk_count=0,
+        can_reset=True,
+    )
+
+    assert "Reset Speech Blocks to recover" in page._status_edit.toPlainText()
+    assert page._generate_button.isEnabled() is False
+    assert page._reset_generation_button.isEnabled() is True
+
+
 def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) -> None:
     """
     @brief      Verify the page renders chunk lists, block lists, and read-only selected block details.

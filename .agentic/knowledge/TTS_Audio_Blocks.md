@@ -41,8 +41,12 @@ All operation metadata lives in a single authoritative `audio_blocks.json`
 document with a fixed root field set (`status`, `voice_language`,
 `input_fingerprint`, `checkpoint`, `blocks`). `load_audio_blocks_report()` and
 `load_operation_state()` are projections over that document. A missing
-document, a non-object payload, or any root-contract violation reads as
-not-started. The
+document reads as not-started. Every existing unreadable, non-object, or
+contract-invalid document raises `AudioBlocksDocumentError` with the original
+failure chained and `Reset Audio Blocks to recover` in the operator message.
+State and generation boundaries disable generation, surface that recovery,
+and leave explicit Audio Blocks reset as the only replacement path
+(`REQ-REL-c5b666e6`, `REQ-UX-7982f351`). The
 `voice_clone_profiles.json` cache stays a separate artifact because it holds
 large per-voice model prompts that would otherwise be rewritten on every
 per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.

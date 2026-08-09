@@ -67,8 +67,23 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
         return
 
     scene_ambience_audio_enabled = window._audio_blocks_page.scene_ambience_audio_enabled()
-    report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
-    if _has_fully_generated_run(window._current_project_root, report, scene_ambience_audio_enabled):
+    try:
+        speech_blocks_service.load_speech_blocks_document(window._current_project_root)
+        audio_blocks_service.load_audio_blocks_document(window._current_project_root)
+        report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
+        fully_generated = _has_fully_generated_run(
+            window._current_project_root,
+            report,
+            scene_ambience_audio_enabled,
+        )
+    except (speech_blocks_service.SpeechBlocksDocumentError, audio_blocks_service.AudioBlocksDocumentError) as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    if fully_generated:
         return
 
     probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache(window)

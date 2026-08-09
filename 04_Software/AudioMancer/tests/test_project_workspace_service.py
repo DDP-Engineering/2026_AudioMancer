@@ -928,10 +928,7 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
         [{"speech_block_id": "sb-1", "chunk_id": "chunk-0001", "approved": False}],
         status="review_pending",
     )
-    _write_json(
-        project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
-        [{"speech_block_id": "sb-1", "generated": False}],
-    )
+    _write_audio_blocks_document_fixture(project_root, status="in_progress")
     manifest["current_stage"] = "narrator_definition_ready"
     manifest["narrator_profile_name"] = "Selected Narrator"
     manifest["narrator_language"] = "en"
@@ -1097,22 +1094,56 @@ def test_open_project_advances_current_stage_from_contiguous_completed_artifacts
     assert open_result["changes"] == []
 
 
-def test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing(tmp_path) -> None:
+@pytest.mark.parametrize(
+    ("operation_kind", "document_name", "reset_instruction", "reset_stage"),
+    [
+        (
+            "speech_blocks",
+            config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
+            "Reset Speech Blocks to recover",
+            "character_voices_ready",
+        ),
+        (
+            "audio_blocks",
+            config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME,
+            "Reset Audio Blocks to recover",
+            "speech_blocks_ready",
+        ),
+    ],
+)
+def test_open_project_requires_explicit_reset_for_corrupt_block_document(
+    tmp_path,
+    operation_kind,
+    document_name,
+    reset_instruction,
+    reset_stage,
+) -> None:
     """
-    @brief      Verify corrupt artifacts produce warnings but no completed metadata promotion.
+    @brief      Verify corrupt block documents require operator-approved stage reset.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     """
-    project_root, manifest = project_workspace_service.create_project("CorruptSpeech", tmp_path)
-    manifest["current_stage"] = "speech_blocks_ready"
+    project_root, manifest = project_workspace_service.create_project(f"Corrupt-{operation_kind}", tmp_path)
+    manifest["current_stage"] = "audio_blocks_ready"
     project_workspace_service.save_manifest(manifest, project_root)
-    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("{broken", encoding="utf-8")
+    document_path = project_root / document_name
+    document_path.write_text("{broken", encoding="utf-8")
+    corrupt_bytes = document_path.read_bytes()
 
     open_result = project_workspace_service.open_project(project_root)
 
-    assert open_result["status"] == "ok"
-    assert open_result["manifest"]["operations"]["speech_blocks"]["status"] == "not_started"
+    assert open_result["status"] == "repair_required"
+    assert open_result["corrupted_step"] == operation_kind
+    assert reset_instruction in open_result["message"]
+    assert document_path.read_bytes() == corrupt_bytes
+
+    repaired_result = project_workspace_service.repair_project(open_result)
+
+    assert repaired_result["status"] == "ok"
+    assert repaired_result["manifest"]["current_stage"] == reset_stage
+    assert repaired_result["manifest"]["operations"][operation_kind]["status"] == "not_started"
+    assert not document_path.exists()
 
 
 def _operation_state(status: str, current: int, total: int) -> dict[str, object]:

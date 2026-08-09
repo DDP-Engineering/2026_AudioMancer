@@ -1,0 +1,78 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-REL-c5b666e6"
+
+title = "Reject corrupt authoritative block documents"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When an authoritative Speech Blocks or Audio Blocks document exists but cannot be read or validated, the stage loader shall raise its stage-specific document error with the original failure chained and an instruction to reset that stage, while a genuinely missing document remains the normal not-started result.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Service tests distinguish missing files from malformed JSON, invalid UTF-8, read failures, non-object payloads, and contract-invalid objects, asserting the typed exception, reset instruction, cause, and unchanged corrupt bytes when generation is attempted."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_existing_invalid_document_raises_typed_reset_recovery_error",
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_unreadable_existing_document_chains_oserror",
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_public_read_projections_do_not_hide_invalid_document",
+  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_generation_does_not_overwrite_corrupt_speech_blocks_document",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_existing_invalid_document_raises_typed_reset_recovery_error",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_unreadable_existing_document_chains_oserror",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_public_read_projections_do_not_hide_invalid_document",
+  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_generation_does_not_overwrite_corrupt_audio_blocks_document",
+  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_requires_explicit_reset_for_corrupt_block_document",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "An existing authoritative workflow document must not be mistaken for an absent optional document and overwritten."
+
+created = 2026-08-09
+updated = 2026-08-09

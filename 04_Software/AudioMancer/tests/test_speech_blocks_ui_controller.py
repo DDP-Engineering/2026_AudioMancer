@@ -27,7 +27,7 @@ from audiomancer.services import (
     project_workspace_service,
     speech_blocks_service,
 )
-from audiomancer.ui.controllers import speech_blocks_ui_controller
+from audiomancer.ui.controllers import home_ui_controller, speech_blocks_ui_controller
 from audiomancer.ui.main_window import MainWindow
 from chunking_test_support import build_chunking_document
 
@@ -66,6 +66,47 @@ def test_speech_blocks_ui_controller_requires_confirmation_before_starting(monke
 
     speech_blocks_ui_controller.handle_generate_requested(window, "profile-1")
 
+    assert start_calls == []
+
+
+def test_speech_blocks_ui_controller_rejects_corrupt_document_before_confirmation(
+    monkeypatch, qtbot, tmp_path
+) -> None:
+    """
+    @brief      Verify a corrupt Speech Blocks document is warned before confirmation or generation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project(tmp_path, "SpeechBlocksControllerCorrupt")
+    window = _build_window(qtbot, project_root)
+    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("{corrupt", encoding="utf-8")
+    warning_calls: list[tuple[object, ...]] = []
+    confirmation_calls: list[bool] = []
+    start_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **_kwargs: warning_calls.append(args),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: confirmation_calls.append(True) or QMessageBox.StandardButton.No,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+
+    speech_blocks_ui_controller.handle_generate_requested(window, "profile-1")
+
+    assert len(warning_calls) == 1
+    assert "Reset Speech Blocks to recover" in str(warning_calls[0][2])
+    assert confirmation_calls == []
     assert start_calls == []
 
 
@@ -860,7 +901,15 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     stale_artifacts[0].write_text("[]\n", encoding="utf-8")
     stale_artifacts[1].write_text("[]\n", encoding="utf-8")
     stale_artifacts[2].write_text("{}\n", encoding="utf-8")
+    activation_warnings = []
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, _title, message: activation_warnings.append(message),
+    )
     window = _build_window(qtbot, project_root)
+    assert activation_warnings
+    assert "Reset Speech Blocks to recover" in activation_warnings[0]
     monkeypatch.setattr(
         speech_blocks_ui_controller.QMessageBox,
         "question",

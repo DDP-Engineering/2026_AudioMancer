@@ -21,6 +21,40 @@ from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
 
 
+def test_audio_blocks_page_shows_reset_recovery_without_generation(qtbot) -> None:
+    """
+    @brief      Verify the Audio Blocks page renders a reset-only corrupt-document recovery state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_blocks_state(
+        full_source_text="",
+        speech_blocks=[],
+        current_block_id=None,
+        current_block_speaker="",
+        current_block_text="",
+        notes=["Audio Blocks data is unreadable. Reset Audio Blocks to recover."],
+        status_lines=[],
+        progress_current=0,
+        progress_total=0,
+        progress_percent=0,
+        stage_status="failed",
+        can_start_or_continue=False,
+        can_reset=True,
+        can_approve_all=False,
+        can_regenerate_selected=False,
+        can_approve_selected=False,
+    )
+
+    assert "Reset Audio Blocks to recover" in page._status_edit.toPlainText()
+    assert page._start_button.isEnabled() is False
+    assert page._reset_button.isEnabled() is True
+
+
 def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbot) -> None:
     """
     @brief      Verify the page renders source text, speech-block markers, selected details, and progress.

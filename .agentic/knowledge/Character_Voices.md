@@ -31,6 +31,13 @@ batch generation, and preview signals.
 - `REQ-REL-ee8f9ed0` — generated, imported, and narrator-copied sample WAV
   bytes publish through the shared atomic persistence contract without changing
   sample metadata ownership or cancellation behavior.
+- `REQ-DATA-52fee282` — selected-language writes validate an existing project
+  manifest before initializing or mutating `characters_voice.json`; missing
+  manifests retain the established fallback, while corrupt, unreadable, and
+  unexpected failures propagate without reporting success.
+- `REQ-UX-f80d35c2` — expected manifest failures become read-only recovery
+  state or the existing project-error warning, without target synchronization
+  or partial normal page application.
 - Narrator targets are preview-only; character targets retain stable IDs across
   character renames and store sample metadata with their project-local WAVs.
 - Readiness requires the selected narrator WAV and metadata plus every character
@@ -44,6 +51,13 @@ Controller synchronization therefore returns without writing the manifest when
 the page has no targets and `characters_voice.json` does not yet exist. Once the
 file exists, the controller may reload it when the page snapshot is empty and
 derive truthful not-started, in-progress, or completed progress from disk.
+
+Language persistence loads and validates `project.json` before target-file
+initialization. A valid locked manifest continues to force the project target
+language, an unlocked manifest saves normally, and a genuinely missing manifest
+keeps the compatible target-initialization fallback. Validation, filesystem,
+and unexpected manifest failures cannot act as an implicit unlock; expected
+errors are logged at the write boundary and surfaced by state/controller UI.
 
 Batch generation persists each completed character sample immediately. A later
 cancellation does not roll back those samples; it refreshes the UI and manifest

@@ -19,6 +19,9 @@ import json
 from pathlib import Path
 import wave
 
+import pytest
+
+from audiomancer import config
 from audiomancer.services import character_voices_service, narrator_definition_service, project_workspace_service
 
 
@@ -130,6 +133,95 @@ def test_selected_voice_language_persists(tmp_path) -> None:
 
     assert saved_language == "ro"
     assert character_voices_service.load_selected_voice_language(project_root) == "ro"
+
+
+def test_selected_voice_language_preserves_locked_manifest_language(tmp_path) -> None:
+    """
+    @brief      Verify a locked valid manifest rejects a different Character Voices language.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("CharacterVoicesLockedLanguage", tmp_path)
+    manifest["target_language"] = "en"
+    manifest["selected_voice_language"] = "en"
+    manifest["project_options_locked"] = True
+    project_workspace_service.save_manifest(manifest, project_root)
+    manifest_path = project_root / "project.json"
+    original_manifest_bytes = manifest_path.read_bytes()
+
+    saved_language = character_voices_service.save_selected_voice_language(project_root, "Romanian")
+
+    assert saved_language == "en"
+    assert manifest_path.read_bytes() == original_manifest_bytes
+
+
+def test_selected_voice_language_keeps_missing_manifest_fallback(tmp_path) -> None:
+    """
+    @brief      Verify a genuinely missing manifest keeps the compatible language fallback and target initialization.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "missing-manifest-project"
+    project_root.mkdir()
+
+    saved_language = character_voices_service.save_selected_voice_language(project_root, "Romanian")
+
+    assert saved_language == "ro"
+    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
+    assert (project_root / "project.json").exists() is False
+
+
+def test_selected_voice_language_rejects_corrupt_manifest_before_target_initialization(tmp_path) -> None:
+    """
+    @brief      Verify a corrupt manifest cannot report a language save or create Character Voices state.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("CharacterVoicesCorruptManifest", tmp_path)
+    manifest_path = project_root / "project.json"
+    corrupt_manifest_bytes = b"{corrupt project manifest"
+    manifest_path.write_bytes(corrupt_manifest_bytes)
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    assert targets_path.exists() is False
+
+    with pytest.raises(ValueError):
+        character_voices_service.save_selected_voice_language(project_root, "Romanian")
+
+    assert manifest_path.read_bytes() == corrupt_manifest_bytes
+    assert targets_path.exists() is False
+
+
+@pytest.mark.parametrize("manifest_failure", [PermissionError("manifest denied"), RuntimeError("unexpected load")])
+def test_selected_voice_language_does_not_swallow_manifest_failures(
+    monkeypatch,
+    tmp_path,
+    manifest_failure: Exception,
+) -> None:
+    """
+    @brief      Verify manifest filesystem and unexpected failures propagate before target initialization.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  manifest_failure Injected manifest load failure.
+    @return     None.
+    @exception  None
+    """
+    project_root = tmp_path / "manifest-failure-project"
+    project_root.mkdir()
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+
+    def _raise_manifest_failure(_project_root) -> None:
+        """Raise the selected manifest load failure."""
+        raise manifest_failure
+
+    monkeypatch.setattr(project_workspace_service, "load_manifest", _raise_manifest_failure)
+
+    with pytest.raises(type(manifest_failure), match=str(manifest_failure)):
+        character_voices_service.save_selected_voice_language(project_root, "Romanian")
+
+    assert targets_path.exists() is False
 
 
 def test_character_voices_targets_use_atomic_json_writer(monkeypatch, tmp_path) -> None:

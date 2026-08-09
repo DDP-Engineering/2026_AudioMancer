@@ -56,6 +56,16 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
         )
         return
     try:
+        speech_blocks_service.load_speech_blocks_document(window._current_project_root)
+        audio_blocks_service.load_audio_blocks_document(window._current_project_root)
+    except (speech_blocks_service.SpeechBlocksDocumentError, audio_blocks_service.AudioBlocksDocumentError) as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    try:
         speech_blocks_service.resolve_source_chunks(window._current_project_root, window._current_manifest)
     except ValueError as error:
         QMessageBox.warning(

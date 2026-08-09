@@ -104,14 +104,21 @@ def save_selected_voice_language(project_root: str | Path, selected_voice_langua
     @param[in]  project_root Active project root folder.
     @param[in]  selected_voice_language Candidate selected voice language value.
     @return     Persisted canonical voice language code.
-    @exception  None
+    @exception  OSError Raised when an existing manifest cannot be read or saved.
+    @exception  ValueError Raised when an existing manifest is invalid.
     """
-    ensure_character_voices_files(project_root)
     normalized_language = narrator_definition_service.narrator_language_code(selected_voice_language)
     try:
         manifest = project_workspace_service.load_manifest(project_root)
-    except Exception:
-        manifest = None
+    except FileNotFoundError:
+        ensure_character_voices_files(project_root)
+        return normalized_language
+    except (OSError, ValueError):
+        _CHARACTER_VOICES_LOGGER.exception(
+            "Cannot save Character Voices language because the project manifest could not be loaded."
+        )
+        raise
+    ensure_character_voices_files(project_root)
     if isinstance(manifest, dict):
         if bool(manifest.get("project_options_locked", False)):
             normalized_language = narrator_definition_service.narrator_language_code(

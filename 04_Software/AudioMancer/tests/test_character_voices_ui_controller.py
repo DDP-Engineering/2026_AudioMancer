@@ -129,6 +129,41 @@ def test_character_voices_ui_controller_page_activation_warns_when_narrator_samp
     assert window._character_voices_missing_narrator_popup_shown is True
 
 
+def test_character_voices_page_activation_surfaces_corrupt_manifest_without_target_mutation(
+    monkeypatch, qtbot, tmp_path
+) -> None:
+    """
+    @brief      Verify activation contains a corrupt manifest failure and preserves voice targets and page state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project_with_character_and_selected_narrator(
+        tmp_path,
+        "CharacterVoicesCorruptManifestActivation",
+    )
+    window = _build_window(qtbot, project_root)
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    target_bytes = targets_path.read_bytes()
+    current_target_id = window._character_voices_page.current_target_id()
+    (project_root / config.PROJECT_MANIFEST_FILE_NAME).write_text("{corrupt", encoding="utf-8")
+    warning_calls: list[tuple[object, ...]] = []
+    monkeypatch.setattr(
+        character_voices_ui_controller.QMessageBox,
+        "warning",
+        lambda *args, **_kwargs: warning_calls.append(args),
+    )
+
+    character_voices_ui_controller.handle_page_activated(window)
+
+    assert len(warning_calls) == 1
+    assert str(warning_calls[0][2]).strip()
+    assert targets_path.read_bytes() == target_bytes
+    assert window._character_voices_page.current_target_id() == current_target_id
+
+
 def test_character_voices_ui_controller_page_activation_syncs_home_status(qtbot, tmp_path) -> None:
     """
     @brief      Verify page activation updates the Character Voices operation summary for Home.

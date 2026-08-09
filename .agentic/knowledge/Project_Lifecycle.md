@@ -102,6 +102,15 @@ that repair decision. Declining the repair therefore leaves the project
 unopened without hiding the completed reset; accepting it continues through
 repair and activation without repeating the recovery information.
 
+Project validation preflights the authoritative Speech Blocks and Audio Blocks
+documents after upstream Chunking compatibility is established. A present
+invalid block document returns `repair_required` with the stage-specific reset
+instruction and preserves the damaged bytes until the operator confirms. The
+confirmed repair resets that operation and its downstream artifacts through the
+central runtime ownership boundary, rewrites the manifest to the preceding
+ready stage, and then reopens normally. Direct activation also shows the same
+project-error warning and keeps Home/export presentation non-crashing.
+
 `REQ-UX-da3b47c4` contains expected workspace failures at the Home boundary.
 Create, open, confirmed repair, and source-import service calls catch
 `OSError` and `ValueError`, show `dialog.project_error_title` with the original
@@ -174,6 +183,11 @@ Project opening then returns through its existing validation flow with `ok` or
 `repair_required`, depending on whether the remaining evidence implies a
 concrete manifest normalization, instead of propagating a document-shape
 exception.
+
+Speech Blocks and Audio Blocks completion evidence is projected only from their
+strict authoritative documents. Missing documents remain ordinary not-started
+evidence; existing unreadable or invalid documents produce an explicit
+operator-approved stage-reset request and are never normalized into absence.
 
 Narrator completion evidence and exports are projections of the strict
 `narrator_voice.json` document. The selected profile's language, inline sample
@@ -359,9 +373,9 @@ as part of focused validation.
 
 - Atomic writes are last-replacement-wins and do not provide cross-process
   locking or backup rotation.
-- Interactive project repair is metadata-only and intentionally leaves corrupt
-  or stale domain artifacts untouched; incompatible Chunking data is the
-  explicit automatic-reset exception.
+- Interactive project repair is metadata-only except for operator-confirmed
+  Extraction, Speech Blocks, and Audio Blocks recovery. Incompatible Chunking
+  remains the sole automatic domain reset.
 - Export formats are TXT/Markdown for readable projections and ZIP for voice or
   assembly artifacts; PDF export is not implemented.
 - Snapshots are filesystem snapshots taken at start time, not transactional

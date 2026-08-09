@@ -29,6 +29,7 @@ from audiomancer.services import (
     project_export_service,
     project_snapshot_service,
     project_workspace_service,
+    speech_blocks_service,
     text_cleanup_state_service,
     text_extraction_service,
     ui_state_service,
@@ -619,7 +620,16 @@ def activate_project(
     @exception  None
     """
     window.stop_all_audio_playback()
-    audio_blocks_service.reconcile_audio_playability(project_root)
+    try:
+        speech_blocks_service.load_speech_blocks_document(project_root)
+        audio_blocks_service.reconcile_audio_playability(project_root)
+    except (speech_blocks_service.SpeechBlocksDocumentError, audio_blocks_service.AudioBlocksDocumentError) as error:
+        current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
     window._text_cleanup_page.discard_cleaned_text_edit()
     window.set_project_active(True)
     window._current_page_id = "home"
