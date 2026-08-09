@@ -291,7 +291,7 @@ def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -
         observed_payloads.append(bytes(payload))
         Path(target_path).write_bytes(payload)
 
-    monkeypatch.setattr(character_voices_service, "_write_bytes_atomic", _capture_byte_write, raising=False)
+    monkeypatch.setattr(character_voices_service, "write_bytes_atomic", _capture_byte_write)
 
     character_voices_service.store_target_sample(
         project_root,
@@ -456,7 +456,7 @@ def test_same_narrator_sync_skips_unchanged_copied_samples(monkeypatch, tmp_path
         """
         raise AssertionError("unchanged same-narrator sync rewrote metadata")
 
-    monkeypatch.setattr(character_voices_service, "_write_bytes_atomic", _fail_byte_write, raising=False)
+    monkeypatch.setattr(character_voices_service, "write_bytes_atomic", _fail_byte_write)
     monkeypatch.setattr(character_voices_service, "write_json_atomic", _fail_json_write, raising=False)
 
     character_voices_service.sync_same_narrator_samples(project_root, character_targets, "en")

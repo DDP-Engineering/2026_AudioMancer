@@ -50,7 +50,10 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - Generated audio paths are a pure function of `speech_block_id`
   (`audio_blocks/<speech_block_id>.wav`, parts under `audio_blocks/parts/`).
   The name depends only on the block's stable primary key. WAV format/metadata
-  must pass validation before downstream assembly.
+  must pass validation before downstream assembly. Complete single-block,
+  split-part, and Scene Ambience payloads publish through the shared atomic byte
+  writer so a failed replacement cannot expose a truncated WAV
+  (`REQ-REL-ee8f9ed0`).
 - Runtime progress is persisted in `document.checkpoint` (`run_token`,
   `current_phase`, `current_block_id`, `next_speech_block_index`,
   `next_split_part_index`) for truthful resume rather than inferred from a

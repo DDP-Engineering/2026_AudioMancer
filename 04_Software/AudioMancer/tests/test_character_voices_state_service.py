@@ -249,7 +249,7 @@ def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypa
 
     monkeypatch.setattr(project_workspace_service, "save_manifest", _fail_manifest_save)
     monkeypatch.setattr(character_voices_service, "save_voice_targets", _fail_targets_save)
-    monkeypatch.setattr(character_voices_service, "_write_bytes_atomic", _fail_byte_write, raising=False)
+    monkeypatch.setattr(character_voices_service, "write_bytes_atomic", _fail_byte_write)
 
     state = character_voices_state_service.build_character_voices_state(
         project_root,

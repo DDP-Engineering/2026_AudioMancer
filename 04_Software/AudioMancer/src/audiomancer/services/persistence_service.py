@@ -61,6 +61,35 @@ def write_text_atomic(
         raise
 
 
+def write_bytes_atomic(target_path: str | Path, payload: bytes) -> None:
+    """
+    @brief      Write bytes through a same-directory temporary file and atomic replacement.
+    @param[in]  target_path Final file path to replace.
+    @param[in]  payload Complete byte payload to persist.
+    @return     None.
+    @exception  OSError Raised when the temporary write or replacement fails.
+    """
+    resolved_path = Path(target_path)
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
+    try:
+        file_descriptor, temporary_name = tempfile.mkstemp(
+            dir=resolved_path.parent,
+            prefix=f".{resolved_path.name}.",
+            suffix=".tmp",
+        )
+        temporary_path = Path(temporary_name)
+        with os.fdopen(file_descriptor, "wb") as temporary_file:
+            temporary_file.write(payload)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        os.replace(temporary_path, resolved_path)
+    except OSError:
+        if temporary_path is not None:
+            _unlink_temporary_file(temporary_path)
+        raise
+
+
 def write_json_atomic(
     target_path: str | Path,
     payload: Any,

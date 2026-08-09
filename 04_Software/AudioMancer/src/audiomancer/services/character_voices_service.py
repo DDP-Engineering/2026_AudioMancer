@@ -16,13 +16,10 @@
 
 # IMPORTS
 
-from contextlib import suppress
 from copy import deepcopy
 import json
-import os
 from pathlib import Path
 import re
-import tempfile
 
 from audiomancer import config
 from audiomancer.services import (
@@ -33,7 +30,7 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
-from audiomancer.services.persistence_service import write_json_atomic
+from audiomancer.services.persistence_service import write_bytes_atomic, write_json_atomic
 
 # CONSTANTS
 
@@ -575,7 +572,7 @@ def store_target_sample(
         "preview_text": str(preview_text).strip(),
         "runtime_result_summary": str(runtime_result_summary).strip(),
     }
-    _write_bytes_atomic(audio_path, audio_bytes)
+    write_bytes_atomic(audio_path, audio_bytes)
     _update_target_sample_metadata(
         project_root,
         target_id,
@@ -628,7 +625,7 @@ def import_target_sample(
         "audio_validation": dict(validation_report),
         "runtime_result_summary": "Imported WAV sample.",
     }
-    _write_bytes_atomic(audio_path, source_path.read_bytes())
+    write_bytes_atomic(audio_path, source_path.read_bytes())
     _update_target_sample_metadata(
         project_root,
         target_id,
@@ -715,7 +712,7 @@ def sync_same_narrator_samples(
             updated_targets,
         ):
             continue
-        _write_bytes_atomic(audio_path, narrator_audio_bytes)
+        write_bytes_atomic(audio_path, narrator_audio_bytes)
         updated_targets = _target_sample_metadata_updated_targets(
             updated_targets,
             target_id,
@@ -1260,46 +1257,6 @@ def _write_json(path: Path, payload: object) -> None:
     @return     None.
     """
     write_json_atomic(path, payload)
-
-
-def _write_bytes_atomic(target_path: str | Path, payload: bytes) -> None:
-    """
-    @brief      Write bytes through a same-directory temporary file and atomic replacement.
-    @param[in]  target_path Final file path to replace.
-    @param[in]  payload Complete byte payload to persist.
-    @return     None.
-    @exception  OSError Raised when the temporary write or replacement fails.
-    """
-    resolved_path = Path(target_path)
-    resolved_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path: Path | None = None
-    try:
-        file_descriptor, temporary_name = tempfile.mkstemp(
-            dir=resolved_path.parent,
-            prefix=f".{resolved_path.name}.",
-            suffix=".tmp",
-        )
-        temporary_path = Path(temporary_name)
-        with os.fdopen(file_descriptor, "wb") as temporary_file:
-            temporary_file.write(payload)
-            temporary_file.flush()
-            os.fsync(temporary_file.fileno())
-        os.replace(temporary_path, resolved_path)
-    except OSError:
-        if temporary_path is not None:
-            _unlink_temporary_file(temporary_path)
-        raise
-
-
-def _unlink_temporary_file(temporary_path: Path) -> None:
-    """
-    @brief      Best-effort cleanup for temporary byte persistence files.
-    @param[in]  temporary_path Temporary file path to remove.
-    @return     None.
-    @exception  None
-    """
-    with suppress(OSError):
-        temporary_path.unlink(missing_ok=True)
 
 
 # END OF FILE

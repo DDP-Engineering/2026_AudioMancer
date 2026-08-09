@@ -1,0 +1,78 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-REL-ee8f9ed0"
+
+title = "Publish generated WAV bytes through one atomic persistence contract"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When an AudioMancer service publishes complete generated or imported WAV bytes, the service shall use the public same-directory atomic byte writer so an existing target remains complete on failure and writer-owned temporary files are removed before the original exception propagates.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+verification = "Focused persistence tests prove parent creation, successful replacement, failed-replace cleanup, target preservation, and exception propagation; caller tests intercept the public writer from Character Voices, Narrator, and every generated-WAV path in Audio Blocks."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_persistence_service.py::test_write_bytes_atomic_creates_parent_and_replaces_complete_payload",
+  "04_Software/AudioMancer/tests/test_persistence_service.py::test_write_bytes_atomic_failed_replace_preserves_target_and_cleans_temporary_file",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_audio_uses_atomic_byte_writer",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_same_narrator_sync_skips_unchanged_copied_samples",
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_refresh_is_read_only_when_character_voices_are_unchanged",
+  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_sample_audio_uses_atomic_byte_writer",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_generation_checkpoints_a_split_block_without_error",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"
+rationale = "Generated WAV artifacts must not be truncated when a process or replacement fails, and equivalent artifact owners must not carry divergent durability implementations."
+
+created = 2026-08-09
+updated = 2026-08-09

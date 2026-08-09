@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Generated Character Voices, Narrator, and Audio Blocks WAV files now publish
+  through one crash-safe atomic byte writer, preserving an existing complete
+  file and cleaning temporary files when replacement fails.
+- New, loaded, saved, validated, and repaired project manifests now use Audio
+  Assembly's single settings-default and normalization contract, keeping
+  invalid-value fallbacks and duration and silence bounds consistent.
 - VoiceWeaver model discovery now keeps one canonical runtime/settings shape,
   preserving generation-range defaults for Speech and Audio Blocks budgets
   while filtering unsupported nested model parameters safely.

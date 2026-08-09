@@ -17,11 +17,14 @@
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_assembly_service,
     audio_blocks_service,
     chunking_document_service,
     narrator_definition_service,
@@ -574,6 +577,135 @@ def test_validate_project_manifest_normalizes_voice_assignment_mode() -> None:
     validated = project_workspace_service.validate_project_manifest(manifest)
 
     assert validated["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
+
+def test_project_workspace_calls_audio_assembly_settings_contract(monkeypatch) -> None:
+    """
+    @brief      Verify project manifest defaults and normalization call the domain-owned public API.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    domain_defaults = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "max_duration_minutes": 37,
+    }
+    domain_normalized = {
+        **domain_defaults,
+        "max_duration_minutes": 91,
+        "inter_block_silence_ms": 654,
+    }
+    calls: list[tuple[str, object]] = []
+
+    def _default_settings() -> dict[str, object]:
+        """
+        @brief      Return an observable domain default payload.
+        @return     Domain-owned settings defaults.
+        """
+        calls.append(("default", None))
+        return dict(domain_defaults)
+
+    def _normalize_settings(value: object) -> dict[str, object]:
+        """
+        @brief      Return an observable domain normalization payload.
+        @param[in]  value Candidate manifest settings.
+        @return     Domain-owned normalized settings.
+        """
+        calls.append(("normalize", value))
+        return dict(domain_normalized)
+
+    monkeypatch.setattr(audio_assembly_service, "default_audio_assembly_settings", _default_settings)
+    monkeypatch.setattr(audio_assembly_service, "normalize_audio_assembly_settings", _normalize_settings)
+
+    manifest = project_workspace_service.build_project_manifest("AssemblyContract")
+    assert manifest["audio_assembly_settings"] == domain_defaults
+
+    candidate = {"max_duration_minutes": "88"}
+    manifest["audio_assembly_settings"] = candidate
+    validated = project_workspace_service.validate_project_manifest(manifest)
+
+    assert validated["audio_assembly_settings"] == domain_normalized
+    assert calls == [("default", None), ("normalize", candidate)]
+
+
+def test_project_manifest_settings_match_domain_bounds_and_preserve_save_load(tmp_path) -> None:
+    """
+    @brief      Verify manifest settings exactly match domain defaults, bounds, and invalid-input rules.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    assert project_workspace_service.build_project_manifest("AssemblyDefaults")[
+        "audio_assembly_settings"
+    ] == audio_assembly_service.default_audio_assembly_settings()
+    candidates = (
+        None,
+        ["invalid"],
+        {
+            "output_mode": "unsupported",
+            "max_duration_minutes": -4,
+            "output_format": "MP3",
+            "inter_block_silence_ms": 60_001,
+            "inter_chunk_silence_ms": "invalid",
+            "include_scene_ambience": 0,
+            "unknown_field": "discarded",
+        },
+        {
+            "output_mode": "time_limit",
+            "max_duration_minutes": 99_999,
+            "output_format": "WAV",
+            "inter_block_silence_ms": -1,
+            "inter_chunk_silence_ms": 60_001,
+            "include_scene_ambience": True,
+        },
+    )
+    for candidate in candidates:
+        manifest = project_workspace_service.build_project_manifest("AssemblyBounds")
+        manifest["audio_assembly_settings"] = candidate
+
+        assert project_workspace_service.validate_project_manifest(manifest)[
+            "audio_assembly_settings"
+        ] == audio_assembly_service.normalize_audio_assembly_settings(candidate)
+
+    project_root, manifest = project_workspace_service.create_project("AssemblyRoundTrip", tmp_path)
+    saved_candidate = candidates[-1]
+    manifest["audio_assembly_settings"] = saved_candidate
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    assert project_workspace_service.load_manifest(project_root)[
+        "audio_assembly_settings"
+    ] == audio_assembly_service.normalize_audio_assembly_settings(saved_candidate)
+
+
+def test_audio_assembly_and_project_workspace_import_without_cycle() -> None:
+    """
+    @brief      Verify both service import orders and settings calls succeed in fresh interpreters.
+    @return     None.
+    @exception  None
+    """
+    scripts = (
+        (
+            "from audiomancer.services import project_workspace_service\n"
+            "project_workspace_service.build_project_manifest('WorkspaceFirst')\n"
+            "from audiomancer.services import audio_assembly_service\n"
+            "audio_assembly_service.default_audio_assembly_settings()\n"
+        ),
+        (
+            "from audiomancer.services import audio_assembly_service\n"
+            "audio_assembly_service.default_audio_assembly_settings()\n"
+            "from audiomancer.services import project_workspace_service\n"
+            "project_workspace_service.build_project_manifest('AssemblyFirst')\n"
+        ),
+    )
+
+    for script in scripts:
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stderr
 
 
 def test_validate_project_manifest_normalizes_operations_map() -> None:

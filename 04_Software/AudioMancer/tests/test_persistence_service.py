@@ -73,4 +73,59 @@ def test_write_json_atomic_failed_replace_leaves_previous_json_intact(tmp_path, 
     assert list(tmp_path.glob(".project.json.*.tmp")) == []
 
 
+def test_write_bytes_atomic_creates_parent_and_replaces_complete_payload(tmp_path) -> None:
+    """
+    @brief      Verify atomic byte persistence creates parents and replaces complete payloads.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    target_path = tmp_path / "generated" / "voice.wav"
+
+    persistence_service.write_bytes_atomic(target_path, b"RIFF-first")
+    assert target_path.read_bytes() == b"RIFF-first"
+
+    persistence_service.write_bytes_atomic(target_path, b"RIFF-second")
+
+    assert target_path.read_bytes() == b"RIFF-second"
+    assert list(target_path.parent.glob(".voice.wav.*.tmp")) == []
+
+
+def test_write_bytes_atomic_failed_replace_preserves_target_and_cleans_temporary_file(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify atomic byte replacement propagates failure without torn or orphan files.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    target_path = tmp_path / "voice.wav"
+    target_path.write_bytes(b"RIFF-before")
+    expected_error = PermissionError("replace failed")
+
+    def _raise_replace_error(source_path: Path, destination_path: Path) -> None:
+        """
+        @brief      Simulate a platform-level byte replacement failure.
+        @param[in]  source_path Temporary source path passed to replacement.
+        @param[in]  destination_path Final destination path passed to replacement.
+        @return     None.
+        @exception  PermissionError Always raised to simulate failed replacement.
+        """
+        _ = source_path
+        _ = destination_path
+        raise expected_error
+
+    monkeypatch.setattr(persistence_service.os, "replace", _raise_replace_error)
+
+    with pytest.raises(PermissionError, match="replace failed") as error_info:
+        persistence_service.write_bytes_atomic(target_path, b"RIFF-after")
+
+    assert error_info.value is expected_error
+    assert target_path.read_bytes() == b"RIFF-before"
+    assert list(tmp_path.glob(".voice.wav.*.tmp")) == []
+
+
 # END OF FILE

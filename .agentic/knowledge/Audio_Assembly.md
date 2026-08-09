@@ -31,6 +31,11 @@ The assembly service loads validated block WAVs, applies configured composition/
 
 ## 6. Data Contracts
 
+- `default_audio_assembly_settings()` and
+  `normalize_audio_assembly_settings()` are the public domain-owned settings
+  contract used by Audio Assembly and every project-manifest build, validation,
+  save/load, and repair path; local workspace imports avoid the reverse-service
+  import cycle (`REQ-FUNC-4cc6cf8c`).
 - Outputs and referenced inputs remain project-relative and ordered by block identity; state records completed outputs, durations and resumable progress.
 - Every newly persisted report records one UTC ISO `started_at` for the logical
   run and a nullable `completed_at`; compact state carries the same start as

@@ -737,6 +737,19 @@ def test_audio_blocks_generation_checkpoints_a_split_block_without_error(monkeyp
     long_narration = " ".join(f"Sentence number {index} of the long narration block." for index in range(1, 21))
     speech_blocks[0]["text"] = long_narration
     _write_speech_blocks_fixture_document(project_root, speech_blocks)
+    atomic_write_paths = []
+
+    def _capture_atomic_write(target_path, payload) -> None:
+        """
+        @brief      Capture and perform one split-part atomic byte write.
+        @param[in]  target_path Final generated WAV path.
+        @param[in]  payload Complete validated WAV payload.
+        @return     None.
+        """
+        atomic_write_paths.append(target_path)
+        target_path.write_bytes(payload)
+
+    monkeypatch.setattr(audio_blocks_service, "write_bytes_atomic", _capture_atomic_write)
 
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
@@ -789,6 +802,7 @@ def test_audio_blocks_generation_checkpoints_a_split_block_without_error(monkeyp
     assert int(split_block["split_part_count"]) > 1, "the long block must actually exercise the split path"
     assert split_block["generated"] is True
     assert report["generated_block_count"] == len(audio_blocks)
+    assert any(path.parent.name == "parts" for path in atomic_write_paths)
 
 
 def test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_in_order(
@@ -2107,6 +2121,19 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
         {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Rain ready."}},
     ]
     audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice")]
+    atomic_write_paths = []
+
+    def _capture_atomic_write(target_path, payload) -> None:
+        """
+        @brief      Capture and perform one complete generated Audio Blocks WAV write.
+        @param[in]  target_path Final generated WAV path.
+        @param[in]  payload Complete validated WAV payload.
+        @return     None.
+        """
+        atomic_write_paths.append(target_path)
+        target_path.write_bytes(payload)
+
+    monkeypatch.setattr(audio_blocks_service, "write_bytes_atomic", _capture_atomic_write)
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -2163,6 +2190,11 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
     assert generation_order == ["tts", "tts", "load:StableAudioOpen", "sound"]
     assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
     assert ambience_block["audio_relative_path"]
+    assert [path.name for path in atomic_write_paths] == [
+        "0001-000001.wav",
+        "0001-000002.wav",
+        "0001-000003.wav",
+    ]
 
 
 def test_audio_blocks_service_projects_only_real_scene_ambience_wav_ownership(tmp_path) -> None:

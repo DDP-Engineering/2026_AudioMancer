@@ -71,9 +71,14 @@ when the reset makes them inapplicable. `import_service.import_source`
 validates and copies the selected source through a same-project temporary file,
 atomically promotes it to a collision-safe non-artifact name, removes only a
 safely resolved previous project copy after the copy succeeds, and returns the
-manifest-ready source record. Reserved root-artifact names come from Operation
-Orchestration's central ownership registry. `persistence_service` provides the
-atomic write primitive used by manifest persistence.
+  manifest-ready source record. Reserved root-artifact names come from Operation
+  Orchestration's central ownership registry. `persistence_service` provides
+  public atomic replacement primitives for text, JSON, and complete byte
+  payloads. Character Voices, Narrator, and Audio Blocks route generated-WAV
+  byte publication through `write_bytes_atomic`, which creates parents, fsyncs
+  the temporary payload, preserves an existing complete target on failure,
+  removes its owned temporary file, and propagates the original `OSError`
+  (`REQ-REL-ee8f9ed0`).
 
 For replacement, `HomeUiController` registers the copied source in the pending
 manifest, calls `text_extraction_service.reset_extraction_and_downstream`,
@@ -184,6 +189,12 @@ audio-assembly settings, and notes. `source_document` contains
 `size_bytes`. Compact operation summaries contain `status`, progress values,
 `mode`, and `warning_count`; detailed checkpoints and outputs remain in their
 domain artifacts.
+
+Audio Assembly owns the public settings defaults and normalization rules.
+Project manifest creation, validation, saving/loading, and repair call those
+exact functions through local imports, retaining one set of bounds and invalid
+input behavior without introducing the existing reverse-service import cycle
+(`REQ-FUNC-4cc6cf8c`).
 
 `current_stage` is the highest workflow milestone the project has reached, not a
 cursor for where the operator currently is. `sync_manifest_operation_summary`

@@ -201,6 +201,51 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     assert not list(project_root.glob("audio_narator_*.json"))
 
 
+def test_narrator_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify generated narrator sample WAV bytes use the public atomic writer.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorAtomicBytes", tmp_path)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Atomic Voice",
+        "English",
+        "Warm prompt.",
+        "Preview text.",
+    )
+    observed_writes: list[tuple[Path, bytes]] = []
+
+    def _capture_byte_write(target_path, payload) -> None:
+        """
+        @brief      Capture and perform one narrator atomic byte persistence request.
+        @param[in]  target_path Final sample path.
+        @param[in]  payload Complete WAV payload.
+        @return     None.
+        """
+        resolved_path = Path(target_path)
+        observed_writes.append((resolved_path, bytes(payload)))
+        resolved_path.write_bytes(payload)
+
+    monkeypatch.setattr(narrator_definition_service, "write_bytes_atomic", _capture_byte_write)
+
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        profile,
+        "Preview text.",
+        {"generation_mode": "definition", "source_model_id": "qwen-designer", "language": "en"},
+        "Narrator sample ready.",
+        b"RIFF-narrator",
+    )
+
+    assert observed_writes == [
+        (project_root / f"audio_narator_{profile['profile_id']}.wav", b"RIFF-narrator")
+    ]
+
+
 def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp_path) -> None:
     """
     @brief      Verify imported narrator samples persist audio, transcript, and selected metadata.

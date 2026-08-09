@@ -49,6 +49,7 @@ from audiomancer.services.operation_runtime_service import (
 from audiomancer.services.operation_runtime_service import (
     optional_string as _optional_string,
 )
+from audiomancer.services.persistence_service import write_bytes_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -1932,7 +1933,7 @@ def _generate_audio_block(
         )
         _validate_wav_bytes(audio_bytes)
         if len(split_plan["parts"]) == 1:
-            audio_path.write_bytes(audio_bytes)
+            write_bytes_atomic(audio_path, audio_bytes)
         else:
             part_path = _audio_part_artifact_path(
                 project_root,
@@ -1940,7 +1941,7 @@ def _generate_audio_block(
                 part_index,
             )
             part_path.parent.mkdir(parents=True, exist_ok=True)
-            part_path.write_bytes(audio_bytes)
+            write_bytes_atomic(part_path, audio_bytes)
             part_paths.append(part_path)
         runtime_result_summary = str(final_result.get("summary", "")).strip()
         if len(split_plan["parts"]) > 1 and callable(checkpoint_callback):
@@ -2068,7 +2069,7 @@ def _generate_scene_ambience_audio_block(
         timeout_seconds=timeout_seconds,
     )
     _validate_wav_bytes(audio_bytes)
-    audio_path.write_bytes(audio_bytes)
+    write_bytes_atomic(audio_path, audio_bytes)
     generated_at = _utc_now_iso()
     _AUDIO_BLOCKS_LOGGER.info(
         "Generated Scene Ambience audio block chunk_id=%s sequence_index=%s audio_path=%s",

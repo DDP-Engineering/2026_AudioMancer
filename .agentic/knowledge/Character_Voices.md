@@ -28,6 +28,9 @@ batch generation, and preview signals.
   the page and manifest before presenting cancellation status.
 - `REQ-UX-1e55ab3b` — valid edit mode keeps Save reachable and emits unchanged
   prompt and preview text through the established save path.
+- `REQ-REL-ee8f9ed0` — generated, imported, and narrator-copied sample WAV
+  bytes publish through the shared atomic persistence contract without changing
+  sample metadata ownership or cancellation behavior.
 - Narrator targets are preview-only; character targets retain stable IDs across
   character renames and store sample metadata with their project-local WAVs.
 - Readiness requires the selected narrator WAV and metadata plus every character
