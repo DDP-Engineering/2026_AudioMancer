@@ -16,6 +16,7 @@
 # IMPORTS
 
 import json
+from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, operation_runtime_service, project_workspace_service
@@ -310,6 +311,266 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
+
+
+def test_reset_operation_data_deletes_only_character_discovery_ai_logs(tmp_path) -> None:
+    """
+    @brief      Verify Character Discovery reset removes both owned AI-log token families only.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("ResetCharacterLogs", tmp_path)
+    current_log_path = project_root / "log_ai_character_discovery_current.log"
+    historical_log_path = project_root / "log_ai_characters_historical.log"
+    unrelated_log_path = project_root / "log_ai_translation_unrelated.log"
+    for log_path in (current_log_path, historical_log_path, unrelated_log_path):
+        log_path.write_text("transaction", encoding="utf-8")
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "character_discovery",
+        include_current=True,
+    )
+
+    assert not current_log_path.exists()
+    assert not historical_log_path.exists()
+    assert unrelated_log_path.is_file()
+
+
+def test_reset_operation_data_deletes_referenced_character_samples_before_targets_document(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify Character Voices reset removes every owned sample before its metadata document.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("ResetCharacterSamples", tmp_path)
+    generated_sample_path = project_root / "audio_alice.wav"
+    imported_sample_path = project_root / "imported_bob.wav"
+    generated_sample_path.write_bytes(b"RIFF-generated")
+    imported_sample_path.write_bytes(b"RIFF-imported")
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    targets_path.write_text(
+        json.dumps(
+            [
+                {
+                    "target_id": "character_alice",
+                    "target_kind": "character",
+                    "sample_audio_path": generated_sample_path.name,
+                    "sample_metadata": {"sample_source": "voice_designer"},
+                },
+                {
+                    "target_id": "character_bob",
+                    "target_kind": "character",
+                    "sample_audio_path": imported_sample_path.name,
+                    "sample_metadata": {"sample_source": "imported_sample"},
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    original_unlink = Path.unlink
+
+    def unlink_with_order_assertion(path: Path, *args, **kwargs) -> None:
+        """
+        @brief      Assert samples are absent before the targets document is removed.
+        @param[in]  path Path selected for deletion.
+        @return     None.
+        @exception  AssertionError Raised when reset deletes metadata first.
+        """
+        if path == targets_path:
+            assert not generated_sample_path.exists()
+            assert not imported_sample_path.exists()
+        original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", unlink_with_order_assertion)
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "character_voices",
+        include_current=True,
+    )
+
+    assert not targets_path.exists()
+    assert not generated_sample_path.exists()
+    assert not imported_sample_path.exists()
+
+
+def test_character_discovery_reset_preserves_narrator_and_deletes_character_samples(tmp_path) -> None:
+    """
+    @brief      Verify narrator-preserving discovery reset still clears downstream character samples.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("ResetDiscoverySamples", tmp_path)
+    narrator_definition_service.ensure_narrator_voice_document(project_root)
+    narrator_sample_path = project_root / "audio_narator_preserved.wav"
+    character_sample_path = project_root / "audio_character_removed.wav"
+    narrator_sample_path.write_bytes(b"RIFF-narrator")
+    character_sample_path.write_bytes(b"RIFF-character")
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    targets_path.write_text(
+        json.dumps(
+            [
+                {
+                    "target_id": "narrator",
+                    "target_kind": "narrator",
+                    "sample_audio_path": narrator_sample_path.name,
+                    "sample_metadata": {"sample_source": "narrator_definition"},
+                },
+                {
+                    "target_id": "character_alice",
+                    "target_kind": "character",
+                    "sample_audio_path": character_sample_path.name,
+                    "sample_metadata": {"sample_source": "voice_designer"},
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "character_discovery",
+        include_current=True,
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+    )
+
+    assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
+    assert narrator_sample_path.is_file()
+    assert not targets_path.exists()
+    assert not character_sample_path.exists()
+
+
+def test_character_voice_sample_reset_preserves_unowned_and_unsafe_paths(tmp_path) -> None:
+    """
+    @brief      Verify Character Voices reset never broad-deletes or follows unsafe sample references.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("SafeCharacterSampleReset", tmp_path)
+    unreferenced_wav_path = project_root / "audio_unreferenced.wav"
+    unrelated_root_wav_path = project_root / "project_theme.wav"
+    referenced_non_wav_path = project_root / "character_notes.txt"
+    referenced_directory_path = project_root / "audio_directory.wav"
+    traversal_target_path = tmp_path / "traversal_target.wav"
+    absolute_target_path = tmp_path / "absolute_target.wav"
+    for file_path in (
+        unreferenced_wav_path,
+        unrelated_root_wav_path,
+        referenced_non_wav_path,
+        traversal_target_path,
+        absolute_target_path,
+    ):
+        file_path.write_bytes(b"keep")
+    referenced_directory_path.mkdir()
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    targets_path.write_text(
+        json.dumps(
+            [
+                {
+                    "target_id": "character_traversal",
+                    "target_kind": "character",
+                    "sample_audio_path": "../traversal_target.wav",
+                },
+                {
+                    "target_id": "character_absolute",
+                    "target_kind": "character",
+                    "sample_audio_path": str(absolute_target_path.resolve()),
+                },
+                {
+                    "target_id": "character_non_wav",
+                    "target_kind": "character",
+                    "sample_audio_path": referenced_non_wav_path.name,
+                },
+                {
+                    "target_id": "character_directory",
+                    "target_kind": "character",
+                    "sample_audio_path": referenced_directory_path.name,
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "character_voices",
+        include_current=True,
+    )
+
+    assert unreferenced_wav_path.is_file()
+    assert unrelated_root_wav_path.is_file()
+    assert referenced_non_wav_path.is_file()
+    assert referenced_directory_path.is_dir()
+    assert traversal_target_path.is_file()
+    assert absolute_target_path.is_file()
+
+
+def test_character_voice_sample_reset_tolerates_non_utf8_targets_document(tmp_path) -> None:
+    """
+    @brief      Verify corrupt non-UTF-8 metadata cannot block Character Voices reset.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("CorruptCharacterSampleReset", tmp_path)
+    unrelated_wav_path = project_root / "audio_unrelated.wav"
+    unrelated_wav_path.write_bytes(b"RIFF-unrelated")
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    targets_path.write_bytes(b"\xff\xfe\x00")
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "character_voices",
+        include_current=True,
+    )
+
+    assert not targets_path.exists()
+    assert unrelated_wav_path.is_file()
+
+
+def test_reset_operation_data_preserves_character_voice_document_and_samples(tmp_path) -> None:
+    """
+    @brief      Verify explicit Character Voices preservation retains its metadata and samples.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = project_workspace_service.create_project("PreserveCharacterSamples", tmp_path)
+    character_sample_path = project_root / "audio_character_preserved.wav"
+    character_sample_path.write_bytes(b"RIFF-character")
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    targets_path.write_text(
+        json.dumps(
+            [
+                {
+                    "target_id": "character_alice",
+                    "target_kind": "character",
+                    "sample_audio_path": character_sample_path.name,
+                    "sample_metadata": {"sample_source": "voice_designer"},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "character_discovery",
+        include_current=True,
+        preserve_operation_kinds=("character_voices",),
+    )
+
+    assert targets_path.is_file()
+    assert character_sample_path.is_file()
 
 
 def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -> None:

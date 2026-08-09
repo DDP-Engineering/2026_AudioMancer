@@ -110,6 +110,7 @@ _OPERATION_ARTIFACT_GLOBS = {
 
 # @brief AI log tokens that differ from their owning operation kind.
 _OPERATION_AI_LOG_TOKENS = {
+    "character_discovery": ("character_discovery", "characters"),
     "narrator_definition": ("narrator_profiles",),
 }
 
@@ -630,6 +631,8 @@ def reset_operation_data(
     for selected_kind in operation_kinds:
         if selected_kind in preserved_operation_kinds:
             continue
+        if selected_kind == "character_voices":
+            _delete_character_voice_samples(root_path)
         for file_name in _OPERATION_ARTIFACT_FILE_NAMES.get(selected_kind, ()):
             artifact_path = root_path / file_name
             if artifact_path.is_file():
@@ -655,6 +658,41 @@ def reset_operation_data(
                 for child in audiobook_root.rglob("*"):
                     if child.is_file():
                         child.unlink()
+
+
+def _delete_character_voice_samples(project_root: Path) -> None:
+    """
+    @brief      Delete regular Character Voices sample WAVs proven by persisted target metadata.
+    @param[in]  project_root Active project root.
+    @return     None.
+    @exception  None
+    """
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    try:
+        targets_payload = load_optional_json_artifact(targets_path)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return
+    if not isinstance(targets_payload, list):
+        return
+    resolved_project_root = project_root.resolve()
+    for target_payload in targets_payload:
+        if not isinstance(target_payload, dict):
+            continue
+        if str(target_payload.get("target_kind", "")).strip() != "character":
+            continue
+        sample_relative_path = optional_string(target_payload.get("sample_audio_path"))
+        if not sample_relative_path:
+            continue
+        try:
+            safe_relative_path = validate_project_relative_path(sample_relative_path)
+        except (OSError, ValueError):
+            continue
+        unresolved_sample_path = resolved_project_root / safe_relative_path
+        sample_path = try_resolve_project_relative_path(resolved_project_root, safe_relative_path)
+        if sample_path is None or sample_path != unresolved_sample_path:
+            continue
+        if sample_path.suffix.lower() == ".wav" and sample_path.is_file():
+            sample_path.unlink()
 
 
 def _normalized_operation_kind_set(operation_kinds: Iterable[str] | None) -> frozenset[str]:

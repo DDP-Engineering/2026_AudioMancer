@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Reset now removes Character Discovery AI logs from both current and older
+  projects and deletes only Character Voices sample WAVs proven by saved target
+  metadata, preserving narrator audio, unrelated WAVs, unsafe paths, and
+  explicitly preserved voice data.
 - Character Voices now waits for real persisted voice targets and samples
   before marking the step complete, reports sample-import filesystem failures
   without closing the application, reflects samples completed before a batch
