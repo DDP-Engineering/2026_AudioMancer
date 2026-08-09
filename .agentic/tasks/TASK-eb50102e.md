@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-eb50102e — Harden Audio Assembly inputs and classic WAV outputs
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-7c32fd5e, REQ-REL-607c7bfb, REQ-REL-f3f965de
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report prepared for the delivery commit; approved outcome is guarded local integration without push
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] close-out: `stage: done` set and committed only after the outcome succeeded
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section written in user language; this task is not a release
 
@@ -84,6 +84,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Human reran 12 key selectors successfully and differentially verified that representative actual resampling outputs never exceed the conservative planned-frame bound.
 - 2026-08-09 deliver: Approved outcome is one delivery commit, one journal-only closeout commit, and guarded local fast-forward integration into `AudioMancer_V2` with all six user-owned dirty paths preserved and no push.
 - 2026-08-09 deliver: Corrected generated report accounting to task base `a500bf5` because the configured repository merge base includes unrelated historical changes.
+- 2026-08-09 deliver: Delivery commit `e3ccf2e1b90022c7b1f789a2e1f7915fa81d6bec` succeeded with implementation, tests, requirements, spec, knowledge, Changelog, journal, and report.
+- 2026-08-09 close: Marked the journal done in its dedicated closeout commit before the separately requested guarded local fast-forward integration.
 
 ## Delivery report (2026-08-09)
 
