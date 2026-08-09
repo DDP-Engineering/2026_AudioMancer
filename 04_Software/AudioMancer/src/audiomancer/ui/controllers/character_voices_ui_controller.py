@@ -154,6 +154,13 @@ def handle_import_sample_requested(window: "MainWindow", target_id: str) -> None
     except ValueError as error:
         _show_voice_sample_import_error(window, error, current_language)
         return
+    except OSError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
     window._character_voices_inspected_target_id = target_id
     window.show_project_state(
         window._current_project_root,
@@ -496,6 +503,12 @@ def _handle_generate_sample_cancelled(window: "MainWindow", message: str, curren
     """
     _ = message
     window._settings_payload = settings_service.load_settings()
+    if window._current_project_root is not None:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+    _sync_manifest_stage(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.operation_cancelled", current_language),
@@ -897,7 +910,9 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
     current_stage_rank = config.PROJECT_WORKFLOW_STAGES.index(current_stage)
     narrator_stage_rank = config.PROJECT_WORKFLOW_STAGES.index("narrator_definition_ready")
     voice_targets = list(window._character_voices_page._targets)  # noqa: SLF001
-    if not voice_targets and (window._current_project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file():
+    if not voice_targets:
+        if not (window._current_project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file():
+            return
         voice_targets = character_voices_service.load_voice_plan(window._current_project_root)
     desired_stage = (
         "character_voices_ready"

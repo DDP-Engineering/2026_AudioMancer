@@ -442,7 +442,7 @@ class CharacterVoicesPage(QWidget):
             and self._can_edit_prompt
         )
         self._save_prompt_button.setEnabled(
-            self._project_active and not self._busy and not self._preview_active and self._edit_mode and self._dirty
+            self._project_active and not self._busy and not self._preview_active and self._edit_mode
         )
         self._generate_sample_button.setEnabled(
             self._project_active
