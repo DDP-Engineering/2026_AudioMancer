@@ -102,8 +102,6 @@ _speaker_match_key = speech_blocks_normalization_service.speaker_match_key
 _speech_block_id = speech_blocks_normalization_service.speech_block_id
 _speech_block_warning_reason = speech_blocks_normalization_service.speech_block_warning_reason
 _warning_records_from_blocks = speech_blocks_report_state_service.warning_records_from_blocks
-_build_atomic_speech_units = speech_blocks_text_split_service.build_atomic_speech_units
-_build_source_spans = speech_blocks_text_split_service.build_source_spans
 _split_text_for_ai_context_budget = speech_blocks_text_split_service.split_text_for_ai_context_budget
 
 SpeechBlockPayload = dict[str, object]
@@ -1716,11 +1714,6 @@ def _chunk_user_prompt(
             "source_language": narrator_definition_service.narrator_language_label(source_language),
             "chunk_id": str(source_chunk.get("chunk_id", "")),
             "chunk_text": str(source_chunk.get("text", "")),
-            "atomic_units_json": json.dumps(
-                _compact_atomic_units_for_prompt(source_chunk, speaker_catalog),
-                indent=2,
-                ensure_ascii=False,
-            ),
             "source_context_json": json.dumps(
                 _compact_source_context_for_prompt(source_chunk),
                 indent=2,
@@ -2063,7 +2056,6 @@ def _generate_budgeted_chunk_blocks(
     chunk_segments = _budgeted_source_chunk_segments(
         source_chunk,
         budget_metadata,
-        attach_source_spans=False,
         source_token_cap=_SPEECH_BLOCKS_DIRECT_SOURCE_TOKEN_CAP,
     )
     combined_blocks: list[SpeechBlockPayload] = []
@@ -2287,84 +2279,6 @@ def _direct_block_response_schema() -> dict[str, object]:
             }
         },
     }
-
-
-def _compact_atomic_units_for_prompt(
-    source_chunk: dict[str, object],
-    speaker_catalog: dict[str, dict[str, object]],
-    include_text: bool = True,
-) -> list[dict[str, object]]:
-    """
-    @brief      Build atomic-unit prompt rows with exact local text previews and speaker hints.
-    @param[in]  source_chunk Source chunk or AI-budget segment with deterministic atomic units.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @param[in]  include_text True when prompt rows may include source text previews.
-    @return     Compact atomic-unit rows.
-    @exception  None
-    """
-    raw_units = [unit for unit in source_chunk.get("atomic_units", []) if isinstance(unit, dict)]
-    compact_units: list[dict[str, object]] = []
-    for index, raw_unit in enumerate(raw_units):
-        if not _is_selectable_atomic_prompt_unit(raw_unit):
-            continue
-        hint_text = " ".join(
-            str(unit.get("text", ""))
-            for unit in (
-                raw_units[index - 1] if index > 0 else {},
-                raw_unit,
-                raw_units[index + 1] if index + 1 < len(raw_units) else {},
-            )
-            if isinstance(unit, dict)
-        )
-        compact_unit = {
-            "atomic_unit_id": str(raw_unit.get("atomic_unit_id", raw_unit.get("unit_id", ""))).strip(),
-            "source_span_id": str(raw_unit.get("source_span_id", "")).strip(),
-            "structural_kind": str(raw_unit.get("structural_kind", "")).strip(),
-            "start_offset": int(raw_unit.get("start_offset", 0) or 0),
-            "end_offset": int(raw_unit.get("end_offset", 0) or 0),
-            "speaker_hint_ids": _speaker_hint_ids_for_text(hint_text, speaker_catalog),
-        }
-        if include_text:
-            compact_unit["text"] = str(raw_unit.get("text", ""))
-        compact_units.append(compact_unit)
-    return compact_units
-
-
-def _is_selectable_atomic_prompt_unit(raw_unit: dict[str, object]) -> bool:
-    """
-    @brief      Decide whether an atomic unit should be selectable by the AI prompt.
-    @param[in]  raw_unit Atomic-unit payload.
-    @return     True for speakable units; False for whitespace separators.
-    @exception  None
-    """
-    structural_kind = str(raw_unit.get("structural_kind", "")).strip().casefold()
-    unit_text = str(raw_unit.get("text", ""))
-    return structural_kind != "separator" and bool(unit_text.strip())
-
-
-def _speaker_hint_ids_for_text(
-    text: str,
-    speaker_catalog: dict[str, dict[str, object]],
-) -> list[str]:
-    """
-    @brief      Return speaker IDs whose display name or aliases appear in local attribution text.
-    @param[in]  text Local atomic-unit context text.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @return     Ordered matching speaker IDs.
-    @exception  None
-    """
-    normalized_text = _speaker_match_key(text)
-    hint_ids: list[str] = []
-    for speaker_id, speaker_entry in speaker_catalog.items():
-        if speaker_id == _NARRATOR_SPEAKER_ID:
-            continue
-        candidate_names = [
-            str(speaker_entry.get("display_name", "")),
-            *[str(alias) for alias in speaker_entry.get("aliases", []) if str(alias).strip()],
-        ]
-        if any(_speaker_match_key(candidate_name) in normalized_text for candidate_name in candidate_names):
-            hint_ids.append(str(speaker_id))
-    return hint_ids
 
 
 def _compact_source_context_for_prompt(source_chunk: dict[str, object]) -> dict[str, object]:
@@ -2648,7 +2562,6 @@ def _insert_scene_ambience_blocks(
 def _budgeted_source_chunk_segments(
     source_chunk: dict[str, object],
     budget_metadata: BudgetMetadataPayload,
-    attach_source_spans: bool = True,
     source_token_cap: int | None = None,
 ) -> list[dict[str, object]]:
     """
@@ -2664,31 +2577,8 @@ def _budgeted_source_chunk_segments(
     source_text = str(source_chunk.get("text", ""))
     text_segments = _split_text_for_ai_context_budget(source_text, text_budget_tokens)
     if not text_segments:
-        return [_source_chunk_with_source_spans(source_chunk) if attach_source_spans else dict(source_chunk)]
-    return [
-        (
-            _source_chunk_with_source_spans({**dict(source_chunk), "text": text_segment})
-            if attach_source_spans
-            else {**dict(source_chunk), "text": text_segment}
-        )
-        for text_segment in text_segments
-    ]
-
-
-def _source_chunk_with_source_spans(source_chunk: dict[str, object]) -> dict[str, object]:
-    """
-    @brief      Attach deterministic source spans to one Speech Blocks request chunk.
-    @param[in]  source_chunk Source chunk or AI-budget segment payload.
-    @return     Source chunk payload with local `source_spans` for model selection.
-    @exception  None
-    """
-    chunk_payload = dict(source_chunk)
-    chunk_payload["source_spans"] = _build_source_spans(str(chunk_payload.get("text", "")))
-    chunk_payload["atomic_units"] = _build_atomic_speech_units(
-        str(chunk_payload.get("text", "")),
-        list(chunk_payload.get("source_spans", [])),
-    )
-    return chunk_payload
+        return [dict(source_chunk)]
+    return [{**dict(source_chunk), "text": text_segment} for text_segment in text_segments]
 
 
 def _source_chunk_with_attribution_context(

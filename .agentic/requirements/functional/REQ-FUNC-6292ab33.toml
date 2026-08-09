@@ -18,7 +18,7 @@ title = "Preserve dash-led dialogue coverage"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
-status = "active"
+status = "retired"
 
 # Self-contained prose: a reader with no other context must be able to
 # understand and check it. No ticket numbers, no run IDs, no references
@@ -39,22 +39,20 @@ status = "active"
 # plainly is better plainly.
 requirement = """
 When a dash-led paragraph begins with an unspaced dialogue turn and contains later spaced turn markers, Speech Blocks shall preserve contiguous dialogue-span and atomic-unit coverage from source offset zero through the paragraph end.
+
+Retired 2026-08-09: the span and atomic-unit selection generator is unreachable from the current direct-block pipeline.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "Focused text-split tests build source spans and atomic units for unspaced and mixed-spacing dash turns, then prove exact offsets, attribution kinds, contiguous coverage, and character-for-character reconstruction without fallback."
+verification = "Inspection: confirm the retired source-span and atomic-unit builders and their self-tests are absent from the current Speech Blocks implementation."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
-]
+affected_paths = []
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_unspaced_dash_opener_preserves_contiguous_span_and_atomic_coverage",
-]
+linked_tests = []
 
 # --- optional below this line ---
 

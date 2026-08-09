@@ -1,25 +1,22 @@
 schema = 1
 id = "REQ-FUNC-678f8849"
 title = "Atomic speech-unit building shall split many elements inside one span"
-status = "active"
+status = "retired"
 
 requirement = """
 Atomic speech-unit building shall split many elements inside one span and classify multilingual attribution.
+
+Retired 2026-08-09: production generation no longer builds or selects atomic speech units.
 """
 
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Inspection: confirm the retired atomic-unit builder and its self-tests are absent from the current Speech Blocks implementation."
 
-affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
-]
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_splits_many_elements_inside_one_span",
-  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_classifies_multilingual_attribution_patterns",
-]
+affected_paths = []
+linked_tests = []
 
 priority = "high"
 rationale = """
 Units must isolate elements and attribution correctly across languages.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-09

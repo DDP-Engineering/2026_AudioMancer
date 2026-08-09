@@ -61,7 +61,9 @@ affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
   "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
 ]
@@ -71,6 +73,8 @@ affected_paths = [
 linked_tests = [
   "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_ignores_noncanonical_top_level_operation_usage",
   "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_report_state_signatures_exclude_discarded_parameters",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_retired_span_and_atomic_generation_machinery_is_absent",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_retired_span_warning_tokens_remain_projectable",
 ]
 
 # --- optional below this line ---

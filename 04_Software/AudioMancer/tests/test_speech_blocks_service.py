@@ -17,6 +17,7 @@
 
 # IMPORTS
 
+import inspect
 import json
 from pathlib import Path
 
@@ -30,11 +31,115 @@ from audiomancer.services import (
     chunking_document_service,
     project_workspace_service,
     prompt_template_service,
+    speech_blocks_normalization_service,
     speech_blocks_service,
+    speech_blocks_text_split_service,
 )
 from chunking_test_support import build_chunking_document
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_retired_span_and_atomic_generation_machinery_is_absent() -> None:
+    """
+    @brief      Verify the retired span/atomic generation cluster is not shipped.
+    @return     None.
+    @exception  None
+    """
+    retired_normalization_names = {
+        "SourceSpan",
+        "AtomicSpeechUnit",
+        "SpeechBlockModelSelection",
+        "SpeechBlockSelectionValidationResult",
+        "source_span_selection_contract_requested",
+        "normalize_source_span_selection_chunk_blocks",
+        "source_span_response_requires_confidence",
+        "source_span_candidate_blocks",
+        "parse_source_spans",
+        "parse_atomic_units",
+        "validate_atomic_unit_model_selections",
+        "selectable_atomic_unit",
+        "validate_source_span_model_selections",
+        "speech_block_model_selection",
+        "strict_speaker_entry",
+        "source_span_selection_fallback",
+    }
+    retired_text_split_names = {
+        "_CANDIDATE_KIND_DIALOGUE",
+        "_CANDIDATE_KIND_NARRATION",
+        "_CANDIDATE_KIND_ATTRIBUTION",
+        "_CANDIDATE_KIND_MIXED",
+        "_ATOMIC_KIND_DIALOGUE",
+        "_ATOMIC_KIND_ATTRIBUTION",
+        "_ATOMIC_KIND_NARRATION",
+        "_ATOMIC_KIND_SEPARATOR",
+        "_ATOMIC_KIND_MIXED",
+        "_DIALOGUE_DASHES",
+        "_DIALOGUE_TRAILING_PUNCTUATION",
+        "_MAX_NARRATION_SENTENCE_SOURCE_SPANS",
+        "_ATTRIBUTION_VERBS",
+        "build_source_spans",
+        "build_atomic_speech_units",
+        "_paragraph_ranges",
+        "_atomic_ranges",
+        "_span_is_dash_led_dialogue",
+        "_dash_atomic_ranges",
+        "_dash_dialogue_attribution_split_offset",
+        "_atomic_quote_dialogue_ranges",
+        "_quoted_range_looks_like_dialogue",
+        "_local_quote_context_before",
+        "_local_quote_context_after",
+        "_atomic_context_kind",
+        "_coalesce_atomic_ranges",
+        "_looks_like_attribution",
+        "_append_atomic_unit",
+        "_renumber_atomic_units",
+        "_coalesce_atomic_units",
+        "_is_dash_dialogue_paragraph",
+        "_is_dialogue_dash_character",
+        "_append_dash_dialogue_source_spans",
+        "_dash_dialogue_ranges",
+        "_dash_marker_is_dialogue_boundary",
+        "_dash_dialogue_has_inline_attribution",
+        "_dash_dialogue_span_looks_like_attribution",
+        "_append_narration_source_spans",
+        "_quote_dialogue_ranges",
+        "_quote_opener_is_plausible",
+        "_extend_through_trailing_dialogue_punctuation",
+        "_candidate_kind_for_context_span",
+        "_append_source_span",
+        "_renumber_source_spans",
+    }
+    retired_service_names = {
+        "_build_source_spans",
+        "_build_atomic_speech_units",
+        "_compact_atomic_units_for_prompt",
+        "_is_selectable_atomic_prompt_unit",
+        "_speaker_hint_ids_for_text",
+        "_source_chunk_with_source_spans",
+    }
+
+    assert retired_normalization_names.isdisjoint(vars(speech_blocks_normalization_service))
+    assert retired_text_split_names.isdisjoint(vars(speech_blocks_text_split_service))
+    assert retired_service_names.isdisjoint(vars(speech_blocks_service))
+    assert "attach_source_spans" not in inspect.signature(
+        speech_blocks_service._budgeted_source_chunk_segments  # noqa: SLF001
+    ).parameters
+    assert "atomic_units_json" not in inspect.getsource(speech_blocks_service._chunk_user_prompt)  # noqa: SLF001
+
+
+@pytest.mark.parametrize("warning_flag", ["source_span_selection_invalid", "atomic_unit_selection_invalid"])
+def test_retired_span_warning_tokens_remain_projectable(warning_flag: str) -> None:
+    """
+    @brief      Verify persisted legacy warning tokens keep readable operator text.
+    @param[in]  warning_flag Retired generation warning token to project.
+    @return     None.
+    @exception  None
+    """
+    warning_reason = speech_blocks_service._speech_block_warning_reason(warning_flag)  # noqa: SLF001
+
+    assert warning_reason != warning_flag
+    assert "fell back to narrator" in warning_reason
 
 
 def test_resolve_source_chunks_uses_original_when_no_translation(tmp_path) -> None:
@@ -1216,6 +1321,7 @@ def test_speech_blocks_resume_restarts_previous_full_cast_state(tmp_path) -> Non
     ("response_contract", "expected_next_chunk_index"),
     [
         ("deterministic_narrator_blocks", 1),
+        ("atomic_unit_selection", 0),
         ("narrator_boundary_ids", 0),
     ],
 )
@@ -1265,7 +1371,8 @@ def test_same_narrator_resume_depends_on_the_recorded_response_contract(
     assert restored == ([], expected_next_chunk_index)
 
 
-def test_incompatible_response_contract_regenerates_without_error(tmp_path) -> None:
+@pytest.mark.parametrize("response_contract", ["atomic_unit_selection", "narrator_boundary_ids"])
+def test_incompatible_response_contract_regenerates_without_error(tmp_path, response_contract: str) -> None:
     """
     @brief      Verify an incompatible response contract regenerates cleanly.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -1281,9 +1388,10 @@ def test_incompatible_response_contract_regenerates_without_error(tmp_path) -> N
     speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
 
     document = speech_blocks_service.load_speech_blocks_document(project_root)
-    document["response_contract"] = "narrator_boundary_ids"
+    document["response_contract"] = response_contract
     document["status"] = "running"
     speech_blocks_service.write_speech_blocks_document(project_root, document)
+    assert speech_blocks_service.load_speech_blocks_document(project_root)["response_contract"] == response_contract
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
 
@@ -2072,176 +2180,8 @@ def test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias() -> None:
     assert len(warnings) == 1
 
 
-def test_normalize_chunk_blocks_reconstructs_text_from_source_span_ids() -> None:
-    """
-    @brief      Verify span selections reconstruct exact source text and ignore model-owned rewrites.
-    @details    Covers SBCON-001, SBCON-003, and REQ-FUNC-040.
-    @return     None.
-    @exception  None
-    """
-    speaker_catalog = {
-        "narrator": _narrator_catalog_entry(),
-        "maria": {
-            "speaker_id": "maria",
-            "speaker_kind": "character",
-            "display_name": "Maria",
-        },
-    }
-    source_chunk = {
-        "chunk_id": "chunk-0001",
-        "text": 'Narration. "Hello."',
-        "source_spans": [
-            {
-                "source_span_id": "s001",
-                "start_offset": 0,
-                "end_offset": 11,
-                "text": "Narration. ",
-            },
-            {
-                "source_span_id": "s002",
-                "start_offset": 11,
-                "end_offset": 19,
-                "text": '"Hello."',
-            },
-        ],
-    }
-
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
-        source_chunk,
-        {
-            "blocks": [
-                {
-                    "source_span_ids": ["s001"],
-                    "speaker_id": "narrator",
-                    "content_kind": "narration",
-                    "confidence": "high",
-                    "source_text": "The model rewrote this narration.",
-                    "text": "The model rewrote this narration.",
-                    "warnings": [],
-                },
-                {
-                    "source_span_ids": ["s002"],
-                    "speaker_id": "maria",
-                    "content_kind": "dialogue",
-                    "confidence": "high",
-                    "source_text": "The model rewrote this dialogue.",
-                    "text": "The model rewrote this dialogue.",
-                    "warnings": [],
-                },
-            ]
-        },
-        speaker_catalog,
-        "en",
-    )
-
-    assert [block["source_text"] for block in blocks] == ["Narration. ", '"Hello."']
-    assert [block["text"] for block in blocks] == ["Narration.", "Hello."]
-    assert [block["speaker_id"] for block in blocks] == ["narrator", "maria"]
-    assert warnings == []
 
 
-@pytest.mark.parametrize(
-    ("model_block", "expected_warning_flag"),
-    [
-        (
-            {
-                "source_span_ids": ["missing-span"],
-                "speaker_id": "maria",
-                "content_kind": "dialogue",
-                "confidence": "high",
-            },
-            "source_span_selection_invalid",
-        ),
-        (
-            {
-                "source_span_ids": ["s002", "s001"],
-                "speaker_id": "maria",
-                "content_kind": "dialogue",
-                "confidence": "high",
-            },
-            "source_span_selection_invalid",
-        ),
-        (
-            {
-                "source_span_ids": ["s001", "s001"],
-                "speaker_id": "maria",
-                "content_kind": "dialogue",
-                "confidence": "high",
-            },
-            "source_span_selection_invalid",
-        ),
-        (
-            {
-                "source_span_ids": [],
-                "speaker_id": "maria",
-                "content_kind": "dialogue",
-                "confidence": "high",
-            },
-            "source_span_selection_invalid",
-        ),
-        (
-            {
-                "source_span_ids": ["s001"],
-                "speaker_id": "unknown_character",
-                "content_kind": "dialogue",
-                "confidence": "high",
-            },
-            "speaker_selection_invalid",
-        ),
-    ],
-)
-def test_normalize_chunk_blocks_rejects_invalid_span_or_speaker_selection(
-    model_block: dict[str, object],
-    expected_warning_flag: str,
-) -> None:
-    """
-    @brief      Verify invalid span or speaker selections do not persist unsafe character blocks.
-    @details    Covers SBCON-002 and REQ-FUNC-040.
-    @param[in]  model_block Model block selection under test.
-    @param[in]  expected_warning_flag Warning flag expected on deterministic fallback.
-    @return     None.
-    @exception  None
-    """
-    speaker_catalog = {
-        "narrator": _narrator_catalog_entry(),
-        "maria": {
-            "speaker_id": "maria",
-            "speaker_kind": "character",
-            "display_name": "Maria",
-        },
-    }
-    source_chunk = {
-        "chunk_id": "chunk-0001",
-        "text": 'Narration. "Hello."',
-        "source_spans": [
-            {
-                "source_span_id": "s001",
-                "start_offset": 0,
-                "end_offset": 11,
-                "text": "Narration. ",
-            },
-            {
-                "source_span_id": "s002",
-                "start_offset": 11,
-                "end_offset": 19,
-                "text": '"Hello."',
-            },
-        ],
-    }
-
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
-        source_chunk,
-        {"blocks": [model_block]},
-        speaker_catalog,
-        "en",
-    )
-
-    assert len(blocks) == 1
-    assert blocks[0]["speaker_id"] == "narrator"
-    assert blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION
-    assert blocks[0]["source_text"] == source_chunk["text"]
-    assert expected_warning_flag in blocks[0]["warning_flags"]
-    assert any(expected_warning_flag in str(warning.get("reason", "")) for warning in warnings)
 
 
 def test_normalize_chunk_blocks_supports_french_guillemets() -> None:
@@ -2841,7 +2781,7 @@ def test_speech_block_book_sort_uses_complete_chunk_number() -> None:
     assert [block["chunk_id"] for block in ordered_blocks] == ["chunk-0001", "chunk-10000", "chunk-10001"]
 
 
-def test_start_generation_preserves_french_dash_and_guillemet_source_spans(monkeypatch, tmp_path) -> None:
+def test_start_generation_preserves_french_dash_and_guillemet_dialogue(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify generation can persist multiple French guillemet and dash Speech Blocks per chunk.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -2880,7 +2820,6 @@ def test_start_generation_preserves_french_dash_and_guillemet_source_spans(monke
                         "warning_flags": [],
                     },
                     {
-                        "source_span_ids": ["s002"],
                         "speaker_id": "narrator",
                         "content_kind": "dialogue",
                         "source_text": "« Bonjour. »",
@@ -3112,14 +3051,12 @@ def test_speech_blocks_production_prompt_contract_matrix(
             "display_name": "Maria",
             "aliases": ["doamna Maria", "pilotul"],
         }
-        source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
-            {
-                "chunk_id": "chunk-contract-0001",
-                "text": 'Contract narration. "Hello there."',
-                "previous_context": "Maria ridica mana inaintea replicii.",
-                "next_context": "Pilotul ii raspunse imediat dupa aceea.",
-            }
-        )
+        source_chunk = {
+            "chunk_id": "chunk-contract-0001",
+            "text": 'Contract narration. "Hello there."',
+            "previous_context": "Maria ridica mana inaintea replicii.",
+            "next_context": "Pilotul ii raspunse imediat dupa aceea.",
+        }
     else:
         source_chunk = {"chunk_id": "chunk-contract-0001", "text": 'Contract narration. "Hello there."'}
 
@@ -3181,12 +3118,10 @@ def test_speech_blocks_prompt_uses_direct_blocks_and_forbids_text_rewrites() -> 
             "aliases": ["Ana"],
         },
     }
-    source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
-        {
-            "chunk_id": "chunk-atomic-0001",
-            "text": '"Come?" Ana asked. "Soon."',
-        }
-    )
+    source_chunk = {
+        "chunk_id": "chunk-direct-0001",
+        "text": '"Come?" Ana asked. "Soon."',
+    }
 
     rendered_system_prompt = prompt_template_service.render_prompt("speech_blocks_system", {})
     rendered_prompt = speech_blocks_service._chunk_user_prompt(  # noqa: SLF001
@@ -3212,219 +3147,6 @@ def test_speech_blocks_prompt_uses_direct_blocks_and_forbids_text_rewrites() -> 
     assert "`source_text`" not in rendered_system_prompt
 
 
-def test_normalize_chunk_blocks_rejects_dialogue_attribution_unit_merge() -> None:
-    """
-    @brief      Verify validation rejects one dialogue block that merges dialogue and attribution units.
-    @details    Covers SB-ATOMIC-003 and REQ-FUNC-052.
-    @return     None.
-    @exception  None
-    """
-    speaker_catalog = {
-        "narrator": _narrator_catalog_entry(),
-        "ana": {
-            "speaker_id": "ana",
-            "speaker_kind": "character",
-            "display_name": "Ana",
-        },
-    }
-    source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
-        {
-            "chunk_id": "chunk-0001",
-            "text": '"Come?" Ana asked. "Soon."',
-        }
-    )
-
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
-        source_chunk,
-        {
-            "blocks": [
-                {
-                    "unit_ids": ["u001", "u002", "u003"],
-                    "speaker_id": "ana",
-                    "content_kind": "dialogue",
-                    "confidence": "high",
-                    "warning_flags": [],
-                }
-            ]
-        },
-        speaker_catalog,
-        "en",
-    )
-
-    assert blocks
-    assert blocks[0]["speaker_id"] == "narrator"
-    assert "atomic_unit_selection_invalid" in blocks[0]["warning_flags"]
-    assert any("attribution" in str(warning["reason"]).casefold() for warning in warnings)
-
-
-def test_normalize_chunk_blocks_accepts_narration_with_non_spoken_quoted_words() -> None:
-    """
-    @brief      Verify narrator emphasis quotes do not force atomic selection fallback.
-    @details    Covers SB-ATOMIC-006 and REQ-FUNC-051.
-    @return     None.
-    @exception  None
-    """
-    source_text = (
-        'Not "our" Emperor, Scytale noted. "Your" Emperor. Irulan is too much the Bene Gesserit to miss that slip.'
-    )
-    speaker_catalog = {"narrator": _narrator_catalog_entry()}
-    source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
-        {
-            "chunk_id": "chunk-0001",
-            "text": source_text,
-        }
-    )
-    selectable_unit_ids = [
-        str(unit["atomic_unit_id"])
-        for unit in source_chunk["atomic_units"]
-        if unit["structural_kind"] != "separator" and str(unit.get("text", "")).strip()
-    ]
-
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
-        source_chunk,
-        {
-            "blocks": [
-                {
-                    "unit_ids": selectable_unit_ids,
-                    "speaker_id": "narrator",
-                    "content_kind": "narration",
-                    "confidence": "high",
-                    "warning_flags": [],
-                }
-            ]
-        },
-        speaker_catalog,
-        "en",
-    )
-
-    assert len(blocks) == 1
-    assert blocks[0]["speaker_id"] == "narrator"
-    assert blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION
-    assert blocks[0]["source_text"] == source_text
-    assert blocks[0]["text"] == source_text
-    assert not blocks[0]["warning_flags"]
-    assert not warnings
-
-
-def test_speech_blocks_direct_prompt_does_not_expose_atomic_separator_units() -> None:
-    """
-    @brief      Verify direct prompts do not expose atomic separator rows.
-    @details    Covers SB-DIRECT-001 and REQ-FUNC-054.
-    @return     None.
-    @exception  None
-    """
-    speaker_catalog = {
-        "narrator": _narrator_catalog_entry(),
-        "ana": {
-            "speaker_id": "ana",
-            "speaker_kind": "character",
-            "display_name": "Ana",
-        },
-    }
-    source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
-        {
-            "chunk_id": "chunk-separator-0001",
-            "text": '"A."\n"B."',
-        }
-    )
-
-    rendered_system_prompt = prompt_template_service.render_prompt("speech_blocks_system", {})
-    rendered_prompt = speech_blocks_service._chunk_user_prompt(  # noqa: SLF001
-        source_chunk,
-        "en",
-        speaker_catalog,
-        voice_assignment_mode="narrator_and_characters",
-        tts_budget={
-            "model_token_budget": 2048,
-            "safe_word_count": 300,
-            "model_budget_source": "test",
-        },
-    )
-
-    assert '"structural_kind": "separator"' not in rendered_prompt
-    assert "Available atomic speech units:" not in rendered_prompt
-    assert "selectable speakable atomic unit" not in rendered_system_prompt
-
-
-def test_normalize_chunk_blocks_ignores_separator_coverage_and_rejects_separator_selection() -> None:
-    """
-    @brief      Verify separator-only units are not required for coverage and cannot be selected.
-    @details    Covers SB-ATOMIC-005 and REQ-FUNC-054.
-    @return     None.
-    @exception  None
-    """
-    speaker_catalog = {
-        "narrator": _narrator_catalog_entry(),
-        "ana": {
-            "speaker_id": "ana",
-            "speaker_kind": "character",
-            "display_name": "Ana",
-        },
-    }
-    source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
-        {
-            "chunk_id": "chunk-separator-0002",
-            "text": '"A."\n"B."',
-        }
-    )
-    separator_unit_id = next(
-        str(unit["atomic_unit_id"]) for unit in source_chunk["atomic_units"] if unit["structural_kind"] == "separator"
-    )
-    speakable_unit_ids = [
-        str(unit["atomic_unit_id"]) for unit in source_chunk["atomic_units"] if unit["structural_kind"] != "separator"
-    ]
-
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
-        source_chunk,
-        {
-            "blocks": [
-                {
-                    "unit_ids": [speakable_unit_ids[0]],
-                    "speaker_id": "ana",
-                    "content_kind": "dialogue",
-                    "confidence": "high",
-                    "warning_flags": [],
-                },
-                {
-                    "unit_ids": [speakable_unit_ids[1]],
-                    "speaker_id": "ana",
-                    "content_kind": "dialogue",
-                    "confidence": "high",
-                    "warning_flags": [],
-                },
-            ]
-        },
-        speaker_catalog,
-        "en",
-    )
-
-    assert [block["text"] for block in blocks] == ["A.", "B."]
-    assert all(str(block["text"]).strip() for block in blocks)
-    assert not warnings
-
-    fallback_blocks, fallback_warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
-        source_chunk,
-        {
-            "blocks": [
-                {
-                    "unit_ids": [separator_unit_id],
-                    "speaker_id": "narrator",
-                    "content_kind": "narration",
-                    "confidence": "high",
-                    "warning_flags": [],
-                }
-            ]
-        },
-        speaker_catalog,
-        "en",
-    )
-
-    assert fallback_blocks
-    assert fallback_blocks[0]["speaker_id"] == "narrator"
-    assert "atomic_unit_selection_invalid" in fallback_blocks[0]["warning_flags"]
-    assert any("separator" in str(warning["reason"]).casefold() for warning in fallback_warnings)
-
-
 def test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints() -> None:
     """
     @brief      Verify source-language aliases and deterministic attribution hints are available to speaker assignment.
@@ -3442,12 +3164,10 @@ def test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints() ->
             "source_language_evidence": [{"chunk_id": "chunk-0001", "text": "răspunse pilotul Ion"}],
         },
     }
-    source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
-        {
-            "chunk_id": "chunk-atomic-0002",
-            "text": "„Vii?” întrebă Ion. „Curând.”",
-        }
-    )
+    source_chunk = {
+        "chunk_id": "chunk-direct-0002",
+        "text": "„Vii?” întrebă Ion. „Curând.”",
+    }
 
     rendered_prompt = speech_blocks_service._chunk_user_prompt(  # noqa: SLF001
         source_chunk,
@@ -3573,30 +3293,6 @@ def test_normalize_chunk_blocks_narrator_only_preserves_delimiters() -> None:
     assert warnings == []
 
 
-def test_budgeted_source_chunk_segments_attach_source_spans() -> None:
-    """
-    @brief      Verify Speech Blocks request segments carry deterministic source-span selections.
-    @details    Covers SBSPAN-001, SBSPAN-003, and REQ-FUNC-042.
-    @return     None.
-    @exception  None
-    """
-    source_text = 'Narration before. "Deal," the pilot said.\n\n- Vii acasa? intreba Ion.'
-
-    source_segments = speech_blocks_service._budgeted_source_chunk_segments(  # noqa: SLF001
-        {"chunk_id": "chunk-0001", "text": source_text},
-        {"text_budget_tokens": ai_budget_service.estimate_text_tokens(source_text) + 10},
-    )
-
-    assert len(source_segments) == 1
-    source_spans = source_segments[0]["source_spans"]
-    assert [span["source_span_id"] for span in source_spans] == [
-        f"s{index:03d}" for index in range(1, len(source_spans) + 1)
-    ]
-    assert "".join(str(span["text"]) for span in source_spans) == source_text
-    assert {str(span["candidate_kind"]) for span in source_spans if str(span["text"]).strip()} >= {
-        "mixed_candidate",
-        "dialogue_candidate",
-    }
 
 
 def test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries() -> None:
@@ -4126,33 +3822,6 @@ def _prepare_single_chunk_generation_project(monkeypatch, tmp_path, name: str, s
     return project_root, project_workspace_service.load_manifest(project_root)
 
 
-def _valid_single_chunk_span_response() -> dict[str, object]:
-    """
-    @brief      Build one valid source-span selection response for the default one-chunk fixture.
-    @return     Fake Speech Blocks model response.
-    @exception  None
-    """
-    return {
-        "payload": {
-            "blocks": [
-                {
-                    "source_span_ids": ["s001"],
-                    "speaker_id": "narrator",
-                    "content_kind": "narration",
-                    "confidence": "high",
-                    "warning_flags": [],
-                },
-                {
-                    "source_span_ids": ["s002"],
-                    "speaker_id": "narrator",
-                    "content_kind": "dialogue",
-                    "confidence": "high",
-                    "warning_flags": ["ambiguous_speaker"],
-                },
-            ]
-        },
-        "usage": {"input_tokens": 2, "output_tokens": 2, "total_tokens": 4, "usage_available": True},
-    }
 
 
 def _narrator_catalog_entry() -> dict[str, object]:

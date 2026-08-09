@@ -1,25 +1,25 @@
 schema = 1
 id = "REQ-FUNC-5f4a236d"
-title = "Speech-block generation shall preserve French dash and guillemet source"
+title = "Preserve French dialogue through direct Speech Block generation"
 status = "active"
 
 requirement = """
-Speech-block generation shall preserve French dash and guillemet source spans and attach source spans to budgeted segments.
+When French source uses guillemets or dash-led dialogue, direct Speech Block
+generation shall preserve its ordered source slices and spoken dialogue text.
 """
 
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Automated: one focused end-to-end direct-generation selector."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_source_spans",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_budgeted_source_chunk_segments_attach_source_spans",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_dialogue",
 ]
 
 priority = "high"
 rationale = """
-Source spans must survive multilingual splitting and budgeting.
+Direct generation must retain supported French dialogue punctuation and order.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-09

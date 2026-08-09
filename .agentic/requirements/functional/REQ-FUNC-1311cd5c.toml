@@ -1,13 +1,15 @@
 schema = 1
 id = "REQ-FUNC-1311cd5c"
-title = "Speech-block prompts shall use direct blocks with aliases and"
+title = "Use direct Speech Block prompts with attribution context"
 status = "active"
 
 requirement = """
-Speech-block prompts shall use direct blocks with aliases and attribution context, forbid text rewrites, hide atomic separators, and stay honest about local-model guidance.
+Speech-block prompts shall request direct blocks from exact source text, include
+speaker aliases and non-selectable attribution context, forbid text rewrites,
+and stay honest about local-model guidance.
 """
 
-verification = "Automated: 7 linked pytest selector(s)."
+verification = "Automated: 6 linked direct-prompt selectors."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
@@ -16,7 +18,6 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speaker_catalog_preserves_character_aliases_for_prompt",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_prompt_does_not_expose_atomic_separator_units",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_production_prompt_contract_matrix",
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_prompt_uses_direct_blocks_and_forbids_text_rewrites",
@@ -27,4 +28,4 @@ rationale = """
 The generation prompt contract must be stable and safe.
 """
 created = 2026-07-19
-updated = 2026-07-26
+updated = 2026-08-09

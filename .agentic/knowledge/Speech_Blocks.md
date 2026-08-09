@@ -17,10 +17,10 @@ Converts approved text and voice context into an ordered, operator-reviewable sp
 The orchestration service resolves source chunks and voice assignments, assembles one authoritative `speech_blocks.json` document (source identity, AI/budget metadata, resume checkpoint, and blocks), and coordinates reset/approval transitions. Normalization and text-split services provide deterministic content/speaker/identifier handling and size-aware splits. Report and operation-state views are recomputed as projections from that single document through `load_speech_blocks_report()` and `load_operation_state()`; one public read or mutation shares one resolved source context/count across its projections and log-path work. The controller and page route operations, guarded edits, selection, warnings, and review actions through the shared runner.
 
 The two narration modes take different paths. `narrator_and_characters` sends
-budgeted source segments to the model under the `direct_blocks` contract and
-realigns the returned text to the source, so uncovered spans become narrator
-review rows. `same_narrator` calls no model at all: because every block gets the
-narrator voice, the only remaining decision is structural, and
+plain budgeted source segments to the model under the `direct_blocks` contract
+and realigns the returned text to the source, so uncovered text becomes
+narrator review rows. `same_narrator` calls no model at all: because every
+block gets the narrator voice, the only remaining decision is structural, and
 `speech_blocks_narrator_split_service` makes it by packing whole sentences into
 evenly sized blocks under the `deterministic_narrator_blocks` contract.
 
@@ -47,10 +47,6 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Cached VoiceWeaver budgets use a persisted `max_new_tokens` generation-range
   default when effective/default model parameters omit it, preserving the
   runtime-reported split capacity (`REQ-FUNC-1fef6b33`).
-- Dash-led paragraphs retain contiguous source-span and atomic-unit offsets even
-  when the opening turn has no whitespace after its dash and later replies do;
-  attribution units remain selectable instead of forcing a narrator fallback
-  (REQ-FUNC-6292ab33).
 - Every TTS-budget split stores exact, ordered `source_text` slices whose
   concatenation reproduces the original block character-for-character,
   including leading or trailing whitespace-only spans. When model audio text
@@ -100,9 +96,10 @@ otherwise it uses the original Chunking document text through its shared reader.
   across a page break. Speech Blocks carries that verdict through, so a chunk
   with a non-`strong` `cleanup_boundary_confidence` marks its blocks
   `weak_source_boundary` and `needs_review` instead of hiding the uncertainty.
-- A response contract incompatible with deterministic same-narrator
-  segmentation is not resumable; generation restarts to avoid mixing two
-  segmentations in one document.
+- Persisted `atomic_unit_selection` and `narrator_boundary_ids` response
+  contracts from older releases remain valid to load and review, but neither is
+  resumable; generation restarts under the current compatible contract to avoid
+  mixing two segmentation algorithms in one document (REQ-FUNC-b355f8e6).
 - Operator edits, warning cleanup, and approval updates preserve the persisted
   `deterministic_narrator_blocks` marker for same-narrator documents
   (REQ-FUNC-10095db1).

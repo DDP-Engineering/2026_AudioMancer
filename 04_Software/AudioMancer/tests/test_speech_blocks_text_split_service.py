@@ -15,125 +15,11 @@
 
 # IMPORTS
 
-import pytest
 
 from audiomancer.services import (
-    speech_blocks_normalization_service,
     speech_blocks_text_split_service,
     tts_budget_service,
 )
-
-
-def test_build_source_spans_preserves_exact_text_and_paragraph_boundaries() -> None:
-    """
-    @brief      Verify deterministic Speech Blocks source spans preserve exact source text.
-    @details    Covers SBSPAN-001, SBSPAN-003, and REQ-FUNC-042.
-    @return     None.
-    @exception  None
-    """
-    source_text = 'Naratiune inainte. "Deal," the pilot said.\n\n- Vii acasa? intreba Ion.'
-
-    source_spans = speech_blocks_text_split_service.build_source_spans(source_text)
-
-    _assert_source_spans_reconstruct_text(source_text, source_spans)
-    paragraph_boundary_end = source_text.index("\n\n") + 2
-    assert all(
-        not (int(span["start_offset"]) < paragraph_boundary_end < int(span["end_offset"])) for span in source_spans
-    )
-
-
-def test_build_source_spans_classifies_multilingual_dialogue_conventions() -> None:
-    """
-    @brief      Verify multilingual dialogue markers produce language-neutral source-span candidate kinds.
-    @details    Covers SBSPAN-002, SBSPAN-003, and REQ-FUNC-043.
-    @return     None.
-    @exception  None
-    """
-    cases = [
-        ("romanian_guillemet", "«Bună seara.»", "dialogue_candidate"),
-        ("romanian_dash", "— Vii acasă?", "dialogue_candidate"),
-        ("french_guillemet_attribution", "« Bonjour », dit-elle.", "mixed_candidate"),
-        ("german_low_high_quote", "„Guten Morgen.“", "dialogue_candidate"),
-        ("german_reversed_guillemet_attribution", "»Guten Morgen«, sagte Anna.", "mixed_candidate"),
-        ("russian_dash_attribution", "— Пойдём домой? — спросил Иван.", "mixed_candidate"),
-        ("japanese_corner_quote", "太郎は言った。「行こう。」", "mixed_candidate"),
-        ("chinese_fullwidth_quote", "她说：“走吧。”", "mixed_candidate"),
-        ("mixed_narration_dialogue", 'The pilot nodded. "Deal," the pilot said.', "mixed_candidate"),
-    ]
-
-    for label, source_text, expected_kind in cases:
-        source_spans = speech_blocks_text_split_service.build_source_spans(source_text)
-
-        _assert_source_spans_reconstruct_text(source_text, source_spans)
-        candidate_kinds = {str(span.get("candidate_kind", "")) for span in source_spans if str(span["text"]).strip()}
-        assert expected_kind in candidate_kinds, label
-
-
-def test_build_atomic_speech_units_splits_many_elements_inside_one_span() -> None:
-    """
-    @brief      Verify one source span can produce many ordered atomic Speech Blocks units.
-    @details    Covers SB-ATOMIC-001 and REQ-FUNC-050.
-    @return     None.
-    @exception  None
-    """
-    source_text = '"Are you coming?" Ana asked. "Not yet," Ion said. "Then hurry."'
-    source_spans = [
-        {
-            "source_span_id": "s001",
-            "start_offset": 0,
-            "end_offset": len(source_text),
-            "text": source_text,
-            "candidate_kind": "mixed_candidate",
-        }
-    ]
-
-    atomic_units = speech_blocks_text_split_service.build_atomic_speech_units(source_text, source_spans)
-
-    assert [unit["atomic_unit_id"] for unit in atomic_units] == ["u001", "u002", "u003", "u004", "u005"]
-    assert [unit["structural_kind"] for unit in atomic_units] == [
-        "dialogue",
-        "attribution",
-        "dialogue",
-        "attribution",
-        "dialogue",
-    ]
-    assert [unit["text"] for unit in atomic_units] == [
-        '"Are you coming?"',
-        " Ana asked. ",
-        '"Not yet,"',
-        " Ion said. ",
-        '"Then hurry."',
-    ]
-    assert {unit["source_span_id"] for unit in atomic_units} == {"s001"}
-    _assert_atomic_units_reconstruct_text(source_text, atomic_units)
-
-
-def test_build_atomic_speech_units_classifies_multilingual_attribution_patterns() -> None:
-    """
-    @brief      Verify multilingual dialogue attribution is separated from dialogue.
-    @details    Covers SB-ATOMIC-002 and REQ-FUNC-051.
-    @return     None.
-    @exception  None
-    """
-    cases = [
-        ('"Come?" Ana asked. "Soon."', ["dialogue", "attribution", "dialogue"]),
-        ("\u201eVii?\u201d \u00eentreb\u0103 Ana. \u201eCur\u00e2nd.\u201d", ["dialogue", "attribution", "dialogue"]),
-        ("\u00ab Tu viens ? \u00bb demanda Ana. \u00ab Bient\u00f4t. \u00bb", ["dialogue", "attribution", "dialogue"]),
-        ("\u201eKommst du?\u201c, fragte Anna. \u201eBald.\u201c", ["dialogue", "attribution", "dialogue"]),
-        ("\u2014 Vii? \u00eentreb\u0103 Ana. \u2014 Cur\u00e2nd.", ["dialogue", "attribution", "dialogue"]),
-    ]
-
-    for source_text, expected_kinds in cases:
-        atomic_units = speech_blocks_text_split_service.build_atomic_speech_units(source_text)
-
-        assert [unit["structural_kind"] for unit in atomic_units if str(unit["text"]).strip()] == expected_kinds
-        _assert_atomic_units_reconstruct_text(source_text, atomic_units)
-        for unit in atomic_units:
-            if unit["structural_kind"] == "dialogue":
-                assert " asked" not in str(unit["text"]).casefold()
-                assert "întreb" not in str(unit["text"]).casefold()
-                assert "demanda" not in str(unit["text"]).casefold()
-                assert "fragte" not in str(unit["text"]).casefold()
 
 
 def test_split_text_for_ai_context_budget_preserves_ordered_segments() -> None:
@@ -150,40 +36,6 @@ def test_split_text_for_ai_context_budget_preserves_ordered_segments() -> None:
     assert len(split_parts) > 1
 
 
-@pytest.mark.parametrize(
-    "source_text",
-    [
-        "—Bună. — Ce faci? — Bine.",
-        "—Bună ziua. — Ce faci? întrebă Ana. — Bine.",
-    ],
-)
-def test_unspaced_dash_opener_preserves_contiguous_span_and_atomic_coverage(source_text: str) -> None:
-    """
-    @brief      Verify an unspaced first dash turn retains exact coverage before spaced replies.
-    @param[in]  source_text Mixed-spacing dash-dialogue paragraph.
-    @return     None.
-    @exception  None
-    """
-    source_spans = speech_blocks_text_split_service.build_source_spans(source_text)
-    atomic_units = speech_blocks_text_split_service.build_atomic_speech_units(source_text, source_spans)
-    source_chunk = {
-        "chunk_id": "chunk-0001",
-        "source_spans": source_spans,
-        "atomic_units": atomic_units,
-    }
-    parsed_spans, source_span_error = speech_blocks_normalization_service.parse_source_spans(source_chunk, source_text)
-    parsed_units, atomic_unit_error = speech_blocks_normalization_service.parse_atomic_units(source_chunk, source_text)
-
-    _assert_source_spans_reconstruct_text(source_text, source_spans)
-    _assert_atomic_units_reconstruct_text(source_text, atomic_units)
-    assert parsed_spans and not source_span_error
-    assert parsed_units and not atomic_unit_error
-    assert source_spans[0]["start_offset"] == 0
-    assert atomic_units[0]["start_offset"] == 0
-    if "întrebă" in source_text:
-        assert "attribution" in [unit["structural_kind"] for unit in atomic_units]
-
-
 def test_estimate_budget_units_handles_words_and_compact_scripts() -> None:
     """
     @brief      Verify TTS budget units work for spaced and compact text.
@@ -193,59 +45,6 @@ def test_estimate_budget_units_handles_words_and_compact_scripts() -> None:
     assert tts_budget_service.estimate_budget_units("") == 0
     assert tts_budget_service.estimate_budget_units("one two three") == 3
     assert tts_budget_service.estimate_budget_units("abcdefghijklmno") >= 3
-
-
-def _assert_source_spans_reconstruct_text(source_text: str, source_spans: list[dict[str, object]]) -> None:
-    """
-    @brief      Assert source span IDs, offsets, and text form one exact contiguous source string.
-    @param[in]  source_text Expected full source text.
-    @param[in]  source_spans Candidate source-span payloads.
-    @return     None.
-    @exception  None
-    """
-    assert source_spans
-    cursor = 0
-    for index, span in enumerate(source_spans, start=1):
-        assert span["source_span_id"] == f"s{index:03d}"
-        assert span["start_offset"] == cursor
-        assert int(span["end_offset"]) > cursor
-        assert span["text"] == source_text[cursor : int(span["end_offset"])]
-        assert span["candidate_kind"] in {
-            "dialogue_candidate",
-            "narration_candidate",
-            "attribution_candidate",
-            "mixed_candidate",
-        }
-        cursor = int(span["end_offset"])
-    assert cursor == len(source_text)
-    assert "".join(str(span["text"]) for span in source_spans) == source_text
-
-
-def _assert_atomic_units_reconstruct_text(source_text: str, atomic_units: list[dict[str, object]]) -> None:
-    """
-    @brief      Assert atomic unit IDs, offsets, and text form one exact contiguous source string.
-    @param[in]  source_text Expected full source text.
-    @param[in]  atomic_units Candidate atomic-unit payloads.
-    @return     None.
-    @exception  None
-    """
-    assert atomic_units
-    cursor = 0
-    for index, unit in enumerate(atomic_units, start=1):
-        assert unit["atomic_unit_id"] == f"u{index:03d}"
-        assert unit["start_offset"] == cursor
-        assert int(unit["end_offset"]) > cursor
-        assert unit["text"] == source_text[cursor : int(unit["end_offset"])]
-        assert unit["structural_kind"] in {
-            "dialogue",
-            "attribution",
-            "narration",
-            "separator",
-            "mixed",
-        }
-        cursor = int(unit["end_offset"])
-    assert cursor == len(source_text)
-    assert "".join(str(unit["text"]) for unit in atomic_units) == source_text
 
 
 # END OF FILE

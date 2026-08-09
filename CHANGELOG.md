@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Speech Blocks no longer carries the retired source-span and atomic-unit
+  generation path; current direct and narrator-only generation is unchanged,
+  and projects saved with either legacy response contract remain readable but
+  restart under the compatible current contract instead of resuming mixed work.
 - Speech Blocks, Audio Blocks, Text Chunking, and shared AI internals no longer
   carry proven-unreachable helpers, branches, aliases, or discarded arguments;
   documented compatibility and intentional test-support interfaces remain.
