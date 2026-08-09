@@ -1100,14 +1100,13 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
                 "budget_metadata": previous_budget,
             },
         },
-        None,
         input_fingerprint,
         "en",
         source_chunks,
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], [], 0)
+    assert restored == ([], 0)
 
 
 def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) -> None:
@@ -1147,14 +1146,13 @@ def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) 
                 "speech_blocks_response_contract": "source_span_selection",
             },
         },
-        None,
         input_fingerprint,
         "en",
         source_chunks,
         speech_blocks_service._compute_generation_rules_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], [], 0)
+    assert restored == ([], 0)
 
 
 def test_speech_blocks_resume_ignores_source_chunk_count_without_processed_count(tmp_path) -> None:
@@ -1205,14 +1203,13 @@ def test_speech_blocks_resume_restarts_previous_full_cast_state(tmp_path) -> Non
                 "source_language": "en",
             },
         },
-        None,
         input_fingerprint,
         "en",
         source_chunks,
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], [], 0)
+    assert restored == ([], 0)
 
 
 @pytest.mark.parametrize(
@@ -1259,14 +1256,13 @@ def test_same_narrator_resume_depends_on_the_recorded_response_contract(
                 "speech_blocks_response_contract": response_contract,
             },
         },
-        None,
         input_fingerprint,
         "en",
         source_chunks,
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], [], expected_next_chunk_index)
+    assert restored == ([], expected_next_chunk_index)
 
 
 def test_incompatible_response_contract_regenerates_without_error(tmp_path) -> None:

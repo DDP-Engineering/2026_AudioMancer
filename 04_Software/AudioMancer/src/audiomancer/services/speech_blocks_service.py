@@ -719,10 +719,9 @@ def start_or_continue_generation(
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
     started_at = _resolve_started_at(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at, existing_state)
-    existing_blocks, warning_records, start_chunk_index = _restore_resume_state(
+    existing_blocks, start_chunk_index = _restore_resume_state(
         resolved_project_root,
         existing_state,
-        existing_report,
         input_fingerprint,
         source_language,
         source_chunks,
@@ -806,7 +805,6 @@ def start_or_continue_generation(
     )
 
     all_blocks = list(existing_blocks)
-    warning_entries = list(warning_records)
     covered_chunk_ids = {
         str(block.get("chunk_id", "")).strip()
         for block in all_blocks
@@ -893,7 +891,7 @@ def start_or_continue_generation(
                 ),
             )
 
-        chunk_blocks, chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
+        chunk_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
             ai_profile_payload,
             system_prompt,
             source_chunk,
@@ -945,7 +943,6 @@ def start_or_continue_generation(
         all_blocks.extend(chunk_blocks)
         all_blocks = _renumber_speech_blocks(source_chunks, all_blocks)
         covered_chunk_ids.add(chunk_id)
-        warning_entries.extend(chunk_warnings)
         report = _rebuild_report_with_prompt_rules(
             all_blocks,
             source_language,
@@ -3505,46 +3502,44 @@ def _build_source_fingerprint(source_chunks: list[dict[str, object]], source_lan
 def _restore_resume_state(
     project_root: Path,
     existing_state: dict[str, object],
-    existing_report: dict[str, object] | None,
     input_fingerprint: str,
     source_language: str,
     source_chunks: list[dict[str, object]],
     additional_speech_block_instructions_fingerprint: str,
-) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], int]:
+) -> tuple[list[SpeechBlockPayload], int]:
     """
     @brief      Restore resumable Speech Blocks state when the persisted checkpoint is still valid.
     @param[in]  project_root Active project root folder.
     @param[in]  existing_state Existing operation-state payload.
-    @param[in]  existing_report Existing Speech Blocks report payload.
     @param[in]  input_fingerprint Current source snapshot fingerprint.
     @param[in]  source_language Active source language code.
     @param[in]  source_chunks Ordered current source chunk snapshot.
     @param[in]  additional_speech_block_instructions_fingerprint Operator instruction fingerprint.
-    @return     Existing blocks, warning entries, and the next chunk index.
+    @return     Existing blocks and the next chunk index.
     @exception  None
     """
     if not isinstance(existing_state, dict):
-        return [], [], 0
+        return [], 0
     if str(existing_state.get("status", "")).strip() not in {"running", "failed", "review_pending", "completed"}:
-        return [], [], 0
+        return [], 0
     metadata = existing_state.get("metadata", {})
     resume_checkpoint = existing_state.get("resume_checkpoint", {})
     if not isinstance(metadata, dict):
-        return [], [], 0
+        return [], 0
     if str(metadata.get("source_snapshot_fingerprint", "")).strip() != input_fingerprint:
-        return [], [], 0
+        return [], 0
     if str(metadata.get("source_language", "")).strip() != source_language:
-        return [], [], 0
+        return [], 0
     resume_checkpoint_payload = resume_checkpoint if isinstance(resume_checkpoint, dict) else {}
     if not _is_resumable_speech_blocks_response_contract(metadata, resume_checkpoint_payload):
-        return [], [], 0
+        return [], 0
     stored_instruction_fingerprint = str(
         metadata.get("additional_speech_block_instructions_fingerprint")
         or resume_checkpoint_payload.get("additional_speech_block_instructions_fingerprint")
         or _compute_prompt_fingerprint("")
     )
     if stored_instruction_fingerprint != additional_speech_block_instructions_fingerprint:
-        return [], [], 0
+        return [], 0
     existing_blocks = load_speech_blocks(project_root)
     next_chunk_index = _restore_next_speech_blocks_chunk_index(
         existing_state,
@@ -3559,13 +3554,8 @@ def _restore_resume_state(
             next_segment_index = max(0, int(raw_segment_index))
     active_checkpoint_status = str(existing_state.get("status", "")).strip() in {"running", "failed"}
     if next_chunk_index <= 0 and next_segment_index <= 0 and (active_checkpoint_status or not existing_blocks):
-        return [], [], 0
-    warnings = _restore_speech_blocks_warning_records(existing_report, metadata)
-    return (
-        existing_blocks,
-        warnings,
-        next_chunk_index,
-    )
+        return [], 0
+    return existing_blocks, next_chunk_index
 
 
 def _is_resumable_speech_blocks_response_contract(
@@ -3658,23 +3648,6 @@ def _restore_next_speech_blocks_segment_index(
     if raw_segment_index in (None, ""):
         return 0
     return max(0, int(raw_segment_index))
-
-
-def _restore_speech_blocks_warning_records(
-    existing_report: dict[str, object] | None,
-    metadata: dict[str, object],
-) -> list[dict[str, object]]:
-    """
-    @brief      Restore persisted Speech Blocks warning records.
-    @param[in]  existing_report Existing Speech Blocks report payload.
-    @param[in]  metadata Existing operation metadata payload.
-    @return     Warning records safe to carry into resumed generation.
-    @exception  None
-    """
-    raw_warnings = (
-        existing_report.get("warnings", []) if isinstance(existing_report, dict) else metadata.get("warnings", [])
-    )
-    return [dict(item) for item in raw_warnings if isinstance(item, dict)]
 
 
 def _resolve_started_at(existing_state: dict[str, object]) -> str:
