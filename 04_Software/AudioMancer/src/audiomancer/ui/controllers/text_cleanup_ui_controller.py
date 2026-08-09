@@ -131,7 +131,6 @@ def handle_save_cleaned_text_requested(window: MainWindow, cleaned_text: str) ->
     try:
         updated_manifest = text_cleanup_state_service.save_cleaned_text_edit(
             window._current_project_root,
-            window._current_manifest,
             cleaned_text,
         )
     except ValueError as error:

@@ -58,7 +58,7 @@ def test_cleanup_state_exposes_runtime_quality_and_manual_save(tmp_path) -> None
     assert state["uncertainty_count"] == document["quality_report"]["low_confidence_count"]
     assert state["can_reset_cleanup"] is True
 
-    text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Operator correction.\n")
+    text_cleanup_state_service.save_cleaned_text_edit(project_root, "Operator correction.\n")
     updated = text_cleanup_service.load_cleanup_document(project_root)
     assert updated is not None
     assert updated["user_modified"] is True

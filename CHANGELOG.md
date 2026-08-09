@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Internal Cleanup, extraction, project recovery/export, and Audio Blocks state
+  paths no longer carry unused results, branches, helpers, or parameters;
+  active behavior and persisted formats remain unchanged.
 - Audio Blocks re-split reconciliation now preserves same-narrator voice
   assignment, and rejected Speech Block saves restore the persisted block text
   after the editor closes.

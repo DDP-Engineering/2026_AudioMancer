@@ -22,7 +22,6 @@ import json
 from pathlib import Path
 
 from audiomancer.services import (
-    cleanup_analysis_service,
     llm_provider_service,
     prompt_template_service,
     token_usage_service,
@@ -164,27 +163,10 @@ def adjudicate_questions(
         warnings.extend(batch_warnings)
         failed_batch_count += batch_failures
 
-    operations = []
-    question_by_id = {
-        str(item["question_id"]): item
-        for item in normalized_questions
-    }
-    for record in answer_records:
-        if not bool(record.get("accepted")):
-            continue
-        question = question_by_id[str(record["question_id"])]
-        operation = cleanup_analysis_service.operation_from_answer(
-            question,
-            str(record["final_choice"]),
-            verifier=True,
-        )
-        if operation is not None:
-            operations.append(operation)
     if any(record.get("state") == "fallback" for record in answer_records):
         for record in answer_records:
             record.setdefault("state", "completed")
     return {
-        "operations": operations,
         "answers": answer_records,
         "warnings": warnings,
         "token_usage": usage,
@@ -345,7 +327,6 @@ def _process_batch(
                 disagreements[:midpoint],
                 log_path,
                 cancel_requested,
-                resume_answers,
                 request_finished,
                 submission_callback,
             )
@@ -355,7 +336,6 @@ def _process_batch(
                 disagreements[midpoint:],
                 log_path,
                 cancel_requested,
-                resume_answers,
                 request_finished,
                 submission_callback,
             )
@@ -399,7 +379,6 @@ def _process_verifier_split(
     questions: list[dict[str, object]],
     log_path,
     cancel_requested,
-    resume_answers,
     request_finished,
     submission_callback,
 ) -> tuple[dict[str, str], list[str], dict[str, object], int]:
@@ -441,7 +420,6 @@ def _process_verifier_split(
             questions[:midpoint],
             log_path,
             cancel_requested,
-            resume_answers,
             request_finished,
             submission_callback,
         )
@@ -451,7 +429,6 @@ def _process_verifier_split(
             questions[midpoint:],
             log_path,
             cancel_requested,
-            resume_answers,
             request_finished,
             submission_callback,
         )
@@ -803,7 +780,6 @@ def _result(
 ) -> dict[str, object]:
     """Build one complete adjudication result."""
     return {
-        "operations": [],
         "answers": answers,
         "warnings": warnings,
         "token_usage": usage,

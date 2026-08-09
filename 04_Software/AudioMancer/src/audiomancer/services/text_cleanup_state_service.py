@@ -145,11 +145,9 @@ def build_ai_cleanup_profile_state(
 
 def save_cleaned_text_edit(
     project_root: Path,
-    manifest: dict[str, object],
     cleaned_text: str,
 ) -> dict[str, object]:
     """Persist an optional operator correction and keep Chunking immediately ready."""
-    _ = manifest
     text_cleanup_service.save_user_cleaned_text(project_root, cleaned_text)
     return project_workspace_service.load_manifest(project_root)
 

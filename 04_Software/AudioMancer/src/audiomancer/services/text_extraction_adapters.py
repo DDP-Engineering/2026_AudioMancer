@@ -67,7 +67,6 @@ _META_ATTRIBUTE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _RTF_CODE_PAGE_PATTERN = re.compile(br"\\ansicpg(\d{3,5})\b", re.IGNORECASE)
-_PDF_PAGE_EDGE_FRACTION = 0.12
 _HTML_VOID_TAGS = frozenset(
     (
         "area",

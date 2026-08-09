@@ -243,7 +243,7 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
             f"Project uses the unsupported legacy numbered runtime layout: {legacy_folder}. "
             "Create a new flattened project; migration is not supported."
         )
-    extraction_reset_result = _build_extraction_reset_result(payload, resolved_root)
+    extraction_reset_result = _build_extraction_reset_result(resolved_root)
     if extraction_reset_result is not None:
         return extraction_reset_result
     chunking_document_service.load_chunking_document(resolved_root)
@@ -603,12 +603,10 @@ def sync_manifest_operation_summary(
 
 
 def _build_extraction_reset_result(
-    payload: dict[str, object],
     project_root: Path,
 ) -> ProjectOpenResult | None:
     """
     @brief      Build a destructive reset request for incompatible Extraction data.
-    @param[in]  payload Parsed project manifest payload.
     @param[in]  project_root Active project root folder.
     @return     Tagged reset request or `None` when Extraction is compatible.
     @exception  None
@@ -626,7 +624,6 @@ def _build_extraction_reset_result(
             "changes": [],
             "warnings": [],
         }
-    _ = payload
     return None
 
 
@@ -683,7 +680,7 @@ def _build_project_manifest_healing_result(
     """
     current_stage_is_invalid = _is_invalid_current_stage(payload)
     base_stage = (
-        _derive_consistent_stage(payload, project_root) if current_stage_is_invalid else str(payload["current_stage"])
+        _derive_trustworthy_stage(payload) if current_stage_is_invalid else str(payload["current_stage"])
     )
     if current_stage_is_invalid:
         candidate_manifest = _build_repaired_manifest(payload, base_stage)
@@ -820,7 +817,7 @@ def _verified_source_stage(manifest: dict[str, object], project_root: Path) -> s
     if not isinstance(source_document, dict):
         return config.DEFAULT_WORKFLOW_STAGE
     stored_relative_path = str(source_document.get("stored_relative_path", "")).strip()
-    if stored_relative_path and _project_relative_path_exists(project_root, stored_relative_path):
+    if stored_relative_path and project_relative_path_exists(project_root, stored_relative_path):
         return "source_selected"
     return config.DEFAULT_WORKFLOW_STAGE
 
@@ -1096,7 +1093,7 @@ def _audio_blocks_completion_evidence(project_root: Path, warnings: list[str]) -
         if _artifact_exists(project_root, config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME):
             warnings.append("Audio Blocks artifacts exist but do not prove a completed stage.")
         return None
-    if not _audio_block_files_exist(project_root, audio_blocks, state):
+    if not _audio_block_files_exist(project_root, audio_blocks):
         warnings.append(
             "Audio Blocks completion was not healed because at least one referenced audio artifact is missing."
         )
@@ -1123,7 +1120,7 @@ def _audio_assembly_completion_evidence(project_root: Path, warnings: list[str])
     if not _status_is_completed(state) or not isinstance(report, dict):
         return None
     output_paths = _report_output_paths(report)
-    if not output_paths or not all(_project_relative_path_exists(project_root, path) for path in output_paths):
+    if not output_paths or not all(project_relative_path_exists(project_root, path) for path in output_paths):
         warnings.append(
             "Audio Assembly completion was not healed because one or more final audiobook outputs are missing."
         )
@@ -1359,7 +1356,7 @@ def _character_voice_target_has_sample(project_root: Path, target: object) -> bo
         "sample_relative_path",
         "audio_relative_path",
     )
-    return audio_relative_path is not None and _project_relative_path_exists(project_root, audio_relative_path)
+    return audio_relative_path is not None and project_relative_path_exists(project_root, audio_relative_path)
 
 
 def _audio_blocks_report_is_completed(report: object) -> bool:
@@ -1377,18 +1374,16 @@ def _audio_blocks_report_is_completed(report: object) -> bool:
     return total_count > 0 and generated_count == total_count and approved_count == total_count
 
 
-def _audio_block_files_exist(project_root: Path, audio_blocks: object, state: object) -> bool:
+def _audio_block_files_exist(project_root: Path, audio_blocks: object) -> bool:
     """
     @brief      Return whether referenced Audio Blocks audio files exist.
     @param[in]  project_root Active project root folder.
     @param[in]  audio_blocks Parsed Audio Blocks payload.
-    @param[in]  state Parsed Audio Blocks operation-state payload.
     @return     True when referenced generated audio artifacts exist.
     @exception  None
     """
     from audiomancer.services import audio_blocks_artifact_service
 
-    _ = state
     if not isinstance(audio_blocks, list) or not audio_blocks:
         return False
     for block in audio_blocks:
@@ -1432,17 +1427,6 @@ def _report_output_paths(report: dict[str, object]) -> list[str]:
     ]
 
 
-def _project_relative_path_exists(project_root: Path, relative_path: str) -> bool:
-    """
-    @brief      Return whether one project-relative path exists below the project root.
-    @param[in]  project_root Active project root folder.
-    @param[in]  relative_path Candidate project-relative path.
-    @return     True when the path resolves under the project root and exists.
-    @exception  None
-    """
-    return project_relative_path_exists(project_root, relative_path)
-
-
 def _optional_string(value: object) -> str | None:
     """
     @brief      Normalize one optional manifest string and reject null-like persisted text.
@@ -1475,7 +1459,7 @@ def _first_optional_string(*payloads_and_fields: object) -> str | None:
     for payload in payloads:
         for field_name in field_names:
             value = _optional_string(payload.get(field_name))
-            if value is not None and value != "None":
+            if value is not None:
                 return value
     return None
 
@@ -1539,21 +1523,6 @@ def _is_invalid_current_stage(payload: dict[str, object]) -> bool:
         or not current_stage.strip()
         or current_stage not in config.PROJECT_WORKFLOW_STAGES
     )
-
-
-def _derive_consistent_stage(
-    payload: dict[str, object],
-    project_root: Path,
-) -> str:
-    """
-    @brief      Derive the highest current-stage token still consistent with the project.
-    @param[in]  payload Parsed manifest payload.
-    @param[in]  project_root Candidate project root folder.
-    @return     Conservatively trusted stage token for repaired metadata.
-    @exception  None
-    """
-    _ = project_root
-    return _derive_trustworthy_stage(payload)
 
 
 def _build_repaired_manifest(

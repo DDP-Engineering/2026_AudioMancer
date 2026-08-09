@@ -1201,16 +1201,6 @@ def _word_count(texts: Iterable[str]) -> int:
     return sum(len(text.split()) for text in texts)
 
 
-def _approved_count(items: Iterable[dict[str, object]]) -> int:
-    """
-    @brief      Count approved translation records.
-    @param[in]  items Translation records.
-    @return     Approved record count.
-    @exception  None
-    """
-    return sum(1 for item in items if bool(item.get("approved", False)))
-
-
 def _chunk_mode_from_chunks(chunks: list[dict[str, object]]) -> str | None:
     """
     @brief      Resolve a chunking mode fallback from chunk records.

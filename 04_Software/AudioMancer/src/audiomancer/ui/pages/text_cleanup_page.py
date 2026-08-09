@@ -131,7 +131,7 @@ class TextCleanupPage(QWidget):
             self._cleaned_text_edit.setPlainText(cleaned_text or "")
             self._cleaned_text_edit.setReadOnly(True)
         status_notes = list(notes)
-        if validation_state in {"passed", "passed_with_warnings"}:
+        if validation_state == "passed":
             status_notes.append(
                 f"Validation: {validation_state}; "
                 f"low-confidence boundaries: {int(uncertainty_count)}."

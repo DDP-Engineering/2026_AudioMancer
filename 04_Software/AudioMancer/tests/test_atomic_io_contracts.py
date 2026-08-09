@@ -180,7 +180,7 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
     monkeypatch.setattr(text_cleanup_service, "write_json_atomic", _capture_json_write)
     monkeypatch.setattr(project_workspace_service, "write_json_atomic", _capture_json_write)
 
-    text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Edited text.\n")
+    text_cleanup_state_service.save_cleaned_text_edit(project_root, "Edited text.\n")
 
     assert text_calls[0] == (cleaned_path, "Edited text.\n")
     assert any(
@@ -221,41 +221,6 @@ def test_audio_assembly_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> 
         (project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME, report),
         (project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME, state),
     ]
-
-
-def test_text_extraction_running_metadata_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify Text Extraction running state persistence routes through the atomic JSON writer.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    """
-    metadata_path = tmp_path / config.EXTRACTION_METADATA_FILE_NAME
-    write_calls: list[tuple[Path, object]] = []
-
-    def _capture_atomic_write(target_path: str | Path, payload: object) -> None:
-        """
-        @brief      Capture one atomic writer call.
-        @param[in]  target_path Requested target path.
-        @param[in]  payload JSON payload passed to the writer.
-        @return     None.
-        @exception  None
-        """
-        write_calls.append((Path(target_path), payload))
-
-    monkeypatch.setattr(text_extraction_service, "write_json_atomic", _capture_atomic_write)
-
-    text_extraction_service._write_running_metadata(
-        metadata_path,
-        1,
-        2,
-        ["warning"],
-        None,
-    )
-
-    assert write_calls[0][0] == metadata_path
-    assert write_calls[0][1]["status"] == "running"
 
 
 # END OF FILE

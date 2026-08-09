@@ -168,29 +168,6 @@ def reset_extraction_and_downstream(project_root: str | Path) -> None:
     reset_operation_data(project_root, "extraction", include_current=True)
 
 
-def _write_running_metadata(
-    metadata_path: Path,
-    progress_current: int,
-    progress_total: int,
-    warnings: list[str],
-    page_count: int | None,
-) -> None:
-    """Persist one running progress snapshot atomically."""
-    write_json_atomic(
-        metadata_path,
-        _build_metadata(
-            status="running",
-            progress_current=progress_current,
-            progress_total=progress_total,
-            warnings=warnings,
-            character_count=None,
-            word_count=None,
-            line_count=None,
-            page_count=page_count,
-        ),
-    )
-
-
 def _build_metadata(
     *,
     status: str,

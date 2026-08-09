@@ -843,8 +843,7 @@ def _can_reuse_analysis(
         )
     except CleanupDocumentError:
         return False
-    if not isinstance(document, dict):
-        return False
+    assert document is not None
     try:
         expected_policy_hash = _policy_hash(
             list(document["unit_operations"]),

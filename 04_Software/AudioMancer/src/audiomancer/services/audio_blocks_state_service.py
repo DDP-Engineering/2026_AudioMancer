@@ -137,7 +137,7 @@ def build_audio_blocks_state(
         "can_regenerate_selected": current_block is not None
         and audio_blocks_service.audio_can_regenerate(current_block),
         "can_approve_selected": current_block is not None and audio_blocks_service.is_generated(current_block),
-        "selected_text_character_limit": _selected_text_character_limit(settings_payload, merged_blocks),
+        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
         "scene_ambience_audio_enabled": scene_ambience_audio_enabled,
     }
 
@@ -315,7 +315,7 @@ def _empty_state(language: str, settings_payload: dict[str, object] | None = Non
         "can_approve_all": False,
         "can_regenerate_selected": False,
         "can_approve_selected": False,
-        "selected_text_character_limit": _selected_text_character_limit(settings_payload, []),
+        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
         "scene_ambience_audio_enabled": _scene_ambience_audio_enabled(settings_payload),
     }
 
@@ -378,16 +378,13 @@ def _build_full_source_text(
 
 def _selected_text_character_limit(
     settings_payload: dict[str, object] | None,
-    audio_blocks: list[dict[str, object]],
 ) -> int:
     """
     @brief      Resolve an approximate selected speech text limit in characters.
     @param[in]  settings_payload Persisted application settings payload.
-    @param[in]  audio_blocks Current merged Audio Blocks payload list.
     @return     Approximate safe character limit for the active TTS model.
     @exception  None
     """
-    _ = audio_blocks
     discovered_models = []
     if isinstance(settings_payload, dict):
         raw_models = settings_payload.get("tts_runtime_discovered_models", [])

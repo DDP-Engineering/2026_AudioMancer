@@ -321,24 +321,6 @@ def _validate_reason_codes(value: object) -> None:
         raise ValueError("Cleanup boundary reason codes are invalid.")
 
 
-def operation_from_answer(
-    question: dict[str, object],
-    choice: str,
-    *,
-    verifier: bool,
-) -> dict[str, object] | None:
-    """Return a compatibility boundary operation for one accepted choice."""
-    if choice not in BOUNDARY_CHOICES or choice == "document_end":
-        return None
-    return {
-        "operation_id": "",
-        "action": choice,
-        "target_id": str(question["target_id"]),
-        "evidence": "ai_adjudication",
-        "verified_by": "blind_verifier" if verifier else "primary",
-    }
-
-
 def questions_from_boundaries(
     canonical_text: str,
     ledger: dict[str, object],
