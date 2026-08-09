@@ -14,7 +14,7 @@ schema = 1
 # and must match the category folder this file sits in.
 id = "REQ-REL-c822b662"
 
-title = "Degrade safely when settings recovery access fails"
+title = "Degrade safely when settings load or repair persistence access fails"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
@@ -38,15 +38,16 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-If an operating-system error prevents reading or completing recovery of the
-active settings file, the settings loader shall return built-in defaults for the
-current run while leaving the original bytes recoverable at the active path or a
-completed corruption backup and logging one concise content-free warning.
+If an operating-system error prevents reading, completing corruption recovery,
+or persisting validated repairs for the active settings file, the settings
+loader shall return usable validated settings for the current run while leaving
+the original bytes recoverable at the active path or a completed corruption
+backup and logging one concise content-free warning.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "Temporary fixtures simulate read, backup, and post-backup default-write failures; loading does not raise, defaults are returned, original bytes remain recoverable at the correct path, prior backups are unchanged, and warnings contain no settings values."
+verification = "Temporary fixtures simulate read, backup, post-backup default-write, and valid-payload repair-write failures; loading does not raise, usable validated settings are returned, original bytes remain recoverable at the correct path, prior backups are unchanged, and warnings contain no settings values."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
@@ -59,6 +60,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_read_oserror_returns_defaults_without_modifying_file",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_backup_oserror_returns_defaults_without_modifying_file",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_default_write_oserror_preserves_backup_and_returns_defaults",
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_repair_write_oserror_returns_validated_settings",
 ]
 
 # --- optional below this line ---
@@ -70,4 +72,4 @@ priority = "high"   # low | normal | high
 rationale = "Permission and transient access failures must not turn settings recovery into either startup failure or destructive persistence."
 
 created = 2026-08-08
-updated = 2026-08-08
+updated = 2026-08-09

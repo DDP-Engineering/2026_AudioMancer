@@ -36,7 +36,8 @@ the shared atomic writer used for critical project metadata.
 - Coordinate Home-page create/open/repair, source import, option locking,
   snapshot, and export actions.
 - Render text/Markdown delivery projections and package ready voice or audio
-  artifacts into external ZIP exports.
+  artifacts into external ZIP exports through temporary archives and atomic
+  replacement, preserving an existing destination when creation fails.
 - Create cancellable whole-project ZIP snapshots through a temporary archive
   and atomic replacement.
 - Write critical text and JSON files through same-directory temporary files,
@@ -79,6 +80,13 @@ safely resolved previous project copy after the copy succeeds, and returns the
   the temporary payload, preserves an existing complete target on failure,
   removes its owned temporary file, and propagates the original `OSError`
   (`REQ-REL-ee8f9ed0`).
+
+`project_export_service.create_archive_export` publishes each ready voice or
+audio ZIP through the deterministic sibling `.<archive-name>.tmp`, closes the
+complete archive before `os.replace`, and removes only that owned temporary file
+when archive creation or replacement fails. The requested destination therefore
+remains unchanged until a complete replacement is available
+(`REQ-FUNC-efcaeeed`).
 
 For replacement, `HomeUiController` registers the copied source in the pending
 manifest, calls `text_extraction_service.reset_extraction_and_downstream`,

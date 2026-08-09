@@ -827,11 +827,19 @@ def load_settings() -> dict[str, Any]:
 
     validated_settings, repairs_made = _validate_settings_internal(persisted_payload)
     if repairs_made:
-        _write_settings_file(validated_settings)
-        _SETTINGS_LOGGER.info(
-            f"Detected and repaired persisted settings at {settings_path}.",
-            extra={"func_name": "load_settings", "event": "settings-heal"},
-        )
+        try:
+            _write_settings_file(validated_settings)
+        except OSError:
+            _SETTINGS_LOGGER.warning(
+                f"Detected repairs for persisted settings at {settings_path}, "
+                "but could not persist the repaired settings; using validated settings for this run.",
+                extra={"func_name": "load_settings", "event": "settings-heal"},
+            )
+        else:
+            _SETTINGS_LOGGER.info(
+                f"Detected and repaired persisted settings at {settings_path}.",
+                extra={"func_name": "load_settings", "event": "settings-heal"},
+            )
     else:
         _SETTINGS_LOGGER.info(
             f"Loaded settings from {settings_path} without requiring repairs.",

@@ -19,6 +19,7 @@
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import zipfile
 
@@ -282,12 +283,22 @@ def create_archive_export(
     if not archive_entries:
         raise ValueError("The requested archive has no generated audio assets to export.")
     archive_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for archive_name, source_path, text_content in archive_entries:
-            if source_path is not None:
-                archive.write(source_path, archive_name)
-            else:
-                archive.writestr(archive_name, text_content or "")
+    temporary_path = archive_path.with_name(f".{archive_path.name}.tmp")
+    if temporary_path.exists():
+        temporary_path.unlink()
+    try:
+        with zipfile.ZipFile(temporary_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for archive_name, source_path, text_content in archive_entries:
+                if source_path is not None:
+                    archive.write(source_path, archive_name)
+                else:
+                    archive.writestr(archive_name, text_content or "")
+        os.replace(temporary_path, archive_path)
+    except Exception:
+        _PROJECT_EXPORT_LOGGER.exception("Project archive export failed path=%s", archive_path)
+        if temporary_path.exists():
+            temporary_path.unlink()
+        raise
     return archive_path
 
 

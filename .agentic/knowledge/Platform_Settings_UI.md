@@ -94,10 +94,11 @@ one level below its filesystem anchor. This behavior is covered by
 - Inputs: the configured settings path, persisted JSON payload, operator edits,
   built-in/custom theme payloads, runtime language, wheel-step setting, and
   valid HTTP(S) runtime/provider URLs.
-- Outputs: normalized settings written when repairs occur, exact-byte corruption
-  backups for malformed or undecodable settings, component logs, translated
-  strings, a Qt palette/stylesheet/font state, and one global scroll-step event
-  filter.
+- Outputs: normalized settings written when repairs occur and persistence is
+  available, usable validated in-memory settings when a repair write fails,
+  exact-byte corruption backups for malformed or undecodable settings,
+  component logs, translated strings, a Qt palette/stylesheet/font state, and
+  one global scroll-step event filter.
 
 ## 6. Data Contracts
 
@@ -138,10 +139,12 @@ instructions from the Chunking document.
   exclusive, flushed, and synced before the existing atomic settings writer
   replaces the active file with built-in defaults.
 - Read, backup, or post-backup default-write `OSError` failures return built-in
-  defaults for the current run and log only paths/outcomes, never settings
-  contents (`REQ-REL-c822b662`). The original bytes remain at the active path
-  when reading or backup fails and remain recoverable in the completed backup
-  when the later default write fails.
+  defaults for the current run, while a failed validated repair write returns
+  the usable repaired payload in memory without changing the active file; all
+  paths log only outcomes, never settings contents (`REQ-REL-c822b662`). The
+  original bytes remain at the active path when reading, backup, or repair
+  persistence fails and remain recoverable in the completed backup when the
+  later default write fails.
 - `config.SUPPORTED_LANGUAGES` is the operator interface allowlist and contains
   exactly `en` and `ro`. `settings_service.validate_settings()` replaces any
   other persisted or submitted interface language with

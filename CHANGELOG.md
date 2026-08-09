@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Project ZIP exports now replace their destination only after the complete
+  archive closes successfully, preserving an existing export and removing the
+  temporary archive when a source read or replacement fails.
+- Startup now continues with repaired settings in memory when the repaired
+  settings file cannot be written, while warning without exposing settings
+  contents.
 - Successfully saving a Text Cleanup correction now closes the edit session
   and refreshes the persisted text in read-only mode, while a failed save
   still preserves the editable draft.

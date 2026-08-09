@@ -18,6 +18,8 @@
 import json
 import zipfile
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import (
     narrator_definition_service,
@@ -354,6 +356,68 @@ def test_project_export_service_creates_voice_and_audio_archives(tmp_path) -> No
         assert "Output Mode: whole_book" in manifest_text
         assert "Duration: 01:15" in manifest_text
         assert "Size: 14 bytes" in manifest_text
+
+
+def test_project_archive_export_failure_preserves_existing_archive_and_cleans_temp(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify a source-read failure preserves the prior archive and removes the owned temporary file.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+    archive_path = tmp_path / "narrator_voice.zip"
+    previous_archive = b"previous-complete-archive"
+    archive_path.write_bytes(previous_archive)
+    original_build_archive_entries = project_export_service._build_archive_entries
+
+    def _build_entries_with_missing_source(*args):
+        """@brief Build real entries, then remove the first source before ZIP writing."""
+        archive_entries = original_build_archive_entries(*args)
+        source_path = archive_entries[0][1]
+        assert source_path is not None
+        source_path.unlink()
+        return archive_entries
+
+    monkeypatch.setattr(project_export_service, "_build_archive_entries", _build_entries_with_missing_source)
+
+    with pytest.raises(FileNotFoundError):
+        project_export_service.create_archive_export(
+            project_root,
+            manifest,
+            project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+            archive_path,
+        )
+
+    assert archive_path.read_bytes() == previous_archive
+    assert not (tmp_path / ".narrator_voice.zip.tmp").exists()
+
+
+def test_project_archive_export_success_replaces_existing_archive(tmp_path) -> None:
+    """
+    @brief      Verify a complete archive atomically replaces the prior destination.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+    archive_path = tmp_path / "narrator_voice.zip"
+    with zipfile.ZipFile(archive_path, "w") as previous_archive:
+        previous_archive.writestr("stale.txt", "stale archive content")
+
+    returned_path = project_export_service.create_archive_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        archive_path,
+    )
+
+    assert returned_path == archive_path
+    with zipfile.ZipFile(archive_path) as replacement_archive:
+        assert "stale.txt" not in replacement_archive.namelist()
+        assert config.NARRATOR_VOICE_FILE_NAME in replacement_archive.namelist()
+    assert not (tmp_path / ".narrator_voice.zip.tmp").exists()
 
 
 def test_project_export_archives_never_include_ai_transaction_logs(tmp_path) -> None:

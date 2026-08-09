@@ -353,6 +353,40 @@ def test_load_settings_default_write_oserror_preserves_backup_and_returns_defaul
     assert content_marker not in caplog.text
 
 
+def test_load_settings_repair_write_oserror_returns_validated_settings(tmp_path, monkeypatch, caplog) -> None:
+    """
+    @brief      Verify a failed repair write does not discard usable validated settings or abort loading.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  caplog Pytest log-capture fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    content_marker = "do-not-log-repair-write-marker"
+    repairable_settings = settings_service.build_default_settings()
+    repairable_settings["language"] = "unsupported"
+    repairable_settings["future_marker"] = content_marker
+    settings_path.write_text(json.dumps(repairable_settings, indent=2), encoding="utf-8")
+
+    def _raise_write_error(_settings_payload) -> None:
+        """@brief Simulate failure while persisting validated settings repairs."""
+        raise PermissionError("simulated repaired settings write failure")
+
+    monkeypatch.setattr(settings_service, "_write_settings_file", _raise_write_error)
+
+    with caplog.at_level(logging.WARNING, logger="settings"):
+        loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings["language"] == config.DEFAULT_LANGUAGE
+    assert loaded_settings["future_marker"] == content_marker
+    assert json.loads(settings_path.read_text(encoding="utf-8")) == repairable_settings
+    assert "could not persist the repaired settings" in caplog.text.lower()
+    assert content_marker not in caplog.text
+
+
 def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypatch) -> None:
     """
     @brief      Verify invalid persisted settings are healed and rewritten.
