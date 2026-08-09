@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-7c33dff5 — Validate and repair BUG-09 through BUG-14
 
-stage: deliver
+stage: done
 type: fix
 path: quick
 requirements: REQ-FUNC-f5c39900, REQ-UX-aa109e16, REQ-UX-08439166, REQ-FUNC-35098598, REQ-FUNC-5e008e3b
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, affected paths, and test links are true
 - [x] delivery confirmed by standing human approval before commit
 - [x] journal and report are inside the delivery commit and the delegated commit outcome is delivered
-- [ ] close-out: `stage: done` set and committed only after delivery succeeds
+- [x] close-out: `stage: done` set and committed only after delivery succeeds
 - [x] code follows `01_Documentation/Code_Style.md`
 - [x] `CHANGELOG.md` Unreleased section is written in user language
 - [x] no release/version/help-version changes were made
@@ -74,6 +74,7 @@ opened: 2026-08-09
 - 2026-08-09 deliver: semantic diff review confirmed early failure exits, successful-save and invalidation flows, normal generation, persisted narrator identifiers and terminology, portability, security boundaries, versions, help files, planning files, parent checkout, push, and merge remain unchanged.
 - 2026-08-09 deliver: standing approval confirms the exact reviewed delivery commit and delegated commit-only outcome.
 - 2026-08-09 deliver: the generated report's 420-file merge-base count includes inherited branch divergence, while the exact task delta is 28 tracked files plus this new journal with no planning, version, or help-file changes.
+- 2026-08-09 close: delivery commit f18ffb8caa2485f7c4d4bae0dabbd7febb47dbea succeeded; no push or merge was requested or performed.
 
 ## Delivery report (2026-08-09)
 
