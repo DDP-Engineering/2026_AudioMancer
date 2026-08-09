@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-09deb724 — Resume split Audio Blocks and preserve cancellation UI state
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-9e6c2465, REQ-FUNC-d53b102d, REQ-FUNC-50f45095
@@ -42,8 +42,8 @@ opened: 2026-08-09
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, and links are true
 - [x] delivery confirmed by the human before the commit
-- [x] journal and report prepared inside the delivery commit; branch delivery authorized
-- [ ] close-out: `stage: done` set and committed only after the outcome succeeded
+- [x] journal and report included in delivery commit c97a8e1cb99983d16dc60f096b4d33b9c6438230
+- [x] close-out: `stage: done` set after the branch delivery commit succeeded
 - [x] code follows `01_Documentation/Code_Style.md` and `CHANGELOG.md` Unreleased is updated; this task is not a release
 
 ## Log
@@ -72,6 +72,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: Accepted the expected unticked-deliver warning because human approval, delivery/report, and closeout are deliberately pending; the other 84 static warnings are repository-wide baseline findings.
 - 2026-08-09 deliver: Human approved staged fingerprint dd410b9cdace7e6fa468fd9e325db71bfcc45628 after independent diff review and five passing key regression cases.
 - 2026-08-09 deliver: Corrected the generated report diff count to the task base e894f8e because the configured repository merge base includes unrelated historical delivery commits.
+- 2026-08-09 deliver: Delivery commit c97a8e1cb99983d16dc60f096b4d33b9c6438230 succeeded with the approved implementation, tests, requirements, knowledge, changelog, and report.
+- 2026-08-09 close: Marked the journal done in its dedicated closeout commit before the separately requested guarded local fast-forward integration.
 
 ## Delivery report (2026-08-09)
 
@@ -82,4 +84,4 @@ opened: 2026-08-09
   - REQ-FUNC-50f45095 - Keep Audio Blocks rows aligned on incremental insertion
 - diff vs task base e894f8e: 11 file(s) changed, 676 line(s) added, 49 line(s) removed
 - checks: errors=0 warnings=85 notes=0
-- checklist: 7/8 done; open: close-out after the branch delivery commit succeeds
+- checklist: 8/8 done
