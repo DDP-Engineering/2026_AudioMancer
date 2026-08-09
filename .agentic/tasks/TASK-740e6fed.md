@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-740e6fed — Correct Speech Blocks split coverage and provenance
 
-stage: deliver
+stage: done
 type: fix
 path: full
 requirements: REQ-FUNC-6292ab33, REQ-FUNC-c13373e7, REQ-FUNC-15a96219, REQ-FUNC-5e94d565
@@ -43,7 +43,7 @@ opened: 2026-08-09
 - [x] requirements re-read: status, prose, verification, paths, and links are true
 - [x] delivery confirmed by the human before the commit
 - [x] journal and report inside the delivery commit
-- [ ] close-out: `stage: done` set and committed only after the delivery commit succeeds
+- [x] close-out: `stage: done` set and committed only after the delivery commit succeeds
 - [x] code follows `01_Documentation/Code_Style.md` and `CHANGELOG.md` Unreleased describes the user-visible fixes; this task is not a release
 
 ## Log
@@ -81,6 +81,8 @@ opened: 2026-08-09
 - 2026-08-09 deliver: exactly one direct full suite passed with 1,561 passed, 1 skipped, 1 deselected, and the existing `audioop` deprecation warning in 37 minutes 51 seconds.
 - 2026-08-09 deliver: semantic review confirmed exact dash coverage and attribution, closer-first nested quote handling, lossless source provenance with independent spoken splitting, authoritative quote unwrapping, preserved public and persisted payloads, and no unrelated finding or planning-file changes.
 - 2026-08-09 deliver: human approval confirmed staged fingerprint `0666df4a61665d39cd9d11ac8972afa353964259`, the exact 14-file scope, and all recorded validation evidence before commit.
+- 2026-08-09 deliver: approved delivery commit `d41fbe7` succeeded locally with no push.
+- 2026-08-09 close-out: set the task journal to done after the delivery commit succeeded; local AudioMancer_V2 integration remains the explicitly requested post-closeout operation.
 
 ## Delivery report (2026-08-09)
 
