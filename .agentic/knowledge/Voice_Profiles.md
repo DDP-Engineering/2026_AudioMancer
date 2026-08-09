@@ -27,6 +27,10 @@ required before speech generation.
   updates strict (`REQ-REL-870d0b6a`).
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
+- Run narrator and character voice-design samples through one shared
+  VoiceWeaver probe, model-load, generation, validation, and download sequence
+  while keeping each controller's request, budget, persistence, and refresh
+  behavior explicit (`REQ-FUNC-47809158`, `REQ-FUNC-7a68a78e`).
 - Keep Narrator Voice selection application controller-owned through the full
   page-state payload while exposing `current_profile_id()` for live reads
   (`REQ-NFR-b3fb9944`).
@@ -47,7 +51,10 @@ AI generation stores compact checkpoints in the same document and appends
 profiles only after complete validation. The main window passes the page-owned
 live narrator-generation AI selection back through the enabled-profile resolver.
 Character-voice services keep their independent target contract and resolve the
-selected narrator through the narrator service.
+selected narrator through the narrator service. `tts_runtime_ui_support`
+returns only the generated request, provider summary, and WAV bytes; narrator
+and character controllers remain responsible for their distinct persistence
+and UI completion paths.
 
 ## 4. Dependencies
 
@@ -159,7 +166,9 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py`
 - `04_Software/AudioMancer/tests/test_character_voices_page.py`
@@ -168,6 +177,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_character_voices_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_narator_voice_page.py`
 - `04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py`
 - `04_Software/AudioMancer/tests/test_narrator_definition_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_definition_state_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py`

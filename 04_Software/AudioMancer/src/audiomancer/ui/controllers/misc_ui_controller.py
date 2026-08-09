@@ -84,6 +84,33 @@ def confirm_question(window: "MainWindow", language: str, title_key: str, messag
     return decision == QMessageBox.StandardButton.Yes
 
 
+def show_voice_sample_import_error(window: "MainWindow", error: ValueError, language: str) -> None:
+    """
+    @brief      Show one localized voice-sample import validation error.
+    @param[in]  window Main application window.
+    @param[in]  error Validation exception.
+    @param[in]  language Current UI language code.
+    @return     None.
+    @exception  None
+    """
+    message_key = {
+        "unsupported_file_type": "voice_sample_import.error_unsupported_file_type",
+        "missing_file": "voice_sample_import.error_missing_file",
+        "invalid_wav": "voice_sample_import.error_invalid_wav",
+        "sample_too_short": "voice_sample_import.error_sample_too_short",
+        "sample_silent": "voice_sample_import.error_sample_silent",
+        "empty_preview_text": "voice_sample_import.error_empty_sample_text",
+        "readonly_target": "voice_sample_import.error_readonly_target",
+    }.get(str(error), "voice_sample_import.error_invalid_wav")
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", language),
+        ui_state_service.translate(message_key, language).format(
+            min_duration_seconds=config.DEFAULT_IMPORTED_VOICE_SAMPLE_MIN_SECONDS,
+        ),
+    )
+
+
 def show_message(
     window: "MainWindow",
     message: str,

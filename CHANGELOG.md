@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Narrator and character voice sample generation now use one shared
+  VoiceWeaver runtime sequence while retaining their distinct preview budgets,
+  language inputs, sample ownership, refresh behavior, and cancellation and
+  error messages.
 - AI workflow profile selectors and destructive default-No confirmation
   dialogs now share their common construction while preserving every existing
   workflow label, selected/default fallback, translation, dialog parent,

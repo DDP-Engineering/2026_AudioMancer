@@ -871,6 +871,140 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
     assert observed_cancel_callbacks == [cancel_callback, cancel_callback]
 
 
+def test_narator_voice_shared_runtime_keeps_profile_persistence_and_refresh(monkeypatch) -> None:
+    """
+    @brief      Verify shared runtime data remains owned by narrator persistence and refresh paths.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    profile = {
+        "profile_id": "profile_narrator",
+        "language": "English",
+        "prompt_text": "Measured narrator.",
+    }
+    generation_request = {
+        "can_generate": True,
+        "model_id": "voice-designer",
+        "language": "en",
+        "supported_languages": ["en"],
+    }
+    stored_arguments: list[tuple[object, ...]] = []
+    refresh_calls: list[tuple[object, object]] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "resolve_cached_tts_budget",
+        lambda _models: {},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "estimated_safe_word_count",
+        lambda _payload: 100,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "estimate_budget_units",
+        lambda _text: 10,
+    )
+
+    def _run_shared_runtime(
+        _settings,
+        _messages,
+        request_builder,
+        prompt_text,
+        preview_text,
+        _progress_callback,
+        _cancel_requested,
+        *,
+        before_probe,
+        default_language,
+    ):
+        """@brief Return shared runtime data after exercising narrator request construction."""
+        before_probe()
+        assert default_language == narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE
+        assert request_builder([{"model_id": "voice-designer"}]) == generation_request
+        assert prompt_text == "Measured narrator."
+        assert preview_text == "Narrator preview."
+        return {
+            "generation_request": generation_request,
+            "result_summary": "Narrator sample ready.",
+            "audio_bytes": b"RIFF-narrator",
+        }
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_runtime_ui_support,
+        "run_voice_design_generation",
+        _run_shared_runtime,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "profile_generation_request",
+        lambda _profile, discovered_models: generation_request,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "store_profile_sample",
+        lambda *args: stored_arguments.append(args),
+    )
+
+    narator_voice_ui_controller._generate_and_store_sample(
+        "project-root",
+        {"tts_runtime_discovered_models": []},
+        {"preview_text_over_budget": "{word_count}/{safe_word_count}"},
+        profile,
+        "Narrator preview.",
+        None,
+        lambda: False,
+    )
+
+    assert stored_arguments == [
+        (
+            "project-root",
+            profile,
+            "Narrator preview.",
+            generation_request,
+            "Narrator sample ready.",
+            b"RIFF-narrator",
+        )
+    ]
+
+    window = SimpleNamespace(
+        _settings_payload={"old": True},
+        _narator_voice_inspected_profile_id=None,
+        _current_project_root="project-root",
+        show_project_state=lambda root, manifest: refresh_calls.append((root, manifest)),
+    )
+    monkeypatch.setattr(narator_voice_ui_controller.settings_service, "load_settings", lambda: {"new": True})
+    monkeypatch.setattr(
+        narator_voice_ui_controller,
+        "_start_narator_voice_change_progress",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "load_selected_profile_state",
+        lambda _root: {"selected_profile_id": "different-profile"},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.project_workspace_service,
+        "load_manifest",
+        lambda _root: {"current_stage": "narrator_definition_ready"},
+    )
+    monkeypatch.setattr(narator_voice_ui_controller.misc_ui_controller, "show_message", lambda *_args: None)
+
+    narator_voice_ui_controller._handle_generate_sample_success(
+        window,
+        None,
+        "profile_narrator",
+        False,
+        "en",
+    )
+
+    assert window._settings_payload == {"new": True}
+    assert window._narator_voice_inspected_profile_id == "profile_narrator"
+    assert refresh_calls == [("project-root", {"current_stage": "narrator_definition_ready"})]
+
+
 def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-024 failed sample generation preserves the previous profile sample.

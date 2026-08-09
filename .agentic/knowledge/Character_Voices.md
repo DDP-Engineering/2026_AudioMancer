@@ -15,6 +15,8 @@ prompt updates, import and generated-sample persistence, readiness, and operatio
 summary derivation. `character_voices_state_service.py` builds the page payload.
 `character_voices_ui_controller.py` coordinates Qt actions, threaded generation,
 manifest synchronization, downstream audio invalidation, and status presentation.
+`tts_runtime_ui_support.py` owns the common VoiceWeaver probe, model-load,
+voice-design, terminal validation, progress, cancellation, and WAV-download flow.
 `CharacterVoicesPage` exposes target selection and import, edit/save, generation,
 batch generation, and preview signals.
 
@@ -44,6 +46,9 @@ batch generation, and preview signals.
 - `REQ-NFR-b3fb9944` — the page applies selection through its controller-owned
   full-state payload and exposes `current_target_id()` without a stale direct
   selection-application method.
+- `REQ-FUNC-7a68a78e` â€” shared runtime orchestration returns generated data to
+  the character controller, which retains target-owned persistence, batch
+  sequencing, refresh, manifest sync, and downstream invalidation.
 - Narrator targets are preview-only; character targets retain stable IDs across
   character renames and store sample metadata with their project-local WAVs.
 - Readiness requires the selected narrator WAV and metadata plus every character
@@ -89,8 +94,11 @@ ready-promotion regressions.
 - `04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py`
 - `04_Software/AudioMancer/tests/test_character_voices_service.py`
 - `04_Software/AudioMancer/tests/test_character_voices_state_service.py`
 - `04_Software/AudioMancer/tests/test_character_voices_page.py`
 - `04_Software/AudioMancer/tests/test_character_voices_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py`

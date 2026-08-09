@@ -30,7 +30,6 @@ from audiomancer.services import (
     project_workspace_service,
     ui_state_service,
     voice_sample_import_service,
-    voiceweaver_runtime_service,
 )
 from audiomancer.ui.controllers import (
     audio_blocks_ui_controller,
@@ -43,6 +42,7 @@ if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
 
 settings_service = tts_runtime_ui_support.settings_service
+voiceweaver_runtime_service = tts_runtime_ui_support.voiceweaver_runtime_service
 
 
 def handle_page_activated(window: "MainWindow") -> None:
@@ -606,133 +606,32 @@ def _generate_and_store_sample(
     @param[in]  cancel_requested Optional cooperative cancellation callback.
     @return     None.
     """
-    _emit_sample_progress(
-        progress_callback,
-        2,
-        progress_messages["prepare"],
-    )
-    probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache_from_settings(settings_payload)
-    if not bool(probe_result.get("success", False)):
-        raise RuntimeError(str(probe_result.get("message", "")))
-    operation_runtime_service.raise_if_cancelled(cancel_requested)
-    capability_matrix = dict(probe_result.get("capability_matrix", {}))
-    if not bool(capability_matrix.get("minimum_qwen_ready", False)):
-        raise RuntimeError(
-            progress_messages["qwen_capabilities_missing"].format(
-                missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
-            )
+    def _build_generation_request(discovered_models: list[dict[str, object]]) -> dict[str, object]:
+        """@brief Build the character-specific generation request."""
+        return character_voices_service.voice_target_generation_request(
+            target_payload,
+            discovered_models,
+            voice_language,
         )
-    discovered_models = list(probe_result.get("discovered_models", []))
-    generation_request = character_voices_service.voice_target_generation_request(
-        target_payload,
-        discovered_models,
-        voice_language,
-    )
-    if not bool(generation_request.get("can_generate", False)):
-        raise RuntimeError(str(generation_request.get("unavailable_reason", "")))
-    base_url = str(settings_payload.get("tts_runtime_base_url", "")).strip()
-    runtime_api_key = str(settings_payload.get("tts_runtime_api_key", ""))
-    preview_timeout_seconds = tts_runtime_ui_support.preview_timeout_seconds_from_settings(settings_payload)
-    model_id = str(generation_request.get("model_id", "")).strip()
-    initial_status = voiceweaver_runtime_service.read_status(
-        base_url,
-        runtime_api_key,
-        timeout_seconds=preview_timeout_seconds,
-    )
-    tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, initial_status)
-    active_model_id = _active_model_id_from_status(initial_status)
-    _emit_sample_progress(
-        progress_callback,
-        10,
-        progress_messages["prepare"],
-    )
-    if active_model_id != model_id:
-        operation_runtime_service.raise_if_cancelled(cancel_requested)
-        _emit_sample_progress(
-            progress_callback,
-            25,
-            progress_messages["load_model"],
-        )
-        voiceweaver_runtime_service.load_model(
-            base_url,
-            runtime_api_key,
-            model_id,
-            timeout_seconds=preview_timeout_seconds,
-        )
-        load_status = voiceweaver_runtime_service.wait_for_terminal_operation(
-            base_url,
-            runtime_api_key,
-            progress_callback=lambda status_payload: _update_load_progress(
-                progress_callback,
-                status_payload,
-                progress_messages["load_model"],
-            ),
-            timeout_seconds=preview_timeout_seconds,
-            cancel_requested=cancel_requested,
-        )
-        tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, load_status)
-        load_operation = load_status.get("operation", {})
-        if not isinstance(load_operation, dict) or str(load_operation.get("status", "")).strip().lower() != "completed":
-            raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(load_status))
-        active_model_id = _active_model_id_from_status(load_status)
-        if active_model_id != model_id:
-            raise RuntimeError(f"VoiceWeaver did not activate the requested model '{model_id}'.")
 
-    operation_runtime_service.raise_if_cancelled(cancel_requested)
-    _emit_sample_progress(
-        progress_callback,
-        35,
-        progress_messages["generate"],
-    )
-    voiceweaver_runtime_service.generate_voice_design(
-        base_url,
-        runtime_api_key,
-        str(generation_request.get("language", voice_language)),
-        preview_text,
+    runtime_result = tts_runtime_ui_support.run_voice_design_generation(
+        settings_payload,
+        progress_messages,
+        _build_generation_request,
         str(target_payload.get("prompt_text", "")),
-        model_parameters=dict(generation_request.get("model_parameters", {}))
-        if isinstance(generation_request.get("model_parameters"), dict)
-        else None,
-        timeout_seconds=preview_timeout_seconds,
-    )
-    final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
-        base_url,
-        runtime_api_key,
-        progress_callback=lambda status_payload: _update_generation_progress(
-            progress_callback,
-            status_payload,
-            progress_messages["generate"],
-        ),
-        timeout_seconds=preview_timeout_seconds,
-        cancel_requested=cancel_requested,
-    )
-    tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, final_status)
-    final_operation = final_status.get("operation", {})
-    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip() != "completed":
-        raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
-    final_result = final_status.get("result", {})
-    if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):
-        raise RuntimeError(progress_messages["generation_missing_audio"])
-
-    operation_runtime_service.raise_if_cancelled(cancel_requested)
-    _emit_sample_progress(
+        preview_text,
         progress_callback,
-        95,
-        progress_messages["download"],
-    )
-    audio_bytes = voiceweaver_runtime_service.download_generated_voice(
-        base_url,
-        runtime_api_key,
-        timeout_seconds=preview_timeout_seconds,
+        cancel_requested,
+        default_language=voice_language,
     )
     character_voices_service.store_target_sample(
         project_root,
         target_payload,
         voice_language,
         preview_text,
-        generation_request,
-        str(final_result.get("summary", "")),
-        audio_bytes,
+        dict(runtime_result["generation_request"]),
+        str(runtime_result["result_summary"]),
+        bytes(runtime_result["audio_bytes"]),
     )
 
 
@@ -865,12 +764,11 @@ def _update_generation_progress(
     @param[in]  stage_text Progress stage text.
     @return     None.
     """
-    operation_payload = status_payload.get("operation", {})
-    if not isinstance(operation_payload, dict):
-        return
-    percent = int(operation_payload.get("progress_percent", 0))
-    mapped_percent = 35 + int(max(0, min(percent, 100)) * 0.55)
-    _emit_sample_progress(progress_callback, mapped_percent, stage_text)
+    tts_runtime_ui_support._update_voice_design_generation_progress(  # noqa: SLF001
+        progress_callback,
+        status_payload,
+        stage_text,
+    )
 
 
 def _update_load_progress(
@@ -885,12 +783,11 @@ def _update_load_progress(
     @param[in]  stage_text Progress stage text.
     @return     None.
     """
-    operation_payload = status_payload.get("operation", {})
-    if not isinstance(operation_payload, dict):
-        return
-    percent = int(operation_payload.get("progress_percent", 0))
-    mapped_percent = 25 + int(max(0, min(percent, 100)) * 0.10)
-    _emit_sample_progress(progress_callback, mapped_percent, stage_text)
+    tts_runtime_ui_support._update_voice_design_load_progress(  # noqa: SLF001
+        progress_callback,
+        status_payload,
+        stage_text,
+    )
 
 
 def _emit_sample_progress(progress_callback, percent: int, message: str) -> None:
@@ -902,8 +799,7 @@ def _emit_sample_progress(progress_callback, percent: int, message: str) -> None
     @return     None.
     @exception  None
     """
-    if progress_callback is not None:
-        progress_callback(0, 100, percent, message)
+    tts_runtime_ui_support._emit_voice_design_progress(progress_callback, percent, message)  # noqa: SLF001
 
 
 def _active_model_id_from_status(status_payload: dict[str, object]) -> str | None:
@@ -1047,22 +943,7 @@ def _show_voice_sample_import_error(window: "MainWindow", error: ValueError, lan
     @return     None.
     @exception  None
     """
-    message_key = {
-        "unsupported_file_type": "voice_sample_import.error_unsupported_file_type",
-        "missing_file": "voice_sample_import.error_missing_file",
-        "invalid_wav": "voice_sample_import.error_invalid_wav",
-        "sample_too_short": "voice_sample_import.error_sample_too_short",
-        "sample_silent": "voice_sample_import.error_sample_silent",
-        "empty_preview_text": "voice_sample_import.error_empty_sample_text",
-        "readonly_target": "voice_sample_import.error_readonly_target",
-    }.get(str(error), "voice_sample_import.error_invalid_wav")
-    QMessageBox.warning(
-        window,
-        ui_state_service.translate("dialog.project_error_title", language),
-        ui_state_service.translate(message_key, language).format(
-            min_duration_seconds=config.DEFAULT_IMPORTED_VOICE_SAMPLE_MIN_SECONDS,
-        ),
-    )
+    misc_ui_controller.show_voice_sample_import_error(window, error, language)
 
 
 def _confirm_generate_missing_samples(window: "MainWindow", language: str, sample_count: int) -> bool:

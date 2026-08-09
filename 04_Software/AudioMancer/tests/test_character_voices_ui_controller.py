@@ -1029,6 +1029,121 @@ def test_failed_character_sample_generation_preserves_existing_sample(monkeypatc
     assert character_voices_service.load_target_sample_metadata(project_root, "character_alice") == original_metadata
 
 
+def test_character_shared_runtime_keeps_target_persistence_and_refresh(monkeypatch) -> None:
+    """
+    @brief      Verify shared runtime data remains owned by character persistence and refresh paths.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    target = {
+        "target_id": "character_alice",
+        "target_kind": "character",
+        "prompt_text": "Bright character.",
+    }
+    generation_request = {
+        "can_generate": True,
+        "model_id": "voice-designer",
+        "language": "ro",
+    }
+    stored_arguments: list[tuple[object, ...]] = []
+    refresh_calls: list[tuple[object, object]] = []
+
+    def _run_shared_runtime(
+        _settings,
+        _messages,
+        request_builder,
+        prompt_text,
+        preview_text,
+        _progress_callback,
+        _cancel_requested,
+        *,
+        default_language,
+    ):
+        """@brief Return shared runtime data after exercising character request construction."""
+        assert default_language == "ro"
+        assert request_builder([{"model_id": "voice-designer"}]) == generation_request
+        assert prompt_text == "Bright character."
+        assert preview_text == "Character preview."
+        return {
+            "generation_request": generation_request,
+            "result_summary": "Character sample ready.",
+            "audio_bytes": b"RIFF-character",
+        }
+
+    monkeypatch.setattr(
+        character_voices_ui_controller.tts_runtime_ui_support,
+        "run_voice_design_generation",
+        _run_shared_runtime,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.character_voices_service,
+        "voice_target_generation_request",
+        lambda _target, _models, _language: generation_request,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.character_voices_service,
+        "store_target_sample",
+        lambda *args: stored_arguments.append(args),
+    )
+
+    character_voices_ui_controller._generate_and_store_sample(
+        "project-root",
+        {},
+        {},
+        target,
+        "ro",
+        "Character preview.",
+        None,
+        lambda: False,
+    )
+
+    assert stored_arguments == [
+        (
+            "project-root",
+            target,
+            "ro",
+            "Character preview.",
+            generation_request,
+            "Character sample ready.",
+            b"RIFF-character",
+        )
+    ]
+
+    window = SimpleNamespace(
+        _settings_payload={"old": True},
+        _character_voices_inspected_target_id=None,
+        _current_project_root="project-root",
+        show_project_state=lambda root, manifest: refresh_calls.append((root, manifest)),
+    )
+    invalidated_targets: list[tuple[str, ...]] = []
+    monkeypatch.setattr(character_voices_ui_controller.settings_service, "load_settings", lambda: {"new": True})
+    monkeypatch.setattr(
+        character_voices_ui_controller.project_workspace_service,
+        "load_manifest",
+        lambda _root: {"current_stage": "narrator_definition_ready"},
+    )
+    monkeypatch.setattr(character_voices_ui_controller, "_sync_manifest_stage", lambda _window: None)
+    monkeypatch.setattr(
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_for_voice_targets",
+        lambda _window, target_ids: invalidated_targets.append(target_ids),
+    )
+    monkeypatch.setattr(character_voices_ui_controller.misc_ui_controller, "show_message", lambda *_args: None)
+
+    character_voices_ui_controller._handle_generate_sample_success(
+        window,
+        None,
+        "character_alice",
+        "en",
+    )
+
+    assert window._settings_payload == {"new": True}
+    assert window._character_voices_inspected_target_id == "character_alice"
+    assert refresh_calls == [("project-root", {"current_stage": "narrator_definition_ready"})]
+    assert invalidated_targets == [("character_alice",)]
+
+
 def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify Character Voices generation progress text does not disclose the concrete runtime model id.
