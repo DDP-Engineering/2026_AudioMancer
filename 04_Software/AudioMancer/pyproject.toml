@@ -23,6 +23,8 @@ dependencies = [
 dev = [
     "pytest>=8.0,<9.0",
     "pytest-qt>=4.4,<5.0",
+    "pytest-timeout>=2.4,<3.0",
+    "pytest-xdist>=3.8,<4.0",
     "PyInstaller>=6.0,<7.0",
     "ruff>=0.15.10",
 ]
@@ -43,6 +45,8 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-m 'not performance'"
+timeout = 120
+timeout_method = "thread"
 markers = [
     "service: fast non-Qt service and logic tests",
     "ui: Qt widget, controller, and main-window tests",

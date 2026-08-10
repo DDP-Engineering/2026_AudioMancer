@@ -17,7 +17,7 @@ Run every command from `04_Software/AudioMancer/`.
 
 | Property | Value |
 | --- | --- |
-| Runner | `pytest` 8.x with `pytest-qt` 4.x |
+| Runner | `pytest` 8.x with `pytest-qt` 4.x, `pytest-timeout` 2.x, and `pytest-xdist` 3.x |
 | Configuration | `[tool.pytest.ini_options]` in `pyproject.toml` |
 | Test root | `tests/` (114 modules, 2 shared support modules, 1 JSON fixture) |
 | Collected tests | 1242 |
@@ -62,11 +62,24 @@ Fast feedback - service tier only, no Qt widgets:
 uv run pytest -m service -q
 ```
 
+Parallel service-tier feedback using four local pytest worker processes:
+
+```powershell
+uv run pytest -m service -n 4 --dist loadfile -q
+```
+
+Parallel execution is opt-in: the normal pytest command remains serial.
+`--dist loadfile` keeps every test module on one worker, and the worker
+processes are local test runners rather than additional Codex agents.
+
 UI tier only (Qt widgets, controllers, and main-window shells):
 
 ```powershell
-uv run pytest -m ui -q
+uv run pytest -m ui -n 0 -q
 ```
+
+Keep the UI tier serial until its Qt application state, settings paths, local
+ports, and modal-dialog behavior have been proven isolated across processes.
 
 The opt-in performance baseline is deselected by default. Run it explicitly:
 

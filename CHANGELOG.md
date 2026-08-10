@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Service tests can now use explicitly requested local pytest workers while
+  normal and Qt/UI test runs remain serial by default.
+- Pytest now terminates any individual test that exceeds two minutes, preventing
+  a blocked dialog or other hang from consuming the complete test-suite budget.
 - AI Translation verification now uses a valid Speech Blocks project fixture,
   preventing strict corrupt-state recovery from opening a blocking test dialog.
 - Speech, translation, audio-model loading, and workflow controllers now share
