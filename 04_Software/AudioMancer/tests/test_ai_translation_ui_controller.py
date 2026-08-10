@@ -20,7 +20,12 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service, narrator_definition_service, project_workspace_service
+from audiomancer.services import (
+    ai_translation_service,
+    narrator_definition_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.main_window import MainWindow
 from chunking_test_support import build_chunking_document
@@ -210,7 +215,22 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
         encoding="utf-8",
     )
     narrator_definition_service.ensure_narrator_voice_document(project_root)
-    (project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "source": {"kind": "original", "language": "en", "fingerprint": "translation-fixture"},
+            "ai_profile_id": "profile-1",
+            "instructions": "",
+            "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {},
+            "checkpoint": None,
+            "failure": None,
+            "blocks": [],
+        },
+    )
     window = _build_window(qtbot, project_root)
     assert window._current_manifest is not None
     window._current_manifest["operations"]["narrator_definition"]["status"] = "completed"

@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AI Translation verification now uses a valid Speech Blocks project fixture,
+  preventing strict corrupt-state recovery from opening a blocking test dialog.
 - Speech, translation, audio-model loading, and workflow controllers now share
   behavior-identical internal helpers while preserving existing limits,
   fallbacks, cancellation, progress, refresh, and error behavior.

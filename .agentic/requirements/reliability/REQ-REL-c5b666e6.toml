@@ -64,6 +64,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_public_read_projections_do_not_hide_invalid_document",
   "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_generation_does_not_overwrite_corrupt_audio_blocks_document",
   "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_requires_explicit_reset_for_corrupt_block_document",
+  "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_controller_keeps_broad_downstream_reset_on_approval_loss",
 ]
 
 # --- optional below this line ---
