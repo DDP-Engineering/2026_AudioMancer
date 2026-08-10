@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-c993d6ac — Fix strict Speech Blocks fixture hang in translation verification
 
-stage: deliver
+stage: done
 type: fix
 path: quick
 requirements: REQ-REL-c5b666e6
@@ -45,8 +45,8 @@ opened: 2026-08-10
 - [x] knowledge pages reviewed; no update is needed for a test-fixture-only fix
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the standing approval in the verification prompt
-- [ ] journal and report inside the delivery commit; local commit delivered
-- [ ] close-out: `stage: done` set and committed only after delivery succeeds
+- [x] journal and report inside the delivery commit; local commit delivered
+- [x] close-out: `stage: done` set and committed only after delivery succeeds
 - [x] code style reviewed; this task is not a release and changes no version
 
 ## Log
@@ -65,6 +65,7 @@ opened: 2026-08-10
 - 2026-08-10 deliver: Diff review found four intended files only, no source behavior change, no knowledge-page change needed, no release/version change, and the verification-generated default settings file was removed.
 - 2026-08-10 deliver: Standing prompt approval authorizes local delivery and close-out commits; push, merge, parent edits, and planning-file edits remain excluded.
 - 2026-08-10 deliver: The report's 469-file merge-base count is an AEGIS base-selection artifact; authoritative HEAD and staged review contains exactly the journal, one requirement link, one test fixture, and the Unreleased changelog entry.
+- 2026-08-10 deliver: Local delivery commit 2eb44ec succeeded with the exact four-file staged diff; task closed without push or merge as required.
 
 ## Delivery report (2026-08-10)
 
