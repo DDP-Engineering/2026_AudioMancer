@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-d6b4e4ea — Implement confirmed 2026-08-10 analysis fixes
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-FUNC-4d5ece0f, REQ-FUNC-1a2d28bb, REQ-DATA-966afd2d, REQ-REL-484a0674, REQ-REL-8dc30a4b, REQ-REL-0f90f2a4, REQ-DATA-d5324480, REQ-FUNC-3199dbb1, REQ-FUNC-6f6e045f, REQ-REL-1a521d45, REQ-DATA-330b5d31, REQ-REL-557b0a5f, REQ-DATA-ca7c6c36, REQ-SEC-cdbd652c, REQ-PLAT-0ef29ded, REQ-REL-8a56ff1e, REQ-REL-50e2f540, REQ-REL-3b9c207e, REQ-UX-cc7bc507, REQ-DATA-5e59c157, REQ-UX-29c94862, REQ-UX-6ec7fe61, REQ-FUNC-f04f2515, REQ-UX-9a7fc380, REQ-PLAT-e1ca40ab, REQ-UX-a6c3e152, REQ-FUNC-2b7862b5, REQ-FUNC-efbb32a4, REQ-FUNC-90dd5691, REQ-FUNC-ff2e2c94, REQ-FUNC-085699ab, REQ-FUNC-efcaeeed, REQ-PLAT-2a16daee
@@ -42,8 +42,8 @@ opened: 2026-08-10
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, links all true
 - [x] delivery confirmed by the human before the commit
-- [ ] journal and report inside the delivery commit; approved local outcome delivered
-- [ ] close-out: `stage: done` set and committed only after the approved outcome succeeded
+- [x] journal and report inside the delivery commit; approved local outcome delivered
+- [x] close-out: `stage: done` set and committed only after the approved outcome succeeded
 - [x] project delivery additions and code style verified; no release version workflow required
 
 ## Log
@@ -98,6 +98,8 @@ opened: 2026-08-10
 - 2026-08-11 deliver: Reviewed the production, test, requirement, documentation, knowledge, and changelog diff against the confirmed findings and explicit exclusions; no analysis documents, release versions, broad refactors, compatibility identifiers, or unrelated user files are included.
 - 2026-08-11 deliver: Re-read all task requirements; delivered requirements remain active, compact-script target-only requirements are retired with explicit reasons, and affected paths plus linked selectors match the implemented contracts.
 - 2026-08-11 deliver: The human explicitly approved the staged delivery commit and safe local fast-forward merge into master; pushing remains forbidden.
+- 2026-08-11 deliver: Delivery commit f429d0b was created on ddp/analysis-2026-08-10-fixes and local master fast-forwarded to it after proving no overlap with the preserved main-checkout changes.
+- 2026-08-11 close-out: Marked the task done after the approved local outcome succeeded; no push was attempted.
 
 ## Delivery report (2026-08-11)
 
@@ -138,4 +140,4 @@ opened: 2026-08-10
   - REQ-PLAT-2a16daee - Accept UTF-8 BOM settings
 - diff vs merge base: 105 file(s) changed, 2744 line(s) added
 - checks: errors=0 warnings=6 notes=0
-- checklist: 6/8 done; open: journal and report inside the delivery commit; approved local outcome delivered; close-out: `stage: done` set and committed only after the approved outcome succeeded
+- checklist: 8/8 done; open: none
