@@ -38,14 +38,12 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When the active settings file contains a valid UTF-8 JSON object with an
-optional leading byte-order mark, the settings loader shall treat it identically
-to a BOM-free payload.
+When an active or packaged seed settings file contains a valid UTF-8 JSON object with an optional leading byte-order mark, the settings loader shall treat it identically to a BOM-free payload.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "A temporary valid non-default settings payload encoded with a UTF-8 BOM loads with every validated value intact and creates no corruption backup."
+verification = "Focused tests load active and packaged-seed valid non-default settings payloads with a UTF-8 BOM and observe every validated value intact without a corruption backup or default fallback."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
@@ -56,6 +54,7 @@ affected_paths = [
 # these select the impacted regression set.
 linked_tests = [
   "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_accepts_utf8_bom_without_creating_backup",
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_accepts_bom_bundled_default",
 ]
 
 # --- optional below this line ---
@@ -67,4 +66,4 @@ priority = "high"   # low | normal | high
 rationale = "UTF-8 BOM output is common in Windows editors and does not make a JSON settings payload corrupt."
 
 created = 2026-08-08
-updated = 2026-08-08
+updated = 2026-08-10

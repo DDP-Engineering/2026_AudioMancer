@@ -146,7 +146,13 @@ def create_project_snapshot(
     except Exception:
         _PROJECT_SNAPSHOT_LOGGER.exception("Project ZIP snapshot failed snapshot_path=%s", final_path)
         if temporary_path.exists():
-            temporary_path.unlink()
+            try:
+                temporary_path.unlink()
+            except OSError:
+                _PROJECT_SNAPSHOT_LOGGER.exception(
+                    "Could not remove failed snapshot temporary path=%s",
+                    temporary_path,
+                )
         raise
 
     _PROJECT_SNAPSHOT_LOGGER.info("Created project ZIP snapshot snapshot_path=%s file_count=%s", final_path, file_count)

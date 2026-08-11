@@ -1124,13 +1124,11 @@ def _confirm_delete_profile(window: "MainWindow", language: str) -> bool:
     @param[in]  language Language code.
     @return     None.
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.narator_voice_delete_title", language),
-            ui_state_service.translate("dialog.narator_voice_delete_message", language),
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.narator_voice_delete_title",
+        "dialog.narator_voice_delete_message",
     )
 
 
@@ -1141,13 +1139,11 @@ def _confirm_profile_edit(window: "MainWindow", language: str) -> bool:
     @param[in]  language Language code.
     @return     None.
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.narator_voice_edit_title", language),
-            ui_state_service.translate("dialog.narator_voice_edit_message", language),
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.narator_voice_edit_title",
+        "dialog.narator_voice_edit_message",
     )
 
 
@@ -1167,13 +1163,11 @@ def _confirm_generate_sample(window: "MainWindow", language: str, profile_id: st
         if has_existing_sample
         else "dialog.narator_voice_generate_sample_message"
     )
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.narator_voice_generate_sample_title", language),
-            ui_state_service.translate(message_key, language),
-        )
-        == QMessageBox.StandardButton.Yes
+    return misc_ui_controller.confirm_question(
+        window,
+        language,
+        "dialog.narator_voice_generate_sample_title",
+        message_key,
     )
 
 

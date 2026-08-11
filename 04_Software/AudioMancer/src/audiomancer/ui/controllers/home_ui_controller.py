@@ -618,6 +618,7 @@ def activate_project(
     @exception  None
     """
     window.stop_all_audio_playback()
+    window._ai_translation_page.flush_pending_translation_edit()
     try:
         speech_blocks_service.load_speech_blocks_document(project_root)
         audio_blocks_service.reconcile_audio_playability(project_root)
@@ -630,12 +631,9 @@ def activate_project(
         )
     window._text_cleanup_page.discard_cleaned_text_edit()
     window.set_project_active(True)
-    window._current_page_id = "home"
-    home_page = window._page_registry.get("home")
-    if home_page is not None:
-        window._stack.setCurrentWidget(home_page)
-        window._sidebar.set_current_page("home")
-    window.show_project_state(project_root, manifest)
+    window._current_project_root = project_root
+    window._current_manifest = manifest
+    window.set_current_page("home")
 
 
 def _confirm_cleanup_draft_discard(window: "MainWindow", language: str) -> bool:

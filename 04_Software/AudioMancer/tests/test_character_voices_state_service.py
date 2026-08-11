@@ -171,7 +171,7 @@ def test_state_same_narrator_mode_disables_character_edit_and_generate(tmp_path)
 
 def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
     """
-    @brief      Verify missing Narator Voice samples surface a warning.
+    @brief      Verify missing Narrator Voice samples surface a warning.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -194,7 +194,7 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
     )
 
     assert state["missing_narrator_sample"] is True
-    assert any("narator voice sample" in note.lower() for note in state["notes"])
+    assert any("narrator voice sample" in note.lower() for note in state["notes"])
 
 
 def test_state_manifest_save_failure_returns_recovery_without_target_sync(monkeypatch, tmp_path) -> None:
@@ -343,7 +343,7 @@ def _create_project_with_narrator_and_character(
                 "source_model_id": "qwen-designer",
                 "language": "en",
             },
-            "Narator voice sample ready.",
+            "Narrator voice sample ready.",
             b"RIFF-narrator",
         )
     narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")

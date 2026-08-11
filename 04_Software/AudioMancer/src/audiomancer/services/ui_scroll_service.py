@@ -73,6 +73,9 @@ class ScrollStepEventFilter(QObject):
         @return     True when the wheel event was handled.
         @exception  None
         """
+        if event.type() == QEvent.Type.Destroy:
+            self._vertical_angle_remainder_by_viewport.pop(id(watched), None)
+            return super().eventFilter(watched, event)
         if event.type() != QEvent.Type.Wheel or not isinstance(watched, QWidget):
             return super().eventFilter(watched, event)
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:

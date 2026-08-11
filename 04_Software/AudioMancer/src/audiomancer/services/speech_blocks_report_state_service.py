@@ -155,7 +155,13 @@ def build_operation_state(
     @return     Persisted operation-state payload.
     @exception  None
     """
-    processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in speech_blocks})
+    processed_chunk_count = len(
+        {
+            chunk_id
+            for block in speech_blocks
+            if (chunk_id := str(block.get("chunk_id", "")).strip())
+        }
+    )
     warning_entries = warning_records_from_blocks(speech_blocks)
     metadata_payload: dict[str, object] = {
         "source_language": source_language,

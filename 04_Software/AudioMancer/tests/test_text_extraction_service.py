@@ -495,6 +495,20 @@ def test_structured_html_extractor_omits_ignored_subtrees_without_losing_visible
     assert [event.text for event in parser.events] == expected_texts
 
 
+def test_structured_html_extractor_preserves_common_visible_containers() -> None:
+    """Verify common EPUB structural containers do not silently lose visible text."""
+    parser = text_extraction_adapters._StructuredHtmlExtractor(spine_index=0, item_id="chapter_1.xhtml")
+    parser.feed(
+        "<body>Bare body<div>Div paragraph.</div><table><tr><td>Cell text.</td></tr></table>"
+        "<dl><dt>Term.</dt><dd>Definition.</dd></dl><figure><figcaption>Caption.</figcaption></figure></body>"
+    )
+    parser.close()
+
+    assert [event.text for event in parser.events] == [
+        "Bare body", "Div paragraph.", "Cell text.", "Term.", "Definition.", "Caption."
+    ]
+
+
 def test_extract_text_omits_hidden_epub_content_from_canonical_text_and_ledger(tmp_path) -> None:
     """Verify public EPUB extraction writes only visible blocks in source order."""
     project_root, manifest = project_workspace_service.create_project("VisibleEpub", tmp_path)

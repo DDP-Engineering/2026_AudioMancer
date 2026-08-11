@@ -22,7 +22,6 @@ from audiomancer.services import (
     narrator_definition_service,
     narrator_definition_state_service,
     project_workspace_service,
-    tts_budget_service,
 )
 
 
@@ -225,27 +224,6 @@ def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_
     assert "Profiles with samples: 1" in state["status_lines"]
     assert "Selected profiles: 0" in state["status_lines"]
     assert "Qwen3 TTS readiness: ready" in state["status_lines"]
-
-
-def test_narrator_state_service_status_lines_use_compact_script_budget_units() -> None:
-    """
-    @brief      Verify the status counter uses the shared compact-script budget estimate.
-    @return     None.
-    @exception  None
-    """
-    preview_text = narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE["zh"]
-    preview_units = tts_budget_service.estimate_budget_units(preview_text)
-
-    lines = narrator_definition_state_service.build_status_lines(
-        [],
-        [],
-        {"minimum_qwen_ready": True},
-        "en",
-        current_profile={"preview_text": preview_text},
-        preview_safe_word_limit=81,
-    )
-
-    assert f"Preview budget: {preview_units}/81 safe budget units" in lines
 
 
 def test_repeated_narrator_state_refresh_does_not_write_or_alter_document(monkeypatch, tmp_path) -> None:

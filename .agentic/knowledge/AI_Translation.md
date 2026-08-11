@@ -12,6 +12,9 @@ operator-reviewable translation document.
   atomic writes, summaries, synchronization after chunk changes, and resets.
 - Translate/retranslate chunks with AI Runtime budgets, prompts, usage,
   cancellation, resumable checkpoints, and explicit approval state.
+- Restrict translation targets to English, Romanian, German, French, Russian,
+  Portuguese, Spanish, and Italian while retaining the source-script guard for
+  unsupported Latin/Cyrillic alternatives and CJK text (`REQ-FUNC-f04f2515`).
 - Project document/state notes into the translation workflow and invalidate
 only permitted downstream work.
 - Present profile selection, chunk review/edit/debouncing, retranslation,

@@ -283,6 +283,8 @@ def create_archive_export(
         _PROJECT_EXPORT_LOGGER.warning("Archive export unavailable kind=%s status=%s", export_kind, state.get("status"))
         raise ValueError("The requested export is not available yet.")
     archive_path = append_required_extension(export_path, ".zip")
+    if _is_path_inside_project(project_root, archive_path):
+        raise ValueError("Archive destination must be outside the active project folder.")
     archive_entries = _build_archive_entries(Path(project_root), manifest, export_kind)
     if not archive_entries:
         raise ValueError("The requested archive has no generated audio assets to export.")
@@ -301,7 +303,13 @@ def create_archive_export(
     except Exception:
         _PROJECT_EXPORT_LOGGER.exception("Project archive export failed path=%s", archive_path)
         if temporary_path.exists():
-            temporary_path.unlink()
+            try:
+                temporary_path.unlink()
+            except OSError:
+                _PROJECT_EXPORT_LOGGER.exception(
+                    "Could not remove failed archive temporary path=%s",
+                    temporary_path,
+                )
         raise
     return archive_path
 

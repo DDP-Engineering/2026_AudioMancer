@@ -15,11 +15,7 @@
 
 # IMPORTS
 
-import math
-import re
-
 from audiomancer import config
-from audiomancer.services import cleanup_text_analysis_service
 
 # PUBLIC API
 
@@ -132,32 +128,18 @@ def estimated_word_count(text: str) -> int:
     return len([word for word in str(text).split() if word.strip()])
 
 
-def estimate_budget_units(text: str, script_name: str | None = None) -> int:
+def estimate_budget_units(text: str) -> int:
     """
     @brief      Estimate spoken budget units for one text span, in word-equivalents.
-    @details    Word counting is meaningless for scripts written without spaces, so the
-                estimate also derives units from a per-script character rate and keeps the
-                larger of the two. One unit is the text a narrator speaks in
-                `1 / DEFAULT_TTS_WORDS_PER_AUDIO_SECOND` seconds.
+    @details    Supported Latin and Cyrillic target text is budgeted by word count.
     @param[in]  text Candidate text span.
-    @param[in]  script_name Optional pre-classified dominant writing script.
     @return     Conservative budget-unit count.
     @exception  None
     """
     normalized_text = str(text).strip()
     if not normalized_text:
         return 0
-    resolved_script = script_name or cleanup_text_analysis_service.classify_text_script(normalized_text)
-    characters_per_second = float(
-        config.DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_BY_SCRIPT.get(
-            resolved_script,
-            config.DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_FALLBACK,
-        )
-    )
-    word_like_count = len(re.findall(r"[^\W_]+(?:['’][^\W_]+)?", normalized_text, flags=re.UNICODE))
-    compact_length = len(re.sub(r"\s+", "", normalized_text))
-    character_units = math.ceil(compact_length * _words_per_audio_second() / characters_per_second)
-    return max(1, word_like_count, character_units)
+    return max(1, estimated_word_count(normalized_text))
 
 
 # LOCAL HELPERS

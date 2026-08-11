@@ -11,11 +11,13 @@ verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_page_activation_warns_when_narrator_sample_is_missing",
   "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_page_activation_syncs_home_status",
   "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_page_activation_uses_persisted_targets_before_page_load",
+  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_character_voices_activation_refreshes_before_prerequisite_warning",
 ]
 
 priority = "high"

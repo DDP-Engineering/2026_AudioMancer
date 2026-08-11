@@ -18,7 +18,7 @@ title = "Narrator samples shall enforce script-aware safe TTS budgets"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
-status = "active"
+status = "retired"
 
 # Self-contained prose: a reader with no other context must be able to
 # understand and check it. No ticket numbers, no run IDs, no references
@@ -39,6 +39,8 @@ status = "active"
 # plainly is better plainly.
 requirement = """
 When Narrator Voice validates or displays a sample-preview TTS budget, it shall use the shared script-aware budget-unit estimate so the displayed count matches the pre-runtime safe-budget decision.
+
+Retired 2026-08-10: Japanese, Korean, and Chinese target workflows are unsupported, so the TTS budget now uses the supported word-based estimate.
 """
 
 # The observation that settles whether the behavior holds — not a
@@ -76,4 +78,4 @@ priority = "high"
 rationale = "Whitespace counts let space-less previews bypass the safe TTS limit and show operators a false budget value."
 
 created = 2026-08-07
-updated = 2026-08-07
+updated = 2026-08-10

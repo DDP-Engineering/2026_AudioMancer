@@ -725,4 +725,21 @@ def test_wait_for_terminal_operation_stops_before_status_read_when_cancelled(mon
     assert status_reads["count"] == 0
 
 
+def test_wait_for_terminal_operation_ignores_idle_before_running(monkeypatch) -> None:
+    """Verify registration-lag idle status does not become a false terminal failure."""
+    statuses = iter(("idle", "running", "completed"))
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"operation": {"status": next(statuses)}},
+    )
+    monkeypatch.setattr(voiceweaver_runtime_service, "_sleep_with_cancel", lambda *_args: None)
+
+    result = voiceweaver_runtime_service.wait_for_terminal_operation(
+        "http://127.0.0.1:8059", poll_interval_seconds=0.0, timeout_seconds=1.0
+    )
+
+    assert result["operation"]["status"] == "completed"
+
+
 # END OF FILE

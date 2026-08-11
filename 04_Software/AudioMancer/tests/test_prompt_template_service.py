@@ -69,4 +69,17 @@ def test_render_prompt_allows_braced_source_text_values(tmp_path) -> None:
     assert rendered == "Clean this:\nChapter index markers: {ix}, {x}, {xi}."
 
 
+def test_render_prompt_does_not_resubstitute_inserted_placeholder_text(tmp_path) -> None:
+    """Verify replacement values containing known placeholders remain literal."""
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "sample.txt").write_text("{instructions}\nTarget: {target_language}", encoding="utf-8")
+    rendered = prompt_template_service.render_prompt(
+        "sample",
+        {"instructions": "Keep literal {target_language} text.", "target_language": "Romanian"},
+        prompt_root=prompt_root,
+    )
+    assert rendered == "Keep literal {target_language} text.\nTarget: Romanian"
+
+
 # END OF FILE

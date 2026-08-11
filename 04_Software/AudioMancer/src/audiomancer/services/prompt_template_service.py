@@ -78,12 +78,10 @@ def render_prompt(
     if extra_variables:
         raise ValueError(f"Prompt '{prompt_name}' received unexpected placeholders: {', '.join(extra_variables)}")
 
-    rendered = template
-    for placeholder_name in sorted(placeholders):
-        rendered = rendered.replace(
-            f"{{{placeholder_name}}}",
-            str(variables[placeholder_name]),
-        )
+    rendered = _PLACEHOLDER_PATTERN.sub(
+        lambda match: str(variables[match.group(1)]),
+        template,
+    )
 
     if not rendered.strip():
         raise ValueError(f"Rendered prompt is empty: {prompt_name}")

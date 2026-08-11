@@ -220,15 +220,15 @@ def test_config_resolves_frozen_packaged_runtime_resources(monkeypatch, tmp_path
         importlib.reload(misc_ui_controller)
 
 
-def test_config_translation_languages_include_qwen3_tts_languages_with_chinese() -> None:
+def test_config_translation_languages_exclude_unsupported_cjk_targets() -> None:
     """
-    @brief      Verify shared language options include Qwen3 TTS languages, Romanian, and Chinese.
+    @brief      Verify shared language options include only supported Latin and Cyrillic targets.
     @return     None.
     @exception  None
     """
     language_codes = [language_code for language_code, _label in config.TRANSLATION_LANGUAGE_OPTIONS]
 
-    assert language_codes == ["en", "ro", "ja", "ko", "zh", "de", "fr", "ru", "pt", "es", "it"]
+    assert language_codes == ["en", "ro", "de", "fr", "ru", "pt", "es", "it"]
 
 
 def test_config_defines_seven_font_size_steps() -> None:

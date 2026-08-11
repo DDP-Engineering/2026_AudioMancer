@@ -98,7 +98,6 @@ def plan_narrator_blocks(
     chunk_text: str,
     target_units: int,
     minimum_units: int | None = None,
-    script_name: str | None = None,
 ) -> list[NarratorBlockPayload]:
     """
     @brief      Split one source chunk into evenly sized same-narrator blocks.
@@ -108,7 +107,6 @@ def plan_narrator_blocks(
     @param[in]  chunk_text Exact source chunk text, normally one paragraph.
     @param[in]  target_units Preferred budget units per block.
     @param[in]  minimum_units Optional floor below which a trailing block is merged back.
-    @param[in]  script_name Optional pre-classified dominant writing script.
     @return     Ordered block payloads whose `source_text` values concatenate to the input.
     @exception  ValueError Raised when the planned blocks would not reproduce the input.
     """
@@ -119,13 +117,11 @@ def plan_narrator_blocks(
     resolved_minimum = (
         int(minimum_units) if minimum_units is not None else int(resolved_target * _ORPHAN_BLOCK_FRACTION)
     )
-    resolved_script = script_name or cleanup_text_analysis_service.classify_text_script(source_text)
-
     atomic_spans = _atomic_sentence_spans(source_text)
-    packed_spans = _pack_spans(atomic_spans, resolved_target, resolved_script)
-    packed_spans = _absorb_orphan_tail(packed_spans, resolved_target, resolved_minimum, resolved_script)
+    packed_spans = _pack_spans(atomic_spans, resolved_target)
+    packed_spans = _absorb_orphan_tail(packed_spans, resolved_target, resolved_minimum)
 
-    blocks = [_build_block(span_text, resolved_target, resolved_script) for span_text in packed_spans]
+    blocks = [_build_block(span_text, resolved_target) for span_text in packed_spans]
     _verify_source_coverage(source_text, blocks)
     return blocks
 
@@ -187,7 +183,7 @@ def _ends_with_abbreviation(span_text: str) -> bool:
     return token[0].isupper()
 
 
-def _pack_spans(atomic_spans: list[str], target_units: int, script_name: str) -> list[str]:
+def _pack_spans(atomic_spans: list[str], target_units: int) -> list[str]:
     """
     @brief      Pack atomic spans into evenly sized blocks that stay inside the target budget.
     @details    Filling every block to the maximum leaves the remainder stranded in a short
@@ -196,11 +192,10 @@ def _pack_spans(atomic_spans: list[str], target_units: int, script_name: str) ->
                 needs rather than toward the ceiling.
     @param[in]  atomic_spans Ordered atomic spans.
     @param[in]  target_units Maximum budget units per block.
-    @param[in]  script_name Dominant writing script.
     @return     Ordered packed block texts.
     @exception  None
     """
-    total_units = tts_budget_service.estimate_budget_units("".join(atomic_spans), script_name)
+    total_units = tts_budget_service.estimate_budget_units("".join(atomic_spans))
     block_count = max(1, math.ceil(total_units / target_units))
     effective_target = max(1, math.ceil(total_units / block_count))
 
@@ -210,7 +205,7 @@ def _pack_spans(atomic_spans: list[str], target_units: int, script_name: str) ->
         if not current:
             current = atomic_span
             continue
-        if tts_budget_service.estimate_budget_units(current + atomic_span, script_name) > effective_target:
+        if tts_budget_service.estimate_budget_units(current + atomic_span) > effective_target:
             packed_spans.append(current)
             current = atomic_span
             continue
@@ -224,7 +219,6 @@ def _absorb_orphan_tail(
     packed_spans: list[str],
     target_units: int,
     minimum_units: int,
-    script_name: str,
 ) -> list[str]:
     """
     @brief      Merge a very short trailing block back into its predecessor.
@@ -233,31 +227,29 @@ def _absorb_orphan_tail(
     @param[in]  packed_spans Ordered packed block texts.
     @param[in]  target_units Preferred budget units per block.
     @param[in]  minimum_units Floor below which the trailing block is absorbed.
-    @param[in]  script_name Dominant writing script.
     @return     Ordered packed block texts with any orphan tail absorbed.
     @exception  None
     """
     if len(packed_spans) < 2 or minimum_units <= 0:
         return packed_spans
-    if tts_budget_service.estimate_budget_units(packed_spans[-1], script_name) >= minimum_units:
+    if tts_budget_service.estimate_budget_units(packed_spans[-1]) >= minimum_units:
         return packed_spans
     merged = packed_spans[-2] + packed_spans[-1]
-    if tts_budget_service.estimate_budget_units(merged, script_name) > target_units:
+    if tts_budget_service.estimate_budget_units(merged) > target_units:
         return packed_spans
     return [*packed_spans[:-2], merged]
 
 
-def _build_block(span_text: str, target_units: int, script_name: str) -> NarratorBlockPayload:
+def _build_block(span_text: str, target_units: int) -> NarratorBlockPayload:
     """
     @brief      Build one narrator block payload from an exact source span.
     @param[in]  span_text Exact source span for this block.
     @param[in]  target_units Preferred budget units per block.
-    @param[in]  script_name Dominant writing script.
     @return     Block payload with exact source text, spoken text, and warning flags.
     @exception  None
     """
     warning_flags: list[str] = []
-    if tts_budget_service.estimate_budget_units(span_text, script_name) > target_units:
+    if tts_budget_service.estimate_budget_units(span_text) > target_units:
         warning_flags.append(NARRATOR_BUDGET_EXCEEDED_FLAG)
     return {
         "source_text": span_text,

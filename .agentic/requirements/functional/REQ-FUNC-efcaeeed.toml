@@ -19,6 +19,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_creates_voice_and_audio_archives",
   "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_failure_preserves_existing_archive_and_cleans_temp",
   "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_success_replaces_existing_archive",
+  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_cleanup_does_not_mask_original_failure",
 ]
 
 priority = "high"

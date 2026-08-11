@@ -241,7 +241,10 @@ def run_voice_design_generation(
     )
     persist_runtime_status_from_settings(settings_payload, final_status)
     final_operation = final_status.get("operation", {})
-    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip() != "completed":
+    if (
+        not isinstance(final_operation, dict)
+        or str(final_operation.get("status", "")).strip().lower() != "completed"
+    ):
         raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
     final_result = final_status.get("result", {})
     if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):

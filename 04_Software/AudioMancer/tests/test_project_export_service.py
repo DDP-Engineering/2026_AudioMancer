@@ -16,6 +16,7 @@
 # IMPORTS
 
 import json
+from pathlib import Path
 import zipfile
 
 import pytest
@@ -407,6 +408,38 @@ def test_project_archive_export_failure_preserves_existing_archive_and_cleans_te
 
     assert archive_path.read_bytes() == previous_archive
     assert not (tmp_path / ".narrator_voice.zip.tmp").exists()
+
+
+def test_project_archive_export_cleanup_does_not_mask_original_failure(tmp_path, monkeypatch) -> None:
+    """Verify a temporary-file cleanup failure cannot replace the archive failure."""
+    project_root, manifest = _build_export_project(tmp_path)
+    archive_path = tmp_path / "narrator_voice.zip"
+    temporary_path = tmp_path / ".narrator_voice.zip.tmp"
+    original_build_archive_entries = project_export_service._build_archive_entries
+    original_unlink = Path.unlink
+
+    def _build_entries_with_missing_source(*args):
+        archive_entries = original_build_archive_entries(*args)
+        source_path = archive_entries[0][1]
+        assert source_path is not None
+        source_path.unlink()
+        return archive_entries
+
+    def _unlink(path, *args, **kwargs):
+        if path == temporary_path:
+            raise PermissionError("temporary export is locked")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(project_export_service, "_build_archive_entries", _build_entries_with_missing_source)
+    monkeypatch.setattr(Path, "unlink", _unlink)
+
+    with pytest.raises(FileNotFoundError):
+        project_export_service.create_archive_export(
+            project_root,
+            manifest,
+            project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+            archive_path,
+        )
 
 
 def test_project_archive_export_success_replaces_existing_archive(tmp_path) -> None:
@@ -807,6 +840,20 @@ def test_project_export_service_keeps_existing_uppercase_zip_extension(tmp_path)
 
     assert archive_path == requested_path
     assert archive_path.is_file()
+
+
+def test_project_archive_export_rejects_destination_inside_project(tmp_path) -> None:
+    """Verify the service boundary prevents recursive project archive capture."""
+    project_root, manifest = _build_export_project(tmp_path)
+    destination = project_root / "exports" / "narrator.zip"
+    with pytest.raises(ValueError, match="outside the active project"):
+        project_export_service.create_archive_export(
+            project_root,
+            manifest,
+            project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+            destination,
+        )
+    assert not destination.exists()
 
 
 # END OF FILE

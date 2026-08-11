@@ -22,6 +22,7 @@ from pathlib import Path
 import re
 
 from audiomancer import config
+from audiomancer.services import cleanup_text_analysis_service
 from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
@@ -53,13 +54,6 @@ CHUNK_FIELDS = frozenset(
         "starts_after_scene_separator",
     }
 )
-_ROMAN_NUMERAL_PATTERN = re.compile(
-    r"(?=[MDCLXVI]+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})"
-)
-_CHAPTER_PATTERNS = (
-    re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
-    _ROMAN_NUMERAL_PATTERN,
-)
 TOKEN_USAGE_FIELDS = frozenset({"input_tokens", "output_tokens", "total_tokens", "usage_available"})
 RESUMABLE_STATUSES = frozenset({"running", "cancelled", "failed"})
 TERMINAL_STATUSES = frozenset({"completed"})
@@ -90,10 +84,9 @@ def chapter_label_from_text(chunk_text: str) -> str | None:
     """
     for line in chunk_text.splitlines():
         normalized = line.strip()
-        if len(normalized) > 100:
-            continue
-        if any(pattern.fullmatch(normalized) for pattern in _CHAPTER_PATTERNS):
-            return normalized
+        chapter_label = cleanup_text_analysis_service.detect_chapter_label(normalized)
+        if chapter_label is not None:
+            return chapter_label
     return None
 
 

@@ -47,20 +47,6 @@ def test_discovered_model_budget_overrides_the_fallback() -> None:
     assert budget["model_budget_source"] == "default_model_parameters"
 
 
-def test_budget_units_use_characters_for_space_free_scripts() -> None:
-    """
-    @brief      Verify CJK text is budgeted by characters rather than by meaningless word counts.
-    @return     None.
-    @exception  None
-    """
-    japanese_text = "彼は笑った。彼女は黙っていた。それから彼は出て行った。"
-
-    units = tts_budget_service.estimate_budget_units(japanese_text)
-
-    assert units > len(japanese_text.split())
-    assert units >= len(japanese_text) * 0.3
-
-
 def test_budget_units_stay_word_paced_for_latin_script() -> None:
     """
     @brief      Verify spaced text keeps a word-paced estimate.

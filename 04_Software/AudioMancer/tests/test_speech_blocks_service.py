@@ -3876,4 +3876,25 @@ def _profile_payload() -> dict[str, object]:
     }
 
 
+def test_projected_completed_state_does_not_fabricate_timestamp() -> None:
+    """Verify repeated reads cannot make a completed operation appear newly completed."""
+    document = {
+        "status": "completed",
+        "source": {"kind": "original", "language": "en", "fingerprint": "source"},
+        "instructions": "",
+        "response_contract": "direct_blocks",
+        "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+        "budget_metadata": {},
+        "checkpoint": None,
+        "scene_ambience": {},
+        "blocks": [],
+    }
+
+    first = speech_blocks_service._project_operation_state(document, 0)  # noqa: SLF001
+    second = speech_blocks_service._project_operation_state(document, 0)  # noqa: SLF001
+
+    assert first["completed_at"] is None
+    assert second["completed_at"] is None
+
+
 # END OF FILE

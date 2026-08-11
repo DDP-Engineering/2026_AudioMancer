@@ -92,7 +92,7 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
         "Default Chunking Profile",
         "Default AI Chunking Strategy",
         "Default Translation Profile",
-        "Default Narator Generation Profile",
+        "Default Narrator Generation Profile",
         "Default Character Extraction Profile",
         "Default Speech Blocks Profile",
     ]

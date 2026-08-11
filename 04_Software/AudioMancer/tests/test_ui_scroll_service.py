@@ -15,7 +15,7 @@
 
 # IMPORTS
 
-from PySide6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QApplication, QListWidget, QWidget
 
@@ -69,6 +69,22 @@ def test_scroll_step_filter_ignores_non_scroll_area_widgets(qtbot) -> None:
 
     assert installed_filter is not None
     assert installed_filter.eventFilter(widget, event) is False
+
+
+def test_scroll_step_filter_discards_destroyed_viewport_remainder(qtbot) -> None:
+    """Verify destroyed viewport identities cannot retain wheel state."""
+    application = QApplication.instance()
+    assert application is not None
+    list_widget = QListWidget()
+    qtbot.addWidget(list_widget)
+    installed_filter = ui_scroll_service.install_global_scroll_step_filter(application, 2)
+    assert installed_filter is not None
+    viewport = list_widget.viewport()
+    installed_filter._vertical_angle_remainder_by_viewport[id(viewport)] = 60  # noqa: SLF001
+
+    installed_filter.eventFilter(viewport, QEvent(QEvent.Type.Destroy))
+
+    assert id(viewport) not in installed_filter._vertical_angle_remainder_by_viewport  # noqa: SLF001
 
 
 # HELPER FUNCTIONS

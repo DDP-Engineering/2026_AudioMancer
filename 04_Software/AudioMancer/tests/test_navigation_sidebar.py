@@ -25,7 +25,7 @@ _WORKFLOW_PAGES = (
     ("text_chunking", "Text Chunking"),
     ("ai_translation", "AI Translation"),
     ("characters", "Characters"),
-    ("narator_voice", "Narator Voice"),
+    ("narator_voice", "Narrator Voice"),
     ("character_voices", "Character Voices"),
     ("speech_blocks", "Speech Blocks"),
     ("audio_blocks", "Audio Blocks"),

@@ -1278,4 +1278,22 @@ def test_home_ui_controller_reselects_stored_source_without_reset(monkeypatch, t
     assert refreshed_manifests == []
 
 
+def test_activate_project_flushes_translation_edit_and_displays_home(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """Verify project activation flushes old edits before selecting the Home container."""
+    project_root, manifest = project_workspace_service.create_project("ActivationTarget", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.set_current_page("audio_blocks")
+    calls = []
+    monkeypatch.setattr(window._ai_translation_page, "flush_pending_translation_edit", lambda: calls.append("flush"))
+
+    home_ui_controller.activate_project(window, project_root, manifest)
+
+    assert calls == ["flush"]
+    assert window._current_page_id == "home"
+    assert window._stack.currentWidget() is window._page_containers["home"]
+
+
 # END OF FILE

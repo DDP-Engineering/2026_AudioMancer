@@ -1,0 +1,23 @@
+schema = 1
+id = "REQ-REL-3b9c207e"
+title = "Preserve the original project snapshot failure"
+status = "active"
+
+requirement = """
+When project snapshot creation fails and temporary-file cleanup also fails, the snapshot service shall report the original creation failure.
+"""
+
+verification = "A focused snapshot test injects a missing source and a locked temporary ZIP, then observes the original FileNotFoundError."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_cleanup_does_not_mask_original_failure",
+]
+
+spec = ""
+priority = "normal"
+rationale = "Cleanup is best-effort and must not hide the actionable cause of snapshot failure."
+created = 2026-08-10
+updated = 2026-08-10

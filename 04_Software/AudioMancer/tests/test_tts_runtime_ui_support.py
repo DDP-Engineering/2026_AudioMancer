@@ -87,12 +87,12 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
         (
             {
                 "active_model": {"model_id": "voice-designer"},
-                "operation": {"status": "completed", "progress_percent": 50},
+                "operation": {"status": " Completed ", "progress_percent": 50},
                 "device_diagnostics": {},
             },
             {
                 "active_model": {"model_id": "voice-designer"},
-                "operation": {"status": "completed", "progress_percent": 50},
+                "operation": {"status": " Completed ", "progress_percent": 50},
                 "result": {"available": True, "summary": "Sample ready."},
                 "device_diagnostics": {},
             },

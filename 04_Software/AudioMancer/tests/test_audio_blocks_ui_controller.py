@@ -969,4 +969,30 @@ def _read_speech_blocks_fixture_blocks(project_root):
     document = speech_blocks_service.load_speech_blocks_document(project_root)
     return document["blocks"] if document else []
 
+def test_audio_blocks_playback_stops_audio_assembly_preview() -> None:
+    """Verify Audio Blocks playback cannot overlap the assembled audiobook."""
+    stopped = []
+
+    class _Player:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def stop(self) -> None:
+            stopped.append(self.name)
+
+    window = type(
+        "Window",
+        (),
+        {
+            "_narator_voice_audio_player": _Player("narrator"),
+            "_character_voices_audio_player": _Player("characters"),
+            "_audio_assembly_audio_player": _Player("assembly"),
+        },
+    )()
+
+    audio_blocks_ui_controller._stop_other_audio_previews(window)  # noqa: SLF001
+
+    assert stopped == ["narrator", "characters", "assembly"]
+
+
 # END OF FILE

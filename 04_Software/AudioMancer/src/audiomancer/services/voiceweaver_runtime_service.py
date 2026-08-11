@@ -984,6 +984,7 @@ def wait_for_terminal_operation(
     """
     deadline = time.monotonic() + timeout_seconds
     last_status_payload: dict[str, object] | None = None
+    observed_active_operation = False
     while time.monotonic() <= deadline:
         raise_if_cancelled(cancel_requested)
         last_status_payload = read_status(
@@ -1002,8 +1003,12 @@ def wait_for_terminal_operation(
             .strip()
             .lower()
         )
-        if operation_status in {"completed", "failed", "idle"}:
+        if operation_status in {"completed", "failed"}:
             return last_status_payload
+        if operation_status == "idle" and observed_active_operation:
+            return last_status_payload
+        if operation_status != "idle":
+            observed_active_operation = True
         _sleep_with_cancel(max(poll_interval_seconds, 0.05), cancel_requested)
     raise RuntimeError("Timed out while waiting for VoiceWeaver to finish the current operation.")
 

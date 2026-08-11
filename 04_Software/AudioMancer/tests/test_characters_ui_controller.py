@@ -295,7 +295,7 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
     assert window._characters_page.current_character_id() is not None
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     voice_targets = character_voices_service.load_voice_plan(project_root)
-    assert {target["display_name"] for target in voice_targets} == {"Narator Voice", "Alice", "Bob"}
+    assert {target["display_name"] for target in voice_targets} == {"Narrator Voice", "Alice", "Bob"}
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert {block["speech_block_id"] for block in speech_blocks} == {"0001-000001", "0001-000002"}
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)

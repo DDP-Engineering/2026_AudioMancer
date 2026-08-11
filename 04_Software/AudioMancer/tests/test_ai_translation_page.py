@@ -362,6 +362,32 @@ def test_start_translation_flushes_pending_edit_before_signal_and_stops_timer(qt
     ]
 
 
+def test_translation_state_refresh_flushes_pending_edit(qtbot) -> None:
+    """Verify a state refresh persists the latest edit instead of silently discarding it."""
+    page = _build_page(qtbot)
+    emitted = []
+    page.translated_text_changed.connect(lambda chunk_id, text: emitted.append((chunk_id, text)))
+    page._translated_text_edit.setPlainText("Latest before refresh")
+
+    page.set_translation_state(
+        source_chunks=_source_chunks(),
+        translated_chunks=[
+            {"chunk_id": "chunk-0001", "translated_text": "Translated one", "approved": False},
+            {"chunk_id": "chunk-0002", "translated_text": "Translated two", "approved": False},
+        ],
+        notes=[],
+        original_language="en",
+        target_language="ro",
+        selected_profile_id="profile-1",
+        stage_status=ai_translation_service.TRANSLATION_STATUS_IN_PROGRESS,
+        translated_count=2,
+        approved_count=0,
+        total_count=2,
+    )
+
+    assert emitted == [("chunk-0001", "Latest before refresh")]
+
+
 def test_translation_page_displays_locked_language_and_chunk_preview(qtbot) -> None:
     """Verify locked language indicators and canonical source preview remain visible."""
     page = _build_page(qtbot)

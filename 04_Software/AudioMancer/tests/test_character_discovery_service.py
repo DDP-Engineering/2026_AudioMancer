@@ -679,6 +679,37 @@ def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
     assert failed_document["checkpoint"]["phase"] == "synthesis"
     assert failed_document["checkpoint"]["next_candidate_index"] == 0
     assert failed_document["failure"]["phase"] == "synthesis"
+    assert failed_document["failure"]["message"] == "model failed"
+
+
+def test_start_discovery_resumes_empty_synthesis_checkpoint(monkeypatch, tmp_path) -> None:
+    """Verify an interrupted zero-candidate synthesis run can finalize without another model call."""
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryEmptySynthesis")
+    _resolved_chunks, source = character_discovery_service._resolve_discovery_input_chunks(project_root)  # noqa: SLF001
+    character_discovery_service.write_character_document(
+        project_root,
+        _character_document(
+            source,
+            status="running",
+            checkpoint={"phase": "synthesis", "next_candidate_index": 0, "candidates": []},
+        ),
+    )
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    monkeypatch.setattr(
+        character_discovery_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: pytest.fail("Empty synthesis resume must not call the provider."),
+    )
+
+    document = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+    )
+
+    assert document["status"] == "completed"
+    assert document["characters"] == []
+    assert document["checkpoint"] is None
 
 
 def test_discovery_resume_preserves_manual_inventory_through_checkpoints_and_recancellation(

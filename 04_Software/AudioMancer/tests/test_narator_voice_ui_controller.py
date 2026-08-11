@@ -1105,62 +1105,6 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
     assert sample_metadata["preview_text"] == "Previous sample text."
 
 
-def test_narator_voice_generate_sample_rejects_compact_script_budget_before_runtime_work(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify compact-script previews stop at the safe budget before VoiceWeaver commands run.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary path fixture.
-    @return     None.
-    @exception  None
-    """
-    project_root, _manifest = _create_project(tmp_path, "NarratorControllerCompactBudget")
-    profile = narrator_definition_service.create_custom_profile(
-        project_root,
-        "Chinese Narrator",
-        "Chinese",
-        "Generated prompt.",
-        narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE["zh"],
-    )
-    progress_messages = {
-        **_sample_progress_messages(),
-        "preview_text_over_budget": ui_state_service.translate(
-            "narator_voice.error_preview_text_over_budget",
-            "en",
-        ),
-    }
-    monkeypatch.setattr(
-        narator_voice_ui_controller.tts_runtime_ui_support,
-        "probe_runtime_and_persist_cache_from_settings",
-        lambda _settings_payload: pytest.fail("VoiceWeaver was probed after a rejected preview budget."),
-    )
-    monkeypatch.setattr(
-        narator_voice_ui_controller.tts_budget_service,
-        "resolve_cached_tts_budget",
-        lambda _models: {},
-    )
-    monkeypatch.setattr(
-        narator_voice_ui_controller.tts_budget_service,
-        "estimated_safe_word_count",
-        lambda _payload: 14,
-    )
-    monkeypatch.setattr(
-        narator_voice_ui_controller.voiceweaver_runtime_service,
-        "read_status",
-        lambda *_args, **_kwargs: pytest.fail("VoiceWeaver status was queried after a rejected preview budget."),
-    )
-
-    with pytest.raises(RuntimeError, match=r"15 budget units, safe limit 14"):
-        narator_voice_ui_controller._generate_and_store_sample(
-            project_root,
-            _default_settings_payload(),
-            progress_messages,
-            profile,
-            narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE["zh"],
-            progress_callback=None,
-            cancel_requested=lambda: False,
-        )
-
-
 def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker(
     monkeypatch,
     qtbot,
@@ -1282,7 +1226,7 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
     narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
 
     assert captured["operation_kind"] == "narrator_definition"
-    assert captured["operation_name"] == "Generate Narators"
+    assert captured["operation_name"] == "Generate Narrators"
     assert captured["initial_message"] == "Generating narator profiles..."
     assert captured["cancellable"] is True
     assert captured["project_root"] == project_root
@@ -2072,6 +2016,27 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "supported_generation_modes": ["definition", "voice_designer"],
         },
     ]
+
+
+def test_narrator_profile_confirmations_use_shared_default_no_helper(monkeypatch) -> None:
+    """Verify delete, edit, and generation confirmations all default to No."""
+    calls = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.misc_ui_controller,
+        "confirm_question",
+        lambda *args: (calls.append(args), False)[1],
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "has_profile_sample",
+        lambda *_args: False,
+    )
+    window = SimpleNamespace(_current_project_root=None)
+
+    assert narator_voice_ui_controller._confirm_delete_profile(window, "en") is False  # noqa: SLF001
+    assert narator_voice_ui_controller._confirm_profile_edit(window, "en") is False  # noqa: SLF001
+    assert narator_voice_ui_controller._confirm_generate_sample(window, "en", "profile-1") is False  # noqa: SLF001
+    assert len(calls) == 3
 
 
 # END OF FILE

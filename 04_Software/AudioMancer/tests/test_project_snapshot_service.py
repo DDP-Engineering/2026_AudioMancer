@@ -128,6 +128,26 @@ def test_project_snapshot_service_does_not_leave_final_zip_when_creation_fails(m
     assert snapshot_path.with_name(f".{snapshot_path.name}.tmp").exists() is False
 
 
+def test_project_snapshot_cleanup_does_not_mask_original_failure(monkeypatch, tmp_path) -> None:
+    """Verify a temporary-file cleanup failure cannot replace the snapshot failure."""
+    project_root, _manifest = _build_snapshot_project(tmp_path)
+    snapshot_path = tmp_path / "exports" / "failed.zip"
+    temporary_path = snapshot_path.with_name(f".{snapshot_path.name}.tmp")
+    missing_file = project_root / "missing.txt"
+    original_unlink = Path.unlink
+
+    def _unlink(path, *args, **kwargs):
+        if path == temporary_path:
+            raise PermissionError("temporary snapshot is locked")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(project_snapshot_service, "_iter_project_files", lambda _project_root: iter([missing_file]))
+    monkeypatch.setattr(Path, "unlink", _unlink)
+
+    with pytest.raises(FileNotFoundError):
+        project_snapshot_service.create_project_snapshot(project_root, snapshot_path)
+
+
 def test_project_snapshot_service_skips_symlink_directories_when_supported(tmp_path) -> None:
     """
     @brief      Verify symlink directories are not followed into the snapshot archive.

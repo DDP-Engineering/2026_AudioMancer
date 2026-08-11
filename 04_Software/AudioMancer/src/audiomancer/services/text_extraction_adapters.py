@@ -565,6 +565,8 @@ class _StructuredHtmlExtractor(HTMLParser):
     """Extract visible block-level text and native roles from XHTML."""
 
     _BLOCK_KINDS = {
+        "body": "body",
+        "div": "body",
         "p": "body",
         "h1": "heading",
         "h2": "heading",
@@ -573,6 +575,11 @@ class _StructuredHtmlExtractor(HTMLParser):
         "h5": "heading",
         "h6": "heading",
         "li": "list_or_dialogue",
+        "dt": "body",
+        "dd": "body",
+        "td": "body",
+        "th": "body",
+        "figcaption": "body",
         "blockquote": "blockquote",
         "pre": "table_or_preformatted",
     }

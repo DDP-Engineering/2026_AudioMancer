@@ -606,4 +606,11 @@ def _create_ready_chunking_project(
     return project_root, manifest
 
 
+@pytest.mark.parametrize("heading", ["Chapitre 3", "Kapitel IV", "Capítulo 7", "Глава 2"])
+def test_chunking_uses_cleanup_chapter_labels_for_supported_european_languages(heading: str) -> None:
+    """Verify Chunking recognizes the same supported European headings as Cleanup."""
+    assert cleanup_text_analysis_service.detect_chapter_label(heading) == heading
+    assert chunking_document_service.chapter_label_from_text(f"Preface line\n{heading}\nBody") == heading
+
+
 # END OF FILE

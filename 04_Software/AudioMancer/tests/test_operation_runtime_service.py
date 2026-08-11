@@ -703,4 +703,26 @@ def test_ensure_default_operation_state_skips_audio_blocks(tmp_path) -> None:
     assert not (project_root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).exists()
 
 
+def test_reset_operation_data_attempts_later_artifacts_after_unlink_failure(tmp_path, monkeypatch) -> None:
+    """Verify one locked artifact does not prevent reset from attempting later owned files."""
+    project_root, _manifest = project_workspace_service.create_project("ResetFailureCollection", tmp_path)
+    locked_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    later_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    locked_path.write_text("locked", encoding="utf-8")
+    later_path.write_text("later", encoding="utf-8")
+    original_unlink = Path.unlink
+
+    def _unlink(path, *args, **kwargs):
+        if path == locked_path:
+            raise PermissionError("locked cleanup output")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", _unlink)
+
+    operation_runtime_service.reset_operation_data(project_root, "cleanup", include_current=True)
+
+    assert locked_path.exists()
+    assert not later_path.exists()
+
+
 # END OF FILE

@@ -120,9 +120,6 @@ def test_each_persistent_page_localizes_audited_visible_text(qtbot) -> None:
     assert _combo_labels(home_page._target_language_combo) == [
         "Engleza",
         "Romana",
-        "Japoneza",
-        "Coreeana",
-        "Chineza",
         "Germana",
         "Franceza",
         "Rusa",
@@ -130,12 +127,9 @@ def test_each_persistent_page_localizes_audited_visible_text(qtbot) -> None:
         "Spaniola",
         "Italiana",
     ]
-    assert [home_page._target_language_combo.itemData(index) for index in range(11)] == [
+    assert [home_page._target_language_combo.itemData(index) for index in range(8)] == [
         "en",
         "ro",
-        "ja",
-        "ko",
-        "zh",
         "de",
         "fr",
         "ru",

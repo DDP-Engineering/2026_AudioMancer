@@ -20,6 +20,7 @@
 
 import json
 from pathlib import Path
+import re
 import threading
 import time
 from urllib import error, request
@@ -79,6 +80,10 @@ class _UnsupportedMaxTokensError(RuntimeError):
     @details Allows chat_json to retain the compatible token parameter across
              later outer attempts in the same invocation.
     """
+
+
+class _TransientProviderError(RuntimeError):
+    """Mark provider and transport failures that are safe to retry."""
 
 
 # PUBLIC API
@@ -215,6 +220,7 @@ def chat_json(
                 ) = _repair_json_response_with_model(
                     profile_payload,
                     raw_content,
+                    active_request_payload,
                     cancel_requested=cancel_requested,
                 )
                 normalized_usage = token_usage_service.merge_token_usage(
@@ -260,6 +266,14 @@ def chat_json(
         except OperationCancelledError:
             raise
         except Exception as error_object:
+            if isinstance(error_object, _UnsupportedResponseFormatError):
+                error_object = RuntimeError(
+                    "AI provider does not support required structured JSON output."
+                )
+            elif isinstance(error_object, _UnsupportedMaxTokensError):
+                error_object = RuntimeError(
+                    "AI provider rejected the supported output-token limit fields."
+                )
             last_error = error_object
             _append_ai_log(
                 log_path,
@@ -413,12 +427,21 @@ def _request_chat_completion(
                 raise _UnsupportedMaxTokensError(error_body) from http_error
         if http_error.code in {408, 409, 429} or http_error.code >= 500:
             _LLM_PROVIDER_LOGGER.warning("Transient AI provider HTTP failure: status=%s", http_error.code)
-            raise RuntimeError(f"Transient AI provider failure: HTTP {http_error.code}: {error_body}") from http_error
+            raise _TransientProviderError(
+                f"Transient AI provider failure: HTTP {http_error.code}: {error_body}"
+            ) from http_error
         _LLM_PROVIDER_LOGGER.warning("AI provider HTTP request failed: status=%s", http_error.code)
         raise RuntimeError(f"AI provider request failed with HTTP {http_error.code}: {error_body}") from http_error
     except error.URLError as url_error:
         _LLM_PROVIDER_LOGGER.warning("AI provider URL request failed: %s", getattr(url_error, "reason", url_error))
-        raise RuntimeError(f"AI provider request failed: {getattr(url_error, 'reason', url_error)}") from url_error
+        raise _TransientProviderError(
+            f"AI provider request failed: {getattr(url_error, 'reason', url_error)}"
+        ) from url_error
+    except (TimeoutError, OSError) as transport_error:
+        _LLM_PROVIDER_LOGGER.warning("Transient AI provider transport failure: %s", transport_error)
+        raise _TransientProviderError(
+            f"AI provider transport failure: {transport_error}"
+        ) from transport_error
     payload = json.loads(raw_body)
     if not isinstance(payload, dict):
         raise ValueError("AI provider returned a non-object JSON payload.")
@@ -611,6 +634,13 @@ def _strip_code_fence(content: str) -> str:
     @param[in]  content Value for `content`.
     @return     Helper result.
     """
+    single_line_match = re.fullmatch(
+        r"```(?:json)?\s*(.*?)\s*```",
+        content,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if single_line_match is not None:
+        return single_line_match.group(1).strip()
     stripped_lines = content.splitlines()
     if stripped_lines and stripped_lines[0].startswith("```"):
         stripped_lines = stripped_lines[1:]
@@ -704,6 +734,7 @@ def _is_valid_json_escape_sequence(content: str, escape_index: int) -> bool:
 def _repair_json_response_with_model(
     profile_payload: dict[str, object],
     malformed_content: str,
+    active_request_payload: dict[str, object],
     cancel_requested=None,
 ) -> tuple[dict[str, object], str, str, dict[str, object]]:
     """
@@ -744,6 +775,8 @@ def _repair_json_response_with_model(
             )
         ),
     }
+    if "max_completion_tokens" in active_request_payload:
+        repair_request_payload = _build_max_completion_tokens_payload(repair_request_payload)
     repair_payload, repair_body = _request_chat_completion_with_cancellation(
         profile_payload,
         repair_request_payload,
@@ -803,13 +836,7 @@ def _is_retryable_error(error_object: Exception) -> bool:
     @param[in]  error_object Value for `error_object`.
     @return     True when the helper condition is satisfied.
     """
-    message = str(error_object).lower()
-    return (
-        "transient ai provider failure" in message
-        or "timed out" in message
-        or "temporarily" in message
-        or "temporary failure" in message
-    )
+    return isinstance(error_object, (_TransientProviderError, TimeoutError))
 
 
 def _append_ai_log(log_path: str | Path | None, payload: dict[str, object]) -> None:

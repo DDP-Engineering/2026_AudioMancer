@@ -359,11 +359,14 @@ def update_progress_dialog(
     @exception  None
     """
     if window._operation_progress_dialog is not None:
-        window._operation_progress_dialog.update_progress(
-            percent,
-            message,
-            token_usage,
-        )
+        if token_usage is None:
+            window._operation_progress_dialog.update_progress(percent, message)
+        else:
+            window._operation_progress_dialog.update_progress(
+                percent,
+                message,
+                token_usage,
+            )
 
 
 def process_pending_ui_events() -> None:

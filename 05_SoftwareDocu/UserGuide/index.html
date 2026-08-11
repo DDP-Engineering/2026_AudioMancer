@@ -29,7 +29,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <a href="#chunking">Text Chunking</a>
             <a href="#translation">AI Translation</a>
             <a href="#characters">Characters</a>
-            <a href="#narrator">Narator Voice</a>
+            <a href="#narrator">Narrator Voice</a>
             <a href="#character-voices">Character Voices</a>
             <a href="#speech-blocks">Speech Blocks</a>
             <a href="#audio-blocks">Audio Blocks</a>
@@ -71,7 +71,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Settings includes light and dark built-in themes, selection and preview of valid custom themes
                     already stored in the settings file, separate font controls for interface controls and long text
-                    windows, and configurable mouse-wheel scroll steps. Narator Voice and Character Voices can import
+                    windows, and configurable mouse-wheel scroll steps. Narrator Voice and Character Voices can import
                     validated WAV samples with operator-entered sample text. AI Settings and TTS Settings use a consistent
                     <strong>Cancel</strong>, <strong>Save</strong>, and <strong>OK</strong> flow.
                 </p>
@@ -106,8 +106,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     VoiceWeaver installation.
                 </p>
                 <p>
-                    Translation targets supported by AudioMancer are English, Romanian, Japanese, Korean, Chinese,
-                    German, French, Russian, Portuguese, Spanish, and Italian. The audio language follows the project
+                    Translation targets supported by AudioMancer are English, Romanian, German, French, Russian,
+                    Portuguese, Spanish, and Italian. The audio language follows the project
                     language selected on the Home page and requires VoiceWeaver voices/models that support that
                     language.
                 </p>
@@ -335,7 +335,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Use <strong>Edit</strong>, <strong>Save</strong>, and <strong>Delete</strong> in Text Chunking until the chunk list matches the book order you want.</li>
                     <li>Run <strong>AI Translation</strong> when you want a translated or same-language AI rewrite/adaptation pass. If no translation work is needed, continue only after the existing chunks are approved.</li>
                     <li>Open <strong>Characters</strong>. Run discovery or add/edit characters manually. Confirm names, aliases, gender hint, age hint, voice definition prompt, and evidence, then approve the character list.</li>
-                    <li>Open <strong>Narator Voice</strong>. Generate or edit the narrator profile, create or import the narrator WAV sample, preview it, and select it.</li>
+                    <li>Open <strong>Narrator Voice</strong>. Generate or edit the narrator profile, create or import the narrator WAV sample, preview it, and select it.</li>
                     <li>Open <strong>Character Voices</strong> when the project uses character voices. Generate or import the available character samples; it is fine to continue with only the characters that already have usable samples.</li>
                     <li>Open <strong>Speech Blocks</strong>. Select the first source chunk, press <strong>Insert</strong>, choose the speaker and content kind, enter the text, and save. Keep inserting after the selected block until the chunk contains the narration, dialogue, pauses, ambience, and indications you want.</li>
                     <li>Use <strong>Edit</strong>, <strong>Delete</strong>, <strong>Approve</strong>, <strong>Generate Audio</strong>, and <strong>Play/Stop</strong> on selected Speech Blocks to review one block at a time without losing your current selection.</li>
@@ -414,7 +414,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     run can rewrite, normalize, or adapt the text rather than silently copying it.
                 </p>
                 <ul>
-                    <li>Supported translation targets: English, Romanian, Japanese, Korean, Chinese, German, French, Russian, Portuguese, Spanish, and Italian.</li>
+                    <li>Supported translation targets: English, Romanian, German, French, Russian, Portuguese, Spanish, and Italian.</li>
                     <li>Generate translation per chunk.</li>
                     <li>Add optional operator translation rules in the word-wrapped prompt box before a fresh translation, a new pass from review, or selected-chunk retranslation. Resume keeps the rules stored with the interrupted run, while selected-chunk rules apply only to that one attempt.</li>
                     <li>Inspect every translated chunk beside its source context.</li>
@@ -461,9 +461,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             </section>
 
             <section id="narrator">
-                <h2>Narator Voice</h2>
+                <h2>Narrator Voice</h2>
                 <p>
-                    The Narator Voice page prepares the main storytelling voice. Select a built-in or project-local
+                    The Narrator Voice page prepares the main storytelling voice. Select a built-in or project-local
                     profile, edit the prompt when needed, generate a VoiceWeaver sample, preview it, then select the
                     narrator profile for the project.
                 </p>
@@ -473,13 +473,13 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </div>
                 <ul>
                     <li>Inspect available narrator profiles and the selected project narrator.</li>
-                    <li>Use Generate Narator Profiles to create editable text-only AI profile suggestions, with optional operator profile rules in a word-wrapped prompt box before every generation attempt.</li>
+                    <li>Use Generate Narrator Profiles to create editable text-only AI profile suggestions, with optional operator profile rules in a word-wrapped prompt box before every generation attempt.</li>
                     <li>The enabled AI profile chosen for narrator suggestions remains selected while the page refreshes or you inspect another narrator. If it is removed or disabled, AudioMancer uses the configured narrator-generation default, then the first enabled profile.</li>
                     <li>After a failed or cancelled profile run, retry restores the saved profile count and rules when its checkpoint is valid. Keep both unchanged to permit a compatible resume, or change the count or edit or clear the rules to start clean; cancelling either dialog starts no AI work.</li>
                     <li>Edit narrator prompt, preview text, and voice description before generation.</li>
                     <li>If an inspected profile is no longer available when you choose Edit, AudioMancer shows a project error so you can refresh the project and try again.</li>
                     <li>When the project voice language changes, AudioMancer updates each profile language but preserves manually or AI-authored preview text. Only an untouched canonical preview default is replaced with the new language's default.</li>
-                    <li>The Preview budget uses script-aware spoken units and must remain within the displayed safe limit before generating a sample.</li>
+                    <li>The Preview budget uses word-based spoken units for the supported languages and must remain within the displayed safe limit before generating a sample.</li>
                     <li>Generate a VoiceWeaver sample for the chosen voice language.</li>
                     <li>Play and stop narrator samples inside the page.</li>
                     <li>Editing or deleting a profile stops preview playback and releases its sample before cleanup; sample metadata is cleared even if the operating system still has the WAV file open.</li>
@@ -490,7 +490,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Interrupt sample generation and resume the workflow later.</li>
                 </ul>
                 <figure>
-                    <img src="assets/screenshots/narator-voice.png" alt="Narator Voice page">
+                    <img src="assets/screenshots/narator-voice.png" alt="Narrator Voice page">
                     <figcaption>Narrator profiles keep prompts, preview text, samples, and the selected narrator voice.</figcaption>
                 </figure>
             </section>
@@ -647,7 +647,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Export And Results</h2>
                 <p>
                     The Home page can export cleaned text, chunks, AI translations, characters, and Speech Blocks as
-                    text files. It can also export Narator Voice samples, Character Voices samples, and Audio Assembly
+                    text files. It can also export Narrator Voice samples, Character Voices samples, and Audio Assembly
                     outputs as ZIP archives. Voice ZIP exports include the generated WAV sample plus a companion text
                     file with the voice definition and preview text; Audio Assembly ZIP exports include the WAV output
                     files and a manifest with composition method, file list, duration, and size details.

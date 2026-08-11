@@ -69,7 +69,7 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     assert window._home_page._name_label.text() == "Project: Book5_CAL_CAL"
     assert window._sidebar.item(1).flags() != main_window_module.Qt.ItemFlag.NoItemFlags
     assert any(
-        "Narator Voice" in window._home_page._stage_list.item(index).text()
+        "Narrator Voice" in window._home_page._stage_list.item(index).text()
         for index in range(window._home_page._stage_list.count())
     )
     assert any(

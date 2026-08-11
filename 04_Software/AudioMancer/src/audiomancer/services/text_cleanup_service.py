@@ -124,7 +124,7 @@ def clean_text(
     dominant_script = cleanup_text_analysis_service.classify_text_script(
         canonical_text
     )
-    if dominant_script in {"cjk", "hangul"}:
+    if dominant_script == "unsupported":
         raise ValueError(
             "Cleanup supports Latin and Cyrillic source text only; "
             "the document appears to use CJK or Hangul."
@@ -925,6 +925,8 @@ def _reset_ai_adjudication(
             "reason_codes": list(prior["reason_codes"]),
         }
     batch_order = _batch_order(questions, profile_fingerprint)
+    document["user_modified"] = False
+    document["structure_source"] = "cleanup_roles"
     document["profile_fingerprint"] = profile_fingerprint
     document["prompt_hash"] = prompt_hash
     document["status"] = "running"

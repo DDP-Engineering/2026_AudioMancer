@@ -636,28 +636,28 @@ def reset_operation_data(
         for file_name in _OPERATION_ARTIFACT_FILE_NAMES.get(selected_kind, ()):
             artifact_path = root_path / file_name
             if artifact_path.is_file():
-                artifact_path.unlink()
+                _remove_reset_artifact(artifact_path)
         for artifact_glob in _OPERATION_ARTIFACT_GLOBS.get(selected_kind, ()):
             for artifact_path in root_path.glob(artifact_glob):
                 if artifact_path.is_file():
-                    artifact_path.unlink()
+                    _remove_reset_artifact(artifact_path)
         log_tokens = _OPERATION_AI_LOG_TOKENS.get(selected_kind, (selected_kind,))
         for log_token in log_tokens:
             for log_path in root_path.glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{log_token}_*.log"):
                 if log_path.is_file():
-                    log_path.unlink()
+                    _remove_reset_artifact(log_path)
         if selected_kind == "audio_blocks":
             audio_blocks_root = root_path / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
             if audio_blocks_root.is_dir():
                 for child in audio_blocks_root.rglob("*"):
                     if child.is_file():
-                        child.unlink()
+                        _remove_reset_artifact(child)
         if selected_kind == "audio_assembly":
             audiobook_root = root_path / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
             if audiobook_root.is_dir():
                 for child in audiobook_root.rglob("*"):
                     if child.is_file():
-                        child.unlink()
+                        _remove_reset_artifact(child)
 
 
 def _delete_character_voice_samples(project_root: Path) -> None:
@@ -692,7 +692,18 @@ def _delete_character_voice_samples(project_root: Path) -> None:
         if sample_path is None or sample_path != unresolved_sample_path:
             continue
         if sample_path.suffix.lower() == ".wav" and sample_path.is_file():
-            sample_path.unlink()
+            _remove_reset_artifact(sample_path)
+
+
+def _remove_reset_artifact(artifact_path: Path) -> None:
+    """Remove one reset-owned artifact without aborting the remaining reset plan."""
+    try:
+        artifact_path.unlink()
+    except OSError:
+        _OPERATION_RUNTIME_LOGGER.exception(
+            "Could not remove reset-owned artifact path=%s",
+            artifact_path,
+        )
 
 
 def _normalized_operation_kind_set(operation_kinds: Iterable[str] | None) -> frozenset[str]:

@@ -168,7 +168,9 @@ def test_chat_json_uses_bounded_exponential_retry_delays(monkeypatch) -> None:
 
     def _transient_failure(*_args, **_kwargs):
         call_counter["count"] += 1
-        raise RuntimeError("Transient AI provider failure: controlled test failure")
+        raise llm_provider_service._TransientProviderError(  # noqa: SLF001
+            "Transient AI provider failure: controlled test failure"
+        )
 
     monkeypatch.setattr(
         llm_provider_service,
@@ -208,7 +210,9 @@ def test_chat_json_cancels_before_retry_backoff_without_another_request(monkeypa
 
     def _transient_failure(*_args, **_kwargs):
         call_counter["count"] += 1
-        raise RuntimeError("Transient AI provider failure: controlled test failure")
+        raise llm_provider_service._TransientProviderError(  # noqa: SLF001
+            "Transient AI provider failure: controlled test failure"
+        )
 
     monkeypatch.setattr(
         llm_provider_service,
@@ -254,7 +258,9 @@ def test_chat_json_cancels_during_sliced_retry_backoff(monkeypatch) -> None:
 
     def _transient_failure(*_args, **_kwargs):
         call_counter["count"] += 1
-        raise RuntimeError("Transient AI provider failure: controlled test failure")
+        raise llm_provider_service._TransientProviderError(  # noqa: SLF001
+            "Transient AI provider failure: controlled test failure"
+        )
 
     def _cancel_requested() -> bool:
         cancellation_checks["count"] += 1
@@ -712,7 +718,10 @@ def test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled(monke
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(
+        RuntimeError,
+        match="AI provider does not support required structured JSON output",
+    ) as error_info:
         llm_provider_service.chat_json(
             {
                 "id": "profile_1",
@@ -731,6 +740,7 @@ def test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled(monke
         )
 
     assert len(request_bodies) == 1
+    assert type(error_info.value) is RuntimeError
 
 
 def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> None:
@@ -918,6 +928,53 @@ def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatc
     assert request_bodies[2]["max_completion_tokens"] == 256
     assert retry_delays == [0.5]
     assert result["payload"]["results"][0]["unit_id"] == "retained-token"
+
+
+def test_chat_json_retains_max_completion_tokens_for_json_repair(monkeypatch) -> None:
+    """Verify a JSON repair request retains the learned provider token field."""
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_payload = json.loads(http_request.data.decode("utf-8"))
+        request_bodies.append(request_payload)
+        if "max_tokens" in request_payload:
+            raise error.HTTPError(
+                http_request.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=io.BytesIO(
+                    b'{"error":{"message":"Use max_completion_tokens instead",'
+                    b'"param":"max_tokens","code":"unsupported_parameter"}}'
+                ),
+            )
+        if len(request_bodies) == 2:
+            return _FakeResponse(json.dumps({"choices": [{"message": {"content": "not json"}}]}))
+        return _FakeResponse(
+            json.dumps({"choices": [{"message": {"content": '{"translated_text":"repaired"}'}}]})
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "max_output_tokens": 256,
+        },
+        "system",
+        "user",
+    )
+
+    assert len(request_bodies) == 3
+    assert "max_tokens" in request_bodies[0]
+    assert all("max_tokens" not in request_payload for request_payload in request_bodies[1:])
+    assert all(request_payload["max_completion_tokens"] == 256 for request_payload in request_bodies[1:])
+    assert result["payload"]["translated_text"] == "repaired"
 
 
 def test_chat_json_repairs_invalid_backslash_escapes_in_model_output(
@@ -1641,6 +1698,19 @@ def test_chat_json_requests_the_shared_versioned_endpoint(monkeypatch) -> None:
     assert observed_urls == [
         "https://gateway.example.com/proxy/v1/chat/completions?api-version=2026-08-09"
     ]
+
+
+def test_retry_classification_uses_exception_type_not_message_text() -> None:
+    """Verify permanent errors cannot opt into retries through provider wording."""
+    assert llm_provider_service._is_retryable_error(  # noqa: SLF001
+        RuntimeError("Permanent HTTP 400: service temporarily unavailable")
+    ) is False
+    assert llm_provider_service._is_retryable_error(TimeoutError("socket read failed")) is True  # noqa: SLF001
+
+
+def test_strip_code_fence_preserves_single_line_json() -> None:
+    """Verify compact fenced provider responses retain their JSON payload."""
+    assert llm_provider_service._strip_code_fence('```json {"value": 1} ```') == '{"value": 1}'  # noqa: SLF001
 
 
 # END OF FILE

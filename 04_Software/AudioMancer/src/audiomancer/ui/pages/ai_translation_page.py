@@ -253,8 +253,7 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         """
-        self._edit_timer.stop()
-        self._pending_edit = None
+        self.flush_pending_translation_edit()
         self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
         self._display_chunks = _build_display_chunks(self._source_chunks, translated_chunks)
         self._stage_status = stage_status

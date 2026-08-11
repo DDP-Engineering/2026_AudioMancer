@@ -471,7 +471,6 @@ def test_downstream_consumers_use_shared_document_reader() -> None:
         "audiomancer.services.character_discovery_service",
         "audiomancer.services.narrator_profile_generation_service",
         "audiomancer.services.speech_blocks_service",
-        "audiomancer.services.speech_blocks_report_state_service",
         "audiomancer.services.audio_blocks_state_service",
         "audiomancer.services.project_export_service",
     )

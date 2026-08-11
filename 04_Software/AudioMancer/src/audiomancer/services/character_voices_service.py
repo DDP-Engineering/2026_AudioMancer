@@ -48,9 +48,6 @@ SAMPLE_SOURCE_IMPORTED = voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
 DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
     "en": "The evening settled over the old house, and each voice carried a different shade of memory.",
     "ro": "Seara s-a asezat peste casa veche, iar fiecare glas purta o alta nuanta de amintire.",
-    "ja": "夕暮れが古い家を包み、それぞれの声が異なる記憶の色合いを帯びていた。",
-    "ko": "저녁이 오래된 집 위로 내려앉자, 저마다의 목소리는 서로 다른 기억의 빛을 품고 있었다.",
-    "zh": "夜色笼罩着老屋，每个声音都带着不同色调的回忆。",
     "de": ("Der Abend senkte sich ueber das alte Haus, und jede Stimme trug einen anderen Ton der Erinnerung."),
     "fr": "Le soir est tombe sur la vieille maison, et chaque voix portait une autre nuance de memoire.",
     "ru": "Вечер опустился на старый дом, и в каждом голосе звучал свой оттенок памяти.",
@@ -144,7 +141,10 @@ def load_voice_plan(project_root: str | Path) -> list[dict[str, object]]:
     @exception  None
     """
     ensure_character_voices_files(project_root)
-    payload = json.loads(_targets_path(project_root).read_text(encoding="utf-8"))
+    try:
+        payload = json.loads(_targets_path(project_root).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return []
     if not isinstance(payload, list):
         return []
     return [_normalize_voice_target(item) for item in payload if isinstance(item, dict)]
@@ -191,7 +191,7 @@ def sync_voice_plan(
                     **existing_narrator_target,
                     "target_id": TARGET_ID_NARRATOR,
                     "target_kind": TARGET_KIND_NARRATOR,
-                    "display_name": "Narator Voice",
+                    "display_name": "Narrator Voice",
                     "character_id": None,
                     "prompt_text": None,
                     "default_prompt_text": None,

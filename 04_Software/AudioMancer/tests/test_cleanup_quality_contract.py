@@ -1450,4 +1450,16 @@ def test_online_disclosure_counts_failed_submission_attempts(
     assert document["progress"]["completed_request_count"] == 0
 
 
+def test_ai_reset_clears_replaced_manual_edit_provenance(tmp_path) -> None:
+    """Verify fresh AI adjudication no longer presents overwritten output as user-authored."""
+    _project_root, document = _build_completed_cleanup(tmp_path)
+    document["user_modified"] = True
+    document["structure_source"] = "user_edited"
+
+    text_cleanup_service._reset_ai_adjudication(document, None, "prompt-hash", questions=[])  # noqa: SLF001
+
+    assert document["user_modified"] is False
+    assert document["structure_source"] == "cleanup_roles"
+
+
 # END OF FILE

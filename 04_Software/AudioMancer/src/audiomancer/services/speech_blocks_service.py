@@ -423,7 +423,7 @@ def _project_operation_state(
         resume_checkpoint=dict(checkpoint) if isinstance(checkpoint, dict) else None,
     )
     state["started_at"] = str(checkpoint.get("run_token", "")).strip() if checkpoint else ""
-    state["completed_at"] = _utc_now_iso() if status == "completed" else None
+    state["completed_at"] = None
     log_name = Path(log_relative_path).name if log_relative_path else ""
     state["artifact_paths"] = [config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME, *([log_name] if log_name else [])]
     return state

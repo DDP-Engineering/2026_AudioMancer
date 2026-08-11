@@ -36,15 +36,15 @@ def test_split_text_for_ai_context_budget_preserves_ordered_segments() -> None:
     assert len(split_parts) > 1
 
 
-def test_estimate_budget_units_handles_words_and_compact_scripts() -> None:
+def test_estimate_budget_units_handles_supported_word_paced_text() -> None:
     """
-    @brief      Verify TTS budget units work for spaced and compact text.
+    @brief      Verify TTS budget units use word counts for supported text.
     @return     None.
     @exception  None
     """
     assert tts_budget_service.estimate_budget_units("") == 0
     assert tts_budget_service.estimate_budget_units("one two three") == 3
-    assert tts_budget_service.estimate_budget_units("abcdefghijklmno") >= 3
+    assert tts_budget_service.estimate_budget_units("abcdefghijklmno") == 1
 
 
 # END OF FILE

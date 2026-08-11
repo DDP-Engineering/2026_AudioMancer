@@ -77,7 +77,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert window._settings_dialog.height() <= main_window_module.WINDOW_HEIGHT
     assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Workflow Progress" for group_box in window.findChildren(QGroupBox))
-    assert any(group_box.title() == "Narator Voices" for group_box in window.findChildren(QGroupBox))
+    assert any(group_box.title() == "Narrator Voices" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Voice Designer Prompt" for group_box in window.findChildren(QGroupBox))
     assert any(button.text() == "Cleanup" for button in window.findChildren(QPushButton))
     assert not any(button.text() == "AI-Assisted Cleanup" for button in window.findChildren(QPushButton))
@@ -88,7 +88,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert any(button.text() == "Delete" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Save" for button in window.findChildren(QPushButton))
     assert any(button.text() == "OK" for button in window.findChildren(QPushButton))
-    assert window._tts_settings_page._save_button.text() == "Save"
+    assert window._tts_settings_page._save_button.text() == "Apply"
     assert window._tts_settings_page._ok_button.text() == "OK"
     assert any(button.text() == "Connect" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Test Connection" for button in window.findChildren(QPushButton))
@@ -834,6 +834,38 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, defa
     assert window._settings_dialog.windowTitle() == "Setari"
     assert window._settings_page._language_label.text() == "Limba"
     assert window._settings_page._completion_beep_checkbox.text() == "Reda semnalul sonor la finalizare"
+
+
+def test_character_voices_activation_refreshes_before_prerequisite_warning(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """Verify first Character Voices visit checks freshly projected targets."""
+    project_root, manifest = project_workspace_service.create_project("CharacterVoiceActivation", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._current_project_root = project_root
+    window._current_manifest = manifest
+    order = []
+    original_show_project_state = window.show_project_state
+    monkeypatch.setattr(
+        window,
+        "show_project_state",
+        lambda *args, **kwargs: (order.append("refresh"), original_show_project_state(*args, **kwargs))[1],
+    )
+    monkeypatch.setattr(
+        main_window_module.character_voices_ui_controller,
+        "handle_page_activated",
+        lambda _window: order.append("activate"),
+    )
+
+    window.set_current_page("character_voices")
+
+    assert order[:2] == ["refresh", "activate"]
+
+
+def test_main_window_uses_correct_narrator_navigation_label() -> None:
+    """Verify the stable internal page id maps to correctly spelled user text."""
+    assert dict(MainWindow.PAGE_ORDER)["narator_voice"] == "Narrator Voice"
 
 
 # END OF FILE

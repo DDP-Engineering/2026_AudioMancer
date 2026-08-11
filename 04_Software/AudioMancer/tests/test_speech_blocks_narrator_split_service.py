@@ -220,9 +220,6 @@ def test_short_trailing_block_is_absorbed_into_its_predecessor() -> None:
         ("french", "Il entra. « Bonsoir », dit-il. Personne ne répondit dans la grande salle vide."),
         ("german", "Er kam herein. Sie schwieg lange. Dann ging er wieder hinaus in den Regen."),
         ("russian", "Он засмеялся. Она молчала. Потом он ушёл и больше не возвращался."),
-        ("japanese", "彼は笑った。彼女は黙っていた。それから彼は出て行った。誰も止めなかった。"),
-        ("chinese", "他笑了。她沉默了。然后他走了。没有人阻止他。"),
-        ("korean", "그는 웃었다. 그녀는 침묵했다. 그리고 그는 떠났다. 아무도 막지 않았다."),
     ],
 )
 def test_supported_languages_split_without_losing_text(label: str, source_text: str) -> None:
@@ -238,20 +235,6 @@ def test_supported_languages_split_without_losing_text(label: str, source_text: 
     assert _rebuild(blocks) == source_text, label
     assert blocks, label
     assert all(str(block["text"]).strip() for block in blocks), label
-
-
-def test_space_free_scripts_are_split_into_several_blocks() -> None:
-    """
-    @brief      Verify CJK paragraphs are budgeted by characters rather than collapsing into one block.
-    @return     None.
-    @exception  None
-    """
-    source_text = "".join("他笑了。她沉默了。然后他走了。" for _ in range(6))
-
-    blocks = narrator_split.plan_narrator_blocks(source_text, target_units=10)
-
-    assert _rebuild(blocks) == source_text
-    assert len(blocks) > 1
 
 
 def test_slightly_oversized_chunk_splits_into_even_blocks_without_flags() -> None:

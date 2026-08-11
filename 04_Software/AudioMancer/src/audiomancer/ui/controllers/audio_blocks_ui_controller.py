@@ -1362,6 +1362,7 @@ def _stop_other_audio_previews(window: "MainWindow") -> None:
     """
     window._narator_voice_audio_player.stop()
     window._character_voices_audio_player.stop()
+    window._audio_assembly_audio_player.stop()
 
 
 # END OF FILE

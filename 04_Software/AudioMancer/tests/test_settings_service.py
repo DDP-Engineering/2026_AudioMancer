@@ -1183,4 +1183,53 @@ def test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_
     assert json.loads(portable_settings_path.read_text(encoding="utf-8")) == created_settings
 
 
+def test_ensure_settings_file_accepts_bom_bundled_default(tmp_path, monkeypatch) -> None:
+    """Verify a Windows-authored BOM seed does not fall back to factory defaults."""
+    bundled_settings_path = tmp_path / "install" / "settings.json"
+    bundled_settings_path.parent.mkdir(parents=True)
+    bundled_payload = settings_service.build_default_settings()
+    bundled_payload["language"] = "ro"
+    bundled_settings_path.write_text(json.dumps(bundled_payload), encoding="utf-8-sig")
+    active_settings_path = tmp_path / "userdata" / "settings.json"
+    monkeypatch.setattr(config, "APP_DEFAULT_SETTINGS_PATH", bundled_settings_path)
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", active_settings_path)
+
+    seeded_settings = settings_service.ensure_settings_file()
+
+    assert seeded_settings["language"] == "ro"
+
+
+def test_validate_settings_repairs_boolean_positive_integers() -> None:
+    """Verify JSON booleans cannot masquerade as integer runtime limits."""
+    profile = {
+        "id": "profile-1",
+        "label": "Profile",
+        "backend_kind": config.LLM_BACKEND_OPTIONS[0],
+        "base_url": "",
+        "api_key": "",
+        "model_name": "",
+        "context_window": True,
+        "max_output_tokens": True,
+        "request_timeout_seconds": True,
+        "temperature": config.DEFAULT_LLM_TEMPERATURE,
+        "supports_structured_output": False,
+        "enabled": True,
+    }
+    repaired = settings_service.validate_settings(
+        {
+            "tts_audio_preview_timeout_seconds": True,
+            "tts_audio_generation_timeout_seconds": True,
+            "tts_preview_text_character_limit": True,
+            "llm_profiles": [profile],
+        }
+    )
+
+    assert repaired["tts_audio_preview_timeout_seconds"] is not True
+    assert repaired["tts_audio_generation_timeout_seconds"] is not True
+    assert repaired["tts_preview_text_character_limit"] is not True
+    assert repaired["llm_profiles"][0]["context_window"] is not True
+    assert repaired["llm_profiles"][0]["max_output_tokens"] is not True
+    assert repaired["llm_profiles"][0]["request_timeout_seconds"] is not True
+
+
 # END OF FILE

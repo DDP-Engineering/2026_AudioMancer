@@ -124,4 +124,29 @@ def test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint(tmp_p
     assert state["resume_checkpoint"]["budget_metadata"] == {"text_budget_tokens": 10}
 
 
+def test_build_operation_state_excludes_empty_chunk_identifiers(tmp_path: Path) -> None:
+    """Verify malformed empty chunk identifiers do not inflate processed progress."""
+    project_root = tmp_path / "Project"
+    project_root.mkdir()
+    state = speech_blocks_report_state_service.build_operation_state(
+        project_root,
+        [{"chunk_id": "chunk-0001", "text": "Hello."}],
+        [
+            {"chunk_id": "", "approved": False, "warning_flags": []},
+            {"chunk_id": "   ", "approved": False, "warning_flags": []},
+            {"chunk_id": "chunk-0001", "approved": False, "warning_flags": []},
+        ],
+        status="running",
+        started_at="2026-08-10T12:00:00+00:00",
+        source_language="en",
+        source_kind="original",
+        profile_id="profile-1",
+        input_fingerprint="fingerprint",
+        log_path=project_root / "log_ai_speech_blocks_test.log",
+        token_usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+        next_chunk_index=1,
+    )
+    assert state["metadata"]["processed_chunk_count"] == 1
+
+
 # END OF FILE

@@ -185,7 +185,7 @@ def _seed_settings_payload() -> tuple[dict[str, Any], str]:
         return build_default_settings(), "built-in defaults"
 
     try:
-        bundled_payload = json.loads(default_settings_path.read_text(encoding="utf-8"))
+        bundled_payload = json.loads(default_settings_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError, ValueError):
         return build_default_settings(), "built-in defaults"
 
@@ -300,7 +300,7 @@ def _validate_llm_profile(
         normalized_profile["base_url"] = default_profile["base_url"]
 
     for field_name in integer_fields:
-        if not isinstance(normalized_profile.get(field_name), int) or normalized_profile[field_name] <= 0:
+        if type(normalized_profile.get(field_name)) is not int or normalized_profile[field_name] <= 0:
             _log_settings_repair(
                 f"Repaired llm_profiles[{profile_index}].{field_name} using the default value.",
                 f"llm_profiles[{profile_index}].{field_name}",
@@ -309,7 +309,9 @@ def _validate_llm_profile(
             )
             normalized_profile[field_name] = default_profile[field_name]
 
-    if not isinstance(normalized_profile.get("temperature"), (int, float)):
+    if isinstance(normalized_profile.get("temperature"), bool) or not isinstance(
+        normalized_profile.get("temperature"), (int, float)
+    ):
         _log_settings_repair(
             f"Repaired llm_profiles[{profile_index}].temperature using the default value.",
             f"llm_profiles[{profile_index}].temperature",
@@ -332,7 +334,7 @@ def _validate_llm_profile(
 
     discovered_context_window = normalized_profile.get("discovered_context_window")
     if discovered_context_window is not None and (
-        not isinstance(discovered_context_window, int) or discovered_context_window <= 0
+        type(discovered_context_window) is not int or discovered_context_window <= 0
     ):
         _log_settings_repair(
             f"Repaired llm_profiles[{profile_index}].discovered_context_window using the default value.",
@@ -484,7 +486,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             normalized_settings[field_name] = defaults[field_name]
 
     if (
-        not isinstance(normalized_settings["ui_scroll_steps_per_wheel_notch"], int)
+        type(normalized_settings["ui_scroll_steps_per_wheel_notch"]) is not int
         or normalized_settings["ui_scroll_steps_per_wheel_notch"] < config.MIN_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
         or normalized_settings["ui_scroll_steps_per_wheel_notch"] > config.MAX_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
     ):
@@ -542,7 +544,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         "scene_ambience_max_blocks_per_sequence",
         "scene_ambience_num_inference_steps",
     ):
-        if not isinstance(normalized_settings[field_name], int) or normalized_settings[field_name] <= 0:
+        if type(normalized_settings[field_name]) is not int or normalized_settings[field_name] <= 0:
             _log_settings_repair(
                 f"Repaired invalid '{field_name}' using the default value.",
                 field_name,
@@ -568,7 +570,8 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         )
 
     if (
-        not isinstance(normalized_settings["scene_ambience_guidance_scale"], int | float)
+        isinstance(normalized_settings["scene_ambience_guidance_scale"], bool)
+        or not isinstance(normalized_settings["scene_ambience_guidance_scale"], int | float)
         or float(normalized_settings["scene_ambience_guidance_scale"]) <= 0
     ):
         _log_settings_repair(
@@ -583,7 +586,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         )
 
     scene_ambience_seed = normalized_settings["scene_ambience_seed"]
-    if scene_ambience_seed is not None and (not isinstance(scene_ambience_seed, int) or scene_ambience_seed < 0):
+    if scene_ambience_seed is not None and (type(scene_ambience_seed) is not int or scene_ambience_seed < 0):
         _log_settings_repair(
             "Repaired invalid 'scene_ambience_seed' using the default value.",
             "scene_ambience_seed",

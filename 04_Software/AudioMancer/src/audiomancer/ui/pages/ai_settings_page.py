@@ -243,7 +243,7 @@ class AiSettingsPage(QWidget):
         self._default_strategy_label = QLabel("Default AI Chunking Strategy", self)
         self._default_context_mode_label = QLabel("Chunking Context Mode", self)
         self._default_translation_label = QLabel("Default Translation Profile", self)
-        self._default_narrator_generation_label = QLabel("Default Narator Generation Profile", self)
+        self._default_narrator_generation_label = QLabel("Default Narrator Generation Profile", self)
         self._default_character_label = QLabel(
             "Default Character Extraction Profile",
             self,

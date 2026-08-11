@@ -87,9 +87,6 @@ DEFAULT_PREVIEW_TEXT = (
 DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
     "en": DEFAULT_PREVIEW_TEXT,
     "ro": "Sala a amutit cand ultimul felinar s-a stins, iar fiecare pas purta greutatea unei hotarari nerostite.",
-    "ja": "最後のランタンが暗くなると広間は静まり返り、一歩ごとに言葉にならない決断の重みが宿っていた。",
-    "ko": "마지막 등불이 어두워지자 홀은 고요해졌고, 걸음마다 말하지 못한 결정의 무게가 실려 있었다.",
-    "zh": "最后一盏灯笼暗下去时，大厅陷入寂静，每一步都承载着未出口决定的重量。",
     "de": (
         "Der Saal wurde still, als die letzte Laterne erlosch, "
         "und jeder Schritt trug das Gewicht einer unausgesprochenen Entscheidung."

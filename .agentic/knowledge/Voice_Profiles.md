@@ -17,7 +17,8 @@ required before speech generation.
   (`REQ-UX-f6f92026`, `REQ-UX-850b356e`, `REQ-UX-cbed137b`).
 - Restore truthful count and instruction defaults for every narrator-generation
   retry while leaving compatibility decisions to the full service fingerprint.
-- Validate narrator preview duration and sample budgets with shared script-aware spoken units.
+- Validate narrator preview duration and sample budgets with shared word-based
+  spoken units for supported voice languages (`REQ-FUNC-f04f2515`).
 - Migrate profile languages without replacing authored previews or writing an
   unchanged narrator document (`REQ-FUNC-4f57d7ae`, `REQ-FUNC-0fff5848`,
   `REQ-FUNC-206af389`).

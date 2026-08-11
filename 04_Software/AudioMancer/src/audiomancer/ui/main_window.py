@@ -125,7 +125,7 @@ class MainWindow(QMainWindow):
         ("text_chunking", "Text Chunking"),
         ("ai_translation", "AI Translation"),
         ("characters", "Characters"),
-        ("narator_voice", "Narator Voice"),
+        ("narator_voice", "Narrator Voice"),
         ("character_voices", "Character Voices"),
         ("speech_blocks", "Speech Blocks"),
         ("audio_blocks", "Audio Blocks"),
@@ -245,11 +245,11 @@ class MainWindow(QMainWindow):
         was_blocked = self._sidebar.blockSignals(True)
         self._sidebar.set_current_page(page_id)
         self._sidebar.blockSignals(was_blocked)
+        if self._current_project_root is not None and self._current_manifest is not None:
+            self.show_project_state(self._current_project_root, self._current_manifest)
         if page_id == "character_voices":
             self._character_voices_missing_narrator_popup_shown = False
             character_voices_ui_controller.handle_page_activated(self)
-        if self._current_project_root is not None and self._current_manifest is not None:
-            self.show_project_state(self._current_project_root, self._current_manifest)
 
     def set_project_active(self, is_active: bool) -> None:
         """

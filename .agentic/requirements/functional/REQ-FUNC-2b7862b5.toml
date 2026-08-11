@@ -18,7 +18,7 @@ title = "AI narrator previews shall use script-aware duration units"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
-status = "active"
+status = "retired"
 
 # Self-contained prose: a reader with no other context must be able to
 # understand and check it. No ticket numbers, no run IDs, no references
@@ -39,6 +39,8 @@ status = "active"
 # plainly is better plainly.
 requirement = """
 When an AI-generated narrator profile supplies preview text, the Narrator Voice service shall apply the shared script-aware budget-unit estimate to its existing minimum and maximum preview-duration bounds.
+
+Retired 2026-08-10: Japanese, Korean, and Chinese target workflows are unsupported, so compact-script preview acceptance is no longer product behavior.
 """
 
 # The observation that settles whether the behavior holds — not a
@@ -70,4 +72,4 @@ priority = "high"
 rationale = "Whitespace token counts falsely reject valid previews in scripts written without spaces after paid AI style analysis."
 
 created = 2026-08-07
-updated = 2026-08-07
+updated = 2026-08-10

@@ -687,19 +687,6 @@ DEFAULT_TTS_SPLIT_SAFETY_FACTOR = 0.80
 # @brief Approximate spoken-word rate used to convert audio token budget into text guidance.
 DEFAULT_TTS_WORDS_PER_AUDIO_SECOND = 2.5
 
-# @brief Approximate spoken characters per audio second, per dominant writing script.
-# @details Space-separated scripts are word-paced; CJK and Hangul are character-paced, so a
-#          word count is meaningless there and the character rate decides the budget.
-DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_BY_SCRIPT = {
-    "latin": 14.0,
-    "cyrillic": 14.0,
-    "cjk": 6.0,
-    "hangul": 7.0,
-}
-
-# @brief Character rate used when the dominant writing script cannot be classified.
-DEFAULT_TTS_CHARACTERS_PER_AUDIO_SECOND_FALLBACK = 14.0
-
 # @brief Operator target for one narration block, in generated audio seconds.
 # @details Zero means "follow the TTS model budget", which produces the widest safe blocks.
 #          Any positive value only ever shortens blocks; the model budget stays the hard cap.
@@ -815,9 +802,6 @@ DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION = 0.60
 TRANSLATION_LANGUAGE_OPTIONS = (
     ("en", "English"),
     ("ro", "Romanian"),
-    ("ja", "Japanese"),
-    ("ko", "Korean"),
-    ("zh", "Chinese"),
     ("de", "German"),
     ("fr", "French"),
     ("ru", "Russian"),

@@ -262,14 +262,18 @@ def test_character_voices_targets_use_atomic_json_writer(monkeypatch, tmp_path) 
     assert observed_paths == [project_root / "characters_voice.json"]
 
 
-def test_preview_text_covers_qwen3_tts_languages_with_chinese() -> None:
+def test_preview_text_covers_supported_translation_targets_only() -> None:
     """
     @brief      Verify deterministic preview text exists for every supported voice language.
     @return     None.
     @exception  None
     """
-    for language_code in ("en", "ro", "ja", "ko", "zh", "de", "fr", "ru", "pt", "es", "it"):
+    for language_code in ("en", "ro", "de", "fr", "ru", "pt", "es", "it"):
         assert character_voices_service.preview_text_for_language(language_code)
+    assert all(
+        language_code not in character_voices_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE
+        for language_code in ("ja", "ko", "zh")
+    )
 
 
 def test_save_target_prompt_persists_preview_text(tmp_path) -> None:
@@ -608,6 +612,12 @@ def _write_import_test_wav(path: Path) -> None:
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(frame * frame_count)
+
+
+def test_load_voice_plan_tolerates_malformed_json(tmp_path) -> None:
+    """Verify a corrupt optional voice plan degrades to unavailable state."""
+    (tmp_path / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("{not json", encoding="utf-8")
+    assert character_voices_service.load_voice_plan(tmp_path) == []
 
 
 # END OF FILE

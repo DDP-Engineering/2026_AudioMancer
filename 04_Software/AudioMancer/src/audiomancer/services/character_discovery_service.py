@@ -344,7 +344,7 @@ def start_or_continue_discovery(
             budget_metadata,
         )
     )
-    if not merged_candidates and not windows and not raw_candidates:
+    if not merged_candidates and not windows and not raw_candidates and resume_phase != "synthesis":
         raise ValueError("Character discovery requires at least one chunk window.")
     if not merged_candidates:
         planned_window_count = completed_window_count + len(windows)
@@ -493,7 +493,7 @@ def start_or_continue_discovery(
             rejected_candidates=rejected_candidates,
         )
         raise
-    except Exception:
+    except Exception as error_object:
         _write_operation_state(
             state_path=document_path,
             status="failed",
@@ -504,6 +504,7 @@ def start_or_continue_discovery(
             checkpoint=discovery_checkpoint,
             character_inventory=character_inventory,
             rejected_candidates=rejected_candidates,
+            failure_message=str(error_object),
         )
         raise
 
@@ -630,7 +631,7 @@ def start_or_continue_discovery(
             rejected_candidates=rejected_candidates,
         )
         raise
-    except Exception:
+    except Exception as error_object:
         _write_operation_state(
             state_path=document_path,
             status="failed",
@@ -641,6 +642,7 @@ def start_or_continue_discovery(
             checkpoint=synthesis_checkpoint,
             character_inventory=character_inventory,
             rejected_candidates=rejected_candidates,
+            failure_message=str(error_object),
         )
         raise
 
@@ -1875,6 +1877,7 @@ def _write_operation_state(
     source: dict[str, str] | None = None,
     character_inventory: list[dict[str, object]] | None = None,
     rejected_candidates: list[dict[str, object]] | None = None,
+    failure_message: str | None = None,
 ) -> None:
     """
     @brief      Write the operation state.
@@ -1951,7 +1954,10 @@ def _write_operation_state(
         "rejected_candidates": persisted_rejected_candidates,
         "checkpoint": persisted_checkpoint,
         "failure": (
-            {"phase": str(phase), "message": f"Character Discovery {phase} failed."}
+            {
+                "phase": str(phase),
+                "message": str(failure_message or f"Character Discovery {phase} failed."),
+            }
             if status == "failed"
             else None
         ),

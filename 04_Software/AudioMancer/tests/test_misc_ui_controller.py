@@ -204,6 +204,20 @@ def test_create_progress_dialog_defaults_to_english_without_settings_payload(qtb
     assert window._operation_progress_dialog.windowTitle() == "Translation In Progress"  # noqa: SLF001
 
 
+def test_progress_update_without_usage_preserves_displayed_token_summary(qtbot) -> None:
+    """Verify ordinary progress ticks do not clear a prior token-usage summary."""
+    window = _build_window(qtbot, {"language": "en"})
+    misc_ui_controller.create_progress_dialog(window, "Translation", "Preparing", lambda: None)
+    dialog = window._operation_progress_dialog  # noqa: SLF001
+    usage = {"input_tokens": 12, "output_tokens": 3, "total_tokens": 15, "usage_available": True}
+    misc_ui_controller.update_progress_dialog(window, 25, "Model work", usage)
+    expected_text = dialog._token_usage_label.text()  # noqa: SLF001
+
+    misc_ui_controller.update_progress_dialog(window, 50, "Saving")
+
+    assert dialog._token_usage_label.text() == expected_text  # noqa: SLF001
+
+
 def test_clear_progress_dialog_destroys_and_clears_the_shared_reference(qtbot) -> None:
     """
     @brief      Verify terminal runner cleanup can destroy and clear the shared dialog.

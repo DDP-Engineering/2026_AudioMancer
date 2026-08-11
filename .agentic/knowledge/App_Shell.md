@@ -52,7 +52,9 @@ shell and all persistent pages. If a project is open, the shell then invokes
 its current-page refresh path with the new language, rebuilding derived notes
 and rows without eagerly loading every hidden workflow page. Common popup and
 operation-progress text is supplied already translated by the owning
-controller.
+controller. English user-facing navigation and settings use the correctly
+spelled Narrator label while stable internal identifiers remain unchanged
+(`REQ-UX-a6c3e152`).
 
 ## 4. Dependencies
 

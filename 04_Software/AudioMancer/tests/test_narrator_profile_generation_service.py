@@ -388,45 +388,6 @@ def test_narrator_profile_generation_preserves_latin_preview_budget_boundaries(
     assert len(profiles) == 2
 
 
-@pytest.mark.parametrize("voice_language", ("zh", "ko"))
-def test_narrator_profile_generation_accepts_default_compact_script_preview_at_minimum_budget(
-    tmp_path,
-    monkeypatch,
-    mock_prompt_environment,
-    voice_language: str,
-) -> None:
-    """
-    @brief      Verify compact-script default previews satisfy the existing minimum duration budget.
-    @param[in]  tmp_path Temporary path fixture.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  mock_prompt_environment Prompt-root fixture.
-    @param[in]  voice_language Narrator voice language under test.
-    @return     None.
-    @exception  None
-    """
-    _write_narrator_prompts(mock_prompt_environment)
-    project_root = tmp_path / "project"
-    project_root.mkdir()
-    _write_chunks(project_root, "A multilingual chronicle moves through memory, ritual, and political consequence.")
-    preview_text = narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE[voice_language]
-    monkeypatch.setattr(
-        narrator_profile_generation_service.llm_provider_service,
-        "chat_json",
-        _chat_json_factory([], _profiles_payload(2, preview_text=preview_text)),
-    )
-
-    narrator_profile_generation_service.generate_narrator_profiles(
-        project_root,
-        {},
-        _MOCK_AI_PROFILE,
-        2,
-        voice_language,
-        220,
-    )
-
-    assert narrator_definition_service.load_profiles(project_root)
-
-
 def test_narrator_profile_generation_merges_token_usage_into_report_and_state(
     tmp_path,
     monkeypatch,

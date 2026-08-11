@@ -12,6 +12,29 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Translation targets now match the supported product contract: English,
+  Romanian, German, French, Russian, Portuguese, Spanish, and Italian. Japanese,
+  Korean, and Chinese target-only options and budgeting paths have been removed,
+  while unsupported source scripts still receive the existing cleanup warning.
+- English navigation, settings, help, and workflow labels now spell Narrator
+  correctly without changing stable project data or internal compatibility IDs.
+- AI requests now retry only typed transient provider failures, preserve output
+  limits during JSON repair, accept valid one-line JSON fences, and report
+  response-format compatibility failures without leaking internal markers.
+- Text extraction, chapter detection, Cleanup role resets, prompt rendering,
+  Character Discovery resume/error reporting, and blank Speech Blocks report
+  rows now preserve the complete and truthful source and operation state.
+- Project export and snapshot creation now reject unsafe self-inclusion and keep
+  the original failure when temporary cleanup also fails; settings validation,
+  reset cleanup, malformed voice plans, and Speech Blocks lifecycle projections
+  now handle invalid or partial data safely.
+- Workflow pages now preserve pending Translation edits during refresh, refresh
+  Character Voices only after project state is loaded, stop active audio on
+  navigation, retain token progress when usage is omitted, normalize terminal
+  VoiceWeaver status, and default destructive narrator confirmations to No.
+- VoiceWeaver idle detection now waits for an active generation state, and
+  completed Speech Blocks no longer invent completion timestamps when none were
+  persisted.
 - Service tests can now use explicitly requested local pytest workers while
   normal and Qt/UI test runs remain serial by default.
 - Pytest now terminates any individual test that exceeds two minutes, preventing
