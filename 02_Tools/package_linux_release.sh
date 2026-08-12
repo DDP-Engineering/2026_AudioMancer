@@ -329,6 +329,12 @@ if [[ ! -d "${DIST_BUNDLE_PATH}" ]]; then
     exit 1
 fi
 
+# PySide's optional TIFF image plugin targets the retired libtiff.so.5 ABI,
+# which Ubuntu 24.04 does not provide. AudioMancer does not load TIFF assets;
+# omit this unusable plugin instead of shipping one unresolved shared object.
+remove_path_if_exists \
+    "${DIST_BUNDLE_PATH}/_internal/PySide6/Qt/plugins/imageformats/libqtiff.so"
+
 invoke_step "Assemble delivery staging folder" mkdir -p "${STAGING_PATH}"
 # Start from PyInstaller output, then add project-controlled runtime assets.
 cp -a "${DIST_BUNDLE_PATH}/." "${STAGING_PATH}/"

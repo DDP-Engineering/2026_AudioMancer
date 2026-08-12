@@ -10,7 +10,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Fixed
+## [2.0.0] - 2026-08-12
+
+### Fixed in the refreshed packages
 
 - Translation targets now match the supported product contract: English,
   Romanian, German, French, Russian, Portuguese, Spanish, and Italian. Japanese,
@@ -211,7 +213,6 @@ All notable changes to this project will be documented in this file.
   profile count when its checkpoint is valid. Keeping both values can resume
   compatible style analysis, while changing the count or editing or clearing
   the rules starts clean and cancelling the dialog starts no AI work.
-- Narrator Voice now measures generated previews, safe sample limits, and visible preview counters with script-aware spoken units, so Japanese, Chinese, and Korean previews follow the same safe duration rules as space-separated languages.
 - Character Discovery now writes transaction logs in its own resettable log
   family. Rejected candidate diagnostics are saved without source excerpts or
   AI credentials, survive interrupted resumes without double-counting, and
@@ -298,9 +299,7 @@ All notable changes to this project will be documented in this file.
   project no longer asks to repair stale completed summaries for files that
   Cleanup already removed.
 
-## [2.0.0] - 2026-07-30
-
-### Added
+### Added in the initial package
 
 - New **Narration Block Target (s)** setting under TTS Settings → Runtime Audio
   Limits. It sets the preferred spoken length of one same-narrator block. The
