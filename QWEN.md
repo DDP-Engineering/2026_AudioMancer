@@ -23,9 +23,10 @@ This digest is enough to act on if you read nothing else.
 Stages, one step file each in `.agentic/steps/`: **frame** (agree scope,
 open the task journal) -> **specify** (write the requirement, and a spec
 when useful) -> **design** (a short note for non-trivial work) -> **build**
-(failing test first, then the implementation, until green) -> **deliver**
-(full suite, check, knowledge pages, report, commit). A small fix or change
-may take the quick path, frame -> build -> deliver.
+(failing test first, then the implementation, until green) -> **validate**
+(review, knowledge, full suite and strict check) -> **deliver** (approval,
+report, commit/PR). A small fix or change may take the quick path,
+frame -> build -> validate -> deliver.
 
 To resume: `python .agentic/aegis.py status` lists the task journals; open
 `.agentic/tasks/TASK-<id>.md`, read its `stage:` line and `## Log`, open

@@ -28,7 +28,7 @@ requirement alone is not enough to build from.
    behavior, update it (and its `updated` date) instead of adding a
    duplicate.
 3. Create each new file:
-   `python .agentic/aegis.py req new <category> "<title>"`
+   `python .agentic/aegis.py req <category> "<title>"`
    Categories: `functional ux nfr security data platform reliability test`.
 4. Fill the required fields: `schema`, `id`, `title`, `status`,
    `requirement`, `verification`. Start `status = "draft"`; `build`

@@ -5,17 +5,30 @@ schema = 1
 
 [commands]
 # The application lives in 04_Software/AudioMancer and runs through uv.
+# The full suite changes directory so pytest picks up `testpaths` from the
+# application's pyproject.toml.
 test = "cd 04_Software/AudioMancer && uv run pytest -q"
-test_impacted = "cd 04_Software/AudioMancer && uv run pytest -q {tests}"
+# The impacted set must NOT change directory: AEGIS substitutes
+# repository-root-relative selectors into {tests}, and a `cd` would make
+# pytest resolve them a second time against the application folder
+# (04_Software/AudioMancer/04_Software/AudioMancer/tests/...). `--project`
+# selects the application's environment without moving the working
+# directory, and pytest still infers the application as its rootdir from
+# the selector paths, so `pythonpath` and `testpaths` keep working.
+test_impacted = "uv run --project 04_Software/AudioMancer pytest -q {tests}"
 # Repository audits from 02_Tools/audits, scoped to the files this task
 # changed so the advisory report stays proportionate. Drop --changed-only to
 # audit the whole application subtree.
 codestyle = "python 02_Tools/audits/audit_codestyle.py --changed-only"
 logging_coverage = "python 02_Tools/audits/audit_logging_coverage.py --changed-only"
-# Seconds allowed per command. The default is 1800, but the full AudioMancer
-# suite runs roughly 45 minutes, so the default would kill a healthy suite at
-# 30 minutes and report it as a failure. 4200 leaves headroom.
-timeout = 4200
+
+[timeouts]
+# Seconds allowed for one named command. Nothing shipped carries a limit, so
+# only the full suite is bounded here; the fast audits run unbounded. The full
+# AudioMancer suite takes at most 60 minutes, so it is capped at exactly that.
+# A run that exceeds the cap is reported as proving nothing - never as a
+# failure - so raise this line if the suite legitimately grows past an hour.
+test = 3600
 
 [layout]
 # Globs used by the traceability heuristics of `aegis check`.

@@ -31,10 +31,15 @@ requirement links current so that set stays correct.
 3. Run the test and watch it fail. Confirm the failure is the one you
    expect (missing behavior), not a typo, an import error, or a bad
    fixture.
-4. Note the observed failure in `## Log` before implementing, one line:
-   `- <date> build: tests/x.py::test_y red as expected (<reason>)`.
-   This line is the evidence that the test came first; if it is missing,
-   the test did not.
+4. Record the observed failure in `## Log` before implementing. Include the
+   **exact test selector or command**, its **non-zero exit code**, and the
+   **expected missing-behavior failure reason**:
+   `- <date> build red: command=\`pytest -q tests/x.py::test_y\`; exit=1;`
+   ` expected missing behavior=<reason>.`
+   Keep it reproducible but short; do not paste the full traceback. This is
+   an agent-authored journal record, not independent proof. For a
+   `Manual:`/`Inspection:` method, record a **manual observation** after the
+   implementation instead: method, action, and observed result.
 5. Implement the smallest change that makes the test pass. Resist adding
    behavior no requirement asks for.
 6. Maintain the links **now, before running the focused set**:
@@ -47,29 +52,33 @@ requirement links current so that set stays correct.
    unlinked new test would not be in the set, and a changed source file
    no requirement covers makes `--impacted` refuse and fall back to the
    full suite (by design).
-7. Run `python .agentic/aegis.py test --impacted` as the inner loop. It
-   runs only the tests linked to requirements whose `affected_paths` you
-   touched, so it is fast enough to run after every edit. Repeat steps
-   2–7 until the requirement is done.
+7. Run `python .agentic/aegis.py test --impacted --base HEAD` as the inner
+   loop. It runs only the tests linked to requirements whose
+   `affected_paths` you touched, so it is fast enough to run after every
+   edit. `--base HEAD` narrows it further to what you have not committed
+   yet — without it the basis is the whole branch, which on a long-lived
+   branch selects most of the suite. Repeat steps 2–7 until the
+   requirement is done.
 8. Move to the next requirement and repeat from step 1.
 9. When all requirements are green, run `python .agentic/aegis.py check`.
    Fix what it flags, or record in one log line which warning you accept
    and why.
-10. Tick the checklist, set `stage: deliver`, and **replace
-    `## Done checklist`** with the deliver stage's "Done when" list from
-    `5_deliver.md` — the checklist always shows the current stage's items.
+10. Tick the checklist, set `stage: validate`, and **replace
+    `## Done checklist`** with the validate stage's "Done when" list from
+    `5_validate.md` — the checklist always shows the current stage's items.
 
 **Outputs:**
 
 - New and changed tests, and the implementation that satisfies them.
 - Updated `affected_paths`, `linked_tests`, `status` on each requirement.
-- Journal log lines: one red-test line per requirement, plus any accepted
-  warning.
+- Journal log lines: one reproducible red-test record per automated
+  requirement, a manual observation where applicable, plus accepted warnings.
 
 **Done when:**
 
-- [ ] a failing test was written and observed red for each requirement,
-      and noted in the log before implementation
+- [ ] each automated requirement has a pre-implementation red record with
+      exact selector or command, non-zero exit, and expected failure reason;
+      each manual requirement has a post-implementation observation
 - [ ] implementation makes those tests pass
 - [ ] `test --impacted` green
 - [ ] `affected_paths` and `linked_tests` updated on every requirement
@@ -77,7 +86,7 @@ requirement links current so that set stays correct.
       `"retired"`, with the reason in its prose, where this task
       deliberately removed the behavior
 - [ ] `check` clean, or each remaining warning explained in the log
-- [ ] `stage: deliver`
+- [ ] `stage: validate`
 
 **Skip when:** Never — the quick path goes through `build` too. If a task
 genuinely changes no behavior (documentation only), say so in the log and

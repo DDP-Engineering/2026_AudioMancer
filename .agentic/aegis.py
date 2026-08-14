@@ -37,7 +37,7 @@ import time
 import tomllib
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.4.0"
 SCHEMA = 1
 
 AGENTIC = Path(__file__).resolve().parent
@@ -55,14 +55,18 @@ TASK_TYPES = ("feature", "fix", "change", "adopt")
 #: accepted as aliases so both vocabularies work on the command line.
 CATEGORIES: dict[str, tuple[str, str]] = {
     "functional": ("functional", "FUNC"),
+    "func": ("functional", "FUNC"),
     "ux": ("ux", "UX"),
     "nfr": ("nfr", "NFR"),
     "non_functional": ("nfr", "NFR"),
     "security": ("security", "SEC"),
+    "sec": ("security", "SEC"),
     "data": ("data", "DATA"),
     "data_privacy": ("data", "DATA"),
     "platform": ("platform", "PLAT"),
+    "plat": ("platform", "PLAT"),
     "reliability": ("reliability", "REL"),
+    "rel": ("reliability", "REL"),
     "release": ("reliability", "REL"),
     "test": ("test", "TEST"),
     "testing": ("test", "TEST"),
@@ -79,7 +83,24 @@ schema = 1
 test = "pytest -q"
 # test_impacted = "pytest -q {tests}"   # {tests} = the focused regression set
 # lint = "ruff check ."
-# timeout = 1800                        # seconds allowed per command
+# timeout = 0                           # seconds allowed per command; 0 or
+#                                       # absent means no limit at all
+# workdir = "app"                       # run commands here, not at the root
+#
+# Set `workdir` when your application lives below the repository root, and
+# never put a directory change inside a command: paths substituted into
+# `{tests}` are repository-relative, so a command that moves itself would
+# resolve them a second time and find nothing. With `workdir` set, those
+# paths are rewritten to match before the command runs.
+
+[timeouts]
+# Seconds allowed for one named command, overriding [commands] timeout.
+# Nothing here by default: a command is stopped only when you ask for it,
+# because a limit short enough to cut off a healthy suite would report a
+# failure that never happened. A stopped command is reported as proving
+# nothing - never as a failure.
+# test = 5400
+# lint = 120
 
 [layout]
 # Globs used by the traceability heuristics of `aegis check`.
@@ -89,8 +110,10 @@ tests = ["tests/"]
 [zones]
 # What each stage may write besides `.agentic/`, which every stage may
 # always write. Values name the globs above: "source", "tests". A stage
-# left out entirely may write anywhere - that is why build and deliver
-# are not listed. Advisory like everything else: check reports an edit
+# left out entirely may write anywhere - that is why build, validate, and
+# deliver are not listed. Deliver is publish-only by instruction, but the
+# merge-base diff cannot attribute an edit to one stage without false hits.
+# Advisory like everything else: check reports an edit
 # outside the zone, it never stops one. The defaults are shown; uncomment
 # and change a line to widen or narrow one stage.
 # frame = []
@@ -117,9 +140,10 @@ This digest is enough to act on if you read nothing else.
 Stages, one step file each in `.agentic/steps/`: **frame** (agree scope,
 open the task journal) -> **specify** (write the requirement, and a spec
 when useful) -> **design** (a short note for non-trivial work) -> **build**
-(failing test first, then the implementation, until green) -> **deliver**
-(full suite, check, knowledge pages, report, commit). A small fix or change
-may take the quick path, frame -> build -> deliver.
+(failing test first, then the implementation, until green) -> **validate**
+(review, knowledge, full suite and strict check) -> **deliver** (approval,
+report, commit/PR). A small fix or change may take the quick path,
+frame -> build -> validate -> deliver.
 
 To resume: `python .agentic/aegis.py status` lists the task journals; open
 `.agentic/tasks/TASK-<id>.md`, read its `stage:` line and `## Log`, open
@@ -220,6 +244,19 @@ def run_git(*args: str) -> tuple[int, str] | None:
     except (OSError, subprocess.SubprocessError):
         return None
     return out.returncode, out.stdout
+
+
+def git_head() -> str:
+    """
+    @brief The checked-out commit, or "" when there is no history yet.
+    @details Recorded in a task journal at creation so every later
+             measurement of what the task changed has an exact starting
+             point instead of guessing at the branch's fork point.
+    """
+    out = run_git("rev-parse", "HEAD")
+    if out is None or out[0] != 0 or not out[1].strip():
+        return ""
+    return out[1].strip()
 
 
 def git_branch() -> str:
@@ -424,14 +461,14 @@ def cmd_init(_args: argparse.Namespace) -> int:
     for name in POINTER_FILES:
         print(f"  {name:<16} {write_pointer(name)}")
 
-    print("Next: python .agentic/aegis.py task new \"<title>\"")
+    print("Next: python .agentic/aegis.py task \"<title>\"")
     return 0
 
 
-# task new / req new
+# task / req
 
 
-def cmd_task_new(args: argparse.Namespace) -> int:
+def cmd_task(args: argparse.Namespace) -> int:
     """@brief Scaffold a task journal from templates/task.md."""
     title = args.title.strip()
     if not title:
@@ -449,6 +486,11 @@ def cmd_task_new(args: argparse.Namespace) -> int:
     text = re.sub(r"^type: .*$", f"type: {args.type}", text, count=1, flags=re.M)
     text = re.sub(r"^branch: .*$", lambda _m: f"branch: {branch}", text, count=1,
                   flags=re.M)
+    # no space after the colon in the template: the value starts out empty,
+    # and stays that way - with no trailing space - when there is no history
+    head = git_head()
+    text = re.sub(r"^base:.*$", lambda _m: f"base: {head}".rstrip(), text,
+                  count=1, flags=re.M)
     text = re.sub(r"^opened: .*$", f"opened: {stamp}", text, count=1, flags=re.M)
     text = re.sub(r"^- \d{4}-\d{2}-\d{2} frame:", f"- {stamp} frame:", text, count=1,
                   flags=re.M)
@@ -459,7 +501,7 @@ def cmd_task_new(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_req_new(args: argparse.Namespace) -> int:
+def cmd_req(args: argparse.Namespace) -> int:
     """@brief Scaffold a requirement from templates/requirement.toml."""
     key = args.category.strip().lower()
     if key not in CATEGORIES:
@@ -527,7 +569,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     for path in unreadable:
         print(f"  {path.stem:<15} (unreadable) not valid UTF-8")
     if not paths:
-        print("no task journals yet - python .agentic/aegis.py task new \"<title>\"")
+        print("no task journals yet - python .agentic/aegis.py task \"<title>\"")
         return 0
     print(f"{len(parsed)} open task journal(s) in {rel(AGENTIC / 'tasks')}"
           + (f" ({hidden} done hidden - use --all)" if hidden and not args.all else "")
@@ -609,13 +651,15 @@ CHECKS: tuple[tuple[str, str], ...] = (
     ("uncovered-source", "changed source files are covered by affected_paths"),
     ("no-linked-tests", "active requirements have existing linked tests"),
     ("stale-paths", "affected_paths entries still exist on disk"),
-    ("scope-drift", "a build/deliver task's diff touches its requirements"),
+    ("scope-drift", "a build/validate/deliver task's diff touches its requirements"),
     ("secret-in-diff", "no secret patterns in the added diff lines"),
     ("ticket-ref", "no ticket/run-id patterns inside requirement prose"),
     ("unticked-deliver", "a journal in deliver has no unticked items"),
     ("outside-layout", "the diff stays inside source/tests globs and .agentic/"),
     ("source-no-test-changes", "source changes come with test changes"),
     ("config", "aegis.toml keys have the documented shapes"),
+    ("command-failed", "a --run command ran to completion and succeeded"),
+    ("command-timeout", "no --run command was stopped by its time limit"),
     ("nothing-ran", "--run actually executed at least one command"),
     ("manual-verification", "a requirement is verified by hand, not by test"),
     ("stage-zone", "the diff stays inside the current stage's write zone"),
@@ -639,12 +683,16 @@ DEFAULT_ZONES: dict[str, tuple[str, ...]] = {
     "survey": (), "components": ("tests",), "close": (),
 }
 
+#: `[commands]` keys that configure how commands run rather than naming one.
+RESERVED_COMMAND_KEYS = ("timeout", "workdir")
+
 #: [table][key] -> expected python type, for the advisory config check.
 CONFIG_SHAPE: dict[str, dict[str, type]] = {
-    "commands": {"timeout": int},
+    "commands": {"timeout": int, "workdir": str},
     "layout": {"source": list, "tests": list, "default_branch": str},
     "check": {"ignore": list, "secret_patterns_extra": list,
               "strict_promote": list, "run": list},
+    "timeouts": {},   # keys are command names; values checked below
     "zones": {stage: list for stage in DEFAULT_ZONES},
 }
 
@@ -669,6 +717,22 @@ def check_config(add, cfg: dict) -> None:
     for key, value in cfg_table(cfg, "commands").items():
         if key != "timeout" and not isinstance(value, str):
             add("WARN", "config", name, f"[commands] {key} should be a string")
+    for key, value in cfg_table(cfg, "timeouts").items():
+        if isinstance(value, bool) or not isinstance(value, int):
+            add("WARN", "config", name, f"[timeouts] {key} should be int")
+        elif key not in cfg_table(cfg, "commands"):
+            add("WARN", "config", name,
+                f"[timeouts] {key} names no [commands] entry")
+    # a workdir that does not resolve silently sends every command back to the
+    # repository root, where substituted paths still work but the application's
+    # own configuration does not - worth one line rather than a silent surprise
+    workdir = str(cfg_table(cfg, "commands").get("workdir", "")).strip()
+    if workdir and not repo_relative_ok(workdir):
+        add("WARN", "config", name,
+            "[commands] workdir must stay inside the repository")
+    elif workdir and not (ROOT / workdir).is_dir():
+        add("WARN", "config", name,
+            f"[commands] workdir '{workdir}' is not a directory")
     # an unrecognised zone name expands to no globs, which would silently
     # narrow the stage to `.agentic/` - the opposite of what a typo intends
     for stage, names in cfg_table(cfg, "zones").items():
@@ -694,13 +758,13 @@ REQUIRED_FIELDS = ("schema", "id", "title", "status", "requirement", "verificati
 CODE_BY_FOLDER = {folder: code for folder, code in CATEGORIES.values()}
 REQ_STATUSES = ("draft", "active", "retired")
 REQ_ID_RE = re.compile(r"^REQ-[A-Z]{2,6}-[0-9a-f]{4,12}$")
-#: journal stage vocabulary: the five stages, adoption's phases, and done.
-KNOWN_STAGES = ("frame", "specify", "design", "build", "deliver", "done",
+#: journal stage vocabulary: the six stages, adoption's phases, and done.
+KNOWN_STAGES = ("frame", "specify", "design", "build", "validate", "deliver", "done",
                 "survey", "components", "close")
 #: which step file explains each stage - adoption's phases live in adopt.md.
 STAGE_STEP_FILES = {
     "frame": "1_frame.md", "specify": "2_specify.md", "design": "3_design.md",
-    "build": "4_build.md", "deliver": "5_deliver.md",
+    "build": "4_build.md", "validate": "5_validate.md", "deliver": "6_deliver.md",
     "survey": "adopt.md", "components": "adopt.md", "close": "adopt.md",
 }
 
@@ -747,7 +811,7 @@ def is_ticket_reference(hit: str) -> bool:
 DIFF_HEADER_RE = re.compile(r"^diff --git a/(.*) b/(.*)$")
 
 CHECK_EPILOG = (
-    "the 17 checks (slug - what silent means):\n"
+    f"the {len(CHECKS)} checks (slug - what silent means):\n"
     + "\n".join(f"  {slug:<24}{desc}" for slug, desc in CHECKS)
     + """
 
@@ -758,7 +822,7 @@ else a local `master`, then `main`. Without git or a merge base, each diff-based
 reports one NOTE line and everything else still runs. Lines longer
 than 100 columns are truncated with `...`.
 
-exits 0 always - except with --strict, which exits 1 when there are
+findings never make it exit non-zero - only --strict does, when there are
 errors, failed --run commands, or warnings whose slug is listed in
 [check] strict_promote. --run executes every plain [commands] entry
 (template entries containing `{` and the `timeout` key are skipped, as
@@ -772,6 +836,10 @@ printed as `run: <name> skipped`.
 
 output is capped at the first 40 findings; --full (implied by --strict)
 prints them all.
+
+a usage error - an unknown task id, an unreadable aegis.toml - exits 1
+whatever the findings say: that is the command failing to run, not a
+judgement on the repository.
 """
 )
 
@@ -879,9 +947,38 @@ def added_lines_of(file: str) -> list[tuple[str, str]]:
             data.decode("utf-8", errors="replace").splitlines()]
 
 
-def collect_diff(cfg: dict) -> tuple[list[str], list[tuple[str, str]], list[str], str]:
+def diff_base(cfg: dict, revision: str = "") -> tuple[str, str]:
     """
-    @brief Changed files and added lines versus the merge base.
+    @brief The revision every diff is taken against, and why it failed.
+    @details Without an explicit revision this is the merge base with the
+             default branch - right for reviewing a whole branch. An explicit
+             revision (`--base HEAD` during the edit-run loop) is used as
+             given, so only work after that point counts as changed.
+    """
+    probe = run_git("rev-parse", "--git-dir")
+    if probe is None:
+        return "", "git executable not found"
+    if probe[0] != 0:
+        return "", "not a git repository"
+    if revision:
+        resolved = run_git("rev-parse", "--verify", f"{revision}^{{commit}}")
+        if not resolved or resolved[0] != 0 or not resolved[1].strip():
+            return "", f"unknown base revision '{revision}'"
+        return resolved[1].strip(), ""
+    branch = default_branch(cfg)
+    if not branch:
+        return "", "no default branch (origin/HEAD, master, main)"
+    base = run_git("merge-base", "HEAD", branch)
+    if not base or base[0] != 0 or not base[1].strip():
+        return "", f"no merge base between HEAD and {branch}"
+    return base[1].strip(), ""
+
+
+def collect_diff(cfg: dict,
+                 revision: str = "") -> tuple[list[str], list[tuple[str, str]],
+                                              list[str], str]:
+    """
+    @brief Changed files and added lines versus the diff base.
     @details File names come from `git diff --name-only -z` (robust against
              quoted/non-ASCII paths); added text from the patch for tracked
              files plus bounded reads of untracked files, so work in progress
@@ -889,18 +986,10 @@ def collect_diff(cfg: dict) -> tuple[list[str], list[tuple[str, str]], list[str]
              (file, text) pairs, reason); a non-empty reason means the
              diff-based checks must degrade to NOTE lines.
     """
-    probe = run_git("rev-parse", "--git-dir")
-    if probe is None:
-        return [], [], [], "git executable not found"
-    if probe[0] != 0:
-        return [], [], [], "not a git repository"
-    branch = default_branch(cfg)
-    if not branch:
-        return [], [], [], "no default branch (origin/HEAD, master, main)"
-    base = run_git("merge-base", "HEAD", branch)
-    if not base or base[0] != 0 or not base[1].strip():
-        return [], [], [], f"no merge base between HEAD and {branch}"
-    names = run_git("diff", "--name-only", "-z", base[1].strip(), "--")
+    resolved, reason = diff_base(cfg, revision)
+    if reason:
+        return [], [], [], reason
+    names = run_git("diff", "--name-only", "-z", resolved, "--")
     if not names or names[0] != 0:
         return [], [], [], "git diff failed"
     files = [name for name in names[1].split("\0") if name]
@@ -911,7 +1000,7 @@ def collect_diff(cfg: dict) -> tuple[list[str], list[tuple[str, str]], list[str]
     # quotepath=false keeps non-ASCII names unquoted so header attribution
     # works for them; names with quotes or backslashes stay quoted and are
     # picked up by the per-file fallback below.
-    patch = run_git("-c", "core.quotepath=false", "diff", base[1].strip(), "--")
+    patch = run_git("-c", "core.quotepath=false", "diff", resolved, "--")
     if patch and patch[0] == 0:
         current = ""
         for line in patch[1].split("\n"):
@@ -929,7 +1018,7 @@ def collect_diff(cfg: dict) -> tuple[list[str], list[tuple[str, str]], list[str]
     # diff them one at a time, where the name is known from the file list.
     unattributed = [f for f in files if f not in seen_in_patch]
     for name in unattributed[:MAX_REDIFF_FILES]:
-        one = run_git("diff", base[1].strip(), "--", name)
+        one = run_git("diff", resolved, "--", name)
         if one and one[0] == 0:
             added.extend((name, line[1:]) for line in one[1].split("\n")
                          if line.startswith("+") and not line.startswith("+++"))
@@ -1115,11 +1204,14 @@ def check_diff(add, skip, cfg, records, journals, scope) -> None:
     """
     @brief Diff-based checks 5, 8, 9, 12, 13 and 17.
     @details `scope` is the parsed journal of `--task` or None; it narrows
-             check 5's coverage set and checks 8 and 17 to that one task.
-             Without a usable diff every check here emits one NOTE and
-             returns.
+             check 5's coverage set and checks 8 and 17 to that one task, and
+             its `base:` header - the commit the task started from - becomes
+             the diff basis, so the findings describe that task rather than
+             everything its branch has done. Without a usable diff every check
+             here emits one NOTE and returns.
     """
-    files, added, gaps, reason = collect_diff(cfg)
+    base = str(scope["header"].get("base", "")).strip() if scope else ""
+    files, added, gaps, reason = collect_diff(cfg, base)
     if reason:
         for slug in DIFF_CHECKS:
             add("NOTE", slug, "(diff)", f"skipped: {reason}")
@@ -1160,7 +1252,7 @@ def check_diff(add, skip, cfg, records, journals, scope) -> None:
 
     for relpath, data in drift_journals:  # 8: scope-drift
         stage = data["header"].get("stage", "")
-        if stage not in ("build", "deliver") or not files:
+        if stage not in ("build", "validate", "deliver") or not files:
             continue
         # targets are the linked requirements' affected_paths only - the
         # requirement TOML itself is usually created on this same branch and
@@ -1266,26 +1358,55 @@ def run_checks(cfg: dict, task: str | None) -> list[tuple[str, str, str, str]]:
     return findings
 
 
-def command_timeout(cfg: dict) -> int:
-    """@brief `[commands] timeout` in seconds; 1800 when absent or invalid,
-    and never below 1 - a zero or negative timeout would kill everything."""
+def command_timeout(cfg: dict, name: str = "") -> int | None:
+    """
+    @brief The limit for one command in seconds, or None for no limit.
+    @details `[timeouts] <name>` wins, then the shared `[commands] timeout`,
+             and absent means None: nothing shipped may stop a command the
+             repository believes is healthy. A suite that legitimately runs
+             for an hour is the repository's business, and a limit low enough
+             to cut it short would report a failure that never happened. Zero,
+             negative and unreadable values all mean no limit too, so the only
+             way to get one is to ask for it.
+    """
+    table = cfg_table(cfg, "timeouts")
+    raw = table.get(name) if name and name in table else \
+        cfg_table(cfg, "commands").get("timeout")
     try:
-        value = int(cfg_table(cfg, "commands").get("timeout", 1800))
+        value = int(raw)  # type: ignore[arg-type]
     except (TypeError, ValueError):
-        return 1800
-    return max(1, value)
+        return None
+    return value if value > 0 else None
+
+
+def command_workdir(cfg: dict) -> Path:
+    """
+    @brief Where configured commands run: `[commands] workdir`, else the root.
+    @details A repository whose application sits below the root would
+             otherwise have to embed a directory change in the command
+             string, which silently invalidates every path substituted into
+             that command. An absent, escaping, or missing directory falls
+             back to the root - the `config` check reports it; nothing here
+             blocks.
+    """
+    raw = str(cfg_table(cfg, "commands").get("workdir", "")).strip()
+    if not raw or not repo_relative_ok(raw):
+        return ROOT
+    target = ROOT / raw
+    return target if target.is_dir() else ROOT
 
 
 def runnable_commands(cfg: dict) -> list[tuple[str, str]]:
     """
     @brief The `[commands]` entries that can run as-is, in file order.
-    @details The `timeout` key and template entries containing `{` (such as
-             `test_impacted`) are not directly runnable and are skipped.
+    @details The reserved keys - which name configuration, not commands -
+             and template entries containing `{` (such as `test_impacted`)
+             are not directly runnable and are skipped.
     """
     return [
         (name, value)
         for name, value in cfg_table(cfg, "commands").items()
-        if name != "timeout" and isinstance(value, str)
+        if name not in RESERVED_COMMAND_KEYS and isinstance(value, str)
         and value.strip() and "{" not in value
     ]
 
@@ -1317,12 +1438,15 @@ def kill_tree(proc: subprocess.Popen) -> bool:
         return False
 
 
-def run_command(command: str, timeout: int,
-                capture: bool = True) -> tuple[int, float, list[str]]:
+def run_command(command: str, timeout: int | None, capture: bool = True,
+                cwd: Path | None = None) -> tuple[int, float, list[str], bool]:
     """
-    @brief Run one configured shell command in the repo root.
-    @details Returns (exit code, seconds, captured output tail). Exit 124 on
-             timeout: the command's process tree is killed where the platform
+    @brief Run one configured shell command, by default in the repo root.
+    @details Returns (exit code, seconds, captured output tail, stopped). The
+             `stopped` flag says the limit ended the command, which the exit
+             code alone cannot: a command is free to exit 124 by itself, and a
+             caller reporting whether anything was proven must not guess. Exit
+             124 on timeout: the command's process tree is killed where the platform
              allows it (`taskkill /F /T` on Windows, the session group on
              POSIX), and when that kill is refused - restricted sandboxes do
              refuse it - the shell is still killed and the returned tail says
@@ -1338,7 +1462,7 @@ def run_command(command: str, timeout: int,
              when it would not have filled anything there.
     """
     start = time.monotonic()
-    kwargs: dict = {"cwd": str(ROOT), "shell": True}
+    kwargs: dict = {"cwd": str(cwd or ROOT), "shell": True}
     sink = None
     if capture:
         # a temp file, not a pipe: output of any size costs disk, not memory,
@@ -1353,12 +1477,13 @@ def run_command(command: str, timeout: int,
     except OSError as exc:
         if sink is not None:
             sink.close()
-        return 127, time.monotonic() - start, [str(exc)]
+        return 127, time.monotonic() - start, [str(exc)], False
 
-    note = ""
+    note, stopped = "", False
     try:
         code = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
+        stopped = True
         killed = kill_tree(proc)
         try:
             proc.wait(timeout=5)
@@ -1381,7 +1506,7 @@ def run_command(command: str, timeout: int,
     if note:
         output = f"{output}\n{note}"
     tail = [line for line in output.strip().split("\n") if line.strip()][-8:]
-    return code, time.monotonic() - start, tail
+    return code, time.monotonic() - start, tail, stopped
 
 
 #: command names that suggest side effects beyond verification - skipped by
@@ -1413,7 +1538,7 @@ def run_configured_commands(cfg: dict, findings: list,
     allowed = str_list(cfg_table(cfg, "check").get("run"))
     out = stream if stream is not None else sys.stdout
     results: list[dict] = []
-    timeout = command_timeout(cfg)
+    workdir = command_workdir(cfg)
     ran = 0
 
     def say(text: str) -> None:
@@ -1432,9 +1557,22 @@ def run_configured_commands(cfg: dict, findings: list,
                             "reason": "name suggests side effects"})
             continue
         say(f"run: {name} started")  # a 20-minute suite must not look hung
-        code, seconds, tail = run_command(command, timeout)
+        limit = command_timeout(cfg, name)
+        code, seconds, tail, stopped = run_command(command, limit, cwd=workdir)
         ran += 1
-        if code == 0:
+        if stopped:
+            # a command that was cut off returned no verdict at all: calling
+            # that a failure invents evidence, calling it a pass hides that
+            # nothing was checked. It stays an ERROR because an unfinished
+            # proof is not a proof.
+            say(f"run: {name} stopped at its {limit}s limit ({seconds:.1f}s)"
+                " - nothing proven")
+            for text in tail:
+                say(f"  | {text}")
+            findings.append(("ERROR", "command-timeout", "(run)",
+                             f"{name} reached its {limit}s limit - nothing "
+                             "proven; raise [timeouts] if it needs longer"))
+        elif code == 0:
             say(f"run: {name} ok ({seconds:.1f}s)")
         else:
             say(f"run: {name} FAIL exit {code} ({seconds:.1f}s)")
@@ -1442,7 +1580,8 @@ def run_configured_commands(cfg: dict, findings: list,
                 say(f"  | {text}")
             findings.append(("ERROR", "command-failed", "(run)",
                              f"{name} exit {code}"))
-        results.append({"name": name, "status": "ok" if code == 0 else "failed",
+        status = "stopped" if stopped else ("ok" if code == 0 else "failed")
+        results.append({"name": name, "status": status,
                         "exit": code, "seconds": round(seconds, 1),
                         "tail": tail})
     if not ran:
@@ -1532,8 +1671,36 @@ def cmd_check(args: argparse.Namespace) -> int:
 #: Anything else falls back to the full suite instead of reaching the shell.
 SAFE_TEST_REF_RE = re.compile(r"^[A-Za-z0-9_./][A-Za-z0-9_.:\[\]/=-]*$")
 
+#: How long a substituted command may get before the platform refuses to
+#: launch it. Windows caps a process command line at 32767 characters and the
+#: shell that actually receives it at rather less, so this stays conservative:
+#: a focused set is worth nothing if the command cannot start. Exceeding it is
+#: not an error - it selects a coarser set (whole test files), then the full
+#: suite.
+COMMAND_LENGTH_LIMIT = 8000
 
-def impacted_tests(cfg: dict) -> tuple[list[str], str]:
+
+def rebase_ref(entry: str, workdir: Path) -> str:
+    """
+    @brief One repository-relative test reference, seen from `workdir`.
+    @details References are stored repository-relative so they stay
+             comparable whatever a repository configures; only substitution
+             knows where the command will run. Returns "" when the reference
+             lies outside the working directory, where the command could not
+             reach it.
+    """
+    if workdir == ROOT:
+        return entry
+    path, _, selector = entry.partition("::")
+    try:
+        relative = (ROOT / path).resolve().relative_to(workdir.resolve())
+    except (ValueError, OSError):
+        return ""
+    rebased = relative.as_posix()
+    return f"{rebased}::{selector}" if selector else rebased
+
+
+def impacted_tests(cfg: dict, revision: str = "") -> tuple[list[str], str]:
     """
     @brief The focused regression set: diff -> requirements -> linked_tests.
     @details The traceability mapping driven in reverse, with two safety
@@ -1545,7 +1712,7 @@ def impacted_tests(cfg: dict) -> tuple[list[str], str]:
              the fallback - references are substituted into a shell command
              and must never be able to alter it.
     """
-    files, _added, _gaps, reason = collect_diff(cfg)
+    files, _added, _gaps, reason = collect_diff(cfg, revision)
     if reason:
         return [], reason
     source_globs = str_list(cfg_table(cfg, "layout").get("source"))
@@ -1578,7 +1745,47 @@ def impacted_tests(cfg: dict) -> tuple[list[str], str]:
             return [], f"unsafe test reference '{entry}'"
         if not repo_relative_ok(entry.split("::", 1)[0]):
             return [], f"test reference escapes the repository ('{entry}')"
-    return tests, ""
+
+    workdir = command_workdir(cfg)
+    rebased = []
+    for entry in tests:
+        seen_from = rebase_ref(entry, workdir)
+        if not seen_from:
+            return [], ("test reference is outside the command working "
+                        f"directory ('{entry}')")
+        rebased.append(seen_from)
+    return rebased, ""
+
+
+def fit_impacted(template_cmd: str, tests: list[str],
+                 reason: str) -> tuple[str, list[str], str]:
+    """
+    @brief Substitute the focused set, coarsening it until it can launch.
+    @details A selector list long enough to exceed the platform's command
+             line cannot start at all, which is a worse outcome than running
+             a slightly wider set. So the ladder is: exact selectors, then
+             each distinct test file once, then the caller's full-suite
+             fallback. Returns (command, references used, reason); an empty
+             command means the caller must fall back and say why.
+    """
+    if not tests:
+        return "", tests, reason
+    command = template_cmd.replace("{tests}", " ".join(tests))
+    if len(command) <= COMMAND_LENGTH_LIMIT:
+        return command, tests, ""
+
+    files: list[str] = []
+    for entry in tests:
+        path = entry.partition("::")[0]
+        if path not in files:
+            files.append(path)
+    command = template_cmd.replace("{tests}", " ".join(files))
+    if len(command) <= COMMAND_LENGTH_LIMIT:
+        print(f"impacted: too long to launch - reduced to {len(files)} "
+              f"test file(s) from {len(tests)} selector(s)")
+        return command, files, ""
+    return "", files, ("still too long to launch after reduction to "
+                       f"{len(files)} test file(s)")
 
 
 def append_log(task_id: str, message: str) -> None:
@@ -1616,7 +1823,8 @@ def cmd_test(args: argparse.Namespace) -> int:
     if args.impacted and args.name != "test":
         raise UserError("--impacted only applies to the 'test' command")
     command = commands.get(args.name)
-    if not isinstance(command, str) or not command.strip() or "{" in command:
+    if (args.name in RESERVED_COMMAND_KEYS or not isinstance(command, str)
+            or not command.strip() or "{" in command):
         raise UserError(
             f"no runnable [commands] entry named '{args.name}' in aegis.toml")
 
@@ -1627,9 +1835,10 @@ def cmd_test(args: argparse.Namespace) -> int:
             print("impacted: no test_impacted template in aegis.toml"
                   " - running the full test command")
         else:
-            tests, reason = impacted_tests(cfg)
-            if tests:
-                command = template_cmd.replace("{tests}", " ".join(tests))
+            tests, reason = impacted_tests(cfg, getattr(args, "base", "") or "")
+            substituted, tests, reason = fit_impacted(template_cmd, tests, reason)
+            if substituted:
+                command = substituted
                 label = f"test --impacted ({len(tests)} test ref(s))"
             else:
                 print(f"impacted: {reason} - running the full test command")
@@ -1638,7 +1847,11 @@ def cmd_test(args: argparse.Namespace) -> int:
         read_journal(args.task)
 
     print(f"$ {command}")
-    code, seconds, _tail = run_command(command, command_timeout(cfg), capture=False)
+    code, seconds, _tail, stopped = run_command(
+        command, command_timeout(cfg, args.name), capture=False,
+        cwd=command_workdir(cfg))
+    if stopped:
+        label = f"{label} stopped at its limit - nothing proven"
     print(f"{label}: exit {code} ({seconds:.1f}s)")
     if args.task:
         append_log(args.task, f"test: {label} exit {code} ({seconds:.1f}s)")
@@ -1667,7 +1880,12 @@ def cmd_report(args: argparse.Namespace) -> int:
         for rid in split_ids(header.get("requirements", ""))
     ]
 
-    files, added, gaps, reason = collect_diff(cfg)
+    # the task's own starting commit when it recorded one: a report measured
+    # from the branch's fork point counts every earlier commit as this task's
+    # work, and a human approving the task reads that number
+    base = str(header.get("base", "")).strip()
+    basis = f"task base {base[:7]}" if base else "merge base"
+    files, added, gaps, reason = collect_diff(cfg, base)
     diff_line = (f"unavailable ({reason})" if reason else
                  f"{len(files)} file(s) changed, {len(added)} line(s) added"
                  + (f"; {len(gaps)} file(s) not content-scanned" if gaps else ""))
@@ -1685,7 +1903,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         f" path: {header.get('path', '?')}; branch: {header.get('branch', '?')}",
         "- requirements:" if req_lines else "- requirements: none linked",
         *req_lines,
-        f"- diff vs merge base: {diff_line}",
+        f"- diff vs {basis}: {diff_line}",
         f"- checks: errors={counts['ERROR']} warnings={counts['WARN']}"
         f" notes={counts['NOTE']}",
         f"- checklist: {done}/{len(data['checklist'])} done"
@@ -1719,23 +1937,19 @@ def build_parser() -> argparse.ArgumentParser:
     init = subs.add_parser("init", help="finish installing the payload in this repo")
     init.set_defaults(func=cmd_init)
 
-    task = subs.add_parser("task", help="task journals")
-    task_subs = task.add_subparsers(dest="task_command", required=True)
-    task_new = task_subs.add_parser("new", help="create a task journal")
-    task_new.add_argument("title")
-    task_new.add_argument("--type", choices=TASK_TYPES, default="feature")
-    task_new.set_defaults(func=cmd_task_new)
+    task = subs.add_parser("task", help="create a task journal")
+    task.add_argument("title")
+    task.add_argument("--type", choices=TASK_TYPES, default="feature")
+    task.set_defaults(func=cmd_task)
 
-    req = subs.add_parser("req", help="requirements")
-    req_subs = req.add_subparsers(dest="req_command", required=True)
-    req_new = req_subs.add_parser("new", help="create a requirement file")
-    req_new.add_argument("category", help=", ".join(sorted(CATEGORIES)))
-    req_new.add_argument("title")
-    req_new.set_defaults(func=cmd_req_new)
+    req = subs.add_parser("req", help="create a requirement file")
+    req.add_argument("category", help=", ".join(sorted(CATEGORIES)))
+    req.add_argument("title")
+    req.set_defaults(func=cmd_req)
 
     check = subs.add_parser(
         "check",
-        help="run the heuristic check catalog (advisory, always exits 0)",
+        help="run the heuristic check catalog (advisory: findings never fail it)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=CHECK_EPILOG,
     )
@@ -1758,6 +1972,9 @@ def build_parser() -> argparse.ArgumentParser:
                       help="a [commands] entry name (default: test)")
     test.add_argument("--impacted", action="store_true",
                       help="run only the tests linked to requirements the diff touches")
+    test.add_argument("--base", default="",
+                      help="diff against this revision instead of the merge base"
+                           " (--base HEAD selects only uncommitted work)")
     test.add_argument("--task", help="append the result to this task journal's log")
     test.set_defaults(func=cmd_test)
 

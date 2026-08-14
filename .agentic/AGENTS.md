@@ -8,12 +8,12 @@ SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 
 # AEGIS Light — agent workflow
 
-## This repository
-
-**Read `.agentic/PROJECT.md` before you start.** It carries the rules
-that are specific to AudioMancer and are not optional: the binding code
-style (`01_Documentation/Code_Style.md`), where the source and tests
-live, and the four-place version workflow that delivery must follow.
+**Read `.agentic/PROJECT.md` before you start.** It carries this
+repository's binding project rules — code style, the four-place version
+bump, and the delivery checklist additions — on top of this generic
+workflow. (This one pointer line is re-added after each payload upgrade;
+the rules themselves live in the repo-owned `PROJECT.md` and are never
+touched.)
 
 ## Philosophy
 
@@ -34,15 +34,19 @@ did. Do the steps honestly and keep the journal true.
 | 2 | specify | `.agentic/steps/2_specify.md` | Write or update the requirement(s), and a spec when useful. |
 | 3 | design | `.agentic/steps/3_design.md` | A short design note for non-trivial work; cite requirement IDs. |
 | 4 | build | `.agentic/steps/4_build.md` | Failing test first, then implementation, until green. |
-| 5 | deliver | `.agentic/steps/5_deliver.md` | Full suite, strict check, knowledge pages, report, commit/PR. |
+| 5 | validate | `.agentic/steps/5_validate.md` | Review and reconcile the candidate, then prove it as the final action. |
+| 6 | deliver | `.agentic/steps/6_deliver.md` | Present the validated candidate, report, commit, and publish. |
 
-**Quick path.** For a small fix or change: `frame → build → deliver`.
+**Quick path.** For a small fix or change: `frame → build → validate → deliver`.
 Decide this in `frame`, record `path: quick` in the journal header, and
 say why in the log. Everything else uses the full path.
 
 **Write zones.** Every stage may write under `.agentic/`. Beyond that,
 `frame`, `specify` and `design` write nothing else — they come before the
-code is agreed — while `build` and `deliver` write anywhere. Advisory
+code is agreed — while `build`, `validate`, and `deliver` have no mechanical
+zone. `deliver` is still publish-only by instruction: if the validated
+candidate changes, return to `validate`. It has no configured zone because
+the merge-base diff cannot tell which stage introduced an edit. Advisory
 like the rest: `check` reports an edit outside the current stage's zone
 as `stage-zone`, it never blocks one, and a hit usually means the
 journal's `stage:` is stale rather than that the edit was wrong. Change
@@ -64,12 +68,13 @@ defined in that one file; `status` points them back at it.
 | Component knowledge | `.agentic/knowledge/<component>.md`, one page per component |
 | Templates | `.agentic/templates/` — `requirement.toml`, `spec.md`, `task.md`, `component.md` |
 | Step files | `.agentic/steps/` |
+| CLI reference | `.agentic/CLI.md` |
 | Config | `.agentic/aegis.toml` — test/lint commands, source and test globs |
 
 Source code and tests stay where the repo already keeps them. Never write
 work products anywhere else; `check` flags strays.
 
-**Do not edit the payload.** `AGENTS.md`, `steps/`, `templates/`,
+**Do not edit the payload.** `AGENTS.md`, `CLI.md`, `steps/`, `templates/`,
 `aegis.py` and `LICENSE.txt` are replaced wholesale when this workflow is
 upgraded, so any change you make there is silently lost. Found a bug in
 `aegis.py`, or need a rule the steps do not cover? Say so and let the
@@ -104,7 +109,8 @@ never crosses machines.
 - **Checkpoint (default).** Stop and ask twice, not once per stage: at
   the end of `frame` (scope, chosen path, proposed requirements — the
   cheap moment to course-correct) and before the `deliver` commit/PR
-  (report plus check and suite results, presented for a yes). The stages
+  (the validated candidate, check, and suite results, presented for a yes).
+  The stages
   in between flow through without asking.
 - **Autopilot.** When the prompt says "autopilot to deliver", suppress
   the frame stop. The pre-PR stop always remains, because publishing is
@@ -136,18 +142,22 @@ For a small local model, give one stage per session:
 | specify | `Read .agentic/AGENTS.md. Continue TASK-<id> (stage specify): follow .agentic/steps/2_specify.md, then update the task journal.` |
 | design | `Read .agentic/AGENTS.md. Continue TASK-<id> (stage design): follow .agentic/steps/3_design.md, then update the task journal.` |
 | build | `Read .agentic/AGENTS.md. Continue TASK-<id> (stage build): follow .agentic/steps/4_build.md, then update the task journal.` |
-| deliver | `Read .agentic/AGENTS.md. Continue TASK-<id> (stage deliver): follow .agentic/steps/5_deliver.md, then update the task journal.` |
+| validate | `Read .agentic/AGENTS.md. Continue TASK-<id> (stage validate): follow .agentic/steps/5_validate.md, then update the task journal.` |
+| deliver | `Read .agentic/AGENTS.md. Continue TASK-<id> (stage deliver): follow .agentic/steps/6_deliver.md, then update the task journal.` |
 | adopt | `Read .agentic/AGENTS.md. Adopt this repo: follow .agentic/steps/adopt.md, one component per session.` |
 
 ## Commands you will use
 
+The complete syntax, options, examples, exit behavior, and guidance on when
+to use each command are in `.agentic/CLI.md`.
+
 ```
 # "python" throughout - use "python3" on Linux distributions without it
 python .agentic/aegis.py status                 # open tasks, or one task's state
-python .agentic/aegis.py task new "<title>"     # new task journal
-python .agentic/aegis.py req new <cat> "<t>"    # new requirement file
+python .agentic/aegis.py task "<title>"         # new task journal
+python .agentic/aegis.py req <cat> "<title>"    # new requirement file
 python .agentic/aegis.py check                  # advisory report, always exits 0
-python .agentic/aegis.py test --impacted        # fast inner loop during build
-python .agentic/aegis.py test                   # full suite, used at deliver
+python .agentic/aegis.py test --impacted --base HEAD   # fast loop in build
+python .agentic/aegis.py test                   # full suite, used at validate
 python .agentic/aegis.py report TASK-<id>       # delivery summary into the journal
 ```

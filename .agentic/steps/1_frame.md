@@ -36,7 +36,7 @@ the task journal that every later stage reads and updates.
    own naming convention). The journal's `branch:` header must match
    `git branch --show-current` — later sessions verify this on resume.
 5. Create the journal:
-   `python .agentic/aegis.py task new "<title>" --type feature`
+   `python .agentic/aegis.py task "<title>" --type feature`
    (`--type fix` or `--type change` as appropriate).
 6. Fill the journal header: `stage`, `type`, `path`, `branch`, `opened`.
    Leave `requirements:` empty until `specify` (quick path: fill it now

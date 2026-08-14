@@ -31,7 +31,7 @@ exactly where it stands: `stage: survey` → `stage: components` →
 1. Run `python .agentic/aegis.py init`. If you are on the repo's default
    branch, create an adoption branch first (`git checkout -b adopt/<repo>`
    or the repo's own convention). Then open an adoption journal:
-   `python .agentic/aegis.py task new "Adopt <repo>" --type adopt`, and
+   `python .agentic/aegis.py task "Adopt <repo>" --type adopt`, and
    set `stage: survey` in its header.
 2. Propose a component breakdown heuristically: directory structure,
    entry points, import clusters, existing docs, test file grouping. Aim

@@ -14,12 +14,16 @@ The header is the block of "key: value" lines directly under the title.
 Keep it exactly in that form — one key per line, no blank lines inside
 the block, no comments between the lines — so it stays machine-readable.
 
-  stage         frame | specify | design | build | deliver | done
+  stage         frame | specify | design | build | validate | deliver | done
                 (adoption journals: survey | components | close | done)
   type          feature | fix | change | adopt
   path          full | quick
   requirements  comma-separated requirement IDs, empty until specify
   branch        the branch this task is delivered on
+  base          the commit this task started from, filled in at creation;
+                the delivery report and `check --task` measure the diff
+                against it, so leave it alone once it is written. Empty
+                when the repository had no history yet.
   opened        YYYY-MM-DD
 
 Header lines are edited in place; log lines are only ever appended.
@@ -33,6 +37,7 @@ type: feature
 path: full
 requirements:
 branch: <branch>
+base:
 opened: 2026-01-01
 
 ## Done checklist (current stage)
