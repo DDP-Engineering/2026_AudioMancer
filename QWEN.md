@@ -7,15 +7,25 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 # QWEN.md
 
-AudioMancer uses **AEGIS Light**: a companion engineering workflow that
+AudioMancer uses **AEGIS**: a companion engineering workflow that
 advises and records but never blocks. The full contract is
 `.agentic/AGENTS.md`; this repository's own rules - the binding code
 style and the release version workflow - are in `.agentic/PROJECT.md`.
 Read both before changing code.
 
-<!-- AEGIS-LIGHT:BEGIN (managed by .agentic/aegis.py init) -->
+## Changelog - every delivery
 
-## AEGIS Light workflow
+Before the delivery commit, record what this task changed under
+`## [Unreleased]` in `CHANGELOG.md`, in user language. This applies to
+every delivery, not only to releases.
+
+Assigning a version to that section makes the task a release, and a
+release must then carry the same version into the project and both help
+files - see `.agentic/PROJECT.md`, *Delivery - the version workflow*.
+
+<!-- AEGIS:BEGIN (managed by .agentic/aegis.py init) -->
+
+## AEGIS workflow
 
 The full contract is `.agentic/AGENTS.md` - read it before starting work.
 This digest is enough to act on if you read nothing else.
@@ -38,14 +48,4 @@ Artifacts: requirements in `.agentic/requirements/<category>/`, specs in
 `.agentic/knowledge/`. `python .agentic/aegis.py check` is advisory - read
 its findings and self-correct; nothing here blocks you mid-flight.
 
-<!-- AEGIS-LIGHT:END -->
-
-## Changelog - every delivery
-
-Before the delivery commit, record what this task changed under
-`## [Unreleased]` in `CHANGELOG.md`, in user language. This applies to
-every delivery, not only to releases.
-
-Assigning a version to that section makes the task a release, and a
-release must then carry the same version into the project and both help
-files - see `.agentic/PROJECT.md`, *Delivery - the version workflow*.
+<!-- AEGIS:END -->

@@ -39,17 +39,22 @@ prove the final tree before it is presented for publication.
    automatable test that is merely missing.
 6. If steps 1-5 changed source, tests, requirements, specs, or knowledge, rerun
    the impacted set and resolve the result before proving the repository.
-7. **Prove the final candidate only after every candidate-changing step:**
+7. If validation changed any repository file outside `.agentic/`, rerun
+   `python .agentic/aegis.py evolution --task TASK-<id>` so the saved,
+   timestamped report describes the final candidate. Review every added,
+   modified, and removed path. The report is descriptive evidence, not a
+   tamper-proof guarantee.
+8. **Prove the final candidate only after every candidate-changing step:**
    `python .agentic/aegis.py check --task TASK-<id> --strict --run`.
    This executes the configured full verification commands plus the advisory
    catalog. If any fix changes the candidate, repeat the relevant review and
    this proof; the last proof must describe the tree handed to `deliver`.
-8. Record the actual result in the log: command, exit code, commands/tests run,
+9. Record the actual result in the log: command, exit code, commands/tests run,
    and remaining warnings with their accepted reasons. Never write "green"
    over a non-zero exit. A failure introduced by this task returns to the
    appropriate earlier stage. A pre-existing base-branch failure is named and
    kept out of scope, with its effect on CI stated honestly.
-9. Tick the checklist, set `stage: deliver`, and replace it with the delivery
+10. Tick the checklist, set `stage: deliver`, and replace it with the delivery
    stage's "Done when" list from `6_deliver.md`. The task now means
    "validated, not yet published."
 
@@ -67,6 +72,7 @@ prove the final tree before it is presented for publication.
 - [ ] knowledge pages updated for every materially changed component
 - [ ] requirements re-read: status, prose, verification, paths, and links true
 - [ ] manual or inspection verification completed and recorded where applicable
+- [ ] final evolution report refreshed after the last candidate edit
 - [ ] final `check --strict --run` result recorded truthfully after all edits
 - [ ] remaining warnings and pre-existing failures explained
 - [ ] `stage: deliver`

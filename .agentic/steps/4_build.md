@@ -40,9 +40,16 @@ requirement links current so that set stays correct.
    an agent-authored journal record, not independent proof. For a
    `Manual:`/`Inspection:` method, record a **manual observation** after the
    implementation instead: method, action, and observed result.
-5. Implement the smallest change that makes the test pass. Resist adding
+5. Run `python .agentic/aegis.py anchor --task TASK-<id>` after the expected
+   red failure and before implementation. AEGIS records a timestamped
+   fingerprint of every Git-visible, non-ignored repository file except its
+   own `.agentic/` state and generated Python bytecode caches. This describes
+   the starting point; it is not tamper-proof and does not prove the red test
+   was honest. For work without an automated red test, anchor immediately
+   before the first implementation edit instead.
+6. Implement the smallest change that makes the test pass. Resist adding
    behavior no requirement asks for.
-6. Maintain the links **now, before running the focused set**:
+7. Maintain the links **now, before running the focused set**:
    - add each source path you changed to that requirement's
      `affected_paths` (forward slashes, repo-relative);
    - add each new or changed test to `linked_tests` as
@@ -52,18 +59,20 @@ requirement links current so that set stays correct.
    unlinked new test would not be in the set, and a changed source file
    no requirement covers makes `--impacted` refuse and fall back to the
    full suite (by design).
-7. Run `python .agentic/aegis.py test --impacted --base HEAD` as the inner
+8. Run `python .agentic/aegis.py test --impacted --base HEAD` as the inner
    loop. It runs only the tests linked to requirements whose
    `affected_paths` you touched, so it is fast enough to run after every
    edit. `--base HEAD` narrows it further to what you have not committed
    yet — without it the basis is the whole branch, which on a long-lived
-   branch selects most of the suite. Repeat steps 2–7 until the
+   branch selects most of the suite. Repeat steps 2–8 until the
    requirement is done.
-8. Move to the next requirement and repeat from step 1.
-9. When all requirements are green, run `python .agentic/aegis.py check`.
+9. Move to the next requirement and repeat from step 1.
+10. When all requirements are green, run
+    `python .agentic/aegis.py evolution --task TASK-<id>`. Review every added,
+    modified, and removed path, then run `python .agentic/aegis.py check`.
    Fix what it flags, or record in one log line which warning you accept
    and why.
-10. Tick the checklist, set `stage: validate`, and **replace
+11. Tick the checklist, set `stage: validate`, and **replace
     `## Done checklist`** with the validate stage's "Done when" list from
     `5_validate.md` — the checklist always shows the current stage's items.
 
@@ -79,6 +88,7 @@ requirement links current so that set stays correct.
 - [ ] each automated requirement has a pre-implementation red record with
       exact selector or command, non-zero exit, and expected failure reason;
       each manual requirement has a post-implementation observation
+- [ ] repository anchor recorded after red and evolution reviewed after implementation
 - [ ] implementation makes those tests pass
 - [ ] `test --impacted` green
 - [ ] `affected_paths` and `linked_tests` updated on every requirement

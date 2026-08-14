@@ -10,7 +10,7 @@ SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 Component knowledge page, at .agentic/knowledge/<component>.md, one per
 component. This is what a session loads instead of re-reading the whole
 component's source, so keep it short, current, and true. Updated at
-deliver whenever the component's behavior, interface, or file set changed.
+validate whenever the component's behavior, interface, or file set changed.
 Sections below are recommended, not mandatory.
 -->
 

@@ -25,7 +25,7 @@ the task journal that every later stage reads and updates.
    is in scope and, explicitly, what is not.
 2. Locate the area: which components and which files this will touch.
    Skim them; do not edit anything yet.
-3. Choose the path. Take the **quick path** (`frame → build → deliver`)
+3. Choose the path. Take the **quick path** (`frame → build → validate → deliver`)
    only when all of these hold: no new externally observable behavior, no
    new interface or data format, no new dependency, an existing
    requirement already covers the behavior you are changing, and the

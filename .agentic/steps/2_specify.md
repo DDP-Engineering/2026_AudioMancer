@@ -64,7 +64,9 @@ requirement alone is not enough to build from.
 10. Put every requirement ID on the journal's `requirements:` header line,
    comma-separated, and log what you created or changed.
 11. Run `python .agentic/aegis.py check` and fix every format error it
-    reports. Empty-`linked_tests` warnings are expected at this stage.
+    reports. A draft requirement's empty `linked_tests` is intentionally
+    silent until build; if that warning appears now, the requirement was
+    activated prematurely and its status must be corrected.
 12. Tick the checklist, set `stage: design`, and **replace
     `## Done checklist`** with the design stage's "Done when" list from
     `3_design.md` — the checklist always shows the current stage's items.

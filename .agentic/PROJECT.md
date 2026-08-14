@@ -7,10 +7,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 # AudioMancer — project rules
 
-Project-specific rules that sit on top of the generic AEGIS Light
-workflow. `AGENTS.md` and `steps/5_deliver.md` point here. Keeping them
-in this file means a payload upgrade — which replaces those two files —
-costs one pointer line to re-add, never these rules.
+Project-specific rules that sit on top of the generic AEGIS workflow.
+`.agentic/AGENTS.md` points here. Keeping the rules in this repository-owned
+file means payload upgrades replace generic guidance without replacing these
+project requirements.
 
 ## Where things are
 

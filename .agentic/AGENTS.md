@@ -6,14 +6,11 @@ See the LICENSE.txt in the .agentic folder for full license details.
 SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
-# AEGIS Light — agent workflow
+# AEGIS — agent workflow
 
-**Read `.agentic/PROJECT.md` before you start.** It carries this
-repository's binding project rules — code style, the four-place version
-bump, and the delivery checklist additions — on top of this generic
-workflow. (This one pointer line is re-added after each payload upgrade;
-the rules themselves live in the repo-owned `PROJECT.md` and are never
-touched.)
+**Read `.agentic/PROJECT.md` before starting work.** It contains
+AudioMancer's binding code-style, versioning, and delivery rules. This
+repository-specific file is preserved across payload upgrades.
 
 ## Philosophy
 

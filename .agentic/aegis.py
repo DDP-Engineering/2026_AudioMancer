@@ -9,7 +9,7 @@
 # -----------------------------------------------------------------------------
 """
 @file aegis.py
-@brief The AEGIS Light companion CLI: a scaffolder and a reporter.
+@brief The AEGIS companion CLI: a scaffolder and a reporter.
 @details Single file, stdlib only, Python >= 3.11. Invoked as
          `python .agentic/aegis.py <cmd>` from the repo root on Windows and
          Linux alike; it locates its own `.agentic` directory from
@@ -27,7 +27,9 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import fnmatch
+import hashlib
 import json
+import os
 import re
 import secrets
 import subprocess
@@ -37,7 +39,7 @@ import time
 import tomllib
 from pathlib import Path
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 SCHEMA = 1
 
 AGENTIC = Path(__file__).resolve().parent
@@ -45,8 +47,12 @@ ROOT = AGENTIC.parent
 
 DATA_DIRS = ("requirements", "specs", "tasks", "knowledge")
 POINTER_FILES = ("AGENTS.md", "CLAUDE.md", "QWEN.md")
-MARK_BEGIN = "<!-- AEGIS-LIGHT:BEGIN (managed by .agentic/aegis.py init) -->"
-MARK_END = "<!-- AEGIS-LIGHT:END -->"
+MARK_BEGIN = "<!-- AEGIS:BEGIN (managed by .agentic/aegis.py init) -->"
+MARK_END = "<!-- AEGIS:END -->"
+LEGACY_MARK_PAIRS = ((
+    "<!-- AEGIS-LIGHT:BEGIN (managed by .agentic/aegis.py init) -->",
+    "<!-- AEGIS-LIGHT:END -->",
+),)
 
 TASK_TYPES = ("feature", "fix", "change", "adopt")
 
@@ -73,7 +79,7 @@ CATEGORIES: dict[str, tuple[str, str]] = {
 }
 
 DEFAULT_CONFIG = """\
-# AEGIS Light configuration. Written once by `aegis init` and yours from
+# AEGIS configuration. Written once by `aegis init` and yours from
 # then on - upgrades never overwrite this file.
 
 schema = 1
@@ -132,7 +138,7 @@ strict_promote = []
 """
 
 POINTER_DIGEST = """\
-## AEGIS Light workflow
+## AEGIS workflow
 
 The full contract is `.agentic/AGENTS.md` - read it before starting work.
 This digest is enough to act on if you read nothing else.
@@ -169,12 +175,24 @@ def today() -> str:
     return _dt.date.today().isoformat()
 
 
+def utc_now() -> str:
+    """@brief Current UTC time as a stable ISO 8601 string."""
+    return (_dt.datetime.now(_dt.timezone.utc).isoformat(timespec="microseconds")
+            .replace("+00:00", "Z"))
+
+
 def rel(path: Path) -> str:
     """@brief Repo-relative path with forward slashes, for output and storage."""
     try:
         return path.resolve().relative_to(ROOT).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def generated_python_cache(path: str) -> bool:
+    """@brief Whether a repository path is generated Python bytecode."""
+    parts = path.split("/")
+    return "__pycache__" in parts or path.lower().endswith((".pyc", ".pyo"))
 
 
 def read_text(path: Path) -> str:
@@ -397,6 +415,367 @@ def read_journal(task_id: str) -> tuple[Path, dict]:
     return path, parse_journal(read_text(path))
 
 
+# repository anchor / evolution
+
+
+def state_path(journal: Path, kind: str) -> Path:
+    """@brief The task-owned anchor or evolution sidecar path."""
+    return journal.with_suffix(f".{kind}.json")
+
+
+def read_json_file(path: Path, label: str) -> dict:
+    """@brief Read one UTF-8 JSON object or raise a concise user error."""
+    try:
+        value = json.loads(read_text(path))
+    except json.JSONDecodeError as exc:
+        raise UserError(f"{rel(path)} is not valid JSON: {exc}") from None
+    if not isinstance(value, dict):
+        raise UserError(f"{rel(path)} {label} must be a JSON object")
+    return value
+
+
+def write_json_file(path: Path, value: dict) -> None:
+    """@brief Atomically write deterministic UTF-8/LF JSON."""
+    text = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    fd, temporary = -1, ""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp",
+                                         dir=path.parent)
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        fd = -1
+        os.replace(temporary, path)
+    except OSError as exc:
+        if fd >= 0:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        if temporary:
+            try:
+                Path(temporary).unlink()
+            except OSError:
+                pass
+        raise UserError(f"cannot write {rel(path)}: {exc}") from None
+
+
+def visible_repo_paths() -> list[str]:
+    """
+    @brief Git-visible paths, excluding AEGIS state and Python bytecode caches.
+    @details `--exclude-standard` honors every normal ignore source. NUL
+             separation preserves whitespace and newlines in filenames.
+    """
+    probe = run_git("rev-parse", "--git-dir")
+    if probe is None:
+        raise UserError("git executable not found; repository state not recorded")
+    if probe[0] != 0:
+        raise UserError("not a git repository; repository state not recorded")
+    out = run_git("ls-files", "--cached", "--others", "--exclude-standard", "-z")
+    if out is None or out[0] != 0:
+        raise UserError("git could not list visible repository files")
+    paths: list[str] = []
+    for name in out[1].split("\0"):
+        if not name or name == ".agentic" or name.startswith(".agentic/") \
+                or generated_python_cache(name):
+            continue
+        if not repo_relative_ok(name):
+            raise UserError(f"git returned an unsafe repository path: {name!r}")
+        paths.append(name)
+    return sorted(set(paths))
+
+
+def fingerprint(path: Path, name: str) -> dict | None:
+    """
+    @brief A stable content identity for a regular file, symlink, or submodule.
+    @details Regular files stream through SHA-256. Symlinks hash their link
+             text rather than following it. A missing tracked path is omitted,
+             which represents its current worktree deletion.
+    """
+    try:
+        if path.is_symlink():
+            target = os.readlink(path)
+            raw = os.fsencode(target)
+            return {"kind": "symlink", "sha256": hashlib.sha256(raw).hexdigest()}
+        if path.is_file():
+            before = path.stat()
+            digest = hashlib.sha256()
+            with path.open("rb") as handle:
+                while chunk := handle.read(1024 * 1024):
+                    digest.update(chunk)
+            after = path.stat()
+            if (before.st_size, before.st_mtime_ns) != \
+                    (after.st_size, after.st_mtime_ns):
+                raise UserError(f"{name} changed while it was being fingerprinted")
+            return {"kind": "file", "sha256": digest.hexdigest()}
+        if path.is_dir():
+            head = run_git("-C", name, "rev-parse", "HEAD")
+            if head and head[0] == 0 and head[1].strip():
+                return {"kind": "submodule", "commit": head[1].strip()}
+            raise UserError(f"cannot fingerprint repository directory entry: {name}")
+        if not path.exists():
+            return None
+        raise UserError(f"cannot fingerprint non-file repository entry: {name}")
+    except UserError:
+        raise
+    except OSError as exc:
+        raise UserError(f"cannot fingerprint {name}: {exc}") from None
+
+
+def repository_manifest() -> dict[str, dict]:
+    """@brief Current Git-visible repository content map."""
+    files: dict[str, dict] = {}
+    for name in visible_repo_paths():
+        value = fingerprint(ROOT / name, name)
+        if value is not None:
+            files[name] = value
+    return files
+
+
+def file_area(path: str, source_globs: list[str], test_globs: list[str]) -> str:
+    """@brief Categorize one repository path from the anchor's layout."""
+    if match_any(path, test_globs):
+        return "tests"
+    if match_any(path, source_globs):
+        return "source"
+    return "other"
+
+
+def valid_utc(value: object) -> bool:
+    """@brief Whether a value is the UTC timestamp form emitted by AEGIS."""
+    return isinstance(value, str) and bool(re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z", value
+    ))
+
+
+def valid_fingerprint(value: object) -> bool:
+    """@brief Whether a value is a closed schema-1 repository identity."""
+    if not isinstance(value, dict):
+        return False
+    kind = value.get("kind")
+    if kind in ("file", "symlink"):
+        return set(value) == {"kind", "sha256"} and bool(re.fullmatch(
+            r"[0-9a-f]{64}", str(value.get("sha256", ""))
+        ))
+    if kind == "submodule":
+        return set(value) == {"kind", "commit"} and bool(re.fullmatch(
+            r"(?:[0-9a-f]{40}|[0-9a-f]{64})", str(value.get("commit", ""))
+        ))
+    return False
+
+
+def validate_anchor(value: dict, task: str, path: Path) -> dict:
+    """@brief Validate the closed anchor schema used by evolution and check."""
+    if value.get("schema") != 1:
+        raise UserError(f"{rel(path)} anchor schema must be 1")
+    if value.get("task") != task:
+        raise UserError(f"{rel(path)} belongs to task {value.get('task')!r}, not {task}")
+    if not re.fullmatch(r"[0-9a-f]{16}", str(value.get("anchor_id", ""))):
+        raise UserError(f"{rel(path)} has an invalid anchor_id")
+    if not valid_utc(value.get("created_at")):
+        raise UserError(f"{rel(path)} has an invalid created_at timestamp")
+    if not isinstance(value.get("stage"), str):
+        raise UserError(f"{rel(path)} anchor stage must be a string")
+    head = value.get("head")
+    if not isinstance(head, str) or (head and not re.fullmatch(
+            r"(?:[0-9a-f]{40}|[0-9a-f]{64})", head)):
+        raise UserError(f"{rel(path)} has an invalid anchor HEAD")
+    if not isinstance(value.get("files"), dict):
+        raise UserError(f"{rel(path)} anchor files must be an object")
+    source_globs, test_globs = value.get("source_globs"), value.get("test_globs")
+    if not isinstance(source_globs, list) or not all(
+            isinstance(item, str) for item in source_globs):
+        raise UserError(f"{rel(path)} source_globs must be an array of strings")
+    if not isinstance(test_globs, list) or not all(
+            isinstance(item, str) for item in test_globs):
+        raise UserError(f"{rel(path)} test_globs must be an array of strings")
+    categories = value.get("categories")
+    if not isinstance(categories, dict) or set(categories) != set(value["files"]):
+        raise UserError(f"{rel(path)} categories must cover every anchored file")
+    for name, identity in value["files"].items():
+        if not isinstance(name, str) or not repo_relative_ok(name) or \
+                name == ".agentic" or name.startswith(".agentic/"):
+            raise UserError(f"{rel(path)} contains an invalid repository path")
+        if not valid_fingerprint(identity):
+            raise UserError(f"{rel(path)} has an invalid fingerprint for {name!r}")
+        if categories.get(name) != file_area(name, source_globs, test_globs):
+            raise UserError(f"{rel(path)} has an invalid category for {name!r}")
+    return value
+
+
+def validate_history(value: dict, task: str, path: Path) -> dict:
+    """@brief Validate the compact evolution-history envelope."""
+    if value.get("schema") != 1:
+        raise UserError(f"{rel(path)} evolution schema must be 1")
+    if value.get("task") != task:
+        raise UserError(f"{rel(path)} belongs to task {value.get('task')!r}, not {task}")
+    if not isinstance(value.get("reports"), list):
+        raise UserError(f"{rel(path)} evolution reports must be an array")
+    for report in value["reports"]:
+        if not isinstance(report, dict) or not re.fullmatch(
+                r"[0-9a-f]{16}", str(report.get("anchor_id", ""))):
+            raise UserError(f"{rel(path)} has an invalid evolution report")
+        if not valid_utc(report.get("anchor_created_at")) or not valid_utc(
+                report.get("evolved_at")):
+            raise UserError(f"{rel(path)} has an invalid report timestamp")
+        if not isinstance(report.get("counts"), dict) or not isinstance(
+                report.get("changes"), list):
+            raise UserError(f"{rel(path)} has an invalid report body")
+    return value
+
+
+def evolution_history(path: Path, task: str) -> dict:
+    """@brief Existing compact history, or a new empty envelope."""
+    if not path.is_file():
+        return {"schema": 1, "task": task, "reports": []}
+    return validate_history(read_json_file(path, "evolution"), task, path)
+
+
+def cmd_anchor(args: argparse.Namespace) -> int:
+    """@brief Record the current Git-visible repository content for one task."""
+    journal, data = read_journal(args.task)
+    task = journal.stem
+    anchor_file = state_path(journal, "anchor")
+    history_file = state_path(journal, "evolution")
+    previous = None
+    previous_matched = False
+    if anchor_file.is_file():
+        previous = validate_anchor(read_json_file(anchor_file, "anchor"),
+                                   task, anchor_file)
+        history = evolution_history(history_file, task)
+        previous_matched = any(
+            isinstance(report, dict)
+            and report.get("anchor_id") == previous["anchor_id"]
+            for report in history["reports"]
+        )
+
+    cfg = load_config()
+    source_globs = str_list(cfg_table(cfg, "layout").get("source"))
+    test_globs = str_list(cfg_table(cfg, "layout").get("tests"))
+    created = utc_now()
+    files = repository_manifest()
+    record = {
+        "schema": 1,
+        "task": task,
+        "anchor_id": secrets.token_hex(8),
+        "created_at": created,
+        "stage": data["header"].get("stage", ""),
+        "head": git_head(),
+        "source_globs": source_globs,
+        "test_globs": test_globs,
+        "categories": {
+            name: file_area(name, source_globs, test_globs) for name in files
+        },
+        "files": files,
+    }
+    write_json_file(anchor_file, record)
+    replaced = previous is not None
+    unmatched = replaced and not previous_matched
+    if args.json:
+        emit_json({
+            "command": "anchor", "task": task, "file": rel(anchor_file),
+            "anchor_id": record["anchor_id"], "created_at": created,
+            "stage": record["stage"], "head": record["head"],
+            "file_count": len(files), "replaced": replaced,
+            "replaced_unmatched": unmatched,
+        })
+        return 0
+    print(f"anchored {len(files)} file(s) for {task} at "
+          f"{record['head'][:7] or 'no HEAD'} ({created})")
+    print(f"saved {rel(anchor_file)}")
+    if unmatched:
+        print(f"warning: replaced unmatched anchor {previous['anchor_id']}")
+    elif replaced:
+        print(f"replaced completed anchor {previous['anchor_id']}")
+    return 0
+
+
+def compare_manifests(anchor: dict, current: dict[str, dict]) -> tuple[list[dict], dict]:
+    """@brief Changed entries and aggregate counts for one anchor comparison."""
+    source_globs = list(anchor.get("source_globs", []))
+    test_globs = list(anchor.get("test_globs", []))
+    before_files = anchor["files"]
+    changes: list[dict] = []
+    status_counts = {name: 0 for name in ("added", "modified", "removed",
+                                          "unchanged")}
+    area_counts = {
+        area: {name: 0 for name in ("added", "modified", "removed", "unchanged")}
+        for area in ("source", "tests", "other")
+    }
+    for path in sorted(set(before_files) | set(current)):
+        before, after = before_files.get(path), current.get(path)
+        if before is None:
+            status = "added"
+        elif after is None:
+            status = "removed"
+        elif before != after:
+            status = "modified"
+        else:
+            status = "unchanged"
+        area = file_area(path, source_globs, test_globs)
+        status_counts[status] += 1
+        area_counts[area][status] += 1
+        if status != "unchanged":
+            changes.append({"path": path, "area": area, "status": status,
+                            "before": before, "after": after})
+    return changes, {"status": status_counts, "area": area_counts}
+
+
+def cmd_evolution(args: argparse.Namespace) -> int:
+    """@brief Compare the repository with its active task anchor and save it."""
+    journal, data = read_journal(args.task)
+    task = journal.stem
+    anchor_file = state_path(journal, "anchor")
+    history_file = state_path(journal, "evolution")
+    if not anchor_file.is_file():
+        raise UserError(f"no anchor for {task}; run 'aegis anchor --task {task}'")
+    anchor = validate_anchor(read_json_file(anchor_file, "anchor"),
+                             task, anchor_file)
+    history = evolution_history(history_file, task)
+    current = repository_manifest()
+    changes, counts = compare_manifests(anchor, current)
+    evolved = utc_now()
+    report = {
+        "anchor_id": anchor["anchor_id"],
+        "anchor_created_at": anchor.get("created_at", ""),
+        "evolved_at": evolved,
+        "anchor_stage": anchor.get("stage", ""),
+        "evolution_stage": data["header"].get("stage", ""),
+        "anchor_head": anchor.get("head", ""),
+        "current_head": git_head(),
+        "counts": counts,
+        "changes": changes,
+    }
+    replaced = False
+    reports = history["reports"]
+    for index, old in enumerate(reports):
+        if isinstance(old, dict) and old.get("anchor_id") == anchor["anchor_id"]:
+            reports[index] = report
+            replaced = True
+            break
+    if not replaced:
+        reports.append(report)
+    write_json_file(history_file, history)
+    if args.json:
+        emit_json({
+            "command": "evolution", "task": task,
+            "file": rel(history_file), "anchor_id": anchor["anchor_id"],
+            "evolved_at": evolved, "counts": counts, "changes": changes,
+            "replaced": replaced,
+        })
+        return 0
+    changed = len(changes)
+    print(f"evolution for {task}: {changed} changed file(s) "
+          f"({counts['status']['added']} added, "
+          f"{counts['status']['modified']} modified, "
+          f"{counts['status']['removed']} removed) at {evolved}")
+    for item in changes:
+        print(f"{item['status'].upper()} [{item['area']}] {item['path']}")
+    print(f"saved {rel(history_file)}"
+          + (" (refreshed)" if replaced else ""))
+    return 0
+
+
 # init
 
 
@@ -419,14 +798,29 @@ def write_pointer(name: str) -> str:
     crlf = "\r\n" in raw
     text = raw.replace("\r\n", "\n")
 
-    begin, end = text.find(MARK_BEGIN), text.find(MARK_END)
-    if begin >= 0 and end > begin:
-        stop = end + len(MARK_END)
-        if text[stop : stop + 1] == "\n":  # take the marker's own newline only
-            stop += 1
-        if text[begin:stop].strip() == block.strip():
+    spans: list[tuple[int, int]] = []
+    for begin_mark, end_mark in ((MARK_BEGIN, MARK_END), *LEGACY_MARK_PAIRS):
+        cursor = 0
+        while (begin := text.find(begin_mark, cursor)) >= 0:
+            end = text.find(end_mark, begin + len(begin_mark))
+            if end < 0:
+                break
+            stop = end + len(end_mark)
+            if text[stop : stop + 1] == "\n":
+                stop += 1
+            spans.append((begin, stop))
+            cursor = stop
+    spans.sort()
+    if spans:
+        begin, stop = spans[0]
+        if len(spans) == 1 and text[begin:stop].strip() == block.strip():
             return "unchanged"
-        out, outcome = text[:begin] + block + text[stop:], "refreshed"
+        parts, cursor = [text[:begin], block], stop
+        for duplicate_begin, duplicate_stop in spans[1:]:
+            parts.append(text[cursor:duplicate_begin])
+            cursor = duplicate_stop
+        parts.append(text[cursor:])
+        out, outcome = "".join(parts), "refreshed"
     else:
         separator = ("" if text.endswith("\n\n")
                      else "\n" if text.endswith("\n") else "\n\n")
@@ -438,10 +832,17 @@ def write_pointer(name: str) -> str:
     return outcome
 
 
-def cmd_init(_args: argparse.Namespace) -> int:
+def cmd_init(args: argparse.Namespace) -> int:
     """@brief Finishing step after the payload was copied into a repo."""
     if not (AGENTIC / "AGENTS.md").is_file():
         raise UserError(f"payload looks incomplete: no {rel(AGENTIC / 'AGENTS.md')}")
+
+    git_version = run_git("--version")
+    git_available = bool(git_version and git_version[0] == 0)
+    if args.git and not git_available:
+        raise UserError(
+            "cannot initialize a Git repository: git is not installed or unavailable"
+        )
 
     print(f"aegis init - {rel(AGENTIC)}")
     for name in DATA_DIRS:
@@ -460,6 +861,25 @@ def cmd_init(_args: argparse.Namespace) -> int:
 
     for name in POINTER_FILES:
         print(f"  {name:<16} {write_pointer(name)}")
+
+    if not git_available:
+        print("  git              unavailable; diff, impacted, anchor, and evolution "
+              "evidence disabled")
+        print("Next: install Git, then rerun python .agentic/aegis.py init")
+        return 0
+
+    probe = run_git("rev-parse", "--git-dir")
+    if probe and probe[0] == 0:
+        print(f"  {'git':<16} repository ready ({git_version[1].strip()})")
+    elif args.git:
+        created = run_git("init")
+        if not created or created[0] != 0:
+            raise UserError("git init failed; repository was not initialized")
+        print(f"  {'git':<16} repository initialized ({git_version[1].strip()})")
+    else:
+        print(f"  {'git':<16} installed, but this is not a Git repository")
+        print("Next: python .agentic/aegis.py init --git")
+        return 0
 
     print("Next: python .agentic/aegis.py task \"<title>\"")
     return 0
@@ -574,10 +994,12 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"{len(parsed)} open task journal(s) in {rel(AGENTIC / 'tasks')}"
           + (f" ({hidden} done hidden - use --all)" if hidden and not args.all else "")
           + ":")
-    for _path, data in parsed[:STATUS_CAP]:
+    for path, data in parsed[:STATUS_CAP]:
         header = data["header"]
-        print(f"  {data['id'] or '?':<15} {header.get('stage', '?'):<10} "
-              f"{header.get('type', '?'):<8} {data['title']}")
+        identity = data["id"] or path.stem
+        title = data["title"] or "(missing heading)"
+        print(f"  {identity:<15} {header.get('stage', '?'):<10} "
+              f"{header.get('type', '?'):<8} {title}")
     if len(parsed) > STATUS_CAP:
         print(f"  ... {len(parsed) - STATUS_CAP} more (see .agentic/tasks/)")
     print("Resume one with: python .agentic/aegis.py status TASK-<id>")
@@ -639,7 +1061,7 @@ def status_one(task_id: str, as_json: bool = False) -> int:
     return 0
 
 
-# check - the 17-check heuristic catalog
+# check - the heuristic catalog
 
 #: (slug, one-line description). The slugs are the stable vocabulary the
 #: later `--strict` promotion list will use - never rename one.
@@ -657,6 +1079,7 @@ CHECKS: tuple[tuple[str, str], ...] = (
     ("unticked-deliver", "a journal in deliver has no unticked items"),
     ("outside-layout", "the diff stays inside source/tests globs and .agentic/"),
     ("source-no-test-changes", "source changes come with test changes"),
+    ("repo-evolution", "a scoped task has a completed anchor/evolution pair"),
     ("config", "aegis.toml keys have the documented shapes"),
     ("command-failed", "a --run command ran to completion and succeeded"),
     ("command-timeout", "no --run command was stopped by its time limit"),
@@ -825,8 +1248,9 @@ than 100 columns are truncated with `...`.
 findings never make it exit non-zero - only --strict does, when there are
 errors, failed --run commands, or warnings whose slug is listed in
 [check] strict_promote. --run executes every plain [commands] entry
-(template entries containing `{` and the `timeout` key are skipped, as
-are side-effect-looking names unless [check] run lists them); a failing
+(template entries containing `{` are skipped, as are the reserved
+`timeout` and `workdir` keys and side-effect-looking names unless
+[check] run lists them); a failing
 command is an ERROR (`command-failed`), and running nothing at all is
 also an ERROR (`nothing-ran`), so --strict fails on it without needing a
 promotion entry - silence never counts as proof. Note that --run proves
@@ -921,11 +1345,12 @@ STATUS_CAP = 20
 
 
 def untracked_files() -> list[str]:
-    """@brief Untracked, non-ignored files - NUL-delimited so any name works."""
+    """@brief Relevant untracked, non-ignored files, decoded NUL-safely."""
     out = run_git("ls-files", "--others", "--exclude-standard", "-z")
     if not out or out[0] != 0:
         return []
-    return [name for name in out[1].split("\0") if name]
+    return [name for name in out[1].split("\0")
+            if name and not generated_python_cache(name)]
 
 
 def added_lines_of(file: str) -> list[tuple[str, str]]:
@@ -983,7 +1408,8 @@ def collect_diff(cfg: dict,
              quoted/non-ASCII paths); added text from the patch for tracked
              files plus bounded reads of untracked files, so work in progress
              is visible before it is ever staged. Returns (files, added
-             (file, text) pairs, reason); a non-empty reason means the
+             (file, text) pairs, gaps, reason); gaps name files whose added
+             content could not be scanned, and a non-empty reason means the
              diff-based checks must degrade to NOTE lines.
     """
     resolved, reason = diff_base(cfg, revision)
@@ -992,7 +1418,8 @@ def collect_diff(cfg: dict,
     names = run_git("diff", "--name-only", "-z", resolved, "--")
     if not names or names[0] != 0:
         return [], [], [], "git diff failed"
-    files = [name for name in names[1].split("\0") if name]
+    files = [name for name in names[1].split("\0")
+             if name and not generated_python_cache(name)]
 
     added: list[tuple[str, str]] = []
     gaps: list[str] = []
@@ -1009,9 +1436,11 @@ def collect_diff(cfg: dict,
                 # attribution, never leave it pointing at the previous file
                 match = DIFF_HEADER_RE.match(line)
                 current = match.group(2) if match else ""
+                if current and generated_python_cache(current):
+                    current = ""
                 if current:
                     seen_in_patch.add(current)
-            elif line.startswith("+") and not line.startswith("+++") and current:
+            elif line.startswith("+") and not line.startswith("+++ ") and current:
                 added.append((current, line[1:]))
 
     # tracked files the header parse could not attribute (git-quoted names):
@@ -1021,7 +1450,7 @@ def collect_diff(cfg: dict,
         one = run_git("diff", resolved, "--", name)
         if one and one[0] == 0:
             added.extend((name, line[1:]) for line in one[1].split("\n")
-                         if line.startswith("+") and not line.startswith("+++"))
+                         if line.startswith("+") and not line.startswith("+++ "))
         else:
             gaps.append(name)
     gaps.extend(unattributed[MAX_REDIFF_FILES:])  # never silently skipped
@@ -1101,7 +1530,7 @@ def manual_method(verification: str) -> str:
     @details Some behaviors no test can settle - a look-and-see judgement, an
              install on clean hardware, a printed page. Naming the method
              after `Manual:` or `Inspection:` records it as a deliberate
-             choice, and check reports check 16 instead of check 6: still
+             choice, and check reports check 19 instead of check 6: still
              printed, still counted, but a NOTE, so it never fails --strict
              and never joins the standing list of tests still owed. The
              prefix alone does not count - it has to name a method.
@@ -1114,7 +1543,7 @@ def manual_method(verification: str) -> str:
 
 
 def check_requirement_links(add, records) -> None:
-    """@brief Per-requirement checks 4, 6, 7, 10 and 16 over the parsed records."""
+    """@brief Per-requirement checks 4, 6, 7, 10 and 19 over the parsed records."""
     for relpath, _path, data in records:
         spec_ref = str(data.get("spec", "") or "").strip()
         if spec_ref and not repo_relative_ok(spec_ref):
@@ -1125,7 +1554,7 @@ def check_requirement_links(add, records) -> None:
         if status == "active":
             linked = str_list(data.get("linked_tests"))
             method = manual_method(str(data.get("verification", "") or ""))
-            if not linked and method:  # 16: manual-verification
+            if not linked and method:  # 19: manual-verification
                 add("NOTE", "manual-verification", relpath,
                     "by hand: " + method[:60])
             elif not linked:
@@ -1202,9 +1631,9 @@ def scan_journals(add, skip, req_ids: set[str]) -> list[tuple[str, dict]]:
 
 def check_diff(add, skip, cfg, records, journals, scope) -> None:
     """
-    @brief Diff-based checks 5, 8, 9, 12, 13 and 17.
+    @brief Diff-based checks 5, 8, 9, 12, 13 and 20.
     @details `scope` is the parsed journal of `--task` or None; it narrows
-             check 5's coverage set and checks 8 and 17 to that one task, and
+             check 5's coverage set and checks 8 and 20 to that one task, and
              its `base:` header - the commit the task started from - becomes
              the diff basis, so the findings describe that task rather than
              everything its branch has done. Without a usable diff every check
@@ -1219,6 +1648,7 @@ def check_diff(add, skip, cfg, records, journals, scope) -> None:
     # WARN, not NOTE: a team that promotes `secret-in-diff` in CI is asking
     # for the secret scan to be trusted, and an unscanned file is precisely
     # when it cannot be - so the gap must be promotable too.
+    gaps = [name for name in gaps if not skip(name)]
     for name in gaps[:5]:  # a partial scan must say so, never read as clean
         add("WARN", "secret-in-diff", name, "added lines not scanned")
     if len(gaps) > 5:
@@ -1306,14 +1736,14 @@ def check_diff(add, skip, cfg, records, journals, scope) -> None:
         add("NOTE", "stage-zone", "(diff)",
             "skipped: current branch unavailable; use --task on detached HEAD")
         zone_journals = []
-    for relpath, data in zone_journals:  # 17: stage-zone
+    for relpath, data in zone_journals:  # 20: stage-zone
         stage = data["header"].get("stage", "")
         recorded = data["header"].get("branch", "")
         if recorded and current not in ("unknown", recorded):
             continue  # this journal describes some other branch's diff
         allowed: list[str] = []
         for zone in zones[stage]:
-            # an unrecognised name contributes nothing; check 14 reports it
+            # an unrecognised name contributes nothing; check 15 reports it
             if zone == "source":
                 allowed.extend(source_globs)
             elif zone == "tests":
@@ -1329,7 +1759,7 @@ def check_diff(add, skip, cfg, records, journals, scope) -> None:
 
 def run_checks(cfg: dict, task: str | None) -> list[tuple[str, str, str, str]]:
     """
-    @brief Collect the full findings list of the 17-check catalog.
+    @brief Collect the full findings list of the check catalog.
     @details Shared by `check` and `report`. `task` scopes the diff-based
              checks to that journal exactly as `check --task` does.
     """
@@ -1343,7 +1773,7 @@ def run_checks(cfg: dict, task: str | None) -> list[tuple[str, str, str, str]]:
         return match_any(path, ignore)
 
     check_config(add, cfg)
-    scope = read_journal(task)[1] if task else None
+    scope_path, scope = read_journal(task) if task else (None, None)
     if scope:
         recorded, current = scope["header"].get("branch", ""), git_branch()
         if recorded and current not in ("unknown", recorded):
@@ -1355,7 +1785,42 @@ def run_checks(cfg: dict, task: str | None) -> list[tuple[str, str, str, str]]:
     req_ids = {str(d.get("id", "")) for _r, _p, d in records} - {""}
     journals = scan_journals(add, skip, req_ids)
     check_diff(add, skip, cfg, records, journals, scope)
+    if scope_path is not None and scope is not None:
+        check_repo_evolution(add, scope_path, scope)
     return findings
+
+
+def check_repo_evolution(add, journal: Path, scope: dict) -> None:
+    """@brief Report missing or unreadable state records for one scoped task."""
+    task = journal.stem
+    anchor_file = state_path(journal, "anchor")
+    history_file = state_path(journal, "evolution")
+    if not anchor_file.is_file():
+        add("NOTE", "repo-evolution", rel(journal),
+            "no anchor recorded for task")
+        return
+    try:
+        anchor = validate_anchor(read_json_file(anchor_file, "anchor"),
+                                 task, anchor_file)
+    except UserError as exc:
+        add("WARN", "repo-evolution", rel(anchor_file), str(exc))
+        return
+    if not history_file.is_file():
+        add("NOTE", "repo-evolution", rel(journal),
+            "active anchor has no completed evolution")
+        return
+    try:
+        history = validate_history(read_json_file(history_file, "evolution"),
+                                   task, history_file)
+    except UserError as exc:
+        add("WARN", "repo-evolution", rel(history_file), str(exc))
+        return
+    if not any(isinstance(report, dict)
+               and report.get("anchor_id") == anchor["anchor_id"]
+               for report in history["reports"]):
+        stage = scope.get("header", {}).get("stage", "")
+        add("NOTE", "repo-evolution", rel(journal),
+            f"active anchor has no completed evolution (stage {stage or '?'})")
 
 
 def command_timeout(cfg: dict, name: str = "") -> int | None:
@@ -1372,6 +1837,8 @@ def command_timeout(cfg: dict, name: str = "") -> int | None:
     table = cfg_table(cfg, "timeouts")
     raw = table.get(name) if name and name in table else \
         cfg_table(cfg, "commands").get("timeout")
+    if isinstance(raw, bool):
+        return None
     try:
         value = int(raw)  # type: ignore[arg-type]
     except (TypeError, ValueError):
@@ -1596,7 +2063,7 @@ def run_configured_commands(cfg: dict, findings: list,
 
 def cmd_check(args: argparse.Namespace) -> int:
     """
-    @brief Run the 15-check catalog and print the findings report.
+    @brief Run the check catalog and print the findings report.
     @details Advisory by design: exits 0 - except with --strict (the CI
              mode), which exits 1 on errors, failed --run commands, and
              warnings promoted via `[check] strict_promote`. One finding per
@@ -1846,7 +2313,7 @@ def cmd_test(args: argparse.Namespace) -> int:
     if args.task:  # validate before running: a typo must not cost a suite run
         read_journal(args.task)
 
-    print(f"$ {command}")
+    print(f"$ {command}", flush=True)
     code, seconds, _tail, stopped = run_command(
         command, command_timeout(cfg, args.name), capture=False,
         cwd=command_workdir(cfg))
@@ -1929,12 +2396,14 @@ def build_parser() -> argparse.ArgumentParser:
     """@brief The argparse tree for every implemented command."""
     parser = argparse.ArgumentParser(
         prog="aegis",
-        description="AEGIS Light companion CLI - a scaffolder and a reporter.",
+        description="AEGIS companion CLI - a scaffolder and a reporter.",
     )
-    parser.add_argument("--version", action="version", version=f"aegis-light {VERSION}")
+    parser.add_argument("--version", action="version", version=f"aegis {VERSION}")
     subs = parser.add_subparsers(dest="command", required=True)
 
     init = subs.add_parser("init", help="finish installing the payload in this repo")
+    init.add_argument("--git", action="store_true",
+                      help="run git init when Git is installed but no repository exists")
     init.set_defaults(func=cmd_init)
 
     task = subs.add_parser("task", help="create a task journal")
@@ -1946,6 +2415,20 @@ def build_parser() -> argparse.ArgumentParser:
     req.add_argument("category", help=", ".join(sorted(CATEGORIES)))
     req.add_argument("title")
     req.set_defaults(func=cmd_req)
+
+    anchor = subs.add_parser(
+        "anchor", help="record Git-visible repository state for one task")
+    anchor.add_argument("--task", required=True, help="TASK-<id> or <id>")
+    anchor.add_argument("--json", action="store_true",
+                        help="emit one JSON document on stdout")
+    anchor.set_defaults(func=cmd_anchor)
+
+    evolution = subs.add_parser(
+        "evolution", help="compare repository state with a task anchor")
+    evolution.add_argument("--task", required=True, help="TASK-<id> or <id>")
+    evolution.add_argument("--json", action="store_true",
+                           help="emit one JSON document on stdout")
+    evolution.set_defaults(func=cmd_evolution)
 
     check = subs.add_parser(
         "check",
