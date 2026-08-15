@@ -10,6 +10,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Speech Blocks page: the Chunk List can now be made taller. Drag the new
+  horizontal separator between the Chunk List and the Selected Chunk /
+  Speech Blocks panes below it, the same way the two lower panes are
+  already resized against each other.
+- The separator stops at both ends: the Chunk List never becomes shorter
+  than the height it opens with, and never takes more than 60% of the page,
+  so the Selected Chunk and Speech Blocks panes stay usable.
+- The page still opens exactly as before, with the Chunk List ending level
+  with the action buttons beside it.
+
 ## [2.0.0] - 2026-08-12
 
 ### Fixed in the refreshed packages

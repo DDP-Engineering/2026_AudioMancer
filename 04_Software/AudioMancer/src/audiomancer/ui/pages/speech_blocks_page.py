@@ -18,7 +18,7 @@
 
 from contextlib import suppress
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QComboBox,
@@ -57,6 +57,7 @@ _APPROVE_ALL_HEADER_BUTTON_MIN_WIDTH_PX = 108
 _LOWER_SOURCE_MIN_WIDTH_PX = 480
 _LOWER_SOURCE_MIN_WIDTH_FRACTION = 0.40
 _LOWER_SOURCE_MIN_WIDTH_FLOOR_PX = 300
+_CHUNK_PANEL_MAX_HEIGHT_FRACTION = 0.60
 _DEFERRED_SCROLL_RESTORE_DELAY_MS = 25
 _SOURCE_TEXT_SCROLL_SETTLE_DELAY_MS = 10
 _SOURCE_TEXT_SCROLL_FINAL_DELAY_MS = 30
@@ -110,6 +111,7 @@ class SpeechBlocksPage(QWidget):
         self._current_block_id: str | None = None
         self._selected_audio_playback_active = False
         self._source_text_restore_generation = 0
+        self._chunk_panel_default_height_applied = False
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -140,8 +142,18 @@ class SpeechBlocksPage(QWidget):
         layout.addLayout(header_row)
 
         body_content_layout = QVBoxLayout()
-        chunk_row = QHBoxLayout()
-        self._chunk_group = QGroupBox("Chunk List", self)
+        self._upper_splitter = QSplitter(Qt.Orientation.Vertical, self)
+        self._upper_splitter.setChildrenCollapsible(False)
+
+        # The chunk panel is the upper pane of a vertical splitter, so the operator can
+        # drag the separator to enlarge the Chunk List. Its bounds are enforced in
+        # _apply_upper_splitter_limits, which stops the separator itself at both ends.
+        self._chunk_panel = QWidget(self._upper_splitter)
+        chunk_row = QHBoxLayout(self._chunk_panel)
+        # The panel only carries the row that used to sit directly in the page layout,
+        # so it adds no margins of its own and stays flush with the panes below it.
+        chunk_row.setContentsMargins(0, 0, 0, 0)
+        self._chunk_group = QGroupBox("Chunk List", self._chunk_panel)
         chunk_layout = QVBoxLayout(self._chunk_group)
         self._chunk_list = QListWidget(self)
         self._chunk_list.setTextElideMode(Qt.TextElideMode.ElideRight)
@@ -182,12 +194,11 @@ class SpeechBlocksPage(QWidget):
         self._apply_chunk_action_top_margin()
         chunk_row.addWidget(self._chunk_group, 1)
         chunk_row.addWidget(self._chunk_actions_column)
-        # Cap the Chunk List frame height at the action-button column height so the
-        # list grows to align its bottom edge with the buttons instead of leaving a gap.
-        chunk_actions_height = self._chunk_actions_column.sizeHint().height()
-        self._chunk_group.setMinimumHeight(min(94, chunk_actions_height))
-        self._chunk_group.setMaximumHeight(chunk_actions_height)
-        body_content_layout.addLayout(chunk_row)
+        # The panel opens at, and never shrinks below, the action-button column height:
+        # the Chunk List frame keeps ending level with the last button row, exactly as
+        # it did before the panel became resizable. The separator only enlarges it.
+        self._chunk_panel.setMinimumHeight(self._chunk_panel_opening_height())
+        self._upper_splitter.addWidget(self._chunk_panel)
 
         self._lower_splitter = QSplitter(self)
         self._lower_splitter.setChildrenCollapsible(False)
@@ -267,9 +278,19 @@ class SpeechBlocksPage(QWidget):
         self._lower_splitter.addWidget(self._blocks_group)
         self._lower_splitter.setStretchFactor(0, 1)
         self._lower_splitter.setStretchFactor(1, 1)
-        body_content_layout.addWidget(self._lower_splitter, 1)
+        self._upper_splitter.addWidget(self._lower_splitter)
+        # Extra page height goes to the lower panes, so a chunk list the operator
+        # sized by hand keeps that height while the window is resized.
+        self._upper_splitter.setStretchFactor(0, 0)
+        self._upper_splitter.setStretchFactor(1, 1)
+        body_content_layout.addWidget(self._upper_splitter, 1)
         layout.addLayout(body_content_layout, 1)
+        # Both splitters are laid out after the page resize event, so their bounds are
+        # recomputed from their own resize events rather than from a stale geometry.
+        self._lower_splitter.installEventFilter(self)
+        self._upper_splitter.installEventFilter(self)
         self._apply_lower_splitter_minimums()
+        self._apply_upper_splitter_limits()
 
         self._status_group = QWidget(self)
         status_layout = QVBoxLayout(self._status_group)
@@ -307,6 +328,37 @@ class SpeechBlocksPage(QWidget):
         super().resizeEvent(event)
         self._apply_chunk_action_top_margin()
         self._apply_lower_splitter_minimums()
+        self._apply_upper_splitter_limits()
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Open the Chunk List at its default height the first time the page is shown.
+        @param[in]  event Qt show event.
+        @return     None.
+        @exception  None
+        """
+        super().showEvent(event)
+        self._apply_upper_splitter_limits()
+        if not self._chunk_panel_default_height_applied:
+            self._chunk_panel_default_height_applied = True
+            self._apply_chunk_panel_default_height()
+
+    def eventFilter(self, watched: object, event: object) -> bool:  # noqa: N802
+        """
+        @brief      Recompute splitter bounds when a splitter receives its own geometry.
+        @details    The nested splitters are laid out after the page resize event, so their
+                    widths and heights are only final in their own resize events.
+        @param[in]  watched Widget the event was sent to.
+        @param[in]  event Qt event.
+        @return     Base-class filter result; the events are observed, never consumed.
+        @exception  None
+        """
+        if event.type() == QEvent.Type.Resize:
+            if watched is self._lower_splitter:
+                self._apply_lower_splitter_minimums()
+            elif watched is self._upper_splitter:
+                self._apply_upper_splitter_limits()
+        return super().eventFilter(watched, event)
 
     def _apply_chunk_action_top_margin(self) -> None:
         """
@@ -906,6 +958,51 @@ class SpeechBlocksPage(QWidget):
         )
         self._source_group.setMinimumWidth(source_minimum_width)
         self._blocks_group.setMinimumWidth(0)
+
+    def _chunk_panel_opening_height(self) -> int:
+        """
+        @brief      Height the Chunk List panel opens at and never shrinks below.
+        @details    The action-button column height, so the Chunk List frame ends level
+                    with the last button row for the font currently in use.
+        @return     Panel height in pixels.
+        @exception  None
+        """
+        return self._chunk_actions_column.sizeHint().height()
+
+    def _apply_upper_splitter_limits(self) -> None:
+        """
+        @brief      Bound how far the Chunk List separator can be dragged.
+        @details    The floor is the chunk list minimum height, which the non-collapsible
+                    splitter already honors. The cap is expressed as a minimum height on
+                    the lower panes, so the separator stops there instead of leaving the
+                    chunk panel clamped behind a detached handle.
+        @return     None.
+        @exception  None
+        """
+        required_attributes = ("_upper_splitter", "_lower_splitter", "_chunk_panel")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        self._chunk_panel.setMinimumHeight(self._chunk_panel_opening_height())
+        available_height = self._upper_splitter.height() - self._upper_splitter.handleWidth()
+        if available_height <= 0:
+            return
+        chunk_panel_maximum_height = int(available_height * _CHUNK_PANEL_MAX_HEIGHT_FRACTION)
+        lower_minimum_height = max(
+            self._lower_splitter.minimumSizeHint().height(),
+            available_height - chunk_panel_maximum_height,
+        )
+        if self._lower_splitter.minimumHeight() != lower_minimum_height:
+            self._lower_splitter.setMinimumHeight(lower_minimum_height)
+
+    def _apply_chunk_panel_default_height(self) -> None:
+        """
+        @brief      Open the Chunk List panel at its unresized height.
+        @return     None.
+        @exception  None
+        """
+        chunk_panel_height = self._chunk_panel_opening_height()
+        lower_height = max(1, self._upper_splitter.height() - chunk_panel_height - self._upper_splitter.handleWidth())
+        self._upper_splitter.setSizes([chunk_panel_height, lower_height])
 
     def _emit_generate_requested(self) -> None:
         """

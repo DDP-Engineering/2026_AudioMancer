@@ -115,6 +115,17 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Scene-ambience insertion remaps each matched `after_speech_block_id` from the
   spoken row's old identifier to its post-insertion identifier, including when
   opener ambience shifts every spoken row (REQ-DATA-f0eb775c).
+- The page stacks the Chunk List panel and the lower Selected Chunk / Speech
+  Blocks splitter as the two non-collapsible panes of one vertical splitter.
+  The Chunk List panel opens at the chunk action-button column height, which is
+  also its floor, so the page still opens exactly as it did before the panel
+  became resizable and the separator only enlarges it. It cannot take more than
+  60% of the splitter height - the cap is a minimum height on the lower panes,
+  so the separator itself stops there and the panel never detaches from its
+  handle. Both splitters recompute their
+  bounds from their own resize events, because a nested splitter has no final
+  geometry yet during the page resize event (`REQ-UX-ac320626`,
+  `REQ-UX-e4fc6fa7`).
 - The page accepts controller-owned full state through
   `set_speech_blocks_state()` and retains the live single-row update path, but
   exposes no unused incremental insert or remove methods

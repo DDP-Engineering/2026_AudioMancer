@@ -16,9 +16,9 @@
 
 # IMPORTS
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
+from PySide6.QtWidgets import QApplication, QPlainTextEdit, QSizePolicy, QSplitter
 
 from audiomancer.services import speech_blocks_service
 from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
@@ -245,8 +245,6 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     )[0]
     assert generate_row == play_row
     assert page._chunk_actions_column_layout.contentsMargins().top() == 2
-    # The Chunk List frame caps at the action-button column height so their bottoms align.
-    assert page._chunk_group.maximumHeight() == page._chunk_actions_column.sizeHint().height()
 
     with qtbot.waitSignal(page.generate_audio_selected_requested) as generation_signal:
         page._generate_audio_button.click()
@@ -354,6 +352,64 @@ def test_speech_blocks_page_selected_chunk_pane_keeps_minimum_width(qtbot) -> No
     qtbot.wait(0)
 
     assert page._source_group.minimumWidth() >= 480
+
+
+def test_speech_blocks_page_chunk_list_separator_stops_at_both_bounds(qtbot) -> None:
+    """
+    @brief      Verify the Chunk List separator is draggable and stops at its minimum and maximum.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.show()
+    page.resize(1400, 900)
+    QApplication.processEvents()
+
+    assert isinstance(page._upper_splitter, QSplitter)
+    assert page._upper_splitter.orientation() == Qt.Orientation.Vertical
+    assert page._upper_splitter.childrenCollapsible() is False
+    assert page._upper_splitter.indexOf(page._chunk_panel) == 0
+    assert page._upper_splitter.indexOf(page._lower_splitter) == 1
+
+    splitter_height = page._upper_splitter.height()
+    opening_height = page._chunk_actions_column.sizeHint().height()
+
+    # Drag the separator to the bottom: the panel stops at its cap, the separator
+    # stops with it, and the lower panes keep their share of the page.
+    page._upper_splitter.setSizes([splitter_height, 0])
+    QApplication.processEvents()
+
+    assert page._chunk_panel.geometry().bottom() + 1 == page._upper_splitter.handle(1).geometry().top()
+    assert page._chunk_panel.height() <= int(splitter_height * 0.60) + 1
+    assert page._lower_splitter.height() >= int(splitter_height * 0.35)
+
+    # Drag the separator to the top: the panel stops at the height it opens with.
+    page._upper_splitter.setSizes([0, splitter_height])
+    QApplication.processEvents()
+
+    assert page._chunk_panel.geometry().bottom() + 1 == page._upper_splitter.handle(1).geometry().top()
+    assert page._chunk_panel.height() == opening_height
+
+
+def test_speech_blocks_page_chunk_list_opens_at_the_action_column_height(qtbot) -> None:
+    """
+    @brief      Verify the Chunk List opens at its original height, aligned with the action buttons.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.show()
+    page.resize(1400, 900)
+    QApplication.processEvents()
+
+    # The Chunk List frame still ends level with the last action-button row, and its
+    # left edge still lines up with the Selected Chunk pane below it.
+    assert page._chunk_group.height() == page._chunk_actions_column.sizeHint().height()
+    assert page._chunk_group.mapTo(page, QPoint(0, 0)).x() == page._source_group.mapTo(page, QPoint(0, 0)).x()
 
 
 def test_speech_blocks_page_restores_selected_chunk_text_selection(qtbot) -> None:
