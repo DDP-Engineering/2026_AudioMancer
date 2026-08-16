@@ -174,6 +174,8 @@ def chat_json(
     active_request_payload = request_payload
     for attempt_index in range(1, attempts + 1):
         raw_content: str | None = None
+        raw_payload: dict[str, object] | None = None
+        raw_body: str | None = None
         try:
             while True:
                 try:
@@ -205,7 +207,10 @@ def chat_json(
                     )
                 except _UnsupportedMaxTokensError:
                     active_request_payload = _build_max_completion_tokens_payload(active_request_payload)
-            raw_content = _extract_message_content(raw_payload)
+            raw_content = _extract_message_content(
+                raw_payload,
+                _resolved_output_limit(active_request_payload),
+            )
             try:
                 parsed_payload = _parse_json_content(raw_content)
                 normalized_usage = token_usage_service.normalize_provider_usage(raw_payload)
@@ -275,17 +280,21 @@ def chat_json(
                     "AI provider rejected the supported output-token limit fields."
                 )
             last_error = error_object
-            _append_ai_log(
-                log_path,
-                {
-                    "exchange_event": "failure",
-                    "parsed_status": "parsed_failure",
-                    "attempt_index": attempt_index,
-                    "error_text": str(error_object),
-                    "raw_message_content": raw_content,
-                    **dict(log_context or {}),
-                },
-            )
+            failure_record: dict[str, object] = {
+                "exchange_event": "failure",
+                "parsed_status": "parsed_failure",
+                "attempt_index": attempt_index,
+                "error_text": str(error_object),
+                "raw_message_content": raw_content,
+            }
+            if raw_payload is not None:
+                # The response the exchange failed on is what makes the failure
+                # diagnosable afterwards; a successful record already carries
+                # both fields, and a transport failure has neither to record.
+                failure_record["raw_response_body"] = raw_body
+                failure_record["usage"] = token_usage_service.normalize_provider_usage(raw_payload)
+            failure_record.update(dict(log_context or {}))
+            _append_ai_log(log_path, failure_record)
             if attempt_index >= attempts or not _is_retryable_error(error_object):
                 break
             retry_delay = min(
@@ -569,11 +578,32 @@ def _build_without_response_format_payload(
     return compatibility_payload
 
 
-def _extract_message_content(payload: dict[str, object]) -> str:
+def _resolved_output_limit(request_payload: dict[str, object]) -> int:
     """
-    @brief      Execute the extract message content helper.
-    @param[in]  payload Optional payload processed by the helper.
-    @return     Helper result.
+    @brief      Report the output-token limit one request payload carries.
+    @details    Providers that reject max_tokens are retried with
+                max_completion_tokens, so the limit named in a failure has to
+                follow whichever field the active payload ended up using.
+    @param[in]  request_payload Serialized provider request payload.
+    @return     Output-token limit carried by the request.
+    @exception  None
+    """
+    if "max_completion_tokens" in request_payload:
+        return int(request_payload["max_completion_tokens"])
+    return int(request_payload.get("max_tokens", 0))
+
+
+def _extract_message_content(
+    payload: dict[str, object],
+    output_token_limit: int,
+) -> str:
+    """
+    @brief      Extract one provider response's message content.
+    @param[in]  payload Parsed provider response payload.
+    @param[in]  output_token_limit Output-token limit the request carried.
+    @return     Message content as one string.
+    @exception  RuntimeError Raised when the response stopped at the output limit.
+    @exception  ValueError Raised on an invalid choice or message payload, or a refusal.
     """
     choices = payload.get("choices", [])
     if not isinstance(choices, list) or not choices:
@@ -583,7 +613,10 @@ def _extract_message_content(payload: dict[str, object]) -> str:
         raise ValueError("AI provider response contains an invalid choice payload.")
     finish_reason = first_choice.get("finish_reason")
     if isinstance(finish_reason, str) and finish_reason.strip().lower() == "length":
-        raise RuntimeError("AI provider response reached the provider output-token limit.")
+        raise RuntimeError(
+            "AI provider response reached the provider output-token limit of "
+            f"{output_token_limit} tokens."
+        )
     message = first_choice.get("message", {})
     if not isinstance(message, dict):
         raise ValueError("AI provider response contains an invalid message payload.")
@@ -782,7 +815,10 @@ def _repair_json_response_with_model(
         repair_request_payload,
         cancel_requested=cancel_requested,
     )
-    repaired_content = _extract_message_content(repair_payload)
+    repaired_content = _extract_message_content(
+        repair_payload,
+        _resolved_output_limit(repair_request_payload),
+    )
     return (
         _parse_json_content(repaired_content),
         repair_body,

@@ -1,0 +1,162 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-16T17:42:43.233899Z",
+      "anchor_head": "f9e55c9da2dffeba0cdaef048e7d32083027161c",
+      "anchor_id": "c838cbd8d6899ece",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "66ee2c449e5a16a5ae89600f8fd1e0d52a0b22acf39be106970a4094e5636c1f"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "fcb99458d3cc7938d8c1f9a991fa889c28c831db6cd60f9053caf2e8fc11d188"
+          },
+          "path": "04_Software/AudioMancer/prompts/text_cleanup_adjudication_primary_system.txt",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1b4e7bc5f66dafaedc4b9a1147ba6081b9e6666db65c7f343aefcd8c4bbe0de0"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "1aedb3d2588bc780e19f8d34d5c2fdad45c6458cd8032c9fb7a2f1eee4471211"
+          },
+          "path": "04_Software/AudioMancer/prompts/text_cleanup_adjudication_verifier_system.txt",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "25d0d125b44b759d34eafb27be02146b66eb8c28e4c84c8cd9e464ede5bff47f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "30681337a787f4e7d7c73e1acfe7c66b2ced917df007f0b1fe129a0a2e0ec4f3"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d25f48cc282dda1dcf870bb9b5ef2af19d5c360aa57e05f999d084cee75b21b9"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "c8ca10407cbfeeeecb7677c703f3222cb936d9a3c301f5559cc07e7fc33ca4b5"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "45132afa26f31e33555e4ce3f0f37eb66d07f4a71fb18f80f0c5d27e8129e1f3"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "5aecaffbc667bad0488088a0ecc4b89a93deced9ec4629e2f38ccd4e826ae3b7"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1f4861a873dc845d1c5667d5880ee05a990a804d3c4a5c294c559495e354fbea"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "7f3e8274cc73316a3dccda9bc1adbea76a83ff6a51ad76e18f6a026aadc12c44"
+          },
+          "path": "04_Software/AudioMancer/tests/cleanup_test_support.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0f1021bdfaecff50c5bfd85499d80b38f5b0b446be6ec5f4621e24ade2c9c74e"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "57ba8992cc31f50f36c1d4077c153958d4723c14ddae19209a929b329fa0c9c4"
+          },
+          "path": "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d9b846608c5cacaca1eb7cedb46594d8ba6fc157e6471a933ed340d9f4ce584c"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "0155d28f4a1626d7dee42ca2a200bc58f0aa18a25fdba53f716a40826a8516c3"
+          },
+          "path": "04_Software/AudioMancer/tests/test_llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "97d4164aa26975a412a7abb3e94c9ba54b28c1d9a0f9926bc0ef54b2f9ede83f"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "476aa088fb8f9fbf43ac886686a5d482b18b987b90859c95ff7ca53d30ddb417"
+          },
+          "path": "04_Software/AudioMancer/tests/test_text_cleanup_page.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 106
+          },
+          "source": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 99
+          },
+          "tests": {
+            "added": 0,
+            "modified": 4,
+            "removed": 0,
+            "unchanged": 116
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 9,
+          "removed": 0,
+          "unchanged": 321
+        }
+      },
+      "current_head": "f9e55c9da2dffeba0cdaef048e7d32083027161c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-16T18:22:51.967979Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-346b1303"
+}

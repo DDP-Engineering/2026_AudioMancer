@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-UX-b3547171"
+title = "The Text Cleanup previews shall share one minimum width"
+status = "active"
+
+requirement = """
+The Text Cleanup page shall give its Extracted Text preview and its Cleaned Text preview one shared minimum width, no narrower than the width the Cleaned Text preview needs for its own editor and its Edit, Save and Cancel controls, so neither preview can be dragged narrower than the other.
+"""
+
+verification = "Automated: a built Text Cleanup page reports an equal minimum width for both preview panes, and that width is at least the width the Cleaned Text preview needs for its own contents; dragging the separator to either extreme leaves both panes at or above it."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_cleanup_previews_share_one_minimum_width",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The Cleaned Text preview carries an Edit/Save/Cancel row under its editor and the Extracted Text preview does not, so the two panes inherited different minimum widths from their contents and the left pane could be squeezed far narrower than the right. Comparing the two texts side by side needs both panes to stay readable.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

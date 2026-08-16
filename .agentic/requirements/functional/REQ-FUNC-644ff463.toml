@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-644ff463"
+title = "Cleanup AI adjudication shall reserve output tokens from the selected profile"
+status = "active"
+
+requirement = """
+Cleanup AI adjudication shall set each adjudication request's output-token reservation to the selected AI profile's configured maximum output tokens, lowered where necessary to the largest value that still keeps the request's estimated input plus that reservation inside its safe context ceiling, and never below the tokens the request's own answers need. A request that cannot hold that lower bound stays context-oversized and is handled as one.
+"""
+
+verification = "Automated: a request built for a profile whose ceiling has room carries that profile's configured maximum output tokens as its provider output limit; a profile whose ceiling has less room carries the reduced limit that exactly fits the ceiling; a batch whose ceiling cannot hold the tokens its answers need is reported context-oversized instead of being sent; and the same reservation is used for the context-budget decision and for the request."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_output_reservation_follows_profile_limit_and_context_ceiling",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_answer_room_below_the_answer_document_is_context_oversized",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_configured_output_limit_below_the_answer_document_splits_the_batch",
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_adjudication_request_carries_the_resolved_output_reservation",
+]
+
+spec = ""
+priority = "high"
+rationale = """
+A fixed 512-token reservation is spent before the answer by any model that emits reasoning tokens first, so every adjudication request terminates at the provider output limit and the whole document falls back to deterministic priors. Reserving the operator's own configured limit removes the hidden second limit, and clamping it to the context ceiling keeps small-context profiles from splitting every batch down to a single question.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

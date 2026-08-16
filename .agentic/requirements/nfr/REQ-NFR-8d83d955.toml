@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-NFR-8d83d955"
+title = "Failed provider exchanges shall record the raw response body and token usage"
+status = "active"
+
+requirement = """
+When a provider chat exchange fails after the provider returned a response, the AI transaction log record written for that failure shall carry that response's raw body and its normalized token usage, recorded under the same field names a successful exchange uses. A failure with no provider response omits both fields.
+"""
+
+verification = "Automated: a failing exchange whose provider response is present appends a failure record whose raw response body and normalized usage match that response and use the successful record's field names; a transport failure that produced no response appends its failure record without those fields and without raising; and the existing redaction of sensitive field names still applies to the record."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_failed_exchange_records_the_response_body_and_usage",
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_transport_failure_record_omits_the_response_fields",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+A failure record that names only the error leaves the operator's transaction log unable to say why the exchange failed. Twelve identical output-limit failures were recorded without once showing the token counts that would have identified the cause, while the successful path had been recording the body all along.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

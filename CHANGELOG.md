@@ -22,6 +22,30 @@ All notable changes to this project will be documented in this file.
 - The page still opens exactly as before, with the Chunk List ending level
   with the action buttons beside it.
 
+### Fixed
+
+- Text Cleanup with an AI profile no longer fails every request when the
+  selected model reasons before it answers. Cleanup capped each request at
+  512 output tokens no matter what the AI profile allowed, and a reasoning
+  model spends more than that thinking before it writes anything, so every
+  request stopped at the limit and the whole book fell back to its automatic
+  decisions. Cleanup now uses the output limit set on the AI profile, reduced
+  only when the model's context window cannot hold it.
+- The Cleanup AI prompts now state the exact answer format they expect. A
+  model served by a local runtime that does not enforce the requested format
+  could answer correctly but label the answer wrongly, and the answer was
+  then discarded. Note that this changes the prompts, so a Cleanup that is
+  paused part-way asks its AI questions again the next time it runs; the
+  automatic text analysis is kept.
+- The AI transaction log now records the provider's reply and its token
+  counts when a request fails, so a failed run can be diagnosed from the log
+  instead of showing repeated identical error lines. The message for a reply
+  that ran out of room now names the limit it reached.
+- The Extracted Text and Cleaned Text previews on the Text Cleanup page now
+  open at the same width, and neither can be dragged narrower than the other.
+  The cleaned preview used to open twice as wide, and the extracted preview
+  could be squeezed much narrower than it.
+
 ## [2.0.0] - 2026-08-12
 
 ### Fixed in the refreshed packages
