@@ -118,6 +118,15 @@ membership, and the primary-plus-verifier estimate are projections of this
 same plan. Recursive budget splits remain runtime children and never replace
 the durable top-level plan.
 
+`REQ-FUNC-84cd9f47` makes both adjudication prompts state the response object
+they require - the `batch_id`, the `answers` array of `question_id`/`choice`
+entries, and the fact that the request supplies `questions` while the response
+owes `answers`. A provider that treats `response_format` as advisory rather than
+as a decoding constraint otherwise leaves the model no statement of the contract,
+and it infers an envelope from the request it is reading. Editing these templates
+changes the prompt hash, so it clears every persisted AI answer and regenerates
+the batch plan while deterministic analysis survives.
+
 `REQ-UX-bb78f412` counts resumed AI progress in completed provider requests,
 not answered questions. Orchestration supplies the durable checkpoint counter
 to adjudication, while per-question answers only skip completed passes. One
@@ -218,6 +227,17 @@ zero introduced-fusion count without treating the metric as constant.
 AI is eligible only when a selected profile advertises structured output and
 at least a 16K context window. Batches contain 4 questions at 16-31K, 8 at
 32-127K, and 16 at 128K or above. Oversized requests split recursively.
+
+`REQ-FUNC-644ff463` makes each request's output-token reservation the selected
+profile's own configured `max_output_tokens`, lowered to whatever the 70%
+context ceiling leaves free once the estimated input is subtracted. One resolver
+returns the value that both the budget decision and the request use, so the two
+can no longer disagree. A reservation below the batch's answer floor - the
+largest answer document that batch could produce, counted at one token per UTF-8
+byte - is context-oversized and splits as before, which means a profile
+configured with a small output limit reaches a smaller batch instead of a
+truncated response. Reasoning models charge their thinking to the same limit,
+so a fixed reservation was spent before the answer began.
 Invalid/provider failures retry once and then only that batch falls back to its
 priors. The verifier sees only disagreements between a primary answer and its
 prior; an override is accepted only when both model passes agree. Without a
@@ -335,7 +355,11 @@ If an exact source unit cannot be found during whitespace realignment, the edit
 still persists, the component logger emits a warning, and `cleanup.json`
 records `user_whitespace_realign_incomplete`.
 
-The existing Cleanup page layout and controls remain unchanged. The status pane
+The Cleanup page keeps its existing controls. `REQ-UX-b3547171` and
+`REQ-UX-860d8bfc` give its two previews one shared minimum width and an equal
+opening width: the Cleaned Text preview carries the Edit/Save/Cancel row and so
+sets the minimum both panes respect, and equal stretch factors keep them equal
+as the page resizes until the operator drags the separator. The status pane
 projects running, paused, invalid, and completed state from `cleanup.json`;
 progress and cancellation continue through the existing operation dialog.
 

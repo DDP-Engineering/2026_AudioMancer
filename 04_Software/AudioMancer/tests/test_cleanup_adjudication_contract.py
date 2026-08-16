@@ -462,6 +462,27 @@ def test_cleanup_prompts_require_listed_choices() -> None:
         assert "do not invent" in normalized
 
 
+def test_cleanup_prompts_state_the_required_response_shape() -> None:
+    """Cover REQ-FUNC-84cd9f47."""
+    prompts = [
+        prompt_template_service.load_prompt(
+            "text_cleanup_adjudication_primary_system"
+        ),
+        prompt_template_service.load_prompt(
+            "text_cleanup_adjudication_verifier_system"
+        ),
+    ]
+
+    for prompt in prompts:
+        normalized = prompt.casefold()
+        for field_name in ("batch_id", "answers", "question_id", "choice"):
+            assert field_name in normalized
+        # The request supplies "questions" and the response owes "answers"; a
+        # provider that leaves the schema unenforced needs that said out loud.
+        assert "questions" in normalized
+        assert normalized.index("answers") != normalized.index("questions")
+
+
 def test_ai_adjudication_reports_each_primary_and_verifier_request(
     monkeypatch,
 ) -> None:
@@ -504,6 +525,114 @@ def test_ai_adjudication_reports_each_primary_and_verifier_request(
     ]
     assert "Primary" in progress[0][2]
     assert "Verifier" in progress[1][2]
+
+
+def test_output_reservation_follows_profile_limit_and_context_ceiling() -> None:
+    """Cover REQ-FUNC-644ff463."""
+    system_prompt = "S" * 100
+    schema = {"type": "object"}
+    # (100 + 100 + 18) // 2 for the two prompts and the serialized schema.
+    short_prompt_input_tokens = 109
+
+    roomy = cleanup_ai_adjudication_service._resolve_output_reservation(
+        make_profile(context_window=131_072, max_output_tokens=4_096),
+        "cleanup-batch-0001",
+        [_question(0)],
+        system_prompt,
+        "U" * 100,
+        schema,
+    )
+    assert roomy == 4_096
+
+    clamped = cleanup_ai_adjudication_service._resolve_output_reservation(
+        make_profile(context_window=16_000, max_output_tokens=65_535),
+        "cleanup-batch-0001",
+        [_question(0)],
+        system_prompt,
+        "U" * 100,
+        schema,
+    )
+    assert clamped == int(16_000 * 0.70) - short_prompt_input_tokens
+
+
+def test_answer_room_below_the_answer_document_is_context_oversized() -> None:
+    """Cover REQ-FUNC-644ff463."""
+    # This prompt leaves 41 tokens under the ceiling: room to spare, but far
+    # too little to hold even a one-question answer document.
+    try:
+        cleanup_ai_adjudication_service._resolve_output_reservation(
+            make_profile(context_window=16_000, max_output_tokens=65_535),
+            "cleanup-batch-0001",
+            [_question(0)],
+            "S" * 100,
+            "U" * 22_200,
+            {"type": "object"},
+        )
+    except cleanup_ai_adjudication_service.ContextBudgetExceededError:
+        return
+    raise AssertionError("An answer document that cannot fit must be context-oversized.")
+
+
+def test_configured_output_limit_below_the_answer_document_splits_the_batch(monkeypatch) -> None:
+    """Cover REQ-FUNC-644ff463."""
+    batch_sizes: list[int] = []
+
+    def _chat_json(_profile, _system, user_prompt, **_kwargs):
+        payload = json.loads(user_prompt)
+        batch_sizes.append(len(payload["questions"]))
+        return {
+            "payload": {
+                "batch_id": payload["batch_id"],
+                "answers": [
+                    {
+                        "question_id": item["question_id"],
+                        "choice": "join_with_space",
+                    }
+                    for item in payload["questions"]
+                ],
+            },
+            "usage": {},
+        }
+
+    monkeypatch.setattr(cleanup_ai_adjudication_service.llm_provider_service, "chat_json", _chat_json)
+    # A 16-question answer document needs about 1100 tokens, so this profile's
+    # own output limit - not its 128K context - is what the batch cannot fit.
+    cleanup_ai_adjudication_service.adjudicate_questions(
+        [_question(index) for index in range(16)],
+        make_profile(context_window=131_072, max_output_tokens=1_024),
+    )
+
+    assert batch_sizes == [8, 8]
+
+
+def test_adjudication_request_carries_the_resolved_output_reservation(monkeypatch) -> None:
+    """Cover REQ-FUNC-644ff463."""
+    observed_reservations: list[object] = []
+
+    def _chat_json(_profile, _system, user_prompt, **kwargs):
+        observed_reservations.append(kwargs.get("max_output_tokens_override"))
+        payload = json.loads(user_prompt)
+        return {
+            "payload": {
+                "batch_id": payload["batch_id"],
+                "answers": [
+                    {
+                        "question_id": item["question_id"],
+                        "choice": "join_with_space",
+                    }
+                    for item in payload["questions"]
+                ],
+            },
+            "usage": {},
+        }
+
+    monkeypatch.setattr(cleanup_ai_adjudication_service.llm_provider_service, "chat_json", _chat_json)
+    cleanup_ai_adjudication_service.adjudicate_questions(
+        [_question(index) for index in range(3)],
+        make_profile(context_window=131_072, max_output_tokens=4_096),
+    )
+
+    assert observed_reservations == [4_096]
 
 
 def _question(

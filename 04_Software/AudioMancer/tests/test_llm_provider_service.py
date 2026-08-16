@@ -1292,6 +1292,7 @@ def test_chat_json_rejects_output_length_limited_malformed_json(monkeypatch, tmp
     except RuntimeError as error_object:
         error_text = str(error_object)
         assert "output-token limit" in error_text
+        assert "256" in error_text
         assert truncated_content not in error_text
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected output-length-limited response to fail.")
@@ -1356,7 +1357,9 @@ def test_chat_json_rejects_output_length_limited_valid_json(monkeypatch) -> None
             "user",
         )
     except RuntimeError as error_object:
-        assert str(error_object) == "AI provider response reached the provider output-token limit."
+        assert str(error_object) == (
+            "AI provider response reached the provider output-token limit of 256 tokens."
+        )
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected output-length-limited response to fail.")
 
@@ -1711,6 +1714,116 @@ def test_retry_classification_uses_exception_type_not_message_text() -> None:
 def test_strip_code_fence_preserves_single_line_json() -> None:
     """Verify compact fenced provider responses retain their JSON payload."""
     assert llm_provider_service._strip_code_fence('```json {"value": 1} ```') == '{"value": 1}'  # noqa: SLF001
+
+
+def test_failed_exchange_records_the_response_body_and_usage(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a failure record keeps the provider response it failed on.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    response_body = json.dumps(
+        {
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {"content": ""},
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 900,
+                "completion_tokens": 256,
+                "total_tokens": 1156,
+            },
+        }
+    )
+
+    def _fake_urlopen(_http_request, **_kwargs):
+        """
+        @brief      Return one output-length-limited response carrying usage.
+        @param[in]  _http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake provider response.
+        @exception  None
+        """
+        return _FakeResponse(response_body)
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    log_path = tmp_path / "transactions.log"
+
+    with pytest.raises(RuntimeError):
+        llm_provider_service.chat_json(
+            _length_limited_profile(),
+            "system",
+            "user",
+            log_path=log_path,
+        )
+
+    failure_record = _one_failure_record(log_path)
+    assert failure_record["raw_response_body"] == response_body
+    assert failure_record["usage"]["output_tokens"] == 256
+
+
+def test_transport_failure_record_omits_the_response_fields(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a failure with no provider response records no response fields.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+
+    def _fake_urlopen(_http_request, **_kwargs):
+        """
+        @brief      Fail every attempt before any provider response exists.
+        @param[in]  _http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     None.
+        @exception  URLError Raised on every request attempt.
+        """
+        raise error.URLError("no route to provider")
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    log_path = tmp_path / "transactions.log"
+
+    with pytest.raises(RuntimeError):
+        llm_provider_service.chat_json(
+            _length_limited_profile(),
+            "system",
+            "user",
+            log_path=log_path,
+            retry_count_override=0,
+        )
+
+    failure_record = _one_failure_record(log_path)
+    assert "raw_response_body" not in failure_record
+    assert "usage" not in failure_record
+
+
+def _length_limited_profile() -> dict[str, object]:
+    """Return one profile whose output limit is small enough to name in errors."""
+    return {
+        "id": "profile_1",
+        "backend_kind": "openai_compatible",
+        "base_url": "https://api.openai.com/v1",
+        "model_name": "gpt-5.4-mini",
+        "request_timeout_seconds": 30,
+        "temperature": 0.1,
+        "max_output_tokens": 256,
+    }
+
+
+def _one_failure_record(log_path) -> dict[str, object]:
+    """Return the single failure record written to one transaction log."""
+    records = [
+        json.loads(line)
+        for line in log_path.read_text(encoding="utf-8").splitlines()
+    ]
+    failures = [record for record in records if record.get("exchange_event") == "failure"]
+    assert len(failures) == 1
+    return failures[0]
 
 
 # END OF FILE

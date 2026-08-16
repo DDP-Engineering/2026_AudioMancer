@@ -21,6 +21,7 @@ from collections.abc import Callable
 import json
 from pathlib import Path
 
+from audiomancer import config
 from audiomancer.services import (
     llm_provider_service,
     prompt_template_service,
@@ -32,8 +33,10 @@ from audiomancer.services.operation_runtime_service import (
 )
 
 MINIMUM_CONTEXT_WINDOW = 16_000
-MAX_OUTPUT_TOKENS = 512
 PROMPT_CONTRACT_ID = "cleanup-adjudication-2026-07-28"
+
+# @brief Fraction of the context window one request may occupy.
+_SAFE_CONTEXT_FRACTION = 0.70
 
 
 class ContextBudgetExceededError(ValueError):
@@ -522,7 +525,14 @@ def _ask(
         ensure_ascii=False,
         separators=(",", ":"),
     )
-    _require_context_budget(profile, system_prompt, user_prompt, schema)
+    output_reservation = _resolve_output_reservation(
+        profile,
+        batch_id,
+        questions,
+        system_prompt,
+        user_prompt,
+        schema,
+    )
     if callable(submission_callback):
         submission_callback(
             "verifier" if verifier else "primary",
@@ -546,7 +556,7 @@ def _ask(
         allow_unconstrained_fallback=False,
         allow_model_json_repair=False,
         retry_count_override=0,
-        max_output_tokens_override=MAX_OUTPUT_TOKENS,
+        max_output_tokens_override=output_reservation,
     )
     answers = _validate_answers(response.get("payload"), batch_id, questions)
     return answers, token_usage_service.coerce_token_usage(response.get("usage"))
@@ -689,23 +699,78 @@ def _compatibility_warning(
     return None
 
 
-def _require_context_budget(
+def _resolve_output_reservation(
     profile: dict[str, object],
+    batch_id: str,
+    questions: list[dict[str, object]],
     system_prompt: str,
     user_prompt: str,
     schema: dict[str, object],
-) -> None:
-    """Enforce a conservative UTF-8 byte estimator and 70% context ceiling."""
+) -> int:
+    """
+    @brief      Resolve one request's output-token reservation.
+    @details    The operator's configured profile limit, lowered to whatever the
+                safe context ceiling still leaves free. Returning the value the
+                budget decision used keeps the request from carrying a different
+                limit than the one it was admitted under.
+    @param[in]  profile Normalized AI profile payload.
+    @param[in]  batch_id Identifier the answers must echo.
+    @param[in]  questions Questions this request must answer.
+    @param[in]  system_prompt System-role prompt body.
+    @param[in]  user_prompt User-role prompt body.
+    @param[in]  schema JSON Schema sent as the structured-output contract.
+    @return     Output-token reservation for this request.
+    @exception  ContextBudgetExceededError Raised when the free room cannot hold
+                the answers this request has to produce.
+    """
     estimated_input = (
         len(system_prompt.encode("utf-8"))
         + len(user_prompt.encode("utf-8"))
         + len(json.dumps(schema, ensure_ascii=False).encode("utf-8"))
     ) // 2
-    required = estimated_input + MAX_OUTPUT_TOKENS
-    if required > int(int(profile["context_window"]) * 0.70):
+    ceiling = int(int(profile["context_window"]) * _SAFE_CONTEXT_FRACTION)
+    reservation = min(
+        int(profile.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS)),
+        ceiling - estimated_input,
+    )
+    if reservation < _answer_token_floor(batch_id, questions):
         raise ContextBudgetExceededError(
             "Cleanup question batch exceeds the safe context budget."
         )
+    return reservation
+
+
+def _answer_token_floor(
+    batch_id: str,
+    questions: list[dict[str, object]],
+) -> int:
+    """
+    @brief      Tokens the largest answer document for one batch can need.
+    @details    Every question paired with its longest choice, counted at one
+                token per UTF-8 byte rather than at the input estimator's byte
+                pair rate: answer JSON is punctuation-dense, and a floor that
+                under-counts admits a request that truncates instead of
+                splitting one that does not fit.
+    @param[in]  batch_id Identifier the answers must echo.
+    @param[in]  questions Questions this request must answer.
+    @return     Smallest reservation that can still hold the answers.
+    @exception  None
+    """
+    largest_answers = {
+        "batch_id": batch_id,
+        "answers": [
+            {
+                "question_id": str(item["question_id"]),
+                "choice": max(
+                    (str(choice) for choice in item["choices"]),
+                    key=len,
+                    default="",
+                ),
+            }
+            for item in questions
+        ],
+    }
+    return len(json.dumps(largest_answers, ensure_ascii=False).encode("utf-8"))
 
 
 def _resume_pass_answers(

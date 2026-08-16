@@ -90,9 +90,14 @@ class TextCleanupPage(QWidget):
         cleaned_layout.addLayout(edit_row)
         self._preview_splitter.addWidget(self._extracted_group)
         self._preview_splitter.addWidget(self._cleaned_group)
+        # The two previews are read side by side, so neither is the primary one:
+        # equal stretch factors split every later width change evenly, which
+        # keeps them equal until the operator drags the separator.
         self._preview_splitter.setStretchFactor(0, 1)
-        self._preview_splitter.setStretchFactor(1, 2)
+        self._preview_splitter.setStretchFactor(1, 1)
         layout.addWidget(self._preview_splitter, 6)
+        self._equal_preview_widths_applied = False
+        self._apply_preview_minimum_widths()
 
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
@@ -104,6 +109,57 @@ class TextCleanupPage(QWidget):
         layout.addWidget(self._status_edit)
         self._saved_cleaned_text = ""
         self.set_processing_state(None, None, ["Import a source to begin text extraction."], False, False)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Open both previews at equal width the first time the page is shown.
+        @param[in]  event Qt show event.
+        @return     None.
+        @exception  None
+        """
+        super().showEvent(event)
+        self._apply_preview_minimum_widths()
+        if not self._equal_preview_widths_applied:
+            self._equal_preview_widths_applied = True
+            self._apply_equal_preview_widths()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep the shared preview minimum width current for the page geometry.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        """
+        super().resizeEvent(event)
+        self._apply_preview_minimum_widths()
+
+    def _apply_preview_minimum_widths(self) -> None:
+        """
+        @brief      Give both previews one shared minimum width.
+        @details    The Cleaned Text preview carries the Edit, Save and Cancel row
+                    under its editor and the Extracted Text preview does not, so
+                    the two panes would otherwise inherit different minimum widths
+                    from their contents. Each pane's own minimum size hint is read
+                    rather than its applied minimum, so repeated calls - a font
+                    size change restyles that row - cannot ratchet the panes wider.
+        @return     None.
+        @exception  None
+        """
+        shared_minimum_width = max(
+            self._extracted_group.minimumSizeHint().width(),
+            self._cleaned_group.minimumSizeHint().width(),
+        )
+        self._extracted_group.setMinimumWidth(shared_minimum_width)
+        self._cleaned_group.setMinimumWidth(shared_minimum_width)
+
+    def _apply_equal_preview_widths(self) -> None:
+        """
+        @brief      Divide the preview area evenly between the two previews.
+        @return     None.
+        @exception  None
+        """
+        half_width = max(1, self._preview_splitter.width() // 2)
+        self._preview_splitter.setSizes([half_width, half_width])
 
     def set_project_active(self, is_active: bool) -> None:
         self._project_active = bool(is_active)

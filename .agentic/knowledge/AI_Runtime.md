@@ -127,10 +127,21 @@ operations retain the default compatibility behavior.
 
 For the first OpenAI-compatible chat-completion choice, an explicit
 `finish_reason` of `"length"` is a hard provider failure: `chat_json` raises a
-fixed `RuntimeError` that identifies the provider output-token limit before it
+`RuntimeError` that identifies the provider output-token limit before it
 reads message content, parses JSON, performs local repair, or issues a
 model-repair request. Providers that omit the field remain compatible, and
-other finish reasons keep their existing behavior.
+other finish reasons keep their existing behavior. `REQ-FUNC-3875ac3b` also has
+that message name the limit the request carried, read from whichever of
+`max_tokens` or `max_completion_tokens` the active payload ended up using, so a
+truncated response says which budget it exhausted without quoting prompts or
+response content.
+
+`REQ-NFR-8d83d955` makes a failure record keep the response it failed on. When
+the provider answered and the exchange failed afterwards, the transaction log
+record carries that response's raw body and normalized token usage under the
+field names a successful record already uses; a transport failure produced no
+response and records neither. Without this, a run could fill its log with
+identical error lines that never show the token counts explaining them.
 
 ## 7. Workflow Integration
 
@@ -184,7 +195,10 @@ run the focused modules above with `uv run pytest`, plus
 otherwise valid output-length-limited responses fail after one provider
 request, log `parsed_failure` rather than repaired success, preserve normal
 `stop` and omitted-finish-reason parsing, and leave non-truncated
-malformed-response model repair available.
+malformed-response model repair available. It also verifies that the length
+error names the request's own limit, that a failure record following a provider
+response carries that response's body and usage, and that a transport failure
+records neither.
 
 ## 10. Limitations And Future Work
 

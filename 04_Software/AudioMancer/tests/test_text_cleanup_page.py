@@ -15,6 +15,8 @@
 
 # IMPORTS
 
+from PySide6.QtWidgets import QApplication
+
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 
 # PUBLIC API
@@ -124,6 +126,51 @@ def test_busy_transition_keeps_active_cleaned_text_draft(qtbot) -> None:
     assert page._editing_cleaned_text is True
     assert page._cleaned_text_edit.toPlainText() == "draft while busy"
     assert page._cleaned_text_edit.isReadOnly() is False
+
+
+def test_cleanup_previews_share_one_minimum_width(qtbot) -> None:
+    """
+    @brief      Verify neither preview can be dragged narrower than the other.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.resize(1400, 800)
+    page.show()
+    QApplication.processEvents()
+
+    shared_minimum = page._cleaned_group.minimumWidth()
+    assert page._extracted_group.minimumWidth() == shared_minimum
+    # The Cleaned Text preview carries the Edit/Save/Cancel row, so its own
+    # content is what sets the width both panes have to respect.
+    assert shared_minimum >= page._cleaned_group.minimumSizeHint().width()
+
+
+def test_cleanup_previews_open_at_equal_width(qtbot) -> None:
+    """
+    @brief      Verify both previews open equal and stay equal as the page resizes.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.resize(1400, 800)
+    page.show()
+    QApplication.processEvents()
+
+    opening_sizes = page._preview_splitter.sizes()
+    # One pixel of slack: an odd number of pixels cannot split evenly in two.
+    assert abs(opening_sizes[0] - opening_sizes[1]) <= 1
+
+    page.resize(1700, 800)
+    QApplication.processEvents()
+
+    widened_sizes = page._preview_splitter.sizes()
+    assert abs(widened_sizes[0] - widened_sizes[1]) <= 1
+    assert widened_sizes[0] > opening_sizes[0]
 
 
 # END OF FILE

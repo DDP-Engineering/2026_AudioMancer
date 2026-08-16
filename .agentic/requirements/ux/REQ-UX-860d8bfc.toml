@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-UX-860d8bfc"
+title = "The Text Cleanup previews shall open at equal width"
+status = "active"
+
+requirement = """
+The Text Cleanup page shall keep its Extracted Text preview and its Cleaned Text preview at equal width, both when the page first opens and as the page is resized, until the operator drags the separator between them.
+"""
+
+verification = "Automated: a newly shown Text Cleanup page reports two equal preview pane widths; the two stay equal after the page is resized; and a separator drag leaves them at the dragged widths."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_cleanup_previews_open_at_equal_width",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The previews are read side by side to compare extracted text with its cleaned result, so neither side is the primary one. The page opened with the cleaned preview twice as wide as the extracted preview.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

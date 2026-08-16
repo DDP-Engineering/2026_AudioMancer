@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-84cd9f47"
+title = "Cleanup adjudication prompts shall state the required response shape"
+status = "active"
+
+requirement = """
+Each Cleanup adjudication prompt shall state the exact response object it requires, naming the batch identifier field, the answers array that carries one entry per question, and the question identifier and choice fields of an entry, and shall say that the answers array is named differently from the questions array the request supplies.
+"""
+
+verification = "Automated: the primary and verifier prompt bodies each contain the required response object with its answers, question_id and choice field names, and distinguish it from the request's questions array. Manual: one adjudication run against a provider that does not enforce the supplied JSON Schema returns the answers envelope on its verifier passes, including single-question ones."
+
+affected_paths = [
+  "04_Software/AudioMancer/prompts/text_cleanup_adjudication_primary_system.txt",
+  "04_Software/AudioMancer/prompts/text_cleanup_adjudication_verifier_system.txt",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_cleanup_prompts_state_the_required_response_shape",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The prompts asked only for "the required JSON" and left the shape entirely to the response_format schema. A local provider that treats that schema as advisory rather than as a decoding constraint therefore gives the model no statement of the contract at all, and the model infers an envelope from the request it is reading: two single-question verifier passes answered correctly but under the request's own questions key, so strict validation discarded both and the batch kept its deterministic prior. Stating the shape in the prompt costs nothing where the schema is enforced and is the only contract where it is not.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16
