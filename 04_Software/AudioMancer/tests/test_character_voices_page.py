@@ -403,4 +403,43 @@ def test_character_voices_page_matches_translation_notes_and_narrator_editor_siz
     assert page._preview_text_edit.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
 
 
+def test_character_voices_action_row_orders_edit_save_import_generate_preview(qtbot) -> None:
+    """
+    @brief      Verify REQ-UX-880bcda6 the action row runs edit, save, import, generate, preview.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+    actions_row = page._preview_group.layout().itemAt(1).layout()
+
+    assert actions_row.indexOf(page._edit_prompt_button) == 0
+    assert actions_row.indexOf(page._save_prompt_button) == 1
+    assert actions_row.indexOf(page._import_sample_button) == 2
+    assert actions_row.indexOf(page._generate_sample_button) == 3
+    assert actions_row.indexOf(page._preview_toggle_button) == 4
+
+
+def test_character_voices_prompt_buttons_carry_short_edit_and_save_labels(qtbot) -> None:
+    """
+    @brief      Verify REQ-UX-10020786 the prompt buttons read Edit and Save in both languages.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+
+    page.apply_language("en")
+
+    assert page._edit_prompt_button.text() == "Edit"
+    assert page._save_prompt_button.text() == "Save"
+
+    page.apply_language("ro")
+
+    assert page._edit_prompt_button.text() == "Editeaza"
+    assert page._save_prompt_button.text() == "Salveaza"
+
+
 # END OF FILE

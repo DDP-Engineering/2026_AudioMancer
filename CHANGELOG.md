@@ -35,6 +35,11 @@ All notable changes to this project will be documented in this file.
   - is gone. All four only repeated choices you make on the Home page and
   could not be changed here, and the voice target list and the prompt editor
   now start that much higher up the page.
+- Character Voices page: the row of buttons under the Preview Text box now
+  reads Edit, Save, Import Sample, Generate Sample, Preview - the order you
+  work in. The first two are also shorter: **Edit Voice Prompt** and **Save
+  Voice Prompt** are now simply **Edit** and **Save**, so all five labels fit
+  the row instead of being cut off.
 
 ### Fixed
 

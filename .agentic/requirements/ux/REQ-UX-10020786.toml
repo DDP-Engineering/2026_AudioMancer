@@ -1,0 +1,33 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-UX-10020786"
+title = "The Character Voices prompt buttons shall carry short Edit and Save labels"
+status = "active"
+
+requirement = """
+The two prompt actions in the Character Voices action row shall be labelled with the single word for edit and the single word for save in the interface language in use, rather than with a phrase naming the voice prompt.
+"""
+
+verification = "Automated: a constructed Character Voices page shows the two prompt buttons as Edit and Save with the English interface selected and as Editeaza and Salveaza with the Romanian interface selected."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_prompt_buttons_carry_short_edit_and_save_labels",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The five buttons share one row, and the two long phrases pushed the row wider than the space it has, so their labels were cut off. The buttons sit directly under the prompt and preview editors they act on, so the shorter words lose no meaning.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

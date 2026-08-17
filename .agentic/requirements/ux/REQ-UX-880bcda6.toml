@@ -1,0 +1,32 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-UX-880bcda6"
+title = "The Character Voices action row shall order its five actions edit, save, import, generate, preview"
+status = "active"
+
+requirement = """
+The row of actions under the preview text box on the Character Voices page shall place its five buttons left to right in the order edit prompt, save prompt, import sample, generate sample, preview.
+"""
+
+verification = "Automated: the action row layout of a constructed Character Voices page reports the edit, save, import, generate and preview buttons at positions zero through four."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_action_row_orders_edit_save_import_generate_preview",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The operator works the row from the left: a prompt is edited and saved before a sample is imported or generated, and the sample is previewed last. The former order opened with import, so the two prompt actions sat in the middle of the sample actions and the row did not read in the order the work is done.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

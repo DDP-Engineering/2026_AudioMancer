@@ -56,6 +56,14 @@ batch generation, and preview signals.
   selected voice language stays, because sample generation and preview text
   read it. `language_entries` still lives inside the state service, where it
   validates the saved voice language against the selectable codes.
+- `REQ-UX-880bcda6` — the action row under the preview text box runs edit,
+  save, import sample, generate sample, preview, in the order the operator
+  works it.
+- `REQ-UX-10020786` — the two prompt actions are labelled with the single
+  word for edit and for save in the interface language, so the five buttons
+  fit one row. The `character_voices.edit_prompt` and
+  `character_voices.save_prompt` keys keep their names; they name the action,
+  not the label, and no other page reads them.
 - `REQ-NFR-b3fb9944` — the page applies selection through its controller-owned
   full-state payload and exposes `current_target_id()` without a stale direct
   selection-application method.
