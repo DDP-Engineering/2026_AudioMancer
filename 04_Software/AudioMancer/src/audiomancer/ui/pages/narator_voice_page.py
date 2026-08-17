@@ -189,20 +189,17 @@ class NaratorVoicePage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QWidget(self)
-        status_layout = QVBoxLayout(self._status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        status_layout.addWidget(self._status_edit)
-        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_group, 0)
+        self._operation_status_text = ""
 
         self.set_project_active(False)
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted operation state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
@@ -306,7 +303,7 @@ class NaratorVoicePage(QWidget):
         self._original_profile = None
         self._refresh_profile_list(current_profile_id)
         self._load_profile_into_editor(_display_profile_name(profile_name), prompt_text, preview_text)
-        self._status_edit.setPlainText("\n".join(line for line in status_lines if str(line).strip()))
+        self._operation_status_text = "\n".join(line for line in status_lines if str(line).strip())
         self._apply_control_state()
 
     def set_ai_profiles(

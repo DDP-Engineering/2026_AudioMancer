@@ -263,18 +263,7 @@ class CharactersPage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QWidget(self)
-        status_layout = QVBoxLayout(self._status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        status_layout.addWidget(self._status_edit)
-        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_group, 0)
+        self._operation_status_text = ""
 
         self.set_project_active(False)
         self.set_ai_profiles([], None)
@@ -290,6 +279,14 @@ class CharactersPage(QWidget):
             can_edit=False,
             can_delete=False,
         )
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted operation state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
@@ -384,7 +381,7 @@ class CharactersPage(QWidget):
             profile_index = self._profile_combo.findData(selected_profile_id)
             if profile_index >= 0:
                 self._profile_combo.setCurrentIndex(profile_index)
-        self._status_edit.setPlainText("\n".join(str(note) for note in notes if str(note).strip()))
+        self._operation_status_text = "\n".join(str(note) for note in notes if str(note).strip())
         preferred_character_id = current_character_id
         if preferred_character_id is None and self._profiles:
             preferred_character_id = str(self._profiles[0].get("character_id", ""))
@@ -599,8 +596,6 @@ class CharactersPage(QWidget):
                 0,
                 ui_state_service.translate("ai_settings.none", language),
             )
-        if not self._project_active:
-            self._status_edit.setPlainText(ui_state_service.translate("characters.summary", language))
 
     def _align_demographic_confidence_labels(self) -> None:
         """

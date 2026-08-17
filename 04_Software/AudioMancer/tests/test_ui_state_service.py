@@ -86,28 +86,6 @@ def test_translate_returns_expected_english_and_romanian_strings() -> None:
     assert ui_state_service.translate("sidebar.text_chunking", "ro") == "Segmentare Text"
 
 
-def test_operator_status_pane_height_scales_with_line_count(qtbot) -> None:
-    """
-    @brief      Verify the operator-status pane height follows the requested row count.
-    @details    Covers REQ-UX-032: the status pane uses a compact, font-aware
-                three-row height derived from the reference widget font metrics.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    """
-    widget = QWidget()
-    qtbot.addWidget(widget)
-
-    line_height = widget.fontMetrics().lineSpacing()
-    three_rows = ui_state_service.operator_status_pane_height(widget, 3)
-
-    assert three_rows == int(line_height * 3 + 4 * 2 + 2 * 2)
-    assert three_rows < ui_state_service.operator_status_pane_height(widget, 5)
-    assert ui_state_service.operator_status_pane_height(widget, 0) == ui_state_service.operator_status_pane_height(
-        widget, 1
-    )
-
-
 def test_selective_impact_strings_cover_supported_languages() -> None:
     """
     @brief      Verify selective-impact labels and confirmations exist in EN and RO.

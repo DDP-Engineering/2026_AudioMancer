@@ -49,7 +49,7 @@ def test_main_window_loads_audio_blocks_state_into_real_page(qtbot, tmp_path, de
     assert window._audio_blocks_page._source_text_edit.toPlainText() == 'Narration one.\n\n"Alice spoke."'
     assert window._audio_blocks_page._speaker_label.text() == "Speaker: Narrator"
     assert window._audio_blocks_page._progress_bar.value() == 50
-    assert "Generated audio: 1/2" in window._audio_blocks_page._status_edit.toPlainText()
+    assert "Generated audio: 1/2" in window._audio_blocks_page.operation_status_text()
 
 
 def _create_project(tmp_path, name: str):

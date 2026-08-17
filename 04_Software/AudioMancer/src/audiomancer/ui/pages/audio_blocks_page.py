@@ -169,18 +169,7 @@ class AudioBlocksPage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QWidget(self)
-        status_layout = QVBoxLayout(self._status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        status_layout.addWidget(self._status_edit)
-        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_group)
+        self._operation_status_text = ""
 
         self.apply_language(self._current_language)
         self.set_project_active(False)
@@ -203,6 +192,14 @@ class AudioBlocksPage(QWidget):
             can_approve_selected=False,
             selected_text_character_limit=0,
         )
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted operation state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
@@ -281,7 +278,7 @@ class AudioBlocksPage(QWidget):
         if self._source_text_edit.toPlainText() != full_source_text:
             self._source_text_edit.setPlainText(full_source_text)
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
-        self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
+        self._operation_status_text = "\n".join([*notes, "", *status_lines]).strip()
         previously_selected_id = self._current_block_id
         desired_block_id = current_block_id or previously_selected_id
         if not self._rebuild_audio_block_list(desired_block_id):
@@ -374,7 +371,7 @@ class AudioBlocksPage(QWidget):
         _ = progress_current
         _ = progress_total
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
-        self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
+        self._operation_status_text = "\n".join([*notes, "", *status_lines]).strip()
         if can_approve_all is not None:
             self._can_approve_all = bool(can_approve_all)
         if can_reset is not None:
@@ -501,8 +498,6 @@ class AudioBlocksPage(QWidget):
             ui_state_service.translate(self._selected_playback_label_key(), language)
         )
         self._approve_button.setText(ui_state_service.translate(self._approval_button_label_key(), language))
-        if not self._project_active:
-            self._status_edit.setPlainText(ui_state_service.translate("audio_blocks.initial_note", language))
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0:
             self._show_selected_block(current_row)

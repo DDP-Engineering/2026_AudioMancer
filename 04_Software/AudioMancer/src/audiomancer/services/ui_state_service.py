@@ -153,6 +153,9 @@ _UI_STRINGS = {
         "dialog.operation_progress_cancel": "Cancel Operation",
         "dialog.operation_progress_token_usage": "Input tokens: {input_tokens} | Output tokens: {output_tokens} | Total: {total_tokens}",
         "dialog.operation_progress_token_usage_unavailable": "Token usage was not reported by the backend.",
+        "dialog.operation_status_title": "Operation Status",
+        "dialog.close": "Close",
+        "sidebar.operation_status": "Op Status",
         "about.subtitle": "Transform written words into real audio experience!",
         "about.version": "Version: {version}",
         "about.license": "License",
@@ -410,7 +413,6 @@ _UI_STRINGS = {
         "text_cleanup.extracted_note": "Raw extracted text will appear here after source processing.",
         "text_cleanup.cleaned_note": "Deterministic or AI-assisted cleanup output will appear here.",
         "text_cleanup.notes_text": "Import a source to begin text extraction.\nDeterministic cleanup and AI-assisted cleanup are not wired yet.",
-        "text_cleanup.initial_note": "Import a source to begin text extraction.",
         "text_cleanup.error_extraction_required": "Complete Text Extraction before Cleanup.",
         "text_cleanup.operation_extraction": "Text Extraction",
         "text_cleanup.progress_extraction_start": "Extracting text and source structure...",
@@ -457,7 +459,6 @@ _UI_STRINGS = {
         "text_chunking.cleaned_note": "Cleaned text will appear here and serve as the chunking reference.",
         "text_chunking.selected_note": "The full text of the selected chunk will appear here.",
         "text_chunking.notes_text": "Run cleanup before chunking.\nDeterministic chunking will populate the chunk list and selected preview.",
-        "text_chunking.initial_note": "Run cleanup before chunking.",
         "text_chunking.note_no_project": "Create or open a project to begin text chunking.",
         "text_chunking.note_no_source": "Import a source file and complete cleanup before chunking.",
         "text_chunking.note_missing_cleanup": "Run deterministic or AI-assisted cleanup before chunking.",
@@ -487,7 +488,6 @@ _UI_STRINGS = {
         "ai_translation.status_approved": "Approved",
         "ai_translation.status_translated": "Translated",
         "ai_translation.status_pending": "Pending",
-        "ai_translation.initial_note": "Run text chunking before AI Translation.",
         "ai_translation.retranslate": "Re-Translate Selected",
         "ai_translation.approve_selected": "Approve Selected",
         "ai_translation.source_note": "The source chunk selected from the list will appear here.",
@@ -700,7 +700,6 @@ _UI_STRINGS = {
         "speech_blocks.ai_profile": "AI Profile",
         "speech_blocks.generate": "Generate All",
         "speech_blocks.reset_generation": "Reset",
-        "speech_blocks.initial_note": "Create or open a project to begin Speech Blocks generation.",
         "speech_blocks.approve_all": "Approve All",
         "speech_blocks.chunk_list_group": "Chunk List",
         "speech_blocks.selected_group": "Selected Chunk",
@@ -750,7 +749,6 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Play Audiobook",
         "audio_blocks.stop_audiobook": "Stop Audiobook",
         "audio_blocks.reset_generation": "Reset Audio Generation",
-        "audio_blocks.initial_note": "Create or open a project before generating Audio Blocks.",
         "audio_blocks.approve_all": "Approve All",
         "audio_blocks.source_group": "Source Text",
         "audio_blocks.blocks_group": "Speech Blocks",
@@ -1256,6 +1254,9 @@ _UI_STRINGS = {
         "dialog.operation_progress_cancel": "Anuleaza Operatia",
         "dialog.operation_progress_token_usage": "Tokeni intrare: {input_tokens} | Tokeni iesire: {output_tokens} | Total: {total_tokens}",
         "dialog.operation_progress_token_usage_unavailable": "Utilizarea tokenilor nu a fost raportata de backend.",
+        "dialog.operation_status_title": "Starea Operatiei",
+        "dialog.close": "Inchide",
+        "sidebar.operation_status": "Stare Operatie",
         "about.subtitle": "Transforma cuvintele scrise intr-o experienta audio reala!",
         "about.version": "Versiune: {version}",
         "about.license": "Licenta",
@@ -1513,7 +1514,6 @@ _UI_STRINGS = {
         "text_cleanup.extracted_note": "Textul extras brut va aparea aici dupa procesarea sursei.",
         "text_cleanup.cleaned_note": "Rezultatul curatarii deterministe sau asistate de AI va aparea aici.",
         "text_cleanup.notes_text": "Importa o sursa pentru a incepe extragerea textului.\nCuratarea determinista si cea asistata de AI nu sunt inca conectate.",
-        "text_cleanup.initial_note": "Importa o sursa pentru a incepe extragerea textului.",
         "text_cleanup.error_extraction_required": "Finalizeaza Extragerea Textului inainte de Curatare.",
         "text_cleanup.operation_extraction": "Extragere Text",
         "text_cleanup.progress_extraction_start": "Se extrag textul si structura sursei...",
@@ -1560,7 +1560,6 @@ _UI_STRINGS = {
         "text_chunking.cleaned_note": "Textul curatat va aparea aici si va servi drept referinta pentru segmentare.",
         "text_chunking.selected_note": "Textul complet al segmentului selectat va aparea aici.",
         "text_chunking.notes_text": "Ruleaza curatarea inainte de segmentare.\nSegmentarea determinista va popula lista segmentelor si previzualizarea selectiei.",
-        "text_chunking.initial_note": "Ruleaza curatarea inainte de segmentare.",
         "text_chunking.note_no_project": "Creeaza sau deschide un proiect pentru a incepe segmentarea textului.",
         "text_chunking.note_no_source": "Importa un fisier sursa si finalizeaza curatarea inainte de segmentare.",
         "text_chunking.note_missing_cleanup": "Ruleaza curatarea determinista sau asistata de AI inainte de segmentare.",
@@ -1590,7 +1589,6 @@ _UI_STRINGS = {
         "ai_translation.status_approved": "Aprobat",
         "ai_translation.status_translated": "Tradus",
         "ai_translation.status_pending": "In asteptare",
-        "ai_translation.initial_note": "Ruleaza segmentarea textului inainte de Traducerea AI.",
         "ai_translation.retranslate": "Retradu Segmentul Selectat",
         "ai_translation.approve_selected": "Aproba Selectia",
         "ai_translation.source_note": "Segmentul sursa selectat din lista va aparea aici.",
@@ -1804,7 +1802,6 @@ _UI_STRINGS = {
         "speech_blocks.ai_profile": "Profil AI",
         "speech_blocks.generate": "Genereaza Tot",
         "speech_blocks.reset_generation": "Reseteaza",
-        "speech_blocks.initial_note": "Creeaza sau deschide un proiect pentru a incepe generarea Blocurilor de Vorbire.",
         "speech_blocks.approve_all": "Aproba Tot",
         "speech_blocks.chunk_list_group": "Lista Segmentelor",
         "speech_blocks.selected_group": "Segment Selectat",
@@ -1854,7 +1851,6 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Reda Audiobook",
         "audio_blocks.stop_audiobook": "Opreste Audiobook",
         "audio_blocks.reset_generation": "Reseteaza Generarea Audio",
-        "audio_blocks.initial_note": "Creeaza sau deschide un proiect inainte de generarea Blocurilor Audio.",
         "audio_blocks.approve_all": "Aproba Tot",
         "audio_blocks.source_group": "Text Sursa",
         "audio_blocks.blocks_group": "Blocuri Vorbire",
@@ -2371,24 +2367,6 @@ def completion_beep_enabled_from_settings(
     if not isinstance(settings_payload, dict):
         return False
     return bool(settings_payload.get("play_completion_beep", config.DEFAULT_PLAY_COMPLETION_BEEP))
-
-
-def operator_status_pane_height(reference_widget: QWidget, line_count: int = 3) -> int:
-    """
-    @brief      Compute the fixed pixel height for an operator-status pane.
-    @details    Sizes the pane to show `line_count` text rows using the reference
-                widget font metrics plus the default plain-text document margin and
-                frame, so the status pane stays compact and follows the active UI
-                font scale instead of a hard-coded pixel band.
-    @param[in]  reference_widget Widget whose font metrics drive the row height.
-    @param[in]  line_count Number of text rows the pane should display.
-    @return     Fixed pane height in pixels.
-    @exception  None
-    """
-    line_height = reference_widget.fontMetrics().lineSpacing()
-    document_margin = 4
-    frame = 2
-    return int(line_height * max(line_count, 1) + document_margin * 2 + frame * 2)
 
 
 # HELPER FUNCTIONS

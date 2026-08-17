@@ -99,16 +99,9 @@ class TextCleanupPage(QWidget):
         self._equal_preview_widths_applied = False
         self._apply_preview_minimum_widths()
 
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        self._status_edit.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_edit)
+        self._operation_status_text = ""
         self._saved_cleaned_text = ""
-        self.set_processing_state(None, None, ["Import a source to begin text extraction."], False, False)
+        self.set_processing_state(None, None, [], False, False)
 
     def showEvent(self, event) -> None:  # noqa: N802
         """
@@ -192,8 +185,16 @@ class TextCleanupPage(QWidget):
                 f"Validation: {validation_state}; "
                 f"low-confidence boundaries: {int(uncertainty_count)}."
             )
-        self._status_edit.setPlainText("\n".join(status_notes))
+        self._operation_status_text = "\n".join(status_notes)
         self._apply_button_state()
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted Cleanup state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def set_ai_profiles(
         self,
@@ -264,8 +265,6 @@ class TextCleanupPage(QWidget):
         self._extracted_group.setTitle(ui_state_service.translate("text_cleanup.extracted_group", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_cleanup.cleaned_group", language))
         self._ai_profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
-        if not self._project_active:
-            self._status_edit.setPlainText(ui_state_service.translate("text_cleanup.initial_note", language))
 
     def _emit_cleanup_requested(self) -> None:
         if self._workflow_actions_enabled():

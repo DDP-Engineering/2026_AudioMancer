@@ -345,4 +345,26 @@ def test_home_page_language_switch_preserves_all_source_statuses(
     assert page._import_button.isEnabled() is (not options_locked)
 
 
+@pytest.mark.parametrize("stage_count", [9, 10])
+@pytest.mark.parametrize("stepper_width", [360.0, 468.0, 640.0, 790.0, 1040.0, 1600.0])
+def test_workflow_stepper_keeps_end_captions_inside_its_width(stepper_width, stage_count) -> None:
+    """
+    @brief      Verify the outermost stage captions are never drawn off the stepper.
+    @details    Covers REQ-UX-bd974d8e: each caption is centred on its bead and is
+                one bead spacing wide, so the bead inset has to be at least half a
+                caption or the first and last stage names are clipped at the edges.
+    @param[in]  stepper_width Stepper width in pixels.
+    @param[in]  stage_count Number of workflow stages drawn.
+    @return     None.
+    @exception  None
+    """
+    margin_x, gap = home_page._stepper_bead_layout(stepper_width, stage_count)
+
+    first_caption_left = margin_x - gap / 2.0
+    last_caption_right = margin_x + (stage_count - 1) * gap + gap / 2.0
+
+    assert first_caption_left >= 0.0
+    assert last_caption_right <= stepper_width
+
+
 # END OF FILE

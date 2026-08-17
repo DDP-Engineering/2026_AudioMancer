@@ -66,6 +66,29 @@ _STATUS_COLOR_ROLES = {
     "finished": "success",
 }
 
+# @brief Smallest bead inset from the stepper edge, in pixels.
+_STEPPER_MIN_MARGIN_PX: float = 26.0
+
+
+def _stepper_bead_layout(width: float, count: int) -> tuple[float, float]:
+    """
+    @brief      Resolve the bead inset and spacing for one stepper width.
+    @details    Every caption is centred on its bead and drawn one bead spacing
+                wide, so the outermost captions overhang the widget unless the
+                inset is at least half a spacing. Deriving the inset from the
+                width and the stage count makes the first and last captions land
+                exactly on the edges; the minimum inset wins only at widths where
+                it is already the larger of the two, so nothing moves there.
+    @param[in]  width Stepper width in pixels.
+    @param[in]  count Number of stages to draw.
+    @return     Tuple of bead inset and spacing between bead centres, in pixels.
+    @exception  None
+    """
+    if count <= 1:
+        return width / 2.0, 0.0
+    margin_x = max(_STEPPER_MIN_MARGIN_PX, width / (2.0 * count))
+    return margin_x, max(width - 2.0 * margin_x, 1.0) / (count - 1)
+
 
 class _WorkflowStepper(QWidget):
     """
@@ -151,12 +174,10 @@ class _WorkflowStepper(QWidget):
         """
         colors = self._colors
         count = len(self._steps)
-        margin_x = 26.0
         bead_radius = 11.0
         bead_center_y = 20.0
         width = float(self.width())
-        span = max(width - 2.0 * margin_x, 1.0)
-        gap = span / (count - 1) if count > 1 else 0.0
+        margin_x, gap = _stepper_bead_layout(width, count)
         centers = [(width / 2.0 if count == 1 else margin_x + index * gap) for index in range(count)]
 
         border = QColor(colors.get("border", "#D7DDE5"))

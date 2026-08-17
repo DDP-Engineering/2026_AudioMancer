@@ -172,20 +172,17 @@ class CharacterVoicesPage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QWidget(self)
-        status_layout = QVBoxLayout(self._status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        status_layout.addWidget(self._status_edit)
-        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_group, 0)
+        self._operation_status_text = ""
 
         self.set_project_active(False)
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted operation state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
@@ -293,7 +290,7 @@ class CharacterVoicesPage(QWidget):
         self._set_language_labels(original_language, translated_language)
         self._assignment_mode_value_label.setText(assignment_mode_label)
         self._set_voice_language_label(language_entries, selected_voice_language)
-        self._status_edit.setPlainText("\n".join(line for line in status_lines if str(line).strip()))
+        self._operation_status_text = "\n".join(line for line in status_lines if str(line).strip())
         self._apply_control_state()
 
     def begin_edit_mode(self) -> None:

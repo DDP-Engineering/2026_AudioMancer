@@ -17,7 +17,6 @@
 
 import pytest
 
-from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
 
 
@@ -50,7 +49,7 @@ def test_audio_blocks_page_shows_reset_recovery_without_generation(qtbot) -> Non
         can_approve_selected=False,
     )
 
-    assert "Reset Audio Blocks to recover" in page._status_edit.toPlainText()
+    assert "Reset Audio Blocks to recover" in page.operation_status_text()
     assert page._start_button.isEnabled() is False
     assert page._reset_button.isEnabled() is True
 
@@ -133,9 +132,6 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._approval_status_label.text() == "Status: Pending"
     assert page._block_text_edit.toPlainText() == "Hello there."
     assert page._progress_bar.value() == 50
-    expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
-    assert page._status_group.minimumHeight() == expected_status_height
-    assert page._status_group.maximumHeight() == expected_status_height
     assert page._approve_button.isEnabled() is True
     assert page._approve_button.text() == "Approve"
     assert page._approve_all_button.text() == "Approve All"

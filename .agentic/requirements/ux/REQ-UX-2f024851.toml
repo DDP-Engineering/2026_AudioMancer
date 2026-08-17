@@ -4,21 +4,22 @@ title = "Operator status editors shall use the UI font role"
 status = "active"
 
 requirement = """
-Operator status editors shall use the UI font role.
+The editor that displays operator status text shall carry the UI control font role, so the text follows the operator's interface font size rather than the content font.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Automated: the operation-status dialog's text editor carries the UI control font-role property, and the stylesheet rule for that role applies to it."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operator_status_font_role.py::test_operator_status_editors_use_ui_font_role",
+  "04_Software/AudioMancer/tests/test_operation_status_dialog.py::test_operation_status_dialog_editor_uses_the_ui_font_role",
 ]
 
 priority = "high"
 rationale = """
-Operator status text must follow the UI font role, not the content font.
+Operator status text must follow the UI font role, not the content font. The behaviour is unchanged; only its location moved, from one status editor per workflow page to the single editor in the operation-status dialog that replaced them.
 """
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-08-16

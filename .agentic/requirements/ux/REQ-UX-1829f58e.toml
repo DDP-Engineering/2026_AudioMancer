@@ -1,0 +1,40 @@
+schema = 1
+id = "REQ-UX-1829f58e"
+title = "Pressing the operation-status button shall open the modeless status dialog for the current page"
+status = "active"
+
+requirement = """
+When the operator presses the operation-status button, the shell shall show a dialog carrying the status text of the current page's workflow operation, and that dialog shall be modeless so the shell and its pages stay usable while it is open.
+"""
+
+verification = "Automated: pressing the button on a page whose operation has run shows a visible dialog whose text equals the status text built for that page; the dialog reports no application or window modality; and the shell's current page can still be changed while it is open, after which the dialog carries the new page's status text."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_status_dialog.py::test_operation_status_dialog_is_modeless",
+  "04_Software/AudioMancer/tests/test_operation_status_dialog.py::test_operation_status_dialog_shows_the_supplied_status_text",
+  "04_Software/AudioMancer/tests/test_operation_status_dialog.py::test_operation_status_dialog_localizes_title_and_close",
+  "04_Software/AudioMancer/tests/test_operation_status_button.py::test_operation_status_button_opens_the_dialog_and_follows_the_page",
+]
+
+spec = ""
+priority = "high"
+rationale = """
+The status text is read against what the page shows, so a dialog that blocked the page would defeat its own purpose. Modelessness also keeps this dialog clear of the operation-progress dialog, which is deliberately application-modal because it owns cancellation of a running operation; these are two different surfaces and only the progress one may seize the shell.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

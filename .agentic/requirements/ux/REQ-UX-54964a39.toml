@@ -4,7 +4,7 @@ title = "The Text Cleanup page shall expose a profile selector, Cleanup and"
 status = "active"
 
 requirement = """
-The Text Cleanup page shall expose a profile selector, Cleanup and Reset actions, two previews, Edit/Save/Cancel controls, a progress dialog, and a status pane.
+The Text Cleanup page shall expose a profile selector, Cleanup and Reset actions, two previews, Edit/Save/Cancel controls, and a progress dialog.
 """
 
 verification = "The Cleanup page exposes the contracted controls and interactions."
@@ -23,4 +23,4 @@ rationale = """
 Operators need one coherent Cleanup surface for quality review, resume, and manual editing.
 """
 created = 2026-07-27
-updated = 2026-07-30
+updated = 2026-08-16

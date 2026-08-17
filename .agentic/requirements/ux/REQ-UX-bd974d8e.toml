@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-UX-bd974d8e"
+title = "The Home workflow stepper shall keep every stage caption inside its width"
+status = "active"
+
+requirement = """
+The Home workflow pipeline stepper shall draw every stage caption fully inside its own width, so that the first and last stage captions are not clipped at the left and right edges.
+"""
+
+verification = "Automated: across the window widths the stepper is drawn at, the computed caption band of the first stage starts at or after the left edge and the caption band of the last stage ends at or before the right edge, for both nine and ten stages."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_home_page.py::test_workflow_stepper_keeps_end_captions_inside_its_width",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The stepper insets its beads by a fixed 26 pixels but centres each caption on its bead with the full inter-bead spacing as its width. Once the spacing exceeds 52 pixels, which it does at every normal window size, half a caption falls outside the widget at each end and the outer stage names are cut: the first loses its opening letters and the last its closing ones. Deriving the inset from the caption width instead of fixing it makes the outermost captions land exactly on the edges, and it changes nothing at narrow widths where the fixed inset was already large enough.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

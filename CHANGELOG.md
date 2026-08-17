@@ -10,6 +10,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Every workflow page gained back the space its status box used to take at the
+  bottom. The previews, lists and editors on those pages now run all the way
+  down to the bottom of the window.
+- The same status text moved to a new **Op Status** button under the page list
+  on the left. Pressing it opens the status of the operation on the page you
+  are looking at, in a window you can resize and leave open while you keep
+  working; switch page and it follows you to that page's operation.
+- The button stays greyed out until the operation on that page has actually
+  run, so it never opens an empty window. This means the short hints that used
+  to sit in the status box before you ran anything - "Run cleanup before
+  chunking." and the like - are no longer shown; the Home page still lists
+  every step and how far it has got.
+
+### Fixed
+
+- Home page: the first and last step names under the Workflow Pipeline are no
+  longer cut off at the edges. "Text Cleanup" showed as "ext Cleanup" and
+  "Audio Assembly" as "Audio Assem"; all ten names are now fully readable.
+
 ### Added
 
 - Speech Blocks page: the Chunk List can now be made taller. Drag the new

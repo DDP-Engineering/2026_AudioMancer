@@ -1,10 +1,12 @@
 schema = 1
 id = "REQ-UX-f65f5ffa"
 title = "The operator status pane height shall scale with line count"
-status = "active"
+status = "retired"
 
 requirement = """
 The operator status pane height shall scale with line count.
+
+Retired 2026-08-16: the fixed-height operator status pane it sized no longer exists. The per-page status pane was replaced by a resizable operation-status dialog, which the operator sizes directly, so there is no longer a pane whose height has to be computed from a line count.
 """
 
 verification = "Automated: 1 linked pytest selector(s)."
@@ -12,13 +14,11 @@ verification = "Automated: 1 linked pytest selector(s)."
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_operator_status_pane_height_scales_with_line_count",
-]
+linked_tests = []
 
 priority = "high"
 rationale = """
 The status pane must grow to fit its content.
 """
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-08-16

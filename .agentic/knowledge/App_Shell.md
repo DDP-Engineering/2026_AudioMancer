@@ -17,6 +17,7 @@ window frame in which all AudioMancer workflow components run.
 - Expose the package version and `audiomancer` / `python -m audiomancer` entry points.
 - Initialize logging, settings, scroll filtering, application-wide theme, and the application icon before constructing the main window, tolerating logging that degraded to console output only.
 - Compose the toolbar, left navigation sidebar, pages, dialogs, project summaries, and lifecycle cleanup in `MainWindow`.
+- Offer each workflow page's operation status through one modeless dialog opened from a button under the sidebar, enabled only once that page's operation has a recorded run status.
 - Provide shared user-facing help, about/license, message, progress, and title helpers.
 - Reapply the active locale to app-owned persistent surfaces and rebuild the
   current project page when runtime language settings change.
@@ -38,7 +39,13 @@ of aborting. This is what keeps a read-only installation directory from crashing
 startup with no diagnostic. See `.agentic/specs/user_data_location.spec.md`.
 
 `MainWindow` creates the fixed left `NavigationSidebar`, page stack, shared
-toolbar and settings dialogs. It routes selection to a current page, refreshes
+toolbar and settings dialogs. The sidebar shares a column wrapper with the
+operation-status button: the sidebar is itself the `QListWidget` whose rows are
+the workflow pages, so a non-page control cannot live inside it without posing
+as an eleventh page and escaping the page-enablement loop. `PAGE_OPERATION_KIND`
+maps each page to the workflow operation whose persisted status drives that
+button, and the button and any open dialog refresh from the same current-page
+path as the page state itself. It routes selection to a current page, refreshes
 only that page's derived state, applies language/theme changes, and stops
 active audio playback when it closes. `misc_ui_controller` resolves localized
 help and license resources, builds common dialogs, and owns the exact localized
@@ -129,6 +136,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/ui/__init__.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/main_window.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py`
