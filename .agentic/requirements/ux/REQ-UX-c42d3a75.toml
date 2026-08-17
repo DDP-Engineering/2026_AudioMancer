@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-UX-c42d3a75"
+title = "The Characters page left pane shall keep a minimum of one third of the main splitter width"
+status = "active"
+
+requirement = """
+The Characters page shall hold the left pane of its main splitter, which carries the Character List and the Character Profile, to a minimum of one third of that splitter's width, while the Evidence pane on the right keeps a minimum of one quarter.
+"""
+
+verification = "Automated: with the Characters page main splitter laid out at a known width, the left pane reports a minimum width of one third of that width and the Evidence pane a minimum width of one quarter, and dragging the splitter fully to the left leaves the left pane at its one-third minimum."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_left_pane_keeps_a_one_third_minimum",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+A single minimum of one quarter was applied to both panes, which let the left pane fall to 344 pixels at a splitter width of 1378 - far below the roughly 700 pixels the profile form needs - so the operator lost sight of most of the form before the drag stopped. The left pane holds a labelled form and the right holds a list over a preview, so the left is the side that needs the wider floor. One third plus one quarter is seven twelfths of the width, leaving the two minimums unable to conflict at any window size.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

@@ -148,7 +148,7 @@ class CharactersPage(QWidget):
         editor_group_layout.setContentsMargins(6, 12, 6, 6)
         self._editor_scroll_area = QScrollArea(self._editor_group)
         self._editor_scroll_area.setWidgetResizable(True)
-        self._editor_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._editor_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._editor_scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         self._editor_form_widget = QWidget(self._editor_scroll_area)
         editor_layout = QFormLayout(self._editor_form_widget)
@@ -290,7 +290,7 @@ class CharactersPage(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
-        @brief      Keep Characters page splitter panes from shrinking below one quarter of their available span.
+        @brief      Keep Characters page splitter panes from shrinking below their share of the available span.
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
@@ -763,7 +763,7 @@ class CharactersPage(QWidget):
 
     def _apply_main_splitter_minimums(self) -> None:
         """
-        @brief      Set each Characters page splitter pane minimum to one quarter of its splitter span.
+        @brief      Set the Characters page left pane minimum to one third and the Evidence pane to one quarter.
         @return     None.
         @exception  None
         """
@@ -774,9 +774,8 @@ class CharactersPage(QWidget):
         self._apply_evidence_splitter_minimums()
         splitter_width = self._main_splitter.width()
         if splitter_width > 0:
-            minimum_pane_width = splitter_width // 4
-            self._left_splitter.setMinimumWidth(minimum_pane_width)
-            self._evidence_group.setMinimumWidth(minimum_pane_width)
+            self._left_splitter.setMinimumWidth(splitter_width // 3)
+            self._evidence_group.setMinimumWidth(splitter_width // 4)
         splitter_height = self._left_splitter.height()
         if splitter_height > 0:
             self._editor_group.setMinimumHeight(splitter_height // 4)

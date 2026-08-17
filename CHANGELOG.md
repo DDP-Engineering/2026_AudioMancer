@@ -30,6 +30,14 @@ All notable changes to this project will be documented in this file.
 - Home page: the first and last step names under the Workflow Pipeline are no
   longer cut off at the edges. "Text Cleanup" showed as "ext Cleanup" and
   "Audio Assembly" as "Audio Assem"; all ten names are now fully readable.
+- Characters page: dragging the separator to the left no longer hides part of
+  the Character Profile form with no way to reach it. The form now gets a
+  scroll bar along its bottom edge whenever it is wider than the space left
+  for it, the same way it already scrolls up and down.
+- Characters page: the left side of that separator also stops sooner, at a
+  third of the page instead of a quarter, so the profile fields stay readable
+  without scrolling in most positions. The Evidence side on the right is
+  unchanged.
 
 ### Added
 

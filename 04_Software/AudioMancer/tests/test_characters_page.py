@@ -17,6 +17,7 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QApplication
 
 from audiomancer.services import character_discovery_service
 from audiomancer.ui.pages.characters_page import CharactersPage
@@ -111,6 +112,50 @@ def test_characters_page_evidence_splitter_keeps_twenty_percent_minimums(qtbot) 
     top_size, bottom_size = page._evidence_splitter.sizes()
 
     assert bottom_size >= (top_size + bottom_size) // 5
+
+
+def test_characters_page_profile_pane_scrolls_horizontally_when_narrow(qtbot) -> None:
+    """
+    @brief      Verify the Character Profile pane offers a horizontal scroll bar when narrowed.
+    @return     None.
+    @exception  None
+    """
+    page = _build_page(qtbot)
+    page.show()
+    QApplication.processEvents()
+    scroll_area = page._editor_scroll_area
+
+    assert scroll_area.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAsNeeded
+
+    form_minimum_width = page._editor_form_widget.minimumSizeHint().width()
+    scroll_area.resize(form_minimum_width // 2, 400)
+    QApplication.processEvents()
+
+    assert scroll_area.horizontalScrollBar().maximum() > 0
+
+    scroll_area.resize(form_minimum_width + 200, 400)
+    QApplication.processEvents()
+
+    assert scroll_area.horizontalScrollBar().maximum() == 0
+
+
+def test_characters_page_left_pane_keeps_a_one_third_minimum(qtbot) -> None:
+    """
+    @brief      Verify the left pane floors at one third and Evidence stays at one quarter.
+    @return     None.
+    @exception  None
+    """
+    page = _build_page(qtbot)
+    page._main_splitter.resize(1200, 600)
+    page._apply_main_splitter_minimums()
+
+    assert page._left_splitter.minimumWidth() == 400
+    assert page._evidence_group.minimumWidth() == 300
+
+    page._main_splitter.setSizes([1, 1199])
+    left_size, _evidence_size = page._main_splitter.sizes()
+
+    assert left_size >= 400
 
 
 def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:

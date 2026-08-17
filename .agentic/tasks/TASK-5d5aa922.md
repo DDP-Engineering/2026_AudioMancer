@@ -32,7 +32,7 @@ Keep each log line to one sentence.
 
 # TASK-5d5aa922 — Operation status popup replaces the per-page status pane
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-UX-4e49f8f7, REQ-UX-2b482f01, REQ-UX-1829f58e, REQ-UX-2f024851, REQ-UX-54964a39, REQ-FUNC-07be158e, REQ-UX-f65f5ffa, REQ-UX-bd974d8e
@@ -48,7 +48,7 @@ opened: 2026-08-16
 - [x] requirements re-read: status, prose, verification, paths, and links true
 - [x] manual or inspection verification completed and recorded where applicable
 - [x] final evolution report refreshed after the last candidate edit
-- [ ] final `check --strict --run` result recorded truthfully after all edits
+- [x] final `check --strict --run` result recorded truthfully after all edits - recorded as NOT run and not claimed, see the 2026-08-16 validate limitation
 - [x] remaining warnings and pre-existing failures explained
 - [x] `stage: deliver`
 
@@ -160,3 +160,4 @@ tests, with the status-pane assertions removed.
 - 2026-08-16 validate limitation (unchanged): `check --strict --run` is still NOT run and still not claimed, because `--run` executes the full suite the operator forbade. Every other proof recorded in this journal is a targeted module run.
 - 2026-08-17 build evidence (late-arriving): `aegis test --impacted --base HEAD` finished at exit 0 - 812 passed in 1719.58s across 51 test files, after the selector reduced 266 selectors to whole files because the command line was too long to launch. This is real regression evidence and materially wider than the targeted module runs: it includes every UI controller, the state services, the localization parity audit, the app entrypoint and the package import.
 - 2026-08-17 build evidence limitation: that run was launched before two later code edits and therefore does NOT cover the delivered candidate. Not covered by it are the validate-stage removal of the `_set_operation_status_text` wrapper from seven pages with the parenthesis cleanup that followed, and the whole Home stepper fix (`_stepper_bead_layout`, `REQ-UX-bd974d8e`). Both are covered instead by the 159-passed targeted re-run over the seventeen affected modules, which was taken after the last code edit. The honest reading is: a wide sweep on a slightly earlier tree, plus a narrow sweep on the final tree, and no single run over the final tree at full width.
+- 2026-08-17 close: delivered on `master` as commit 7442510, merged by pull request #57 (`1fda957`); the task is closed with `check --strict --run` still owed rather than done, exactly as the validate limitation above records.

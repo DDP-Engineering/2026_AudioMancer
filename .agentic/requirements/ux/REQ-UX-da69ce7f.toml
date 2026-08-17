@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-UX-da69ce7f"
+title = "The Characters page Character Profile pane shall scroll horizontally when narrower than its form"
+status = "active"
+
+requirement = """
+While the Characters page Character Profile pane is narrower than the profile form it contains, the pane shall offer a horizontal scroll bar, so that every field and label stays reachable at any splitter position.
+"""
+
+verification = "Automated: with the Characters page main splitter dragged fully to the left, the Character Profile scroll area reports a horizontal scroll policy of ScrollBarAsNeeded and a horizontal scroll range greater than zero, and that range returns to zero once the pane is wider than the form."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_profile_pane_scrolls_horizontally_when_narrow",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The Character Profile form sits in a resizable scroll area whose horizontal scroll bar is switched off. A resizable scroll area never shrinks its inner widget below that widget's own minimum, so once the pane is narrower than the form the surplus is simply clipped: the form keeps a minimum width of about 676 pixels against a viewport of roughly 330 at the leftmost splitter position, and around 346 pixels of fields and labels sit outside the viewport with no bar to reach them. The vertical bar already behaves this way; the horizontal one was the only direction left unreachable.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17
