@@ -49,51 +49,56 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
                 <p>
-                    AudioMancer helps turn a written book or story into audiobook WAV files. It guides you through
-                    the work one page at a time: import the source, clean the text, split it into chunks, optionally
-                    translate it, prepare narrator and character voices, generate speech audio, and assemble the final
-                    audiobook files.
+                    AudioMancer turns a written book or story into audiobook WAV files. It guides you through the work
+                    one page at a time: import the source, clean the text, split it into chunks, optionally translate
+                    it, prepare narrator and character voices, split the text into speech instructions, generate the
+                    audio, and assemble the final audiobook.
+                </p>
+                <h3>The Window</h3>
+                <p>
+                    The toolbar across the top holds <strong>New Project</strong>, <strong>Open Project</strong>,
+                    <strong>Settings</strong>, <strong>AI Settings</strong>, <strong>TTS Settings</strong>,
+                    <strong>Help</strong> and <strong>About</strong>. These stay available at all times.
+                    <strong>Help</strong> opens this offline guide in your browser, and <strong>About</strong> shows
+                    the version and the licence text.
                 </p>
                 <p>
-                    Work through the left sidebar from top to bottom. Review visible text and audio before you press
-                    approval buttons. AudioMancer keeps completed work where possible: local chunk, translation,
-                    character, voice, Speech Block, and Audio Block edits reset only the affected downstream records,
-                    while full upstream regeneration still clears dependent workflow data.
+                    The sidebar on the left lists the ten pages in working order: Home / Project, Text Cleanup, Text
+                    Chunking, AI Translation, Characters, Narrator Voice, Character Voices, Speech Blocks, Audio
+                    Blocks, and Audio Assembly. Until a project is open only <strong>Home / Project</strong> can be
+                    selected; the other rows are greyed out. Work down the list from top to bottom.
                 </p>
                 <p>
-                    Under the sidebar, the <strong>Op Status</strong> button opens the status of the operation on the
-                    page you are viewing: counts, warnings and how the last run ended. It stays greyed out until that
-                    operation has run at least once. The window is resizable and does not block the application, so you
-                    can leave it open while you work, and it follows you when you move to another page.
+                    Directly under the sidebar sits the <strong>Op Status</strong> button. It opens the status of the
+                    operation belonging to the page you are viewing: counts, warnings, and how the last run ended. It
+                    stays greyed out until that operation has run at least once, and it is never available on Home,
+                    which has no operation of its own. The window it opens is resizable, does not block the
+                    application, and follows you as you move between pages. Close it with its <strong>Close</strong>
+                    button.
                 </p>
-                <p>
-                    Scene Ambience can add ordered individual sound blocks to a scene. Each ambience block has its own
-                    prompt and negative prompt while using the Scene Ambience duration from TTS Settings, so you can
-                    build an atmosphere from simple sound sources rather than one complex mixed prompt. Speech Blocks
-                    can preview selected audio directly from the page, Audio Blocks can generate narrator, character,
-                    and Scene Ambience WAV files, and Audio Assembly can preview and include mixed ambience in the final
-                    audiobook.
-                </p>
-                <p>
-                    Settings includes light and dark built-in themes, selection and preview of valid custom themes
-                    already stored in the settings file, separate font controls for interface controls and long text
-                    windows, and configurable mouse-wheel scroll steps. Narrator Voice and Character Voices can import
-                    validated WAV samples with operator-entered sample text. AI Settings and TTS Settings use a consistent
-                    <strong>Cancel</strong>, <strong>Save</strong>, and <strong>OK</strong> flow.
-                </p>
-                <div class="warning">
-                    Current AudioMancer audio generation requires VoiceWeaver. OpenAI or LM Studio profiles are used
-                    for text workflows only; they do not generate the narrator, character, or Audio Blocks WAV files.
-                </div>
                 <div class="note">
-                    Long generation operations can be interrupted and continued later. Use <strong>Cancel</strong>,
-                    <strong>Escape</strong>, or the progress dialog's title-bar close control to request cancellation;
-                    the dialog stays visible while the operation stops. Return to the same page and run the operation
-                    again to continue or regenerate as needed.
+                    Long operations show a progress window with a status line, a percentage bar, and &mdash; once the model
+                    reports them &mdash; the input, output and total token counts for the run. When the operation can be
+                    interrupted, the window offers <strong>Cancel Operation</strong>. Pressing it, pressing
+                    <strong>Escape</strong>, or using the title-bar close control all request the same cancellation;
+                    the window stays visible while the operation stops, and the button greys out because the request
+                    is only sent once. Return to the same page and start the operation again to continue.
                 </div>
+                <div class="warning">
+                    Audio generation requires VoiceWeaver. OpenAI or LM Studio profiles are used for text work only;
+                    they do not generate narrator, character, or Audio Blocks WAV files.
+                </div>
+                <h3>How Work Is Protected</h3>
+                <p>
+                    AudioMancer keeps completed work where it can. A local edit &mdash; one chunk, one translation, one
+                    character, one voice, one Speech Block &mdash; resets only the records that depend on it. Rerunning a
+                    whole operation is different: it clears that operation's result and everything downstream of it,
+                    and every action that does so asks you first. Confirmation questions default to
+                    <strong>No</strong>, so pressing Enter by accident never destroys work.
+                </p>
                 <figure>
                     <img src="assets/screenshots/home-project.png" alt="AudioMancer Home dashboard">
-                    <figcaption>The Home dashboard shows source selection, locked project options, workflow progress, and export tools in one compact view.</figcaption>
+                    <figcaption>The Home page combines the project summary, the workflow pipeline, per-stage progress, and the export list in one view.</figcaption>
                 </figure>
             </section>
 
@@ -101,26 +106,23 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>What You Need</h2>
                 <ul>
                     <li><strong>AudioMancer:</strong> the desktop application and this offline help bundle.</li>
-                    <li><strong>VoiceWeaver:</strong> required for audio generation. Install it on the same computer or on another computer reachable on the same local network.</li>
-                    <li><strong>AI text model:</strong> optional for deterministic-only cleanup/chunking, but required for AI cleanup, AI chunking, translation, character discovery, and narrator-plus-character Speech Blocks. Same-narrator Speech Blocks needs no AI model unless Scene Ambience is enabled.</li>
-                    <li><strong>Project storage:</strong> enough disk space for source files, intermediate WAV files, and final audiobook outputs.</li>
+                    <li><strong>VoiceWeaver:</strong> required for all audio generation. Install it on the same computer or on another computer reachable on your local network.</li>
+                    <li><strong>An AI text model:</strong> required for AI-assisted cleanup, AI-assisted chunking, translation, character discovery, narrator profile generation, and Speech Blocks. Deterministic cleanup and deterministic chunking work without one.</li>
+                    <li><strong>Disk space:</strong> for the source file, intermediate WAV files, and the final audiobook.</li>
                 </ul>
                 <p>
-                    VoiceWeaver must be running before narrator samples, character samples, or Audio Blocks can be
-                    generated. If VoiceWeaver runs on a different computer, use that computer's LAN IP address in
-                    TTS Settings, for example <code>http://192.168.1.25:8000</code> or the endpoint required by your
-                    VoiceWeaver installation.
+                    VoiceWeaver must be running before any sample or audio block can be generated. If it runs on
+                    another computer, enter that computer's address in TTS Settings &mdash; for example
+                    <code>http://192.168.1.25:8059</code>.
                 </p>
                 <p>
-                    Translation targets supported by AudioMancer are English, Romanian, German, French, Russian,
-                    Portuguese, Spanish, and Italian. The audio language follows the project
-                    language selected on the Home page and requires VoiceWeaver voices/models that support that
-                    language.
+                    Translation targets are English, Romanian, German, French, Russian, Portuguese, Spanish, and
+                    Italian. The spoken language follows the translation language you lock on the Home page, so
+                    VoiceWeaver needs voices that support it.
                 </p>
                 <div class="warning">
-                    AudioMancer creates dedicated voice definitions and samples for the selected narrator and, when
-                    enabled, for each character. These voices are prepared specifically for the current project instead
-                    of being generic one-click presets.
+                    AudioMancer builds voice definitions and samples for the specific narrator and characters of the
+                    current project. They are prepared for this book, not picked from a list of generic presets.
                 </div>
             </section>
 
@@ -147,81 +149,129 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     </div>
                 </div>
                 <div class="warning">
-                    Do not run AudioMancer from inside the zip file. Extract the full folder first and keep all files
-                    together. The application expects settings, licenses, help files, and runtime files to stay beside
-                    the executable.
+                    Do not run AudioMancer from inside the zip file. Extract the whole folder first and keep the files
+                    together &mdash; settings, licences, help files and runtime files must stay beside the executable.
                 </div>
                 <p>
-                    A portable folder can be extracted directly below a drive or filesystem root, for example
-                    <code>D:\AudioMancer</code> or <code>/audiomancer</code>. AudioMancer starts normally there and
-                    opens the packaged English or Romanian offline Help kept beside the executable.
+                    The folder can sit directly below a drive or filesystem root, for example <code>D:\AudioMancer</code>
+                    or <code>/audiomancer</code>. AudioMancer starts normally there and the toolbar
+                    <strong>Help</strong> action opens the packaged English or Romanian guide kept beside the
+                    executable. If that file is missing, AudioMancer says so instead of opening a browser.
                 </p>
             </section>
 
             <section id="settings">
                 <h2>Settings</h2>
                 <p>
-                    Open <strong>Settings</strong> from the top toolbar before starting a long project. This dialog
-                    controls the interface language, completion beep, mouse-wheel scroll steps, and runtime UI theme.
+                    Open <strong>Settings</strong> from the toolbar. The dialog holds four controls on one row, a
+                    theme and font group, and a live preview.
                 </p>
-                <div class="note">
-                    A valid UTF-8 <code>settings.json</code> with a byte-order mark loads normally. If the file is
-                    malformed or uses an invalid encoding, AudioMancer preserves its exact bytes beside it as
-                    <code>settings.corrupt.json</code> (or a numbered corruption backup when that name already exists)
-                    before continuing with built-in defaults. If the file cannot be read or backed up, AudioMancer
-                    uses built-in defaults for that run and leaves the original file unchanged. Keep corruption
-                    backups private because they can contain the same API keys as the original settings.
-                </div>
                 <ol>
-                    <li>Choose the interface language.</li>
-                    <li>Select a built-in theme, such as <strong>Default Light</strong>, <strong>Default Dark</strong>, or <strong>Dark Contrast</strong>, or select a valid custom theme already stored in <code>settings.json</code>.</li>
-                    <li>Enable or disable the completion beep. When it is enabled, AudioMancer beeps once as soon as a long operation ends on its own, whether it succeeded or failed, so you can start a run and step away from the machine. An operation you cancel yourself stays silent.</li>
-                    <li>Set <strong>Scroll steps</strong> from <strong>1</strong> to <strong>5</strong> to control how many lines common text and list panes move per mouse-wheel notch. The default is <strong>1</strong>.</li>
-                    <li>Use <strong>Apply</strong> to save and refresh the running interface without closing Settings, or use <strong>OK</strong> to save and close.</li>
+                    <li><strong>Language</strong> &mdash; <strong>English</strong> or <strong>Romanian</strong>. It changes the interface and the guide the Help action opens.</li>
+                    <li><strong>Play completion beep</strong> &mdash; off by default. When it is on, AudioMancer beeps once as soon as a long operation ends on its own, so you can start a run and step away. An operation you cancel yourself stays silent.</li>
+                    <li><strong>Scroll steps</strong> &mdash; from <strong>1</strong> to <strong>5</strong>, default <strong>1</strong>. It sets how many lines the text and list panes move per mouse-wheel notch.</li>
+                    <li><strong>Theme</strong> &mdash; eleven built-in themes: Classic Light, Warm Reading, High Contrast, Default Dark, Dark Contrast, <strong>AudioMancer Dark</strong> (the default), AudioMancer Parchment, Midnight Studio, Ember Night, Nordic Slate, and Ink and Paper.</li>
+                    <li><strong>UI font size</strong> and <strong>Text font size</strong> &mdash; two independent combos, each offering Extra small, Small, Medium, Normal, Large, Very large and Huge, both starting at <strong>Normal</strong>. The first scales buttons, labels and lists; the second scales the long text windows and the Op Status window, so you can enlarge reading text without enlarging every control.</li>
                 </ol>
+                <p>
+                    The <strong>Preview</strong> group under the combos shows a sample label, a sample button and a
+                    sample text window in the selected theme and both font sizes, so you can judge a choice before
+                    applying it.
+                </p>
+                <p>
+                    <strong>Cancel</strong> closes without saving. <strong>Apply</strong> saves and refreshes the
+                    running interface with the dialog still open. <strong>OK</strong> saves, refreshes and closes.
+                </p>
                 <h3>Persisted Custom Themes</h3>
                 <p>
-                    If <code>settings.json</code> already contains valid custom themes, they appear after all built-in
-                    themes. Their operator-authored names stay unchanged when the interface language changes. Selecting
-                    one updates the preview, and Apply or OK preserves both the selected custom theme and its existing
-                    payload while saving the Settings-page fields.
+                    If <code>settings.json</code> already contains valid custom themes, they appear in the combo after
+                    the built-in ones, under the names their author gave them, and those names are not re-translated
+                    when you change the interface language. Selecting one updates the preview, and Apply or OK keeps
+                    both the selection and the theme's stored colours.
                 </p>
                 <div class="note">
-                    The current Settings dialog does not create, duplicate, edit, delete, import, or export custom
-                    themes. Invalid or duplicate custom entries remain filtered and are not offered for selection.
+                    The Settings dialog does not create, duplicate, edit, delete, import, or export themes. It only
+                    selects among the built-in themes and any valid custom themes already present in the settings
+                    file; invalid or duplicated entries are filtered out and never offered.
+                </div>
+                <div class="note">
+                    A valid UTF-8 <code>settings.json</code> loads normally, with or without a byte-order mark. If the
+                    file is malformed, AudioMancer preserves its exact bytes beside it as
+                    <code>settings.corrupt.json</code> &mdash; or a numbered backup when that name is taken &mdash; and continues
+                    with built-in defaults. Keep those backups private: they contain the same API keys as the
+                    original.
                 </div>
                 <figure>
                     <img src="assets/screenshots/settings-dialog.png" alt="Settings dialog">
-                    <figcaption>The Settings dialog controls language, completion beep behavior, scroll steps, built-in and already persisted valid custom theme selection, plus interface and text-window font sizes.</figcaption>
+                    <figcaption>Settings controls language, the completion beep, scroll steps, the theme, and the interface and text-window font sizes, with a live preview.</figcaption>
                 </figure>
             </section>
 
             <section id="ai-settings">
                 <h2>AI Settings</h2>
                 <p>
-                    AI Settings stores chat-model profiles for AI-assisted cleanup, chunking, translation, character
-                    discovery, and Speech Blocks. These profiles do not generate audio. Audio generation is handled by
-                    VoiceWeaver through TTS Settings.
+                    AI Settings stores the chat-model profiles used for AI-assisted cleanup, chunking, translation,
+                    character discovery, narrator profile generation, and Speech Blocks. These profiles never generate
+                    audio &mdash; that is VoiceWeaver's job, configured in TTS Settings.
                 </p>
                 <h3>Create A Profile</h3>
                 <ol>
-                    <li>Open <strong>AI Settings</strong>.</li>
-                    <li>Create a profile with a clear name, such as <code>Translation_gpt-5.5</code> or <code>SpeechBlocks_LMStudio_Qwen3</code>.</li>
-                    <li>Set <strong>Backend Kind</strong> to an OpenAI-compatible backend.</li>
-                    <li>For OpenAI online models, use <code>https://api.openai.com/v1</code> and enter an API key acquired from your OpenAI account.</li>
-                    <li>For LM Studio, start the local server and use <code>http://localhost:1234/v1</code>, or the LAN address if LM Studio is on another computer.</li>
-                    <li>Enter the model name exactly as the provider or LM Studio shows it.</li>
-                    <li>Use <strong>Connect</strong> to verify the profile, then set default profiles for each operation.</li>
-                    <li>Click <strong>Save</strong> to persist without closing the dialog, or <strong>OK</strong> to persist and close.</li>
+                    <li>Open <strong>AI Settings</strong> and press <strong>Add Profile</strong>. The new profile is added to the list on the left and selected.</li>
+                    <li>Give it a clear <strong>Profile Name</strong>, such as <code>Translation_gpt-5.5</code> or <code>SpeechBlocks_LMStudio_Qwen3</code>. Leave <strong>Profile enabled</strong> ticked &mdash; only enabled profiles appear in the profile lists on the workflow pages.</li>
+                    <li>Choose the <strong>Backend Kind</strong>: <code>lmstudio</code>, <code>ollama</code>, or <code>openai_compatible</code>.</li>
+                    <li>Enter the <strong>Base URL</strong>. For OpenAI use <code>https://api.openai.com/v1</code>; for LM Studio start its local server and use <code>http://127.0.0.1:1234/v1</code>, or the LAN address when it runs elsewhere.</li>
+                    <li>Enter the <strong>API Key</strong> for online providers. The field is masked and may be left empty for a local provider.</li>
+                    <li>Press <strong>Connect</strong>. On success AudioMancer reports how many models it found and fills the <strong>Model Name</strong> list with them; on failure it shows the reason and keeps your last working values.</li>
+                    <li>Pick the model in <strong>Model Name</strong>. The field is editable, so you can also type a name the provider did not list.</li>
+                    <li>Set <strong>Context Window</strong>, <strong>Max Output Tokens</strong>, <strong>Timeout (s)</strong> and <strong>Temperature</strong>, then choose the default profile for each operation at the bottom of the dialog.</li>
+                    <li><strong>Cancel</strong> discards the session. <strong>Apply</strong> saves without closing. <strong>OK</strong> saves and closes.</li>
                 </ol>
                 <p>
-                    You can switch among profiles while editing: each profile keeps its unsaved values inside the
-                    open dialog. Save or OK persists the session; Cancel still discards it. A successful
-                    <strong>Connect</strong> refreshes that profile's model list. When the exact selected model reports
-                    a context window, AudioMancer fills <strong>Context Window</strong> automatically unless you have
-                    entered a value yourself. LM Studio uses the loaded instance's active context when available,
-                    while Ollama reads the selected model's details. If a later connection attempt fails, the error is
-                    shown without removing the last successful model choices or discovered context.
+                    You can move between profiles while editing; each one keeps its unsaved values until you save or
+                    cancel. <strong>Remove Profile</strong> deletes the selected profile without asking, and refuses
+                    to delete the last remaining one; any operation default pointing at the removed profile falls back
+                    to <strong>(none)</strong>.
+                </p>
+                <p>
+                    A successful <strong>Connect</strong> can fill <strong>Context Window</strong> for you when the
+                    selected model reports one &mdash; LM Studio from the loaded instance, Ollama from the model details.
+                    Once you type in <strong>Model Name</strong> or <strong>Context Window</strong> yourself, later
+                    connections leave your value alone.
+                </p>
+                <h3>Numeric Fields</h3>
+                <table>
+                    <thead>
+                        <tr><th>Field</th><th>Range</th><th>Default</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Context Window</td><td>1 - 1000000</td><td>16384</td></tr>
+                        <tr><td>Max Output Tokens</td><td>1 - 1000000</td><td>8192</td></tr>
+                        <tr><td>Timeout (s)</td><td>1 - 65535</td><td>300</td></tr>
+                        <tr><td>Temperature</td><td>0.00 - 2.00, step 0.05</td><td>0.20</td></tr>
+                    </tbody>
+                </table>
+                <div class="warning">
+                    <strong>Max Output Tokens matters most for translation.</strong> A translation is about as long as
+                    its source, so AudioMancer sizes each translation request by what the reply can return, not by the
+                    context window alone. A profile with a wide context window but a small output limit is simply
+                    split into more, smaller requests. If the output limit is too small to return even one request's
+                    translation, AI Translation refuses to start and names that setting.
+                </div>
+                <h3>Operation Defaults</h3>
+                <p>
+                    The lower part of the dialog sets which profile each operation starts with:
+                    <strong>Default Cleanup Profile</strong>, <strong>Default Chunking Profile</strong>,
+                    <strong>Default Translation Profile</strong>, <strong>Default Narrator Generation
+                    Profile</strong>, <strong>Default Character Extraction Profile</strong> and <strong>Default Speech
+                    Blocks Profile</strong>. Each lists <strong>(none)</strong> followed by every enabled profile.
+                </p>
+                <p>
+                    Two further controls sit among them and are not profile choices. <strong>Default AI Chunking
+                    Strategy</strong> presets the strategy the Text Chunking page starts with &mdash;
+                    <strong>Paragraph</strong>, <strong>Meaning</strong> or <strong>Scene</strong>. <strong>Chunking
+                    Context Mode</strong> &mdash; <strong>Balanced</strong>, <strong>Wide scene context</strong> or
+                    <strong>Maximum context</strong> &mdash; decides how much text AI chunking reads at once; wider windows
+                    can produce more natural boundaries but cost more time per request.
                 </p>
                 <h3>Recommended OpenAI Online Profiles</h3>
                 <table>
@@ -239,459 +289,707 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h3>Recommended LM Studio Local Profiles</h3>
                 <table>
                     <thead>
-                        <tr><th>Operation</th><th>Recommended model</th><th>Fallback</th><th>Temperature</th><th>Context</th></tr>
+                        <tr><th>Operation</th><th>Recommended model</th><th>Fallback</th><th>Temperature</th><th>Context</th><th>Max output</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>AI Cleanup</td><td><code>mistralai/mistral-small-3.2</code></td><td><code>openai/gpt-oss-20b</code></td><td>0.0-0.05</td><td>32768</td></tr>
-                        <tr><td>AI Chunking</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td></tr>
-                        <tr><td>AI Translation</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td></tr>
-                        <tr><td>Character Discovery</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td></tr>
-                        <tr><td>Speech Blocks</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td></tr>
+                        <tr><td>AI Cleanup</td><td><code>mistralai/mistral-small-3.2</code></td><td><code>openai/gpt-oss-20b</code></td><td>0.0-0.05</td><td>32768</td><td>8192</td></tr>
+                        <tr><td>AI Chunking</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
+                        <tr><td>AI Translation</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td><td>8192</td></tr>
+                        <tr><td>Character Discovery</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
+                        <tr><td>Speech Blocks</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td><td>8192</td></tr>
                     </tbody>
                 </table>
                 <div class="note">
-                    OpenAI online profiles require an API key from an OpenAI account. Keep the key private and enter it
-                    only in the AudioMancer AI Settings window.
-                    For LM Studio, AudioMancer sends the selected model, context, output budget, temperature, timeout,
-                    and structured-output hint. You can configure top-p, top-k, repeat penalty, seed, and reasoning mode in LM Studio presets for the loaded model.
+                    AudioMancer sends the model, context window, output budget, temperature, timeout, and &mdash; when
+                    <strong>Structured output</strong> is ticked &mdash; a structured-output hint. Sampling details such as
+                    top-p, top-k, repeat penalty, seed and reasoning mode belong to the LM Studio preset for the
+                    loaded model. Keep online API keys private and enter them only in this dialog.
                 </div>
                 <figure>
                     <img src="assets/screenshots/ai-settings-dialog.png" alt="AI Settings dialog">
-                    <figcaption>AI Settings stores text-model profiles and default choices for AI-assisted pages.</figcaption>
+                    <figcaption>AI Settings stores text-model profiles, their limits, and the default profile for each AI-assisted operation.</figcaption>
                 </figure>
             </section>
 
             <section id="tts-settings">
                 <h2>TTS / VoiceWeaver Settings</h2>
                 <p>
-                    TTS Settings controls the VoiceWeaver runtime used for narrator samples, character samples, and
-                    final Audio Blocks. Current AudioMancer audio generation works only through VoiceWeaver. It also
-                    stores the Scene Ambience sound-generation defaults used after Speech Blocks create ambience
-                    prompts.
+                    TTS Settings configures the VoiceWeaver runtime used for narrator samples, character samples and
+                    Audio Blocks, and stores the Scene Ambience sound-generation defaults.
                 </p>
+                <h3>VoiceWeaver Runtime</h3>
                 <ol>
                     <li>Install and start VoiceWeaver on this computer or on another computer in the same network.</li>
-                    <li>Open <strong>TTS Settings</strong>.</li>
-                    <li>Enter the VoiceWeaver runtime base URL.</li>
-                    <li>Use <strong>Test Connection</strong> so AudioMancer can discover available models and limits.</li>
-                    <li>Adjust preview and generation timeouts if your runtime is slow.</li>
-                    <li>
-                        Set <strong>Narration Block Target (s)</strong> if you want shorter same-narrator blocks than
-                        the model allows. Leave it at <strong>Automatic (model limit)</strong> to use the widest safe
-                        block the discovered TTS model supports. This setting can only shorten blocks: the model token
-                        budget always remains the hard limit, because asking for more audio than the model can generate
-                        produces truncated or silent output.
-                    </li>
-                    <li>Set <strong>Scene Ambience Placement</strong> to <strong>None</strong>, <strong>Openers and closers</strong>, or <strong>Openers, closers, and scene changes</strong>.</li>
-                    <li>Set the Scene Ambience block duration and maximum blocks per sequence. The LLM may use fewer blocks when fewer distinct sound sources are useful.</li>
-                    <li>Adjust Scene Ambience guidance, inference steps, and seed for the sound-prompt model. Use <strong>Random</strong> seed when repeatability is not required.</li>
-                    <li>Click <strong>Save</strong> to persist without closing the dialog, or <strong>OK</strong> to persist and close.</li>
+                    <li>Enter the <strong>Base URL</strong>. The default is <code>http://127.0.0.1:8059</code>.</li>
+                    <li>Enter an <strong>API Key</strong> if your runtime requires one. The field is masked.</li>
+                    <li>Press <strong>Test Connection</strong>. AudioMancer reports success with the number of models found, or shows the failure reason. The status line beside the button reads <strong>Not connected</strong>, <strong>Connected</strong> or <strong>Connection failed</strong>, and starts at <em>Not connected</em> every time the dialog opens.</li>
                 </ol>
                 <p>
-                    The audiobook language and narration mode are selected on the Home page and then locked for the
-                    project. TTS Settings stays focused on runtime connection, discovered models, text limits,
-                    generation timeouts, and Scene Ambience sound-model defaults. Speech Blocks ambience enablement
-                    comes from the Scene Ambience Placement setting.
+                    <strong>Discovered Models</strong> lists what the runtime offers, one row per model as
+                    <em>model | status | generation modes</em>, with <em>active</em> appended to the one in use. Until
+                    a probe succeeds it shows a single line saying no models were discovered.
+                </p>
+                <p>
+                    <strong>Runtime Audio Limits</strong> tells you whether the required Qwen3 base and Voice Designer
+                    capabilities are available. Before a successful probe it asks you to test the connection first;
+                    afterwards it either confirms the capabilities or names the ones that are missing.
+                </p>
+                <h3>Timing And Text Limits</h3>
+                <table>
+                    <thead>
+                        <tr><th>Setting</th><th>Range</th><th>Default</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Audio Preview Timeout (s)</td><td>10 - 3600</td><td>60</td></tr>
+                        <tr><td>Audio Generation Timeout (s)</td><td>30 - 7200</td><td>300</td></tr>
+                        <tr><td>Preview Text Limit (chars)</td><td>64 - 8192</td><td>512</td></tr>
+                        <tr><td>Narration Block Target (s)</td><td>0 - 300, step 5</td><td>0 (<strong>Auto</strong>)</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    <strong>Preview Text Limit</strong> is the hard ceiling on the preview text of a voice profile &mdash;
+                    the Narrator Voice and Character Voices editors stop accepting characters beyond it as you type.
+                </p>
+                <p>
+                    <strong>Narration Block Target</strong> asks for shorter same-narrator blocks than the model would
+                    otherwise allow. At its lowest setting it displays <strong>Auto</strong> and AudioMancer uses the
+                    widest safe block the discovered TTS model supports. This setting can only shorten blocks: the
+                    model's token budget stays the hard limit, because asking for more audio than the model can
+                    produce yields truncated or silent output. A non-zero value below five seconds is raised to five.
+                </p>
+                <h3>Scene Ambience</h3>
+                <table>
+                    <thead>
+                        <tr><th>Setting</th><th>Range</th><th>Default</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Scene Ambience Placement</td><td>None &middot; Openers and closers &middot; Openers, closers and scene changes</td><td>None</td></tr>
+                        <tr><td>Scene Ambience Max Sequence Duration (s)</td><td>1 - 120</td><td>10</td></tr>
+                        <tr><td>Scene Ambience Max Blocks</td><td>1 - 24</td><td>6</td></tr>
+                        <tr><td>Scene Ambience Guidance</td><td>0.1 - 30.0, step 0.5</td><td>7.0</td></tr>
+                        <tr><td>Scene Ambience Steps</td><td>1 - 300</td><td>100</td></tr>
+                        <tr><td>Scene Ambience Seed</td><td>-1 - 2147483647</td><td>-1 (<strong>Random</strong>)</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    <strong>Scene Ambience Placement</strong> is the switch that decides whether Speech Blocks
+                    generation creates ambience blocks at all. Leave it at <strong>None</strong> for a
+                    speech-only audiobook. <strong>Max Sequence Duration</strong> is the length of the whole ambience
+                    sequence, and it governs the sound AudioMancer generates for an ambience block; the per-block
+                    duration on the Speech Blocks page is only used when this setting does not apply. <strong>Max
+                    Blocks</strong> is a ceiling, not a quota &mdash; the model may use fewer when fewer distinct sound
+                    sources are useful. Set a fixed <strong>Seed</strong> when you want a repeatable sound, or leave
+                    it at <strong>Random</strong>.
+                </p>
+                <p>
+                    <strong>Cancel</strong>, <strong>Apply</strong> and <strong>OK</strong> behave as they do in
+                    Settings. The audiobook language and the narration mode are not here &mdash; they belong to the project
+                    and are locked on the Home page.
                 </p>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="TTS Settings dialog">
-                    <figcaption>TTS Settings verifies VoiceWeaver and stores runtime limits plus Scene Ambience sound-generation defaults.</figcaption>
+                    <figcaption>TTS Settings verifies VoiceWeaver, lists the discovered models, and stores the timing, preview and Scene Ambience defaults.</figcaption>
                 </figure>
             </section>
 
             <section id="project">
                 <h2>Create Or Open A Project</h2>
+                <p>
+                    A project is one folder holding the source book, every generated file, and the final audio.
+                    <strong>New Project</strong> and <strong>Open Project</strong> are toolbar actions, available at
+                    any time.
+                </p>
                 <ol>
-                    <li>Click <strong>New Project</strong> to make a new work folder.</li>
-                    <li>Choose a simple project name, such as the book title.</li>
-                    <li>Click <strong>Select Source File</strong> on the Home page.</li>
-                    <li>Select the book or story file. Supported formats include TXT, PDF, RTF, DOCX, ODT, MD, and EPUB.</li>
-                    <li>TXT and RTF extraction recognizes UTF-8 plus common Central European, Western European, and cp1251 Russian text. EPUB chapters honor their BOM or XML/HTML charset declaration, including UTF-16 and declared legacy encodings.</li>
-                    <li>Choose <strong>Translation language</strong> and <strong>Audio output style</strong>.</li>
-                    <li>Click <strong>Start Project</strong>. The source, target language, voice language, and narration mode are locked for this project.</li>
+                    <li>Press <strong>New Project</strong>. Choose the parent folder, then enter the project name &mdash; the book title works well.</li>
+                    <li>On the Home page press <strong>Select Source File</strong> and pick the book. Supported formats are TXT, PDF, RTF, DOCX, ODT, MD and EPUB.</li>
+                    <li>Choose the <strong>Translation language</strong> &mdash; English, Romanian, German, French, Russian, Portuguese, Spanish or Italian.</li>
+                    <li>Choose the <strong>Audio output style</strong>: <strong>Same narrator for whole book</strong>, or <strong>Narrator + character voices</strong>.</li>
+                    <li>Press <strong>Start Project</strong> and confirm. The source file, the translation language and the audio output style are then fixed for this project.</li>
                 </ol>
                 <p>
-                    Use <strong>Open Project</strong> to return to an existing project folder. The compact Home
-                    dashboard combines the current stage with operation summaries so finished and waiting workflow
-                    steps are visible.
+                    Once the options are locked, the two combos and <strong>Start Project</strong> grey out and the
+                    summary reads <em>Locked source</em>. To work from a different source file or a different output
+                    style, create a new project.
                 </p>
                 <p>
-                    If the filesystem blocks project creation, source import, or an accepted repair, AudioMancer
-                    shows the project error and its original reason. It does not switch projects or report success.
+                    <strong>Open Project</strong> returns to an existing project folder. If the project data is
+                    damaged, AudioMancer explains what it found and offers to repair it rather than opening it
+                    silently. If the filesystem blocks creation, import or a repair, AudioMancer shows the error and
+                    its original reason; it does not switch projects or report success.
                 </p>
                 <p>
-                    The Home dashboard also shows completion status for each phase. When a phase is complete, its
-                    export action becomes available: cleaned text, chunks, AI translation, characters, and Speech
-                    Blocks can be exported as documents, and <strong>Export Project ZIP</strong> creates a complete
-                    project snapshot.
+                    TXT and RTF extraction recognises UTF-8 as well as common Central European, Western European and
+                    cp1251 Russian text. EPUB chapters follow their byte-order mark or their declared XML/HTML
+                    charset, including UTF-16 and declared legacy encodings.
+                </p>
+                <h3>Reading The Home Page</h3>
+                <p>
+                    <strong>Project Summary</strong> shows the project name, folder, source file, whether the options
+                    are locked, and what to do next. <strong>Workflow Pipeline</strong> draws the ten stages as a
+                    strip of beads: filled with a tick when finished, filled with a dot while in progress, and hollow
+                    when not started. <strong>Workflow Progress</strong> repeats the same information as a list, one
+                    row per stage reading <em>Not Started</em>, <em>In Progress</em> or <em>Finished</em>, with a
+                    tooltip explaining what that stage is waiting for.
                 </p>
             </section>
 
             <section id="manual-workflow">
                 <h2>Manual Workflow Example</h2>
                 <p>
-                    This example shows a mostly manual production path. Use it when you want AudioMancer to manage
-                    project files, review progress, voices, generated audio, and exports, but you want to decide the text
-                    chunks and Speech Blocks yourself.
+                    This is a mostly manual production path. Use it when you want AudioMancer to manage the project
+                    files, voices, audio and exports, but you want to decide the chunks and the Speech Blocks
+                    yourself.
                 </p>
                 <ol>
-                    <li>Create a project from <strong>Home / Project</strong>, select the source file, choose the translation language and audio output style, then click <strong>Start Project</strong>.</li>
-                    <li>Open <strong>Text Cleanup</strong>, run deterministic cleanup, manually edit the cleaned text if needed, then approve it.</li>
-                    <li>Open <strong>Text Chunking</strong>. If you want a fully manual structure, use <strong>Insert</strong> to create the first chunk, paste or type the desired chunk text, and save it. Select a chunk and press <strong>Insert</strong> again to add the next chunk after the current one.</li>
-                    <li>Use <strong>Edit</strong>, <strong>Save</strong>, and <strong>Delete</strong> in Text Chunking until the chunk list matches the book order you want.</li>
-                    <li>Run <strong>AI Translation</strong> when you want a translated or same-language AI rewrite/adaptation pass. If no translation work is needed, continue only after the existing chunks are approved.</li>
-                    <li>Open <strong>Characters</strong>. Run discovery or add/edit characters manually. Confirm names, aliases, gender hint, age hint, voice definition prompt, and evidence, then approve the character list.</li>
-                    <li>Open <strong>Narrator Voice</strong>. Generate or edit the narrator profile, create or import the narrator WAV sample, preview it, and select it.</li>
-                    <li>Open <strong>Character Voices</strong> when the project uses character voices. Generate or import the available character samples; it is fine to continue with only the characters that already have usable samples.</li>
-                    <li>Open <strong>Speech Blocks</strong>. Select the first source chunk, press <strong>Insert</strong>, choose the speaker and content kind, enter the text, and save. Keep inserting after the selected block until the chunk contains the narration, dialogue, pauses, ambience, and indications you want.</li>
-                    <li>Use <strong>Edit</strong>, <strong>Delete</strong>, <strong>Approve</strong>, <strong>Generate Audio</strong>, and <strong>Play/Stop</strong> on selected Speech Blocks to review one block at a time without losing your current selection.</li>
-                    <li>Open <strong>Audio Blocks</strong> to generate any remaining approved spoken blocks, listen to generated WAV files, regenerate weak blocks, then approve the audio.</li>
-                    <li>Open <strong>Audio Assembly</strong>, choose the composition method, generate the final audiobook WAV output, and review the files with the playback controls.</li>
-                    <li>Return to <strong>Home / Project</strong> to export text documents, voice ZIP archives, Audio Assembly ZIP archives, or a complete project ZIP snapshot.</li>
+                    <li>Create the project from the toolbar, select the source file on <strong>Home / Project</strong>, choose the translation language and audio output style, then press <strong>Start Project</strong>.</li>
+                    <li>Open <strong>Text Cleanup</strong>, press <strong>Extract Text</strong>, then press <strong>Cleanup</strong> with the AI profile set to <strong>(none)</strong> for a deterministic pass. Press <strong>Edit</strong> to correct the cleaned text by hand, then <strong>Save</strong>.</li>
+                    <li>Open <strong>Text Chunking</strong>. For a fully manual structure press <strong>Insert</strong> to create the first chunk, press <strong>Edit</strong>, paste or type the chunk text, and press <strong>Save</strong>. Select a chunk and press <strong>Insert</strong> again to add the next one after it.</li>
+                    <li>Use <strong>Edit</strong>, <strong>Save</strong> and <strong>Delete</strong> until the chunk list matches the book order you want. The last remaining chunk cannot be deleted.</li>
+                    <li>Run <strong>AI Translation</strong> if the audiobook should be in another language, or if you want an AI rewrite in the same language. Otherwise skip the page entirely.</li>
+                    <li>Open <strong>Characters</strong>. Run <strong>Start Discovery</strong>, or build the list by hand with <strong>Add Character</strong>. Correct names, aliases, hints and voice definition prompts with <strong>Edit Character</strong> and <strong>Save Character</strong>.</li>
+                    <li>Open <strong>Narrator Voice</strong>. Press <strong>Create</strong> for a profile of your own or <strong>Generate Narrators</strong> for AI suggestions, write the prompt and preview text, press <strong>Generate Sample</strong> or <strong>Import Sample</strong>, listen with <strong>Play</strong>, then press <strong>Select</strong>.</li>
+                    <li>Open <strong>Character Voices</strong> when the project uses character voices. Give each character a prompt and a sample. It is fine to continue with only the characters that already have usable samples.</li>
+                    <li>Open <strong>Speech Blocks</strong>. Select a chunk, press <strong>Insert</strong>, choose the speaker and the content kind, enter the text, and press <strong>Save</strong>. Keep inserting until the chunk holds the narration, dialogue, pauses, ambience and indications you want.</li>
+                    <li>Use <strong>Approve</strong>, <strong>Generate Audio</strong> and <strong>Play</strong> to review one block at a time without losing your place.</li>
+                    <li>Open <strong>Audio Blocks</strong> to generate the remaining approved blocks, listen with <strong>Play</strong> or <strong>Play Audiobook</strong>, regenerate weak blocks, and approve the audio.</li>
+                    <li>Open <strong>Audio Assembly</strong>, choose the output mode, press <strong>Generate Audio</strong>, and review the result with the playback bar.</li>
+                    <li>Return to <strong>Home / Project</strong> to export the text documents, the voice ZIP archives, the Audio Assembly ZIP, or a full project snapshot.</li>
                 </ol>
                 <div class="note">
-                    Manual edits preserve unrelated downstream work where possible. When a change affects generated
-                    audio, AudioMancer resets only the affected Audio Blocks and asks you to review the impact before
-                    destructive edits.
+                    Manual edits preserve unrelated downstream work. When an edit affects generated audio, AudioMancer
+                    tells you exactly what will be reset and waits for your confirmation before saving.
                 </div>
             </section>
 
             <section id="cleanup">
                 <h2>Text Cleanup</h2>
                 <p>
-                    Text Cleanup extracts readable text from the source file and prepares it for audiobook work.
-                    Deterministic cleanup uses local rules and is the safest first pass. AI-assisted cleanup can help
-                    with broken OCR, page artifacts, and poor paragraph formatting, but you must review the result.
+                    Text Cleanup extracts readable text from the source file and prepares it for audiobook work. The
+                    page has two previews side by side: <strong>Extracted Text Preview</strong> on the left, always
+                    read-only, and <strong>Cleaned Text Preview</strong> on the right.
                 </p>
-                <ul>
-                    <li>Extract source text from supported documents.</li>
-                    <li>Run deterministic cleanup or AI-assisted cleanup; for a fresh AI cleanup run, add optional extra prompt rules when the instructions box appears. Cancelling that optional prompt leaves AI-assisted cleanup ready to start again.</li>
-                    <li>Cleanup is supported for English, Romanian, German, French, Russian, Portuguese, Spanish, and Italian source text. If another source language is detected, Cleanup still finishes and keeps its reviewable output, but it shows one warning with the detected code so you can review the result carefully.</li>
-                    <li>Starting Cleanup again after it has completed asks for confirmation and then starts a genuinely fresh Cleanup pass. This removes the previous Cleanup result and every later workflow result. An interrupted, paused, finalizing, or failed Cleanup run remains resumable instead and keeps its checkpoint.</li>
-                    <li>After AI cleanup completes, select any combination of <strong>Heading</strong>, <strong>Separator</strong>, <strong>Noise</strong>, <strong>Header</strong>, and <strong>Footer</strong>, then press <strong>Apply Spacing</strong>. Story text is never selectable and remains exact. Deselect every category to remove all controllable inter-block blank lines; reapplying uses retained decisions and does not call the AI provider again.</li>
-                    <li>Edit the cleaned text directly to manually improve wording, fix OCR errors, or correct formatting. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
-                    <li>While editing cleaned text, Extract Text, Cleanup, Reset Cleanup, and the optional AI profile are unavailable so your draft cannot be replaced. Save and Cancel remain available; ordinary page refreshes keep the draft. New Project and Open Project ask before discarding changed unsaved text, and cancelling a project picker keeps the draft.</li>
-                    <li>After Cleanup runs again or a cleaned-text edit is saved, regenerate Text Chunking and every later result. AudioMancer removes those stale results and resets their project statuses automatically.</li>
-                    <li>Approve the cleaned text only after review; approved text unlocks Text Chunking.</li>
-                    <li>Drag the divider between extracted and cleaned previews; each preview keeps at least one third of the page width.</li>
-                    <li>Interrupt cleanup and continue it later from the same project. Resumed AI progress continues from the last completed provider request; if a request batch must split into more calls, the displayed total grows instead of hiding completed work or showing a false finish.</li>
-                </ul>
+                <h3>Running It</h3>
+                <ol>
+                    <li>Press <strong>Extract Text</strong>. If a completed extraction already exists, AudioMancer asks first, because a new extraction deletes the current extraction and every later result.</li>
+                    <li>Choose an <strong>AI Profile (optional)</strong>. Leave it at <strong>(none)</strong> for a purely deterministic pass using local rules &mdash; the safest first attempt. Choose an enabled profile to let a model help with broken OCR, page artifacts and poor paragraph formatting.</li>
+                    <li>Press <strong>Cleanup</strong>. There is one Cleanup button for both cases; the profile decides whether a model is involved. If a completed cleanup already exists, AudioMancer asks before replacing it and everything downstream.</li>
+                    <li>Read the result. Press <strong>Edit</strong> to correct it by hand, then <strong>Save</strong> &mdash; or <strong>Cancel</strong> to discard the draft and restore the saved text.</li>
+                </ol>
+                <p>
+                    While an edit is open, <strong>Extract Text</strong>, <strong>Cleanup</strong>, <strong>Reset
+                    Cleanup</strong> and the profile combo all grey out, so no workflow action can replace your draft
+                    behind your back. Only <strong>Save</strong> and <strong>Cancel</strong> stay available.
+                </p>
+                <p>
+                    <strong>Reset Cleanup</strong> always asks first. It deletes the cleanup document, the cleaned
+                    text file, the cleanup logs, and every downstream result including characters, voices and audio.
+                </p>
+                <div class="note">
+                    This page has no approval button. Text Chunking unlocks as soon as cleanup has produced a non-empty
+                    cleaned text &mdash; review the text and correct it before moving on, because nothing else gates it.
+                    After Cleanup runs again or a cleaned-text edit is saved, the later stages are reset for you.
+                </div>
+                <p>
+                    Press <strong>Op Status</strong> for the run's notes. After a successful validation the status
+                    also reports how many low-confidence boundaries the pass found &mdash; a count worth reading before you
+                    move on.
+                </p>
+                <p>
+                    Cleanup is tuned for English, Romanian, German, French, Russian, Portuguese, Spanish and Italian.
+                    Another source language still produces reviewable output, with one warning naming the detected
+                    language code so you know to check the result closely.
+                </p>
+                <p>
+                    Drag the divider between the two previews to favour one side. The panes open at an even split and
+                    neither can be collapsed. Cleanup can be interrupted and continued later; resumed AI progress
+                    continues from the last completed request, and if a batch has to split into more calls the
+                    displayed total grows rather than hiding completed work.
+                </p>
                 <figure>
                     <img src="assets/screenshots/text-cleanup.png" alt="Text Cleanup page">
-                    <figcaption>Text Cleanup shows extraction and cleanup controls plus review text.</figcaption>
+                    <figcaption>Text Cleanup shows the extraction and cleanup controls above the extracted and cleaned previews.</figcaption>
                 </figure>
             </section>
 
             <section id="chunking">
                 <h2>Text Chunking</h2>
                 <p>
-                    Text Chunking splits the cleaned book into manageable chunks. Deterministic chunking is fast and
-                    repeatable. AI-assisted chunking can choose more natural scene or meaning boundaries for complex
-                    prose, but it costs model time and may take longer on local models.
+                    Text Chunking splits the cleaned book into the chunks every later page works with. The left column
+                    stacks <strong>Cleaned Text Reference</strong> above <strong>Chunk List</strong>; the right pane is
+                    <strong>Selected Chunk</strong>. Drag the divider between the two columns &mdash; each keeps at least a
+                    third of the page width. The split between the reference and the chunk list is fixed.
+                </p>
+                <h3>Generating Chunks</h3>
+                <ul>
+                    <li><strong>Deterministic Chunking</strong> is fast, free and repeatable. It needs no AI profile.</li>
+                    <li><strong>AI-Assisted Chunking</strong> can find more natural boundaries in complex prose, but costs model time. It needs an enabled profile selected in <strong>AI Profile</strong>, and stays greyed out until one is.</li>
+                    <li><strong>AI Strategy</strong> chooses how the model splits: <strong>Paragraph</strong> for stable paragraph windows, <strong>Meaning</strong> for semantic units, or <strong>Scene</strong> for scene-like boundaries.</li>
+                    <li>Before a fresh AI run, AudioMancer opens <strong>AI Chunking Instructions</strong> so you can add extra rules to the prompt. Leave it empty for the standard prompt; pressing Cancel there cancels the run. Resuming an interrupted run skips this dialog and reuses the strategy stored with the run, ignoring the combo.</li>
+                    <li>If the model returns no usable split for a window, AudioMancer keeps that window's structural boundaries where it can and otherwise saves the window as one chunk. The progress note names the paragraph range, and the finished run reports the total. A wider <strong>Chunking Context Mode</strong> in AI Settings may produce better boundaries.</li>
+                </ul>
+                <h3>Editing The List</h3>
+                <p>
+                    Each row of the chunk list shows the chunk id and the first line of its text. Select a chunk to
+                    load it into <strong>Selected Chunk</strong>.
                 </p>
                 <ul>
-                    <li>Generate chunks deterministically or with AI assistance.</li>
-                    <li>For a fresh AI chunking run, add optional extra prompt rules when the word-wrapped instructions box appears.</li>
-                    <li>Choose AI chunking strategy: <strong>Paragraph</strong> for stable paragraph windows, <strong>Meaning</strong> for semantic units, or <strong>Scene</strong> for scene-like boundaries.</li>
-                    <li>If AI returns no usable split for any text window, including the final window, AudioMancer preserves its structural boundaries when available and otherwise saves the window as one chunk. The progress note identifies the paragraph range, and the completed operation reports the total fallback-window count. A larger AI chunking context may produce more natural boundaries.</li>
-                    <li>Inspect generated chunks one by one.</li>
-                    <li>Edit generated chunk output before approval when the split or text needs manual correction. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
-                    <li>Use <strong>Insert</strong> to add a new empty chunk after the selected chunk, then save the text you want in that new chunk.</li>
-                    <li>Use <strong>Delete</strong> to remove the selected chunk when it should not continue downstream.</li>
-                    <li>Confirm manual inserts and deletes only after checking the impact message. AudioMancer preserves unaffected translations, Speech Blocks, and Audio Blocks where possible, but resets Audio Assembly because the final ordered content changed.</li>
-                    <li>Approve chunks to unlock translation, character discovery, and Speech Blocks.</li>
-                    <li>Drag the divider between the reference/list area and the selected chunk preview; each side keeps at least one third of the page width.</li>
-                    <li>Interrupt chunking and continue it later from the saved checkpoint. The page shows whether a run is in progress, resumable, or complete without inventing an unavailable total-progress value. Checkpoints created by older AudioMancer break-ID chunking restart from the beginning.</li>
+                    <li><strong>Insert</strong> adds a new empty chunk after the selected one, and creates the very first chunk when the list is empty. It asks first, because an inserted chunk adds an untranslated record and resets Audio Assembly.</li>
+                    <li><strong>Delete</strong> removes the selected chunk with its translation, Speech Blocks, Audio Blocks and generated audio, then resets Audio Assembly. It asks first, and it is unavailable when only one chunk remains.</li>
+                    <li><strong>Edit</strong> always asks first: editing a chunk can reset that chunk's translation, remove its Speech Blocks and Audio Blocks, and reset Audio Assembly. Unaffected chunks are preserved.</li>
+                    <li><strong>Save</strong> writes the edit without a further question.</li>
                 </ul>
+                <p>
+                    Right-click either text pane for <strong>Find</strong> and <strong>Find Next</strong>. The search
+                    wraps once from the top and reports when there is no match. Each pane remembers its own search
+                    term, so you can hunt for different text in the reference and in the selected chunk.
+                </p>
+                <div class="note">
+                    This page has no approval button either. Translation, character discovery and Speech Blocks unlock
+                    from the chunking result itself. Also note that an unsaved chunk draft is dropped whenever the
+                    page refreshes &mdash; press <strong>Save</strong> before starting anything else.
+                </div>
+                <p>
+                    Chunking can be interrupted and continued from its saved checkpoint. Checkpoints written by older
+                    AudioMancer versions restart from the beginning.
+                </p>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Text Chunking page">
-                    <figcaption>The chunk list is the foundation for translation, Speech Blocks, and final audio.</figcaption>
+                    <figcaption>The chunk list is the foundation for translation, Speech Blocks and final audio.</figcaption>
                 </figure>
             </section>
 
             <section id="translation">
                 <h2>AI Translation</h2>
                 <p>
-                    AI Translation is optional and is designed for <strong>literary translation</strong>: preserving
-                    tone, dialogue, character voice, narrative rhythm, and meaning rather than producing a mechanical
-                    word-for-word rewrite. Use it when the audiobook should be produced in another language. The target
-                    language is locked on the Home page and shown here as a read-only indicator. If source and target
-                    language match, AudioMancer still uses the configured AI profile when you start translation so the
-                    run can rewrite, normalize, or adapt the text rather than silently copying it.
+                    AI Translation is optional and aims at <strong>literary translation</strong>: keeping tone,
+                    dialogue, character voice, rhythm and meaning rather than producing a word-for-word rewrite.
+                    <strong>Original Language</strong> and <strong>Target Language</strong> are shown as read-only
+                    indicators &mdash; the target was locked when you started the project. When the two match, starting a
+                    translation still uses the AI profile, so the run rewrites, normalises or adapts the text instead
+                    of copying it.
                 </p>
+                <h3>The Page</h3>
+                <p>
+                    <strong>Chunk List</strong> sits across the top with its three buttons beside it. Each row is
+                    tagged <strong>[Pending]</strong>, <strong>[Translated]</strong> or <strong>[Approved]</strong>,
+                    followed by the chunk id and the first line of the source. Below it, <strong>Original
+                    Chunk</strong> and <strong>Translated Chunk</strong> sit side by side; the original also carries an
+                    <em>Approved chunks: n/m</em> counter and a bar that tracks approvals, not translation progress.
+                </p>
+                <p>
+                    Drag the horizontal divider under the chunk list to see more chunks at once. The list never
+                    shrinks below its opening height and never takes more than half the page, so both text panes stay
+                    usable. The two text panes each keep at least 30% of their shared width.
+                </p>
+                <h3>Translating</h3>
                 <ul>
-                    <li>Supported translation targets: English, Romanian, German, French, Russian, Portuguese, Spanish, and Italian.</li>
-                    <li>Generate translation per chunk.</li>
-                    <li>Add optional operator translation rules in the word-wrapped prompt box before a fresh translation, a new pass from review, or selected-chunk retranslation. Resume keeps the rules stored with the interrupted run, while selected-chunk rules apply only to that one attempt.</li>
-                    <li>Inspect every translated chunk beside its source context.</li>
-                    <li>Drag the horizontal divider under the Chunk List to make the chunk list taller when you need to see more chunks at once. The page still opens with the chunk list at its usual height; the divider never shrinks it below that height and never lets it take more than half of the space it shares with Original Chunk and Translated Chunk, so both text panes stay usable.</li>
-                    <li>Edit translated chunk text manually before approval. Automatic saves keep the editing cursor, selection, undo history, and scroll position in place, and Start/Resume saves the latest pending edit before translation continues.</li>
-                    <li>The selected enabled AI profile stays selected during review refreshes for the current session.</li>
-                    <li>Re-Translate Selected becomes available only after translation has started and is disabled while translation is busy. If that one-chunk attempt fails or is cancelled, the current text, approvals, and downstream-ready completed state remain unchanged.</li>
-                    <li>Approve individual chunks or continue reviewing until all chunks are approved.</li>
-                    <li>Restart translation after changing profile/settings or when you want a fresh literary pass.</li>
-                    <li>Interrupt translation and continue later from the same project.</li>
+                    <li><strong>Start Translation</strong> needs a selected AI profile and at least one chunk without a translation. AudioMancer opens <strong>AI Translation Instructions</strong> first so you can add extra rules; Cancel there cancels the run. Resuming an interrupted run skips the dialog and keeps the rules stored with it.</li>
+                    <li><strong>Re-Translate Selected</strong> becomes available once translation has started, and needs a selected chunk and a selected profile. It always asks for instructions, and those apply only to that one attempt. If the attempt fails or is cancelled, the existing text and approvals are left untouched.</li>
+                    <li><strong>Reset Translation</strong> is how you start a fresh pass. Once every chunk is translated, <strong>Start Translation</strong> greys out, so changing the profile or the rules for a new full pass means resetting first. It asks before deleting the translation and the downstream character, voice, speech, audio and audiobook results.</li>
+                    <li><strong>Approve Selected</strong> approves the current chunk and moves the selection to the next one, so you can review a whole book without touching the list. <strong>Approve All</strong> approves every translated chunk at once, without asking.</li>
                 </ul>
+                <div class="note">
+                    Edits to the translated text save themselves. Typing pauses for about three quarters of a second
+                    and the text is written; switching chunks, approving, starting a run or leaving the page saves it
+                    immediately. Your cursor, selection, undo history and scroll position survive the save.
+                    <strong>Changing a translation clears that chunk's approval</strong> &mdash; the row tag flips back from
+                    <em>[Approved]</em> as you type, which is deliberate: edited text has not been reviewed yet.
+                </div>
+                <p>
+                    Translation can be interrupted and continued later from the same project.
+                </p>
                 <figure>
                     <img src="assets/screenshots/ai-translation.png" alt="AI Translation page">
-                    <figcaption>Translated chunks must be reviewed and approved before downstream pages use them.</figcaption>
+                    <figcaption>The chunk list carries a status tag per chunk; the original and translated panes sit below it.</figcaption>
                 </figure>
             </section>
 
             <section id="characters">
                 <h2>Characters</h2>
                 <p>
-                    The Characters page uses AI to identify speaking roles, aliases, profile notes, evidence, and
-                    Qwen-oriented voice definition prompts. Review the result. Add, edit, delete, or regenerate voice
-                    definitions before moving to character voice samples. Character edits keep unrelated work intact,
-                    but affected Speech Blocks return to review and their generated audio is reset.
+                    The Characters page finds the speaking roles and gives each one a voice definition prompt for the
+                    voice pages. The left column stacks <strong>Character List</strong> above <strong>Character
+                    Profile</strong>; <strong>Evidence</strong> occupies the right.
+                </p>
+                <h3>Discovery</h3>
+                <p>
+                    Choose an enabled <strong>AI Profile</strong> and press <strong>Start Discovery</strong>. The first
+                    time, AudioMancer explains what the operation does; then it opens <strong>Character Discovery
+                    Instructions</strong> so you can add rules to the prompt, and Cancel there cancels the run.
+                    Resuming an interrupted run skips the instructions dialog &mdash; press <strong>Start Discovery</strong>
+                    again to continue, since there is no separate Resume button.
+                </p>
+                <p>
+                    <strong>Reset Discovery</strong> removes the discovery result and its transaction logs, along with
+                    the downstream work, while leaving upstream logs such as translation alone. Use it when the
+                    discovery data is unusable.
+                </p>
+                <p>
+                    While discovery runs or waits to resume, <strong>Op Status</strong> shows the completed and planned
+                    windows, and carries that baseline into character-profile synthesis. When candidates are excluded
+                    for insufficient evidence, the finished page groups the reasons without storing source excerpts,
+                    and the Characters export reports the same count.
+                </p>
+                <h3>The Character Profile</h3>
+                <p>
+                    Selecting a character fills the form: <strong>Canonical Name</strong>, <strong>Aliases</strong>
+                    (comma-separated), <strong>Gender Hint</strong> with its <strong>Gender Confidence</strong>,
+                    <strong>Age Hint</strong> with its <strong>Age Confidence</strong>, the <strong>Voice Definition
+                    Prompt</strong>, and an overall <strong>Confidence</strong>. Every field is read-only until you
+                    enter an edit; the form scrolls when the window is short.
                 </p>
                 <ul>
-                    <li>Discover narrator and character profiles from approved chunks or translated chunks.</li>
-                    <li>Add optional operator Character Discovery rules in the word-wrapped prompt box before a fresh discovery run.</li>
-                    <li>Review names, aliases, gender/age hints, role notes, speaking style, and source evidence.</li>
-                    <li>Edit discovered characters when the model merges, misses, or mislabels a speaker. Assigned Speech Blocks become unapproved so speaker attribution can be reviewed.</li>
-                    <li>Add missing characters manually or delete false positives. Deleting a character changes affected Speech Blocks back to Narrator, marks them unapproved, and resets only their Audio Blocks.</li>
-                    <li>Regenerate dedicated voice-definition text for characters when the description is weak.</li>
-                    <li>Approve the character list before narrator and character voice work continues.</li>
-                    <li>Drag the divider between the character workspace and evidence; each side keeps at least one third of the page width.</li>
-                    <li>Interrupt discovery and continue later from the same project. The page shows completed and planned discovery windows while discovery is running or resumable, then carries that window baseline into character-profile synthesis progress.</li>
-                    <li>Choose any enabled AI profile before Start or Resume. Normal page refreshes keep that selection; Resume uses the profile currently selected in the list.</li>
-                    <li>When discovery excludes candidates because their source or spoken-dialogue evidence is insufficient, the completed page groups the reasons without storing source excerpts; the Characters export shows the same warning count.</li>
-                    <li>As part of its established current-and-downstream reset, Reset Discovery removes Character Discovery transaction logs while preserving upstream logs such as Translation.</li>
-                    <li>If Character Discovery data is invalid, use <strong>Reset Discovery</strong> to remove it and return the page to a ready state.</li>
+                    <li><strong>Add Character</strong> asks for the canonical name, then opens the form for the rest. Saving asks to confirm, and synchronises the Character Voices target list while preserving existing Speech Blocks, Audio Blocks and assembly output.</li>
+                    <li><strong>Edit Character</strong> unlocks the form. Saving asks to confirm, because assigned Speech Blocks become unapproved, their Audio Blocks are reset, and Audio Assembly is reset.</li>
+                    <li><strong>Delete Character</strong> asks to confirm: assigned Speech Blocks return to the Narrator and become unapproved, only the affected Audio Blocks are reset, and Audio Assembly is reset.</li>
+                    <li><strong>Save Character</strong> commits the current add or edit. If you try to leave a character with unsaved changes, AudioMancer offers <strong>Save</strong>, <strong>Discard</strong> or <strong>Cancel</strong>.</li>
                 </ul>
+                <h3>Evidence</h3>
+                <p>
+                    The evidence list shows one row per supporting passage as <em>chunk id | reason</em>, and the pane
+                    beneath it shows the full source chunk. Drag the divider between them; neither drops below a fifth
+                    of the group's height. Right-click the preview for <strong>Find</strong> and <strong>Find
+                    Next</strong>.
+                </p>
+                <div class="note">
+                    There is no approval button on this page, and no button that regenerates a voice definition on its
+                    own. Correct a weak description by editing the <strong>Voice Definition Prompt</strong> directly,
+                    or refine it later on the voice pages, which is where it is actually used. Once discovery has
+                    completed, <strong>Start Discovery</strong> greys out &mdash; reset first to run it again.
+                </div>
                 <figure>
                     <img src="assets/screenshots/characters.png" alt="Characters page">
-                    <figcaption>Character profiles and evidence guide downstream voice generation.</figcaption>
+                    <figcaption>Character profiles and their supporting evidence guide the voice pages downstream.</figcaption>
                 </figure>
             </section>
 
             <section id="narrator">
                 <h2>Narrator Voice</h2>
                 <p>
-                    The Narrator Voice page prepares the main storytelling voice. Select a built-in or project-local
-                    profile, edit the prompt when needed, generate a VoiceWeaver sample, preview it, then select the
-                    narrator profile for the project.
+                    Narrator Voice prepares the main storytelling voice. The <strong>Narrator Voices</strong> list is
+                    on the left; <strong>Voice Designer Prompt</strong> and <strong>Preview Text</strong> stack on the
+                    right. The list shows one row per profile, with <em>| Selected</em> marking the one the project
+                    currently uses.
                 </p>
                 <div class="warning">
-                    The narrator voice is a dedicated project voice. Review the prompt and sample carefully because it
-                    becomes the main voice for narration and same-narrator projects.
+                    The narrator voice is a dedicated project voice. Review the prompt and the sample carefully &mdash; it
+                    becomes the main voice of the audiobook, and in same-narrator projects it speaks every line.
                 </div>
+                <h3>Building A Profile</h3>
                 <ul>
-                    <li>Inspect available narrator profiles and the selected project narrator.</li>
-                    <li>Use Generate Narrator Profiles to create editable text-only AI profile suggestions, with optional operator profile rules in a word-wrapped prompt box before every generation attempt.</li>
-                    <li>The enabled AI profile chosen for narrator suggestions remains selected while the page refreshes or you inspect another narrator. If it is removed or disabled, AudioMancer uses the configured narrator-generation default, then the first enabled profile.</li>
-                    <li>After a failed or cancelled profile run, retry restores the saved profile count and rules when its checkpoint is valid. Keep both unchanged to permit a compatible resume, or change the count or edit or clear the rules to start clean; cancelling either dialog starts no AI work.</li>
-                    <li>Edit narrator prompt, preview text, and voice description before generation.</li>
-                    <li>If an inspected profile is no longer available when you choose Edit, AudioMancer shows a project error so you can refresh the project and try again.</li>
-                    <li>When the project voice language changes, AudioMancer updates each profile language but preserves manually or AI-authored preview text. Only an untouched canonical preview default is replaced with the new language's default.</li>
-                    <li>The Preview budget uses word-based spoken units for the supported languages and must remain within the displayed safe limit before generating a sample.</li>
-                    <li>Generate a VoiceWeaver sample for the chosen voice language.</li>
-                    <li>Play and stop narrator samples inside the page.</li>
-                    <li>Editing or deleting a profile stops preview playback and releases its sample before cleanup; sample metadata is cleared even if the operating system still has the WAV file open.</li>
-                    <li>Use the Select button above the profile list to choose the final narrator sample used downstream by Speech Blocks and Audio Blocks.</li>
-                    <li>Regenerate samples if the voice does not fit the book.</li>
-                    <li>Maximize the application window to give the Voice Designer Prompt and Preview Text panels equal expanded height automatically.</li>
-                    <li>Drag the divider between the profile list and editor; the compact profile list keeps at least one fifth of the page width and the editor keeps at least one third.</li>
-                    <li>Interrupt sample generation and resume the workflow later.</li>
+                    <li><strong>Create</strong> asks for a display name, then opens an empty profile for editing.</li>
+                    <li><strong>Generate Narrators</strong> asks the selected AI profile for editable suggestions. It confirms first &mdash; the analysis can take a long time and may consume paid tokens &mdash; then asks how many profiles to generate (1 to 20), then opens <strong>Narrator Profile Instructions</strong> for optional extra rules. These are text suggestions only; no audio is produced.</li>
+                    <li><strong>Edit</strong> unlocks the prompt and preview text. It warns that continuing deletes the current sample, and, when you are editing the selected narrator and audio already exists, that the generated narrator audio and Audio Assembly will be reset.</li>
+                    <li><strong>Save</strong> commits the edit. <strong>Delete</strong> removes a custom profile after confirming.</li>
                 </ul>
+                <h3>Samples</h3>
+                <ul>
+                    <li><strong>Generate Sample</strong> confirms first &mdash; AudioMancer contacts the TTS runtime, and the connection must have been tested in TTS Settings &mdash; then produces the WAV. If a sample exists it is replaced.</li>
+                    <li><strong>Import Sample</strong> opens a WAV file picker, validates the file, then asks for the exact text spoken in it. That text is required: it is what the voice model matches against.</li>
+                    <li><strong>Play</strong> plays the sample and turns into <strong>Stop</strong> while it is playing, so you can stop it even while the page is otherwise busy.</li>
+                    <li><strong>Select</strong> makes the inspected profile the project narrator used by Speech Blocks and Audio Blocks. It confirms first, because the change resets narrator audio and Audio Assembly.</li>
+                </ul>
+                <p>
+                    <strong>Preview budget</strong> under the preview text shows the spoken units your text costs
+                    against the safe limit of the active TTS model, and updates as you type. Generation is refused
+                    while you are over that limit. The preview text is also cut off at the <strong>Preview Text
+                    Limit</strong> from TTS Settings as you type, so it can never exceed the character ceiling.
+                </p>
+                <p>
+                    When the project voice language changes, AudioMancer updates each profile's language but keeps
+                    preview text you or the model wrote; only an untouched default preview is replaced with the new
+                    language's default. Drag the divider between the list and the editor &mdash; the list stops shrinking at
+                    220 pixels and never grows past about half the page, and the editor keeps at least a third.
+                    Maximising the window gives the prompt and preview panels equal height.
+                </p>
                 <figure>
                     <img src="assets/screenshots/narator-voice.png" alt="Narrator Voice page">
-                    <figcaption>Narrator profiles keep prompts, preview text, samples, and the selected narrator voice.</figcaption>
+                    <figcaption>Narrator profiles hold the voice prompt, the preview text with its budget, the sample, and the selected narrator.</figcaption>
                 </figure>
             </section>
 
             <section id="character-voices">
                 <h2>Character Voices</h2>
                 <p>
-                    Character Voices prepares samples for discovered characters. In narrator-plus-character projects,
-                    each target can have its own prompt and VoiceWeaver sample. In same-narrator projects, this page
-                    is read-only for generation and reuses the selected narrator sample.
+                    Character Voices prepares a sample for each voice target. <strong>Voice Targets</strong> lists the
+                    narrator target first, then every discovered character, each row reading <em>name | Sample
+                    present</em> or <em>name | Sample missing</em>. <strong>Voice Designer Prompt</strong> and
+                    <strong>Preview Text</strong> stack on the right.
                 </p>
                 <div class="warning">
-                    Character voices are created dedicated for the current project and character list. Review each
-                    prompt and sample so dialogue stays consistent across the audiobook.
+                    Character voices are created for this project and this character list. Review each prompt and
+                    sample so dialogue stays consistent across the whole audiobook.
                 </div>
+                <p>
+                    In <strong>Narrator + character voices</strong> projects every character target can have its own
+                    prompt and sample. In <strong>Same narrator for whole book</strong> projects the page is read-only
+                    and every line reuses the selected narrator sample. The narrator target itself is never editable
+                    here &mdash; change it on the Narrator Voice page.
+                </p>
+                <div class="note">
+                    Opening this page before the selected narrator has a sample raises a one-time reminder. Generate
+                    the narrator sample first: the character work depends on it.
+                </div>
+                <h3>Controls</h3>
                 <ul>
-                    <li>Select each character voice target from the project character list.</li>
-                    <li>Review the character handoff prompt created during Character Discovery.</li>
-                    <li>Edit voice prompt and preview text before sample generation.</li>
-                    <li>Use <strong>Generate Character Samples</strong> to regenerate samples for all current character targets.</li>
-                    <li>Generate, play, stop, and regenerate VoiceWeaver samples per character.</li>
-                    <li>Changing one character voice preserves Speech Blocks and Audio Block rows, then clears only generated audio that uses that voice target. Narrator voice changes clear narrator-voice audio only.</li>
-                    <li>Approve or keep reviewing character voice assignments before Speech Blocks and Audio Blocks.</li>
-                    <li>Reuse narrator voice automatically in same-narrator mode.</li>
-                    <li>Drag the divider between the target list and editor; the list keeps at least one quarter of the page width and the editor keeps at least one third.</li>
-                    <li>Interrupt sample generation and continue later from the same project.</li>
+                    <li><strong>Edit</strong> unlocks the prompt and preview text for the selected character. It warns that continuing deletes that character's current sample, and, when generated audio exists, that audio using this voice and Audio Assembly will be reset. Speech Blocks and Audio Block rows themselves are preserved.</li>
+                    <li><strong>Save</strong> commits the edit. Both the prompt and the preview text must be non-empty.</li>
+                    <li><strong>Import Sample</strong> opens a WAV picker, then asks for the exact text spoken in the file, then confirms the audio impact.</li>
+                    <li><strong>Generate Sample</strong> confirms, then contacts the TTS runtime for that one character.</li>
+                    <li><strong>Preview</strong> plays the stored sample and turns into <strong>Stop Preview</strong> while it plays.</li>
+                    <li><strong>Generate Character Samples</strong>, at the top of the page, regenerates the samples of <em>all</em> current character targets after telling you how many will be replaced. It ignores the narrator target.</li>
                 </ul>
+                <div class="note">
+                    This page has no approval button. It is finished when the characters you care about show
+                    <em>Sample present</em>; it is fine to continue with only some of them covered.
+                </div>
                 <figure>
                     <img src="assets/screenshots/character-voices.png" alt="Character Voices page">
-                    <figcaption>Character voice samples are generated only when the project uses separate character voices.</figcaption>
+                    <figcaption>Voice targets list the narrator and every character with their sample status, beside the voice prompt and preview text. The action row in this screenshot predates the current button order.</figcaption>
                 </figure>
             </section>
 
             <section id="speech-blocks">
                 <h2>Speech Blocks</h2>
                 <p>
-                    Speech Blocks split text chunks into audiobook instructions: narration, dialogue, pause,
-                    indication, and optional Scene Ambience sound cues. Narrator-plus-character projects use
-                    speaker-aware AI splitting, because deciding who is speaking needs a model.
+                    Speech Blocks turns each chunk into audiobook instructions: narration, dialogue, pause, indication
+                    and optional Scene Ambience sound cues. <strong>Chunk List</strong> sits across the top with its
+                    action buttons beside it; below, <strong>Selected Chunk</strong> and <strong>Speech
+                    Blocks</strong> sit side by side.
                 </p>
-                <p>
-                    Same-narrator projects do not call a model at all. Every block gets the narrator voice, so the only
-                    remaining decision is where the block boundaries go, and that is decided from the text structure
-                    itself: whole sentences are packed into evenly sized blocks, a sentence is never cut in half, and a
-                    quotation spanning several sentences is kept together. Generation is therefore instant, repeatable,
-                    and costs no AI tokens; an AI profile is only needed if Scene Ambience is switched on. Use
-                    <strong>TTS Settings &rarr; Narration Block Target</strong> to ask for shorter blocks than the TTS
-                    model budget allows.
-                </p>
-                <p>
-                    Review each block. Use edit, insert, delete, re-split, approve, approve-all, character-count,
-                    Generate Audio, and Play/Stop controls to make the block list match the intended audiobook.
-                    Scene Ambience rows use dedicated fields for prompt, negative prompt, and duration.
-                </p>
+                <div class="warning">
+                    <strong>Generate All</strong> and <strong>Split Chunk</strong> require a selected AI profile in
+                    <em>every</em> project, including same-narrator ones. Set up at least one enabled profile in AI
+                    Settings before you reach this page.
+                </div>
+                <h3>Generating</h3>
                 <ul>
-                    <li>Generate Speech Blocks per approved text chunk.</li>
-                    <li>Use <strong>TTS Settings</strong> Scene Ambience Placement before generation or selected-chunk re-splitting to decide whether ambience blocks are created.</li>
-                    <li>Add optional operator Speech Blocks rules in the word-wrapped prompt box before fresh generation or selected-chunk re-splitting.</li>
-                    <li>Inspect speaker, block type, text, pause duration, indication, and Scene Ambience prompt fields.</li>
-                    <li>Scene Ambience is stored as separate ordered Speech Blocks. Each ambience block should describe one simple sound source or closely related sound type, not a composed ambience mix.</li>
-                    <li>Edit Scene Ambience prompt, negative prompt, and duration in the same selected-block detail area used for narrator and character blocks. Audio Blocks generation normalizes the generated sound duration to the Scene Ambience duration from TTS Settings.</li>
-                    <li>Edit selected blocks manually when attribution or text needs correction. If the selected block already has generated audio, the impact warning appears when you press <strong>Edit</strong>, before the editor unlocks.</li>
-                    <li>Use the selected-block character counter to compare current text length against the active TTS model limit.</li>
-                    <li>Insert or delete blocks to repair dialogue, pauses, or narration flow. Insert selects the inserted block; delete selects the next remaining block, or the previous row when the deleted block was last.</li>
-                    <li>Edit, save, insert, delete, approval changes, generation refreshes, and selected-chunk re-splitting preserve the selected-chunk text cursor, highlighted range, horizontal scroll, and vertical scroll. Insert still selects the inserted block; delete still selects the next or previous remaining block.</li>
-                    <li>Re-split selected chunks when the structure is not usable.</li>
-                    <li>Approve individual blocks or use approve-all after review. On an approved block, the same selected-block button changes to <strong>Unapprove</strong> and keeps that row selected.</li>
-                    <li>Use <strong>Generate Audio</strong> and <strong>Play/Stop</strong> on a selected approved block to preview exactly how the current Speech Block will sound without leaving the page.</li>
-                    <li>Editing, deleting, re-splitting, or changing speaker resets only the affected Audio Block. Inserting, approving, or unapproving a Speech Block preserves generated Audio Blocks and resets Audio Assembly.</li>
-                    <li>Reset Speech Blocks when upstream text, translation, characters, or voice mode changes.</li>
-                    <li>Drag the divider between Selected Chunk and Speech Blocks; each lower pane keeps at least one third of the page width.</li>
-                    <li>Drag the horizontal divider under the Chunk List to make the chunk list taller when you need to see more chunks at once. The page still opens with the chunk list at its usual height; the divider never shrinks it below that height and never lets it take more than 60% of the page height, so Selected Chunk and Speech Blocks stay usable.</li>
-                    <li>Interrupt generation and continue later without losing approved blocks.</li>
+                    <li><strong>Generate All</strong> processes every chunk that has none yet. It confirms first &mdash; one AI request per chunk, consuming tokens, and a successful run resets Audio Blocks and Audio Assembly. When Scene Ambience is enabled in TTS Settings it confirms that too, because ambience adds further calls per chunk. Finally it opens <strong>Speech Blocks Instructions</strong> for optional extra rules; resuming an interrupted run skips that dialog.</li>
+                    <li><strong>Split Chunk</strong> re-splits just the selected chunk. It confirms, then always asks for instructions &mdash; there is no resume exemption for a single chunk.</li>
+                    <li><strong>Reset</strong> deletes all Speech Blocks, clears Audio Blocks and Audio Assembly, and resets progress after Character Voices.</li>
+                    <li><strong>Approve All</strong> approves every outstanding block at once, without asking.</li>
                 </ul>
+                <p>
+                    Set <strong>Scene Ambience Placement</strong> in TTS Settings <em>before</em> generating or
+                    re-splitting: it is what decides whether ambience blocks are created at all.
+                </p>
+                <h3>Reading The Block List</h3>
+                <p>
+                    Each row begins with <em>ok</em> when the block is approved or <em>--</em> when it is not, then a
+                    <em>!</em> if the block carries a warning, then the block id, the speaker and the text. Scene
+                    Ambience rows show the sound prompt and its duration instead. The chunk rows above show the number
+                    of blocks each chunk already has.
+                </p>
+                <h3>Editing One Block</h3>
+                <ul>
+                    <li><strong>Insert</strong> asks to confirm, adds a block after the selected one, and opens it for editing straight away.</li>
+                    <li><strong>Delete</strong> asks to confirm, then selects the next remaining block, or the previous one when you deleted the last.</li>
+                    <li><strong>Edit</strong> unlocks the <strong>Speaker</strong> and <strong>Content Kind</strong> combos and the text. It only warns first when that block already has generated audio.</li>
+                    <li><strong>Content Kind</strong> offers <strong>Narration</strong>, <strong>Dialogue</strong>, <strong>Scene Ambience</strong>, <strong>Pause</strong> and <strong>Indication</strong>. Choosing Scene Ambience swaps the text editor for the <strong>Prompt</strong>, <strong>Negative Prompt</strong> and <strong>Duration (s)</strong> fields.</li>
+                    <li><strong>Speaker</strong> is fixed to the Narrator and disabled in same-narrator projects.</li>
+                    <li><strong>Approve</strong> becomes <strong>Unapprove</strong> on an approved block. Approving moves the selection on to the next block so you can work through a chunk quickly.</li>
+                    <li>The counter beside the buttons shows the block's length against the TTS model limit, or <em>-</em> where no limit applies, and counts the ambience prompt for ambience blocks.</li>
+                    <li><strong>Generate Audio</strong> and <strong>Play</strong> preview exactly how the selected approved block will sound, without leaving the page. They are unavailable on pause and indication blocks, which produce no speech.</li>
+                </ul>
+                <div class="note">
+                    Each ambience block should describe one simple sound source, not a composed mix &mdash; an atmosphere is
+                    built from several ordered blocks. The <strong>Duration (s)</strong> field here is a fallback: when
+                    <strong>Scene Ambience Max Sequence Duration</strong> is set in TTS Settings, that value governs the
+                    generated sound instead.
+                </div>
+                <p>
+                    Editing, deleting, re-splitting or changing the speaker of a block resets only that block's audio.
+                    Inserting, approving or unapproving preserves the generated Audio Blocks and resets Audio Assembly.
+                    Your cursor, highlighted range and scroll position in the source pane survive all of these.
+                </p>
+                <p>
+                    Drag the horizontal divider under the chunk list to see more chunks; it opens at the height of the
+                    button block and never takes more than 60% of the page. The lower divider keeps the source pane
+                    between 300 and 480 pixels wide. Generation can be interrupted and continued without losing
+                    approved blocks.
+                </p>
                 <figure>
                     <img src="assets/screenshots/speech-blocks.png" alt="Speech Blocks page">
-                    <figcaption>Speech Blocks define spoken text, pauses, indications, and individual Scene Ambience sound prompts.</figcaption>
+                    <figcaption>Speech Blocks define spoken text, pauses, indications and individual Scene Ambience sound prompts.</figcaption>
                 </figure>
             </section>
 
             <section id="audio-blocks">
                 <h2>Audio Blocks</h2>
                 <p>
-                    Audio Blocks sends approved spoken Speech Blocks to VoiceWeaver and stores generated WAV files
-                    under <code>audio_blocks/</code>. Approved Scene Ambience blocks can also be generated through
-                    VoiceWeaver's sound-prompt path when Scene Ambience Audio is enabled. Pause and indication blocks
-                    do not call the voice model. Long spoken blocks may be split when needed and
-                    stitched back together.
+                    Audio Blocks sends approved Speech Blocks to VoiceWeaver and stores the WAV files under
+                    <code>audio_blocks/</code>. <strong>Source Text</strong> is on the left; on the right the
+                    <strong>Speech Blocks</strong> list sits above <strong>Selected Block</strong>.
+                </p>
+                <h3>Generating</h3>
+                <ul>
+                    <li>Set <strong>Scene Ambience Audio</strong> to <strong>On</strong> or <strong>Off</strong> first. It decides whether approved ambience blocks are generated in this run, and turning it on adds a confirmation because it needs a runtime model that supports sound prompts.</li>
+                    <li><strong>Start Audio Generation</strong> confirms, checks that VoiceWeaver is reachable &mdash; and stops with a clear error if it is not &mdash; then generates every approved block that has no audio yet. Existing audio is skipped even when it is not approved, so this is also how you continue after adding blocks. Pause and indication blocks never call the voice model. Long spoken blocks are split as needed and stitched back into one output.</li>
+                    <li><strong>Re-Generate Audio</strong> redoes just the selected block after confirming; unrelated blocks are untouched. It is unavailable on pause and indication rows.</li>
+                    <li><strong>Reset Audio Generation</strong> clears the generated audio after confirming.</li>
+                    <li><strong>Approve</strong> &mdash; which reads <strong>Unapprove</strong> on an approved row &mdash; and <strong>Approve All</strong> both confirm before changing approval.</li>
+                </ul>
+                <h3>Listening</h3>
+                <p>
+                    Each row reads <em>[approved|pending] duration | file | text</em>. <strong>Play</strong> plays the
+                    selected block and turns into <strong>Stop</strong>; a generated pause block "plays" as its exact
+                    silence.
                 </p>
                 <p>
-                    Generate, preview, regenerate selected blocks when needed, and approve audio only after listening.
-                    AudioMancer asks you to regenerate affected audio after text, voice, language, sample, model,
-                    prompt, or duration changes.
+                    <strong>Play Audiobook</strong> plays continuously from the selected row to the end of the book,
+                    selecting each row as it reaches it, inserting the pauses at their real length, and skipping rows
+                    whose file is missing. It turns into <strong>Stop Audiobook</strong> while running. This is the
+                    fastest way to hear whether the pacing works before you assemble anything. Starting any playback
+                    here stops the narrator, character-voice and Audio Assembly players.
                 </p>
-                <ul>
-                    <li>Generate WAV audio for approved spoken Speech Blocks.</li>
-                    <li>Use the Scene Ambience Audio selector to include or skip approved ambience blocks during Audio Blocks generation.</li>
-                    <li>Generate Scene Ambience WAV files from each block's prompt and negative prompt, using the Scene Ambience duration from TTS Settings.</li>
-                    <li>Use <strong>Start Audio Generation</strong> to continue after adding or deleting Speech Blocks. Existing generated Audio Blocks are skipped even when they are not approved yet; only current approved blocks without audio are generated.</li>
-                    <li>Skip TTS calls for pause and indication blocks.</li>
-                    <li>Split long spoken text when needed and stitch valid generated parts into one block output.</li>
-                    <li>Preview generated block audio with Play/Stop controls.</li>
-                    <li>Regenerate selected blocks after prompt, voice, or text corrections. A single selected regeneration does not touch unrelated Audio Blocks.</li>
-                    <li>Approve generated audio after listening.</li>
-                    <li>Reset stale Audio Blocks when upstream inputs change.</li>
-                    <li>Drag the divider between Source Text and the block review area; each side keeps at least one third of the page width.</li>
-                    <li>Interrupt generation and continue later from the same project.</li>
-                </ul>
+                <p>
+                    Approve the audio only after listening. Regenerate affected blocks after text, voice, language,
+                    sample, model, prompt or duration changes. Drag the divider between the source text and the review
+                    area &mdash; each side keeps at least a quarter of the width &mdash; and the divider between the two lists on
+                    the right, where each keeps 30% of the height. Generation can be interrupted and continued later.
+                </p>
                 <figure>
                     <img src="assets/screenshots/audio-blocks.png" alt="Audio Blocks page">
-                    <figcaption>Audio Blocks is the review stage for spoken WAV files and generated Scene Ambience sound prompts before final assembly.</figcaption>
+                    <figcaption>Audio Blocks is the review stage for spoken WAV files and generated Scene Ambience sounds before final assembly.</figcaption>
                 </figure>
             </section>
 
             <section id="assembly">
                 <h2>Audio Assembly</h2>
                 <p>
-                    Audio Assembly combines approved Audio Blocks into final WAV audiobook files under the project
-                    <code>audiobook/</code> folder. Output modes are one file per text chunk, duration-limited parts,
-                    or one whole-book file.
+                    Audio Assembly combines approved Audio Blocks into the final WAV audiobook under the project's
+                    <code>audiobook/</code> folder.
+                </p>
+                <div class="note">
+                    <strong>Generate Audio</strong> stays greyed out until <em>every</em> Audio Block is approved. If
+                    it will not light up, return to Audio Blocks and look for unapproved rows.
+                </div>
+                <h3>Output Settings</h3>
+                <table>
+                    <thead>
+                        <tr><th>Setting</th><th>Choices or range</th><th>Default</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Output Mode</td><td>Per text chunk &middot; Time limit &middot; Whole audiobook</td><td>Whole audiobook</td></tr>
+                        <tr><td>Max Duration</td><td>1 - 1440 min, only in Time limit mode</td><td>30 min</td></tr>
+                        <tr><td>Inter-Block Silence</td><td>0 - 60000 ms</td><td>250 ms</td></tr>
+                        <tr><td>Inter-Chunk Silence</td><td>0 - 60000 ms</td><td>1000 ms</td></tr>
+                        <tr><td>Output Format</td><td>WAV</td><td>WAV</td></tr>
+                        <tr><td>Include Scene Ambience</td><td>on or off</td><td>on</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Pause Speech Blocks become exact silence of their own length; the two silence settings add the
+                    automatic gaps around and between blocks and chunks. Changing any of these settings after
+                    audiobook files already exist asks first, then deletes those outputs and the assembly report &mdash;
+                    approved Audio Blocks and everything upstream are preserved.
+                </p>
+                <h3>Scene Mix Previews</h3>
+                <p>
+                    This list shows each Scene Ambience group as <em>label | duration | sounds | status</em>, where the
+                    status is <em>needs generated audio</em>, <em>ready</em> or <em>preview ready</em>.
+                    <strong>Generate / Refresh Scene Mix</strong> overlays that group's approved sound WAVs into one
+                    ambient bed, and <strong>Play Scene Mix</strong> plays it. Final assembly uses the same mix when
+                    <strong>Include Scene Ambience</strong> is on.
+                </p>
+                <h3>Reviewing The Result</h3>
+                <p>
+                    <strong>Generated Audiobook Files</strong> lists each output as <em>file name | duration | audio
+                    blocks</em>. Select one and press <strong>Play Audio</strong>, or double-click a row to restart
+                    that file from the beginning. One player serves both lists, so starting either stops the other,
+                    and both buttons read <strong>Stop Playing</strong> while anything is playing.
                 </p>
                 <p>
-                    Pause Speech Blocks become exact silence. Automatic inter-block and inter-chunk silence can be
-                    configured. Long operations can be interrupted and continued later when inputs and settings still
-                    match the current project inputs.
+                    The playback bar shows the current position and the total duration. The slider and the
+                    <strong>-10s</strong> and <strong>+10s</strong> jumps become active only while audio is actually
+                    playing &mdash; selecting a file without playing leaves them dormant at 00:00.
                 </p>
                 <p>
-                    Scene Mix Previews lists available Scene Ambience groups. Generate or refresh a selected mix to
-                    overlay its approved prompt WAVs into one ambient bed, then play that mixed scene before final
-                    assembly. Final assembly uses the same mix path when <strong>Include Scene Ambience</strong> is on.
+                    <strong>Reset Audio Assembly</strong> deletes the generated audiobook files and the assembly
+                    progress after confirming. Assembly can be interrupted and continued later, as long as the inputs
+                    and settings still match.
                 </p>
-                <p>
-                    Select a generated file to preview it. The inline playback bar shows current position and total
-                    duration, supports drag-to-seek, and provides <strong>-10s</strong> / <strong>+10s</strong> quick
-                    jumps. Double-click a generated file to stop current Audio Assembly playback and restart the
-                    clicked file from the beginning.
-                </p>
-                <ul>
-                    <li>Choose output mode: per chunk, duration-limited parts, or whole audiobook.</li>
-                    <li>Configure inter-block and inter-chunk silence.</li>
-                    <li>Generate and play Scene Mix previews for approved Scene Ambience groups.</li>
-                    <li>Generate final WAV deliverables into the project <code>audiobook/</code> folder.</li>
-                    <li>Review generated files from the page list.</li>
-                    <li>Use Play/Stop, double-click playback, seek bar dragging, and 10-second jumps for long files.</li>
-                    <li>Reset and regenerate assembly when output settings or approved Audio Blocks change.</li>
-                    <li>Interrupt assembly and continue later when the current inputs still match.</li>
-                </ul>
                 <figure>
                     <img src="assets/screenshots/audio-assembly.png" alt="Audio Assembly page">
-                    <figcaption>Audio Assembly creates the final audiobook deliverables and includes long-file review controls.</figcaption>
+                    <figcaption>Audio Assembly produces the final deliverables, with scene mix previews and a full playback bar for long files.</figcaption>
                 </figure>
             </section>
 
             <section id="export">
                 <h2>Export And Results</h2>
                 <p>
-                    The Home page can export cleaned text, chunks, AI translations, characters, and Speech Blocks as
-                    text files. It can also export Narrator Voice samples, Character Voices samples, and Audio Assembly
-                    outputs as ZIP archives. Voice ZIP exports include the generated WAV sample plus a companion text
-                    file with the voice definition and preview text; Audio Assembly ZIP exports include the WAV output
-                    files and a manifest with composition method, file list, duration, and size details.
-                    <strong>Export Project ZIP</strong> creates a full project snapshot. Final audiobook WAV files are
-                    saved inside the project folder under <code>audiobook/</code>.
+                    The <strong>Exports</strong> panel on the Home page has one row per stage. Each row offers a
+                    format and an <strong>Export</strong> button, and both stay greyed out until that stage has
+                    produced usable data. Hover a row to see whether it is <em>Available</em>, <em>Not ready</em>, or
+                    reporting a <em>Missing artifact</em>.
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>Export</th><th>Formats</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Cleaned Text</td><td>TXT or Markdown</td></tr>
+                        <tr><td>Text Chunks</td><td>TXT or Markdown</td></tr>
+                        <tr><td>AI Translation</td><td>TXT or Markdown</td></tr>
+                        <tr><td>Characters</td><td>TXT or Markdown</td></tr>
+                        <tr><td>Narrator Voice</td><td>ZIP</td></tr>
+                        <tr><td>Character Voices</td><td>ZIP</td></tr>
+                        <tr><td>Speech Blocks</td><td>TXT or Markdown</td></tr>
+                        <tr><td>Audio Assembly</td><td>ZIP</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Audio Blocks has no export of its own &mdash; its audio reaches you through the Audio Assembly archive.
+                    Voice ZIPs contain the WAV sample and a companion text file with the voice definition and preview
+                    text. The Audio Assembly ZIP contains the WAV outputs and a manifest listing the composition
+                    method, the files, their durations and their sizes.
                 </p>
                 <p>
-                    Export buttons become available only after the matching phase has produced approved data. Use the
-                    Home page status list to see which phases are complete, pending, or waiting for review.
+                    <strong>Export Project ZIP</strong>, beside the project buttons, writes a complete snapshot of the
+                    project. Exports must be written outside the project folder, so a snapshot is never archived into
+                    itself and a runtime file is never overwritten; AudioMancer refuses a destination inside the
+                    project and says why. The final audiobook WAV files also remain in the project under
+                    <code>audiobook/</code>.
                 </p>
             </section>
 
             <section id="troubleshooting">
                 <h2>Troubleshooting</h2>
-                <h3>Buttons are disabled</h3>
-                <p>Most pages depend on earlier pages. Follow the sidebar from top to bottom and approve required results before continuing.</p>
+                <h3>A sidebar page will not open</h3>
+                <p>Every page except Home needs an open project. Create or open one first.</p>
+                <h3>A button is greyed out</h3>
+                <p>Most pages depend on the pages above them, and almost every action is also disabled while an operation is running or while an edit is open. Save or cancel the edit, let the operation finish, and check that the earlier stage produced a result.</p>
+                <h3>Generate All or Split Chunk is greyed out on Speech Blocks</h3>
+                <p>Both need an AI profile selected, in every project &mdash; including same-narrator ones. Add an enabled profile in AI Settings.</p>
+                <h3>Generate Audio is greyed out on Audio Assembly</h3>
+                <p>Assembly requires every Audio Block to be approved. Return to Audio Blocks and approve the remaining rows.</p>
+                <h3>Start Translation is greyed out</h3>
+                <p>It disappears once every chunk has a translation. Use <strong>Reset Translation</strong> for a fresh pass, or <strong>Re-Translate Selected</strong> for one chunk.</p>
                 <h3>No audio is generated</h3>
-                <p>Start VoiceWeaver, verify the base URL in TTS Settings, run Test Connection, and confirm that the required VoiceWeaver models are available.</p>
+                <p>Start VoiceWeaver, check the base URL in TTS Settings, press <strong>Test Connection</strong>, and confirm the required models appear under Discovered Models.</p>
+                <h3>A translation stops in the middle of a chunk</h3>
+                <p>Raise <strong>Max Output Tokens</strong> on the translation profile. A translation is as long as its source, so the output limit, not the context window, is what bounds one request.</p>
                 <h3>AI text operations fail or return bad JSON</h3>
-                <p>Use lower temperature, a larger timeout, a larger context window, or a stronger JSON-following model. Local LM Studio models can be slower than hosted OpenAI models.</p>
+                <p>Lower the temperature, raise the timeout, use a larger context window, or choose a model that follows JSON more reliably. Local models are usually slower than hosted ones.</p>
                 <h3>The app says data is stale</h3>
-                <p>Reset or regenerate downstream pages after changing earlier text, voice, language, sample, or model inputs.</p>
-                <h3>Long operation was cancelled</h3>
-                <p>Many workflows can resume. Reopen the same page and press the generation/start button again when the page offers continuation.</p>
+                <p>Regenerate the downstream pages after changing earlier text, voice, language, sample or model inputs.</p>
+                <h3>A long operation was cancelled</h3>
+                <p>Most operations resume. Reopen the same page and press the start button again; AudioMancer continues from its checkpoint and skips the instructions dialog when it is resuming.</p>
             </section>
 
             <section id="glossary">
                 <h2>Glossary</h2>
                 <ul>
-                    <li><strong>Project:</strong> one folder that stores the source book, generated files, settings, and final audio.</li>
-                    <li><strong>AI profile:</strong> a chat-model configuration for text workflows.</li>
-                    <li><strong>VoiceWeaver:</strong> the required runtime for current AudioMancer audio generation.</li>
+                    <li><strong>Project:</strong> one folder holding the source book, the generated files, and the final audio.</li>
+                    <li><strong>AI profile:</strong> a chat-model configuration used for text work only.</li>
+                    <li><strong>VoiceWeaver:</strong> the runtime that generates all AudioMancer audio.</li>
                     <li><strong>Chunk:</strong> a section of the book used for review and generation.</li>
-                    <li><strong>Speech Block:</strong> one instruction for narration, dialogue, pause, indication, or Scene Ambience.</li>
-                    <li><strong>Audio Block:</strong> generated WAV audio or a non-spoken timing/instruction entry for one approved Speech Block.</li>
+                    <li><strong>Speech Block:</strong> one instruction &mdash; narration, dialogue, pause, indication, or Scene Ambience.</li>
+                    <li><strong>Audio Block:</strong> the generated WAV, or a timing entry, for one approved Speech Block.</li>
+                    <li><strong>Voice target:</strong> the narrator or one character, as something that can own a voice prompt and a sample.</li>
+                    <li><strong>Scene Ambience:</strong> ordered background sound blocks, each describing one simple sound source.</li>
                     <li><strong>Audio Assembly:</strong> the final step that combines Audio Blocks into audiobook WAV files.</li>
+                    <li><strong>Op Status:</strong> the button under the sidebar that opens the current page's operation status.</li>
                 </ul>
             </section>
         </main>

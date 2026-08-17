@@ -12,6 +12,47 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Romanian interface: three status words were wrong. An Audio Block waiting to
+  be generated showed the raw token "in_asteptare" with an underscore, and the
+  Character Voices readiness line said "negata" - which reads as *denied*, not
+  as *not ready*. The list now reads "in asteptare", and the readiness line
+  reads "pregatit" or "nepregatit", matching the wording already used elsewhere
+  in the Romanian interface.
+- Both help files, English and Romanian, were rewritten from the application as
+  it is actually built. The guides had drifted far enough to send you looking
+  for buttons that do not exist: an **Apply Spacing** row with Heading,
+  Separator, Noise, Header and Footer categories on Text Cleanup, an extra
+  instructions box before AI cleanup, a confirmation before editing cleaned
+  text, and a button on Characters that regenerated a voice definition on its
+  own. None of those are in the application. They are gone from the guides.
+- Buttons are now called what they are actually called. **Apply**, not Save, in
+  AI Settings and TTS Settings; **Generate Narrators**, not Generate Narrator
+  Profiles; **Split Chunk**, not Re-split; **Reset Translation**, not Restart;
+  **Auto**, not "Automatic (model limit)"; **Play Audio** and **Stop Playing**
+  in Audio Assembly. The theme list is described as the eleven themes that
+  exist, starting from **AudioMancer Dark** as the default - there is no
+  "Default Light" theme and there never was.
+- The guides now cover features that had no documentation at all: the
+  right-click **Find** and **Find Next** menus on Text Chunking and Characters,
+  **Play Audiobook** on Audio Blocks and how it plays pauses at their real
+  length, the workflow pipeline strip and the TXT-or-Markdown choice on every
+  text export, the **Approve All** buttons, the two font-size settings and the
+  live theme preview, and the way AI Translation saves your edits by itself
+  about three quarters of a second after you stop typing - which also clears
+  that chunk's approval, because edited text has not been reviewed yet.
+- Every panel size the guides quote was measured against the application again.
+  Several were simply wrong: Audio Blocks keeps a quarter of the width per side
+  and not a third, the Speech Blocks source pane sits between 300 and 480
+  pixels, and the narrator profile list stops at a fixed 220 pixels.
+- The guides now say plainly that Text Cleanup, Text Chunking, Characters and
+  Character Voices have **no approval button**. The next stage unlocks from the
+  operation result itself. Earlier versions of the guides described an approval
+  step on all four pages; whether those pages should gain one is a separate
+  question, and the guides no longer answer it for you.
+- The recommended local AI profile table gained the **Max output** column it was
+  missing. It matters now: translation requests are sized by what the reply can
+  return, so that setting, not the context window, is what decides how much text
+  goes into one request.
 - Every workflow page gained back the space its status box used to take at the
   bottom. The previews, lists and editors on those pages now run all the way
   down to the bottom of the window.

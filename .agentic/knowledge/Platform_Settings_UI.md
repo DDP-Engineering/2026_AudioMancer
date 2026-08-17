@@ -154,6 +154,16 @@ instructions from the Chunking document.
   checkout Help paths retain the repository's `05_SoftwareDocu/UserGuide` and
   `05_SoftwareDocu/UserGuide_ro` entry points; shallow installed roots never
   require a second available ancestor during configuration initialization.
+- Both offline guides describe only controls the frontend actually builds
+  (`REQ-UX-f6ddf594`). The English and Romanian files are regenerated from the
+  page modules, not from `_UI_STRINGS`: the catalog retains keys for removed
+  controls - a theme editor (`settings.theme_new`, `theme_duplicate`,
+  `theme_delete`, `theme_import`, `theme_export`), the Text Cleanup spacing
+  categories and `apply_spacing`, a separate `text_cleanup.ai_clean` button,
+  the per-page `*.status_group` panes replaced by the Op Status popup, and the
+  Character Voices assignment and language boxes. A key is evidence that a
+  string exists, never that a widget does; the constructing page module is the
+  only admissible evidence.
 - Theme payloads have normalized IDs, display names, font and color fields;
   settings validation normalizes AI profile/default IDs and cached TTS runtime
   discovery data before they are consumed. Cached VoiceWeaver models use the
@@ -326,4 +336,6 @@ From the adopted component map:
 - `04_Software/AudioMancer/tests/test_ui_theme_service.py`
 - `04_Software/AudioMancer/tests/test_ui_localization_coverage.py`
 - `04_Software/AudioMancer/tests/test_url_service.py`
+- `05_SoftwareDocu/UserGuide/index.html`
+- `05_SoftwareDocu/UserGuide_ro/index.html`
 - `04_Software/AudioMancer/tests/test_user_data_location.py`

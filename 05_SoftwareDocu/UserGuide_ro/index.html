@@ -45,84 +45,87 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <div class="version-box">
                     <p><strong>Versiune ajutor:</strong> 2.0.0</p>
                     <p><strong>Versiune aplicatie:</strong> 2.0.0</p>
-                    <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
+                    <p><strong>Creator:</strong> Ing. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
                 <p>
-                    AudioMancer transforma un text de carte sau poveste in fisiere audio pentru audiobook. Fluxul este
-                    impartit in pagini clare: proiect, curatare text, segmentare, traducere optionala, personaje, voci,
-                    blocuri de vorbire, blocuri audio si asamblare audio.
+                    AudioMancer transforma o carte sau o poveste scrisa in fisiere WAV de audiobook. Te conduce prin
+                    lucru pagina cu pagina: importi sursa, cureti textul, il imparti in segmente, optional il traduci,
+                    pregatesti vocile naratorului si ale personajelor, imparti textul in instructiuni de vorbire,
+                    generezi audio si asamblezi audiobookul final.
+                </p>
+                <h3>Fereastra</h3>
+                <p>
+                    Bara de sus contine <strong>Proiect Nou</strong>, <strong>Deschide Proiect</strong>,
+                    <strong>Setari</strong>, <strong>Setari AI</strong>, <strong>Setari TTS</strong>,
+                    <strong>Ajutor</strong> si <strong>Despre</strong>. Acestea sunt disponibile oricand.
+                    <strong>Ajutor</strong> deschide acest ghid offline in browser, iar <strong>Despre</strong> arata
+                    versiunea si textul licentei.
                 </p>
                 <p>
-                    Lucreaza paginile din bara stanga de sus in jos. Apasa butoanele de generare, aprobare sau salvare
-                    numai dupa ce ai verificat textul si sunetul afisat. AudioMancer pastreaza cat mai mult din munca
-                    deja facuta: editarile locale de segment, traducere, personaj, voce, Bloc de vorbire sau Bloc audio
-                    reseteaza numai inregistrarile afectate, iar regenerarile complete din amonte sterg datele
-                    dependente.
+                    Bara laterala din stanga listeaza cele zece pagini in ordinea de lucru: Acasa / Proiect, Curatare
+                    Text, Segmentare Text, Traducere AI, Personaje, Voce Narator, Voci Personaje, Blocuri Vorbire,
+                    Blocuri Audio si Asamblare Audio. Pana cand un proiect este deschis, se poate selecta doar
+                    <strong>Acasa / Proiect</strong>; celelalte randuri sunt inactive. Parcurge lista de sus in jos.
                 </p>
                 <p>
-                    Sub bara din stanga, butonul <strong>Stare Operatie</strong> deschide starea operatiei de pe pagina
-                    curenta: numaratori, avertismente si felul in care s-a incheiat ultima rulare. Ramane inactiv pana
-                    cand acea operatie a rulat cel putin o data. Fereastra poate fi redimensionata si nu blocheaza
-                    aplicatia, deci o poti lasa deschisa in timp ce lucrezi, iar continutul o urmeaza cand schimbi pagina.
-                </p>
-                <p>
-                    Scene Ambience poate adauga intr-o scena blocuri sonore individuale ordonate. Fiecare bloc
-                    ambiental are prompt si prompt negativ, iar durata foloseste setarea Scene Ambience din Setari TTS,
-                    astfel incat poti construi atmosfera din surse sonore simple, nu dintr-un singur prompt complex.
-                    Blocurile de vorbire pot genera si reda audio pentru blocul selectat direct din pagina, Blocurile
-                    audio pot genera WAV pentru narator, personaje si Scene Ambience, iar Asamblarea audio poate
-                    previzualiza si include ambience mixat in audiobook-ul final.
-                </p>
-                <p>
-                    Setari include teme luminoase si intunecate incluse, selectarea si previzualizarea temelor
-                    personalizate valide deja salvate in fisierul de setari, font separat pentru controalele interfetei
-                    si pentru ferestrele mari de text, plus pasi configurabili pentru rotita mouse-ului. Voce narator
-                    si Voci personaje pot importa esantioane WAV validate impreuna cu textul introdus de operator.
-                    Setari AI si Setari TTS folosesc acelasi flux
-                    <strong>Anuleaza</strong>, <strong>Salveaza</strong> si <strong>OK</strong>.
+                    Chiar sub bara laterala se afla butonul <strong>Stare Operatie</strong>. El deschide starea
+                    operatiei paginii pe care o privesti: numaratori, avertismente si cum s-a incheiat ultima rulare.
+                    Ramane inactiv pana cand acea operatie a rulat cel putin o data si nu este niciodata disponibil pe
+                    Acasa, care nu are o operatie proprie. Fereastra pe care o deschide este redimensionabila, nu
+                    blocheaza aplicatia si te urmeaza cand treci de la o pagina la alta. O inchizi cu butonul
+                    <strong>Inchide</strong>.
                 </p>
                 <div class="note">
-                    AudioMancer pastreaza fiecare carte intr-un dosar de proiect. Nu muta fisierele proiectului cat timp
-                    aplicatia este deschisa.
+                    Operatiile lungi afiseaza o fereastra de progres cu o linie de stare, o bara procentuala si &mdash; de
+                    indata ce modelul le raporteaza &mdash; numarul de tokeni de intrare, de iesire si totalul rularii. Cand
+                    operatia poate fi intrerupta, fereastra ofera <strong>Anuleaza Operatia</strong>. Apasarea lui,
+                    tasta <strong>Escape</strong> sau butonul de inchidere din bara de titlu cer aceeasi anulare;
+                    fereastra ramane vizibila cat timp operatia se opreste, iar butonul se dezactiveaza pentru ca
+                    cererea se trimite o singura data. Revino la aceeasi pagina si porneste din nou operatia pentru a
+                    continua.
                 </div>
                 <div class="warning">
-                    Operatiile lungi de generare pot fi intrerupte si continuate mai tarziu. Foloseste
-                    <strong>Anuleaza</strong>, <strong>Escape</strong> sau controlul de inchidere din bara de titlu a
-                    dialogului de progres pentru a cere anularea; dialogul ramane vizibil cat timp operatia se opreste.
-                    Revino pe aceeasi pagina si porneste operatia din nou pentru continuare sau regenerare.
+                    Generarea audio necesita VoiceWeaver. Profilurile OpenAI sau LM Studio se folosesc doar pentru
+                    lucrul cu text; ele nu genereaza fisierele WAV ale naratorului, ale personajelor sau ale
+                    Blocurilor Audio.
                 </div>
+                <h3>Cum este protejata munca</h3>
+                <p>
+                    AudioMancer pastreaza munca terminata acolo unde poate. O modificare locala &mdash; un segment, o
+                    traducere, un personaj, o voce, un bloc de vorbire &mdash; reseteaza doar inregistrarile care depind de
+                    ea. Reluarea unei operatii intregi este altceva: sterge rezultatul acelei operatii si tot ce vine
+                    dupa el, iar fiecare actiune de acest fel te intreaba mai intai. Intrebarile de confirmare au
+                    <strong>Nu</strong> ca raspuns implicit, asa ca o apasare gresita pe Enter nu distruge niciodata
+                    munca.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/home-project.png" alt="Panoul Acasa">
-                    <figcaption>Panoul Acasa arata proiectul curent, starea fluxului si actiunile principale intr-o vedere compacta.</figcaption>
+                    <img src="assets/screenshots/home-project.png" alt="Panoul Acasa din AudioMancer">
+                    <figcaption>Pagina Acasa reuneste rezumatul proiectului, fluxul de lucru, progresul pe etape si lista de exporturi.</figcaption>
                 </figure>
             </section>
 
             <section id="requirements">
                 <h2>Ce este necesar</h2>
-                <p>
-                    AudioMancer poate folosi modele AI online sau locale pentru text, dar generarea audio este disponibila
-                    in aplicatia curenta numai prin VoiceWeaver.
-                </p>
                 <ul>
-                    <li><strong>VoiceWeaver este obligatoriu pentru audio.</strong> Instaleaza VoiceWeaver pe acelasi calculator sau pe un calculator din aceeasi retea.</li>
-                    <li><strong>OpenAI</strong> poate fi folosit pentru curatare, segmentare, traducere, personaje si blocuri de vorbire.</li>
-                    <li><strong>LM Studio</strong> poate fi folosit pentru aceleasi etape text, daca modelul local este incarcat si serverul API este pornit.</li>
-                    <li>OpenAI si LM Studio nu genereaza audio direct in AudioMancer; ele pregatesc textul si structura pentru VoiceWeaver.</li>
+                    <li><strong>AudioMancer:</strong> aplicatia desktop si acest pachet de ajutor offline.</li>
+                    <li><strong>VoiceWeaver:</strong> necesar pentru toata generarea audio. Instaleaza-l pe acelasi calculator sau pe altul accesibil in reteaua locala.</li>
+                    <li><strong>Un model AI de text:</strong> necesar pentru curatarea asistata de AI, segmentarea asistata de AI, traducere, descoperirea personajelor, generarea profilurilor de narator si Blocurile de Vorbire. Curatarea si segmentarea deterministe functioneaza fara el.</li>
+                    <li><strong>Spatiu pe disc:</strong> pentru fisierul sursa, fisierele WAV intermediare si audiobookul final.</li>
                 </ul>
-                <div class="warning">
-                    Daca VoiceWeaver nu este instalat sau nu poate fi accesat in retea, paginile text pot functiona, dar
-                    generarea blocurilor audio nu va putea produce fisiere WAV.
-                </div>
                 <p>
-                    Limbile tinta pentru traducere sunt: engleza, romana, germana, franceza, rusa, portugheza,
-                    spaniola si italiana. Limba audio urmeaza limba aleasa pentru proiect
-                    pe pagina Acasa si necesita modele sau voci VoiceWeaver compatibile cu acea limba.
+                    VoiceWeaver trebuie sa ruleze inainte ca vreo mostra sau vreun bloc audio sa poata fi generat. Daca
+                    ruleaza pe alt calculator, introdu adresa acelui calculator in Setari TTS &mdash; de exemplu
+                    <code>http://192.168.1.25:8059</code>.
+                </p>
+                <p>
+                    Limbile tinta pentru traducere sunt engleza, romana, germana, franceza, rusa, portugheza, spaniola
+                    si italiana. Limba vorbita urmeaza limba traducerii blocata pe pagina Acasa, deci VoiceWeaver are
+                    nevoie de voci care o sustin.
                 </p>
                 <div class="warning">
-                    AudioMancer creeaza definitii de voce si mostre dedicate pentru narator si, cand este activat,
-                    pentru fiecare personaj. Aceste voci sunt pregatite special pentru proiectul curent, nu sunt simple
-                    presetari generice.
+                    AudioMancer construieste definitii si mostre de voce pentru naratorul si personajele acestui
+                    proiect. Ele sunt pregatite pentru cartea curenta, nu alese dintr-o lista de presetari generice.
                 </div>
             </section>
 
@@ -133,544 +136,887 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <h3>Windows</h3>
                         <ol>
                             <li>Descarca arhiva zip AudioMancer pentru Windows.</li>
-                            <li>Click dreapta pe arhiva si alege <strong>Extract All</strong> / <strong>Extrage tot</strong>.</li>
-                            <li>Deschide dosarul extras.</li>
-                            <li>Porneste <code>AudioMancer.exe</code> sau <code>Start-AudioMancer.cmd</code>.</li>
+                            <li>Click dreapta pe arhiva si alege <strong>Extract All</strong>.</li>
+                            <li>Deschide folderul extras.</li>
+                            <li>Dublu click pe <code>AudioMancer.exe</code> sau <code>Start-AudioMancer.cmd</code>.</li>
                         </ol>
                     </div>
                     <div class="step-card">
                         <h3>Ubuntu</h3>
                         <ol>
-                            <li>Descarca arhiva AudioMancer pentru Ubuntu.</li>
-                            <li>Extrage arhiva intr-un dosar unde ai drept de scriere.</li>
-                            <li>Ruleaza scriptul de pornire inclus in livrare.</li>
-                            <li>Verifica in Setari ca limba si tema interfetei sunt corecte.</li>
+                            <li>Descarca arhiva zip AudioMancer pentru Ubuntu.</li>
+                            <li>Extrage tot folderul din arhiva.</li>
+                            <li>Deschide un terminal in folderul extras.</li>
+                            <li>Ruleaza <code>./AudioMancer</code> sau <code>./start-audiomancer.sh</code>.</li>
                         </ol>
                     </div>
                 </div>
+                <div class="warning">
+                    Nu rula AudioMancer din interiorul arhivei zip. Extrage intai tot folderul si tine fisierele
+                    impreuna &mdash; setarile, licentele, fisierele de ajutor si fisierele de runtime trebuie sa ramana
+                    langa executabil.
+                </div>
                 <p>
-                    Dosarul portabil poate fi extras direct sub radacina unei unitati sau a sistemului de fisiere, de
-                    exemplu <code>D:\AudioMancer</code> sau <code>/audiomancer</code>. AudioMancer porneste normal din
-                    aceste locatii si deschide ghidul offline inclus, in engleza sau romana, pastrat langa executabil.
+                    Folderul poate sta direct sub radacina unui disc sau a sistemului de fisiere, de exemplu
+                    <code>D:\AudioMancer</code> sau <code>/audiomancer</code>. AudioMancer porneste normal acolo, iar
+                    actiunea <strong>Ajutor</strong> din bara de sus deschide ghidul in engleza sau romana pastrat
+                    langa executabil. Daca acel fisier lipseste, AudioMancer o spune in loc sa deschida browserul.
                 </p>
             </section>
 
             <section id="settings">
                 <h2>Setari</h2>
                 <p>
-                    Fereastra Setari controleaza limba interfetei, sunetul de finalizare, pasii de derulare ai rotitei
-                    mouse-ului si tema vizuala folosita in timpul rularii. Schimbarea limbii actualizeaza interfata si
-                    ghidul de ajutor corespunzator.
+                    Deschide <strong>Setari</strong> din bara de sus. Fereastra are patru controale pe un rand, un
+                    grup pentru tema si fonturi si o previzualizare vie.
                 </p>
-                <div class="note">
-                    Un fisier <code>settings.json</code> JSON UTF-8 valid, cu marcaj BOM, se incarca normal. Daca
-                    fisierul este formatat gresit sau foloseste o codare nevalida, AudioMancer pastreaza exact octetii
-                    originali alaturi de el in <code>settings.corrupt.json</code> (sau intr-o copie corupta numerotata
-                    daca numele exista deja), apoi continua cu valorile implicite. Daca fisierul nu poate fi citit sau
-                    copiat in siguranta, AudioMancer foloseste valorile implicite pentru rularea curenta si lasa
-                    fisierul original neschimbat. Pastreaza copiile corupte private, deoarece pot contine aceleasi chei
-                    API ca setarile originale.
-                </div>
                 <ol>
-                    <li>Alege limba interfetei.</li>
-                    <li>Alege o tema inclusa, de exemplu <strong>Default Light</strong>, <strong>Default Dark</strong> sau <strong>Dark Contrast</strong>, ori o tema personalizata valida deja salvata in <code>settings.json</code>.</li>
-                    <li>Activeaza sau dezactiveaza sunetul de finalizare. Cand este activat, AudioMancer emite un sunet scurt imediat ce o operatie lunga se incheie singura, fie ca a reusit, fie ca a esuat, ca sa poti porni o rulare si sa te indepartezi de calculator. O operatie anulata de tine ramane silentioasa.</li>
-                    <li>Seteaza <strong>Pasi derulare</strong> intre <strong>1</strong> si <strong>5</strong> pentru cate linii se misca panourile comune de text si liste la fiecare pas al rotitei mouse-ului. Valoarea implicita este <strong>1</strong>.</li>
-                    <li>Foloseste <strong>Apply</strong> pentru salvare si actualizare fara inchiderea ferestrei, sau <strong>OK</strong> pentru salvare si inchidere.</li>
+                    <li><strong>Limba</strong> &mdash; <strong>English</strong> sau <strong>Romanian</strong>. Schimba interfata si ghidul pe care il deschide actiunea Ajutor.</li>
+                    <li><strong>Reda semnalul sonor la finalizare</strong> &mdash; dezactivat implicit. Cand este activ, AudioMancer emite un semnal imediat ce o operatie lunga se incheie singura, deci poti porni o rulare si pleca de la calculator. O operatie pe care o anulezi tu ramane tacuta.</li>
+                    <li><strong>Pasi derulare</strong> &mdash; de la <strong>1</strong> la <strong>5</strong>, implicit <strong>1</strong>. Stabileste cate linii se deplaseaza panourile de text si listele la o rotita de mouse.</li>
+                    <li><strong>Tema</strong> &mdash; unsprezece teme incluse: Clasic Luminos, Lectura Calda, Contrast Ridicat, Intunecat Implicit, Contrast Intunecat, <strong>AudioMancer Intunecat</strong> (tema implicita), Pergament AudioMancer, Studio de Miezul Noptii, Noapte de Jar, Ardezie Nordica si Cerneala si Hartie.</li>
+                    <li><strong>Marime font UI</strong> si <strong>Marime font text</strong> &mdash; doua liste independente, fiecare cu Foarte mica, Mica, Medie, Normala, Mare, Foarte mare si Uriasa, ambele pornind de la <strong>Normala</strong>. Prima scaleaza butoanele, etichetele si listele; a doua scaleaza ferestrele de text lung si fereastra Stare Operatie, deci poti mari textul de citit fara sa maresti fiecare control.</li>
                 </ol>
-                <h3>Teme personalizate salvate</h3>
                 <p>
-                    Daca <code>settings.json</code> contine deja teme personalizate valide, acestea apar dupa toate
-                    temele incluse. Numele introduse de operator raman neschimbate cand se schimba limba interfetei.
-                    Selectarea unei teme actualizeaza previzualizarea, iar Apply sau OK pastreaza atat tema selectata,
-                    cat si continutul existent al temei atunci cand salveaza campurile paginii Setari.
+                    Grupul <strong>Previzualizare</strong> de sub liste arata o eticheta, un buton si o fereastra de
+                    text exemplu in tema selectata si in ambele marimi de font, ca sa judeci o alegere inainte de a o
+                    aplica.
+                </p>
+                <p>
+                    <strong>Anuleaza</strong> inchide fara a salva. <strong>Aplica</strong> salveaza si reimprospateaza
+                    interfata cu fereastra inca deschisa. <strong>OK</strong> salveaza, reimprospateaza si inchide.
+                </p>
+                <h3>Teme personalizate pastrate</h3>
+                <p>
+                    Daca <code>settings.json</code> contine deja teme personalizate valide, ele apar in lista dupa cele
+                    incluse, sub numele date de autorul lor, iar acele nume nu sunt retraduse cand schimbi limba
+                    interfetei. Selectarea uneia actualizeaza previzualizarea, iar Aplica sau OK pastreaza atat
+                    selectia, cat si culorile stocate ale temei.
                 </p>
                 <div class="note">
-                    Fereastra Setari curenta nu creeaza, duplica, editeaza, sterge, importa sau exporta teme
-                    personalizate. Intrarile invalide sau duplicate raman filtrate si nu pot fi selectate.
+                    Fereastra Setari nu creeaza, nu duplica, nu editeaza, nu sterge, nu importa si nu exporta teme. Ea
+                    doar alege intre temele incluse si temele personalizate valide deja prezente in fisierul de setari;
+                    intrarile invalide sau duplicate sunt filtrate si nu sunt oferite niciodata.
+                </div>
+                <div class="note">
+                    Un fisier <code>settings.json</code> UTF-8 valid se incarca normal, cu sau fara marcaj de ordine a
+                    octetilor. Daca fisierul este deteriorat, AudioMancer ii pastreaza octetii exacti alaturi, ca
+                    <code>settings.corrupt.json</code> &mdash; sau o copie numerotata, cand acel nume este ocupat &mdash; si
+                    continua cu valorile implicite. Tine acele copii private: contin aceleasi chei API ca originalul.
                 </div>
                 <figure>
                     <img src="assets/screenshots/settings-dialog.png" alt="Fereastra Setari">
-                    <figcaption>Setarile controleaza limba, sunetul de finalizare, pasii de derulare, selectarea temelor incluse si a temelor personalizate valide deja salvate, plus dimensiunile fonturilor pentru interfata si ferestrele de text.</figcaption>
+                    <figcaption>Setari controleaza limba, semnalul sonor, pasii de derulare, tema si marimile fontului de interfata si de text, cu previzualizare vie.</figcaption>
                 </figure>
             </section>
 
             <section id="ai-settings">
                 <h2>Setari AI</h2>
                 <p>
-                    Alege furnizorul AI pentru etapele text. Poti folosi OpenAI online sau LM Studio local. Pentru
-                    proiecte lungi, foloseste modele cu fereastra context mare si pastreaza limite de raspuns suficiente.
-                    Pentru modelele OpenAI online ai nevoie de o cheie API obtinuta din contul tau OpenAI. Apasa
-                    <strong>Salveaza</strong> pentru a pastra modificarile fara inchiderea ferestrei sau
-                    <strong>OK</strong> pentru a salva si inchide.
+                    Setari AI pastreaza profilurile de model de chat folosite pentru curatarea, segmentarea si
+                    traducerea asistate de AI, pentru descoperirea personajelor, pentru generarea profilurilor de
+                    narator si pentru Blocurile de Vorbire. Aceste profiluri nu genereaza niciodata audio &mdash; de asta se
+                    ocupa VoiceWeaver, configurat in Setari TTS.
+                </p>
+                <h3>Crearea unui profil</h3>
+                <ol>
+                    <li>Deschide <strong>Setari AI</strong> si apasa <strong>Adauga Profil</strong>. Noul profil este adaugat in lista din stanga si selectat.</li>
+                    <li>Da-i un <strong>Nume Profil</strong> clar, de exemplu <code>Traducere_gpt-5.5</code> sau <code>BlocuriVorbire_LMStudio_Qwen3</code>. Lasa bifat <strong>Profil activ</strong> &mdash; doar profilurile active apar in listele de profiluri din paginile de lucru.</li>
+                    <li>Alege <strong>Tip Backend</strong>: <code>lmstudio</code>, <code>ollama</code> sau <code>openai_compatible</code>.</li>
+                    <li>Introdu <strong>URL Baza</strong>. Pentru OpenAI foloseste <code>https://api.openai.com/v1</code>; pentru LM Studio porneste serverul local si foloseste <code>http://127.0.0.1:1234/v1</code> sau adresa din retea cand ruleaza pe alt calculator.</li>
+                    <li>Introdu <strong>Cheie API</strong> pentru furnizorii online. Campul este mascat si poate ramane gol pentru un furnizor local.</li>
+                    <li>Apasa <strong>Conecteaza</strong>. La reusita, AudioMancer raporteaza cate modele a gasit si completeaza lista <strong>Nume Model</strong> cu ele; la esec arata motivul si pastreaza ultimele valori functionale.</li>
+                    <li>Alege modelul in <strong>Nume Model</strong>. Campul este editabil, deci poti scrie si un nume pe care furnizorul nu l-a listat.</li>
+                    <li>Seteaza <strong>Fereastra Context</strong>, <strong>Tokeni Maximi Iesire</strong>, <strong>Timeout (s)</strong> si <strong>Temperatura</strong>, apoi alege profilul implicit pentru fiecare operatie, in partea de jos a ferestrei.</li>
+                    <li><strong>Anuleaza</strong> renunta la sesiune. <strong>Aplica</strong> salveaza fara sa inchida. <strong>OK</strong> salveaza si inchide.</li>
+                </ol>
+                <p>
+                    Poti trece de la un profil la altul in timp ce editezi; fiecare isi pastreaza valorile nesalvate
+                    pana cand salvezi sau anulezi. <strong>Sterge Profil</strong> sterge profilul selectat fara sa
+                    intrebe si refuza sa stearga ultimul ramas; orice implicit de operatie care indica profilul sters
+                    revine la <strong>(niciunul)</strong>.
                 </p>
                 <p>
-                    Poti comuta intre profiluri in timpul editarii: fiecare profil isi pastreaza valorile nesalvate in
-                    fereastra deschisa. Salveaza sau OK pastreaza sesiunea, iar Anuleaza continua sa o abandoneze. O
-                    conectare reusita actualizeaza lista de modele a profilului. Cand modelul selectat exact raporteaza
-                    o fereastra de context, AudioMancer completeaza automat valoarea daca nu ai modificat-o manual.
-                    Pentru LM Studio este preferat contextul instantei incarcate, iar pentru Ollama sunt citite detaliile
-                    modelului selectat. Daca o conectare ulterioara esueaza, eroarea este afisata fara a sterge ultimele
-                    modele sau informatii de context descoperite cu succes.
+                    O conectare reusita poate completa singura <strong>Fereastra Context</strong> atunci cand modelul
+                    selectat o raporteaza &mdash; LM Studio din instanta incarcata, Ollama din detaliile modelului. De indata
+                    ce scrii tu insuti in <strong>Nume Model</strong> sau in <strong>Fereastra Context</strong>,
+                    conectarile ulterioare iti lasa valoarea neatinsa.
                 </p>
+                <h3>Campuri numerice</h3>
+                <table>
+                    <thead>
+                        <tr><th>Camp</th><th>Interval</th><th>Implicit</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Fereastra Context</td><td>1 - 1000000</td><td>16384</td></tr>
+                        <tr><td>Tokeni Maximi Iesire</td><td>1 - 1000000</td><td>8192</td></tr>
+                        <tr><td>Timeout (s)</td><td>1 - 65535</td><td>300</td></tr>
+                        <tr><td>Temperatura</td><td>0.00 - 2.00, pas 0.05</td><td>0.20</td></tr>
+                    </tbody>
+                </table>
+                <div class="warning">
+                    <strong>Tokenii Maximi de Iesire conteaza cel mai mult la traducere.</strong> O traducere este cam
+                    la fel de lunga ca sursa ei, deci AudioMancer dimensioneaza fiecare cerere de traducere dupa ce
+                    poate returna raspunsul, nu dupa fereastra de context. Un profil cu fereastra de context larga dar
+                    cu limita de iesire mica este pur si simplu impartit in mai multe cereri, mai mici. Daca limita de
+                    iesire este prea mica pentru a returna macar traducerea unei singure cereri, Traducerea AI refuza
+                    sa porneasca si numeste acea setare.
+                </div>
+                <h3>Valori implicite pe operatie</h3>
+                <p>
+                    Partea de jos a ferestrei stabileste cu ce profil porneste fiecare operatie: <strong>Profil
+                    implicit pentru curatare</strong>, <strong>Profil implicit pentru segmentare</strong>,
+                    <strong>Profil implicit pentru traducere</strong>, <strong>Profil implicit generare
+                    narator</strong>, <strong>Profil implicit pentru extragerea personajelor</strong> si <strong>Profil
+                    implicit pentru blocuri de vorbire</strong>. Fiecare listeaza <strong>(niciunul)</strong> urmat de
+                    toate profilurile active.
+                </p>
+                <p>
+                    Alte doua controale stau printre ele si nu sunt alegeri de profil. <strong>Strategie implicita de
+                    segmentare AI</strong> prestabileste strategia cu care porneste pagina Segmentare Text &mdash;
+                    <strong>Paragraf</strong>, <strong>Semnificatie</strong> sau <strong>Scena</strong>. <strong>Mod
+                    context segmentare</strong> &mdash; <strong>Echilibrat</strong>, <strong>Context scena extins</strong>
+                    sau <strong>Context maxim</strong> &mdash; decide cat text citeste segmentarea AI deodata; ferestrele mai
+                    largi pot da granite mai naturale, dar costa mai mult timp la fiecare cerere.
+                </p>
+                <h3>Profiluri OpenAI online recomandate</h3>
+                <table>
+                    <thead>
+                        <tr><th>Operatie</th><th>Model recomandat</th><th>Temperatura</th><th>Context</th><th>Iesire maxima</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Curatare AI</td><td><code>gpt-5.4-nano</code></td><td>0.0-0.1</td><td>400000</td><td>32768</td></tr>
+                        <tr><td>Segmentare AI</td><td><code>gpt-5.4-mini</code></td><td>0.1</td><td>400000</td><td>32768</td></tr>
+                        <tr><td>Traducere AI</td><td><code>gpt-5.5</code></td><td>0.2</td><td>1000000</td><td>64000</td></tr>
+                        <tr><td>Descoperire Personaje</td><td><code>gpt-5.4</code></td><td>0.1</td><td>1000000</td><td>64000</td></tr>
+                        <tr><td>Blocuri Vorbire</td><td><code>gpt-5.4</code></td><td>0.0-0.1</td><td>1000000</td><td>64000</td></tr>
+                    </tbody>
+                </table>
+                <h3>Profiluri LM Studio locale recomandate</h3>
+                <table>
+                    <thead>
+                        <tr><th>Operatie</th><th>Model recomandat</th><th>Alternativa</th><th>Temperatura</th><th>Context</th><th>Iesire maxima</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Curatare AI</td><td><code>mistralai/mistral-small-3.2</code></td><td><code>openai/gpt-oss-20b</code></td><td>0.0-0.05</td><td>32768</td><td>8192</td></tr>
+                        <tr><td>Segmentare AI</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
+                        <tr><td>Traducere AI</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td><td>8192</td></tr>
+                        <tr><td>Descoperire Personaje</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
+                        <tr><td>Blocuri Vorbire</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td><td>8192</td></tr>
+                    </tbody>
+                </table>
+                <div class="note">
+                    AudioMancer trimite modelul, fereastra de context, bugetul de iesire, temperatura, timeoutul si &mdash;
+                    cand <strong>Iesire structurata</strong> este bifata &mdash; un indiciu de iesire structurata. Detaliile
+                    de esantionare precum top-p, top-k, penalizarea de repetitie, seedul si modul de rationament
+                    apartin presetarii LM Studio a modelului incarcat. Tine cheile API online private si introdu-le
+                    doar in aceasta fereastra.
+                </div>
                 <figure>
                     <img src="assets/screenshots/ai-settings-dialog.png" alt="Fereastra Setari AI">
-                    <figcaption>Setarile AI definesc furnizorul, adresa API, modelul si parametrii de generare text.</figcaption>
+                    <figcaption>Setari AI pastreaza profilurile de model de text, limitele lor si profilul implicit al fiecarei operatii asistate de AI.</figcaption>
                 </figure>
-                <h3>Profiluri recomandate OpenAI</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Etapa</th>
-                            <th>Model recomandat</th>
-                            <th>Setari utile</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Curatare text</td>
-                            <td><code>gpt-5.4-nano</code></td>
-                            <td>Temperatura 0.1, context 32k, raspuns 16k.</td>
-                        </tr>
-                        <tr>
-                            <td>Segmentare text</td>
-                            <td><code>gpt-5.4-mini</code></td>
-                            <td>Temperatura 0.0, context 32k, raspuns 16k.</td>
-                        </tr>
-                        <tr>
-                            <td>Traducere AI</td>
-                            <td><code>gpt-5.5</code></td>
-                            <td>Temperatura 0.3, context 64k sau mai mult, raspuns 32k.</td>
-                        </tr>
-                        <tr>
-                            <td>Personaje</td>
-                            <td><code>gpt-5.4</code></td>
-                            <td>Temperatura 0.1, context 64k, raspuns 24k.</td>
-                        </tr>
-                        <tr>
-                            <td>Blocuri de vorbire</td>
-                            <td><code>gpt-5.4</code></td>
-                            <td>Temperatura 0.0, context 64k, raspuns 32k.</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <h3>Profiluri recomandate LM Studio</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Etapa</th>
-                            <th>Model recomandat</th>
-                            <th>Setari utile</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Curatare text</td>
-                            <td><code>mistralai/mistral-small-3.2</code></td>
-                            <td>Fallback: <code>openai/gpt-oss-20b</code>. Temperatura 0.1.</td>
-                        </tr>
-                        <tr>
-                            <td>Segmentare text</td>
-                            <td><code>qwen/qwen3-30b-a3b-2507</code></td>
-                            <td>Temperatura 0.0, context cat mai mare.</td>
-                        </tr>
-                        <tr>
-                            <td>Traducere AI</td>
-                            <td><code>google/gemma-3-27b</code></td>
-                            <td>Temperatura 0.3; foloseste bucati mai mici daca memoria GPU este limitata.</td>
-                        </tr>
-                        <tr>
-                            <td>Personaje</td>
-                            <td><code>qwen/qwen3-30b-a3b-2507</code></td>
-                            <td>Temperatura 0.1; verifica manual numele si rolurile.</td>
-                        </tr>
-                        <tr>
-                            <td>Blocuri de vorbire</td>
-                            <td><code>qwen/qwen3.6-27b</code></td>
-                            <td>Fallback: <code>qwen/qwen3.6-35b-a3b</code>, <code>google/gemma-4-31b</code>, sau <code>openai/gpt-oss-20b</code>. Temperatura 0.1-0.2, context 65535.</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <p class="source-note">
-                    Pastreaza cheia API OpenAI privata si introdu-o numai in fereastra Setari AI din AudioMancer.
-                    Pentru LM Studio, AudioMancer trimite modelul, contextul, limita de raspuns, temperatura,
-                    timeout-ul si sugestia de iesire structurata. Poti configureaza top-p, top-k, repeat penalty, seed si reasoning mode in preseturile LM Studio pentru modelul incarcat.
-                </p>
             </section>
 
             <section id="tts-settings">
-                <h2>Setari TTS</h2>
+                <h2>Setari TTS / VoiceWeaver</h2>
                 <p>
-                    Setarile TTS configureaza conexiunea cu VoiceWeaver. Introdu adresa calculatorului unde ruleaza
-                    VoiceWeaver, portul API si optiunile implicite pentru vocile folosite in proiect. Aici setezi si
-                    valorile implicite pentru generarea Scene Ambience dupa ce Blocurile de vorbire creeaza prompturile
-                    ambientale. Apasa
-                    <strong>Salveaza</strong> pentru a pastra modificarile fara inchiderea ferestrei sau
-                    <strong>OK</strong> pentru a salva si inchide.
+                    Setari TTS configureaza runtimeul VoiceWeaver folosit pentru mostrele naratorului, mostrele
+                    personajelor si Blocurile Audio si pastreaza valorile implicite pentru generarea sunetelor de
+                    Ambienta Scena.
                 </p>
-                <ul>
-                    <li>Foloseste <strong>Test Connection</strong> pentru a descoperi modelele VoiceWeaver disponibile.</li>
-                    <li>Alege <strong>None</strong>, <strong>Deschideri si inchideri</strong> sau <strong>Deschideri, inchideri si schimbari de scena</strong>.</li>
-                    <li>Seteaza durata blocurilor Scene Ambience si numarul maxim de blocuri ambientale pe secventa.</li>
-                    <li>Seteaza guidance, numarul de pasi si seed-ul pentru modelul sound-prompt. Valoarea <strong>Random</strong> foloseste seed aleator.</li>
-                    <li>Activarea Scene Ambience pentru Blocuri de vorbire este controlata de politica Scene Ambience Placement.</li>
-                </ul>
+                <h3>Runtime VoiceWeaver</h3>
+                <ol>
+                    <li>Instaleaza si porneste VoiceWeaver pe acest calculator sau pe altul din aceeasi retea.</li>
+                    <li>Introdu <strong>URL Baza</strong>. Valoarea implicita este <code>http://127.0.0.1:8059</code>.</li>
+                    <li>Introdu o <strong>Cheie API</strong> daca runtimeul tau cere una. Campul este mascat.</li>
+                    <li>Apasa <strong>Testeaza Conexiunea</strong>. AudioMancer raporteaza reusita si numarul de modele gasite sau arata motivul esecului. Linia de stare de langa buton afiseaza <strong>Neconectat</strong>, <strong>Conectat</strong> sau <strong>Conectare esuata</strong> si porneste de la <em>Neconectat</em> de fiecare data cand deschizi fereastra.</li>
+                </ol>
+                <p>
+                    <strong>Modele Descoperite</strong> arata ce ofera runtimeul, un rand pe model, sub forma
+                    <em>model | stare | moduri de generare</em>, cu <em>activ</em> adaugat celui in uz. Pana cand o
+                    testare reuseste, afiseaza o singura linie care spune ca nu s-au descoperit modele.
+                </p>
+                <p>
+                    <strong>Limite Audio Runtime</strong> iti spune daca sunt disponibile capabilitatile Qwen3 base si
+                    Voice Designer necesare. Inainte de o testare reusita, iti cere sa testezi intai conexiunea; dupa
+                    aceea fie confirma capabilitatile, fie le numeste pe cele care lipsesc.
+                </p>
+                <h3>Timpi si limite de text</h3>
+                <table>
+                    <thead>
+                        <tr><th>Setare</th><th>Interval</th><th>Implicit</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Timeout Preview Audio (s)</td><td>10 - 3600</td><td>60</td></tr>
+                        <tr><td>Timeout Generare Audio (s)</td><td>30 - 7200</td><td>300</td></tr>
+                        <tr><td>Limita Text Previzualizare (caractere)</td><td>64 - 8192</td><td>512</td></tr>
+                        <tr><td>Tinta Bloc Naratiune (s)</td><td>0 - 300, pas 5</td><td>0 (<strong>Automat</strong>)</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    <strong>Limita Text Previzualizare</strong> este plafonul ferm al textului de previzualizare al
+                    unui profil de voce &mdash; editoarele din Voce Narator si Voci Personaje nu mai accepta caractere peste
+                    ea in timp ce scrii.
+                </p>
+                <p>
+                    <strong>Tinta Bloc Naratiune</strong> cere blocuri mai scurte decat ar permite modelul in modul
+                    acelasi narator. La valoarea cea mai mica afiseaza <strong>Automat</strong> si AudioMancer
+                    foloseste cel mai larg bloc sigur pe care il sustine modelul TTS descoperit. Aceasta setare poate
+                    doar sa scurteze blocurile: bugetul de tokeni al modelului ramane limita ferma, pentru ca cerand
+                    mai mult audio decat poate produce modelul obtii iesire trunchiata sau tacuta. O valoare nenula sub
+                    cinci secunde este ridicata la cinci.
+                </p>
+                <h3>Ambienta Scena</h3>
+                <table>
+                    <thead>
+                        <tr><th>Setare</th><th>Optiuni sau interval</th><th>Implicit</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Pozitionare Ambienta Scena</td><td>Fara &middot; Deschideri si inchideri &middot; Deschideri, inchideri si schimbari de scena</td><td>Fara</td></tr>
+                        <tr><td>Durata Max Secventa Ambienta (s)</td><td>1 - 120</td><td>10</td></tr>
+                        <tr><td>Nr. Max Blocuri Ambienta</td><td>1 - 24</td><td>6</td></tr>
+                        <tr><td>Ghidaj Ambienta Scena</td><td>0.1 - 30.0, pas 0.5</td><td>7.0</td></tr>
+                        <tr><td>Pasi Ambienta Scena</td><td>1 - 300</td><td>100</td></tr>
+                        <tr><td>Seed Ambienta Scena</td><td>-1 - 2147483647</td><td>-1 (<strong>Aleatoriu</strong>)</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    <strong>Pozitionare Ambienta Scena</strong> este comutatorul care decide daca generarea Blocurilor
+                    de Vorbire creeaza deloc blocuri de ambienta. Lasa-l pe <strong>Fara</strong> pentru un audiobook
+                    doar cu vorbire. <strong>Durata Max Secventa</strong> este lungimea intregii secvente de ambienta
+                    si guverneaza sunetul pe care AudioMancer il genereaza pentru un bloc de ambienta; durata pe bloc
+                    din pagina Blocuri Vorbire se foloseste doar cand aceasta setare nu se aplica. <strong>Nr. Max
+                    Blocuri</strong> este un plafon, nu o cota &mdash; modelul poate folosi mai putine cand mai putine surse
+                    distincte de sunet sunt utile. Fixeaza un <strong>Seed</strong> cand vrei un sunet repetabil sau
+                    lasa-l pe <strong>Aleatoriu</strong>.
+                </p>
+                <p>
+                    <strong>Anuleaza</strong>, <strong>Aplica</strong> si <strong>OK</strong> se comporta ca in Setari.
+                    Limba audiobookului si modul de naratiune nu sunt aici &mdash; ele apartin proiectului si sunt blocate pe
+                    pagina Acasa.
+                </p>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="Fereastra Setari TTS">
-                    <figcaption>Setarile TTS indica serviciul VoiceWeaver si pastreaza limitele plus parametrii Scene Ambience.</figcaption>
+                    <figcaption>Setari TTS verifica VoiceWeaver, listeaza modelele descoperite si pastreaza valorile implicite de timp, previzualizare si Ambienta Scena.</figcaption>
                 </figure>
             </section>
-
             <section id="project">
                 <h2>Proiecte</h2>
                 <p>
-                    Creeaza sau deschide un proiect din pagina Acasa. Fiecare proiect contine textul sursa,
-                    fisierele generate, aprobari si exporturi. Pentru carti lungi, foloseste un dosar dedicat pentru
-                    fiecare proiect.
+                    Un proiect este un folder care contine cartea sursa, toate fisierele generate si audio final.
+                    <strong>Proiect Nou</strong> si <strong>Deschide Proiect</strong> sunt actiuni din bara de sus,
+                    disponibile oricand.
+                </p>
+                <ol>
+                    <li>Apasa <strong>Proiect Nou</strong>. Alege folderul parinte, apoi scrie numele proiectului &mdash; titlul cartii merge bine.</li>
+                    <li>Pe pagina Acasa apasa <strong>Selecteaza Fisierul Sursa</strong> si alege cartea. Formatele acceptate sunt TXT, PDF, RTF, DOCX, ODT, MD si EPUB.</li>
+                    <li>Alege <strong>Limba traducerii</strong> &mdash; engleza, romana, germana, franceza, rusa, portugheza, spaniola sau italiana.</li>
+                    <li>Alege <strong>Stil iesire audio</strong>: <strong>Acelasi narator pentru toata cartea</strong> sau <strong>Narator + voci de personaje</strong>.</li>
+                    <li>Apasa <strong>Porneste Proiectul</strong> si confirma. Fisierul sursa, limba traducerii si stilul de iesire audio sunt apoi fixate pentru acest proiect.</li>
+                </ol>
+                <p>
+                    Odata blocate optiunile, cele doua liste si <strong>Porneste Proiectul</strong> se dezactiveaza, iar
+                    rezumatul afiseaza <em>Sursa blocata</em>. Pentru alt fisier sursa sau alt stil de iesire, creeaza
+                    un proiect nou.
                 </p>
                 <p>
-                    Formatele acceptate sunt TXT, PDF, RTF, DOCX, ODT, MD si EPUB. Extragerea TXT si RTF recunoaste
-                    UTF-8, codari uzuale central-europene si vest-europene, precum si text rusesc cp1251. Capitolele
-                    EPUB respecta BOM-ul sau declaratia XML/HTML de codare, inclusiv UTF-16 si codari legacy declarate.
+                    <strong>Deschide Proiect</strong> revine la un folder de proiect existent. Daca datele proiectului
+                    sunt deteriorate, AudioMancer explica ce a gasit si iti ofera repararea in loc sa il deschida in
+                    tacere. Daca sistemul de fisiere blocheaza crearea, importul sau o reparare, AudioMancer arata
+                    eroarea si motivul ei original; nu schimba proiectul si nu raporteaza reusita.
                 </p>
                 <p>
-                    Daca sistemul de fisiere blocheaza crearea proiectului, importul sursei sau o reparatie acceptata,
-                    AudioMancer afiseaza eroarea de proiect si motivul original. Proiectul curent nu este schimbat si
-                    aplicatia nu raporteaza succesul operatiei.
+                    Extragerea TXT si RTF recunoaste UTF-8, precum si texte uzuale central-europene, vest-europene si
+                    ruse cp1251. Capitolele EPUB urmeaza marcajul de ordine a octetilor sau setul de caractere declarat
+                    XML/HTML, inclusiv UTF-16 si codificari vechi declarate.
                 </p>
+                <h3>Cum se citeste pagina Acasa</h3>
                 <p>
-                    Panoul compact Acasa arata starea de finalizare pentru fiecare faza. Dupa ce o faza este gata,
-                    poti exporta documentele aferente: text curatat, segmente, traduceri, personaje si Blocuri de
-                    vorbire. Butonul <strong>Export Project ZIP</strong> salveaza o copie completa a proiectului.
+                    <strong>Rezumat Proiect</strong> arata numele proiectului, folderul, fisierul sursa, daca optiunile
+                    sunt blocate si ce urmeaza de facut. <strong>Flux de Lucru</strong> deseneaza cele zece etape ca o
+                    banda de buline: pline cu o bifa cand sunt finalizate, pline cu un punct cat timp sunt in curs si
+                    goale cand nu au inceput. <strong>Progres Flux de Lucru</strong> repeta aceeasi informatie ca
+                    lista, un rand pe etapa, cu <em>Nepornit</em>, <em>In Curs</em> sau <em>Finalizat</em> si un
+                    indiciu care explica ce asteapta acea etapa.
                 </p>
             </section>
 
             <section id="manual-workflow">
                 <h2>Exemplu flux manual</h2>
                 <p>
-                    Acest exemplu arata un flux aproape complet manual. Foloseste-l cand vrei ca AudioMancer sa
-                    administreze fisierele proiectului, progresul verificarii, vocile, audio generat si exporturile, dar
-                    vrei sa decizi manual segmentele de text si Blocurile de vorbire.
+                    Acesta este un traseu de productie preponderent manual. Foloseste-l cand vrei ca AudioMancer sa
+                    administreze fisierele proiectului, vocile, audio si exporturile, dar vrei sa decizi tu segmentele
+                    si Blocurile de Vorbire.
                 </p>
                 <ol>
-                    <li>Creeaza un proiect din <strong>Acasa / Proiect</strong>, selecteaza fisierul sursa, alege limba de traducere si stilul audio, apoi apasa <strong>Start Project</strong>.</li>
-                    <li>Deschide <strong>Curatare text</strong>, ruleaza curatarea determinista, editeaza manual textul curatat daca este nevoie, apoi aproba rezultatul.</li>
-                    <li>Deschide <strong>Segmentare text</strong>. Pentru o structura complet manuala, foloseste <strong>Insert</strong> pentru primul segment, introdu sau lipeste textul dorit si salveaza. Selecteaza un segment si apasa din nou <strong>Insert</strong> pentru a adauga urmatorul segment dupa cel curent.</li>
-                    <li>Foloseste <strong>Edit</strong>, <strong>Save</strong> si <strong>Delete</strong> in Segmentare text pana cand lista de segmente corespunde ordinii dorite a cartii.</li>
-                    <li>Ruleaza <strong>Traducere AI</strong> cand vrei o traducere sau o rescriere/adaptare AI in aceeasi limba. Daca nu este nevoie de traducere, continua numai dupa aprobarea segmentelor existente.</li>
-                    <li>Deschide <strong>Personaje</strong>. Ruleaza descoperirea sau adauga/editeaza manual personajele. Confirma nume, aliasuri, indiciu de gen, indiciu de varsta, prompt de definitie vocala si dovezi, apoi aproba lista.</li>
-                    <li>Deschide <strong>Voce narator</strong>. Genereaza sau editeaza profilul naratorului, creeaza sau importa mostra WAV, ascult-o si selecteaz-o.</li>
-                    <li>Deschide <strong>Voci personaje</strong> cand proiectul foloseste voci de personaje. Genereaza sau importa mostrele disponibile; poti continua si daca numai o parte dintre personaje au deja mostre utilizabile.</li>
-                    <li>Deschide <strong>Blocuri de vorbire</strong>. Selecteaza primul segment sursa, apasa <strong>Insert</strong>, alege vorbitorul si tipul de continut, introdu textul si salveaza. Continua sa inserezi dupa blocul selectat pana cand segmentul contine naratiunea, dialogul, pauzele, ambience-ul si indicatiile dorite.</li>
-                    <li>Foloseste <strong>Edit</strong>, <strong>Delete</strong>, <strong>Approve</strong>, <strong>Generate Audio</strong> si <strong>Play/Stop</strong> pe Blocurile de vorbire selectate pentru verificare pe rand, fara pierderea selectiei curente.</li>
-                    <li>Deschide <strong>Blocuri audio</strong> pentru a genera orice blocuri vorbite aprobate ramase, asculta fisierele WAV, regenereaza blocurile slabe, apoi aproba audio.</li>
-                    <li>Deschide <strong>Asamblare audio</strong>, alege metoda de compunere, genereaza iesirea WAV finala si verifica fisierele cu controalele de redare.</li>
-                    <li>Revino la <strong>Acasa / Proiect</strong> pentru exporturi text, arhive ZIP cu voci, arhive ZIP cu Asamblare audio sau arhiva ZIP completa a proiectului.</li>
+                    <li>Creeaza proiectul din bara de sus, selecteaza fisierul sursa pe <strong>Acasa / Proiect</strong>, alege limba traducerii si stilul de iesire audio, apoi apasa <strong>Porneste Proiectul</strong>.</li>
+                    <li>Deschide <strong>Curatare Text</strong>, apasa <strong>Extrage Textul</strong>, apoi apasa <strong>Curatare</strong> cu profilul AI pe <strong>(niciunul)</strong> pentru o trecere determinista. Apasa <strong>Editeaza</strong> pentru a corecta textul curatat manual, apoi <strong>Salveaza</strong>.</li>
+                    <li>Deschide <strong>Segmentare Text</strong>. Pentru o structura complet manuala apasa <strong>Insereaza</strong> pentru primul segment, apasa <strong>Editeaza</strong>, lipeste sau scrie textul si apasa <strong>Salveaza</strong>. Selecteaza un segment si apasa din nou <strong>Insereaza</strong> pentru urmatorul.</li>
+                    <li>Foloseste <strong>Editeaza</strong>, <strong>Salveaza</strong> si <strong>Sterge</strong> pana cand lista de segmente respecta ordinea dorita. Ultimul segment ramas nu poate fi sters.</li>
+                    <li>Ruleaza <strong>Traducere AI</strong> daca audiobookul trebuie sa fie in alta limba sau daca vrei o rescriere AI in aceeasi limba. Altfel sari peste pagina.</li>
+                    <li>Deschide <strong>Personaje</strong>. Ruleaza <strong>Porneste Descoperirea</strong> sau construieste lista manual cu <strong>Adauga Personaj</strong>. Corecteaza numele, aliasurile, indicatiile si prompturile de definitie vocala cu <strong>Editeaza Personajul</strong> si <strong>Salveaza Personajul</strong>.</li>
+                    <li>Deschide <strong>Voce Narator</strong>. Apasa <strong>Creeaza</strong> pentru un profil propriu sau <strong>Genereaza Naratori</strong> pentru sugestii AI, scrie promptul si textul de previzualizare, apasa <strong>Genereaza Mostra</strong> sau <strong>Importa Mostra</strong>, asculta cu <strong>Reda</strong>, apoi apasa <strong>Selecteaza</strong>.</li>
+                    <li>Deschide <strong>Voci Personaje</strong> cand proiectul foloseste voci de personaje. Da fiecarui personaj un prompt si o mostra. Este in regula sa continui doar cu personajele care au deja mostre utilizabile.</li>
+                    <li>Deschide <strong>Blocuri Vorbire</strong>. Selecteaza un segment, apasa <strong>Insereaza</strong>, alege vorbitorul si tipul de continut, scrie textul si apasa <strong>Salveaza</strong>. Insereaza in continuare pana cand segmentul contine naratiunea, dialogul, pauzele, ambienta si indicatiile dorite.</li>
+                    <li>Foloseste <strong>Aproba</strong>, <strong>Genereaza Audio</strong> si <strong>Reda</strong> pentru a revizui bloc cu bloc fara sa pierzi locul.</li>
+                    <li>Deschide <strong>Blocuri Audio</strong> pentru a genera blocurile aprobate ramase, asculta cu <strong>Reda</strong> sau <strong>Reda Audiobook</strong>, regenereaza blocurile slabe si aproba audio.</li>
+                    <li>Deschide <strong>Asamblare Audio</strong>, alege modul de iesire, apasa <strong>Genereaza Audio</strong> si verifica rezultatul cu bara de redare.</li>
+                    <li>Revino la <strong>Acasa / Proiect</strong> pentru a exporta documentele text, arhivele ZIP de voce, ZIPul de Asamblare Audio sau un snapshot complet al proiectului.</li>
                 </ol>
                 <div class="note">
-                    Editarile manuale pastreaza datele downstream neafectate unde este posibil. Cand o schimbare
-                    afecteaza audio generat, AudioMancer reseteaza numai Blocurile audio afectate si cere confirmare
-                    pentru editari cu impact distructiv.
+                    Modificarile manuale pastreaza munca din aval care nu are legatura cu ele. Cand o modificare
+                    afecteaza audio generat, AudioMancer iti spune exact ce va fi resetat si asteapta confirmarea
+                    inainte de salvare.
                 </div>
             </section>
 
             <section id="cleanup">
                 <h2>Curatare text</h2>
                 <p>
-                    Curatarea elimina artefacte de OCR, spatii gresite si structuri care incurca etapele urmatoare.
-                    Poti folosi curatare locala sau AI, apoi verifici rezultatul inainte de aprobare.
+                    Curatarea Textului extrage textul lizibil din fisierul sursa si il pregateste pentru lucrul la
+                    audiobook. Pagina are doua previzualizari alaturate: <strong>Previzualizare Text Extras</strong> in
+                    stanga, mereu doar pentru citire, si <strong>Previzualizare Text Curatat</strong> in dreapta.
                 </p>
-                <ul>
-                    <li>Extrage textul din documente acceptate.</li>
-                    <li>Ruleaza curatare determinista sau curatare asistata AI; pentru o rulare AI noua, adauga reguli optionale suplimentare cand apare caseta de instructiuni. Anularea casetei optionale lasa curatarea asistata AI pregatita pentru o noua pornire.</li>
-                    <li>Curatarea este acceptata pentru text sursa in engleza, romana, germana, franceza, rusa, portugheza, spaniola si italiana. Daca este detectata alta limba sursa, Curatarea se finalizeaza si pastreaza rezultatul pentru verificare, dar afiseaza un singur avertisment cu codul detectat pentru a verifica rezultatul cu atentie.</li>
-                    <li>Pornirea Curatarii dupa ce s-a finalizat cere confirmare si incepe o rulare noua reala. Aceasta elimina rezultatul Curatarii anterioare si toate rezultatele etapelor ulterioare. O rulare intrerupta, pusa pe pauza, in finalizare sau esuata poate fi reluata si isi pastreaza punctul de control.</li>
-                    <li>Dupa finalizarea curatarii AI, selecteaza orice combinatie dintre <strong>Heading</strong>, <strong>Separator</strong>, <strong>Noise</strong>, <strong>Header</strong> si <strong>Footer</strong>, apoi apasa <strong>Apply Spacing</strong>. Textul Story nu poate fi selectat si ramane exact. Deselecteaza toate categoriile pentru a elimina toate randurile goale controlabile dintre blocuri; reaplicarea foloseste deciziile pastrate si nu apeleaza din nou furnizorul AI.</li>
-                    <li>Editeaza direct textul curatat pentru corectii manuale, imbunatatiri sau repararea OCR. Confirma mesajul de impact inainte de editare deoarece salvarile pot afecta datele etapelor urmatoare.</li>
-                    <li>In timpul editarii textului curatat, Extrage text, Curatare, Reseteaza Curatarea si profilul AI optional nu sunt disponibile pentru ca schita sa nu fie inlocuita. Salvare si Anulare raman disponibile; actualizarile obisnuite ale paginii pastreaza schita. Proiect nou si Deschide proiect cer confirmare inainte de a renunta la textul nesalvat modificat, iar anularea selectorului de proiect pastreaza schita.</li>
-                    <li>Dupa o noua rulare a Curatarii sau salvarea unei editari, regenereaza Segmentarea text si toate rezultatele ulterioare. AudioMancer elimina automat rezultatele invechite si reseteaza starile lor din proiect.</li>
-                    <li>Aproba textul curatat numai dupa verificare; aprobarea deblocheaza Segmentare text.</li>
-                    <li>Trage separatorul dintre previzualizarea textului extras si textului curatat; fiecare previzualizare pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe operatia si continua mai tarziu din acelasi proiect. Progresul AI reluat continua de la ultima cerere finalizata catre furnizor; daca un lot trebuie impartit in mai multe apeluri, totalul afisat creste in loc sa ascunda lucrul finalizat sau sa indice fals terminarea.</li>
-                </ul>
+                <h3>Cum se ruleaza</h3>
+                <ol>
+                    <li>Apasa <strong>Extrage Textul</strong>. Daca exista deja o extragere finalizata, AudioMancer intreaba intai, pentru ca o extragere noua sterge extragerea curenta si toate rezultatele ulterioare.</li>
+                    <li>Alege un <strong>Profil AI (optional)</strong>. Lasa-l pe <strong>(niciunul)</strong> pentru o trecere pur determinista, cu reguli locale &mdash; cea mai sigura prima incercare. Alege un profil activ pentru ca un model sa ajute la OCR stricat, artefacte de pagina si paragrafe prost formatate.</li>
+                    <li>Apasa <strong>Curatare</strong>. Exista un singur buton de Curatare pentru ambele cazuri; profilul decide daca este implicat un model. Daca exista deja o curatare finalizata, AudioMancer intreaba inainte de a o inlocui impreuna cu tot ce vine dupa ea.</li>
+                    <li>Citeste rezultatul. Apasa <strong>Editeaza</strong> pentru a-l corecta manual, apoi <strong>Salveaza</strong> &mdash; sau <strong>Anuleaza</strong> pentru a renunta la ciorna si a reveni la textul salvat.</li>
+                </ol>
+                <p>
+                    Cat timp o editare este deschisa, <strong>Extrage Textul</strong>, <strong>Curatare</strong>,
+                    <strong>Reseteaza Curatarea</strong> si lista de profiluri se dezactiveaza, ca nicio actiune de flux
+                    sa nu iti inlocuiasca ciorna pe nevazute. Raman disponibile doar <strong>Salveaza</strong> si
+                    <strong>Anuleaza</strong>.
+                </p>
+                <p>
+                    <strong>Reseteaza Curatarea</strong> intreaba mereu intai. Sterge documentul de curatare, fisierul
+                    de text curatat, jurnalele de curatare si toate rezultatele din aval, inclusiv personaje, voci si
+                    audio.
+                </p>
+                <div class="note">
+                    Aceasta pagina nu are buton de aprobare. Segmentarea Textului se deblocheaza de indata ce curatarea
+                    a produs un text curatat nevid &mdash; revizuieste si corecteaza textul inainte de a merge mai departe,
+                    pentru ca nimic altceva nu il conditioneaza. Dupa o noua rulare a Curatarii sau dupa salvarea unei
+                    editari, etapele ulterioare sunt resetate automat.
+                </div>
+                <p>
+                    Apasa <strong>Stare Operatie</strong> pentru notele rularii. Dupa o validare reusita, starea
+                    raporteaza si cate granite cu incredere scazuta a gasit trecerea &mdash; o valoare care merita citita
+                    inainte de a continua.
+                </p>
+                <p>
+                    Curatarea este reglata pentru engleza, romana, germana, franceza, rusa, portugheza, spaniola si
+                    italiana. O alta limba sursa produce in continuare o iesire revizuibila, cu un avertisment care
+                    numeste codul limbii detectate, ca sa stii ca trebuie sa verifici atent rezultatul.
+                </p>
+                <p>
+                    Trage separatorul dintre cele doua previzualizari pentru a favoriza o parte. Panourile pornesc
+                    impartite egal si niciunul nu poate fi pliat complet. Curatarea poate fi intrerupta si continuata
+                    ulterior; progresul AI reluat continua de la ultima cerere finalizata, iar daca un lot trebuie
+                    impartit in mai multe apeluri, totalul afisat creste in loc sa ascunda munca terminata.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/text-cleanup.png" alt="Pagina Curatare text">
-                    <figcaption>Curata textul si aproba rezultatul inainte de segmentare.</figcaption>
+                    <img src="assets/screenshots/text-cleanup.png" alt="Pagina Curatare Text">
+                    <figcaption>Curatare Text arata controalele de extragere si curatare deasupra previzualizarilor textului extras si curatat.</figcaption>
                 </figure>
             </section>
 
             <section id="chunking">
                 <h2>Segmentare text</h2>
                 <p>
-                    Segmentarea imparte cartea in bucati mai usor de procesat. Bucatile aprobate sunt folosite pentru
-                    traducere, descoperire personaje si blocuri de vorbire.
+                    Segmentarea Textului imparte cartea curatata in segmentele cu care lucreaza toate paginile
+                    urmatoare. Coloana din stanga aseaza <strong>Referinta Text Curatat</strong> deasupra
+                    <strong>Listei Segmentelor</strong>; panoul din dreapta este <strong>Segment Selectat</strong>.
+                    Trage separatorul dintre cele doua coloane &mdash; fiecare pastreaza cel putin o treime din latimea
+                    paginii. Impartirea dintre referinta si lista de segmente este fixa.
+                </p>
+                <h3>Generarea segmentelor</h3>
+                <ul>
+                    <li><strong>Segmentare Determinista</strong> este rapida, gratuita si repetabila. Nu are nevoie de profil AI.</li>
+                    <li><strong>Segmentare Asistata de AI</strong> poate gasi granite mai naturale in proza complexa, dar costa timp de model. Are nevoie de un profil activ selectat in <strong>Profil AI</strong> si ramane inactiva pana cand exista unul.</li>
+                    <li><strong>Strategie AI</strong> alege cum imparte modelul: <strong>Paragraf</strong> pentru ferestre stabile de paragrafe, <strong>Semnificatie</strong> pentru unitati semantice sau <strong>Scena</strong> pentru granite de tip scena.</li>
+                    <li>Inaintea unei rulari AI noi, AudioMancer deschide <strong>Instructiuni Segmentare AI</strong> ca sa adaugi reguli suplimentare in prompt. Lasa gol pentru promptul standard; apasarea Anuleaza acolo anuleaza rularea. Reluarea unei rulari intrerupte sare peste aceasta fereastra si refoloseste strategia stocata cu rularea, ignorand lista.</li>
+                    <li>Daca modelul nu returneaza o impartire utilizabila pentru o fereastra, AudioMancer pastreaza granitele structurale ale ferestrei acolo unde poate si altfel salveaza fereastra ca un singur segment. Nota de progres numeste intervalul de paragrafe, iar rularea incheiata raporteaza totalul. Un <strong>Mod context segmentare</strong> mai larg in Setari AI poate da granite mai bune.</li>
+                </ul>
+                <h3>Editarea listei</h3>
+                <p>
+                    Fiecare rand al listei arata idul segmentului si prima linie a textului sau. Selecteaza un segment
+                    pentru a-l incarca in <strong>Segment Selectat</strong>.
                 </p>
                 <ul>
-                    <li>Genereaza segmente determinist sau cu asistenta AI.</li>
-                    <li>Pentru o rulare AI noua de segmentare, adauga reguli optionale suplimentare cand apare caseta de instructiuni cu word wrap.</li>
-                    <li>Alege strategia AI: <strong>Paragraph</strong> pentru ferestre stabile de paragrafe, <strong>Meaning</strong> pentru unitati semantice sau <strong>Scene</strong> pentru limite apropiate de scene.</li>
-                    <li>Daca AI nu returneaza o impartire utilizabila pentru orice fereastra de text, inclusiv pentru fereastra finala, AudioMancer pastreaza limitele structurale cand sunt disponibile si altfel salveaza fereastra ca un singur segment. Mesajul de progres identifica intervalul de paragrafe, iar operatia finalizata raporteaza numarul total de ferestre fallback. Un context AI mai mare poate produce limite mai naturale.</li>
-                    <li>Inspecteaza fiecare segment generat.</li>
-                    <li>Editeaza rezultatul generat cand textul sau impartirea trebuie corectate manual. Confirma mesajul de impact inainte de editare deoarece salvarile pot afecta datele etapelor urmatoare.</li>
-                    <li>Foloseste <strong>Insert</strong> pentru a adauga un segment gol dupa segmentul selectat, apoi salveaza textul dorit in segmentul nou.</li>
-                    <li>Foloseste <strong>Delete</strong> pentru a elimina segmentul selectat cand nu trebuie sa continue in etapele urmatoare.</li>
-                    <li>Confirma inserarile si stergerile numai dupa ce citesti mesajul de impact. AudioMancer pastreaza traducerile, Blocurile de vorbire si Blocurile audio neafectate unde este posibil, dar reseteaza Asamblarea audio deoarece ordinea continutului final s-a schimbat.</li>
-                    <li>Aproba segmentele pentru a debloca traducerea, personajele si Blocurile de vorbire.</li>
-                    <li>Trage separatorul dintre zona de referinta/lista si previzualizarea segmentului selectat; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe segmentarea si continua mai tarziu de la punctul de control salvat. Pagina arata daca rularea este in curs, poate fi reluata sau este finalizata fara sa inventeze o valoare indisponibila pentru progresul total. Checkpoint-urile create de vechea segmentare pe baza de identificatori pornesc din nou de la inceput.</li>
+                    <li><strong>Insereaza</strong> adauga un segment gol dupa cel selectat si creeaza chiar primul segment cand lista este goala. Intreaba intai, pentru ca un segment inserat adauga o inregistrare netradusa si reseteaza Asamblarea Audio.</li>
+                    <li><strong>Sterge</strong> elimina segmentul selectat impreuna cu traducerea, Blocurile de Vorbire, Blocurile Audio si audio generat, apoi reseteaza Asamblarea Audio. Intreaba intai si este indisponibil cand a mai ramas un singur segment.</li>
+                    <li><strong>Editeaza</strong> intreaba mereu intai: editarea unui segment poate reseta traducerea acelui segment, ii poate elimina Blocurile de Vorbire si Blocurile Audio si reseteaza Asamblarea Audio. Segmentele neafectate sunt pastrate.</li>
+                    <li><strong>Salveaza</strong> scrie modificarea fara alta intrebare.</li>
                 </ul>
+                <p>
+                    Click dreapta in oricare panou de text pentru <strong>Cauta</strong> si <strong>Cauta
+                    Urmatorul</strong>. Cautarea se reia o data de la inceput si anunta cand nu exista potrivire.
+                    Fiecare panou isi tine minte propriul termen, deci poti cauta lucruri diferite in referinta si in
+                    segmentul selectat.
+                </p>
+                <div class="note">
+                    Nici aceasta pagina nu are buton de aprobare. Traducerea, descoperirea personajelor si Blocurile de
+                    Vorbire se deblocheaza din rezultatul segmentarii. Retine si ca o ciorna nesalvata de segment se
+                    pierde ori de cate ori pagina se reimprospateaza &mdash; apasa <strong>Salveaza</strong> inainte de a
+                    porni altceva.
+                </div>
+                <p>
+                    Segmentarea poate fi intrerupta si continuata din punctul ei de control. Punctele de control scrise
+                    de versiuni mai vechi de AudioMancer reiau de la inceput.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare text">
-                    <figcaption>Verifica marimea si ordinea segmentelor inainte de a continua.</figcaption>
+                    <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare Text">
+                    <figcaption>Lista de segmente este fundatia traducerii, a Blocurilor de Vorbire si a audio final.</figcaption>
                 </figure>
             </section>
 
             <section id="translation">
                 <h2>Traducere AI</h2>
                 <p>
-                    Traducerea AI este optionala si este gandita ca <strong>traducere literara</strong>: pastreaza tonul,
-                    dialogul, vocea personajelor, ritmul narativ si sensul, nu doar cuvintele. Foloseste-o daca vrei sa
-                    produci audiobook-ul intr-o alta limba. Verifica manual segmentele traduse, mai ales numele,
-                    dialogul si formulele regionale.
+                    Traducerea AI este optionala si urmareste o <strong>traducere literara</strong>: pastrarea tonului,
+                    a dialogului, a vocii personajelor, a ritmului si a sensului, nu o rescriere cuvant cu cuvant.
+                    <strong>Limba Originala</strong> si <strong>Limba Tinta</strong> sunt afisate ca indicatoare doar
+                    pentru citire &mdash; limba tinta a fost blocata la pornirea proiectului. Cand cele doua coincid,
+                    pornirea unei traduceri foloseste totusi profilul AI, deci rularea rescrie, normalizeaza sau
+                    adapteaza textul in loc sa il copieze.
                 </p>
+                <h3>Pagina</h3>
+                <p>
+                    <strong>Lista Segmentelor</strong> se intinde in partea de sus, cu cele trei butoane alaturi.
+                    Fiecare rand este marcat <strong>[In asteptare]</strong>, <strong>[Tradus]</strong> sau
+                    <strong>[Aprobat]</strong>, urmat de idul segmentului si prima linie a sursei. Dedesubt,
+                    <strong>Segment Original</strong> si <strong>Segment Tradus</strong> stau alaturi; originalul poarta
+                    si un contor <em>Segmente aprobate: n/m</em> si o bara care urmareste aprobarile, nu progresul
+                    traducerii.
+                </p>
+                <p>
+                    Trage separatorul orizontal de sub lista de segmente pentru a vedea mai multe segmente deodata.
+                    Lista nu coboara niciodata sub inaltimea ei de pornire si nu ocupa niciodata mai mult de jumatate
+                    din pagina, deci ambele panouri de text raman utilizabile. Cele doua panouri de text pastreaza
+                    fiecare cel putin 30% din latimea lor comuna.
+                </p>
+                <h3>Traducerea</h3>
                 <ul>
-                    <li>Limbile tinta acceptate sunt engleza, romana, germana, franceza, rusa, portugheza, spaniola si italiana.</li>
-                    <li>Genereaza traducerea pe segmente, cu jurnal AI optional daca este activat in setari.</li>
-                    <li>Adauga reguli optionale de traducere in caseta cu text incadrat pe randuri inainte de o traducere noua, o noua trecere din etapa de verificare sau retraducerea segmentului selectat. Continuarea pastreaza regulile salvate cu rularea intrerupta, iar regulile pentru un segment se aplica numai acelei incercari.</li>
-                    <li>Inspecteaza fiecare segment tradus impreuna cu sursa.</li>
-                    <li>Trage separatorul orizontal de sub Lista Segmentelor pentru a inalta lista cand vrei sa vezi mai multe segmente deodata. Pagina se deschide cu lista la inaltimea obisnuita; separatorul nu o micsoreaza niciodata sub aceasta inaltime si nu ii permite sa ocupe mai mult de jumatate din spatiul pe care il imparte cu panourile Segment original si Segment tradus, astfel incat ambele raman utilizabile.</li>
-                    <li>Editeaza manual textul tradus inainte de aprobare. Salvarile automate pastreaza cursorul, selectia, istoricul de anulare si pozitia de derulare, iar Start/Resume salveaza ultima editare in asteptare inainte de continuarea traducerii.</li>
-                    <li>Profilul AI activat si selectat ramane ales in sesiunea curenta in timpul reimprospatarilor de verificare.</li>
-                    <li>Re-Translate Selected devine disponibil numai dupa pornirea traducerii si este dezactivat cat timp traducerea este ocupata. Daca acea incercare esueaza sau este anulata, textul curent, aprobarile si starea finalizata disponibila etapelor urmatoare raman neschimbate.</li>
-                    <li>Aproba segmente individuale dupa verificare.</li>
-                    <li>Reporneste traducerea cand schimbi profilul AI sau vrei o noua varianta literara.</li>
-                    <li>Intrerupe traducerea si continua mai tarziu din acelasi proiect.</li>
+                    <li><strong>Porneste Traducerea</strong> are nevoie de un profil AI selectat si de cel putin un segment fara traducere. AudioMancer deschide intai <strong>Instructiuni Traducere AI</strong> ca sa adaugi reguli suplimentare; Anuleaza acolo anuleaza rularea. Reluarea unei rulari intrerupte sare peste fereastra si pastreaza regulile stocate cu ea.</li>
+                    <li><strong>Retradu Segmentul Selectat</strong> devine disponibil dupa ce traducerea a pornit si are nevoie de un segment selectat si de un profil selectat. Cere mereu instructiuni, iar acestea se aplica doar acelei incercari. Daca incercarea esueaza sau este anulata, textul si aprobarile existente raman neatinse.</li>
+                    <li><strong>Reseteaza Traducerea</strong> este modul in care incepi o trecere noua. Odata ce fiecare segment este tradus, <strong>Porneste Traducerea</strong> se dezactiveaza, deci schimbarea profilului sau a regulilor pentru o trecere completa noua inseamna resetare intai. Intreaba inainte de a sterge traducerea si rezultatele din aval pentru personaje, voci, vorbire, audio si audiobook.</li>
+                    <li><strong>Aproba Selectia</strong> aproba segmentul curent si muta selectia la urmatorul, deci poti revizui o carte intreaga fara sa atingi lista. <strong>Aproba Tot</strong> aproba toate segmentele traduse deodata, fara sa intrebe.</li>
                 </ul>
+                <div class="note">
+                    Modificarile textului tradus se salveaza singure. Scrisul se opreste pentru aproximativ trei
+                    sferturi de secunda si textul este scris; schimbarea segmentului, aprobarea, pornirea unei rulari
+                    sau parasirea paginii il salveaza imediat. Cursorul, selectia, istoricul de anulare si pozitia de
+                    derulare supravietuiesc salvarii. <strong>Modificarea unei traduceri anuleaza aprobarea acelui
+                    segment</strong> &mdash; marcajul randului revine de la <em>[Aprobat]</em> in timp ce scrii, ceea ce este
+                    intentionat: textul modificat nu a fost inca revizuit.
+                </div>
+                <p>
+                    Traducerea poate fi intrerupta si continuata ulterior din acelasi proiect.
+                </p>
                 <figure>
                     <img src="assets/screenshots/ai-translation.png" alt="Pagina Traducere AI">
-                    <figcaption>Traducerea aprobata devine textul folosit de etapele urmatoare.</figcaption>
+                    <figcaption>Lista de segmente poarta un marcaj de stare pentru fiecare segment; panourile original si tradus stau dedesubt.</figcaption>
                 </figure>
             </section>
-
             <section id="characters">
                 <h2>Personaje</h2>
                 <p>
-                    Pagina Personaje identifica naratorul si personajele din text. Verifica lista si corecteaza numele,
-                    aliasurile sau descrierile inainte de alocarea vocilor.
+                    Pagina Personaje gaseste rolurile vorbitoare si da fiecaruia un prompt de definitie vocala pentru
+                    paginile de voce. Coloana din stanga aseaza <strong>Lista Personajelor</strong> deasupra
+                    <strong>Profilului Personajului</strong>; <strong>Dovezi</strong> ocupa dreapta.
+                </p>
+                <h3>Descoperirea</h3>
+                <p>
+                    Alege un <strong>Profil AI</strong> activ si apasa <strong>Porneste Descoperirea</strong>. Prima
+                    data AudioMancer explica ce face operatia; apoi deschide <strong>Instructiuni Descoperire
+                    Personaje</strong> ca sa adaugi reguli in prompt, iar Anuleaza acolo anuleaza rularea. Reluarea unei
+                    rulari intrerupte sare peste fereastra de instructiuni &mdash; apasa din nou <strong>Porneste
+                    Descoperirea</strong> pentru a continua, pentru ca nu exista un buton separat de reluare.
+                </p>
+                <p>
+                    <strong>Reseteaza Descoperirea</strong> elimina rezultatul descoperirii si jurnalele ei de
+                    tranzactii, impreuna cu munca din aval, lasand neatinse jurnalele din amonte, precum traducerea.
+                    Foloseste-l cand datele descoperirii sunt inutilizabile.
+                </p>
+                <p>
+                    Cat timp descoperirea ruleaza sau asteapta reluarea, <strong>Stare Operatie</strong> arata
+                    ferestrele finalizate si cele planificate si duce acea baza mai departe in progresul sintezei
+                    profilurilor. Cand niste candidati sunt exclusi pentru dovezi insuficiente, pagina incheiata
+                    grupeaza motivele fara sa stocheze fragmente din sursa, iar exportul Personaje raporteaza acelasi
+                    numar.
+                </p>
+                <h3>Profilul personajului</h3>
+                <p>
+                    Selectarea unui personaj completeaza formularul: <strong>Nume Canonic</strong>,
+                    <strong>Aliasuri</strong> (separate prin virgula), <strong>Indicatie Gen</strong> cu
+                    <strong>Incredere Gen</strong>, <strong>Indicatie Varsta</strong> cu <strong>Incredere
+                    Varsta</strong>, <strong>Prompt Definitie Vocala</strong> si o <strong>Incredere</strong> generala.
+                    Fiecare camp este doar pentru citire pana cand intri intr-o editare; formularul se deruleaza cand
+                    fereastra este scunda.
                 </p>
                 <ul>
-                    <li>Descopera naratorul si personajele din segmente aprobate sau traduceri aprobate.</li>
-                    <li>Adauga reguli optionale pentru Descoperirea Personajelor in caseta de prompt cu incadrare automata inainte de o rulare noua.</li>
-                    <li>Revizuieste nume, aliasuri, indicii de varsta/gen, rol, stil de vorbire si dovezi din text.</li>
-                    <li>Editeaza personajele cand modelul AI combina, omite sau eticheteaza gresit un vorbitor. Blocurile de vorbire atribuite revin la starea neaprobata pentru verificare.</li>
-                    <li>Adauga manual personaje lipsa sau sterge rezultate false. Stergerea unui personaj muta Blocurile de vorbire afectate pe Narator, le marcheaza neaprobate si reseteaza numai Blocurile audio aferente.</li>
-                    <li>Regeneraza definitii de voce dedicate cand descrierea nu este suficient de buna.</li>
-                    <li>Aproba lista de personaje inainte de lucrul cu vocile.</li>
-                    <li>Trage separatorul dintre zona de lucru cu personaje si dovezi; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe descoperirea personajelor si continua mai tarziu. Pagina arata ferestrele de descoperire finalizate si planificate cand rularea este in curs sau poate fi reluata, apoi pastreaza aceasta baza in progresul sintezei profilurilor de personaje.</li>
-                    <li>Alege orice profil AI activ inainte de Pornire sau Reluare. Reimprospatarea normala a paginii pastreaza selectia, iar Reluare foloseste profilul selectat curent in lista.</li>
-                    <li>Cand descoperirea exclude candidati deoarece dovezile din sursa sau dialog vorbit sunt insuficiente, pagina finalizata grupeaza motivele fara a stoca fragmente din sursa; exportul Personaje afiseaza acelasi numar de avertismente.</li>
-                    <li>Ca parte a resetarii deja stabilite pentru operatia curenta si cele din aval, Reseteaza Descoperirea elimina jurnalele Descoperirii Personajelor si pastreaza jurnalele din amonte, precum Traducerea.</li>
-                    <li>Daca datele Descoperirii Personajelor sunt nevalide, foloseste <strong>Reseteaza Descoperirea</strong> pentru a le elimina si a readuce pagina in starea pregatita.</li>
+                    <li><strong>Adauga Personaj</strong> cere numele canonic, apoi deschide formularul pentru rest. Salvarea cere confirmare si sincronizeaza lista de tinte din Voci Personaje, pastrand Blocurile de Vorbire, Blocurile Audio si iesirile de asamblare existente.</li>
+                    <li><strong>Editeaza Personajul</strong> deblocheaza formularul. Salvarea cere confirmare, pentru ca Blocurile de Vorbire atribuite devin neaprobate, Blocurile lor Audio sunt resetate si Asamblarea Audio este resetata.</li>
+                    <li><strong>Sterge Personajul</strong> cere confirmare: Blocurile de Vorbire atribuite revin la Narator si devin neaprobate, doar Blocurile Audio afectate sunt resetate, iar Asamblarea Audio este resetata.</li>
+                    <li><strong>Salveaza Personajul</strong> confirma adaugarea sau editarea curenta. Daca incerci sa parasesti un personaj cu modificari nesalvate, AudioMancer ofera <strong>Salveaza</strong>, <strong>Renunta</strong> sau <strong>Anuleaza</strong>.</li>
                 </ul>
+                <h3>Dovezi</h3>
+                <p>
+                    Lista de dovezi arata cate un rand pentru fiecare pasaj justificativ, sub forma <em>id segment |
+                    motiv</em>, iar panoul de dedesubt arata segmentul sursa complet. Trage separatorul dintre ele;
+                    niciunul nu coboara sub o cincime din inaltimea grupului. Click dreapta in panou pentru
+                    <strong>Cauta</strong> si <strong>Cauta Urmatorul</strong>.
+                </p>
+                <div class="note">
+                    Aceasta pagina nu are buton de aprobare si niciun buton care sa regenereze singur o definitie
+                    vocala. Corecteaza o descriere slaba editand direct <strong>Prompt Definitie Vocala</strong> sau
+                    rafineaz-o mai tarziu in paginile de voce, acolo unde este folosita de fapt. Odata ce descoperirea
+                    s-a incheiat, <strong>Porneste Descoperirea</strong> se dezactiveaza &mdash; reseteaza intai pentru a o
+                    rula din nou.
+                </div>
                 <figure>
                     <img src="assets/screenshots/characters.png" alt="Pagina Personaje">
-                    <figcaption>Lista de personaje pregateste vocile pentru narator si dialog.</figcaption>
+                    <figcaption>Profilurile personajelor si dovezile lor ghideaza paginile de voce din aval.</figcaption>
                 </figure>
             </section>
 
             <section id="narrator">
                 <h2>Voce narator</h2>
                 <p>
-                    Alege vocea principala pentru narator. Testeaza mostra audio si pastreaza vocea consistenta pentru
-                    toate capitolele aceluiasi proiect.
+                    Voce Narator pregateste vocea principala de povestire. Lista <strong>Voci Narator</strong> este in
+                    stanga; <strong>Prompt Designer Voce</strong> si <strong>Text Previzualizare</strong> se aseaza in
+                    dreapta. Lista arata cate un rand pe profil, cu <em>| Selectat</em> marcandu-l pe cel folosit de
+                    proiect.
                 </p>
                 <div class="warning">
-                    Vocea naratorului este o voce dedicata proiectului. Verifica promptul si mostra, deoarece aceasta
-                    voce devine vocea principala pentru naratiune si pentru proiectele cu acelasi narator.
+                    Vocea naratorului este o voce dedicata proiectului. Verifica atent promptul si mostra &mdash; ea devine
+                    vocea principala a audiobookului, iar in proiectele cu acelasi narator rosteste fiecare replica.
                 </div>
+                <h3>Construirea unui profil</h3>
                 <ul>
-                    <li>Inspecteaza profilurile de narator disponibile si selectia curenta.</li>
-                    <li>Foloseste Genereaza Profiluri Narator pentru sugestii AI editabile, cu reguli optionale de profil intr-o caseta cu text incadrat pe randuri inainte de fiecare incercare de generare.</li>
-                    <li>Profilul AI activ ales pentru sugestiile de narator ramane selectat cand pagina se reimprospateaza sau inspectezi alt narator. Daca este eliminat sau dezactivat, AudioMancer foloseste profilul implicit configurat pentru generarea naratorului, apoi primul profil activ.</li>
-                    <li>Dupa o rulare esuata sau anulata, reluarea restaureaza numarul de profiluri si regulile salvate cand punctul de reluare este valid. Pastreaza ambele valori pentru a permite continuarea compatibila sau schimba numarul ori editeaza sau goleste regulile pentru a porni curat; anularea oricarui dialog nu porneste lucrul AI.</li>
-                    <li>Editeaza promptul naratorului, textul de previzualizare si descrierea vocii.</li>
-                    <li>Daca un profil inspectat nu mai este disponibil cand alegi Editeaza, AudioMancer afiseaza o eroare de proiect ca sa poti reimprospata proiectul si incerca din nou.</li>
-                    <li>Cand se schimba limba audio a proiectului, AudioMancer actualizeaza limba fiecarui profil, dar pastreaza textul de previzualizare scris manual sau de AI. Numai textul implicit canonic nemodificat este inlocuit cu valoarea implicita a noii limbi.</li>
-                    <li>Bugetul de previzualizare foloseste unitati de vorbire bazate pe cuvinte pentru limbile acceptate si trebuie sa ramana in limita sigura afisata inainte de a genera o mostra.</li>
-                    <li>Genereaza o mostra VoiceWeaver pentru limba audio a proiectului.</li>
-                    <li>Reda si opreste mostra direct in pagina.</li>
-                    <li>Editarea sau stergerea unui profil opreste redarea si elibereaza mostra inainte de curatare; metadatele mostrei sunt eliminate chiar daca sistemul de operare pastreaza inca deschis fisierul WAV.</li>
-                    <li>Foloseste butonul Selecteaza deasupra listei de profiluri pentru mostra finala folosita in etapele urmatoare.</li>
-                    <li>Regenereaza mostra daca vocea nu se potriveste cartii.</li>
-                    <li>Maximizeaza fereastra aplicatiei pentru ca panourile Prompt proiectare voce si Text previzualizare sa primeasca automat aceeasi inaltime extinsa.</li>
-                    <li>Trage separatorul dintre lista de profiluri si editor; lista compacta pastreaza cel putin o cincime din latimea paginii si editorul cel putin o treime.</li>
-                    <li>Intrerupe generarea mostrei si continua mai tarziu.</li>
+                    <li><strong>Creeaza</strong> cere un nume afisat, apoi deschide un profil gol pentru editare.</li>
+                    <li><strong>Genereaza Naratori</strong> cere profilului AI selectat sugestii editabile. Confirma intai &mdash; analiza poate dura mult si poate consuma tokeni platiti &mdash; apoi intreaba cate profiluri sa genereze (de la 1 la 20), apoi deschide <strong>Instructiuni Profil Narator</strong> pentru reguli suplimentare optionale. Acestea sunt doar sugestii de text; nu se produce audio.</li>
+                    <li><strong>Editeaza</strong> deblocheaza promptul si textul de previzualizare. Avertizeaza ca a continua sterge mostra curenta si, cand editezi naratorul selectat si exista deja audio, ca audio generat al naratorului si Asamblarea Audio vor fi resetate.</li>
+                    <li><strong>Salveaza</strong> confirma modificarea. <strong>Sterge</strong> elimina un profil personalizat dupa confirmare.</li>
                 </ul>
+                <h3>Mostre</h3>
+                <ul>
+                    <li><strong>Genereaza Mostra</strong> confirma intai &mdash; AudioMancer contacteaza runtimeul TTS, iar conexiunea trebuie testata in prealabil in Setari TTS &mdash; apoi produce fisierul WAV. Daca exista o mostra, ea este inlocuita.</li>
+                    <li><strong>Importa Mostra</strong> deschide un selector de fisiere WAV, valideaza fisierul, apoi cere textul exact rostit in el. Acel text este obligatoriu: el este ceea ce modelul de voce potriveste.</li>
+                    <li><strong>Reda</strong> reda mostra si devine <strong>Opreste</strong> in timpul redarii, deci o poti opri chiar si cand pagina este altfel ocupata.</li>
+                    <li><strong>Selecteaza</strong> face din profilul inspectat naratorul proiectului, folosit de Blocurile de Vorbire si de Blocurile Audio. Confirma intai, pentru ca schimbarea reseteaza audio naratorului si Asamblarea Audio.</li>
+                </ul>
+                <p>
+                    <strong>Buget previzualizare</strong>, sub textul de previzualizare, arata cate unitati rostite
+                    costa textul tau fata de limita sigura a modelului TTS activ si se actualizeaza in timp ce scrii.
+                    Generarea este refuzata cat timp esti peste acea limita. Textul de previzualizare este si taiat la
+                    <strong>Limita Text Previzualizare</strong> din Setari TTS in timp ce scrii, deci nu poate depasi
+                    niciodata plafonul de caractere.
+                </p>
+                <p>
+                    Cand limba vocii proiectului se schimba, AudioMancer actualizeaza limba fiecarui profil dar
+                    pastreaza textul de previzualizare scris de tine sau de model; doar un text implicit neatins este
+                    inlocuit cu cel implicit al noii limbi. Trage separatorul dintre lista si editor &mdash; lista nu mai
+                    scade sub 220 de pixeli si nu creste peste aproximativ jumatate din pagina, iar editorul pastreaza
+                    cel putin o treime. Maximizarea ferestrei da panourilor de prompt si de previzualizare inaltimi
+                    egale.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/narator-voice.png" alt="Pagina Voce narator">
-                    <figcaption>Vocea naratorului este folosita pentru textul narativ si blocurile fara personaj.</figcaption>
+                    <img src="assets/screenshots/narator-voice.png" alt="Pagina Voce Narator">
+                    <figcaption>Profilurile de narator contin promptul de voce, textul de previzualizare cu bugetul sau, mostra si naratorul selectat.</figcaption>
                 </figure>
             </section>
 
             <section id="character-voices">
                 <h2>Voci personaje</h2>
                 <p>
-                    Aloca voci personajelor. Pentru proiectele cu un singur narator, pastreaza personajele pe vocea
-                    naratorului. Pentru proiectele cu mai multe voci, verifica fiecare mostra inainte de generare.
+                    Voci Personaje pregateste cate o mostra pentru fiecare tinta vocala. <strong>Tintele Vocii</strong>
+                    listeaza intai tinta naratorului, apoi fiecare personaj descoperit, fiecare rand aratand <em>nume |
+                    Mostra prezenta</em> sau <em>nume | Mostra lipsa</em>. <strong>Prompt Designer Voce</strong> si
+                    <strong>Text Previzualizare</strong> se aseaza in dreapta.
                 </p>
                 <div class="warning">
-                    Vocile personajelor sunt create dedicat pentru proiectul curent si lista curenta de personaje.
-                    Verifica fiecare prompt si mostra pentru consistenta dialogului.
+                    Vocile personajelor sunt create pentru acest proiect si pentru aceasta lista de personaje.
+                    Verifica fiecare prompt si fiecare mostra, ca dialogul sa ramana consecvent in tot audiobookul.
                 </div>
+                <p>
+                    In proiectele <strong>Narator + voci de personaje</strong>, fiecare tinta de tip personaj poate
+                    avea propriul prompt si propria mostra. In proiectele <strong>Acelasi narator pentru toata
+                    cartea</strong>, pagina este doar pentru citire si fiecare replica refoloseste mostra naratorului
+                    selectat. Tinta naratorului nu este niciodata editabila aici &mdash; o schimbi pe pagina Voce Narator.
+                </p>
+                <div class="note">
+                    Deschiderea acestei pagini inainte ca naratorul selectat sa aiba o mostra ridica o atentionare
+                    unica. Genereaza intai mostra naratorului: munca la personaje depinde de ea.
+                </div>
+                <h3>Controale</h3>
                 <ul>
-                    <li>Selecteaza fiecare tinta de voce din lista de personaje.</li>
-                    <li>Revizuieste promptul primit din Descoperire personaje.</li>
-                    <li>Editeaza promptul si textul de previzualizare inainte de generarea mostrei.</li>
-                    <li>Foloseste <strong>Genereaza Sample-uri Personaje</strong> pentru a regenera mostre pentru toate tintele curente de personaje.</li>
-                    <li>Genereaza, reda, opreste si regenereaza mostre VoiceWeaver pentru fiecare personaj.</li>
-                    <li>Schimbarea vocii unui personaj pastreaza Blocurile de vorbire si randurile Blocurilor audio, apoi sterge doar audio-ul generat care foloseste acea tinta de voce. Schimbarea vocii naratorului sterge numai audio-ul de narator.</li>
-                    <li>Aproba sau continua revizuirea alocarilor de voci.</li>
-                    <li>Reutilizeaza automat vocea naratorului in modul cu acelasi narator.</li>
-                    <li>Trage separatorul dintre lista de tinte si editor; lista pastreaza cel putin un sfert din latimea paginii si editorul cel putin o treime.</li>
-                    <li>Intrerupe generarea mostrelor si continua mai tarziu.</li>
+                    <li><strong>Editeaza</strong> deblocheaza promptul si textul de previzualizare pentru personajul selectat. Avertizeaza ca a continua sterge mostra curenta a acelui personaj si, cand exista audio generat, ca audio care foloseste aceasta voce si Asamblarea Audio vor fi resetate. Blocurile de Vorbire si randurile de Blocuri Audio sunt pastrate.</li>
+                    <li><strong>Salveaza</strong> confirma modificarea. Atat promptul, cat si textul de previzualizare trebuie sa fie nevide.</li>
+                    <li><strong>Importa Mostra</strong> deschide un selector WAV, apoi cere textul exact rostit in fisier, apoi confirma impactul asupra audio.</li>
+                    <li><strong>Genereaza Mostra</strong> confirma, apoi contacteaza runtimeul TTS pentru acel singur personaj.</li>
+                    <li><strong>Previzualizare</strong> reda mostra stocata si devine <strong>Opreste Previzualizarea</strong> in timpul redarii.</li>
+                    <li><strong>Genereaza Mostre Personaje</strong>, in partea de sus a paginii, regenereaza mostrele <em>tuturor</em> tintelor de tip personaj curente, dupa ce iti spune cate vor fi inlocuite. Ignora tinta naratorului.</li>
                 </ul>
+                <div class="note">
+                    Aceasta pagina nu are buton de aprobare. Este terminata cand personajele care conteaza pentru tine
+                    arata <em>Mostra prezenta</em>; este in regula sa continui cu doar o parte dintre ele acoperite.
+                </div>
                 <figure>
-                    <img src="assets/screenshots/character-voices.png" alt="Pagina Voci personaje">
-                    <figcaption>Alocarile de voci controleaza cum sunt generate replicile in VoiceWeaver.</figcaption>
+                    <img src="assets/screenshots/character-voices.png" alt="Pagina Voci Personaje">
+                    <figcaption>Tintele vocale listeaza naratorul si fiecare personaj cu starea mostrei, langa promptul de voce si textul de previzualizare. Randul de butoane din aceasta captura precede ordinea actuala.</figcaption>
                 </figure>
             </section>
 
             <section id="speech-blocks">
                 <h2>Blocuri de vorbire</h2>
                 <p>
-                    Blocurile de vorbire transforma segmentele aprobate in unitati pregatite pentru audio. Verifica
-                    vorbitorul, textul, contorul de caractere, pauzele, indicatiile si blocurile Scene Ambience inainte
-                    de a aproba blocurile. Poti genera si asculta audio pentru blocul selectat fara sa treci pe pagina
-                    Blocuri audio.
+                    Blocurile de Vorbire transforma fiecare segment in instructiuni de audiobook: naratiune, dialog,
+                    pauza, indicatie si, optional, sunete de Ambienta Scena. <strong>Lista Segmentelor</strong> se
+                    intinde in partea de sus, cu butoanele ei alaturi; dedesubt, <strong>Segment Selectat</strong> si
+                    <strong>Blocuri Vorbire</strong> stau alaturi.
                 </p>
+                <div class="warning">
+                    <strong>Genereaza Tot</strong> si <strong>Imparte Segment</strong> cer un profil AI selectat in
+                    <em>orice</em> proiect, inclusiv in cele cu acelasi narator. Configureaza cel putin un profil activ
+                    in Setari AI inainte de a ajunge la aceasta pagina.
+                </div>
+                <h3>Generarea</h3>
                 <ul>
-                    <li>Genereaza Blocuri de vorbire pentru fiecare segment aprobat.</li>
-                    <li>Foloseste politica Scene Ambience Placement din Setari TTS inainte de generare sau reimpartirea segmentului selectat pentru a decide daca se creeaza blocuri ambientale.</li>
-                    <li>Adauga reguli optionale pentru Blocuri de vorbire in caseta de prompt cu incadrare automata inainte de generare noua sau reimpartirea segmentului selectat.</li>
-                    <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si campurile Scene Ambience.</li>
-                    <li>Scene Ambience este salvat ca blocuri separate ordonate. Fiecare bloc ambiental trebuie sa descrie o singura sursa sonora simpla sau un tip de sunet strans legat, nu un mix compus.</li>
-                    <li>Editeaza promptul, promptul negativ si durata unui bloc Scene Ambience in aceeasi zona de detalii folosita pentru blocurile de narator si personaje. Generarea Blocurilor audio normalizeaza durata sunetului la durata Scene Ambience din Setari TTS.</li>
-                    <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate. Daca blocul selectat are deja audio generat, avertismentul de impact apare cand apesi <strong>Edit</strong>, inainte ca editorul sa fie deblocat.</li>
-                    <li>Foloseste contorul blocului selectat pentru a compara lungimea textului curent cu limita modelului TTS activ.</li>
-                    <li>Insereaza sau sterge blocuri pentru a repara dialogul, pauzele sau fluxul narativ. Inserarea selecteaza blocul inserat; stergerea selecteaza urmatorul bloc ramas sau randul anterior cand blocul sters era ultimul.</li>
-                    <li>Editarea, salvarea, inserarea, stergerea, schimbarea aprobarii, reimprospatarea dupa generare si reimpartirea segmentului selectat pastreaza cursorul, selectia marcata si pozitiile de derulare orizontala si verticala din textul segmentului selectat. Inserarea selecteaza in continuare blocul inserat, iar stergerea selecteaza urmatorul sau anteriorul bloc ramas.</li>
-                    <li>Reimparte segmentele selectate cand structura nu este utilizabila.</li>
-                    <li>Aproba blocuri individuale sau foloseste aprobare globala dupa verificare. Pe un bloc aprobat, acelasi buton pentru blocul selectat devine <strong>Dezaproba</strong> si pastreaza randul selectat.</li>
-                    <li>Foloseste <strong>Generate Audio</strong> si <strong>Play/Stop</strong> pe blocul aprobat selectat pentru a previzualiza sunetul fara sa parasesti pagina.</li>
-                    <li>Editarea, stergerea, reimpartirea sau schimbarea vorbitorului reseteaza numai Blocul audio afectat. Inserarea, aprobarea sau dezaprobarea unui Bloc de vorbire pastreaza Blocurile audio generate si reseteaza Asamblarea audio.</li>
-                    <li>Reseteaza Blocurile de vorbire cand se schimba textul, traducerea, personajele sau modul de voce.</li>
-                    <li>Trage separatorul dintre Segment selectat si Blocuri de vorbire; fiecare panou de jos pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Trage separatorul orizontal de sub Lista Segmentelor pentru a inalta lista cand vrei sa vezi mai multe segmente deodata. Pagina se deschide cu lista la inaltimea obisnuita; separatorul nu o micsoreaza niciodata sub aceasta inaltime si nu ii permite sa ocupe mai mult de 60% din inaltimea paginii, astfel incat panourile Segment selectat si Blocuri de vorbire raman utilizabile.</li>
-                    <li>Intrerupe generarea si continua mai tarziu fara pierderea blocurilor aprobate.</li>
+                    <li><strong>Genereaza Tot</strong> proceseaza fiecare segment care inca nu are blocuri. Confirma intai &mdash; o cerere AI per segment, consumand tokeni, iar o rulare reusita reseteaza Blocurile Audio si Asamblarea Audio. Cand Ambienta Scena este activata in Setari TTS, confirma si asta, pentru ca ambienta adauga apeluri suplimentare pe segment. La final deschide <strong>Instructiuni Blocuri Vorbire</strong> pentru reguli suplimentare; reluarea unei rulari intrerupte sare peste acea fereastra.</li>
+                    <li><strong>Imparte Segment</strong> reimparte doar segmentul selectat. Confirma, apoi cere mereu instructiuni &mdash; pentru un singur segment nu exista scutire la reluare.</li>
+                    <li><strong>Reseteaza</strong> sterge toate Blocurile de Vorbire, goleste Blocurile Audio si Asamblarea Audio si reseteaza progresul dupa Voci Personaje.</li>
+                    <li><strong>Aproba Tot</strong> aproba deodata toate blocurile ramase, fara sa intrebe.</li>
                 </ul>
+                <p>
+                    Seteaza <strong>Pozitionare Ambienta Scena</strong> in Setari TTS <em>inainte</em> de generare sau
+                    de reimpartire: ea decide daca se creeaza deloc blocuri de ambienta.
+                </p>
+                <h3>Cum se citeste lista de blocuri</h3>
+                <p>
+                    Fiecare rand incepe cu <em>ok</em> cand blocul este aprobat sau <em>--</em> cand nu este, apoi un
+                    <em>!</em> daca blocul poarta un avertisment, apoi idul blocului, vorbitorul si textul. Randurile de
+                    Ambienta Scena arata in schimb promptul de sunet si durata lui. Randurile de segmente de deasupra
+                    arata cate blocuri are deja fiecare segment.
+                </p>
+                <h3>Editarea unui bloc</h3>
+                <ul>
+                    <li><strong>Insereaza</strong> cere confirmare, adauga un bloc dupa cel selectat si il deschide direct pentru editare.</li>
+                    <li><strong>Sterge</strong> cere confirmare, apoi selecteaza blocul urmator ramas sau pe cel anterior cand l-ai sters pe ultimul.</li>
+                    <li><strong>Editeaza</strong> deblocheaza listele <strong>Vorbitor</strong> si <strong>Tip Continut</strong> si textul. Avertizeaza doar cand blocul are deja audio generat.</li>
+                    <li><strong>Tip Continut</strong> ofera <strong>Naratiune</strong>, <strong>Dialog</strong>, <strong>Ambienta Scena</strong>, <strong>Pauza</strong> si <strong>Indicatie</strong>. Alegerea Ambienta Scena inlocuieste editorul de text cu campurile <strong>Prompt</strong>, <strong>Prompt Negativ</strong> si <strong>Durata (s)</strong>.</li>
+                    <li><strong>Vorbitor</strong> este fixat pe Narator si dezactivat in proiectele cu acelasi narator.</li>
+                    <li><strong>Aproba</strong> devine <strong>Dezaproba</strong> pe un bloc aprobat. Aprobarea muta selectia pe blocul urmator, ca sa parcurgi rapid un segment.</li>
+                    <li>Contorul de langa butoane arata lungimea blocului fata de limita modelului TTS sau <em>-</em> cand nu se aplica nicio limita si numara promptul de ambienta la blocurile de ambienta.</li>
+                    <li><strong>Genereaza Audio</strong> si <strong>Reda</strong> arata exact cum va suna blocul aprobat selectat, fara sa parasesti pagina. Sunt indisponibile pe blocurile de pauza si de indicatie, care nu produc vorbire.</li>
+                </ul>
+                <div class="note">
+                    Fiecare bloc de ambienta ar trebui sa descrie o singura sursa de sunet simpla, nu un mix compus &mdash;
+                    o atmosfera se construieste din mai multe blocuri ordonate. Campul <strong>Durata (s)</strong> de
+                    aici este o rezerva: cand <strong>Durata Max Secventa Ambienta</strong> este setata in Setari TTS,
+                    acea valoare guverneaza sunetul generat.
+                </div>
+                <p>
+                    Editarea, stergerea, reimpartirea sau schimbarea vorbitorului unui bloc reseteaza doar audio acelui
+                    bloc. Inserarea, aprobarea sau dezaprobarea pastreaza Blocurile Audio generate si reseteaza
+                    Asamblarea Audio. Cursorul, zona evidentiata si pozitia de derulare din panoul sursa supravietuiesc
+                    tuturor acestor actiuni.
+                </p>
+                <p>
+                    Trage separatorul orizontal de sub lista de segmente pentru a vedea mai multe segmente; el porneste
+                    la inaltimea blocului de butoane si nu ocupa niciodata mai mult de 60% din pagina. Separatorul de
+                    jos mentine panoul sursa intre 300 si 480 de pixeli latime. Generarea poate fi intrerupta si
+                    continuata fara pierderea blocurilor aprobate.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/speech-blocks.png" alt="Pagina Blocuri de vorbire">
-                    <figcaption>Blocurile aprobate definesc text vorbit, pauze, indicatii si prompturi individuale Scene Ambience.</figcaption>
+                    <img src="assets/screenshots/speech-blocks.png" alt="Pagina Blocuri Vorbire">
+                    <figcaption>Blocurile de Vorbire definesc textul rostit, pauzele, indicatiile si prompturile individuale de sunet pentru Ambienta Scena.</figcaption>
                 </figure>
             </section>
 
             <section id="audio-blocks">
                 <h2>Blocuri audio</h2>
                 <p>
-                    Pagina Blocuri audio trimite blocurile aprobate catre VoiceWeaver si salveaza fisiere WAV.
-                    Blocurile vorbite folosesc vocea naratorului sau a personajului. Blocurile Scene Ambience aprobate
-                    pot fi generate prin ruta sound-prompt cand selectorul Scene Ambience Audio este pornit. Daca
-                    textul, vocea, promptul, durata sau parametrii se schimba, AudioMancer marcheaza fisierele vechi
-                    ca neactualizate.
+                    Blocurile Audio trimit Blocurile de Vorbire aprobate catre VoiceWeaver si pastreaza fisierele WAV
+                    in <code>audio_blocks/</code>. <strong>Text Sursa</strong> este in stanga; in dreapta, lista
+                    <strong>Blocuri Vorbire</strong> sta deasupra <strong>Blocului Selectat</strong>.
                 </p>
+                <h3>Generarea</h3>
                 <ul>
-                    <li>Genereaza WAV pentru Blocurile de vorbire aprobate si vorbite.</li>
-                    <li>Foloseste selectorul Scene Ambience Audio pentru a include sau sari peste blocurile ambientale aprobate in generarea Blocurilor audio.</li>
-                    <li>Genereaza WAV-uri Scene Ambience din prompt si prompt negativ, folosind durata Scene Ambience din Setari TTS.</li>
-                    <li>Foloseste <strong>Start Audio Generation</strong> pentru a continua dupa adaugarea sau stergerea Blocurilor de vorbire. Blocurile audio deja generate sunt sarite chiar daca nu sunt inca aprobate; se genereaza numai blocurile aprobate curente fara audio.</li>
-                    <li>Nu trimite la TTS blocurile de pauza si indicatie.</li>
-                    <li>Imparte textul prea lung cand este nevoie si reuneste partile valide intr-un singur bloc audio.</li>
-                    <li>Previzualizeaza audio generat cu controale Play/Stop.</li>
-                    <li>Regenereaza blocuri selectate dupa corectii de text, prompt sau voce. O regenerare pentru un singur bloc nu atinge celelalte Blocuri audio.</li>
-                    <li>Aproba audio numai dupa ascultare.</li>
-                    <li>Reseteaza blocurile audio cand intrarile anterioare devin neactualizate.</li>
-                    <li>Trage separatorul dintre Text sursa si zona de verificare blocuri; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe generarea si continua mai tarziu din acelasi proiect.</li>
+                    <li>Seteaza intai <strong>Audio Ambienta Scena</strong> pe <strong>Pornit</strong> sau <strong>Oprit</strong>. Decide daca blocurile de ambienta aprobate sunt generate in aceasta rulare, iar pornirea adauga o confirmare, pentru ca are nevoie de un model de runtime care sustine prompturi de sunet.</li>
+                    <li><strong>Porneste Generarea Audio</strong> confirma, verifica daca VoiceWeaver este accesibil &mdash; si se opreste cu o eroare clara daca nu este &mdash; apoi genereaza fiecare bloc aprobat care nu are inca audio. Audio existent este sarit chiar si cand nu este aprobat, deci asa continui si dupa adaugarea de blocuri. Blocurile de pauza si de indicatie nu apeleaza niciodata modelul de voce. Blocurile rostite lungi sunt impartite la nevoie si reunite intr-o singura iesire.</li>
+                    <li><strong>Regenereaza Audio</strong> reface doar blocul selectat, dupa confirmare; blocurile fara legatura raman neatinse. Este indisponibil pe randurile de pauza si de indicatie.</li>
+                    <li><strong>Reseteaza Generarea Audio</strong> sterge audio generat dupa confirmare.</li>
+                    <li><strong>Aproba</strong> &mdash; care afiseaza <strong>Dezaproba</strong> pe un rand aprobat &mdash; si <strong>Aproba Tot</strong> confirma amandoua inainte de a schimba aprobarea.</li>
                 </ul>
+                <h3>Ascultarea</h3>
+                <p>
+                    Fiecare rand arata <em>[aprobat|in asteptare] durata | fisier | text</em>. <strong>Reda</strong>
+                    reda blocul selectat si devine <strong>Opreste</strong>; un bloc de pauza generat se "reda" ca
+                    tacerea lui exacta.
+                </p>
+                <p>
+                    <strong>Reda Audiobook</strong> reda continuu de la randul selectat pana la sfarsitul cartii,
+                    selectand fiecare rand pe masura ce ajunge la el, inserand pauzele la lungimea lor reala si sarind
+                    randurile carora le lipseste fisierul. Devine <strong>Opreste Audiobook</strong> in timpul rularii.
+                    Este cel mai rapid mod de a auzi daca ritmul functioneaza inainte de a asambla ceva. Orice pornire
+                    de redare aici opreste redarea vocii naratorului, a vocilor personajelor si a Asamblarii Audio.
+                </p>
+                <p>
+                    Aproba audio numai dupa ce l-ai ascultat. Regenereaza blocurile afectate dupa schimbari de text,
+                    voce, limba, mostra, model, prompt sau durata. Trage separatorul dintre textul sursa si zona de
+                    revizuire &mdash; fiecare parte pastreaza cel putin un sfert din latime &mdash; si separatorul dintre cele doua
+                    liste din dreapta, unde fiecare pastreaza 30% din inaltime. Generarea poate fi intrerupta si
+                    continuata ulterior.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/audio-blocks.png" alt="Pagina Blocuri audio">
-                    <figcaption>Genereaza si verifica blocurile vorbite si Scene Ambience inainte de asamblarea finala.</figcaption>
+                    <img src="assets/screenshots/audio-blocks.png" alt="Pagina Blocuri Audio">
+                    <figcaption>Blocurile Audio sunt etapa de revizuire a fisierelor WAV rostite si a sunetelor de Ambienta Scena generate, inainte de asamblarea finala.</figcaption>
                 </figure>
             </section>
 
             <section id="assembly">
                 <h2>Asamblare audio</h2>
                 <p>
-                    Asamblarea audio combina blocurile WAV aprobate in fisiere finale lungi. Poti asculta fisierele
-                    generate direct in pagina, poti derula cu bara de progres si poti folosi butoanele de salt rapid.
+                    Asamblarea Audio combina Blocurile Audio aprobate in fisierele WAV finale ale audiobookului, in
+                    folderul <code>audiobook/</code> al proiectului.
+                </p>
+                <div class="note">
+                    <strong>Genereaza Audio</strong> ramane inactiv pana cand <em>fiecare</em> Bloc Audio este aprobat.
+                    Daca nu se activeaza, revino la Blocuri Audio si cauta randurile neaprobate.
+                </div>
+                <h3>Setari iesire</h3>
+                <table>
+                    <thead>
+                        <tr><th>Setare</th><th>Optiuni sau interval</th><th>Implicit</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Mod Iesire</td><td>Pe segment text &middot; Limita de timp &middot; Audiobook intreg</td><td>Audiobook intreg</td></tr>
+                        <tr><td>Durata Maxima</td><td>1 - 1440 min, doar in modul Limita de timp</td><td>30 min</td></tr>
+                        <tr><td>Pauza Intre Blocuri</td><td>0 - 60000 ms</td><td>250 ms</td></tr>
+                        <tr><td>Pauza Intre Segmente</td><td>0 - 60000 ms</td><td>1000 ms</td></tr>
+                        <tr><td>Format Iesire</td><td>WAV</td><td>WAV</td></tr>
+                        <tr><td>Include Ambienta Scena</td><td>pornit sau oprit</td><td>pornit</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Blocurile de Vorbire de tip pauza devin tacere exacta, de lungimea lor; cele doua setari de pauza
+                    adauga golurile automate dintre blocuri si dintre segmente. Schimbarea oricareia dintre aceste
+                    setari dupa ce exista deja fisiere de audiobook cere confirmare, apoi sterge acele iesiri si
+                    raportul de asamblare &mdash; Blocurile Audio aprobate si tot ce este in amonte sunt pastrate.
+                </p>
+                <h3>Previzualizari mix scena</h3>
+                <p>
+                    Aceasta lista arata fiecare grup de Ambienta Scena sub forma <em>eticheta | durata | sunete |
+                    stare</em>, unde starea este <em>necesita audio generat</em>, <em>pregatit</em> sau
+                    <em>previzualizare pregatita</em>. <strong>Genereaza / Reimprospateaza Mix Scena</strong>
+                    suprapune fisierele WAV de sunet aprobate ale grupului intr-un singur strat ambiental, iar
+                    <strong>Reda Mix Scena</strong> il reda. Asamblarea finala foloseste acelasi mix cand
+                    <strong>Include Ambienta Scena</strong> este pornit.
+                </p>
+                <h3>Verificarea rezultatului</h3>
+                <p>
+                    <strong>Fisiere Audiobook Generate</strong> listeaza fiecare iesire ca <em>nume fisier | durata |
+                    blocuri audio</em>. Selecteaza una si apasa <strong>Reda Audio</strong> sau dublu click pe un rand
+                    pentru a reporni acel fisier de la inceput. Un singur player deserveste ambele liste, deci pornirea
+                    uneia o opreste pe cealalta, iar ambele butoane afiseaza <strong>Opreste Redarea</strong> cat timp
+                    se reda ceva.
                 </p>
                 <p>
-                    Scene Mix Previews listeaza grupurile Scene Ambience disponibile. Genereaza sau actualizeaza mixul
-                    selectat pentru a suprapune WAV-urile aprobate intr-un singur pat ambiental, apoi reda scena mixata
-                    inainte de asamblarea finala. Asamblarea finala foloseste acelasi mix cand
-                    <strong>Include Scene Ambience</strong> este activ.
+                    Bara de redare arata pozitia curenta si durata totala. Cursorul si salturile
+                    <strong>-10s</strong> si <strong>+10s</strong> devin active doar cat timp audio chiar se reda &mdash;
+                    selectarea unui fisier fara redare le lasa inactive la 00:00.
                 </p>
-                <ul>
-                    <li>Apasa <strong>Play</strong> pentru a porni fisierul selectat; butonul devine <strong>Stop</strong> in timpul redarii.</li>
-                    <li>Foloseste <strong>-10s</strong> si <strong>+10s</strong> pentru derulare rapida.</li>
-                    <li>Trage de bara de progres pentru a sari la o pozitie anume.</li>
-                    <li>Dublu-click pe un fisier generat opreste redarea curenta si porneste acel fisier de la inceput.</li>
-                    <li>Alege modul de iesire: pe segment, parti limitate ca durata sau audiobook intreg.</li>
-                    <li>Configureaza pauza intre blocuri si pauza intre segmente.</li>
-                    <li>Genereaza si reda previzualizari Scene Mix pentru grupurile Scene Ambience aprobate.</li>
-                    <li>Genereaza fisiere WAV finale in dosarul <code>audiobook/</code> al proiectului.</li>
-                    <li>Reseteaza si regenereaza asamblarea cand setarile sau blocurile audio aprobate se schimba.</li>
-                    <li>Intrerupe asamblarea si continua mai tarziu cand intrarile curente inca se potrivesc.</li>
-                </ul>
+                <p>
+                    <strong>Reseteaza Asamblarea Audio</strong> sterge fisierele de audiobook generate si progresul
+                    asamblarii dupa confirmare. Asamblarea poate fi intrerupta si continuata ulterior, atat timp cat
+                    intrarile si setarile inca se potrivesc.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/audio-assembly.png" alt="Pagina Asamblare audio">
-                    <figcaption>Bara de progres arata pozitia curenta si permite selectie rapida in fisiere lungi.</figcaption>
+                    <img src="assets/screenshots/audio-assembly.png" alt="Pagina Asamblare Audio">
+                    <figcaption>Asamblarea Audio produce livrabilele finale, cu previzualizari de mix de scena si o bara completa de redare pentru fisiere lungi.</figcaption>
                 </figure>
             </section>
 
             <section id="export">
                 <h2>Export</h2>
                 <p>
-                    Exportul copiaza rezultatele proiectului intr-un dosar de livrare. Pagina Acasa poate exporta text
-                    curatat, segmente, traduceri AI, personaje si Blocuri de vorbire ca documente text. Poate exporta
-                    si arhive ZIP pentru mostre Voce narator, mostre Voci personaje si iesiri Asamblare audio.
-                    Arhivele de voce includ mostra WAV generata si un fisier text cu definitia vocii si textul de
-                    previzualizare; arhivele de Asamblare audio includ fisiere WAV plus un manifest cu metoda de
-                    compunere, lista fisierelor, durata si dimensiune. Verifica inainte ca toate etapele necesare sa
-                    fie aprobate si ca fisierele audio finale se pot reda corect.
+                    Panoul <strong>Exporturi</strong> de pe pagina Acasa are cate un rand pe etapa. Fiecare rand ofera
+                    un format si un buton <strong>Exporta</strong>, iar ambele raman inactive pana cand acea etapa a
+                    produs date utilizabile. Treci cu mouseul peste un rand ca sa vezi daca este <em>Disponibil</em>,
+                    <em>Nepregatit</em> sau raporteaza un <em>Artefact lipsa</em>.
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>Export</th><th>Formate</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Text Curatat</td><td>TXT sau Markdown</td></tr>
+                        <tr><td>Segmente Text</td><td>TXT sau Markdown</td></tr>
+                        <tr><td>Traducere AI</td><td>TXT sau Markdown</td></tr>
+                        <tr><td>Personaje</td><td>TXT sau Markdown</td></tr>
+                        <tr><td>Voce Narator</td><td>ZIP</td></tr>
+                        <tr><td>Voci Personaje</td><td>ZIP</td></tr>
+                        <tr><td>Blocuri Vorbire</td><td>TXT sau Markdown</td></tr>
+                        <tr><td>Asamblare Audio</td><td>ZIP</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Blocurile Audio nu au export propriu &mdash; audio lor ajunge la tine prin arhiva de Asamblare Audio.
+                    Arhivele ZIP de voce contin mostra WAV si un fisier text insotitor cu definitia vocala si textul de
+                    previzualizare. Arhiva ZIP de Asamblare Audio contine fisierele WAV de iesire si un manifest cu
+                    metoda de compunere, fisierele, duratele si dimensiunile lor.
                 </p>
                 <p>
-                    Exporturile de documente devin disponibile numai dupa ce faza corespunzatoare a produs date aprobate.
-                    Foloseste lista de status de pe pagina Acasa pentru a vedea ce este complet, in asteptare
-                    sau in revizuire.
+                    <strong>Exporta ZIP Proiect</strong>, langa butoanele de proiect, scrie un snapshot complet al
+                    proiectului. Exporturile trebuie scrise in afara folderului de proiect, ca un snapshot sa nu fie
+                    niciodata arhivat in el insusi si un fisier de runtime sa nu fie suprascris; AudioMancer refuza o
+                    destinatie din interiorul proiectului si spune de ce. Fisierele WAV finale raman si in proiect, sub
+                    <code>audiobook/</code>.
                 </p>
             </section>
 
             <section id="troubleshooting">
                 <h2>Probleme frecvente</h2>
-                <ul>
-                    <li><strong>Nu se genereaza audio:</strong> verifica daca VoiceWeaver ruleaza si daca adresa din Setari TTS este accesibila.</li>
-                    <li><strong>Modelul AI nu raspunde:</strong> verifica cheia OpenAI sau serverul LM Studio si modelul incarcat.</li>
-                    <li><strong>Textul este impartit gresit:</strong> revino la Segmentare text si ajusteaza bucata afectata.</li>
-                    <li><strong>Vocea este gresita:</strong> verifica alocarile din Voce narator si Voci personaje, apoi regenereaza blocurile afectate.</li>
-                    <li><strong>Fisierul audio final este lung:</strong> foloseste bara de progres, dublu-click pe fisier si salturile de 10 secunde.</li>
-                </ul>
+                <h3>O pagina din bara laterala nu se deschide</h3>
+                <p>Toate paginile in afara de Acasa au nevoie de un proiect deschis. Creeaza sau deschide unul intai.</p>
+                <h3>Un buton este inactiv</h3>
+                <p>Majoritatea paginilor depind de cele de deasupra lor, iar aproape orice actiune este dezactivata si cat timp o operatie ruleaza sau o editare este deschisa. Salveaza sau anuleaza editarea, lasa operatia sa se termine si verifica daca etapa anterioara a produs un rezultat.</p>
+                <h3>Genereaza Tot sau Imparte Segment este inactiv in Blocuri Vorbire</h3>
+                <p>Amandoua au nevoie de un profil AI selectat, in orice proiect &mdash; inclusiv in cele cu acelasi narator. Adauga un profil activ in Setari AI.</p>
+                <h3>Genereaza Audio este inactiv in Asamblare Audio</h3>
+                <p>Asamblarea cere ca fiecare Bloc Audio sa fie aprobat. Revino la Blocuri Audio si aproba randurile ramase.</p>
+                <h3>Porneste Traducerea este inactiv</h3>
+                <p>Dispare de indata ce fiecare segment are o traducere. Foloseste <strong>Reseteaza Traducerea</strong> pentru o trecere noua sau <strong>Retradu Segmentul Selectat</strong> pentru un singur segment.</p>
+                <h3>Nu se genereaza audio</h3>
+                <p>Porneste VoiceWeaver, verifica URLul de baza in Setari TTS, apasa <strong>Testeaza Conexiunea</strong> si confirma ca modelele necesare apar in Modele Descoperite.</p>
+                <h3>O traducere se opreste in mijlocul segmentului</h3>
+                <p>Creste <strong>Tokeni Maximi Iesire</strong> pe profilul de traducere. O traducere este la fel de lunga ca sursa ei, deci limita de iesire, nu fereastra de context, este cea care margineste o cerere.</p>
+                <h3>Operatiile AI de text esueaza sau returneaza JSON invalid</h3>
+                <p>Coboara temperatura, creste timeoutul, foloseste o fereastra de context mai mare sau alege un model care respecta JSON mai fidel. Modelele locale sunt de obicei mai lente decat cele gazduite.</p>
+                <h3>Aplicatia spune ca datele sunt invechite</h3>
+                <p>Regenereaza paginile din aval dupa ce ai schimbat text, voce, limba, mostra sau model din amonte.</p>
+                <h3>O operatie lunga a fost anulata</h3>
+                <p>Majoritatea operatiilor se reiau. Redeschide aceeasi pagina si apasa din nou butonul de pornire; AudioMancer continua din punctul de control si sare peste fereastra de instructiuni cand reia.</p>
             </section>
 
             <section id="glossary">
                 <h2>Glosar</h2>
                 <ul>
-                    <li><strong>Segment:</strong> bucata de text curatat folosita de etapele AI.</li>
-                    <li><strong>Bloc de vorbire:</strong> unitate text cu vorbitor, tip si instructiuni pentru audio.</li>
-                    <li><strong>Bloc audio:</strong> fisier WAV generat pentru un bloc de vorbire.</li>
-                    <li><strong>VoiceWeaver:</strong> serviciul TTS folosit de AudioMancer pentru generarea audio.</li>
-                    <li><strong>Asamblare:</strong> combinarea blocurilor audio in fisiere finale de audiobook.</li>
+                    <li><strong>Proiect:</strong> un folder care contine cartea sursa, fisierele generate si audio final.</li>
+                    <li><strong>Profil AI:</strong> o configuratie de model de chat folosita doar pentru lucrul cu text.</li>
+                    <li><strong>VoiceWeaver:</strong> runtimeul care genereaza tot audio din AudioMancer.</li>
+                    <li><strong>Segment:</strong> o portiune din carte folosita pentru revizuire si generare.</li>
+                    <li><strong>Bloc de vorbire:</strong> o instructiune &mdash; naratiune, dialog, pauza, indicatie sau Ambienta Scena.</li>
+                    <li><strong>Bloc audio:</strong> fisierul WAV generat sau o inregistrare de sincronizare pentru un bloc de vorbire aprobat.</li>
+                    <li><strong>Tinta vocala:</strong> naratorul sau un personaj, ca entitate care poate avea un prompt de voce si o mostra.</li>
+                    <li><strong>Ambienta Scena:</strong> blocuri ordonate de sunet de fundal, fiecare descriind o sursa de sunet simpla.</li>
+                    <li><strong>Asamblare Audio:</strong> etapa finala care combina Blocurile Audio in fisierele WAV ale audiobookului.</li>
+                    <li><strong>Stare Operatie:</strong> butonul de sub bara laterala care deschide starea operatiei paginii curente.</li>
                 </ul>
             </section>
         </main>
