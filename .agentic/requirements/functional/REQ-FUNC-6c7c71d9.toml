@@ -1,0 +1,43 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-FUNC-6c7c71d9"
+title = "Translation source-text budget shall not exceed the profile reply capacity"
+status = "active"
+
+requirement = """
+AI translation shall limit each request's source-text budget to the amount of
+source text whose translation the selected AI profile's maximum output tokens
+can still return.
+"""
+
+verification = """
+Automated: build translation budget metadata for a profile whose context window
+is large relative to its maximum output tokens, and confirm the reported
+source-text budget is bounded by that output limit rather than by the
+context-window fraction.
+"""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_budget_is_bounded_by_profile_reply_capacity",
+]
+
+priority = "high"
+rationale = """
+Translation is the one AI operation whose reply is as long as its request. A
+budget that reserves output tokens without capping the input by them sends more
+source text than the model can ever translate back, and the provider stops the
+reply at its output limit. The defect grows with the context window: a profile
+with a wide window and a modest output limit truncates every chunk.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

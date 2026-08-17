@@ -632,12 +632,12 @@ def test_translation_budget_reserves_output_and_rejects_insufficient_input() -> 
     @return     None.
     """
     small = ai_translation_service._build_budget_metadata(
-        {**_profile_payload(), "context_window": 8192, "max_output_tokens": 512},
+        {**_profile_payload(), "context_window": 8192, "max_output_tokens": 4096},
         "ro",
         "system",
     )
     large = ai_translation_service._build_budget_metadata(
-        {**_profile_payload(), "context_window": 8192, "max_output_tokens": 4096},
+        {**_profile_payload(), "context_window": 8192, "max_output_tokens": 6144},
         "ro",
         "system",
     )
@@ -646,6 +646,43 @@ def test_translation_budget_reserves_output_and_rejects_insufficient_input() -> 
     with pytest.raises(ValueError, match="too little room"):
         ai_translation_service._build_budget_metadata(
             {**_profile_payload(), "context_window": 1024, "max_output_tokens": 900},
+            "ro",
+            "system",
+        )
+
+
+def test_translation_budget_is_bounded_by_profile_reply_capacity() -> None:
+    """
+    @brief      Verify REQ-FUNC-6c7c71d9 bounds source text by what the reply can return.
+    @return     None.
+    """
+    context_window = 32_768
+    max_output_tokens = 8192
+
+    metadata = ai_translation_service._build_budget_metadata(
+        {
+            **_profile_payload(),
+            "context_window": context_window,
+            "max_output_tokens": max_output_tokens,
+        },
+        "ro",
+        "system",
+    )
+
+    assert metadata["text_budget_tokens"] <= max_output_tokens
+    assert metadata["text_budget_tokens"] < int(
+        context_window * config.DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION
+    )
+
+
+def test_translation_refuses_a_profile_whose_reply_capacity_is_too_low() -> None:
+    """
+    @brief      Verify REQ-FUNC-cfa5468c names the output limit when it cannot fund a request.
+    @return     None.
+    """
+    with pytest.raises(ValueError, match="maximum output tokens"):
+        ai_translation_service._build_budget_metadata(
+            {**_profile_payload(), "context_window": 16_384, "max_output_tokens": 512},
             "ro",
             "system",
         )
@@ -981,7 +1018,7 @@ def _profile_payload() -> dict[str, object]:
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": 4096,
-        "max_output_tokens": 512,
+        "max_output_tokens": 2048,
         "request_timeout_seconds": 30,
         "temperature": 0.2,
         "supports_structured_output": False,

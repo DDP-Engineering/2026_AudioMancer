@@ -1,0 +1,97 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-17T15:58:00.244213Z",
+      "anchor_head": "8187391e8a7ef6e3f77ee89d40135e6794aa7b49",
+      "anchor_id": "f8e6ef78ca3627f1",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "81c1c5a6cee228346e42b55703a532a95cfad73a7e86fa497623d5dfad2788e9"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "a469931d43e2dd2810277614dbf907b05dffcee7a22480b0c778d2ceaf5a9ea3"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/config.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "cb08b343032700e59a9002931d68104e856a7e4885c980f11851ae8fe3bea902"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "452fc01252c34130dbdea1dfcbbe5a695d235ee7ef545487bf30c0fb47e931a6"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a213ff2c223ed95825db5c826a72c93c9b9f23cf9f0dee90256482a9dba6236f"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "969f45872fa810f67e93b61045dd5941515be93a1a67a8ac8d62efdfec63c16d"
+          },
+          "path": "04_Software/AudioMancer/tests/test_ai_translation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "ab4fa46627c68692e4dbf5301a7aefec0491595df9bf50fcfa4275c02d224acc"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "eb76f754302e437fac0443d5c62b00ed89e47c6d86cbb580ee2f959d022a99e6"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 107
+          },
+          "source": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 101
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 120
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 4,
+          "removed": 0,
+          "unchanged": 328
+        }
+      },
+      "current_head": "8187391e8a7ef6e3f77ee89d40135e6794aa7b49",
+      "evolution_stage": "validate",
+      "evolved_at": "2026-08-17T16:04:16.972563Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-70804021"
+}

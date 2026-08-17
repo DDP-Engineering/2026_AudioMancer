@@ -1,0 +1,41 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-FUNC-cfa5468c"
+title = "Translation shall refuse a profile whose reply capacity leaves too little source text"
+status = "active"
+
+requirement = """
+If bounding a translation request's source-text budget by the selected AI
+profile's maximum output tokens leaves less source text than AI translation
+requires for one request, then AI translation shall refuse to start and name the
+maximum output tokens as the setting to raise.
+"""
+
+verification = """
+Automated: build translation budget metadata for a profile whose maximum output
+tokens are far below its context window, and confirm the refusal names the
+maximum output tokens rather than the context window.
+"""
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_refuses_a_profile_whose_reply_capacity_is_too_low",
+]
+
+priority = "high"
+rationale = """
+The operator can only act on a refusal that names the setting at fault. Bounding
+the source text by the reply capacity can drive the budget below the workflow
+minimum, and the existing refusal blames the context window, which sends the
+operator to widen a window that was never the constraint.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

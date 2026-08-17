@@ -798,6 +798,9 @@ DEFAULT_AI_TRANSLATION_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
 # @brief Maximum context-window fraction used for AI translation source text.
 DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION = 0.60
 
+# @brief Reply length one unit of AI translation source text is assumed to need.
+DEFAULT_AI_TRANSLATION_OUTPUT_EXPANSION_FACTOR = 1.3
+
 # @brief Supported target languages for the AI translation page.
 TRANSLATION_LANGUAGE_OPTIONS = (
     ("en", "English"),

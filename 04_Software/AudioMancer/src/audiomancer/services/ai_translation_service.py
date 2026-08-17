@@ -860,13 +860,14 @@ def _build_budget_metadata(
     @param[in]  system_prompt Rendered system prompt for the AI request.
     @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
     @return     Constructed budget metadata.
+    @exception  ValueError Raised when the profile output limit cannot return one request's translation.
     """
     user_prompt_shell = _render_translation_user_prompt(
         target_language,
         "(none)",
         additional_translation_instructions,
     )
-    return ai_budget_service.context_budget_metadata(
+    budget_metadata = ai_budget_service.context_budget_metadata(
         ai_profile_payload,
         f"{system_prompt}\n\n{user_prompt_shell}",
         config.DEFAULT_AI_TRANSLATION_MIN_SAFETY_MARGIN_TOKENS,
@@ -876,6 +877,39 @@ def _build_budget_metadata(
         "AI translation cannot run because the selected AI profile context window "
         "and max output tokens leave too little room for translation input",
     )
+    return {
+        **budget_metadata,
+        "text_budget_tokens": _reply_bounded_text_budget(
+            int(budget_metadata["text_budget_tokens"]),
+            int(budget_metadata["max_output_tokens"]),
+        ),
+    }
+
+
+def _reply_bounded_text_budget(text_budget_tokens: int, max_output_tokens: int) -> int:
+    """
+    @brief      Bound one source-text budget by the translation its reply can return.
+    @details    A translation is as long as its source, so source text the output
+                limit cannot return is text the provider stops mid-reply. The
+                shared budget helper reserves output tokens but never caps the
+                input by them, which leaves a wide context window with a modest
+                output limit asking for far more than it can answer.
+    @param[in]  text_budget_tokens Source-text budget the shared helper allowed.
+    @param[in]  max_output_tokens Reserved maximum output tokens for one request.
+    @return     Source-text budget the reply can still return.
+    @exception  ValueError Raised when that bound leaves less than one request needs.
+    """
+    reply_budget_tokens = int(max_output_tokens / config.DEFAULT_AI_TRANSLATION_OUTPUT_EXPANSION_FACTOR)
+    if reply_budget_tokens >= text_budget_tokens:
+        return text_budget_tokens
+    if reply_budget_tokens < config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS:
+        raise ValueError(
+            "AI translation cannot run because the selected AI profile maximum output tokens "
+            f"cannot return one request's translation ({reply_budget_tokens} estimated tokens "
+            f"available, {config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS} required); "
+            "raise the profile maximum output tokens."
+        )
+    return reply_budget_tokens
 
 
 def _render_translation_user_prompt(

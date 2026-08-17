@@ -43,6 +43,20 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- AI Translation: chunks are no longer cut off part-way through when the AI
+  profile can read far more text than it is allowed to write back. Translation
+  used to fill each request from the profile's context window alone, but a
+  translation is as long as the text it came from, so a profile with a wide
+  context window and a modest **Max output tokens** was handed more text than
+  it could ever return and stopped mid-answer. AudioMancer now also measures
+  each request against what the profile can write, and sends less text per
+  request when that is the smaller of the two. Nothing changes for a profile
+  whose two settings were already in balance; a 32K profile left at the default
+  output limit was affected on every chunk.
+- AI Translation: if the profile's **Max output tokens** is set so low that no
+  useful amount of text can be translated in one request, translation now says
+  so and names that setting, instead of blaming the context window that was not
+  the problem.
 - Home page: the first and last step names under the Workflow Pipeline are no
   longer cut off at the edges. "Text Cleanup" showed as "ext Cleanup" and
   "Audio Assembly" as "Audio Assem"; all ten names are now fully readable.

@@ -57,6 +57,14 @@ approval, localization, and busy-state controls.
   resumable failed/cancelled status and completed chunk checkpoints.
 - `REQ-FUNC-e38de6a1` - budgeted requests preserve true paragraph breaks and
   rejoin pieces of one oversized paragraph with spaces.
+- `REQ-FUNC-6c7c71d9` - the source-text budget is bounded by the translation the
+  profile's maximum output tokens can still return, not by the context window
+  alone. Translation is the only AI operation whose reply is as long as its
+  request, so this cap lives here rather than in the shared budget helper, which
+  AI chunking relies on to allow a text budget far larger than its own reply.
+- `REQ-FUNC-cfa5468c` - when that bound leaves less source text than one request
+  needs, translation refuses and names the maximum output tokens as the setting
+  to raise, rather than blaming the context window that was not the constraint.
 - `REQ-UX-dc3def51` - the chunk list sits above the chunk text panes in one
   vertical splitter, so the operator sets the split between them.
 - `REQ-UX-d6fc781d` - that chunk list pane stops shrinking at 150 pixels.
@@ -80,7 +88,10 @@ retranslation as a failed one-off attempt rather than a failed batch.
 Budgeted source segments carry whether their leading text continues the prior
 paragraph; request text retains mixed internal paragraph boundaries, and the
 same relationship reconstructs completed translated responses without changing
-the provider prompt or JSON schema.
+the provider prompt or JSON schema. Budgeting reserves output tokens through the
+shared helper and then lowers the resulting source-text budget to what those
+output tokens can return, so a profile with a wide context window and a modest
+output limit is segmented more finely instead of being cut off mid-reply.
 
 ## 6. Dependencies
 
