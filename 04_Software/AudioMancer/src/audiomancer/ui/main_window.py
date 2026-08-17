@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QPushButton,
     QScrollArea,
     QStackedWidget,
     QToolBar,
@@ -70,6 +71,7 @@ from audiomancer.ui.controllers import (
 )
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.operation_progress_dialog import OperationProgressDialog
+from audiomancer.ui.operation_status_dialog import OperationStatusDialog
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 from audiomancer.ui.pages.audio_assembly_page import AudioAssemblyPage
@@ -131,6 +133,20 @@ class MainWindow(QMainWindow):
         ("audio_blocks", "Audio Blocks"),
         ("audio_assembly", "Audio Assembly"),
     )
+
+    # @brief Workflow operation each page reports status for. Home carries no single
+    #        operation of its own, so it is absent and its status button stays dead.
+    PAGE_OPERATION_KIND = {
+        "text_cleanup": "cleanup",
+        "text_chunking": "chunking",
+        "ai_translation": "translation",
+        "characters": "character_discovery",
+        "narator_voice": "narrator_definition",
+        "character_voices": "character_voices",
+        "speech_blocks": "speech_blocks",
+        "audio_blocks": "audio_blocks",
+        "audio_assembly": "audio_assembly",
+    }
 
     def __init__(
         self,
@@ -211,6 +227,13 @@ class MainWindow(QMainWindow):
         self._toolbar = self._build_toolbar()
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._toolbar)
         self._sidebar = NavigationSidebar(self)
+        self._operation_status_button = QPushButton(self)
+        self._operation_status_button.setObjectName("operationStatusButton")
+        self._operation_status_button.setText(ui_state_service.translate("sidebar.operation_status", "en"))
+        self._operation_status_button.setFixedWidth(self._sidebar.width())
+        self._operation_status_button.setEnabled(False)
+        self._operation_status_button.clicked.connect(self._show_operation_status_dialog)
+        self._operation_status_dialog = OperationStatusDialog(self)
         self._stack = QStackedWidget(self)
 
         self._build_pages()
@@ -218,7 +241,15 @@ class MainWindow(QMainWindow):
 
         central_widget = QWidget(self)
         central_layout = QHBoxLayout(central_widget)
-        central_layout.addWidget(self._sidebar)
+        # The sidebar is itself the QListWidget whose rows are the workflow pages,
+        # so the operation-status button cannot live inside it without posing as an
+        # eleventh page. A column wrapper keeps the button beside the list instead.
+        navigation_column = QWidget(central_widget)
+        navigation_layout = QVBoxLayout(navigation_column)
+        navigation_layout.setContentsMargins(0, 0, 0, 0)
+        navigation_layout.addWidget(self._sidebar, 1)
+        navigation_layout.addWidget(self._operation_status_button, 0)
+        central_layout.addWidget(navigation_column)
         central_layout.addWidget(self._stack, 1)
         self.setCentralWidget(central_widget)
 
@@ -282,6 +313,7 @@ class MainWindow(QMainWindow):
         """
         current_language = self.refresh_project_summary(project_root, manifest)
         self._refresh_current_page_state(project_root, manifest, current_language)
+        self._refresh_operation_status_control(manifest)
 
     def refresh_project_summary(
         self,
@@ -327,6 +359,53 @@ class MainWindow(QMainWindow):
         )
         self._home_page.set_export_states(project_export_service.build_export_states(project_root, manifest))
         return current_language
+
+    def _refresh_operation_status_control(self, manifest: dict[str, object] | None) -> None:
+        """
+        @brief      Match the operation-status button to the current page's operation.
+        @details    The button offers the result of an operation, so it stays dead
+                    until one has been recorded. An absent, empty or not-started
+                    status all mean the same thing to the operator - the operation
+                    has not run - and none of them has a result worth opening.
+        @param[in]  manifest Active project manifest or `None`.
+        @return     None.
+        @exception  None
+        """
+        status_text = self._current_operation_status_text(manifest)
+        self._operation_status_button.setEnabled(status_text is not None)
+        # The dialog is modeless, so one left open must follow the operator to
+        # whichever page they navigate to rather than freezing on a stale page.
+        if self._operation_status_dialog.isVisible():
+            self._operation_status_dialog.set_status_text(status_text or "")
+
+    def _show_operation_status_dialog(self) -> None:
+        """
+        @brief      Show the current page's operation status in the modeless dialog.
+        @return     None.
+        @exception  None
+        """
+        self._operation_status_dialog.set_status_text(
+            self._current_operation_status_text(self._current_manifest) or ""
+        )
+        self._operation_status_dialog.show()
+        self._operation_status_dialog.raise_()
+
+    def _current_operation_status_text(self, manifest: dict[str, object] | None) -> str | None:
+        """
+        @brief      Resolve the status text of the current page's operation.
+        @param[in]  manifest Active project manifest or `None`.
+        @return     Status text, or `None` when the operation has not run.
+        @exception  None
+        """
+        operation_kind = self.PAGE_OPERATION_KIND.get(self._current_page_id or "")
+        if manifest is None or operation_kind is None:
+            return None
+        status = str(home_presenter_service.manifest_operation(manifest, operation_kind).get("status", "")).strip()
+        if status in {"", "not_started"}:
+            return None
+        page = self._page_registry.get(self._current_page_id or "")
+        reader = getattr(page, "operation_status_text", None)
+        return reader() if callable(reader) else ""
 
     def _refresh_current_page_state(
         self,

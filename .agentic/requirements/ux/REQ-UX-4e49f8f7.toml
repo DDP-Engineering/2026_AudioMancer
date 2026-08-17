@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-UX-4e49f8f7"
+title = "The shell shall expose an operation-status button under the navigation sidebar"
+status = "active"
+
+requirement = """
+The application shell shall place one operation-status button directly below the fixed-width navigation sidebar, sharing the sidebar width and sitting outside the sidebar page list so the list continues to hold exactly the workflow page entries.
+"""
+
+verification = "Automated: the shell's left column contains the navigation sidebar above the operation-status button, the button width matches the sidebar width, and the sidebar item count still equals the number of registered workflow pages."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_places_operation_status_button_under_the_sidebar",
+  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_navigation_is_a_left_vertical_sidebar",
+]
+
+spec = ""
+priority = "high"
+rationale = """
+The per-page operator status pane consumed a fixed three text rows at the bottom of every workflow page, which is the space the page content needs most. Moving that text behind one shell control returns the rows to the page. The control cannot join the sidebar itself: the sidebar is a QListWidget whose entries are the workflow pages, each carrying a page identifier, an icon, and a selection behaviour that a non-page row would have to fake, and whose enablement is driven by a loop over the registered pages that a non-page row would escape.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

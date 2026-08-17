@@ -4,7 +4,7 @@ title = "The Narrator Voice page shall lay out selection, editors, edit mode"
 status = "active"
 
 requirement = """
-The Narrator Voice page shall lay out selection, editors, edit mode, preview toggle, status panel, and the AI profile selector.
+The Narrator Voice page shall lay out selection, editors, edit mode, preview toggle, and the AI profile selector.
 """
 
 verification = "Automated: 6 linked pytest selector(s)."
@@ -17,8 +17,8 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit",
   "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes",
   "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_preview_toggle_updates_label_and_select_enablement",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_status_panel_keeps_language_value_internal",
   "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_renders_ai_profile_selector_and_generation_button",
+  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_keeps_language_value_internal",
 ]
 
 priority = "high"
@@ -26,4 +26,4 @@ rationale = """
 The narrator review surface must be complete and readable.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-16

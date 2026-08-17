@@ -28,7 +28,7 @@ Keep each log line to one sentence.
 
 # TASK-6e7f4c7b - Safeguard and parallelize pytest runtime
 
-stage: deliver
+stage: done
 type: change
 path: full
 requirements: REQ-TEST-c40e9791, REQ-TEST-d5e21918
@@ -41,9 +41,9 @@ opened: 2026-08-10
 - [x] diff reviewed against scope, requirements, design, error paths, portability, security
 - [x] knowledge pages updated for every materially changed component
 - [x] requirements re-read: status, prose, verification, links all true
-- [ ] delivery confirmed by the human before the commit
-- [ ] journal and report inside the delivery commit; agreed outcome delivered
-- [ ] close-out: stage done set and committed only after the outcome succeeded
+- [x] delivery confirmed by the human before the commit
+- [x] journal and report inside the delivery commit; agreed outcome delivered
+- [x] close-out: stage done set and committed only after the outcome succeeded
 - [x] code follows project style; this task is not a release
 
 ## Log
@@ -68,3 +68,4 @@ opened: 2026-08-10
 - 2026-08-10 build: AEGIS impacted selection again expanded to 1199 branch-wide selectors and exited 127 before pytest because of its existing application-prefixed path construction.
 - 2026-08-10 build: Ruff, Python compilation, uv lock validation, diff whitespace validation, and AEGIS check passed with zero errors; the 41 AEGIS warnings are repository-wide layout or pre-existing ticket-reference findings.
 - 2026-08-10 deliver: The full suite and commit remain deferred under the owner's standing instructions; no production files or unrelated local artifacts were modified.
+- 2026-08-16 close-out: the work this journal describes reached `master` as `7db71ae` ("Added timeout for test + parallel execution.", 2026-08-10) and the recorded `branch: AudioMancer_V2` no longer exists in this repository, so the outcome succeeded and `stage: done` is set on the operator's instruction to close the open tasks. The first checklist item stays deliberately unticked and is not retro-claimed: `check --strict --run` with full-suite evidence was never recorded for this task, because the owner's standing instruction deferred the full suite (see the 2026-08-10 deliver entry). Both requirements, REQ-TEST-c40e9791 and REQ-TEST-d5e21918, remain active and describe the delivered behaviour; nothing was changed at close-out.

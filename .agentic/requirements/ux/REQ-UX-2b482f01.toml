@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-UX-2b482f01"
+title = "The operation-status button shall be enabled only for an operation that has run"
+status = "active"
+
+requirement = """
+While the workflow operation of the current page has no recorded run status, meaning its persisted status is absent, empty, or the not-started value, the operation-status button shall be disabled, and it shall be enabled for every other persisted status.
+"""
+
+verification = "Automated: with a project whose manifest records the current page's operation as not started, the button is disabled; with the same page's operation recorded as running, completed, failed, or cancelled, the button is enabled; with no project open, the button is disabled."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_operation_status_button.py::test_operation_status_button_is_disabled_without_a_project",
+  "04_Software/AudioMancer/tests/test_operation_status_button.py::test_operation_status_button_follows_the_current_page_operation_status",
+]
+
+spec = ""
+priority = "high"
+rationale = """
+The button offers the result of an operation, so it must be dead until there is a result to show rather than opening an empty dialog. The persisted per-operation status already distinguishes an operation that has never run from one that has, so no new state is introduced to answer the question. This deliberately drops the pre-run guidance the removed status pane used to show, because the operator asked for the operation result and not for the guidance.
+"""
+
+created = 2026-08-16
+updated = 2026-08-16

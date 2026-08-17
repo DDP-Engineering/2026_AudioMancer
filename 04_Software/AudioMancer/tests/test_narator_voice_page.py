@@ -18,7 +18,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLineEdit
 
-from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
 
 
@@ -103,9 +102,6 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     assert page._designer_group.maximumHeight() > 1000
     assert page._preview_text_edit.maximumHeight() > 1000
     assert page._preview_group.maximumHeight() > 1000
-    expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
-    assert page._status_group.minimumHeight() == expected_status_height
-    assert page._status_group.maximumHeight() == expected_status_height
     assert page._preview_text_edit.toPlainText() == "abcde"
 
     page.begin_edit_mode()
@@ -209,9 +205,9 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
     assert page._preview_toggle_button.text() == "Stop"
 
 
-def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) -> None:
+def test_narator_voice_page_keeps_language_value_internal(qtbot) -> None:
     """
-    @brief      Verify status lines render while voice language remains an internal value.
+    @brief      Verify status lines compose while voice language remains an internal value.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -239,7 +235,7 @@ def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) ->
     )
 
     assert page.current_voice_language() == "ro"
-    assert "Profiles: 3" in page._status_edit.toPlainText()
+    assert "Profiles: 3" in page.operation_status_text()
 
 
 def test_narator_voice_page_renders_ai_profile_selector_and_generation_button(qtbot) -> None:

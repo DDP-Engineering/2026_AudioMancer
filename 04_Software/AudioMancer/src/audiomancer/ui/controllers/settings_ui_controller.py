@@ -137,6 +137,8 @@ def apply_language(window, language: str) -> None:
     window._action_help.setText(ui_state_service.translate("toolbar.help", language))
     window._action_about.setText(ui_state_service.translate("toolbar.about", language))
     window._sidebar.apply_language(language)
+    window._operation_status_button.setText(ui_state_service.translate("sidebar.operation_status", language))
+    window._operation_status_dialog.apply_language(language)
     window._settings_dialog.setWindowTitle(ui_state_service.translate("dialog.settings_title", language))
     window._ai_settings_dialog.setWindowTitle(ui_state_service.translate("dialog.ai_settings_title", language))
     window._tts_settings_dialog.setWindowTitle(ui_state_service.translate("dialog.tts_settings_title", language))

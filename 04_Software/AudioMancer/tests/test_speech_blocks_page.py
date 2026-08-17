@@ -47,7 +47,7 @@ def test_speech_blocks_page_shows_reset_recovery_without_generation(qtbot) -> No
         can_reset=True,
     )
 
-    assert "Reset Speech Blocks to recover" in page._status_edit.toPlainText()
+    assert "Reset Speech Blocks to recover" in page.operation_status_text()
     assert page._generate_button.isEnabled() is False
     assert page._reset_generation_button.isEnabled() is True
 

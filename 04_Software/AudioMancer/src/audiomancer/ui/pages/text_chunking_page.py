@@ -157,36 +157,28 @@ class TextChunkingPage(QWidget):
         self._preview_splitter.setStretchFactor(1, 2)
         layout.addWidget(self._preview_splitter, 7)
 
-        status_group = QWidget(self)
-        status_layout = QVBoxLayout(status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        self._status_edit.setPlainText(
-            "Run cleanup before chunking.\n"
-            "Deterministic and AI-assisted chunk generation will populate the chunk list and selected preview."
-        )
-        status_layout.addWidget(self._status_edit)
-        status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(status_group, 0)
+        self._operation_status_text = ""
         self._cleaned_group = cleaned_group
         self._chunk_list_group = chunk_list_group
         self._left_preview_container = left_container
         self._chunk_preview_group = chunk_preview_group
-        self._status_group = status_group
         self._apply_preview_splitter_minimums()
         self.set_project_active(False)
         self.set_processing_state(
             cleaned_text=None,
             chunks=[],
-            notes=["Run cleanup before chunking."],
+            notes=[],
             can_chunk=False,
             can_ai_chunk=False,
         )
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted Chunking state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
@@ -239,7 +231,7 @@ class TextChunkingPage(QWidget):
         self._chunk_list.clear()
         for chunk in self._chunks:
             self._chunk_list.addItem(_format_chunk_list_item(chunk))
-        self._status_edit.setPlainText("\n".join(notes))
+        self._operation_status_text = "\n".join(notes)
         if self._chunks:
             self._chunk_list.setCurrentRow(0)
         else:
@@ -440,8 +432,6 @@ class TextChunkingPage(QWidget):
                 0,
                 ui_state_service.translate("ai_settings.none", language),
             )
-        if not self._project_active:
-            self._status_edit.setPlainText(ui_state_service.translate("text_chunking.initial_note", language))
 
     def _install_preview_find_context_menu(self, editor: QPlainTextEdit) -> None:
         """

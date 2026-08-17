@@ -292,18 +292,7 @@ class SpeechBlocksPage(QWidget):
         self._apply_lower_splitter_minimums()
         self._apply_upper_splitter_limits()
 
-        self._status_group = QWidget(self)
-        status_layout = QVBoxLayout(self._status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        status_layout.addWidget(self._status_edit)
-        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_group)
+        self._operation_status_text = ""
 
         self.apply_language(self._current_language)
         self.set_project_active(False)
@@ -317,6 +306,14 @@ class SpeechBlocksPage(QWidget):
             0,
             0,
         )
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted operation state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
@@ -473,7 +470,7 @@ class SpeechBlocksPage(QWidget):
         block_count_by_chunk = _block_count_by_chunk(self._speech_blocks)
         for source_chunk in self._source_chunks:
             self._chunk_list.addItem(_format_chunk_list_item(source_chunk, block_count_by_chunk))
-        self._status_edit.setPlainText("\n".join(notes))
+        self._operation_status_text = "\n".join(notes)
         if self._source_chunks:
             selected_row = 0
             if current_chunk_id is not None:
@@ -551,7 +548,7 @@ class SpeechBlocksPage(QWidget):
         @return     None.
         @exception  None
         """
-        self._status_edit.setPlainText("\n".join(notes))
+        self._operation_status_text = "\n".join(notes)
         if can_approve_all is not None:
             self._can_approve_all = bool(can_approve_all)
         if can_reset is not None:
@@ -822,8 +819,6 @@ class SpeechBlocksPage(QWidget):
             item = self._speech_block_list.item(index)
             if item is not None:
                 item.setText(_format_speech_block_list_item(speech_block, language))
-        if not self._project_active:
-            self._status_edit.setPlainText(ui_state_service.translate("speech_blocks.initial_note", language))
         self._apply_chunk_action_top_margin()
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0 and not self._editing:

@@ -53,7 +53,7 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert page._list_group.minimumHeight() > page._character_actions_widget.sizeHint().height()
     assert page._evidence_splitter.orientation() == Qt.Orientation.Vertical
     assert page._evidence_splitter.count() == 2
-    assert page._status_edit.toPlainText() == "Completed."
+    assert page.operation_status_text() == "Completed."
 
 
 def test_characters_page_renders_invalid_document_recovery_controls(qtbot) -> None:

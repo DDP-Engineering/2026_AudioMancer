@@ -56,7 +56,7 @@ def test_page_edit_save_and_cancel_are_optional(qtbot) -> None:
     qtbot.addWidget(page)
     page.set_project_active(True)
     page.set_processing_state("source", "clean", [], True, True, True, "passed", 0)
-    status_text = page._status_edit.toPlainText()
+    status_text = page.operation_status_text()
     assert "low-confidence boundaries: 0" in status_text
     assert "preserved" not in status_text
     saved: list[str] = []

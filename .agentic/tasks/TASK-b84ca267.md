@@ -32,7 +32,7 @@ Keep each log line to one sentence.
 
 # TASK-b84ca267 — Speech Blocks: draggable top splitter for chunk list
 
-stage: deliver
+stage: done
 type: change
 path: quick
 requirements: REQ-UX-ac320626, REQ-UX-e4fc6fa7
@@ -46,8 +46,8 @@ opened: 2026-08-15
 - [x] validation evidence, diff, exclusions, and outcome presented
 - [x] delivery confirmed by the human
 - [x] journal and report included in the delivery commit
-- [ ] agreed outcome delivered, normally a PR
-- [ ] close-out committed after the outcome succeeded, or carried by the delivery commit where nothing could fail after it
+- [x] agreed outcome delivered, normally a PR
+- [x] close-out committed after the outcome succeeded, or carried by the delivery commit where nothing could fail after it
 
 ## Log
 
@@ -83,3 +83,4 @@ opened: 2026-08-15
 - checks: errors=0 warnings=13 notes=0
 - checklist: 8/8 done
 - 2026-08-15 deliver: operator approved delivery after testing the running application and asked for the change to be staged with a commit message to review; outcome=one local commit on master, no push and no PR (no remote outcome to wait on); staged paths=the page source and its tests, both help files, `CHANGELOG.md`, the two requirements, this journal with its anchor and evolution reports, and the `Speech_Blocks` knowledge page; deliberately left unstaged=the untracked `0_Planning/Analysis_2026-08-10/` notes, which belong to no task; the commit itself is made by the operator, so `stage: done` is recorded only once it exists.
+- 2026-08-16 close-out: the delivery commit the previous entry waited on exists as `f9e55c9` ("fix(speech-blocks): bounded resizable Chunk List (REQ-UX-ac320626, REQ-UX-e4fc6fa7)") and reached `master` through the `#56` merge at `7fe61c3`, so the condition recorded above is met and `stage: done` is now set. No further code, requirement, or knowledge change was made at close-out; the full-suite limitation recorded in the validate entries stands as written and was never retro-proved.

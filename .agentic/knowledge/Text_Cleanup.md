@@ -359,9 +359,10 @@ The Cleanup page keeps its existing controls. `REQ-UX-b3547171` and
 `REQ-UX-860d8bfc` give its two previews one shared minimum width and an equal
 opening width: the Cleaned Text preview carries the Edit/Save/Cancel row and so
 sets the minimum both panes respect, and equal stretch factors keep them equal
-as the page resizes until the operator drags the separator. The status pane
-projects running, paused, invalid, and completed state from `cleanup.json`;
-progress and cancellation continue through the existing operation dialog.
+as the page resizes until the operator drags the separator. Running, paused,
+invalid, and completed state from `cleanup.json` is composed by the page and
+read through the shell's operation-status dialog rather than a pane on the
+page; progress and cancellation continue through the existing operation dialog.
 
 ## 8. Usage
 

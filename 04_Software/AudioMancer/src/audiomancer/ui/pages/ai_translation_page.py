@@ -156,18 +156,7 @@ class AiTranslationPage(QWidget):
         layout.addWidget(self._chunk_text_splitter, 7)
         self._apply_chunk_text_splitter_minimums()
 
-        self._status_group = QWidget(self)
-        status_layout = QVBoxLayout(self._status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        status_layout.addWidget(self._status_edit)
-        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_group, 0)
+        self._operation_status_text = ""
         self.set_project_active(False)
         self.set_translation_state(
             [],
@@ -181,6 +170,14 @@ class AiTranslationPage(QWidget):
             0,
             0,
         )
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted operation state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
@@ -287,7 +284,7 @@ class AiTranslationPage(QWidget):
                 total_count=total_count,
             )
         )
-        self._status_edit.setPlainText("\n".join(notes))
+        self._operation_status_text = "\n".join(notes)
         row_to_select = 0
         if current_chunk_id is not None:
             for index, chunk in enumerate(self._display_chunks):
@@ -594,8 +591,6 @@ class AiTranslationPage(QWidget):
             item = self._chunk_list.item(index)
             if item is not None:
                 item.setText(_format_chunk_list_item(chunk, language))
-        if not self._project_active:
-            self._status_edit.setPlainText(ui_state_service.translate("ai_translation.initial_note", language))
 
 
 # HELPER FUNCTIONS

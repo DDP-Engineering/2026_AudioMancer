@@ -17,7 +17,6 @@
 
 from PySide6.QtCore import Qt
 
-from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 
 
@@ -436,9 +435,6 @@ def test_character_voices_page_matches_translation_notes_and_narrator_editor_siz
     qtbot.addWidget(page)
     editor_layout = page._prompt_group.parentWidget().layout()
 
-    expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
-    assert page._status_group.minimumHeight() == expected_status_height
-    assert page._status_group.maximumHeight() == expected_status_height
     assert editor_layout.stretch(editor_layout.indexOf(page._prompt_group)) == 1
     assert editor_layout.stretch(editor_layout.indexOf(page._preview_group)) == 1
     assert page._prompt_edit.minimumHeight() == 112

@@ -72,7 +72,9 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert len(window.findChildren(QToolBar)) == 1
     assert len(window.findChildren(QListWidget)) >= 2
     assert window.findChild(QStackedWidget) is not None
-    assert len(window.findChildren(QDialog)) == 3
+    # The three settings dialogs plus the operation-status dialog.
+    assert len(window.findChildren(QDialog)) == 4
+    assert window._operation_status_dialog in window.findChildren(QDialog)
     assert window._settings_dialog.width() <= main_window_module.WINDOW_WIDTH
     assert window._settings_dialog.height() <= main_window_module.WINDOW_HEIGHT
     assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
@@ -117,7 +119,10 @@ def test_main_window_navigation_is_a_left_vertical_sidebar(qtbot, default_settin
     assert window._sidebar.maximumWidth() == 160
     layout = window.centralWidget().layout()
     assert isinstance(layout, QHBoxLayout)
-    assert layout.indexOf(window._sidebar) == 0
+    # The sidebar shares a left column with the operation-status button, so it is
+    # the column that sits left of the stack rather than the sidebar directly.
+    navigation_column = window._sidebar.parentWidget()
+    assert layout.indexOf(navigation_column) == 0
     assert layout.indexOf(window._stack) == 1
     assert layout.stretch(layout.indexOf(window._stack)) == 1
 
@@ -161,6 +166,33 @@ def test_main_window_wraps_workflow_pages_in_scroll_areas(qtbot, default_setting
     assert window._stack.currentWidget() is container
 
     assert window._home_page.findChild(QScrollArea) is None
+
+
+def test_main_window_places_operation_status_button_under_the_sidebar(
+    qtbot,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify the operation-status button sits below the sidebar, outside its list.
+    @details    Covers REQ-UX-4e49f8f7: the shell's left column stacks the
+                navigation sidebar above one operation-status button of the same
+                width, and the sidebar list still holds exactly the workflow pages.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    column_layout = window._sidebar.parentWidget().layout()
+    assert column_layout.indexOf(window._sidebar) == 0
+    assert column_layout.indexOf(window._operation_status_button) == 1
+    assert window._operation_status_button.width() == window._sidebar.width()
+
+    # The button is a shell control, not an eleventh navigation entry: the list
+    # must still carry one row per registered workflow page.
+    assert window._sidebar.count() == len(MainWindow.PAGE_ORDER)
 
 
 def test_main_window_settings_dialogs_scroll(qtbot, default_settings_payload) -> None:

@@ -96,7 +96,6 @@ def test_each_persistent_page_localizes_audited_visible_text(qtbot) -> None:
     assert translation_page._original_language_value_label.text() == "Necunoscuta"
     assert translation_page._target_language_value_label.text() == "Engleza"
     assert translation_page._approved_progress_label.text() == "Segmente aprobate: 0/0"
-    assert translation_page._status_edit.toPlainText() == "Ruleaza segmentarea textului inainte de Traducerea AI."
     translation_page.set_translation_state(
         source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original"}],
         translated_chunks=[{"chunk_id": "chunk-0001", "translated_text": "Traducere", "approved": False}],
@@ -150,26 +149,18 @@ def test_each_persistent_page_localizes_audited_visible_text(qtbot) -> None:
 
     speech_blocks_page = _romanian_page(qtbot, SpeechBlocksPage)
     assert speech_blocks_page._reset_generation_button.text() == "Reseteaza"
-    assert speech_blocks_page._status_edit.toPlainText() == (
-        "Creeaza sau deschide un proiect pentru a incepe generarea Blocurilor de Vorbire."
-    )
 
     chunking_page = _romanian_page(qtbot, TextChunkingPage)
     assert _combo_labels(chunking_page._strategy_combo) == ["Paragraf", "Semnificatie", "Scena"]
-    assert chunking_page._status_edit.toPlainText() == "Ruleaza curatarea inainte de segmentare."
 
     cleanup_page = _romanian_page(qtbot, TextCleanupPage)
-    assert cleanup_page._status_edit.toPlainText() == "Importa o sursa pentru a incepe extragerea textului."
+    assert cleanup_page._extracted_group.title() == "Previzualizare Text Extras"
 
     characters_page = _romanian_page(qtbot, CharactersPage)
-    assert characters_page._status_edit.toPlainText() == (
-        "Ruleaza segmentarea textului inainte de descoperirea personajelor."
-    )
+    assert characters_page._title_label.text() == "<h2>Personaje</h2>"
 
     audio_blocks_page = _romanian_page(qtbot, AudioBlocksPage)
-    assert audio_blocks_page._status_edit.toPlainText() == (
-        "Creeaza sau deschide un proiect inainte de generarea Blocurilor Audio."
-    )
+    assert audio_blocks_page._title_label.text() == "<h2>Blocuri Audio</h2>"
 
     tts_page = _romanian_page(qtbot, TtsSettingsPage)
     assert tts_page._speech_block_target_label.text() == "Tinta Bloc Naratiune (s)"

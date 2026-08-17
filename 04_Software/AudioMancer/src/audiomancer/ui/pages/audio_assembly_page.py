@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QPlainTextEdit,
     QProgressBar,
     QPushButton,
     QSlider,
@@ -183,19 +182,19 @@ class AudioAssemblyPage(QWidget):
         outputs_layout.addLayout(playback_row)
         layout.addWidget(self._outputs_group, 1)
 
-        self._status_group = QWidget(self)
-        status_layout = QVBoxLayout(self._status_group)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_edit = QPlainTextEdit(self)
-        self._status_edit.setReadOnly(True)
-        self._apply_status_edit_font_role()
-        status_layout.addWidget(self._status_edit)
-        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
-        layout.addWidget(self._status_group, 0)
+        self._operation_status_text = ""
 
         self.apply_language(self._current_language)
         self.set_project_active(False)
         self.set_audio_assembly_state(**_empty_page_state())
+
+    def operation_status_text(self) -> str:
+        """
+        @brief      Return the operator status text for this page's operation.
+        @return     Status text as last composed from persisted operation state.
+        @exception  None
+        """
+        return self._operation_status_text
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -206,20 +205,6 @@ class AudioAssemblyPage(QWidget):
         """
         self._project_active = is_active
         self._apply_control_state()
-
-    def _apply_status_edit_font_role(self) -> None:
-        """
-        @brief      Mark and refresh the operator status editor for the UI-control font.
-        @return     None.
-        @exception  None
-        """
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
-        self._status_edit.style().unpolish(self._status_edit)
-        self._status_edit.style().polish(self._status_edit)
-        self._status_edit.update()
 
     def set_busy(self, is_busy: bool) -> None:
         """
@@ -321,7 +306,7 @@ class AudioAssemblyPage(QWidget):
         self._include_scene_ambience_checkbox.setChecked(bool(normalized_settings["include_scene_ambience"]))
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
         self._progress_label.setText(f"{progress_current}/{progress_total}")
-        self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
+        self._operation_status_text = "\n".join([*notes, "", *status_lines]).strip()
         self._scene_mix_list.clear()
         selected_scene_index = 0
         for index, group in enumerate(self._scene_mix_groups):
