@@ -14,8 +14,9 @@
 
 # IMPORTS
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QPlainTextEdit
+from PySide6.QtWidgets import QApplication, QPlainTextEdit
 
 from audiomancer.services import ai_translation_service
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
@@ -395,6 +396,71 @@ def test_translation_page_displays_locked_language_and_chunk_preview(qtbot) -> N
     assert page._target_language_value_label.text() == "Romanian"
     assert page._source_text_edit.toPlainText() == "Original one"
     assert page._chunk_list.item(0).text() == "[Translated] chunk-0001 | Original one"
+
+
+def test_translation_page_splits_chunk_list_from_chunk_text(qtbot) -> None:
+    """Verify REQ-UX-dc3def51 the chunk list and the chunk text panes share one movable vertical splitter."""
+    page = _build_page(qtbot)
+    page.resize(1400, 900)
+    page.show()
+    QApplication.processEvents()
+
+    assert page._page_splitter.orientation() == Qt.Orientation.Vertical
+    assert page._page_splitter.widget(0) is page._chunk_list_group
+    assert page._page_splitter.widget(1) is page._chunk_text_splitter
+
+    splitter_height = page._page_splitter.height()
+    page._page_splitter.setSizes([300, splitter_height - 300])
+    QApplication.processEvents()
+    taller_height = page._chunk_list_group.height()
+    page._page_splitter.setSizes([180, splitter_height - 180])
+    QApplication.processEvents()
+
+    assert taller_height > page._chunk_list_group.height()
+
+
+def test_translation_page_chunk_list_keeps_its_minimum_height(qtbot) -> None:
+    """Verify REQ-UX-d6fc781d the chunk list pane stops shrinking at one hundred and fifty pixels."""
+    page = _build_page(qtbot)
+    page.resize(1400, 900)
+    page.show()
+    QApplication.processEvents()
+
+    assert page._chunk_list_group.minimumHeight() == 150
+
+    page._page_splitter.setSizes([1, page._page_splitter.height() - 1])
+    QApplication.processEvents()
+
+    assert page._chunk_list_group.height() >= 150
+
+
+def test_translation_page_chunk_list_stops_at_half_the_splitter(qtbot) -> None:
+    """Verify REQ-UX-3a39f53e the chunk list pane grows no further than half the height it shares."""
+    page = _build_page(qtbot)
+    page.resize(1400, 900)
+    page.show()
+    QApplication.processEvents()
+    page._page_splitter.resize(1378, 800)
+    page._apply_page_splitter_limits()
+
+    assert page._chunk_list_group.maximumHeight() == 400
+
+    page._page_splitter.setSizes([800, 0])
+    QApplication.processEvents()
+
+    assert page._chunk_list_group.height() <= 400
+
+
+def test_translation_page_chunk_list_minimum_wins_on_a_short_page(qtbot) -> None:
+    """Verify REQ-UX-3a39f53e the minimum height prevails where half the splitter falls below it."""
+    page = _build_page(qtbot)
+    page.resize(1400, 900)
+    page.show()
+    QApplication.processEvents()
+    page._page_splitter.resize(1378, 200)
+    page._apply_page_splitter_limits()
+
+    assert page._chunk_list_group.maximumHeight() == 150
 
 
 # TEST HELPERS

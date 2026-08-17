@@ -24,6 +24,12 @@ All notable changes to this project will be documented in this file.
   to sit in the status box before you ran anything - "Run cleanup before
   chunking." and the like - are no longer shown; the Home page still lists
   every step and how far it has got.
+- AI Translation page: the Chunk List can now be resized against the Original
+  Chunk and Translated Chunk windows below it. Drag the separator between them
+  to give the list more rows when you are scanning for a chunk, or less when
+  you are reading a long translation. The list stops at the height it has
+  always had, so it can never be squeezed away, and it stops growing at half
+  the space the three windows share.
 
 ### Fixed
 

@@ -33,6 +33,9 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import ai_translation_service, ui_state_service
 
+_CHUNK_LIST_MINIMUM_HEIGHT_PX = 150
+_CHUNK_LIST_MAXIMUM_HEIGHT_FRACTION = 0.5
+
 
 class AiTranslationPage(QWidget):
     """
@@ -93,8 +96,8 @@ class AiTranslationPage(QWidget):
         header_row.addWidget(self._profile_combo)
         layout.addLayout(header_row)
 
-        top_row = QHBoxLayout()
-        top_row.setSpacing(12)
+        self._page_splitter = QSplitter(Qt.Orientation.Vertical, self)
+        self._page_splitter.setChildrenCollapsible(False)
         self._chunk_list_group = QGroupBox("Chunk List", self)
         chunk_list_layout = QHBoxLayout(self._chunk_list_group)
         chunk_list_layout.setContentsMargins(6, 12, 6, 6)
@@ -102,8 +105,7 @@ class AiTranslationPage(QWidget):
         self._chunk_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_list_layout.addWidget(self._chunk_list, 1)
-        self._chunk_list_group.setMinimumHeight(150)
-        self._chunk_list_group.setMaximumHeight(176)
+        self._chunk_list_group.setMinimumHeight(_CHUNK_LIST_MINIMUM_HEIGHT_PX)
 
         self._translation_actions_widget = QWidget(self._chunk_list_group)
         actions_layout = QVBoxLayout(self._translation_actions_widget)
@@ -118,8 +120,7 @@ class AiTranslationPage(QWidget):
         self._approve_all_button.clicked.connect(self._emit_approve_all)
         actions_layout.addWidget(self._approve_all_button)
         chunk_list_layout.addWidget(self._translation_actions_widget, 0)
-        top_row.addWidget(self._chunk_list_group, 1)
-        layout.addLayout(top_row, 1)
+        self._page_splitter.addWidget(self._chunk_list_group)
 
         self._chunk_text_splitter = QSplitter(self)
         self._chunk_text_splitter.setChildrenCollapsible(False)
@@ -153,8 +154,13 @@ class AiTranslationPage(QWidget):
         self._chunk_text_splitter.setStretchFactor(0, 1)
         self._chunk_text_splitter.setStretchFactor(1, 1)
         self._chunk_text_splitter.setSizes([600, 600])
-        layout.addWidget(self._chunk_text_splitter, 7)
+        self._page_splitter.addWidget(self._chunk_text_splitter)
+        self._page_splitter.setStretchFactor(0, 0)
+        self._page_splitter.setStretchFactor(1, 1)
+        self._page_splitter.setSizes([_CHUNK_LIST_MINIMUM_HEIGHT_PX, 600])
+        layout.addWidget(self._page_splitter, 1)
         self._apply_chunk_text_splitter_minimums()
+        self._apply_page_splitter_limits()
 
         self._operation_status_text = ""
         self.set_project_active(False)
@@ -181,13 +187,14 @@ class AiTranslationPage(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
-        @brief      Keep original and translated chunk panes from shrinking below thirty percent of splitter width.
+        @brief      Keep the chunk panes and the chunk list within their share of the available space.
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
         """
         super().resizeEvent(event)
         self._apply_chunk_text_splitter_minimums()
+        self._apply_page_splitter_limits()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -423,6 +430,24 @@ class AiTranslationPage(QWidget):
         minimum_pane_width = int(splitter_width * 0.3)
         self._source_group.setMinimumWidth(minimum_pane_width)
         self._translated_group.setMinimumWidth(minimum_pane_width)
+
+    def _apply_page_splitter_limits(self) -> None:
+        """
+        @brief      Cap the chunk list pane at half the page splitter height, never below its minimum.
+        @return     None.
+        @exception  None
+        """
+        required_attributes = ("_page_splitter", "_chunk_list_group")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_height = self._page_splitter.height()
+        if splitter_height <= 0:
+            return
+        maximum_list_height = max(
+            _CHUNK_LIST_MINIMUM_HEIGHT_PX,
+            int(splitter_height * _CHUNK_LIST_MAXIMUM_HEIGHT_FRACTION),
+        )
+        self._chunk_list_group.setMaximumHeight(maximum_list_height)
 
     def _show_selected_chunk(self, row: int) -> None:
         """

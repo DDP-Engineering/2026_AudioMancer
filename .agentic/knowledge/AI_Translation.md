@@ -57,6 +57,11 @@ approval, localization, and busy-state controls.
   resumable failed/cancelled status and completed chunk checkpoints.
 - `REQ-FUNC-e38de6a1` - budgeted requests preserve true paragraph breaks and
   rejoin pieces of one oversized paragraph with spaces.
+- `REQ-UX-dc3def51` - the chunk list sits above the chunk text panes in one
+  vertical splitter, so the operator sets the split between them.
+- `REQ-UX-d6fc781d` - that chunk list pane stops shrinking at 150 pixels.
+- `REQ-UX-3a39f53e` - it grows no further than half the shared splitter height,
+  except on a window short enough that the minimum prevails.
 
 ## 5. Implementation Overview
 
@@ -120,7 +125,10 @@ invalidate only affected translations; reset preserves configured narrator work.
 ## 10. Usage
 
 Operators choose an AI profile and use Start/Resume, edit/retranslate, then
-approve individual or all chunks. The live enabled profile and selected chunk
+approve individual or all chunks. The chunk list and the two chunk text panes
+share a vertical splitter the operator drags to favour scanning the list or
+reading one translation, bounded by a 150 pixel floor and a half-height ceiling.
+The live enabled profile and selected chunk
 survive ordinary state refreshes; same-content edit persistence does not reset
 the editor cursor, selection, undo history, or scroll positions. Start/Resume
 persists any pending edit before the worker can read the document, and selected

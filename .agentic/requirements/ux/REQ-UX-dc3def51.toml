@@ -1,0 +1,32 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-UX-dc3def51"
+title = "The AI Translation page shall let the operator resize the Chunk List against the chunk text panes"
+status = "active"
+
+requirement = """
+The AI Translation page shall place its Chunk List above the Original Chunk and Translated Chunk panes in a vertically oriented splitter, so that the operator can move the boundary between them and choose how much of the page each one takes.
+"""
+
+verification = "Automated: the AI Translation page exposes a vertical splitter whose first widget is the Chunk List group and whose second widget is the Original/Translated chunk splitter, and setting new sizes on that splitter changes the rendered height of the Chunk List group."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_splits_chunk_list_from_chunk_text",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The Chunk List and the two chunk text panes were laid out with fixed stretch factors of one against seven, and the Chunk List additionally carried a hard maximum height, so the boundary between them could not be moved at all. An operator scanning a long chunk list wants more rows and less text area; an operator reviewing one long translation wants the opposite. Only the operator knows which of the two they are doing at any moment, so the split has to be theirs to set.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

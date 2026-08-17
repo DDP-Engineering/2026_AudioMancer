@@ -1,0 +1,33 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-UX-3a39f53e"
+title = "The AI Translation Chunk List pane shall not exceed half of the height it shares with the chunk text panes"
+status = "active"
+
+requirement = """
+While the operator drags the boundary between the AI Translation Chunk List and the chunk text panes towards the bottom of the page, the Chunk List pane shall stop at half the height of the splitter the two share and grow no further, except where that half is smaller than the Chunk List minimum height, in which case the minimum prevails.
+"""
+
+verification = "Automated: with the AI Translation vertical splitter laid out at a known height, the Chunk List group reports a maximum height of half that height, and after the splitter is asked for a first pane as tall as the whole splitter the Chunk List group still reports a size no greater than that half."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_stops_at_half_the_splitter",
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_minimum_wins_on_a_short_page",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The Chunk List shows one line per chunk, so past a point extra height buys the operator little while the Original and Translated text they are actually reviewing loses the space. Half the shared height leaves the two text panes at least as much room as the list. The ceiling is proportional rather than a fixed pixel value so that it grows with the window instead of pinning the list to one screen size. On a window short enough for the two rules to collide the floor wins, because a list squeezed below its minimum stops being usable at all, while a list taking slightly more than half is merely unbalanced.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

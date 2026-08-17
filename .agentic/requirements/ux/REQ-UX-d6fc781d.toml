@@ -1,0 +1,32 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-UX-d6fc781d"
+title = "The AI Translation Chunk List pane shall keep a minimum height of one hundred fifty pixels"
+status = "active"
+
+requirement = """
+While the operator drags the boundary between the AI Translation Chunk List and the chunk text panes towards the top of the page, the Chunk List pane shall stop at a height of one hundred and fifty pixels and shrink no further.
+"""
+
+verification = "Automated: the AI Translation Chunk List group reports a minimum height of one hundred and fifty pixels, and after the vertical splitter is asked for a first pane of one pixel the Chunk List group still reports a size of at least one hundred and fifty pixels."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_keeps_its_minimum_height",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+One hundred and fifty pixels is the height the Chunk List occupies on the page as delivered before this behavior existed, and it is the height the operator asked to keep as the floor. It holds roughly four chunk rows beside the Start, Reset and Approve All button column, which is the least that still reads as a list rather than a sliver. The floor is a fixed pixel value rather than a proportion because the content it has to fit - a row of text and a stack of three buttons - does not scale with the window.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17
