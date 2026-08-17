@@ -93,9 +93,7 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     )
 
     assert [target["target_kind"] for target in state["targets"][:2]] == ["narrator", "character"]
-    assert state["original_language"] == "German"
-    assert state["translated_language"] == "Romanian"
-    assert state["language_entries"] == [("Romanian", "ro")]
+    assert state["selected_voice_language"] == "ro"
     assert state["targets"][0]["can_edit_prompt"] is False
     assert state["targets"][1]["preview_text"]
     assert state["targets"][1]["preview_text"] == state["preview_text"]
@@ -235,6 +233,54 @@ def test_state_manifest_save_failure_returns_recovery_without_target_sync(monkey
     assert state["can_edit_prompt"] is False
     assert state["can_generate_sample"] is False
     assert sync_calls == []
+
+
+def test_state_payloads_carry_no_indicator_only_fields(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-NFR-9792c51a every page-state payload drops the four indicator-only fields.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    removed_keys = ("original_language", "translated_language", "assignment_mode_label", "language_entries")
+    project_root, manifest = _create_project_with_narrator_and_character(tmp_path, "CharacterVoicesPayloadShape")
+    settings_payload = {
+        "tts_runtime_probe_succeeded": True,
+        "tts_runtime_discovered_models": _minimum_qwen_models(),
+    }
+    inactive_state = character_voices_state_service.build_character_voices_state(None, None, "en")
+    empty_project_state = character_voices_state_service.build_character_voices_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+    )
+    normal_state = character_voices_state_service.build_character_voices_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+        inspected_target_id="character_alice",
+        initialize_defaults=True,
+    )
+    monkeypatch.setattr(
+        character_voices_state_service.character_voices_service,
+        "save_selected_voice_language",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("Project manifest is corrupt.")),
+    )
+    recovery_state = character_voices_state_service.build_character_voices_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+        initialize_defaults=True,
+    )
+
+    for state in (inactive_state, empty_project_state, normal_state, recovery_state):
+        for removed_key in removed_keys:
+            assert removed_key not in state
+        assert state["selected_voice_language"]
 
 
 def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypatch, tmp_path) -> None:

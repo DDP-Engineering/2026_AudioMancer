@@ -1,0 +1,34 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-UX-7a0a2d7a"
+title = "The Character Voices header shall carry no language or voice-assignment indicators"
+status = "active"
+
+requirement = """
+The Character Voices page header shall show the page title and the character-sample generation action alone, presenting no read-only box for the book's original language, for the translation language, for the voice-assignment mode, or for the voice language.
+"""
+
+verification = "Automated: a constructed Character Voices page carries no widget attribute for any of the four header indicator boxes or their value labels, and the header layout of the page holds only the title row."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_header_carries_no_language_indicators",
+  "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_each_persistent_page_localizes_audited_visible_text",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+The operator picks the translation language and the voice-assignment mode on the Home page before any of the later pages open, and those choices cannot be changed from Character Voices. Repeating them across the top of the page therefore spends a strip of vertical space on four boxes the operator cannot act on and has already read once, pushing the voice target list and the prompt editor - the surfaces this page exists for - further down.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

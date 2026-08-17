@@ -30,6 +30,11 @@ All notable changes to this project will be documented in this file.
   you are reading a long translation. The list stops at the height it has
   always had, so it can never be squeezed away, and it stops growing at half
   the space the three windows share.
+- Character Voices page: the strip of four read-only boxes across the top -
+  Original language, Translated language, Voice assignment and Voice language
+  - is gone. All four only repeated choices you make on the Home page and
+  could not be changed here, and the voice target list and the prompt editor
+  now start that much higher up the page.
 
 ### Fixed
 

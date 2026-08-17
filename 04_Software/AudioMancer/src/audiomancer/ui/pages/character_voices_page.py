@@ -73,12 +73,8 @@ class CharacterVoicesPage(QWidget):
         self._preview_available = False
         self._current_target_is_editable = False
         self._original_payload: dict[str, object] | None = None
-        self._original_language = "Unknown"
-        self._translated_language = "Not translated"
-        self._language_entries: list[tuple[str, str]] = []
 
         layout = QVBoxLayout(self)
-        header_layout = QVBoxLayout()
         title_row = QHBoxLayout()
         self._title_label = QLabel("<h2>Character Voices</h2>")
         title_row.addWidget(self._title_label)
@@ -86,32 +82,7 @@ class CharacterVoicesPage(QWidget):
         self._generate_missing_samples_button = QPushButton("Generate Character Samples", self)
         self._generate_missing_samples_button.clicked.connect(self.generate_missing_samples_requested.emit)
         title_row.addWidget(self._generate_missing_samples_button)
-        header_layout.addLayout(title_row)
-
-        indicator_row = QHBoxLayout()
-        indicator_row.setSpacing(12)
-        self._original_language_group = QGroupBox("Original language", self)
-        original_layout = QVBoxLayout(self._original_language_group)
-        self._original_language_value_label = QLabel("Unknown", self)
-        original_layout.addWidget(self._original_language_value_label)
-        self._translated_language_group = QGroupBox("Translated language", self)
-        translated_layout = QVBoxLayout(self._translated_language_group)
-        self._translated_language_value_label = QLabel("Not translated", self)
-        translated_layout.addWidget(self._translated_language_value_label)
-        self._assignment_mode_group = QGroupBox("Voice assignment", self)
-        assignment_layout = QVBoxLayout(self._assignment_mode_group)
-        self._assignment_mode_value_label = QLabel("", self)
-        assignment_layout.addWidget(self._assignment_mode_value_label)
-        self._voice_language_group = QGroupBox("Voice language", self)
-        voice_language_layout = QVBoxLayout(self._voice_language_group)
-        self._voice_language_value_label = QLabel("", self)
-        voice_language_layout.addWidget(self._voice_language_value_label)
-        indicator_row.addWidget(self._original_language_group, 1)
-        indicator_row.addWidget(self._translated_language_group, 1)
-        indicator_row.addWidget(self._assignment_mode_group, 1)
-        indicator_row.addWidget(self._voice_language_group, 1)
-        header_layout.addLayout(indicator_row)
-        layout.addLayout(header_layout)
+        layout.addLayout(title_row)
 
         self._main_splitter = QSplitter(self)
         self._main_splitter.setChildrenCollapsible(False)
@@ -230,10 +201,6 @@ class CharacterVoicesPage(QWidget):
         notes: list[str],
         current_target_id: str | None,
         selected_voice_language: str,
-        language_entries: list[tuple[str, str]],
-        original_language: str,
-        translated_language: str,
-        assignment_mode_label: str,
         target_name: str,
         target_kind_label: str,
         prompt_text: str,
@@ -252,10 +219,6 @@ class CharacterVoicesPage(QWidget):
             @param[in]  notes Operator-facing page notes.
             @param[in]  current_target_id Currently inspected target identifier.
             @param[in]  selected_voice_language Current selected character-voices voice language code.
-            @param[in]  language_entries Selectable voice-language entries as `(label, value)`.
-            @param[in]  original_language Source-book original language label.
-            @param[in]  translated_language Translation target label or fallback text.
-            @param[in]  assignment_mode_label Operator-facing voice-assignment mode label.
             @param[in]  target_name Selected target display name.
             @param[in]  target_kind_label Selected target kind label.
             @param[in]  prompt_text Selected target prompt text.
@@ -275,7 +238,6 @@ class CharacterVoicesPage(QWidget):
         self._targets = [deepcopy(target) for target in targets]
         self._current_target_id = current_target_id
         self._selected_voice_language = selected_voice_language
-        self._language_entries = list(language_entries)
         self._current_target_is_editable = is_editable
         self._can_import_sample = can_import_sample
         self._can_edit_prompt = can_edit_prompt
@@ -287,9 +249,6 @@ class CharacterVoicesPage(QWidget):
         self._original_payload = None
         self._refresh_target_list(current_target_id)
         self._load_editor(prompt_text, preview_text)
-        self._set_language_labels(original_language, translated_language)
-        self._assignment_mode_value_label.setText(assignment_mode_label)
-        self._set_voice_language_label(language_entries, selected_voice_language)
         self._operation_status_text = "\n".join(line for line in status_lines if str(line).strip())
         self._apply_control_state()
 
@@ -371,17 +330,11 @@ class CharacterVoicesPage(QWidget):
         self._targets_group.setTitle(ui_state_service.translate("character_voices.list_group", language))
         self._prompt_group.setTitle(ui_state_service.translate("character_voices.prompt_group", language))
         self._preview_group.setTitle(ui_state_service.translate("character_voices.preview_group", language))
-        self._original_language_group.setTitle(self._language_indicator_title("character_voices.original_language"))
-        self._translated_language_group.setTitle(self._language_indicator_title("character_voices.translated_language"))
-        self._assignment_mode_group.setTitle(ui_state_service.translate("character_voices.assignment_mode", language))
-        self._voice_language_group.setTitle(ui_state_service.translate("character_voices.voice_language", language))
         self._import_sample_button.setText(ui_state_service.translate("character_voices.import_sample", language))
         self._edit_prompt_button.setText(ui_state_service.translate("character_voices.edit_prompt", language))
         self._save_prompt_button.setText(ui_state_service.translate("character_voices.save_prompt", language))
         self._generate_sample_button.setText(ui_state_service.translate("character_voices.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
-        self._set_language_labels(self._original_language, self._translated_language)
-        self._set_voice_language_label(self._language_entries, self._selected_voice_language)
         self._refresh_target_list(self._current_target_id)
 
     def _apply_control_state(self) -> None:
@@ -475,22 +428,6 @@ class CharacterVoicesPage(QWidget):
             self._target_list.setCurrentRow(selected_row)
         self._target_list.blockSignals(False)
 
-    def _set_voice_language_label(self, language_entries: list[tuple[str, str]], selected_voice_language: str) -> None:
-        """
-        @brief      Set the read-only voice-language label.
-        @param[in]  language_entries Value for `language_entries`.
-        @param[in]  selected_voice_language Value for `selected_voice_language`.
-        @return     None.
-        """
-        display_label = str(selected_voice_language or "").strip()
-        for label, value in language_entries:
-            if str(value).strip() == str(selected_voice_language).strip():
-                display_label = str(label).strip()
-                break
-        self._voice_language_value_label.setText(
-            ui_state_service.localized_language_label(display_label, self._ui_language)
-        )
-
     def _load_editor(self, prompt_text: str, preview_text: str) -> None:
         """
         @brief      Load the editor.
@@ -502,32 +439,6 @@ class CharacterVoicesPage(QWidget):
         self._prompt_edit.setPlainText(prompt_text)
         self._preview_text_edit.setPlainText(preview_text)
         self._loading_state = False
-
-    def _set_language_labels(self, original_language: str, translated_language: str) -> None:
-        """
-        @brief      Set the language labels.
-        @param[in]  original_language Value for `original_language`.
-        @param[in]  translated_language Value for `translated_language`.
-        @return     None.
-        """
-        self._original_language = str(original_language)
-        self._translated_language = str(translated_language)
-        self._original_language_value_label.setText(
-            ui_state_service.localized_language_label(self._original_language, self._ui_language)
-        )
-        self._translated_language_value_label.setText(
-            ui_state_service.localized_language_label(self._translated_language, self._ui_language)
-        )
-
-    def _language_indicator_title(self, translation_key: str) -> str:
-        """
-        @brief      Build the boxed language-indicator title from one translated label template.
-        @param[in]  translation_key Translation key for the formatted language label.
-        @return     Group-box title without the trailing value placeholder.
-        """
-        translated_label = ui_state_service.translate(translation_key, self._ui_language)
-        title = translated_label.split("{language_label}", maxsplit=1)[0]
-        return title.rstrip(": ").strip()
 
     def _current_target(self) -> dict[str, object] | None:
         """

@@ -55,10 +55,6 @@ def build_character_voices_state(
             "notes": [ui_state_service.translate("character_voices.note_no_project", language)],
             "current_target_id": None,
             "selected_voice_language": narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
-            "language_entries": [],
-            "original_language": ui_state_service.translate("narator_voice.language_unknown", language),
-            "translated_language": ui_state_service.translate("narator_voice.language_not_translated", language),
-            "assignment_mode_label": _assignment_mode_label(config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE, language),
             "target_name": "",
             "target_kind_label": "",
             "prompt_text": "",
@@ -88,9 +84,7 @@ def build_character_voices_state(
     assignment_mode = narrator_definition_service.load_tts_plan(project_root, discovered_models)[
         "voice_assignment_mode"
     ]
-    language_entries, selected_voice_language, original_language, translated_language, translation_ready = (
-        _voice_language_state(project_root, manifest, language)
-    )
+    language_entries, selected_voice_language, translation_ready = _voice_language_state(project_root, manifest)
     saved_language = character_voices_service.load_selected_voice_language(project_root, selected_voice_language)
     selectable_language_codes = [language_code for _label, language_code in language_entries]
     selected_voice_language = (
@@ -154,10 +148,6 @@ def build_character_voices_state(
         "notes": notes,
         "current_target_id": None if current_target is None else current_target.get("target_id"),
         "selected_voice_language": selected_voice_language,
-        "language_entries": language_entries,
-        "original_language": original_language,
-        "translated_language": translated_language,
-        "assignment_mode_label": _assignment_mode_label(assignment_mode, language),
         "target_name": "" if current_target is None else str(current_target.get("display_name", "")),
         "target_kind_label": (
             ""
@@ -209,7 +199,6 @@ def _empty_project_state(manifest: dict[str, object], language: str) -> dict[str
         manifest.get("target_language", manifest.get("selected_voice_language")),
         narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
     )
-    language_label = narrator_definition_service.narrator_language_label(selected_voice_language)
     assignment_mode = str(manifest.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
     if assignment_mode not in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
         assignment_mode = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
@@ -229,10 +218,6 @@ def _empty_project_state(manifest: dict[str, object], language: str) -> dict[str
         ),
         "current_target_id": None,
         "selected_voice_language": selected_voice_language,
-        "language_entries": [(language_label, selected_voice_language)],
-        "original_language": ui_state_service.translate("narator_voice.language_unknown", language),
-        "translated_language": language_label,
-        "assignment_mode_label": _assignment_mode_label(assignment_mode, language),
         "target_name": "",
         "target_kind_label": "",
         "prompt_text": "",
@@ -487,43 +472,29 @@ def _resolve_current_target(
 def _voice_language_state(
     project_root: Path,
     manifest: dict[str, object],
-    language: str,
-) -> tuple[list[tuple[str, str]], str, str, str, bool]:
+) -> tuple[list[tuple[str, str]], str, bool]:
     """
     @brief      Resolve locked character-voices language state.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
-    @param[in]  language Language code.
     @return     Helper result.
     """
     try:
         translation_document = ai_translation_service.load_translation_document(project_root)
     except ai_translation_service.TranslationDocumentError:
         translation_document = None
-    original_language_code = narrator_definition_service.narrator_language_code(
-        manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
-    )
-    original_language_label = narrator_definition_service.narrator_language_label(original_language_code)
     target_language_code = narrator_definition_service.narrator_language_code(
         manifest.get("target_language", manifest.get("selected_voice_language")),
         narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
     )
     target_language_label = narrator_definition_service.narrator_language_label(target_language_code)
     language_entries = [(target_language_label, target_language_code)]
-    translated_language_label = target_language_label
     translation_ready = False
     if translation_document is not None:
         translated_language_code = str(translation_document["target_language"]).strip()
         if translated_language_code in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
-            translated_language_label = narrator_definition_service.narrator_language_label(translated_language_code)
             translation_ready = ai_translation_service.translation_is_completed(project_root)
-    return (
-        language_entries,
-        target_language_code,
-        original_language_label,
-        translated_language_label,
-        translation_ready,
-    )
+    return language_entries, target_language_code, translation_ready
 
 
 def _translation_exists(manifest: dict[str, object]) -> bool:

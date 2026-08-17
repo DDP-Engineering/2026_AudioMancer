@@ -1,0 +1,34 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+schema = 1
+id = "REQ-NFR-9792c51a"
+title = "The Character Voices page state payload shall carry no indicator-only fields"
+status = "active"
+
+requirement = """
+The Character Voices page state payload shall carry no original-language label, translated-language label, voice-assignment-mode label, or selectable-language-entry list, while continuing to carry the selected voice language that sample generation and preview text read.
+"""
+
+verification = "Automated: every payload the Character Voices state service builds - for an inactive project, for a normal project, and for the read-only manifest-failure recovery state - has none of the four removed keys and still has the selected voice language, and the page's state-application method accepts that payload without them."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_payloads_carry_no_indicator_only_fields",
+  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
+]
+
+spec = ""
+priority = "normal"
+rationale = """
+Those four values had exactly one consumer each: the header indicator boxes. Once the boxes are gone the state service would be computing labels, resolving a translated-language code out of the translation document, and formatting an assignment-mode string on every page refresh for nobody to read. Leaving them in the payload also leaves a false signal for the next reader, who would reasonably assume the page still depends on them. The selected voice language is different in kind - it is not an indicator but the language sample generation actually uses - so it stays.
+"""
+
+created = 2026-08-17
+updated = 2026-08-17

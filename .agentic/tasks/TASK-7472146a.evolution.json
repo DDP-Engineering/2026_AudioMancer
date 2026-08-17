@@ -1,0 +1,123 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-17T12:10:20.179848Z",
+      "anchor_head": "9c43f5faa3b2a724652d3ac7af917ddbd1b000e5",
+      "anchor_id": "0a805b462e9ca6af",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4c437104ce0bbf38616ca967a387d4d162e8ff5597e1ee9e07b564889e1bb3de"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "a135690c94bacda990237332a237226d850964ab0e4b219f5a44d38345da0f51"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "43d9f13e2473da6f46b40067c9b4658a45c9f106c0c709eeef7bd38a8eb9fc5b"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "4b73fc2323a710701373ec428737b983950bd16c3d30e625e0bc1a5d547eacd5"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "26482e73503e1c374b6162eac80f021a83327045241334c6b09c5bb1b5632eac"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "15328f28069428b118c5d17fa04ec43cc19ee31f558e7b789cf70c7ece0a533d"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2d39d0b99188942b885ba0ee442e455408385a4950350f4878e04557dc11cbe1"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "643eb21ed271ee34d8bdd66fa5692caf4cbfce2bac57a0a9e05c03a0e1ecc751"
+          },
+          "path": "04_Software/AudioMancer/tests/test_character_voices_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "ce82c522b1365471780f72fcbdc943a43f12501cb0c10cd8552950770828d874"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "2e34bc4aefabd12425e1cb119c4b085352b2dd2eed80c45019ed0ab61514d7b0"
+          },
+          "path": "04_Software/AudioMancer/tests/test_ui_localization_coverage.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "581d79bbe22570fcbcfd67f381b75ffe62f08d3ae8b68509b3f835cee1ae0131"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "da29ec3729d47f92fd4ee556def45018cf0920788441602d1ceaefce7333e4c0"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 107
+          },
+          "source": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 100
+          },
+          "tests": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 119
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 6,
+          "removed": 0,
+          "unchanged": 326
+        }
+      },
+      "current_head": "9c43f5faa3b2a724652d3ac7af917ddbd1b000e5",
+      "evolution_stage": "validate",
+      "evolved_at": "2026-08-17T12:39:51.356378Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-7472146a"
+}

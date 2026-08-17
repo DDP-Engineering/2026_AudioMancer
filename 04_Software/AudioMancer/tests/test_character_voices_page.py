@@ -44,10 +44,6 @@ def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
         notes=["Ready."],
         current_target_id="narrator",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="English",
-        translated_language="Not translated",
-        assignment_mode_label="Narrator + character voices",
         target_name="Narator Voice",
         target_kind_label="Narator Voice",
         prompt_text="",
@@ -92,10 +88,6 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
         notes=["Ready."],
         current_target_id="character_alice",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="English",
-        translated_language="Not translated",
-        assignment_mode_label="Narrator + character voices",
         target_name="Alice",
         target_kind_label="Character",
         prompt_text="Original prompt.",
@@ -142,10 +134,6 @@ def test_character_voices_page_unchanged_valid_edit_can_save_current_payload(qtb
         notes=["Ready."],
         current_target_id="character_alice",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="English",
-        translated_language="Not translated",
-        assignment_mode_label="Narrator + character voices",
         target_name="Alice",
         target_kind_label="Character",
         prompt_text="Original prompt.",
@@ -200,10 +188,6 @@ def test_character_voices_page_import_button_emits_for_character_targets(qtbot) 
         notes=["Ready."],
         current_target_id="character_alice",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="English",
-        translated_language="Not translated",
-        assignment_mode_label="Narrator + character voices",
         target_name="Alice",
         target_kind_label="Character",
         prompt_text="Original prompt.",
@@ -260,10 +244,6 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
         notes=["Ready."],
         current_target_id="character_alice",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="English",
-        translated_language="Not translated",
-        assignment_mode_label="Narrator + character voices",
         target_name="Alice",
         target_kind_label="Character",
         prompt_text="Original prompt.",
@@ -312,10 +292,6 @@ def test_character_voices_page_batch_button_disables_when_character_targets_cann
         notes=["Same narrator voice mode."],
         current_target_id="character_alice",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="English",
-        translated_language="Not translated",
-        assignment_mode_label="Same narrator voice",
         target_name="Alice",
         target_kind_label="Character",
         prompt_text="Original prompt.",
@@ -361,10 +337,6 @@ def test_character_voices_page_editor_payload_includes_preview_text(qtbot) -> No
         notes=["Ready."],
         current_target_id="character_alice",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="English",
-        translated_language="Not translated",
-        assignment_mode_label="Narrator + character voices",
         target_name="Alice",
         target_kind_label="Character",
         prompt_text="Original prompt.",
@@ -381,9 +353,9 @@ def test_character_voices_page_editor_payload_includes_preview_text(qtbot) -> No
     assert page.current_editor_payload()["preview_text"] == "Line one.\nLine two."
 
 
-def test_character_voices_page_header_indicators_render_languages_and_assignment_mode(qtbot) -> None:
+def test_character_voices_page_header_carries_no_language_indicators(qtbot) -> None:
     """
-    @brief      Verify the boxed header indicators render original language, translated language, and assignment mode.
+    @brief      Verify REQ-UX-7a0a2d7a the header holds the title row alone and no indicator boxes.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -391,37 +363,25 @@ def test_character_voices_page_header_indicators_render_languages_and_assignment
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
     page.apply_language("en")
-    page.set_project_active(True)
-    page.set_character_voices_state(
-        targets=[],
-        notes=["Ready."],
-        current_target_id=None,
-        selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="Italian",
-        translated_language="Romanian",
-        assignment_mode_label="Narrator + character voices",
-        target_name="",
-        target_kind_label="",
-        prompt_text="",
-        preview_text="",
-        is_editable=False,
-        can_import_sample=False,
-        can_edit_prompt=False,
-        can_generate_sample=False,
-        preview_available=False,
-        status_lines=["Total targets: 0"],
-        missing_narrator_sample=False,
-    )
 
-    assert page._original_language_group.title() == "Original language"
-    assert page._translated_language_group.title() == "Translated language"
-    assert page._assignment_mode_group.title() == "Voice assignment"
-    assert page._voice_language_group.title() == "Voice language"
-    assert page._original_language_value_label.text() == "Italian"
-    assert page._translated_language_value_label.text() == "Romanian"
-    assert page._assignment_mode_value_label.text() == "Narrator + character voices"
-    assert page._voice_language_value_label.text() == "English"
+    removed_attributes = (
+        "_original_language_group",
+        "_translated_language_group",
+        "_assignment_mode_group",
+        "_voice_language_group",
+        "_original_language_value_label",
+        "_translated_language_value_label",
+        "_assignment_mode_value_label",
+        "_voice_language_value_label",
+    )
+    for attribute_name in removed_attributes:
+        assert not hasattr(page, attribute_name)
+
+    header_row = page.layout().itemAt(0).layout()
+
+    assert header_row.count() == 3
+    assert header_row.indexOf(page._title_label) == 0
+    assert header_row.indexOf(page._generate_missing_samples_button) == 2
 
 
 def test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing(qtbot) -> None:

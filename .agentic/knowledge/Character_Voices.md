@@ -13,6 +13,10 @@ not assign Speech Blocks or generate final audiobook audio.
 `character_voices_service.py` owns `characters_voice.json`, target/sample lookup,
 prompt updates, import and generated-sample persistence, readiness, and operation
 summary derivation. `character_voices_state_service.py` builds the page payload.
+`build_character_voices_state` and `set_character_voices_state` agree key for
+key: the single call site in `MainWindow._refresh_character_voices_page_state`
+splats the payload into the method, so a field added or removed on one side
+must move on the other in the same change.
 `character_voices_ui_controller.py` coordinates Qt actions, threaded generation,
 manifest synchronization, downstream audio invalidation, and status presentation.
 `tts_runtime_ui_support.py` owns the common VoiceWeaver probe, model-load,
@@ -43,6 +47,15 @@ batch generation, and preview signals.
 - `REQ-UX-f80d35c2` — expected manifest failures become read-only recovery
   state or the existing project-error warning, without target synchronization
   or partial normal page application.
+- `REQ-UX-7a0a2d7a` — the page header carries the title and the batch-generation
+  action alone; the four read-only boxes for original language, translated
+  language, voice assignment, and voice language are gone, because the Home
+  page already owns those choices and they were not editable here.
+- `REQ-NFR-9792c51a` — the page-state payload carries no original-language,
+  translated-language, assignment-mode-label, or language-entries field. The
+  selected voice language stays, because sample generation and preview text
+  read it. `language_entries` still lives inside the state service, where it
+  validates the saved voice language against the selectable codes.
 - `REQ-NFR-b3fb9944` — the page applies selection through its controller-owned
   full-state payload and exposes `current_target_id()` without a stale direct
   selection-application method.

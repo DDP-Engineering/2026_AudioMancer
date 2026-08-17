@@ -138,8 +138,7 @@ def test_each_persistent_page_localizes_audited_visible_text(qtbot) -> None:
     ]
 
     character_voices_page = _romanian_page(qtbot, CharacterVoicesPage)
-    assert character_voices_page._original_language_value_label.text() == "Necunoscuta"
-    assert character_voices_page._translated_language_value_label.text() == "Netradusa"
+    assert character_voices_page._title_label.text() == "<h2>Voci Personaje</h2>"
     assert character_voices_page._import_sample_button.text() == "Importa Mostra"
     assert character_voices_page._generate_sample_button.text() == "Genereaza Mostra"
 
