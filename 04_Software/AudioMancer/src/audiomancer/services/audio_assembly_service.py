@@ -217,18 +217,29 @@ def load_generated_outputs(project_root: str | Path) -> list[dict[str, object]]:
 
 
 @trace_function(_AUDIO_ASSEMBLY_LOGGER)
-def list_scene_mix_groups(project_root: str | Path) -> list[SceneMixGroup]:
+def list_scene_mix_groups(
+    project_root: str | Path,
+    audio_blocks: list[dict[str, object]] | None = None,
+) -> list[SceneMixGroup]:
     """
     @brief      Build current Scene Ambience mix-preview groups.
+    @details    Callers that already hold the loaded Audio Blocks pass them in
+                so one page refresh reads the document once; omitting them
+                loads the document here, as every existing caller expects.
     @param[in]  project_root Active project root folder.
+    @param[in]  audio_blocks Already-loaded Audio Blocks payloads, or `None` to load them.
     @return     Ordered Scene Ambience group records.
     @exception  None
     """
     resolved_project_root = Path(project_root)
-    audio_blocks = speech_blocks_service.sort_speech_blocks(
-        audio_blocks_service.load_audio_blocks(resolved_project_root)
+    loaded_blocks = (
+        audio_blocks_service.load_audio_blocks(resolved_project_root) if audio_blocks is None else audio_blocks
     )
-    return _scene_mix_groups_from_blocks(resolved_project_root, audio_blocks, include_blocks=False)
+    return _scene_mix_groups_from_blocks(
+        resolved_project_root,
+        speech_blocks_service.sort_speech_blocks(loaded_blocks),
+        include_blocks=False,
+    )
 
 
 @trace_function(_AUDIO_ASSEMBLY_LOGGER)

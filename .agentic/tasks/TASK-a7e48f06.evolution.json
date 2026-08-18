@@ -1,0 +1,162 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-18T15:55:41.551376Z",
+      "anchor_head": "c09a41501c7caa75c14769dd6e5dcd1179a22689",
+      "anchor_id": "02bf3c1304177df3",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8eb2aec8c23828b0e83a838809283aadfd8638c49598040c99df06f9aac52aef"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "7414a999f16fd6f8f0ef5d60cd55270af02e72f468e83c62e99f9b60d923fbd5"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c3074d2d2e5be7f32aa0c2fe91aa09f49aea4e5d6f3ae3a9b9311d4e16aecc6e"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "bec25f5725743483d637c534eebb6053e180f97086c0dffdda242f95ffe40586"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d0572d419618c6a2f45544c9094d97ee45169d54c125ae73b3c809d76a466305"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "77eb523070dbdebd1a9e7e9691a5cc3175be5210a7d9a609dd022c3b4fdd83e2"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "35421095c3cbe8929ca789615677d800f66bba4aea9dfb5f03ee40dd0af627ba"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "4ccd628beb448912d4d59c1822d87b2f7f53b526f39d24664ad90806e5c60702"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8859db01ff2a7d3c740108741b2da258c588167a016c112c44ad9e66669409dd"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "f6cab8f7919ef2d8d1ff9ddcbf817acd5e4497c7bbd9c047a88cf8bbbedab7c3"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2a0caba8c2c3cc98a5aecc6d367a9de3bed9f36ba0961e60803a6eddcddc28cd"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "3a5c2385d74958fdc8cc06e29000816f67f470447f1eff268155de8e10130421"
+          },
+          "path": "04_Software/AudioMancer/tests/test_audio_assembly_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "fadb45f68449b5db61f0eed575e0cc621c7f656b0627edd22eee8c57baec912b"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "271e7e369d7680890eb450cbebbdf430e07d74b2d865895369992d2256a40d64"
+          },
+          "path": "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "6f970e6af14f88b7de2569c46af76b784f03e926d38993934045e972b85c1031"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "1dd87f1bc5bf7685902b483e5b7a279012951109bddbae783278979a9aa68f69"
+          },
+          "path": "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "be94e57b59fd239b44051bda508f820dd25b03d63ac88afa64dba3d5b0fad3b2"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "4c62989280b58a584e629c3439ccc9fe933660e4fd20f238c4da40719ec49d4f"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 107
+          },
+          "source": {
+            "added": 0,
+            "modified": 5,
+            "removed": 0,
+            "unchanged": 98
+          },
+          "tests": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 118
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 9,
+          "removed": 0,
+          "unchanged": 323
+        }
+      },
+      "current_head": "c09a41501c7caa75c14769dd6e5dcd1179a22689",
+      "evolution_stage": "validate",
+      "evolved_at": "2026-08-18T16:49:45.626913Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-a7e48f06"
+}

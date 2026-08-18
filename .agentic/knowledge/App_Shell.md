@@ -84,6 +84,11 @@ The package API exports `__version__` and `main`. Page identifiers must match
 the sidebar and stacked-page registration. Theme is applied before widgets are
 constructed at startup; page refreshes are limited to the current workflow page
 to avoid unrelated state work, including after a runtime language change.
+`show_project_state()` refreshes the project summary, the current page and the
+operation-status control together, and its summary half rereads every Home
+export artifact. A controller that changed nothing outside its own page uses
+the narrower page-scoped entry point instead - `refresh_audio_assembly_page_state()`
+is the first of these (`REQ-NFR-aed66768`).
 App-owned dialog text comes from the same English/Romanian catalog as persistent
 page text. Shared confirmations retain the caller's window as parent, translate
 the exact caller-provided title and message keys, expose Yes and No, default to

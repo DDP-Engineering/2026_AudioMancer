@@ -16,6 +16,19 @@ Validates and composes ordered generated audio blocks into project-local final a
 
 The assembly service loads validated block WAVs, applies configured composition/ambience behavior, writes resumable outputs and reports, and guards project-relative paths. Final composition and planned virtual Scene Mix preflight share one WAV-parameter selector with an explicit block-path resolver, preserving speech preference, fallback paths, and runtime monkeypatch seams. State service derives readiness and saved-output projections. The controller delegates long work through the shared runner; the page presents output/mix selection, settings, progress and playback.
 
+Refreshing the page is the component's hot path, so its cost is bounded on
+purpose. `build_audio_assembly_state()` loads the Audio Blocks document once
+and hands those blocks to `list_scene_mix_groups()`, whose `audio_blocks`
+argument exists for exactly that (`REQ-NFR-01d90032`); omitting the argument
+still loads, for callers that hold nothing. The numeric Output Settings
+controls do not track keystrokes, so an edit is reported once its value
+settles rather than once per digit, and Generate Audio interprets a
+still-being-typed value before reading the payload (`REQ-UX-4cf55346`). A
+settings save that discards no output refreshes the page through
+`MainWindow.refresh_audio_assembly_page_state()` instead of the app-wide
+`show_project_state()`, which would also reread every Home export artifact
+(`REQ-NFR-aed66768`).
+
 ## 4. Dependencies
 
 - Internal: TTS Audio Blocks artifacts, Speech Blocks ordering/ambience metadata, operation runtime/persistence/project workspace, PCM Codec for sample-width/channel/rate conversion, shared runner and Qt playback widgets.
@@ -111,6 +124,7 @@ From the adopted component map:
 - `04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py`
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/main_window.py` (page-scoped refresh entry point)
 - `04_Software/AudioMancer/tests/test_audio_assembly_page.py`
 - `04_Software/AudioMancer/tests/test_audio_assembly_service.py`
 - `04_Software/AudioMancer/tests/test_audio_assembly_state_service.py`

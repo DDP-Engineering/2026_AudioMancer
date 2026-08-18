@@ -94,6 +94,7 @@ class AudioAssemblyPage(QWidget):
         self._max_duration_spin = QSpinBox(self)
         self._max_duration_spin.setRange(1, 24 * 60)
         self._max_duration_spin.setSuffix(" min")
+        self._max_duration_spin.setKeyboardTracking(False)
         self._max_duration_spin.valueChanged.connect(self._handle_settings_changed)
         self._output_format_combo = QComboBox(self)
         self._output_format_combo.addItem("WAV", audio_assembly_service.OUTPUT_FORMAT_WAV)
@@ -101,10 +102,12 @@ class AudioAssemblyPage(QWidget):
         self._inter_block_gap_spin = QSpinBox(self)
         self._inter_block_gap_spin.setRange(0, 60_000)
         self._inter_block_gap_spin.setSuffix(" ms")
+        self._inter_block_gap_spin.setKeyboardTracking(False)
         self._inter_block_gap_spin.valueChanged.connect(self._handle_settings_changed)
         self._inter_chunk_gap_spin = QSpinBox(self)
         self._inter_chunk_gap_spin.setRange(0, 60_000)
         self._inter_chunk_gap_spin.setSuffix(" ms")
+        self._inter_chunk_gap_spin.setKeyboardTracking(False)
         self._inter_chunk_gap_spin.valueChanged.connect(self._handle_settings_changed)
         self._include_scene_ambience_checkbox = QCheckBox("Include Scene Ambience", self)
         self._include_scene_ambience_checkbox.stateChanged.connect(self._handle_settings_changed)
@@ -435,7 +438,22 @@ class AudioAssemblyPage(QWidget):
         @return     None.
         @exception  None
         """
+        self._settle_pending_setting_edits()
         self.generate_requested.emit(self.current_settings_payload())
+
+    def _settle_pending_setting_edits(self) -> None:
+        """
+        @brief      Interpret text still being typed into the numeric settings controls.
+        @details    The numeric controls do not track keystrokes, so a value the
+                    operator typed without confirming is still unparsed text.
+                    Interpreting it here settles the value - reporting the
+                    setting change through the usual path - before the settings
+                    payload is read.
+        @return     None.
+        @exception  None
+        """
+        for spin_box in (self._max_duration_spin, self._inter_block_gap_spin, self._inter_chunk_gap_spin):
+            spin_box.interpretText()
 
     def _emit_playback_toggle(self) -> None:
         """

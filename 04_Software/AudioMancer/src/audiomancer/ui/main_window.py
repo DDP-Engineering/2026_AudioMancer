@@ -681,6 +681,22 @@ class MainWindow(QMainWindow):
             )
         )
 
+    def refresh_audio_assembly_page_state(self) -> None:
+        """
+        @brief      Refresh the Audio Assembly page alone from the current project state.
+        @details    Narrower than `show_project_state`, which also rebuilds the
+                    project summary and its Home export readiness rows by
+                    reading every export artifact. A caller that changed
+                    nothing outside the Audio Assembly page uses this instead.
+        @return     None.
+        @exception  None
+        """
+        self._refresh_audio_assembly_page_state(
+            self._current_project_root,
+            self._current_manifest,
+            ui_state_service.current_language_from_settings(self._settings_payload),
+        )
+
     def show_settings_dialog(self) -> None:
         """
         @brief      Show the static settings dialog.

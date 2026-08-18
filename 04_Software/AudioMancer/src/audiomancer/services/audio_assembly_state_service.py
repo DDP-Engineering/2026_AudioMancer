@@ -42,7 +42,7 @@ def build_audio_assembly_state(
     report = audio_assembly_service.load_audio_assembly_report(project_root)
     operation_state = audio_assembly_service.load_operation_state(project_root)
     outputs = audio_assembly_service.load_generated_outputs(project_root)
-    scene_mix_groups = audio_assembly_service.list_scene_mix_groups(project_root)
+    scene_mix_groups = audio_assembly_service.list_scene_mix_groups(project_root, audio_blocks)
     include_scene_ambience = bool(settings["include_scene_ambience"])
     assembly_blocks = _filter_assembly_policy_blocks(audio_blocks, include_scene_ambience)
     total_blocks = len(assembly_blocks)

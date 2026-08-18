@@ -84,6 +84,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Audio Assembly: the Output Settings no longer freeze the page while you edit
+  them. Typing into **Inter-Block Silence**, **Inter-Chunk Silence** or **Max
+  Duration** used to save and reload the whole project once per digit, so
+  typing 500 did the work three times over - and if you had already generated
+  audiobook files, it asked three separate times whether to discard them, then
+  discarded them on the first yes, at the value 5. A typed setting is now saved
+  once, when you finish the number: press Enter, click elsewhere, or use the
+  arrows. You are asked about discarding generated files once per change, for
+  the value you actually chose. Pressing **Generate Audio** straight after
+  typing uses the number you just typed.
+- Audio Assembly: saving a setting that discards nothing no longer rereads the
+  whole project. It used to reload your cleaned text, chunks, translations,
+  characters, speech blocks and voice samples - none of which a silence setting
+  can affect - and it read the audio block list twice over on every refresh.
+  The page now refreshes itself alone, from a single read. On a full-length
+  book this is the difference between a page that stalls on every edit and one
+  that answers immediately.
 - AI Translation: chunks are no longer cut off part-way through when the AI
   profile can read far more text than it is allowed to write back. Translation
   used to fill each request from the profile's context window alone, but a

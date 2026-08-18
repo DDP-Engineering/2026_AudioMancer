@@ -145,6 +145,69 @@ def test_audio_assembly_ui_controller_settings_change_resets_only_assembly_outpu
     assert manifest["current_stage"] == "audio_blocks_ready"
 
 
+def test_audio_assembly_ui_controller_settings_change_without_reset_refreshes_only_the_page(tmp_path) -> None:
+    """
+    @brief      Verify a settings save that discards nothing skips the app-wide project refresh.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    window = _controller_window(tmp_path)
+    refreshes: list[str] = []
+    window.show_project_state = lambda *_args, **_kwargs: refreshes.append("project")
+    window.refresh_audio_assembly_page_state = lambda: refreshes.append("page")
+
+    audio_assembly_ui_controller.handle_settings_changed(
+        window,
+        {
+            "output_mode": "time_limit",
+            "max_duration_minutes": 30,
+            "output_format": "wav",
+            "inter_block_silence_ms": 250,
+            "inter_chunk_silence_ms": 750,
+        },
+    )
+
+    manifest = project_workspace_service.load_manifest(window._current_project_root)
+    assert refreshes == ["page"]
+    assert manifest["audio_assembly_settings"]["inter_chunk_silence_ms"] == 750
+
+
+def test_audio_assembly_ui_controller_settings_change_with_reset_refreshes_the_project(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a settings save that discards generated outputs still runs the project refresh.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    window = _controller_window(tmp_path)
+    _write_audio_assembly_report(window._current_project_root)
+    refreshes: list[str] = []
+    window.show_project_state = lambda *_args, **_kwargs: refreshes.append("project")
+    window.refresh_audio_assembly_page_state = lambda: refreshes.append("page")
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(audio_assembly_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    audio_assembly_ui_controller.handle_settings_changed(
+        window,
+        {
+            "output_mode": "time_limit",
+            "max_duration_minutes": 30,
+            "output_format": "wav",
+            "inter_block_silence_ms": 250,
+            "inter_chunk_silence_ms": 750,
+        },
+    )
+
+    assert "project" in refreshes
+    assert not (window._current_project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).exists()
+
+
 def test_audio_assembly_ui_controller_stops_active_playback_when_selected_output_changes(tmp_path) -> None:
     """
     @brief      Verify Stop halts active playback even when another output row is selected.
@@ -388,6 +451,7 @@ def _controller_window(tmp_path):
         _audio_assembly_playback_output_key=None,
         _audio_assembly_playback_starting=False,
         show_project_state=lambda project_root, manifest: _set_project_state,
+        refresh_audio_assembly_page_state=lambda: None,
     )
 
 

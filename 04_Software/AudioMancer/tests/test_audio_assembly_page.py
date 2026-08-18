@@ -15,6 +15,8 @@
 
 # IMPORTS
 
+from PySide6.QtCore import Qt
+
 from audiomancer.services import audio_assembly_service
 from audiomancer.ui.pages.audio_assembly_page import AudioAssemblyPage
 
@@ -332,6 +334,70 @@ def test_audio_assembly_page_localizes_mode_and_output_rows(qtbot) -> None:
     )
     assert page._include_scene_ambience_checkbox.text() == "Include Ambienta Scena"
     assert "blocuri audio" in page._output_list.item(0).text()
+
+
+def test_audio_assembly_page_reports_a_numeric_setting_once_its_value_settles(qtbot) -> None:
+    """
+    @brief      Verify a typed numeric Output Setting is reported once, for its settled value.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = AudioAssemblyPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page._output_mode_combo.setCurrentIndex(
+        page._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_TIME_LIMIT)
+    )
+    payloads: list[dict[str, object]] = []
+    page.settings_changed.connect(payloads.append)
+
+    for spin_box, typed_value, settings_key in (
+        (page._inter_block_gap_spin, "320", "inter_block_silence_ms"),
+        (page._inter_chunk_gap_spin, "750", "inter_chunk_silence_ms"),
+        (page._max_duration_spin, "45", "max_duration_minutes"),
+    ):
+        assert spin_box.keyboardTracking() is False
+        payloads.clear()
+        spin_box.selectAll()
+        qtbot.keyClicks(spin_box, typed_value)
+        qtbot.keyClick(spin_box, Qt.Key.Key_Return)
+        assert len(payloads) == 1
+        assert payloads[0][settings_key] == int(typed_value)
+
+
+def test_audio_assembly_page_generates_with_a_typed_but_unconfirmed_setting(qtbot) -> None:
+    """
+    @brief      Verify Generate Audio uses a typed numeric setting that was never confirmed.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    """
+    page = AudioAssemblyPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_assembly_state(
+        settings=audio_assembly_service.default_audio_assembly_settings(),
+        outputs=[],
+        current_output_key=None,
+        notes=["Ready."],
+        status_lines=[],
+        progress_current=0,
+        progress_total=0,
+        progress_percent=0,
+        stage_status=audio_assembly_service.AUDIO_ASSEMBLY_STAGE_NOT_STARTED,
+        can_generate=True,
+        can_reset=False,
+        can_play_selected=False,
+    )
+    requested: list[dict[str, object]] = []
+    page.generate_requested.connect(requested.append)
+
+    page._inter_block_gap_spin.selectAll()
+    qtbot.keyClicks(page._inter_block_gap_spin, "480")
+    page._generate_button.click()
+
+    assert requested[0]["inter_block_silence_ms"] == 480
 
 
 # END OF FILE

@@ -552,7 +552,7 @@ def _save_audio_assembly_settings(window: "MainWindow", settings: dict[str, obje
             ui_state_service.translate("status.audio_assembly_settings_saved_reset", language),
         )
         return True
-    window.show_project_state(window._current_project_root, window._current_manifest)
+    window.refresh_audio_assembly_page_state()
     return True
 
 

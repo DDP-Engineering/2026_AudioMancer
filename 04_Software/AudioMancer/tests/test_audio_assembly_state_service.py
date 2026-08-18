@@ -122,6 +122,56 @@ def test_build_audio_assembly_state_returns_empty_state_without_project() -> Non
     assert state["can_play_selected"] is False
 
 
+def test_build_audio_assembly_state_loads_audio_blocks_once(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify one page-state build reads the Audio Blocks document a single time.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = project_workspace_service.create_project("AudioAssemblySingleLoad", tmp_path)
+    _write_audio_blocks(
+        project_root,
+        extra_blocks=[
+            {
+                "speech_block_id": "0001-000002-ambience",
+                "sequence_index": 2,
+                "chunk_id": "chunk-0001",
+                "speaker_id": "scene_ambience",
+                "speaker_display_name": "Scene Ambience",
+                "normalized_speaker_name": "scene_ambience",
+                "content_kind": "scene_ambience",
+                "text": "Rain in distant trenches.",
+                "voice_target_id": "narrator",
+                "generated": True,
+                "approved": True,
+            }
+        ],
+    )
+    load_count = 0
+    real_load_audio_blocks = audio_blocks_service.load_audio_blocks
+
+    def counting_load_audio_blocks(*args, **kwargs):
+        """
+        @brief      Count Audio Blocks loads and delegate to the real loader.
+        @param[in]  args Positional arguments forwarded to the real loader.
+        @param[in]  kwargs Keyword arguments forwarded to the real loader.
+        @return     Loaded Audio Blocks payload list.
+        @exception  None
+        """
+        nonlocal load_count
+        load_count += 1
+        return real_load_audio_blocks(*args, **kwargs)
+
+    monkeypatch.setattr(audio_blocks_service, "load_audio_blocks", counting_load_audio_blocks)
+
+    state = audio_assembly_state_service.build_audio_assembly_state(project_root, manifest, "en")
+
+    assert load_count == 1
+    assert any("Approved audio blocks: 2/2" in status_line for status_line in state["status_lines"])
+
+
 def _write_audio_blocks(project_root, extra_blocks=()) -> None:
     """
     @brief      Write the Speech Blocks and Audio Blocks documents for state tests.
