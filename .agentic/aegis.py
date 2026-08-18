@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the PolyForm Noncommercial License 1.0.0.
@@ -36,10 +35,11 @@ import subprocess
 import sys
 import tempfile
 import time
-import tomllib
 from pathlib import Path
 
-VERSION = "0.5.0"
+import tomllib
+
+VERSION = "0.6.0"
 SCHEMA = 1
 
 AGENTIC = Path(__file__).resolve().parent
@@ -160,6 +160,14 @@ Artifacts: requirements in `.agentic/requirements/<category>/`, specs in
 `.agentic/specs/`, journals in `.agentic/tasks/`, component pages in
 `.agentic/knowledge/`. `python .agentic/aegis.py check` is advisory - read
 its findings and self-correct; nothing here blocks you mid-flight.
+
+Say a deviation out loud when you record one, as one line -
+`DEVIATION <stage>: <what> - <why accepted, or what it costs>` - then carry
+on. It never pauses the work and autopilot never suppresses it. You owe one
+for an accepted `check` warning, a non-zero exit or a verification you
+skipped, an unexpected `anchor`/`evolution` report, a manual method standing
+in for an automatable test, a retired requirement, and unrequested work found
+in review.
 """
 
 
@@ -172,7 +180,10 @@ class UserError(Exception):
 
 def today() -> str:
     """@brief Today's date as YYYY-MM-DD."""
-    return _dt.date.today().isoformat()
+    # DTZ011 is suppressed below: the local calendar date is the intent. A
+    # journal line dated in UTC would disagree with the human writing it on
+    # either side of midnight.
+    return _dt.date.today().isoformat()  # noqa: DTZ011
 
 
 def utc_now() -> str:
@@ -252,6 +263,7 @@ def run_git(*args: str) -> tuple[int, str] | None:
     try:
         out = subprocess.run(
             ["git", *args],
+            check=False,          # the caller reads returncode; git failing is data
             cwd=str(ROOT),
             capture_output=True,
             text=True,
@@ -338,7 +350,7 @@ def taken_ids(folder: str, pattern: str) -> set[str]:
 # journal parsing - one place, reused by status and (later) check
 
 TITLE_RE = re.compile(
-    r"^#[ \t]+(TASK-[0-9A-Za-z]{4,12})[ \t]*(?:—|-{1,2})[ \t]*(.*?)[ \t]*$", re.M
+    r"^#[ \t]+(TASK-[0-9A-Za-z]{4,12})[ \t]*(?:—|-{1,2})[ \t]*(.*?)[ \t]*$", re.MULTILINE
 )
 HEADER_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_]*):[ \t]*(.*?)[ \t]*$")
 CHECK_RE = re.compile(r"^\s*-\s*\[([ xX])\]\s*(.*?)\s*$")
@@ -903,17 +915,17 @@ def cmd_task(args: argparse.Namespace) -> int:
 
     text = template("task.md")
     text = TITLE_RE.sub(lambda _m: f"# {task_id} — {title}", text, count=1)
-    text = re.sub(r"^type: .*$", f"type: {args.type}", text, count=1, flags=re.M)
+    text = re.sub(r"^type: .*$", f"type: {args.type}", text, count=1, flags=re.MULTILINE)
     text = re.sub(r"^branch: .*$", lambda _m: f"branch: {branch}", text, count=1,
-                  flags=re.M)
+                  flags=re.MULTILINE)
     # no space after the colon in the template: the value starts out empty,
     # and stays that way - with no trailing space - when there is no history
     head = git_head()
     text = re.sub(r"^base:.*$", lambda _m: f"base: {head}".rstrip(), text,
-                  count=1, flags=re.M)
-    text = re.sub(r"^opened: .*$", f"opened: {stamp}", text, count=1, flags=re.M)
+                  count=1, flags=re.MULTILINE)
+    text = re.sub(r"^opened: .*$", f"opened: {stamp}", text, count=1, flags=re.MULTILINE)
     text = re.sub(r"^- \d{4}-\d{2}-\d{2} frame:", f"- {stamp} frame:", text, count=1,
-                  flags=re.M)
+                  flags=re.MULTILINE)
 
     path = tasks / f"{task_id}.md"
     write_new(path, text)
@@ -937,11 +949,11 @@ def cmd_req(args: argparse.Namespace) -> int:
     stamp = today()
 
     text = template("requirement.toml")
-    text = re.sub(r'^id = ".*"$', f'id = "{req_id}"', text, count=1, flags=re.M)
+    text = re.sub(r'^id = ".*"$', f'id = "{req_id}"', text, count=1, flags=re.MULTILINE)
     text = re.sub(r"^title = .*$", lambda _m: f"title = {toml_string(title)}", text,
-                  count=1, flags=re.M)
-    text = re.sub(r"^created = .*$", f"created = {stamp}", text, count=1, flags=re.M)
-    text = re.sub(r"^updated = .*$", f"updated = {stamp}", text, count=1, flags=re.M)
+                  count=1, flags=re.MULTILINE)
+    text = re.sub(r"^created = .*$", f"created = {stamp}", text, count=1, flags=re.MULTILINE)
+    text = re.sub(r"^updated = .*$", f"updated = {stamp}", text, count=1, flags=re.MULTILINE)
     try:
         tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
@@ -1203,8 +1215,8 @@ SECRET_PATTERNS: tuple[tuple[str, str], ...] = (
     ("private key block", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     ("aws-style access key", r"\bAKIA[0-9A-Z]{16}\b"),
     ("bearer/api token",
-     r"(?i)\b(?:bearer|api[_-]?key|access[_-]?token)\b\s*[:=]?\s*[\"']?"
-     r"[A-Za-z0-9_.\-]{16,}"),
+     (r"(?i)\b(?:bearer|api[_-]?key|access[_-]?token)\b\s*[:=]?\s*[\"']?"
+      r"[A-Za-z0-9_.\-]{16,}")),
     ("password literal", r"(?i)\bpassword\b\s*[:=]\s*\S+"),
 )
 
@@ -1227,7 +1239,7 @@ NOT_TICKET_PREFIXES = frozenset({
 
 def is_ticket_reference(hit: str) -> bool:
     """@brief True when a TICKET_RE hit is a ticket, not a standard or format."""
-    if hit.startswith("#") or hit.startswith(("TASK-", "REQ-")):
+    if hit.startswith(("#", "TASK-", "REQ-")):
         return True
     return hit.split("-", 1)[0].upper() not in NOT_TICKET_PREFIXES
 
@@ -1889,6 +1901,7 @@ def kill_tree(proc: subprocess.Popen) -> bool:
         killed = False
         try:
             result = subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                                    check=False,   # a failed kill is reported, not raised
                                     capture_output=True, timeout=20)
             killed = result.returncode == 0
         except (OSError, subprocess.SubprocessError):
@@ -1934,7 +1947,10 @@ def run_command(command: str, timeout: int | None, capture: bool = True,
     if capture:
         # a temp file, not a pipe: output of any size costs disk, not memory,
         # and only its tail is ever read back.
-        sink = tempfile.TemporaryFile(mode="w+", encoding="utf-8",
+        # SIM115 is suppressed below: the handle outlives this block by design
+        # - it is handed to the child as stdout and closed after the process
+        # is reaped.
+        sink = tempfile.TemporaryFile(mode="w+", encoding="utf-8",  # noqa: SIM115
                                       errors="replace", newline="")
         kwargs.update(stdout=sink, stderr=subprocess.STDOUT)
     if sys.platform != "win32":
@@ -2037,8 +2053,8 @@ def run_configured_commands(cfg: dict, findings: list,
             for text in tail:
                 say(f"  | {text}")
             findings.append(("ERROR", "command-timeout", "(run)",
-                             f"{name} reached its {limit}s limit - nothing "
-                             "proven; raise [timeouts] if it needs longer"))
+                             (f"{name} reached its {limit}s limit - nothing "
+                              "proven; raise [timeouts] if it needs longer")))
         elif code == 0:
             say(f"run: {name} ok ({seconds:.1f}s)")
         else:
@@ -2265,8 +2281,8 @@ def append_log(task_id: str, message: str) -> None:
     path, _data = read_journal(task_id)
     text = read_text(path)
     line = f"- {today()} {message}"
-    heading = re.search(r"^## Log[ \t]*$", text, re.M)
-    following = re.search(r"^## ", text[heading.end():], re.M) if heading else None
+    heading = re.search(r"^## Log[ \t]*$", text, re.MULTILINE)
+    following = re.search(r"^## ", text[heading.end():], re.MULTILINE) if heading else None
     if heading and following:
         pos = heading.end() + following.start()
         head = text[:pos].rstrip("\n")
@@ -2366,13 +2382,13 @@ def cmd_report(args: argparse.Namespace) -> int:
         "",
         f"## Delivery report ({today()})",
         "",
-        f"- stage: {header.get('stage', '?')}; type: {header.get('type', '?')};"
-        f" path: {header.get('path', '?')}; branch: {header.get('branch', '?')}",
+        (f"- stage: {header.get('stage', '?')}; type: {header.get('type', '?')};"
+         f" path: {header.get('path', '?')}; branch: {header.get('branch', '?')}"),
         "- requirements:" if req_lines else "- requirements: none linked",
         *req_lines,
         f"- diff vs {basis}: {diff_line}",
-        f"- checks: errors={counts['ERROR']} warnings={counts['WARN']}"
-        f" notes={counts['NOTE']}",
+        (f"- checks: errors={counts['ERROR']} warnings={counts['WARN']}"
+         f" notes={counts['NOTE']}"),
         f"- checklist: {done}/{len(data['checklist'])} done"
         + (f"; open: {'; '.join(unticked)}" if unticked else ""),
     ]

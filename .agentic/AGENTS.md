@@ -8,10 +8,6 @@ SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 
 # AEGIS — agent workflow
 
-**Read `.agentic/PROJECT.md` before starting work.** It contains
-AudioMancer's binding code-style, versioning, and delivery rules. This
-repository-specific file is preserved across payload upgrades.
-
 ## Philosophy
 
 This workflow is guidance, not enforcement. Nothing blocks you mid-flight:
@@ -117,6 +113,28 @@ These pauses are conversational and sit on top of whatever permission or
 sandbox prompts your host already applies. Autopilot loses no
 auditability: the journal still shows the scope decision, the red-test
 line, the check findings, and the ticked checklists after the fact.
+
+**Deviation notices.** A third thing, and not a stop. The moment you record
+a deviation, say it in the conversation too, as one line:
+
+```
+DEVIATION <stage>: <what> — <why accepted, or what it costs>
+```
+
+Then carry on: stating one never pauses the work and never waits for a
+reply. Autopilot does not suppress them either — the mode that removes the
+frame stop is exactly the one where silence costs most. Say one when you
+accept a `check` warning, when a command exits non-zero or you skip or
+cannot run a verification you owed, when `anchor` or `evolution` reports
+something other than what you expected, when a `Manual:`/`Inspection:`
+method stands in for a test that could have been automated, when you retire
+a requirement, and when diff review turns up work nobody asked for.
+
+The journal line you would have written anyway is still written. The notice
+is its twin, not its replacement — a journal is read afterwards, and by then
+the human has already paid for not knowing. `DEVIATION` is deliberately not
+`WARNING`: `check` prints `WARN` and `NOTE` for its own findings, and your
+judgement should not be mistaken for the tool's.
 
 ## Prompt cheatsheet
 
