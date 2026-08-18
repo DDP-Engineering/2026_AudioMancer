@@ -163,7 +163,11 @@ switch among profiles without losing dialog-session edits
 resulting settings payload. The middle action is labeled Apply because it
 persists without closing; OK persists and closes (`REQ-UX-aa109e16`). Reopening
 after Cancel reloads persisted settings, so Cancel continues to discard the
-dialog session.
+dialog session. Both Apply and OK save the payload, reload it, and refresh only
+the current workflow page through `MainWindow.refresh_current_page_state()`;
+they do not reapply the application-wide theme, font, or language or rescan
+project export readiness, because AI Settings changes none of those
+(`REQ-FUNC-d335d502`, `REQ-NFR-dfe9ab8a`).
 
 ## 9. Validation And Tests
 

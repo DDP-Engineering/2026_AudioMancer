@@ -4,10 +4,10 @@ title = "The AI Settings controller shall persist, reload, and refresh the"
 status = "active"
 
 requirement = """
-The AI Settings controller shall persist, reload, and refresh the window after applying settings.
+The AI Settings controller shall persist, reload, and refresh the current page after applying settings.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "A controller regression applies AI Settings and observes the merged settings saved, the reloaded payload adopted, and the current page refreshed, with the dialog left open on Apply."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
@@ -21,4 +21,4 @@ rationale = """
 Applied settings must persist and refresh dependent UI.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-18

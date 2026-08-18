@@ -86,9 +86,14 @@ constructed at startup; page refreshes are limited to the current workflow page
 to avoid unrelated state work, including after a runtime language change.
 `show_project_state()` refreshes the project summary, the current page and the
 operation-status control together, and its summary half rereads every Home
-export artifact. A controller that changed nothing outside its own page uses
-the narrower page-scoped entry point instead - `refresh_audio_assembly_page_state()`
-is the first of these (`REQ-NFR-aed66768`).
+export artifact. A controller that changed nothing outside its own page uses a
+narrower page-scoped entry point instead: `refresh_current_page_state()`
+refreshes whichever workflow page is visible, and `refresh_audio_assembly_page_state()`
+refreshes only that one page (`REQ-NFR-aed66768`, `REQ-NFR-dfe9ab8a`). Saving AI
+Settings uses `refresh_current_page_state()` and does not reapply the
+application-wide theme, font, or language, because AI Settings owns no such
+setting - only the general Settings dialog does, and only it calls
+`apply_current_ui_settings()`.
 App-owned dialog text comes from the same English/Romanian catalog as persistent
 page text. Shared confirmations retain the caller's window as parent, translate
 the exact caller-provided title and message keys, expose Yes and No, default to

@@ -18,7 +18,7 @@
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer.services import ai_backend_service, settings_service, ui_state_service
-from audiomancer.ui.controllers import misc_ui_controller, settings_ui_controller
+from audiomancer.ui.controllers import misc_ui_controller
 
 # PUBLIC API
 
@@ -47,8 +47,7 @@ def _persist_ai_settings_from_dialog(window, *, close_dialog: bool) -> None:
     merged_settings = window._ai_settings_page.build_settings(window._settings_payload)
     settings_service.save_settings(merged_settings)
     window._settings_payload = settings_service.load_settings()
-    settings_ui_controller.apply_current_ui_settings(window)
-    window.show_project_state(window._current_project_root, window._current_manifest)
+    window.refresh_current_page_state()
     if close_dialog:
         window._ai_settings_dialog.close()
     misc_ui_controller.show_message(

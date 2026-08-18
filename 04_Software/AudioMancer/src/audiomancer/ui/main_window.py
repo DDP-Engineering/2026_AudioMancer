@@ -697,6 +697,25 @@ class MainWindow(QMainWindow):
             ui_state_service.current_language_from_settings(self._settings_payload),
         )
 
+    def refresh_current_page_state(self) -> None:
+        """
+        @brief      Refresh the visible workflow page alone from the current project state.
+        @details    Narrower than `show_project_state`, which also rebuilds the
+                    project summary and its Home export readiness rows by
+                    reading every export artifact, and narrower than
+                    `apply_current_ui_settings`, which reapplies the
+                    application-wide theme, font, and language. A caller that
+                    changed only settings the visible page consumes uses this
+                    instead.
+        @return     None.
+        @exception  None
+        """
+        self._refresh_current_page_state(
+            self._current_project_root,
+            self._current_manifest,
+            ui_state_service.current_language_from_settings(self._settings_payload),
+        )
+
     def show_settings_dialog(self) -> None:
         """
         @brief      Show the static settings dialog.

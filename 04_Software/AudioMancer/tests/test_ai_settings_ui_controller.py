@@ -41,7 +41,13 @@ class _ReadFailureResponse:
 
 
 def test_apply_ai_settings_persists_reloads_and_refreshes_window(monkeypatch) -> None:
-    """REQ-FUNC-025: Apply persists merged settings while leaving the dialog open."""
+    """
+    @brief      Verify Apply persists and reloads settings, refreshes the current page, and leaves the dialog open.
+    @details    REQ-FUNC-d335d502.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
     merged_settings = {"ui": {"language": "en"}, "ai_profiles": [{"id": "local"}]}
     persisted_settings = {**merged_settings, "persisted": True}
     page = SimpleNamespace(build_settings=Mock(return_value=merged_settings))
@@ -51,28 +57,49 @@ def test_apply_ai_settings_persists_reloads_and_refreshes_window(monkeypatch) ->
         _settings_payload={"previous": True},
         _current_project_root="project-root",
         _current_manifest={"project_name": "Demo"},
-        show_project_state=Mock(),
+        refresh_current_page_state=Mock(),
     )
     save_settings = Mock()
-    apply_ui_settings = Mock()
     show_message = Mock()
     monkeypatch.setattr(ai_settings_ui_controller.settings_service, "save_settings", save_settings)
     monkeypatch.setattr(ai_settings_ui_controller.settings_service, "load_settings", lambda: persisted_settings)
-    monkeypatch.setattr(
-        ai_settings_ui_controller.settings_ui_controller,
-        "apply_current_ui_settings",
-        apply_ui_settings,
-    )
     monkeypatch.setattr(ai_settings_ui_controller.misc_ui_controller, "show_message", show_message)
 
     ai_settings_ui_controller.apply_ai_settings_from_dialog(window)
 
     save_settings.assert_called_once_with(merged_settings)
     assert window._settings_payload == persisted_settings
-    apply_ui_settings.assert_called_once_with(window)
-    window.show_project_state.assert_called_once_with("project-root", {"project_name": "Demo"})
+    window.refresh_current_page_state.assert_called_once_with()
     window._ai_settings_dialog.close.assert_not_called()
     show_message.assert_called_once()
+
+
+def test_apply_ai_settings_refreshes_only_the_current_page(monkeypatch) -> None:
+    """
+    @brief      Verify applying AI Settings refreshes only the current page, not the project summary or export scan.
+    @details    REQ-NFR-dfe9ab8a.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    page = SimpleNamespace(build_settings=Mock(return_value={"ai_profiles": []}))
+    window = SimpleNamespace(
+        _ai_settings_page=page,
+        _ai_settings_dialog=SimpleNamespace(close=Mock()),
+        _settings_payload={"previous": True},
+        _current_project_root="project-root",
+        _current_manifest={"project_name": "Demo"},
+        refresh_current_page_state=Mock(),
+        show_project_state=Mock(),
+    )
+    monkeypatch.setattr(ai_settings_ui_controller.settings_service, "save_settings", Mock())
+    monkeypatch.setattr(ai_settings_ui_controller.settings_service, "load_settings", lambda: {"persisted": True})
+    monkeypatch.setattr(ai_settings_ui_controller.misc_ui_controller, "show_message", Mock())
+
+    ai_settings_ui_controller.apply_ai_settings_from_dialog(window)
+
+    window.refresh_current_page_state.assert_called_once_with()
+    window.show_project_state.assert_not_called()
 
 
 def test_connect_ai_profile_displays_failure_popup_for_read_transport_error(monkeypatch) -> None:

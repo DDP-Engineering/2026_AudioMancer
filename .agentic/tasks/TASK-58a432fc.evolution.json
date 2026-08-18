@@ -1,0 +1,84 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-18T17:27:40.006651Z",
+      "anchor_head": "31839aeac2dfefe03818fc8a5c8fafdcc1ad8c74",
+      "anchor_id": "7b2d829e6456bfa1",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "37b4e3a0c5dc69616c32a09a22c6b8cd5ef9b12d9dd2b825d3b41d7df8cbdd82"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "b32ce43d1d441c8e01586727e14ef5a571c948395162ea71f8478f5414041b84"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b5eec54731bd9914299981c271a1daff3d1b1816b3ff9b6eff444536bd3aa3ea"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "35421095c3cbe8929ca789615677d800f66bba4aea9dfb5f03ee40dd0af627ba"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "456a307a8e3a107ca08d441e2bade673a54df81f1cbd3295a59dec46d5500c2f"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "fab3a8cc94c1c836278128eec8c28f547ef628253178827a05fdb790e265fc37"
+          },
+          "path": "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 108
+          },
+          "source": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 101
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 120
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 3,
+          "removed": 0,
+          "unchanged": 329
+        }
+      },
+      "current_head": "31839aeac2dfefe03818fc8a5c8fafdcc1ad8c74",
+      "evolution_stage": "validate",
+      "evolved_at": "2026-08-18T17:50:30.916858Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-58a432fc"
+}
