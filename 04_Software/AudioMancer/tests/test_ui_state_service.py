@@ -400,7 +400,7 @@ def test_theme_stylesheet_controls_use_rounded_corners() -> None:
     assert "border-radius: 8px;" in _qss_block(stylesheet, "QPushButton")
     input_block = _qss_block(
         stylesheet,
-        "QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QTableWidget, QListWidget",
+        "QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTableWidget, QListWidget",
     )
     assert "border-radius: 8px;" in input_block
 

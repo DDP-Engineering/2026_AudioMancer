@@ -2557,7 +2557,7 @@ QGroupBox::title {{
     left: 10px;
     padding: 2px 4px;
 }}
-QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QTableWidget, QListWidget {{
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTableWidget, QListWidget {{
     background-color: {panel_background};
     color: {text_primary};
     border: 1px solid {border};
@@ -2573,7 +2573,7 @@ QPlainTextEdit[{CONTROL_TEXT_FONT_ROLE_PROPERTY}="{CONTROL_TEXT_FONT_ROLE_VALUE}
 {ui_font_stylesheet}
 }}
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus,
-QTableWidget:focus, QListWidget:focus {{
+QDoubleSpinBox:focus, QTableWidget:focus, QListWidget:focus {{
     border: 1px solid {accent};
 }}
 QComboBox::drop-down {{

@@ -126,6 +126,10 @@ All notable changes to this project will be documented in this file.
   third of the page instead of a quarter, so the profile fields stay readable
   without scrolling in most positions. The Evidence side on the right is
   unchanged.
+- AI Settings: the **Temperature** field no longer shows as a plain grey box
+  with barely-readable text against the dark themes. It now matches the
+  border, background and colors of the other fields on the page, such as
+  Context Window and Max Output Tokens.
 
 ### Added
 

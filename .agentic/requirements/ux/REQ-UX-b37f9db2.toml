@@ -4,7 +4,7 @@ title = "In the theme stylesheet, QPushButton and the single-line input controls
 status = "active"
 
 requirement = """
-In the theme stylesheet, QPushButton and the single-line input controls QLineEdit, QComboBox and QSpinBox shall use a border-radius of at least 6px.
+In the theme stylesheet, QPushButton and the single-line input controls QLineEdit, QComboBox, QSpinBox and QDoubleSpinBox shall use a border-radius of at least 6px, the theme panel_background background and text_primary text.
 """
 
 verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners (passed)"
@@ -18,7 +18,7 @@ linked_tests = [
 
 priority = "normal"
 rationale = """
-Consistent rounded corners on buttons and inputs match the card language and the brand.
+Consistent rounded corners on buttons and inputs match the card language and the brand. QDoubleSpinBox is a QAbstractSpinBox sibling of QSpinBox, not a subclass of it, so a selector list naming QSpinBox alone leaves QDoubleSpinBox unstyled - which showed up as the AI Settings Temperature field rendering with native grey chrome against the theme's light text color.
 """
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-08-19
