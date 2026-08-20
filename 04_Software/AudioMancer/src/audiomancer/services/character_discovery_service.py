@@ -2584,131 +2584,41 @@ def _build_character_preview_text(
     candidate: dict[str, object],
 ) -> str:
     """
-    @brief      Build a validated character sample preview from spoken dialogue evidence.
+    @brief      Validate the character sample preview the model composed for this character's voice.
+    @details    An unusable preview stores nothing, which lets the voice plan supply the canonical
+                default for the project voice language once that language is known.
     @param[in]  response_payload AI synthesis response payload.
     @param[in]  candidate Merged character candidate payload.
-    @return     Preview text meeting the configured minimum duration estimate, or an empty string.
+    @return     Preview text inside the accepted voice-clone word range, or an empty string.
     @exception  None
     """
-    response_preview_text = _normalized_character_preview_text(response_payload.get(CHARACTER_PREVIEW_TEXT_FIELD, ""))
-    if _is_valid_character_preview_text(response_preview_text) and _preview_text_supported_by_evidence(
-        response_preview_text,
-        candidate,
-    ):
-        return response_preview_text
-    return _candidate_preview_text(candidate)
-
-
-def _candidate_preview_text(candidate: dict[str, object]) -> str:
-    """
-    @brief      Derive a character preview text from ranked spoken-dialogue evidence excerpts.
-    @param[in]  candidate Merged character candidate payload.
-    @return     Preview text meeting the configured minimum duration estimate, or an empty string.
-    @exception  None
-    """
-    fragments: list[str] = []
-    preview_limit = max(1, int(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
-    for evidence_item in _rank_synthesis_evidence(_restore_evidence(candidate.get("evidence", []))):
-        if not _evidence_has_direct_dialogue(evidence_item):
-            continue
-        fragment = _spoken_preview_fragment(str(evidence_item.get("source_excerpt", "")))
-        if not fragment:
-            continue
-        current_text = " ".join(fragments).strip()
-        proposed_text = " ".join(item for item in (current_text, fragment) if item).strip()
-        if len(proposed_text) > preview_limit:
-            if _is_valid_character_preview_text(current_text):
-                return current_text
-            continue
-        fragments.append(fragment)
-        if _is_valid_character_preview_text(proposed_text):
-            return proposed_text
-    return ""
-
-
-def _preview_text_supported_by_evidence(preview_text: str, candidate: dict[str, object]) -> bool:
-    """
-    @brief      Verify a generated preview is extracted from spoken-dialogue evidence.
-    @param[in]  preview_text Candidate preview text.
-    @param[in]  candidate Merged character candidate payload.
-    @return     True when the normalized preview appears in the normalized spoken evidence text.
-    @exception  None
-    """
-    normalized_preview_text = _normalized_preview_support_text(preview_text)
-    if not normalized_preview_text:
-        return False
-    evidence_fragments = [
-        _spoken_preview_fragment(str(evidence_item.get("source_excerpt", "")))
-        for evidence_item in _rank_synthesis_evidence(_restore_evidence(candidate.get("evidence", [])))
-        if _evidence_has_direct_dialogue(evidence_item)
-    ]
-    normalized_evidence_text = _normalized_preview_support_text(" ".join(evidence_fragments))
-    return normalized_preview_text in normalized_evidence_text
-
-
-def _spoken_preview_fragment(text: str) -> str:
-    """
-    @brief      Normalize one spoken evidence excerpt for preview-sample use.
-    @param[in]  text Source dialogue excerpt.
-    @return     Excerpt with surrounding dialogue delimiters removed.
-    @exception  None
-    """
-    normalized_text = " ".join(str(text).split()).strip()
-    normalized_text = normalized_text.strip("\"'\u201c\u201d\u2018\u2019\u00ab\u00bb\u300c\u300d\u300e\u300f")
-    normalized_text = normalized_text.lstrip("-\u2013\u2014").strip()
-    return normalized_text
-
-
-def _normalized_preview_support_text(text: str) -> str:
-    """
-    @brief      Normalize preview/evidence text for source-support checks.
-    @param[in]  text Candidate text.
-    @return     Lowercase alphanumeric support-check text with normalized spacing.
-    @exception  None
-    """
-    return " ".join(re.sub(r"[^\w\s]", " ", str(text).casefold(), flags=re.UNICODE).split())
+    composed_preview_text = _normalized_character_preview_text(response_payload.get(CHARACTER_PREVIEW_TEXT_FIELD, ""))
+    if not _is_valid_character_preview_text(composed_preview_text):
+        return ""
+    return composed_preview_text
 
 
 def _normalized_character_preview_text(preview_text: object) -> str:
     """
-    @brief      Normalize one generated character preview text value.
+    @brief      Normalize one character preview text value.
+    @details    Runs on every profile load, so it never discards text: length is judged by the
+                accepted word range, and line breaks are kept because they are spoken as pauses.
     @param[in]  preview_text Candidate preview text.
-    @return     Single-line preview text capped to the configured character limit.
+    @return     Preview text with collapsed spacing and preserved line structure.
     @exception  None
     """
-    normalized_text = " ".join(str(preview_text or "").split()).strip()
-    preview_limit = max(1, int(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
-    if len(normalized_text) <= preview_limit:
-        return normalized_text
-    return ""
+    normalized_lines = [" ".join(line.split()) for line in str(preview_text or "").splitlines()]
+    return "\n".join(normalized_lines).strip()
 
 
 def _is_valid_character_preview_text(preview_text: str) -> bool:
     """
-    @brief      Decide whether preview text meets the configured Qwen TTS duration estimate.
+    @brief      Decide whether preview text sits inside the accepted voice-clone word range.
     @param[in]  preview_text Candidate preview text.
-    @return     True when the text is long enough and inside the preview character limit.
+    @return     True when the text is long enough and short enough to record a usable reference.
     @exception  None
     """
-    normalized_text = _normalized_character_preview_text(preview_text)
-    if not normalized_text:
-        return False
-    return tts_budget_service.estimated_word_count(normalized_text) >= _minimum_character_preview_word_count()
-
-
-def _minimum_character_preview_word_count() -> int:
-    """
-    @brief      Estimate the minimum character-preview word count for useful Qwen TTS references.
-    @return     Minimum preview word count.
-    @exception  None
-    """
-    return max(
-        1,
-        int(
-            float(config.DEFAULT_TTS_MIN_PREVIEW_AUDIO_SECONDS) * float(config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND)
-            + 0.999
-        ),
-    )
+    return tts_budget_service.preview_text_range_error(preview_text) is None
 
 
 def _character_voice_gender_instruction(profile_payload: dict[str, object]) -> str:

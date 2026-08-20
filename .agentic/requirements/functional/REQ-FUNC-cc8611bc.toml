@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-cc8611bc"
+title = "Character preview text shall be composed by AI rather than quoted from the book"
+status = "active"
+
+requirement = """
+When character discovery synthesizes one character profile, it shall accept the preview text the model composed for that character's voice without requiring it to appear in the character's dialogue evidence.
+"""
+
+verification = "A focused synthesis test supplies a model response whose preview text appears nowhere in the supplied evidence excerpts, and observes that the synthesized profile carries that composed preview text unchanged."
+
+affected_paths = [
+  "04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt",
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_synthesis_prompt_requests_preview_inside_accepted_range",
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_keeps_composed_preview_absent_from_evidence",
+]
+
+spec = ""
+
+priority = "high"
+rationale = """
+The preview text is a script read aloud by the Voice Designer to record a reference sample; the voice itself comes from the separate voice-definition prompt, so quoting the character's real lines was an authenticity preference rather than a technical need. Requiring a verbatim quote made preview text unavailable for every character the book gives too little dialogue, which is common for secondary characters, and it copied book prose into a generated audio artifact for no benefit.
+"""
+created = 2026-08-20
+updated = 2026-08-20

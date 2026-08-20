@@ -33,6 +33,11 @@ from audiomancer.services import (
 from audiomancer.ui.controllers import narator_voice_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
+_IN_RANGE_PREVIEW_TEXT = (
+    "The hall fell silent as the final lantern dimmed, and every step carried the weight of an unspoken decision. "
+    "Outside, the rain kept its slow measure against the glass."
+)
+
 
 def test_narator_voice_create_profile_does_not_change_selected_narrator(monkeypatch, qtbot, tmp_path) -> None:
     """
@@ -83,12 +88,12 @@ def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeyp
         "Edit Narrator",
         "English",
         "Prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     narrator_definition_service.store_profile_sample(
         project_root,
         profile,
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
         {
             "generation_mode": "definition",
             "model_id": "qwen-designer",
@@ -267,12 +272,12 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
         "My Narrator",
         "English",
         "Prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     narrator_definition_service.store_profile_sample(
         project_root,
         created_profile,
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
         {
             "generation_mode": "definition",
             "model_id": "qwen-designer",
@@ -339,7 +344,7 @@ def test_narator_voice_ui_controller_select_profile_without_sample_updates_manif
         "Unsampled Narrator",
         "English",
         "Prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     window = _build_window(
         qtbot,
@@ -392,12 +397,12 @@ def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypat
         "Progress Narrator",
         "English",
         "Prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     narrator_definition_service.store_profile_sample(
         project_root,
         created_profile,
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
         {
             "generation_mode": "definition",
             "model_id": "qwen-designer",
@@ -488,7 +493,7 @@ def test_narator_voice_select_profile_progress_clears_after_failure(monkeypatch,
         "Failing Narrator",
         "English",
         "Prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
@@ -523,14 +528,14 @@ def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtb
         "First Narrator",
         "English",
         "Warm narrator prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     custom_profile = narrator_definition_service.create_custom_profile(
         project_root,
         "My Narrator",
         "English",
         "Prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     narrator_definition_service.select_narrator_profile(project_root, first_profile["profile_id"], "English")
     profile_a = _ai_profile_payload("profile_a")
@@ -572,7 +577,7 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
         "Generated Narrator",
         "English",
         "Generated prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     window = _build_window(
         qtbot,
@@ -779,7 +784,7 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
         "Generated Narrator",
         "English",
         "Generated prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
 
     def cancel_callback() -> bool:
@@ -863,7 +868,8 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
         _default_settings_payload(),
         _sample_progress_messages(),
         profile,
-        "Preview text for narrator sample generation.",
+        "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+        "Nothing in her tone hurries, and nothing in it asks to be forgiven.",
         progress_callback=None,
         cancel_requested=cancel_callback,
     )
@@ -1019,7 +1025,7 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
         "Generated Narrator",
         "English",
         "Generated prompt.",
-        "Preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
     )
     narrator_definition_service.store_profile_sample(
         project_root,
@@ -1094,7 +1100,8 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
             _default_settings_payload(),
             _sample_progress_messages(),
             profile,
-            "Preview text for narrator sample generation.",
+            "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+        "Nothing in her tone hurries, and nothing in it asks to be forgiven.",
             progress_callback=None,
             cancel_requested=lambda: False,
         )
@@ -1922,6 +1929,7 @@ def _sample_progress_messages() -> dict[str, str]:
         "generate": "Generating narator voice sample...",
         "generation_missing_audio": "VoiceWeaver did not return downloadable audio.",
         "download": "Downloading narator voice sample...",
+        "preview_text_out_of_range": "Between {minimum_words} and {maximum_words} words, currently {word_count}.",
     }
 
 

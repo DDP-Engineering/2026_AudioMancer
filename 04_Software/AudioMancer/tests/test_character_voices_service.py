@@ -22,7 +22,12 @@ import wave
 import pytest
 
 from audiomancer import config
-from audiomancer.services import character_voices_service, narrator_definition_service, project_workspace_service
+from audiomancer.services import (
+    character_voices_service,
+    narrator_definition_service,
+    project_workspace_service,
+    tts_budget_service,
+)
 
 
 def test_build_character_default_prompt_uses_compact_character_profile() -> None:
@@ -414,8 +419,8 @@ def test_sync_voice_plan_uses_character_discovery_preview_text(tmp_path) -> None
     """
     project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesDiscoveryPreview")
     discovered_preview_text = (
-        "Stay close to me while the storm passes over the harbor. "
-        "When the lamps are lit, we will cross the square together."
+        "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+        "Nothing in her tone hurries, and nothing in it asks to be forgiven."
     )
 
     voice_targets = character_voices_service.sync_voice_plan(
@@ -618,6 +623,42 @@ def test_load_voice_plan_tolerates_malformed_json(tmp_path) -> None:
     """Verify a corrupt optional voice plan degrades to unavailable state."""
     (tmp_path / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("{not json", encoding="utf-8")
     assert character_voices_service.load_voice_plan(tmp_path) == []
+
+
+
+def test_sync_voice_plan_falls_back_to_default_preview_when_discovery_stored_none(tmp_path) -> None:
+    """
+    @brief      Verify a character without discovered preview text receives the localized default.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesDefaultPreview")
+
+    voice_targets = character_voices_service.sync_voice_plan(
+        project_root,
+        [{"character_id": "alice", "canonical_name": "Alice", "preview_text": ""}],
+        narrator_definition_service.profile_by_id(
+            project_root,
+            narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"],
+        ),
+    )
+
+    assert voice_targets[1]["preview_text"] == character_voices_service.preview_text_for_language("en")
+
+
+def test_character_preview_defaults_sit_inside_the_shared_word_range() -> None:
+    """
+    @brief      Verify every canonical character preview default is a usable voice-clone reference.
+    @return     None.
+    @exception  None
+    """
+    minimum_words, maximum_words = tts_budget_service.preview_word_bounds()
+
+    for language_code, preview_text in character_voices_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.items():
+        word_count = len(preview_text.split())
+        assert word_count >= minimum_words, f"{language_code} default preview is too short"
+        assert word_count <= maximum_words, f"{language_code} default preview is too long"
 
 
 # END OF FILE

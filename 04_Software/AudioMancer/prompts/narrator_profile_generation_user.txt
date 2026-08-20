@@ -34,7 +34,7 @@ Profile rules:
 - Avoid contradictory descriptors, excessive plot summary, meme language, cartoon exaggeration, and overly theatrical wording.
 - The prompt_text must not ask to generate audio and must not mention implementation, tokens, JSON, or this prompt.
 - The preview_text is spoken to record the reference sample that voice cloning later imitates, so it must be one or two original sentences in the selected voice language, long enough to produce 12 to 15 seconds of Qwen TTS audio, usually 30-38 spoken words; a slight bounded overage is tolerated.
-- The preview_text must be one single line with no line breaks, must read as continuous natural narration rather than a list, and must give the voice varied rhythm and settled pacing rather than one clipped sentence.
+- The preview_text must read as continuous natural narration rather than a list, and must give the voice varied rhythm and settled pacing rather than one clipped sentence.
 - The preview_text must fit normal narrator sample use and must not quote the source text.
 - Do not imitate celebrities, actors, real people, or copyrighted character voices.
 

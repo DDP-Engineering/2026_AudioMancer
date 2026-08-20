@@ -375,6 +375,26 @@ def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
     assert all(profile["preview_text"] == preview_text for profile in profiles)
 
 
+def test_narrator_profile_generation_keeps_multi_line_preview_text() -> None:
+    """
+    @brief      Verify a generated preview spanning several lines is accepted on length alone.
+    @return     None.
+    @exception  None
+    """
+    preview_text = "\n".join(" ".join("word" for _word in range(10)) for _line in range(3))
+
+    profiles, warnings = narrator_profile_generation_service._validated_generated_profiles(
+        _profiles_payload(2, preview_text=preview_text),
+        2,
+        {"male": 1, "female": 1, "random": 0, "random_gender": ""},
+        "en",
+        config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+    )
+
+    assert warnings == []
+    assert all(profile["preview_text"] == preview_text for profile in profiles)
+
+
 @pytest.mark.parametrize(
     ("preview_units", "preserved"),
     ((24, False), (25, True), (44, True), (45, False)),

@@ -18,6 +18,7 @@
 
 import json
 from pathlib import Path
+import re
 
 import pytest
 
@@ -27,6 +28,7 @@ from audiomancer.services import (
     character_discovery_state_service,
     narrator_definition_service,
     project_workspace_service,
+    tts_budget_service,
 )
 from chunking_test_support import build_chunking_document
 
@@ -110,7 +112,8 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
                         "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority."
                     ),
                     "preview_text": (
-                        "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower."
+                        "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower. "
+                        "She counts the minutes without hurrying anyone, and no one argues with her about it."
                     ),
                     "confidence": "high",
                 },
@@ -170,7 +173,8 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
     assert "gentle authority" in profiles[0]["voice_definition_prompt"]
     assert "Age Domain: adult (medium confidence)." in profiles[0]["voice_definition_prompt"]
     assert profiles[0]["preview_text"] == (
-        "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower."
+        "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower. "
+        "She counts the minutes without hurrying anyone, and no one argues with her about it."
     )
     assert profiles[0]["evidence"][0]["chunk_id"] == "chunk-0001"
     assert character_discovery_service.load_input_chunks(project_root)[0]["chunk_id"] == "chunk-0001"
@@ -1394,19 +1398,23 @@ def test_regenerate_character_voice_definition_does_not_duplicate_explicit_age_g
     assert regenerated_profile["voice_definition_prompt"].count("Age Domain:") == 1
 
 
-def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
+def test_build_profile_from_synthesis_keeps_composed_preview_absent_from_evidence() -> None:
     """
-    @brief      Verify character synthesis derives a six-second preview from dialogue evidence.
+    @brief      Verify character synthesis keeps composed preview text that no evidence excerpt contains.
     @return     None.
     @exception  None
     """
+    composed_preview_text = (
+        "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+        "Nothing in her tone hurries, and nothing in it asks to be forgiven."
+    )
     profile = character_discovery_service._build_profile_from_synthesis(  # noqa: SLF001
         {
             "canonical_name": "Alice",
             "gender_hint": "female",
             "age_hint": "adult",
             "voice_definition_prompt": "Create a consistent spoken voice for Alice. Clear and calm.",
-            "preview_text": "Too short.",
+            "preview_text": composed_preview_text,
             "confidence": "high",
         },
         {
@@ -1436,12 +1444,76 @@ def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
         },
     )
 
-    assert profile["preview_text"] == (
-        "Stay close to me while the storm passes over the harbor. "
-        "When the lamps are lit, we will cross the square together."
-    )
+    assert profile["preview_text"] == composed_preview_text
     assert profile["age_hint"] == "adult"
     assert "Age Domain: adult." in profile["voice_definition_prompt"]
+
+
+@pytest.mark.parametrize("preview_word_count", (24, 45))
+def test_build_profile_from_synthesis_drops_out_of_range_preview(preview_word_count: int) -> None:
+    """
+    @brief      Verify a composed preview outside the shared word range stores no character preview text.
+    @param[in]  preview_word_count Number of words in the supplied composed preview text.
+    @return     None.
+    @exception  None
+    """
+    profile = character_discovery_service._build_profile_from_synthesis(  # noqa: SLF001
+        {
+            "canonical_name": "Alice",
+            "gender_hint": "female",
+            "age_hint": "adult",
+            "voice_definition_prompt": "Create a consistent spoken voice for Alice. Clear and calm.",
+            "preview_text": " ".join("word" for _index in range(preview_word_count)),
+            "confidence": "high",
+        },
+        {
+            "character_id": "alice",
+            "canonical_name": "Alice",
+            "gender_hint": "female",
+            "age_hint": "adult",
+            "confidence": "high",
+            "evidence": [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "dialogue_span_id": "dialogue-001",
+                    "source_excerpt": '"Stay close to me while the storm passes over the harbor."',
+                    "reason": "Alice speaks.",
+                    "confidence": "high",
+                },
+            ],
+        },
+    )
+
+    assert profile["preview_text"] == ""
+
+
+def test_normalized_character_preview_text_keeps_over_long_text() -> None:
+    """
+    @brief      Verify normalization never discards a long preview text to an empty string.
+    @return     None.
+    @exception  None
+    """
+    long_preview_text = " ".join("word" for _index in range(400))
+
+    normalized_text = character_discovery_service._normalized_character_preview_text(  # noqa: SLF001
+        long_preview_text
+    )
+
+    assert normalized_text == long_preview_text
+
+
+def test_normalized_character_preview_text_preserves_line_breaks() -> None:
+    """
+    @brief      Verify normalization collapses spaces while keeping operator line breaks.
+    @return     None.
+    @exception  None
+    """
+    normalized_text = character_discovery_service._normalized_character_preview_text(  # noqa: SLF001
+        "First   line.\nSecond    line."
+    )
+
+    assert normalized_text == "First line.\nSecond line."
 
 
 def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
@@ -2727,6 +2799,22 @@ def _nested_saved_character() -> dict[str, object]:
     return character_discovery_service._nested_character_profile(  # noqa: SLF001
         _saved_profile_payload()
     )
+
+
+
+def test_character_synthesis_prompt_requests_preview_inside_accepted_range() -> None:
+    """
+    @brief      Verify the shipped synthesis prompt asks for a preview length the validator accepts.
+    @return     None.
+    @exception  None
+    """
+    prompt_text = (config.APP_PROMPTS_PATH / "character_profile_synthesis_user.txt").read_text(encoding="utf-8")
+    requested_range = re.search(r"(\d+)-(\d+) spoken words", prompt_text)
+    minimum_words, maximum_words = tts_budget_service.preview_word_bounds()
+
+    assert requested_range is not None
+    assert minimum_words <= int(requested_range.group(1))
+    assert int(requested_range.group(2)) <= maximum_words
 
 
 # END OF FILE

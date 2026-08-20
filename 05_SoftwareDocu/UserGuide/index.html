@@ -746,10 +746,19 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Opening this page before the selected narrator has a sample raises a one-time reminder. Generate
                     the narrator sample first: the character work depends on it.
                 </div>
+                <p>
+                    <strong>Preview Text</strong> is spoken to record the sample that this character's generated voice
+                    imitates, so its length decides how good that voice can be &mdash; the same 25 to 44 words the
+                    Narrator Voice page asks for, with 30 to 38 the ideal target. Character discovery asks the AI to
+                    write original lines in that character's manner of speaking rather than quoting the book, because
+                    many characters simply do not have enough dialogue to quote. When the AI cannot produce usable
+                    lines, the character receives the standard preview text for the project language, which you are
+                    free to replace.
+                </p>
                 <h3>Controls</h3>
                 <ul>
                     <li><strong>Edit</strong> unlocks the prompt and preview text for the selected character. It warns that continuing deletes that character's current sample, and, when generated audio exists, that audio using this voice and Audio Assembly will be reset. Speech Blocks and Audio Block rows themselves are preserved.</li>
-                    <li><strong>Save</strong> commits the edit. Both the prompt and the preview text must be non-empty.</li>
+                    <li><strong>Save</strong> commits the edit. The prompt must be non-empty, and the preview text must be between <strong>25 and 44 words</strong>; Save refuses anything outside that and tells you your current word count.</li>
                     <li><strong>Import Sample</strong> opens a WAV picker, then asks for the exact text spoken in the file, then confirms the audio impact.</li>
                     <li><strong>Generate Sample</strong> confirms, then contacts the TTS runtime for that one character.</li>
                     <li><strong>Preview</strong> plays the stored sample and turns into <strong>Stop Preview</strong> while it plays.</li>

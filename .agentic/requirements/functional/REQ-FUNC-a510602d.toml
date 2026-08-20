@@ -1,10 +1,12 @@
 schema = 1
 id = "REQ-FUNC-a510602d"
 title = "Character discovery shall synthesize reviewable profiles with a"
-status = "active"
+status = "retired"
 
 requirement = """
 Character discovery shall synthesize reviewable profiles with a dialogue-preview fallback.
+
+Retired 2026-08-20: character preview text is now composed by the model in the character's voice instead of being quoted from the book, so assembling a preview from ranked dialogue excerpts no longer exists. A character whose composed preview is unusable falls back to the canonical default preview text for the project voice language.
 """
 
 verification = "Automated: 1 linked pytest selector(s)."
@@ -21,4 +23,4 @@ rationale = """
 Profiles must be reviewable even when preview data is sparse.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-20

@@ -28,10 +28,16 @@ from audiomancer.services import (
     narrator_definition_service,
     operation_runtime_service,
     project_workspace_service,
+    tts_budget_service,
     ui_state_service,
 )
 from audiomancer.ui.controllers import character_voices_ui_controller
 from audiomancer.ui.main_window import MainWindow
+
+_MULTILINE_PREVIEW_TEXT = (
+    "She weighs each answer before she gives it, and the words arrive quiet but certain.\n"
+    "Nothing in her tone hurries, and nothing in it asks to be forgiven."
+)
 
 
 def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode(
@@ -347,7 +353,8 @@ def test_character_voices_first_entry_waits_for_persisted_targets_and_sample_evi
             project_root,
             target_payload,
             "en",
-            "Preview text.",
+            "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+            "Nothing in her tone hurries, and nothing in it asks to be forgiven.",
             {"generation_mode": "definition", "source_model_id": "qwen-designer"},
             "Character sample ready.",
             b"RIFF-character",
@@ -462,13 +469,13 @@ def test_character_voices_ui_controller_save_prompt_persists_preview_text(monkey
         {
             "target_id": "character_alice",
             "prompt_text": "Updated prompt.",
-            "preview_text": "Preview line one.\nPreview line two.",
+            "preview_text": _MULTILINE_PREVIEW_TEXT,
         },
     )
 
     target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
     assert target_payload is not None
-    assert target_payload["preview_text"] == "Preview line one.\nPreview line two."
+    assert target_payload["preview_text"] == _MULTILINE_PREVIEW_TEXT
 
 
 def test_character_voices_ui_controller_generate_stops_preview_before_deleting_sample(
@@ -934,7 +941,8 @@ def test_character_sample_generation_cancel_during_model_load(monkeypatch, tmp_p
             _sample_progress_messages(),
             target_payload,
             "en",
-            "Preview text.",
+            "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+            "Nothing in her tone hurries, and nothing in it asks to be forgiven.",
             None,
             lambda: next(cancel_checks, True),
         )
@@ -1020,7 +1028,8 @@ def test_failed_character_sample_generation_preserves_existing_sample(monkeypatc
             _sample_progress_messages(),
             target_payload,
             "en",
-            "Preview text.",
+            "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+            "Nothing in her tone hurries, and nothing in it asks to be forgiven.",
             None,
             lambda: False,
         )
@@ -1224,7 +1233,8 @@ def _create_project_with_character_and_selected_narrator(
         narrator_definition_service.store_profile_sample(
             project_root,
             narrator_profile,
-            "Preview text.",
+            "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+            "Nothing in her tone hurries, and nothing in it asks to be forgiven.",
             {
                 "generation_mode": "definition",
                 "source_model_id": "qwen-designer",
@@ -1291,6 +1301,7 @@ def _sample_progress_messages() -> dict[str, str]:
         "batch_target": "Generating {current}/{total}: {target_name}",
         "qwen_capabilities_missing": "Missing capabilities: {missing_capabilities}.",
         "generation_missing_audio": "Missing generated audio.",
+        "preview_text_out_of_range": "Between {minimum_words} and {maximum_words} words, currently {word_count}.",
     }
 
 
@@ -1320,6 +1331,55 @@ def _default_settings_payload() -> dict[str, object]:
         "tts_audio_preview_timeout_seconds": 60,
         "tts_audio_generation_timeout_seconds": 300,
     }
+
+
+
+def test_character_voices_ui_controller_save_blocks_out_of_range_preview_text(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify a character preview outside the shared word range blocks the save.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerRange")
+    window = _build_window(qtbot, project_root)
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        character_voices_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, title, message: warnings.append((title, message)),
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *args, **kwargs: None,
+    )
+    minimum_words, maximum_words = tts_budget_service.preview_word_bounds()
+
+    character_voices_ui_controller.handle_save_prompt_requested(
+        window,
+        {
+            "target_id": "character_alice",
+            "prompt_text": "Updated prompt.",
+            "preview_text": "Only five words here.",
+        },
+    )
+
+    assert warnings == [
+        (
+            ui_state_service.translate("dialog.project_error_title", "en"),
+            ui_state_service.translate("character_voices.error_preview_text_out_of_range", "en").format(
+                word_count=4,
+                minimum_words=minimum_words,
+                maximum_words=maximum_words,
+            ),
+        )
+    ]
+    target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
+    assert target_payload is not None
+    assert target_payload["prompt_text"] != "Updated prompt."
 
 
 # END OF FILE

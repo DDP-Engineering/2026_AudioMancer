@@ -18,7 +18,6 @@
 
 from contextlib import suppress
 import json
-from math import ceil
 from pathlib import Path
 from uuid import uuid4
 
@@ -87,10 +86,6 @@ _NARRATOR_VOICE_STATUSES = {
 }
 
 DEFAULT_NARRATOR_LANGUAGE = "en"
-
-# @brief Spoken-word overage tolerated above the target narrator preview duration before rejection.
-_NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE = 6
-
 DEFAULT_PREVIEW_TEXT = (
     "The hall fell silent as the final lantern dimmed, and every step carried the weight of an unspoken decision. "
     "Outside, the rain kept its slow measure against the glass, patient as the years."
@@ -329,15 +324,10 @@ def preview_text_for_language(language_value: object) -> str:
 def narrator_preview_word_bounds() -> tuple[int, int]:
     """
     @brief      Resolve the accepted narrator preview length range, in estimated spoken words.
-    @details    Shared by AI generation, the canonical per-language defaults, and the profile editor
-                so one configured duration range governs every narrator preview.
     @return     Tuple of minimum and maximum accepted spoken-word counts.
     @exception  None
     """
-    words_per_second = float(config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND)
-    minimum_words = max(1, ceil(float(config.DEFAULT_NARRATOR_PREVIEW_MIN_AUDIO_SECONDS) * words_per_second))
-    target_maximum_words = ceil(float(config.DEFAULT_NARRATOR_PREVIEW_TARGET_AUDIO_SECONDS) * words_per_second)
-    return minimum_words, max(minimum_words, target_maximum_words + _NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE)
+    return tts_budget_service.preview_word_bounds()
 
 
 def preview_text_range_error(preview_text: object) -> dict[str, int] | None:
@@ -347,11 +337,7 @@ def preview_text_range_error(preview_text: object) -> dict[str, int] | None:
     @return     Mapping of the measured word count and accepted bounds, or None when acceptable.
     @exception  None
     """
-    minimum_words, maximum_words = narrator_preview_word_bounds()
-    word_count = tts_budget_service.estimated_word_count(str(preview_text or ""))
-    if minimum_words <= word_count <= maximum_words:
-        return None
-    return {"word_count": word_count, "minimum_words": minimum_words, "maximum_words": maximum_words}
+    return tts_budget_service.preview_text_range_error(preview_text)
 
 
 def apply_voice_language_to_profiles(project_root: str | Path, voice_language: object) -> str:

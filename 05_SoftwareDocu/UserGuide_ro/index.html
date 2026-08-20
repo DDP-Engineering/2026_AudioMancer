@@ -770,10 +770,19 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Deschiderea acestei pagini inainte ca naratorul selectat sa aiba o mostra ridica o atentionare
                     unica. Genereaza intai mostra naratorului: munca la personaje depinde de ea.
                 </div>
+                <p>
+                    <strong>Text Previzualizare</strong> este rostit pentru a inregistra mostra pe care o imita vocea
+                    generata a acestui personaj, asa ca lungimea lui hotaraste cat de buna poate fi acea voce &mdash;
+                    aceleasi 25 pana la 44 de cuvinte cerute si pe pagina Voce Narator, cu 30 pana la 38 ca tinta
+                    ideala. Descoperirea personajelor cere modelului AI sa scrie replici originale in felul de a vorbi
+                    al personajului, in loc sa citeze cartea, pentru ca multe personaje pur si simplu nu au destul
+                    dialog de citat. Cand modelul AI nu poate produce replici utilizabile, personajul primeste textul
+                    standard pentru limba proiectului, pe care il poti inlocui oricand.
+                </p>
                 <h3>Controale</h3>
                 <ul>
                     <li><strong>Editeaza</strong> deblocheaza promptul si textul de previzualizare pentru personajul selectat. Avertizeaza ca a continua sterge mostra curenta a acelui personaj si, cand exista audio generat, ca audio care foloseste aceasta voce si Asamblarea Audio vor fi resetate. Blocurile de Vorbire si randurile de Blocuri Audio sunt pastrate.</li>
-                    <li><strong>Salveaza</strong> confirma modificarea. Atat promptul, cat si textul de previzualizare trebuie sa fie nevide.</li>
+                    <li><strong>Salveaza</strong> confirma modificarea. Promptul trebuie sa fie nevid, iar textul de previzualizare trebuie sa aiba intre <strong>25 si 44 de cuvinte</strong>; Salveaza refuza orice se afla in afara acestui interval si iti spune numarul tau curent de cuvinte.</li>
                     <li><strong>Importa Mostra</strong> deschide un selector WAV, apoi cere textul exact rostit in fisier, apoi confirma impactul asupra audio.</li>
                     <li><strong>Genereaza Mostra</strong> confirma, apoi contacteaza runtimeul TTS pentru acel singur personaj.</li>
                     <li><strong>Previzualizare</strong> reda mostra stocata si devine <strong>Opreste Previzualizarea</strong> in timpul redarii.</li>

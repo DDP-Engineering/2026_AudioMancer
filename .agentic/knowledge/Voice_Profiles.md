@@ -19,15 +19,17 @@ required before speech generation.
   retry while leaving compatibility decisions to the full service fingerprint.
 - Validate narrator preview duration and sample budgets with shared word-based
   spoken units for supported voice languages (`REQ-FUNC-f04f2515`).
-- Govern every narrator preview text with one accepted spoken-word range sized
-  for a ten-to-fifteen-second voice-clone reference, shared by AI generation,
-  the canonical per-language defaults, and the profile editor
-  (`REQ-FUNC-1202a564`, `REQ-FUNC-1c0c97a6`, `REQ-FUNC-fd4b9595`).
+- Govern every narrator and character preview text with one accepted spoken-word
+  range sized for a ten-to-fifteen-second voice-clone reference, shared by AI
+  generation, the canonical per-language defaults, and both profile editors
+  (`REQ-FUNC-1202a564`, `REQ-FUNC-1c0c97a6`, `REQ-FUNC-fd4b9595`,
+  `REQ-FUNC-11743b06`).
 - Substitute the canonical default preview text for an unusable generated
   preview instead of failing the batch, and report each substitution
   (`REQ-FUNC-05eabf3a`).
-- Block a profile save whose edited preview text falls outside that range,
-  naming the range and the current word count (`REQ-UX-3cdcb2a3`).
+- Block a narrator or character save whose edited preview text falls outside that
+  range, naming the range and the current word count (`REQ-UX-3cdcb2a3`,
+  `REQ-UX-fb5a66cb`).
 - Migrate profile languages without replacing authored previews or writing an
   unchanged narrator document (`REQ-FUNC-4f57d7ae`, `REQ-FUNC-0fff5848`,
   `REQ-FUNC-206af389`).
@@ -57,11 +59,13 @@ localize, while authored previews and sample metadata remain intact. WAV writes
 are atomic and use immutable profile IDs. Sample deletion suppresses only WAV
 filesystem errors before performing the normal strict document update, and the
 controller releases preview playback plus its source before deleting a profile.
-`narrator_preview_word_bounds()` derives one accepted spoken-word range from the
-configured minimum and target narrator preview durations, so the generation
-validator, the canonical defaults, and the editor gate cannot drift apart; the
-narrower six-second constant it replaces for narrators still governs character
-discovery. AI generation stores compact checkpoints in the same document and
+`tts_budget_service.preview_word_bounds()` derives one accepted spoken-word range
+from the configured minimum and target preview durations, so narrator generation,
+character synthesis, the canonical defaults of both operations, and both editor
+gates cannot drift apart; `narrator_preview_word_bounds()` and
+`preview_text_range_error()` remain on `narrator_definition_service` as thin
+delegates. Only length is judged - line breaks are spoken as pauses and are
+accepted on both paths. AI generation stores compact checkpoints in the same document and
 appends profiles only after complete validation. A generated preview outside the
 range does not fail the run: that one profile keeps its generated voice prompt
 and takes the canonical default preview text, and the report's warning list

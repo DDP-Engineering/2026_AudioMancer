@@ -15,6 +15,8 @@
 
 # IMPORTS
 
+from math import ceil
+
 from audiomancer import config
 
 # PUBLIC API
@@ -140,6 +142,37 @@ def estimate_budget_units(text: str) -> int:
     if not normalized_text:
         return 0
     return max(1, estimated_word_count(normalized_text))
+
+
+def preview_word_bounds() -> tuple[int, int]:
+    """
+    @brief      Resolve the accepted voice-preview length range, in estimated spoken words.
+    @details    Shared by narrator generation, character synthesis, the canonical per-language
+                defaults, and both profile editors, so one configured duration range governs every
+                voice-clone reference.
+    @return     Tuple of minimum and maximum accepted spoken-word counts.
+    @exception  None
+    """
+    words_per_second = _words_per_audio_second()
+    minimum_words = max(1, ceil(float(config.DEFAULT_VOICE_PREVIEW_MIN_AUDIO_SECONDS) * words_per_second))
+    target_maximum_words = ceil(float(config.DEFAULT_VOICE_PREVIEW_TARGET_AUDIO_SECONDS) * words_per_second)
+    maximum_words = target_maximum_words + int(config.DEFAULT_VOICE_PREVIEW_WORD_OVERAGE_TOLERANCE)
+    return minimum_words, max(minimum_words, maximum_words)
+
+
+def preview_text_range_error(preview_text: object) -> dict[str, int] | None:
+    """
+    @brief      Report why one voice preview text falls outside the accepted length range.
+    @details    Only length is judged; line breaks are spoken as pauses and are accepted.
+    @param[in]  preview_text Candidate voice preview text.
+    @return     Mapping of the measured word count and accepted bounds, or None when acceptable.
+    @exception  None
+    """
+    minimum_words, maximum_words = preview_word_bounds()
+    word_count = estimated_word_count(str(preview_text or ""))
+    if minimum_words <= word_count <= maximum_words:
+        return None
+    return {"word_count": word_count, "minimum_words": minimum_words, "maximum_words": maximum_words}
 
 
 # LOCAL HELPERS

@@ -53,10 +53,11 @@ Voice prompt rules:
 - The paragraph must include one explicit `Age Domain:` sentence. If age is not supported, write `Age Domain: not specified in the source. Use an age-neutral adult voice and do not default to a young voice.`
 
 Preview text rules:
-- The preview_text field must be extracted only from this character's spoken dialogue in the provided evidence.
-- Combine exact source-language dialogue excerpts in source order when needed, but do not invent, paraphrase, translate, summarize, or add narration.
-- Remove only surrounding dialogue delimiters when they are not part of the spoken text.
-- The preview_text must be long enough to produce at least 6 seconds of Qwen TTS audio, usually 15-24 spoken words.
-- If the provided evidence does not contain enough spoken dialogue for the 6-second minimum, return an empty preview_text string.
+- The preview_text is spoken to record the reference sample that voice cloning later imitates, so write original lines this character could plausibly say rather than quoting the source text.
+- Write it in the same language as the provided evidence, long enough to produce 12 to 15 seconds of Qwen TTS audio, usually 30-38 spoken words; a slight bounded overage is tolerated.
+- Match the character's register, temperament and manner of speaking as the evidence shows them, but do not reuse their exact sentences, name other characters, or reveal plot events.
+- The preview_text must read as continuous natural speech rather than a list, and must give the voice varied rhythm and settled pacing rather than one clipped sentence.
+- The preview_text must not describe the character, must not ask to generate audio, and must not mention implementation, tokens, JSON, or this prompt.
+- Return an empty preview_text string only when the evidence is too thin to judge how this character speaks.
 
 {character_payload}

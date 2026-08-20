@@ -659,18 +659,18 @@ DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS = DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SEC
 # @brief Default maximum narrator preview text length for TTS samples.
 DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT = 512
 
-# @brief Minimum estimated narrator preview audio duration required for useful Qwen TTS references.
-DEFAULT_TTS_MIN_PREVIEW_AUDIO_SECONDS = 6.0
-
-# @brief Shortest estimated narrator preview duration accepted for a voice-clone reference.
+# @brief Shortest estimated preview duration accepted for a narrator or character voice-clone reference.
 # @details Clone quality rises with reference duration up to roughly fifteen seconds; below ten
 #          seconds a reference carries timbre without settled rhythm.
-DEFAULT_NARRATOR_PREVIEW_MIN_AUDIO_SECONDS = 10.0
+DEFAULT_VOICE_PREVIEW_MIN_AUDIO_SECONDS = 10.0
 
-# @brief Target narrator preview duration requested from AI generation, in estimated audio seconds.
+# @brief Target preview duration requested from AI generation, in estimated audio seconds.
 # @details Past this point clone quality plateaus, and common runtime wrappers trim a reference at
 #          thirty seconds, so the accepted maximum stays well short of that.
-DEFAULT_NARRATOR_PREVIEW_TARGET_AUDIO_SECONDS = 15.0
+DEFAULT_VOICE_PREVIEW_TARGET_AUDIO_SECONDS = 15.0
+
+# @brief Spoken-word overage tolerated above the target preview duration before a preview is refused.
+DEFAULT_VOICE_PREVIEW_WORD_OVERAGE_TOLERANCE = 6
 
 # @brief Minimum imported WAV sample duration required for Qwen TTS clone references.
 DEFAULT_IMPORTED_VOICE_SAMPLE_MIN_SECONDS = 3.0

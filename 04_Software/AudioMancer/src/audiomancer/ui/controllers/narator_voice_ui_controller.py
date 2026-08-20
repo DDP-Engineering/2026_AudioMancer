@@ -409,6 +409,10 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
             "narator_voice.error_generation_missing_audio",
             current_language,
         ),
+        "preview_text_out_of_range": ui_state_service.translate(
+            "narator_voice.error_preview_text_out_of_range",
+            current_language,
+        ),
         "preview_text_over_budget": ui_state_service.translate(
             "narator_voice.error_preview_text_over_budget",
             current_language,

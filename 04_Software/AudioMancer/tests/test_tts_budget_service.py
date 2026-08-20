@@ -116,3 +116,15 @@ def test_invalid_or_out_of_range_targets_are_clamped() -> None:
         tts_budget_service.resolve_block_target_audio_seconds({"speech_block_target_audio_seconds": 10_000})
         == config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM
     )
+
+
+def test_preview_word_bounds_span_the_configured_clone_reference_window() -> None:
+    """
+    @brief      Verify the shared preview word range follows the configured voice-clone durations.
+    @return     None.
+    @exception  None
+    """
+    minimum_words, maximum_words = tts_budget_service.preview_word_bounds()
+
+    assert minimum_words == 25
+    assert maximum_words == 44

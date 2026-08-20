@@ -1,0 +1,292 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-20T10:39:29.502904Z",
+      "anchor_head": "ded1fd3d7f70f5490a0d371c5825f76a84ef48ba",
+      "anchor_id": "0300b057ffda4e6a",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "7f5bd34307b4f6521ef893ef81e6f5586230a01f737318a1e4341796cd6d31a3"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "3b31a10ae28088a8bab3ebd5f8ef11c4951d60df300d0e0738d7370e4544e539"
+          },
+          "path": "04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4eef95ce45a9eec91c666e4cccc3041a7020dee63c069a655834442cf3962c72"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "947df9ba8f277361769f70c008baf28b821676857f9de01cc411df17e0a1deff"
+          },
+          "path": "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f35a5363b672c92bbd1d47f938bd4ebc858bfecaac00c27ca2e716b00d827492"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "29589078db080f39948810f7131edfd84d7c369bd303622bc8c9f30e89582d3b"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/config.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f66b74d5a80ef63085e09d69d1c8861889d6111c81e5db0f3d4ebc517c90c268"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "f39a5e87b5a56add3e6c3de6a45717214ced61ef1d6656035a94946a1c9245fb"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "36efc2854116018d9edd25ee1a7e1c4a1343f599d2258dd922719fde25c79d3a"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "f139b22c8bc846870577c4923aaa8f766c2cba58d9520406606272cfbf22ab3d"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5711f3fe81aadc17f59749828963865fb8321e9cf75870b59fa8c4902d0ae5e2"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "f63a64cd4b390bb095f6305b933401862d6b459e4e8357a1583b85d750458692"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d341f2a65bea870acd6d6520a366b230cfb29329a6fd4e37269a7f99eb547eb9"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "5d4295205d98498044f1a0b238848e87cfb9a21e12e92eb7bbef71d64b237b88"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a90d4fa352ba0988f87ce1caf9e3447ed3c781517836d17174461f2acf90efde"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "1aa984184f72c918e23a9a07bdd02af7bcc9deb96f4fdb15d74000f4c1f5bba5"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "96132915e6147fd412c5c7e68850358a6925f81e345a72f687fa6ccf0f502181"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "76d6e95234762484277787df28132592a9f81c766028fdc1b3fbad554c20fb46"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "ead14eab4fb38d950cb69a1a696323d2bb445b55a6f28d82e1fc6c5f3f0818ae"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "96724b323d83ffd55368c5b485edcec407095e01d2ef594e43f4ac42bfb75c97"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "fcb365ac918630541be807e9f4be10fb0dafe224f8a009bd9f4208418342fca6"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "0c070c6b520cdc1e4bbfc8c6df6a876223a017559e9a4673b6a6920dec54f9f0"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f63a5cd9cc59b11fb2dbad6516a3a9d857a55981f739c3b6f127df3910a967fa"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "df6041d5129689d037ed25318363251fdcb53afe320d92e6dead00564c12ce9a"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c0a8157fbe5d35db9925848356517200bd7336b3812912f7dc3df14c164d8bdf"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "c8ad9d4ccc608ce415064c37a3fd60989115114040ec7cb661f00b9219736448"
+          },
+          "path": "04_Software/AudioMancer/tests/test_character_discovery_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "730676eeb8ed3ff8d6810aaf2db1c6bb441eaa086bae4f64a2e456ac57f4c340"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "5d42555d6f53b0c24657781d8a371271027cd2dd3a3ea5b75e9d2279a22c799e"
+          },
+          "path": "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a4811b407e37dcfcff8e19a03b3ec0f34219793d3ba971459f503c1ca7a8f366"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "268bb1bc942f13a00423a190c0187c7c9da3ff4735dbdffeecbf6296dcac64b9"
+          },
+          "path": "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1b542d366fc9387caf9f021f3a6d57e4ddd4ac06500e52d294d07ed52344c50e"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "be9963f668be0bd09b7de2b20e9ae73b6a0e688951e106eb6821ecc4eb7fcc6f"
+          },
+          "path": "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "131083c4222dd8950924acafc389d380fbe4af392f6941dcb718cc5cb709c6f8"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "131cf44f696ccac3f4b627473b2905be364caddc06c2edea7c1d6e9aede89fe1"
+          },
+          "path": "05_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f64e03b2ad50658698203f17086e2b041bd314b4b9c5d818969fa91605f70639"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "bef9d581566a991242b2c46024c665f3e89f607b811bbdce1a2d05cb3096ff19"
+          },
+          "path": "05_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "e48b172ec8cd7ce8780bfe6a78f7d448ae8556e49a2ffd873de8e11683c21918"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "733466855fa8214a482b18e5b6a798536e2c026af6004900bfa9e012547d32b3"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 5,
+            "removed": 0,
+            "unchanged": 95
+          },
+          "source": {
+            "added": 0,
+            "modified": 10,
+            "removed": 0,
+            "unchanged": 93
+          },
+          "tests": {
+            "added": 0,
+            "modified": 4,
+            "removed": 0,
+            "unchanged": 117
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 19,
+          "removed": 0,
+          "unchanged": 305
+        }
+      },
+      "current_head": "ded1fd3d7f70f5490a0d371c5825f76a84ef48ba",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-20T13:13:00.616776Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-134e19e5"
+}

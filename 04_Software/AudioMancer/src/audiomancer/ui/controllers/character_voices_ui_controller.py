@@ -28,6 +28,7 @@ from audiomancer.services import (
     narrator_definition_service,
     operation_runtime_service,
     project_workspace_service,
+    tts_budget_service,
     ui_state_service,
     voice_sample_import_service,
 )
@@ -234,6 +235,17 @@ def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str,
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
+    range_error = tts_budget_service.preview_text_range_error(target_payload.get("preview_text", ""))
+    if range_error is not None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate(
+                "character_voices.error_preview_text_out_of_range",
+                current_language,
+            ).format(**range_error),
+        )
+        return
     try:
         updated_target = character_voices_service.save_target_prompt(
             window._current_project_root,
@@ -320,6 +332,10 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
             "character_voices.error_generation_missing_audio",
             current_language,
         ),
+        "preview_text_out_of_range": ui_state_service.translate(
+            "character_voices.error_preview_text_out_of_range",
+            current_language,
+        ),
     }
     operation_runner_controller.start_threaded_operation(
         window,
@@ -391,6 +407,10 @@ def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
         ),
         "generation_missing_audio": ui_state_service.translate(
             "character_voices.error_generation_missing_audio",
+            current_language,
+        ),
+        "preview_text_out_of_range": ui_state_service.translate(
+            "character_voices.error_preview_text_out_of_range",
             current_language,
         ),
     }

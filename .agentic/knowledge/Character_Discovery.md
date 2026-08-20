@@ -15,6 +15,9 @@ inventory through the stable profile projection.
 - Persist operation status, resume progress, token usage, characters, compact
   rejected-candidate diagnostics, and manual edits in one authoritative document.
 - Maintain evidence, demographic confidence, voice prompts, and provenance.
+- Accept the model-composed character preview text within the shared voice-clone
+  word range, storing none when it falls outside so the voice plan supplies the
+  canonical default (`REQ-FUNC-cc8611bc`, `REQ-FUNC-11743b06`).
 - Invalidate its own and downstream output when the effective source changes.
 - It does not select voices or generate speech/audio.
 
@@ -35,6 +38,17 @@ The key uses NFKD decomposition, case folding, and Unicode alphanumeric
 characters, discarding combining marks and punctuation. It compares accented
 Latin spelling variants without transliterating other scripts; canonical names
 and aliases retain their original display spelling in `characters.json`.
+
+Character preview text is composed by the model in the character's voice rather
+than quoted from the book. The preview is a script the Voice Designer reads to
+record a reference sample, and the voice itself comes from the separate
+voice-definition prompt, so a verbatim quote was never required; requiring one
+left every thinly-spoken character without a preview. `_build_character_preview_text`
+therefore normalizes and range-checks the composed text and stores an empty
+string when it does not fit, because the project voice language is unknown here
+and `character_voices_service` resolves the localized default once it is. Preview
+normalization never discards text: length is judged by the shared range, and line
+breaks are preserved because they are spoken as pauses.
 
 Discovery checkpoints after every successful window. Synthesis remains
 sequential: each candidate is compacted to the current profile budget and sent

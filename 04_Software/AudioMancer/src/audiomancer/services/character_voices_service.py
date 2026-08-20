@@ -46,14 +46,38 @@ SAMPLE_SOURCE_COPIED_NARRATOR = "copied_narrator"
 SAMPLE_SOURCE_IMPORTED = voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
 
 DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
-    "en": "The evening settled over the old house, and each voice carried a different shade of memory.",
-    "ro": "Seara s-a asezat peste casa veche, iar fiecare glas purta o alta nuanta de amintire.",
-    "de": ("Der Abend senkte sich ueber das alte Haus, und jede Stimme trug einen anderen Ton der Erinnerung."),
-    "fr": "Le soir est tombe sur la vieille maison, et chaque voix portait une autre nuance de memoire.",
-    "ru": "Вечер опустился на старый дом, и в каждом голосе звучал свой оттенок памяти.",
-    "pt": "A noite pousou sobre a casa antiga, e cada voz carregava um tom diferente de memoria.",
-    "es": "La tarde cayo sobre la vieja casa, y cada voz llevaba un matiz distinto de memoria.",
-    "it": "La sera scese sulla vecchia casa, e ogni voce portava una diversa sfumatura di memoria.",
+    "en": (
+        "The evening settled over the old house, and each voice carried a different shade of memory. "
+        "No one spoke first, but the silence between them said enough for anyone still listening."
+    ),
+    "ro": (
+        "Seara s-a asezat peste casa veche, iar fiecare glas purta o alta nuanta de amintire. "
+        "Nimeni nu a vorbit primul, dar tacerea dintre ei spunea destul pentru oricine mai asculta."
+    ),
+    "de": (
+        "Der Abend senkte sich ueber das alte Haus, und jede Stimme trug einen anderen Ton der Erinnerung. "
+        "Niemand sprach zuerst, doch die Stille zwischen ihnen sagte genug fuer jeden, der noch zuhoerte."
+    ),
+    "fr": (
+        "Le soir est tombe sur la vieille maison, et chaque voix portait une autre nuance de memoire. "
+        "Personne n'a parle le premier, mais le silence entre eux en disait assez pour qui ecoutait encore."
+    ),
+    "ru": (
+        "Вечер опустился на старый дом, и в каждом голосе звучал свой оттенок памяти. "
+        "Никто не заговорил первым, но молчание между ними сказало достаточно тем, кто еще слушал."
+    ),
+    "pt": (
+        "A noite pousou sobre a casa antiga, e cada voz carregava um tom diferente de memoria. "
+        "Ninguem falou primeiro, mas o silencio entre eles dizia o bastante para quem ainda escutava."
+    ),
+    "es": (
+        "La tarde cayo sobre la vieja casa, y cada voz llevaba un matiz distinto de memoria. "
+        "Nadie hablo primero, pero el silencio entre ellos decia bastante para quien aun escuchaba."
+    ),
+    "it": (
+        "La sera scese sulla vecchia casa, e ogni voce portava una diversa sfumatura di memoria. "
+        "Nessuno parlo per primo, ma il silenzio tra loro diceva abbastanza per chi ancora ascoltava."
+    ),
 }
 
 

@@ -4,24 +4,26 @@ title = "Narrator profile generation shall enforce preview-text bounds"
 status = "active"
 
 requirement = """
-When an AI-generated narrator profile supplies preview text, narrator profile generation shall accept it only while its estimated spoken length falls between the configured minimum of ten seconds of narrated audio and the configured maximum of fifteen seconds plus a bounded overage tolerance.
+When an AI-generated narrator profile supplies preview text, narrator profile generation shall accept it on length alone, only while its estimated spoken length falls between the configured minimum of ten seconds of narrated audio and the configured maximum of fifteen seconds plus a bounded overage tolerance.
 """
 
 verification = "A focused generation test supplies preview text at the minimum accepted word count, at the maximum accepted word count, and one word beyond each bound, then observes that the two in-range texts are carried through onto the stored profile unchanged while neither out-of-range text is."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
 ]
 linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_keeps_multi_line_preview_text",
   "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_preserves_latin_preview_budget_boundaries",
   "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
 ]
 
 priority = "high"
 rationale = """
-The generated preview text is spoken to produce the reference WAV that voice cloning later imitates. Reference quality scales with duration up to roughly fifteen seconds, so a sample under ten seconds carries timbre without stable rhythm, and one far beyond fifteen seconds stops improving and risks being trimmed by the runtime.
+The generated preview text is spoken to produce the reference WAV that voice cloning later imitates. Reference quality scales with duration up to roughly fifteen seconds, so a sample under ten seconds carries timbre without stable rhythm, and one far beyond fifteen seconds stops improving and risks being trimmed by the runtime. Only length is judged: line breaks are spoken as pauses and are accepted, matching character preview text.
 """
 created = 2026-07-19
 updated = 2026-08-20

@@ -1,0 +1,32 @@
+schema = 1
+id = "REQ-FUNC-11743b06"
+title = "Character preview text shall obey the shared voice-clone word range"
+status = "active"
+
+requirement = """
+If a synthesized character profile carries preview text outside the accepted voice-clone word range, then character discovery shall store no preview text for that character, so that the canonical default preview text for the project voice language is used when the voice plan is built.
+"""
+
+verification = "A focused test synthesizes one profile whose composed preview text is below the accepted minimum and one above the accepted maximum, observes that both store empty preview text, then builds the voice plan and observes each target carrying the canonical default preview text for the selected voice language."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_drops_out_of_range_preview",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_falls_back_to_default_preview_when_discovery_stored_none",
+  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_preview_defaults_sit_inside_the_shared_word_range",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_preview_word_bounds_span_the_configured_clone_reference_window",
+]
+
+spec = ""
+
+priority = "high"
+rationale = """
+A character sample is cloned exactly like a narrator sample, so it needs the same reference duration to be worth recording; the previous six-second floor and absent maximum let unusable samples through. Discovery cannot substitute the default itself because the project voice language is not known until the voice plan is built, so it stores nothing and the existing downstream resolution supplies the default.
+"""
+created = 2026-08-20
+updated = 2026-08-20

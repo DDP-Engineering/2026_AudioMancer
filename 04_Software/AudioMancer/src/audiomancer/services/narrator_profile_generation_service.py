@@ -902,9 +902,10 @@ def _validated_generated_profiles(
     @param[in]  allocation Required gender allocation payload.
     @param[in]  voice_language Selected audiobook voice language code.
     @param[in]  preview_text_character_limit Maximum accepted preview text characters.
-    @details    Preview text outside the accepted bounds is replaced by the canonical default for the
-                selected language rather than failing the batch, because it is an interchangeable
-                sample script; an unusable prompt_text still rejects the whole response.
+    @details    Preview text whose length the accepted bounds refuse is replaced by the canonical
+                default for the selected language rather than failing the batch, because it is an
+                interchangeable sample script; an unusable prompt_text still rejects the whole
+                response. Line breaks are spoken as pauses and are accepted.
     @return     Tuple of validated generated profile payloads and preview-substitution warnings.
     @exception  ValueError Raised when the AI response does not satisfy the contract.
     """
@@ -948,8 +949,6 @@ def _validated_generated_profiles(
                 f"is too long for a narrator sample ({preview_budget_units} budget units, "
                 f"maximum {max_preview_units})"
             )
-        elif "\n" in preview_text:
-            unusable_preview_reason = "spans more than one line"
         elif len(preview_text) > preview_limit:
             unusable_preview_reason = f"exceeds {preview_limit} characters"
         if unusable_preview_reason:

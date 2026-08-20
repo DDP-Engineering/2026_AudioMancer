@@ -1,0 +1,28 @@
+schema = 1
+id = "REQ-FUNC-77c03ea9"
+title = "Voice sample generation shall refuse out-of-range preview text"
+status = "active"
+
+requirement = """
+If a narrator or character voice sample is generated from preview text outside the accepted voice-clone word range, then the shared voice-design sequence shall refuse the request before contacting the TTS runtime and report the accepted range with the supplied word count.
+"""
+
+verification = "A focused test runs the shared voice-design sequence with preview text below the accepted minimum and a runtime probe that fails the test if it is reached, then observes a raised error naming the supplied word count."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_refuses_out_of_range_preview_text",
+]
+
+spec = ""
+
+priority = "high"
+rationale = """
+Refusing an out-of-range preview when the operator presses Save protects only text edited in this session. The reference recording is made when a sample is generated, and that path reads stored text, so a profile or target carrying a short preview from an earlier version regenerated a weak reference in silence. Placing the check in the one shared voice-design sequence covers narrator generation, single character generation and whole-list character regeneration together, and refusing before the runtime probe means no model is loaded for a request that cannot produce a usable sample.
+"""
+created = 2026-08-20
+updated = 2026-08-20

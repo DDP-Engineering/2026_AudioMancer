@@ -22,6 +22,11 @@ import pytest
 from audiomancer.services import operation_runtime_service
 from audiomancer.ui.controllers import tts_runtime_ui_support
 
+_IN_RANGE_PREVIEW_TEXT = (
+    "She weighs each answer before she gives it, and the words arrive quiet but certain. "
+    "Nothing in her tone hurries, and nothing in it asks to be forgiven."
+)
+
 # PUBLIC API
 
 
@@ -149,6 +154,7 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
         },
         {
             "prepare": "Preparing",
+            "preview_text_out_of_range": "Out of range.",
             "load_model": "Loading",
             "generate": "Generating",
             "download": "Downloading",
@@ -163,7 +169,7 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
             "supported_languages": ["en", "ro"],
         },
         "Warm, grounded voice.",
-        "Shared preview text.",
+        _IN_RANGE_PREVIEW_TEXT,
         lambda *values: progress_updates.append(values),
         lambda: False,
     )
@@ -181,7 +187,7 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
     }
     assert generated_arguments == [
         (
-            ("http://runtime", "key", "en", "Shared preview text.", "Warm, grounded voice."),
+            ("http://runtime", "key", "en", _IN_RANGE_PREVIEW_TEXT, "Warm, grounded voice."),
             {
                 "model_parameters": {"temperature": 0.4},
                 "supported_languages": ["en", "ro"],
@@ -215,6 +221,7 @@ def test_voice_design_generation_stops_after_probe_when_cancelled(monkeypatch) -
             {},
             {
                 "prepare": "Preparing",
+                "preview_text_out_of_range": "Out of range.",
                 "load_model": "Loading",
                 "generate": "Generating",
                 "download": "Downloading",
@@ -223,7 +230,7 @@ def test_voice_design_generation_stops_after_probe_when_cancelled(monkeypatch) -
             },
             lambda _models: pytest.fail("Request construction ran after cancellation."),
             "Prompt",
-            "Preview",
+            _IN_RANGE_PREVIEW_TEXT,
             None,
             lambda: True,
         )
@@ -238,6 +245,7 @@ def test_voice_design_generation_preserves_probe_and_capability_errors(monkeypat
     """
     progress_messages = {
         "prepare": "Preparing",
+        "preview_text_out_of_range": "Out of range.",
         "load_model": "Loading",
         "generate": "Generating",
         "download": "Downloading",
@@ -251,7 +259,7 @@ def test_voice_design_generation_preserves_probe_and_capability_errors(monkeypat
     )
     with pytest.raises(RuntimeError, match=r"^Provider is unavailable\.$"):
         tts_runtime_ui_support.run_voice_design_generation(
-            {}, progress_messages, lambda _models: {}, "Prompt", "Preview", None, lambda: False
+            {}, progress_messages, lambda _models: {}, "Prompt", _IN_RANGE_PREVIEW_TEXT, None, lambda: False
         )
 
     monkeypatch.setattr(
@@ -268,7 +276,7 @@ def test_voice_design_generation_preserves_probe_and_capability_errors(monkeypat
     )
     with pytest.raises(RuntimeError, match=r"^Missing runtime capabilities: base, voice_designer$"):
         tts_runtime_ui_support.run_voice_design_generation(
-            {}, progress_messages, lambda _models: {}, "Prompt", "Preview", None, lambda: False
+            {}, progress_messages, lambda _models: {}, "Prompt", _IN_RANGE_PREVIEW_TEXT, None, lambda: False
         )
 
 
@@ -319,6 +327,7 @@ def test_voice_design_generation_maps_terminal_runtime_failure(monkeypatch) -> N
             {},
             {
                 "prepare": "Preparing",
+                "preview_text_out_of_range": "Out of range.",
                 "load_model": "Loading",
                 "generate": "Generating",
                 "download": "Downloading",
@@ -327,7 +336,38 @@ def test_voice_design_generation_maps_terminal_runtime_failure(monkeypatch) -> N
             },
             lambda _models: {"can_generate": True, "model_id": "voice-designer", "language": "en"},
             "Prompt",
-            "Preview",
+            _IN_RANGE_PREVIEW_TEXT,
+            None,
+            lambda: False,
+        )
+
+
+
+def test_voice_design_generation_refuses_out_of_range_preview_text(monkeypatch) -> None:
+    """
+    @brief      Verify no sample is recorded from preview text outside the accepted word range.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    monkeypatch.setattr(
+        tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache_from_settings",
+        lambda *_args, **_kwargs: pytest.fail("an out-of-range preview must be refused before the runtime is probed"),
+    )
+
+    with pytest.raises(RuntimeError, match="currently 4"):
+        tts_runtime_ui_support.run_voice_design_generation(
+            {},
+            {
+                "prepare": "Preparing",
+                "preview_text_out_of_range": (
+                    "Between {minimum_words} and {maximum_words} words, currently {word_count}."
+                ),
+            },
+            lambda _models: {},
+            "A mature voice with warm resonance and measured pacing throughout the book.",
+            "Only five words here.",
             None,
             lambda: False,
         )

@@ -4,7 +4,7 @@ title = "Out-of-range generated preview text shall fall back to the canonical de
 status = "active"
 
 requirement = """
-If a generated narrator profile supplies preview text that the accepted preview bounds refuse, then narrator profile generation shall keep the profile, replace only its preview text with the canonical default preview text for the selected voice language, and report one warning naming that profile.
+If a generated narrator profile supplies preview text whose length the accepted preview bounds refuse, then narrator profile generation shall keep the profile, replace only its preview text with the canonical default preview text for the selected voice language, and report one warning naming that profile.
 """
 
 verification = "A focused generation test returns one profile whose preview text is far below the accepted minimum alongside otherwise valid profiles, then observes that generation succeeds, that the stored preview text for that profile equals the canonical default for the selected voice language, that the other profiles keep their own preview text, and that the reported warning count is one."

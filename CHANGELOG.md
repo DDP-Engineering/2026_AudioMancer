@@ -12,6 +12,28 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Character voice samples are now written by the AI instead of being cut from the
+  book. Until now the sample text for a character had to be their own dialogue,
+  quoted word for word, so any character the book does not give enough lines to -
+  most secondary characters - ended up with no sample text at all. The AI now
+  writes original lines in that character's manner of speaking, at the same
+  12 to 15 seconds used for narrators, and characters fall back to the standard
+  text for the project language when it cannot. The built-in character sample
+  texts were lengthened to match, in all eight languages.
+- The Character Voices editor now refuses to save a sample text that is too short
+  or too long to record a usable voice sample, and tells you the accepted range
+  and how many words you currently have, exactly as Narrator Voice does.
+- Generating a voice sample - for the narrator, for one character, or for every
+  character at once - now refuses a sample text outside that same range before it
+  contacts the TTS runtime, instead of only checking it when you press Save.
+  Projects made with earlier versions could otherwise keep regenerating weak
+  voice samples from their old short sample texts without ever saying so.
+- Narrator sample text may now span several lines. Line breaks are spoken as
+  short pauses, so there was no reason to refuse them, and character sample text
+  had always allowed them.
+- Fixed: a character sample text longer than the allowed character count was
+  silently erased every time the character profile was read, instead of being
+  reported. Length is now checked once, where it can be explained.
 - Narrator voice samples are now long enough to clone properly. The sample text
   the AI writes for each narrator was aiming at roughly 6 to 10 seconds of
   speech, which is below what voice cloning needs to capture a voice reliably -

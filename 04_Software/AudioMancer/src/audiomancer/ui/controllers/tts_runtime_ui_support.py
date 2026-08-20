@@ -20,7 +20,12 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from audiomancer import config
-from audiomancer.services import operation_runtime_service, settings_service, voiceweaver_runtime_service
+from audiomancer.services import (
+    operation_runtime_service,
+    settings_service,
+    tts_budget_service,
+    voiceweaver_runtime_service,
+)
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -136,7 +141,7 @@ def run_voice_design_generation(
     @param[in]  progress_messages Worker-safe progress and error messages.
     @param[in]  generation_request_builder Caller-owned request builder for discovered models.
     @param[in]  prompt_text Voice description submitted to VoiceWeaver.
-    @param[in]  preview_text Text synthesized for the sample.
+    @param[in]  preview_text Text synthesized for the sample, refused when outside the accepted word range.
     @param[in]  progress_callback Optional threaded-runner progress callback.
     @param[in]  cancel_requested Optional cooperative cancellation callback.
     @param[in]  before_probe Optional caller-specific validation run after prepare progress.
@@ -145,6 +150,9 @@ def run_voice_design_generation(
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @exception  RuntimeError Raised for runtime, capability, or generated-audio failures.
     """
+    preview_range_error = tts_budget_service.preview_text_range_error(preview_text)
+    if preview_range_error is not None:
+        raise RuntimeError(progress_messages["preview_text_out_of_range"].format(**preview_range_error))
     _emit_voice_design_progress(progress_callback, 2, progress_messages["prepare"])
     if before_probe is not None:
         before_probe()
