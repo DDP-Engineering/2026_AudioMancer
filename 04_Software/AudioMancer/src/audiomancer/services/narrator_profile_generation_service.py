@@ -62,12 +62,6 @@ SOURCE_CLEANED_TEXT = "cleaned_text"
 # @brief Stable operation-mode token for AI-generated narrator profiles.
 NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED = "ai_assisted"
 
-# @brief Target maximum spoken-word count requested from AI for narrator preview text.
-_NARRATOR_PREVIEW_TARGET_MAX_WORDS = 24
-
-# @brief Bounded generated-preview overage tolerated before rejecting model output.
-_NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE = 6
-
 # @brief In-memory narrator-profile-generation result payload type.
 NarratorProfileGenerationReportPayload = dict[str, object]
 
@@ -376,7 +370,7 @@ def generate_narrator_profiles(
         token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
         raw_response_payload = response_result.get("payload", {})
         response_payload = dict(raw_response_payload) if isinstance(raw_response_payload, dict) else {}
-        validated_profiles = _validated_generated_profiles(
+        validated_profiles, preview_warnings = _validated_generated_profiles(
             response_payload,
             requested_count,
             allocation,
@@ -406,8 +400,8 @@ def generate_narrator_profiles(
         "style_brief": str(response_payload.get("style_brief", "")).strip(),
         "style_summary": style_summary,
         "budget_metadata": budget_metadata,
-        "warning_count": 0,
-        "warnings": [],
+        "warning_count": len(preview_warnings),
+        "warnings": list(preview_warnings),
         "token_usage": token_usage,
         "additional_profile_instructions": additional_profile_instructions,
         "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
@@ -908,13 +902,17 @@ def _validated_generated_profiles(
     @param[in]  allocation Required gender allocation payload.
     @param[in]  voice_language Selected audiobook voice language code.
     @param[in]  preview_text_character_limit Maximum accepted preview text characters.
-    @return     Validated generated profile payloads.
+    @details    Preview text outside the accepted bounds is replaced by the canonical default for the
+                selected language rather than failing the batch, because it is an interchangeable
+                sample script; an unusable prompt_text still rejects the whole response.
+    @return     Tuple of validated generated profile payloads and preview-substitution warnings.
     @exception  ValueError Raised when the AI response does not satisfy the contract.
     """
     raw_profiles = response_payload.get("profiles", [])
     if not isinstance(raw_profiles, list) or len(raw_profiles) != requested_count:
         raise ValueError(f"AI narrator generation must return exactly {requested_count} profiles.")
     profiles: list[dict[str, object]] = []
+    warnings: list[str] = []
     names: set[str] = set()
     gender_counts = {"male": 0, "female": 0}
     preview_limit = max(1, int(preview_text_character_limit or config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
@@ -938,24 +936,27 @@ def _validated_generated_profiles(
             raise ValueError(f"Generated narrator profile '{display_name}' has an invalid prompt_text.")
         if _contains_audio_generation_request(prompt_text):
             raise ValueError(f"Generated narrator profile '{display_name}' prompt_text asks for audio generation.")
-        if not preview_text:
-            raise ValueError(f"Generated narrator profile '{display_name}' is missing preview_text.")
         preview_budget_units = tts_budget_service.estimate_budget_units(preview_text)
+        unusable_preview_reason = ""
         if preview_budget_units < min_preview_units:
-            raise ValueError(
-                f"Generated narrator profile '{display_name}' preview_text is too short for a Qwen TTS reference "
-                f"({preview_budget_units} budget units, minimum {min_preview_units})."
+            unusable_preview_reason = (
+                f"is too short for a voice-clone reference ({preview_budget_units} budget units, "
+                f"minimum {min_preview_units})"
             )
-        if "\n" in preview_text:
-            raise ValueError(f"Generated narrator profile '{display_name}' preview_text must be one short sentence.")
-        if preview_budget_units > max_preview_units:
-            raise ValueError(
-                f"Generated narrator profile '{display_name}' preview_text is too long for a narrator sample "
-                f"({preview_budget_units} budget units, maximum {max_preview_units})."
+        elif preview_budget_units > max_preview_units:
+            unusable_preview_reason = (
+                f"is too long for a narrator sample ({preview_budget_units} budget units, "
+                f"maximum {max_preview_units})"
             )
-        if len(preview_text) > preview_limit:
-            raise ValueError(
-                f"Generated narrator profile '{display_name}' preview_text exceeds {preview_limit} characters."
+        elif "\n" in preview_text:
+            unusable_preview_reason = "spans more than one line"
+        elif len(preview_text) > preview_limit:
+            unusable_preview_reason = f"exceeds {preview_limit} characters"
+        if unusable_preview_reason:
+            preview_text = narrator_definition_service.preview_text_for_language(voice_language)
+            warnings.append(
+                f"Generated preview text for '{display_name}' {unusable_preview_reason}; "
+                f"the default preview text for this language was used instead."
             )
         names.add(display_name.casefold())
         gender_counts[gender] += 1
@@ -971,22 +972,16 @@ def _validated_generated_profiles(
         )
     if gender_counts["male"] != int(allocation["male"]) or gender_counts["female"] != int(allocation["female"]):
         raise ValueError("AI narrator generation returned profiles with the wrong male/female allocation.")
-    return profiles
+    return profiles, warnings
 
 
 def _minimum_preview_budget_units() -> int:
     """
-    @brief      Estimate the minimum preview-text budget units for useful Qwen TTS references.
+    @brief      Return the shortest accepted narrator preview budget-unit estimate.
     @return     Minimum preview budget units.
     @exception  None
     """
-    return max(
-        1,
-        int(
-            float(config.DEFAULT_TTS_MIN_PREVIEW_AUDIO_SECONDS) * float(config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND)
-            + 0.999
-        ),
-    )
+    return narrator_definition_service.narrator_preview_word_bounds()[0]
 
 
 def _maximum_preview_budget_units() -> int:
@@ -995,7 +990,7 @@ def _maximum_preview_budget_units() -> int:
     @return     Maximum accepted preview budget-unit estimate.
     @exception  None
     """
-    return _NARRATOR_PREVIEW_TARGET_MAX_WORDS + _NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE
+    return narrator_definition_service.narrator_preview_word_bounds()[1]
 
 
 def _build_model_settings(

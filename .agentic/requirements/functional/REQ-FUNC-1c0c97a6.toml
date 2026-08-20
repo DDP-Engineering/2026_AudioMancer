@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-1c0c97a6"
+title = "Canonical narrator preview defaults shall clear the clone floor"
+status = "active"
+
+requirement = """
+The canonical default narrator preview text supplied for each supported voice language shall be long enough to satisfy the minimum accepted narrator preview duration.
+"""
+
+verification = "A focused test estimates the spoken length of the canonical default preview text for every supported voice language and observes that each one reaches at least the configured minimum accepted narrator preview word count."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_canonical_preview_defaults_clear_the_minimum_word_bound",
+]
+
+spec = ""
+
+priority = "high"
+rationale = """
+A manually created narrator profile starts with the canonical default preview text, and that text is spoken to produce the reference WAV that voice cloning imitates. A default below the minimum useful duration therefore hands every hand-made profile a poor reference. It is also the text substituted when a generated preview is unusable, so it has to be valid by construction.
+"""
+created = 2026-08-20
+updated = 2026-08-20

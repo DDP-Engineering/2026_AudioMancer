@@ -16,6 +16,7 @@
 # IMPORTS
 
 import json
+import re
 
 import pytest
 
@@ -234,13 +235,13 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
     assert state_payload["resume_checkpoint"]["completed_window_count"] == 1
 
 
-def test_narrator_profile_generation_rejects_short_preview_text(
+def test_narrator_profile_generation_substitutes_short_preview_text(
     tmp_path,
     monkeypatch,
     mock_prompt_environment,
 ) -> None:
     """
-    @brief      Verify generated preview text must be long enough for a Qwen TTS reference.
+    @brief      Verify a too-short generated preview is replaced by the canonical default and warned about.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  mock_prompt_environment Prompt-root fixture.
@@ -251,13 +252,58 @@ def test_narrator_profile_generation_rejects_short_preview_text(
     project_root = tmp_path / "project"
     project_root.mkdir()
     _write_chunks(project_root, "A reflective book with intimate narration and restrained tension.")
+    response_payload = _profiles_payload(2)
+    kept_preview_text = str(response_payload["profiles"][1]["preview_text"])
+    response_payload["profiles"][0]["preview_text"] = "Too short."
     monkeypatch.setattr(
         narrator_profile_generation_service.llm_provider_service,
         "chat_json",
-        _chat_json_factory([], _profiles_payload(2, preview_text="Too short.")),
+        _chat_json_factory([], response_payload),
     )
 
-    with pytest.raises(ValueError, match="preview_text is too short"):
+    report_payload = narrator_profile_generation_service.generate_narrator_profiles(
+        project_root,
+        {},
+        _MOCK_AI_PROFILE,
+        2,
+        "en",
+        220,
+    )
+
+    profiles = narrator_definition_service.load_profiles(project_root)
+    assert len(profiles) == 2
+    assert profiles[0]["preview_text"] == narrator_definition_service.preview_text_for_language("en")
+    assert profiles[1]["preview_text"] == kept_preview_text
+    assert report_payload["warning_count"] == 1
+    assert "Male Narrator 1" in str(report_payload["warnings"][0])
+
+
+def test_narrator_profile_generation_rejects_invalid_prompt_text(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify an unusable voice-designer prompt still fails the whole generation batch.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A reflective book with intimate narration and restrained tension.")
+    response_payload = _profiles_payload(2)
+    response_payload["profiles"][0]["prompt_text"] = "Too short."
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory([], response_payload),
+    )
+
+    with pytest.raises(ValueError, match="invalid prompt_text"):
         narrator_profile_generation_service.generate_narrator_profiles(
             project_root,
             {},
@@ -270,46 +316,19 @@ def test_narrator_profile_generation_rejects_short_preview_text(
     assert not narrator_definition_service.load_profiles(project_root)
 
 
-def test_narrator_profile_generation_rejects_preview_text_below_six_seconds(
-    tmp_path,
-    monkeypatch,
-    mock_prompt_environment,
-) -> None:
+def test_narrator_generation_prompt_requests_preview_inside_accepted_range() -> None:
     """
-    @brief      Verify generated preview text below the six-second estimate is rejected.
-    @param[in]  tmp_path Temporary path fixture.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @brief      Verify the shipped generation prompt asks for a preview length the validator accepts.
     @return     None.
     @exception  None
     """
-    _write_narrator_prompts(mock_prompt_environment)
-    project_root = tmp_path / "project"
-    project_root.mkdir()
-    _write_chunks(project_root, "A reflective book with intimate narration and restrained tension.")
-    monkeypatch.setattr(
-        narrator_profile_generation_service.llm_provider_service,
-        "chat_json",
-        _chat_json_factory(
-            [],
-            _profiles_payload(
-                2,
-                preview_text="This narrator sample sentence has only twelve measured spoken words for testing.",
-            ),
-        ),
-    )
+    prompt_text = (config.APP_PROMPTS_PATH / "narrator_profile_generation_user.txt").read_text(encoding="utf-8")
+    requested_range = re.search(r"(\d+)-(\d+) spoken words", prompt_text)
+    minimum_words, maximum_words = narrator_definition_service.narrator_preview_word_bounds()
 
-    with pytest.raises(ValueError, match=r"minimum 15"):
-        narrator_profile_generation_service.generate_narrator_profiles(
-            project_root,
-            {},
-            _MOCK_AI_PROFILE,
-            2,
-            "en",
-            220,
-        )
-
-    assert not narrator_definition_service.load_profiles(project_root)
+    assert requested_range is not None
+    assert minimum_words <= int(requested_range.group(1))
+    assert int(requested_range.group(2)) <= maximum_words
 
 
 def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
@@ -331,7 +350,8 @@ def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
     _write_chunks(project_root, "A multilingual chronicle moves through memory, ritual, and political consequence.")
     preview_text = (
         "Across distant cities and quiet rooms, the narrator carries each memory with steady warmth, clear breath, "
-        "and patient attention to unfolding change in every language."
+        "and patient attention to unfolding change in every language. The measured cadence holds its shape from "
+        "the first line to the last, unhurried and entirely unforced."
     )
     monkeypatch.setattr(
         narrator_profile_generation_service.llm_provider_service,
@@ -345,32 +365,34 @@ def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
         _MOCK_AI_PROFILE,
         2,
         "en",
-        220,
+        config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     )
 
     profiles = narrator_definition_service.load_profiles(project_root)
     assert len(profiles) == 2
     assert report_payload["generated_profile_ids"]
+    assert report_payload["warning_count"] == 0
     assert all(profile["preview_text"] == preview_text for profile in profiles)
 
 
 @pytest.mark.parametrize(
-    ("preview_units", "expected_error"),
-    ((15, None), (30, None), (31, "maximum 30")),
+    ("preview_units", "preserved"),
+    ((24, False), (25, True), (44, True), (45, False)),
 )
 def test_narrator_profile_generation_preserves_latin_preview_budget_boundaries(
     preview_units: int,
-    expected_error: str | None,
+    preserved: bool,
 ) -> None:
     """
-    @brief      Verify Latin previews retain the established minimum and maximum budget boundaries.
+    @brief      Verify only previews inside the accepted word range are carried through unchanged.
     @param[in]  preview_units Number of short Latin word-equivalent units to validate.
-    @param[in]  expected_error Expected validation error, when the preview is over budget.
+    @param[in]  preserved Whether the supplied preview text is expected to survive validation.
     @return     None.
     @exception  None
     """
     preview_text = " ".join("word" for _index in range(preview_units))
-    validation_arguments = (
+
+    profiles, warnings = narrator_profile_generation_service._validated_generated_profiles(
         _profiles_payload(2, preview_text=preview_text),
         2,
         {"male": 1, "female": 1, "random": 0, "random_gender": ""},
@@ -378,14 +400,9 @@ def test_narrator_profile_generation_preserves_latin_preview_budget_boundaries(
         config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     )
 
-    if expected_error is not None:
-        with pytest.raises(ValueError, match=expected_error):
-            narrator_profile_generation_service._validated_generated_profiles(*validation_arguments)
-        return
-
-    profiles = narrator_profile_generation_service._validated_generated_profiles(*validation_arguments)
-
     assert len(profiles) == 2
+    assert all((profile["preview_text"] == preview_text) is preserved for profile in profiles)
+    assert len(warnings) == (0 if preserved else 2)
 
 
 def test_narrator_profile_generation_merges_token_usage_into_report_and_state(
@@ -1184,7 +1201,8 @@ def _profiles_payload(
                     preview_text
                     or (
                         f"Original preview sentence number {index} carries enough measured words for a stable "
-                        "narrator sample during calm audiobook testing."
+                        "narrator sample during calm audiobook testing. A second line keeps the reference long "
+                        "enough for steady pacing and unhurried breath."
                     )
                 ),
             }

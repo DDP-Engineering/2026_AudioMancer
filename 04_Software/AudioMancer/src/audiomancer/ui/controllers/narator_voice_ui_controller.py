@@ -93,6 +93,8 @@ def handle_create_profile_requested(
     except ValueError as error:
         _show_name_validation_error(window, current_language, str(error))
         return
+    if not _accepted_preview_text_range(window, current_language, profile_payload.get("preview_text", "")):
+        return
     created_profile = narrator_definition_service.create_custom_profile(
         window._current_project_root,
         normalized_name,
@@ -199,6 +201,8 @@ def handle_save_profile_requested(
         )
     except ValueError as error:
         _show_name_validation_error(window, current_language, str(error))
+        return
+    if not _accepted_preview_text_range(window, current_language, profile_payload.get("preview_text", "")):
         return
     progress_callback = _start_narator_voice_change_progress(
         window,
@@ -606,10 +610,17 @@ def _handle_generate_profiles_success(window: "MainWindow", result_payload: obje
             window._current_project_root,
             project_workspace_service.load_manifest(window._current_project_root),
         )
+    warning_count = int(report_payload.get("warning_count", 0) or 0)
+    message_key = (
+        "status.narator_voice_profiles_generated_with_defaults"
+        if warning_count
+        else "status.narator_voice_profiles_generated"
+    )
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.narator_voice_profiles_generated", current_language).format(
+        ui_state_service.translate(message_key, current_language).format(
             generated_count=len(generated_profile_ids),
+            warning_count=warning_count,
         ),
     )
 
@@ -1335,6 +1346,28 @@ def _show_name_validation_error(window: "MainWindow", language: str, error_code:
         ui_state_service.translate("dialog.project_error_title", language),
         ui_state_service.translate(message_key, language),
     )
+
+
+def _accepted_preview_text_range(window: "MainWindow", language: str, preview_text: object) -> bool:
+    """
+    @brief      Report whether one edited narrator preview text may be persisted.
+    @details    The editor is preloaded with the canonical default for the project language, so an empty
+                box means the operator cleared it and is reported like any other out-of-range length.
+    @param[in]  window Main application window.
+    @param[in]  language Language code.
+    @param[in]  preview_text Edited narrator preview text.
+    @return     True when the preview text is acceptable, False once the operator has been told why not.
+    @exception  None
+    """
+    range_error = narrator_definition_service.preview_text_range_error(preview_text)
+    if range_error is None:
+        return True
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", language),
+        ui_state_service.translate("narator_voice.error_preview_text_out_of_range", language).format(**range_error),
+    )
+    return False
 
 
 def _selected_profile_id(window: "MainWindow") -> str | None:

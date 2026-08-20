@@ -696,6 +696,22 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Limit</strong> from TTS Settings as you type, so it can never exceed the character ceiling.
                 </p>
                 <p>
+                    The preview text is spoken to record the sample that every generated voice imitates, so its
+                    length decides how good that voice can be. It must be between <strong>25 and 44 words</strong>
+                    &mdash; roughly 10 to 18 seconds of speech, with 30 to 38 words the ideal target. Below that a
+                    sample carries the tone of a voice but not its rhythm; far above it, quality stops improving.
+                    <strong>Save</strong> refuses a preview text outside that range and tells you the range and your
+                    current word count. The same applies to an empty box: a new profile opens with the standard
+                    preview text for the project language already filled in, so clearing it leaves nothing to record
+                    a sample from.
+                </p>
+                <p>
+                    When you press <strong>Generate Narrators</strong>, the AI is asked for preview text in that same
+                    range. If it returns a preview that is unusable anyway, only that narrator's preview text is
+                    replaced with the standard text for the language &mdash; the rest of the narrators are kept, and the
+                    message at the end tells you how many were replaced.
+                </p>
+                <p>
                     When the project voice language changes, AudioMancer updates each profile's language but keeps
                     preview text you or the model wrote; only an untouched default preview is replaced with the new
                     language's default. Drag the divider between the list and the editor &mdash; the list stops shrinking at

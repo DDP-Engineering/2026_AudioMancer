@@ -19,6 +19,15 @@ required before speech generation.
   retry while leaving compatibility decisions to the full service fingerprint.
 - Validate narrator preview duration and sample budgets with shared word-based
   spoken units for supported voice languages (`REQ-FUNC-f04f2515`).
+- Govern every narrator preview text with one accepted spoken-word range sized
+  for a ten-to-fifteen-second voice-clone reference, shared by AI generation,
+  the canonical per-language defaults, and the profile editor
+  (`REQ-FUNC-1202a564`, `REQ-FUNC-1c0c97a6`, `REQ-FUNC-fd4b9595`).
+- Substitute the canonical default preview text for an unusable generated
+  preview instead of failing the batch, and report each substitution
+  (`REQ-FUNC-05eabf3a`).
+- Block a profile save whose edited preview text falls outside that range,
+  naming the range and the current word count (`REQ-UX-3cdcb2a3`).
 - Migrate profile languages without replacing authored previews or writing an
   unchanged narrator document (`REQ-FUNC-4f57d7ae`, `REQ-FUNC-0fff5848`,
   `REQ-FUNC-206af389`).
@@ -48,8 +57,15 @@ localize, while authored previews and sample metadata remain intact. WAV writes
 are atomic and use immutable profile IDs. Sample deletion suppresses only WAV
 filesystem errors before performing the normal strict document update, and the
 controller releases preview playback plus its source before deleting a profile.
-AI generation stores compact checkpoints in the same document and appends
-profiles only after complete validation. The main window passes the page-owned
+`narrator_preview_word_bounds()` derives one accepted spoken-word range from the
+configured minimum and target narrator preview durations, so the generation
+validator, the canonical defaults, and the editor gate cannot drift apart; the
+narrower six-second constant it replaces for narrators still governs character
+discovery. AI generation stores compact checkpoints in the same document and
+appends profiles only after complete validation. A generated preview outside the
+range does not fail the run: that one profile keeps its generated voice prompt
+and takes the canonical default preview text, and the report's warning list
+names it, while an unusable `prompt_text` still rejects the whole response. The main window passes the page-owned
 live narrator-generation AI selection back through the enabled-profile resolver.
 Character-voice services keep their independent target contract and resolve the
 selected narrator through the narrator service. `tts_runtime_ui_support`
@@ -152,6 +168,18 @@ Automated tests cannot judge naturalness, cultural suitability,
 intelligibility, legal usability, or character fit. Operators must audition and
 approve samples. Malformed current narrator documents intentionally require
 operator action.
+
+The preview-text character limit is operator-settable from 64 upward, while the
+accepted word range needs roughly 250 characters. A limit set below that
+contradicts the range: every generated preview is replaced by the canonical
+default, which itself exceeds such a limit and is truncated for display. The
+shipped default of 512 leaves ample room, so this only affects a deliberately
+lowered setting. Raising the settings minimum to match the word range would
+remove the contradiction.
+
+A narrator profile written by an earlier version keeps its shorter preview text,
+which is preserved as authored text rather than migrated. Operators lengthen
+those previews in the editor.
 
 ## Files
 

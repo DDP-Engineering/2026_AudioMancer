@@ -18,11 +18,17 @@
 
 from contextlib import suppress
 import json
+from math import ceil
 from pathlib import Path
 from uuid import uuid4
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service, voice_sample_import_service, voiceweaver_runtime_service
+from audiomancer.services import (
+    project_workspace_service,
+    tts_budget_service,
+    voice_sample_import_service,
+    voiceweaver_runtime_service,
+)
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
 from audiomancer.services.persistence_service import write_bytes_atomic, write_json_atomic
@@ -81,32 +87,48 @@ _NARRATOR_VOICE_STATUSES = {
 }
 
 DEFAULT_NARRATOR_LANGUAGE = "en"
+
+# @brief Spoken-word overage tolerated above the target narrator preview duration before rejection.
+_NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE = 6
+
 DEFAULT_PREVIEW_TEXT = (
-    "The hall fell silent as the final lantern dimmed, and every step carried the weight of an unspoken decision."
+    "The hall fell silent as the final lantern dimmed, and every step carried the weight of an unspoken decision. "
+    "Outside, the rain kept its slow measure against the glass, patient as the years."
 )
 DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
     "en": DEFAULT_PREVIEW_TEXT,
-    "ro": "Sala a amutit cand ultimul felinar s-a stins, iar fiecare pas purta greutatea unei hotarari nerostite.",
+    "ro": (
+        "Sala a amutit cand ultimul felinar s-a stins, iar fiecare pas purta greutatea unei hotarari nerostite. "
+        "Afara, ploaia isi tinea masura inceata pe geam, rabdatoare ca anii."
+    ),
     "de": (
         "Der Saal wurde still, als die letzte Laterne erlosch, "
-        "und jeder Schritt trug das Gewicht einer unausgesprochenen Entscheidung."
+        "und jeder Schritt trug das Gewicht einer unausgesprochenen Entscheidung. "
+        "Draussen hielt der Regen sein langsames Mass gegen das Glas, geduldig wie die Jahre."
     ),
     "fr": (
         "La salle devint silencieuse lorsque la derniere lanterne faiblit, "
-        "et chaque pas portait le poids d'une decision tue."
+        "et chaque pas portait le poids d'une decision tue. "
+        "Dehors, la pluie gardait sa mesure lente contre la vitre, patiente comme les annees."
     ),
-    "ru": "Зал затих, когда последний фонарь померк, и каждый шаг нес тяжесть невысказанного решения.",
+    "ru": (
+        "Зал затих, когда последний фонарь померк, и каждый шаг нес тяжесть невысказанного решения. "
+        "Снаружи дождь держал свой медленный счет по холодному стеклу, терпеливый, как прошедшие годы."
+    ),
     "pt": (
         "O salao ficou em silencio quando a ultima lanterna se apagou, "
-        "e cada passo carregava o peso de uma decisao nao dita."
+        "e cada passo carregava o peso de uma decisao nao dita. "
+        "La fora, a chuva mantinha o seu compasso lento contra o vidro, paciente como os anos."
     ),
     "es": (
         "El salon quedo en silencio cuando la ultima linterna se apago, "
-        "y cada paso llevaba el peso de una decision no pronunciada."
+        "y cada paso llevaba el peso de una decision no pronunciada. "
+        "Afuera, la lluvia mantenia su compas lento contra el cristal, paciente como los anos."
     ),
     "it": (
         "La sala cadde nel silenzio quando l'ultima lanterna si affievoli, "
-        "e ogni passo portava il peso di una decisione non detta."
+        "e ogni passo portava il peso di una decisione non detta. "
+        "Fuori, la pioggia teneva la sua misura lenta contro il vetro, paziente come gli anni."
     ),
 }
 _NARRATOR_LANGUAGE_LABELS = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
@@ -302,6 +324,34 @@ def preview_text_for_language(language_value: object) -> str:
         normalized_language,
         DEFAULT_PREVIEW_TEXT_BY_LANGUAGE[DEFAULT_NARRATOR_LANGUAGE],
     )
+
+
+def narrator_preview_word_bounds() -> tuple[int, int]:
+    """
+    @brief      Resolve the accepted narrator preview length range, in estimated spoken words.
+    @details    Shared by AI generation, the canonical per-language defaults, and the profile editor
+                so one configured duration range governs every narrator preview.
+    @return     Tuple of minimum and maximum accepted spoken-word counts.
+    @exception  None
+    """
+    words_per_second = float(config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND)
+    minimum_words = max(1, ceil(float(config.DEFAULT_NARRATOR_PREVIEW_MIN_AUDIO_SECONDS) * words_per_second))
+    target_maximum_words = ceil(float(config.DEFAULT_NARRATOR_PREVIEW_TARGET_AUDIO_SECONDS) * words_per_second)
+    return minimum_words, max(minimum_words, target_maximum_words + _NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE)
+
+
+def preview_text_range_error(preview_text: object) -> dict[str, int] | None:
+    """
+    @brief      Report why one narrator preview text falls outside the accepted length range.
+    @param[in]  preview_text Candidate narrator preview text.
+    @return     Mapping of the measured word count and accepted bounds, or None when acceptable.
+    @exception  None
+    """
+    minimum_words, maximum_words = narrator_preview_word_bounds()
+    word_count = tts_budget_service.estimated_word_count(str(preview_text or ""))
+    if minimum_words <= word_count <= maximum_words:
+        return None
+    return {"word_count": word_count, "minimum_words": minimum_words, "maximum_words": maximum_words}
 
 
 def apply_voice_language_to_profiles(project_root: str | Path, voice_language: object) -> str:

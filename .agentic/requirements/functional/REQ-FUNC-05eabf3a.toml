@@ -1,0 +1,29 @@
+schema = 1
+id = "REQ-FUNC-05eabf3a"
+title = "Out-of-range generated preview text shall fall back to the canonical default"
+status = "active"
+
+requirement = """
+If a generated narrator profile supplies preview text that the accepted preview bounds refuse, then narrator profile generation shall keep the profile, replace only its preview text with the canonical default preview text for the selected voice language, and report one warning naming that profile.
+"""
+
+verification = "A focused generation test returns one profile whose preview text is far below the accepted minimum alongside otherwise valid profiles, then observes that generation succeeds, that the stored preview text for that profile equals the canonical default for the selected voice language, that the other profiles keep their own preview text, and that the reported warning count is one."
+
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_substitutes_short_preview_text",
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_invalid_prompt_text",
+]
+
+spec = ""
+
+priority = "high"
+rationale = """
+Preview text is a sample script that carries no per-profile meaning and has a valid canonical replacement, whereas the voice-designer prompt is the irreplaceable generated content. Discarding a whole batch of good voice descriptions because one sample script came back the wrong length wastes the entire run and its tokens. Substituting is only honest if the operator is told it happened, which is why the warning is part of the same behavior.
+"""
+created = 2026-08-20
+updated = 2026-08-20

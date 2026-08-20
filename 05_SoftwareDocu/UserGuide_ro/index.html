@@ -718,6 +718,23 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     niciodata plafonul de caractere.
                 </p>
                 <p>
+                    Textul de previzualizare este rostit pentru a inregistra mostra pe care o imita fiecare voce
+                    generata, asa ca lungimea lui hotaraste cat de buna poate fi acea voce. Trebuie sa aiba intre
+                    <strong>25 si 44 de cuvinte</strong> &mdash; aproximativ 10 pana la 18 secunde de vorbire, cu 30
+                    pana la 38 de cuvinte ca tinta ideala. Sub acest prag mostra pastreaza tonul vocii, dar nu si
+                    ritmul ei; mult peste el, calitatea nu se mai imbunatateste. <strong>Salveaza</strong> refuza un
+                    text de previzualizare in afara intervalului si iti spune intervalul si numarul tau curent de
+                    cuvinte. La fel se intampla si cu o caseta goala: un profil nou se deschide cu textul standard
+                    pentru limba proiectului deja completat, asa ca golirea lui nu lasa nimic din care sa se
+                    inregistreze o mostra.
+                </p>
+                <p>
+                    Cand apesi <strong>Genereaza Naratori</strong>, i se cere modelului AI un text de previzualizare
+                    in acelasi interval. Daca returneaza totusi un text inutilizabil, doar textul acelui narator este
+                    inlocuit cu cel standard pentru limba respectiva &mdash; ceilalti naratori sunt pastrati, iar
+                    mesajul de la final iti spune cati au fost inlocuiti.
+                </p>
+                <p>
                     Cand limba vocii proiectului se schimba, AudioMancer actualizeaza limba fiecarui profil dar
                     pastreaza textul de previzualizare scris de tine sau de model; doar un text implicit neatins este
                     inlocuit cu cel implicit al noii limbi. Trage separatorul dintre lista si editor &mdash; lista nu mai

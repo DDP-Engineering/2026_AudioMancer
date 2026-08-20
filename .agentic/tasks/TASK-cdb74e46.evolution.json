@@ -1,0 +1,188 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-20T08:48:39.310493Z",
+      "anchor_head": "e47c624c92d802af663941e9bacb3f0129cf696a",
+      "anchor_id": "cbaf0491741fa76f",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "947df9ba8f277361769f70c008baf28b821676857f9de01cc411df17e0a1deff"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "8fbca68118669e2a1158ffc05b92fc0ec3c7d71e31b734747aff9d5618717694"
+          },
+          "path": "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "29589078db080f39948810f7131edfd84d7c369bd303622bc8c9f30e89582d3b"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "81c1c5a6cee228346e42b55703a532a95cfad73a7e86fa497623d5dfad2788e9"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/config.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f63a64cd4b390bb095f6305b933401862d6b459e4e8357a1583b85d750458692"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "a861d21fc870c92e4c1dcb90b9e9f42904475c24aa8155b7466f3fcb7bb2043a"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5d4295205d98498044f1a0b238848e87cfb9a21e12e92eb7bbef71d64b237b88"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "e9df337b0bee49a7e53550ec8e6ed57c485b436a79d875151347b89d542a97e8"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "76d6e95234762484277787df28132592a9f81c766028fdc1b3fbad554c20fb46"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "fcefd698e5b02b752e73cf359319ae6e4cc190f0cedb2f762f052593389596e2"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0c070c6b520cdc1e4bbfc8c6df6a876223a017559e9a4673b6a6920dec54f9f0"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "c7ee44fe1f3b2042296cc8a5c07b783a4d3abbc575bf35d7ba24706688310822"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "268bb1bc942f13a00423a190c0187c7c9da3ff4735dbdffeecbf6296dcac64b9"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "9ab8d156ee4f3a3c16f649fa2dc9e578e4cbda7eab0f8a3d21d04d4ebe9d5cd7"
+          },
+          "path": "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c490c7bbbc190a568729631885c37399c1c8a6a2f446a1b584d3e1758d44a291"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "e6d82119a4615af401685383204af0724fae55c30bce089fc9c2e670c52dba45"
+          },
+          "path": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "131cf44f696ccac3f4b627473b2905be364caddc06c2edea7c1d6e9aede89fe1"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "c8641fa3c750364f0a46b46947d82058c75915d649764fd0b5f9d8ed9b376e56"
+          },
+          "path": "05_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "bef9d581566a991242b2c46024c665f3e89f607b811bbdce1a2d05cb3096ff19"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "b146bcea0840a0070e626c3acec4ef9cae7a22c6410f9d589a6dd3ec91e7de13"
+          },
+          "path": "05_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "733466855fa8214a482b18e5b6a798536e2c026af6004900bfa9e012547d32b3"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "47a4f5a27dd59a4a8e27b00843af98ced5bd031d3125b6692e37c9c18c2d1a8f"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 4,
+            "removed": 0,
+            "unchanged": 104
+          },
+          "source": {
+            "added": 0,
+            "modified": 5,
+            "removed": 0,
+            "unchanged": 98
+          },
+          "tests": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 119
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 11,
+          "removed": 0,
+          "unchanged": 321
+        }
+      },
+      "current_head": "e47c624c92d802af663941e9bacb3f0129cf696a",
+      "evolution_stage": "deliver",
+      "evolved_at": "2026-08-20T09:10:31.329924Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-cdb74e46"
+}

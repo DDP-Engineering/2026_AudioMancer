@@ -2039,4 +2039,111 @@ def test_narrator_profile_confirmations_use_shared_default_no_helper(monkeypatch
     assert len(calls) == 3
 
 
+def test_narator_voice_save_blocks_out_of_range_preview_text(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify a hand-written preview outside the accepted word range blocks the save.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerPreviewRange")
+    window = _build_window(qtbot, project_root)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Range Narrator",
+        "en",
+        "A mature narrator voice with warm resonance, measured pacing, clear diction, and restrained emotion.",
+        narrator_definition_service.DEFAULT_PREVIEW_TEXT,
+    )
+    warnings: list[tuple[str, str]] = []
+    update_calls: list[object] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, title, message: warnings.append((title, message)),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "update_custom_profile",
+        lambda *args, **kwargs: update_calls.append(args),
+    )
+    minimum_words, maximum_words = narrator_definition_service.narrator_preview_word_bounds()
+
+    narator_voice_ui_controller.handle_save_profile_requested(
+        window,
+        {
+            "profile_id": profile["profile_id"],
+            "display_name": "Range Narrator",
+            "language": "en",
+            "prompt_text": "A mature narrator voice with warm resonance and measured pacing throughout the book.",
+            "preview_text": "Only five words here.",
+        },
+    )
+
+    assert update_calls == []
+    assert warnings == [
+        (
+            ui_state_service.translate("dialog.project_error_title", "en"),
+            ui_state_service.translate("narator_voice.error_preview_text_out_of_range", "en").format(
+                word_count=4,
+                minimum_words=minimum_words,
+                maximum_words=maximum_words,
+            ),
+        )
+    ]
+
+
+def test_narator_voice_save_blocks_cleared_preview_text(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify clearing the preview box blocks the save instead of silently restoring the default.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerPreviewCleared")
+    window = _build_window(qtbot, project_root)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Cleared Narrator",
+        "en",
+        "A mature narrator voice with warm resonance, measured pacing, clear diction, and restrained emotion.",
+        narrator_definition_service.DEFAULT_PREVIEW_TEXT,
+    )
+    warnings: list[tuple[str, str]] = []
+    update_calls: list[object] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "warning",
+        lambda _window, title, message: warnings.append((title, message)),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_definition_service,
+        "update_custom_profile",
+        lambda *args, **kwargs: update_calls.append(args),
+    )
+
+    narator_voice_ui_controller.handle_save_profile_requested(
+        window,
+        {
+            "profile_id": profile["profile_id"],
+            "display_name": "Cleared Narrator",
+            "language": "en",
+            "prompt_text": "A mature narrator voice with warm resonance and measured pacing throughout the book.",
+            "preview_text": "   ",
+        },
+    )
+
+    assert update_calls == []
+    assert len(warnings) == 1
+    assert "0" in warnings[0][1]
+    assert (
+        narrator_definition_service.load_profiles(project_root)[0]["preview_text"]
+        == narrator_definition_service.DEFAULT_PREVIEW_TEXT
+    )
+
+
 # END OF FILE

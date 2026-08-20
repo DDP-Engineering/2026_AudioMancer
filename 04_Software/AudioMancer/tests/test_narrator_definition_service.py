@@ -764,4 +764,18 @@ def test_narrator_language_application_skips_unchanged_document_write(monkeypatc
     assert document_path.read_bytes() == original_bytes
 
 
+def test_canonical_preview_defaults_clear_the_minimum_word_bound() -> None:
+    """
+    @brief      Verify every canonical default preview text is long enough for a voice-clone reference.
+    @return     None.
+    @exception  None
+    """
+    minimum_words, maximum_words = narrator_definition_service.narrator_preview_word_bounds()
+
+    for language_code, preview_text in narrator_definition_service.DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.items():
+        word_count = len(preview_text.split())
+        assert word_count >= minimum_words, f"{language_code} default preview is too short"
+        assert word_count <= maximum_words, f"{language_code} default preview is too long"
+
+
 # END OF FILE

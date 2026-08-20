@@ -12,6 +12,23 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Narrator voice samples are now long enough to clone properly. The sample text
+  the AI writes for each narrator was aiming at roughly 6 to 10 seconds of
+  speech, which is below what voice cloning needs to capture a voice reliably -
+  short samples carry the tone but not the rhythm. Generated sample text now
+  targets 12 to 15 seconds, and the built-in sample text offered for narrators
+  you create yourself was lengthened to match, in all eight languages.
+- Generating narrator profiles no longer throws away the whole batch when the AI
+  returns one bad sample text. Previously a single narrator whose sample came
+  back too short or too long failed the entire run, losing every other narrator
+  it had just written. Now only that narrator's sample text is replaced with the
+  standard text for the language, the rest are kept, and the confirmation
+  message tells you how many were replaced.
+- The Narrator Voice editor now refuses to save a sample text that is too short
+  or too long to record a usable voice sample, and tells you the accepted range
+  and how many words you currently have. An emptied box is refused the same way.
+  Before, a too-short sample text was accepted silently, and an empty one was
+  quietly swapped for the default without telling you.
 - Romanian interface: three status words were wrong. An Audio Block waiting to
   be generated showed the raw token "in_asteptare" with an underscore, and the
   Character Voices readiness line said "negata" - which reads as *denied*, not

@@ -1,0 +1,27 @@
+schema = 1
+id = "REQ-FUNC-fd4b9595"
+title = "Narrator generation prompt shall request a preview inside the accepted range"
+status = "active"
+
+requirement = """
+The shipped narrator profile generation prompt shall instruct the model to write preview text whose requested spoken-word range lies inside the word range that narrator profile generation accepts.
+"""
+
+verification = "A focused test reads the shipped narrator profile generation prompt file, extracts the spoken-word range it asks the model for, and observes that both ends fall within the accepted minimum and maximum preview word counts computed from configuration."
+
+affected_paths = [
+  "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt",
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+]
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_generation_prompt_requests_preview_inside_accepted_range",
+]
+
+spec = ""
+
+priority = "normal"
+rationale = """
+The prompt and the validator hold the same numbers in two places. When only one is changed the model is asked for text the validator then refuses, which wastes a whole generation run. Pinning the prompt's stated range against the computed bounds makes that drift fail a test instead of a run.
+"""
+created = 2026-08-20
+updated = 2026-08-20
