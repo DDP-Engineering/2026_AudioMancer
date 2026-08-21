@@ -2096,6 +2096,84 @@ def test_audio_blocks_split_planner_prefers_sentences_then_word_groups() -> None
     assert " ".join(word_plan["parts"]) == "One two three four five six."
 
 
+def test_generation_split_keeps_a_sentence_whole_below_the_hard_ceiling() -> None:
+    """
+    @brief      Verify REQ-FUNC-79fd5f3a a sentence past the target is emitted whole under the ceiling.
+    @return     None.
+    @exception  None
+    """
+    long_sentence = "One two three four five six seven eight nine ten."
+    plan = audio_blocks_service._plan_audio_block_splits(  # noqa: SLF001
+        f"Short opener. {long_sentence} Short closer.",
+        {"split_audio_seconds_budget": 1.6, "hard_word_count": 50},
+    )
+
+    assert plan["strategy"] == "sentence"
+    assert long_sentence in plan["parts"]
+
+
+def test_generation_split_breaks_a_sentence_only_above_the_hard_ceiling() -> None:
+    """
+    @brief      Verify REQ-FUNC-79fd5f3a a sentence past the ceiling is divided at the ceiling.
+    @return     None.
+    @exception  None
+    """
+    long_sentence = "One two three four five six seven eight nine ten."
+    plan = audio_blocks_service._plan_audio_block_splits(  # noqa: SLF001
+        long_sentence,
+        {"split_audio_seconds_budget": 1.6, "hard_word_count": 6},
+    )
+
+    assert plan["strategy"] == "word_group"
+    assert len(plan["parts"]) > 1
+    assert all(len(str(part).split()) <= 6 for part in plan["parts"])
+    assert " ".join(str(part) for part in plan["parts"]) == long_sentence
+
+
+def test_generation_request_raises_the_token_ceiling_for_an_over_target_part(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-FUNC-46959c54 a part past the operator target is given room to finish.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    long_sentence = "The narrator says " + " ".join(f"token{index}" for index in range(36)) + " finally."
+    recorded_parameters = _generate_recording_model_parameters(
+        monkeypatch,
+        tmp_path,
+        "AudioBlocksOverTargetCeiling",
+        long_sentence,
+        128,
+    )
+
+    assert len(recorded_parameters) == 1
+    requested_tokens = int(recorded_parameters[0]["max_new_tokens"])
+    assert requested_tokens > 128, "the operator target alone would truncate a part it could not fit"
+    assert requested_tokens >= 240, "the ceiling must cover the part's estimated spoken length"
+    assert requested_tokens <= 8192
+
+
+def test_generation_request_keeps_the_operator_ceiling_for_a_part_within_target(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-FUNC-46959c54 a part inside the operator target keeps that target as its ceiling.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    recorded_parameters = _generate_recording_model_parameters(
+        monkeypatch,
+        tmp_path,
+        "AudioBlocksWithinTargetCeiling",
+        "Narration one is short.",
+        128,
+    )
+
+    assert len(recorded_parameters) == 1
+    assert int(recorded_parameters[0]["max_new_tokens"]) == 128
+
+
 def test_audio_blocks_part_artifact_paths_are_keyed_by_speech_block_id(tmp_path) -> None:
     """
     @brief      Verify split-part artifact names derive from `speech_block_id` alone.
@@ -2900,6 +2978,79 @@ def _update_audio_blocks_document(project_root, **fields):
     audio_blocks_service.write_audio_blocks_document(project_root, {**document, **fields})
 
 
+def _generate_recording_model_parameters(monkeypatch, tmp_path, name, block_text, max_generation_tokens):
+    """
+    @brief      Run one Audio Blocks generation over a single block and record every request's parameters.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  name Project display name.
+    @param[in]  block_text Spoken text for the single fixture block.
+    @param[in]  max_generation_tokens Operator generation-token target to configure.
+    @return     Recorded model-parameter mappings, one per generation request.
+    @exception  None
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, name)
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)[:1]
+    speech_blocks[0]["text"] = block_text
+    _write_speech_blocks_fixture_document(project_root, speech_blocks)
+
+    active_model = {
+        "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+        "status": "ready",
+        "supported_generation_modes": ["clone"],
+        "generation_parameter_ranges": {"max_new_tokens": {"recommended_maximum": 2048, "hard_maximum": 8192}},
+    }
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": dict(active_model), "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: {
+            "active_model": dict(active_model),
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+            },
+            "result": {"available": True, "summary": "ready"},
+        },
+    )
+    recorded_parameters: list[dict[str, object]] = []
+
+    def _generate_voice_clone_from_prompt(*_args, model_parameters=None, **_kwargs):
+        recorded_parameters.append(dict(model_parameters or {}))
+        return {"status": "running"}
+
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        _generate_voice_clone_from_prompt,
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: _wav_bytes("part"),
+    )
+    runtime_settings = _runtime_settings()
+    for discovered_model in runtime_settings["discovered_models"]:
+        discovered_model["generation_parameter_ranges"] = dict(active_model["generation_parameter_ranges"])
+    runtime_settings["speech_block_max_generation_tokens"] = max_generation_tokens
+    audio_blocks_service.start_or_continue_generation(project_root, manifest, runtime_settings)
+    return recorded_parameters
+
+
 def _write_speech_blocks_fixture_document(project_root, blocks, *, status: str = "completed"):
     """Persist a valid single Speech Blocks document wrapping fixture blocks."""
     speech_blocks_service.write_speech_blocks_document(
@@ -2935,3 +3086,50 @@ def _read_speech_blocks_fixture_blocks(project_root):
     return document["blocks"] if document else []
 
 # END OF FILE
+
+
+def test_audio_blocks_skips_reloading_an_already_active_clone_model(monkeypatch) -> None:
+    """
+    @brief      Verify REQ-NFR-5bda19fd an already-active clone model is never reloaded.
+    @details    The early return turns on the live active-model identity, not on which source
+                supplied the token budget, so adopting a runtime-reported budget cannot make it
+                unreachable and force a redundant load before every run.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    clone_model_id = "Qwen3-TTS-12Hz-1.7B-Base"
+    clone_model_payload = {
+        "model_id": clone_model_id,
+        "default_model_parameters": {"max_new_tokens": 512},
+        "generation_parameter_ranges": {
+            "max_new_tokens": {"default": 512, "recommended_maximum": 2048, "hard_maximum": 8192}
+        },
+    }
+    active_status = {
+        "active_model": {"model_id": clone_model_id, "effective_model_parameters": {"max_new_tokens": 512}},
+        "operation": {"status": "idle"},
+    }
+    load_model_calls: list[str] = []
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: active_status,
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda _base_url, _api_key, model_id, **_kwargs: load_model_calls.append(model_id),
+    )
+
+    model_budget = audio_blocks_service._ensure_clone_model_loaded(
+        {"base_url": "http://127.0.0.1:8059", "runtime_api_key": "", "timeout_seconds": 5},
+        clone_model_id,
+        clone_model_payload,
+        None,
+        1,
+        0,
+    )
+
+    assert load_model_calls == []
+    assert model_budget["model_token_budget"] > 0

@@ -23,8 +23,9 @@ Rules:
 - Use multiple sequential blocks when possible: HVAC airflow, fans, transformer buzz, relay clicks, material creaks, footsteps, weather, distant machinery, impacts, fire, water, wind, room tone, crowd distance, or battlefield ambience.
 - Include timing and motion language: occasional, intermittent, sparse, irregular, distant, muffled, fading, shifting, approaching, receding, or low-volume.
 - Make prompts realistic, subtle, layered, and non-musical unless the source text explicitly requires stylized sound.
-- Avoid wording that may produce one continuous low beep, pure tone, generic hum, alarm, or single drone.
-- Keep generated sound non-verbal. Put "continuous beep, pure sine wave, single tone, alarm, music, melody, speech, voices, dialogue, singing, loud bass drone, harsh buzzing, distorted, low quality" in negative_prompt unless the scene specifically requires one of those elements.
+- Avoid wording that may produce one featureless sustained tone, pure oscillator, or single drone. Rhythm is not featureless: ticking, dripping, footsteps, engine idle and lapping water are good blocks.
+- Universal exclusion list: {negative_prompt_core}
+- Set negative_prompt to that universal list. Append a further exclusion only when it would contradict the sound you described in that same block, and keep the addition short; every extra term weakens the rest.
 - For each ambience position or scene-change point, create no more than {max_blocks_per_sequence} blocks.
 - Set duration_seconds to {duration_seconds} for every scene_ambience_block; the final Audio Assembly will mix related blocks together.
 - For scene_change cues, set after_speech_block_id to the speech block id immediately before the acoustic change when this can be inferred.

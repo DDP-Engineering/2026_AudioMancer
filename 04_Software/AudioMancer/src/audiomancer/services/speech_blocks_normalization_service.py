@@ -240,8 +240,6 @@ def warning_entries_from_ai_blocks(
 def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> dict[str, object]:
     """
     @brief      Resolve TTS budget metadata for narrator-only splitting.
-    @details    The model budget is the hard cap; the operator's preferred block duration can
-                only narrow it further.
     @param[in]  settings_payload Optional application settings payload.
     @return     TTS budget payload.
     @exception  None
@@ -253,9 +251,9 @@ def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> 
             for model in settings_payload.get("tts_runtime_discovered_models", [])
             if isinstance(model, dict)
         ]
-    return tts_budget_service.apply_block_target_audio_seconds(
-        tts_budget_service.resolve_cached_tts_budget(discovered_models),
-        settings_payload,
+    return tts_budget_service.resolve_cached_tts_budget(
+        discovered_models,
+        tts_budget_service.resolve_generation_token_limit(settings_payload),
     )
 
 
@@ -585,6 +583,7 @@ def split_over_budget_ai_blocks(
     @exception  None
     """
     safe_word_count = safe_tts_word_count(tts_budget)
+    hard_word_count = hard_tts_word_count(tts_budget)
     if safe_word_count <= 0:
         return ai_blocks, []
 
@@ -608,6 +607,7 @@ def split_over_budget_ai_blocks(
             source_text if source_text_matches_audio else audio_text,
             content_kind,
             safe_word_count,
+            hard_word_count,
         )
         if len(audio_parts) <= 1:
             split_blocks.append(ai_block)
@@ -642,18 +642,24 @@ def split_text_for_tts_budget(
     text: str,
     content_kind: str,
     safe_word_count: int,
+    hard_word_count: int = 0,
     boundary_index: int = 0,
 ) -> tuple[list[str], bool]:
     """
     @brief      Split one text span using language-agnostic boundaries before hard fallbacks.
+    @details    The safe count is a packing target: spans are combined up to it, but a span with
+                no boundary left to divide on is emitted whole while it stays inside the hard
+                count. Only a span past the hard count is cut where no boundary exists.
     @param[in]  text Text span to split.
     @param[in]  content_kind Current content-kind token.
-    @param[in]  safe_word_count Maximum estimated budget units per part.
+    @param[in]  safe_word_count Preferred maximum estimated budget units per part.
+    @param[in]  hard_word_count Budget units past which an indivisible span must be cut anyway.
     @param[in]  boundary_index Preferred boundary level index.
     @return     Tuple of split text spans and whether a hard fallback was used.
     @exception  None
     """
     source_text = str(text)
+    hard_unit_limit = max(int(hard_word_count or 0), int(safe_word_count))
     if not source_text.strip():
         return [source_text], False
     if tts_budget_unit_count(normalize_block_text(source_text, content_kind)) <= safe_word_count:
@@ -673,13 +679,16 @@ def split_text_for_tts_budget(
                 span,
                 content_kind,
                 safe_word_count,
+                hard_unit_limit,
                 boundary_index + 1,
             )
             split_parts.extend(span_parts)
             used_hard_split = used_hard_split or span_used_hard_split
         return pack_tts_split_parts(split_parts, content_kind, safe_word_count), used_hard_split
 
-    return hard_split_text_for_tts_budget(source_text, content_kind, safe_word_count), True
+    if tts_budget_unit_count(normalize_block_text(source_text, content_kind)) <= hard_unit_limit:
+        return [source_text], False
+    return hard_split_text_for_tts_budget(source_text, content_kind, hard_unit_limit), True
 
 
 def split_paragraph_spans(text: str) -> list[str]:
@@ -826,6 +835,18 @@ def safe_tts_word_count(tts_budget: dict[str, object] | None) -> int:
     """
     budget_payload = tts_budget or resolve_narrator_only_budget(None)
     return max(0, int(budget_payload.get("safe_word_count", 0) or 0))
+
+
+def hard_tts_word_count(tts_budget: dict[str, object] | None) -> int:
+    """
+    @brief      Resolve the word count past which an indivisible span must be cut anyway.
+    @param[in]  tts_budget Optional TTS budget metadata.
+    @return     Hard word count, never below the safe count.
+    @exception  None
+    """
+    budget_payload = tts_budget or resolve_narrator_only_budget(None)
+    safe_word_count = safe_tts_word_count(budget_payload)
+    return max(safe_word_count, int(budget_payload.get("hard_word_count", 0) or 0))
 
 
 def tts_budget_unit_count(text: str) -> int:

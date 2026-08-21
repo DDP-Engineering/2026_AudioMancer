@@ -1,0 +1,83 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-a80dacf7"
+
+title = "The scene-ambience negative prompt shall carry a configurable universal core plus scene-specific exclusions"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+One configured list of universally unwanted sounds shall be the only exclusions applied to every scene-ambience block, reaching both the rendered generation prompt and the value stored when the model returns no exclusions of its own, so that any further exclusion on a block is one the model chose for that scene's described sound.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "A focused test renders the scene-ambience user prompt from settings carrying a distinctive configured core and observes that exact text in the rendered prompt; normalizing a model response whose block omits `negative_prompt` observes the same configured core stored on the block, and a response supplying its own exclusions observes those kept unchanged. A further test asserts neither shipped ambience prompt file names a periodicity term - beep, sine wave, single tone, alarm, drone or buzz - among the exclusions it instructs, so a rhythmic source is never suppressed by default."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "04_Software/AudioMancer/prompts/scene_ambience_system.txt",
+  "04_Software/AudioMancer/prompts/scene_ambience_user.txt",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_prompt_carries_the_configured_negative_core",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_block_without_exclusions_falls_back_to_the_configured_core",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_block_keeps_model_chosen_exclusions",
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_shipped_ambience_prompts_exclude_no_periodicity_terms_by_default",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = """
+The shipped prompts previously instructed one thirteen-term list on every block, six terms of which - continuous beep, pure sine wave, single tone, alarm, loud bass drone, harsh buzzing - suppress periodicity. A ticking clock, dripping tap, idling engine or distant machinery rhythm was therefore fought on every block whether or not the scene called for it: scene-specific exclusions had been written into a universal default. Length also costs strength, because the sound runtime applies the exclusions as one guidance embedding, so thirteen diluted terms pull less on the ones that always matter than a handful do. Keeping the universal core in one configured place additionally removes a second, shorter default that had been hardcoded separately and disagreed with the prompts.
+"""
+
+created = 2026-08-20
+updated = 2026-08-20

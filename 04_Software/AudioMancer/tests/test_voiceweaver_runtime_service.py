@@ -63,7 +63,6 @@ def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
         if url == "http://127.0.0.1:8059/v1/status":
             return {
                 "active_model": {"model_id": "definition_model"},
-                "device_diagnostics": {"status_message": "CUDA active.", "device_mode": "cuda"},
             }
         raise AssertionError(url)
 
@@ -165,7 +164,7 @@ def test_probe_runtime_rejects_invalid_models_payload(monkeypatch) -> None:
             return {"status": "ok"}
         if url.endswith("/v1/models"):
             return {"models": "invalid"}
-        return {"active_model": None, "device_diagnostics": {}}
+        return {"active_model": None}
 
     monkeypatch.setattr(voiceweaver_runtime_service, "_read_json", _fake_read_json)
 

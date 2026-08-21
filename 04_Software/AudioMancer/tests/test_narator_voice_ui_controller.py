@@ -1130,7 +1130,6 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
         **_default_settings_payload(),
         "llm_profiles": [_ai_profile_payload("profile_1")],
         "default_narrator_profile_generation_profile_id": "profile_1",
-        "tts_preview_text_character_limit": 180,
     }
     window = _build_window(qtbot, project_root, settings_payload=settings_payload)
     captured: dict[str, object] = {}
@@ -1164,7 +1163,6 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
         ai_profile,
         profile_count,
         voice_language,
-        preview_limit,
         additional_profile_instructions=None,
         **_kwargs,
     ):
@@ -1179,7 +1177,6 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
                 "ai_profile_id": ai_profile["id"],
                 "profile_count": profile_count,
                 "voice_language": voice_language,
-                "preview_limit": preview_limit,
                 "additional_profile_instructions": additional_profile_instructions,
             }
         )
@@ -1240,7 +1237,6 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
     assert captured["ai_profile_id"] == "profile_1"
     assert captured["profile_count"] == 4
     assert captured["voice_language"] == "en"
-    assert captured["preview_limit"] == 180
     assert captured["additional_profile_instructions"] == "Prefer crisp theatrical-but-not-grandiose profiles."
     assert observed_instruction_defaults == [""]
 
@@ -1974,10 +1970,8 @@ def _default_settings_payload() -> dict[str, object]:
         "tts_runtime_probe_message": "",
         "tts_runtime_discovered_models": [],
         "tts_runtime_active_model_id": None,
-        "tts_runtime_device_diagnostics": {},
         "tts_audio_preview_timeout_seconds": 60,
         "tts_audio_generation_timeout_seconds": 300,
-        "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     }
 
 

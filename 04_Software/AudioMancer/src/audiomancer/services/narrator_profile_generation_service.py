@@ -135,7 +135,6 @@ def generate_narrator_profiles(
     ai_profile_payload: dict[str, object],
     profile_count: int,
     voice_language: str,
-    preview_text_character_limit: int,
     progress_callback=None,
     cancel_requested=None,
     additional_profile_instructions: str | None = None,
@@ -147,7 +146,6 @@ def generate_narrator_profiles(
     @param[in]  ai_profile_payload Selected validated AI profile payload.
     @param[in]  profile_count Requested narrator profile count.
     @param[in]  voice_language Selected audiobook voice language code.
-    @param[in]  preview_text_character_limit Maximum accepted preview text characters.
     @param[in]  progress_callback Optional progress callback for the modal dialog.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @param[in]  additional_profile_instructions Optional operator-supplied profile-generation rules.
@@ -375,7 +373,6 @@ def generate_narrator_profiles(
             requested_count,
             allocation,
             normalized_voice_language,
-            preview_text_character_limit,
         )
     except Exception:
         _write_interrupted_state("failed")
@@ -893,7 +890,6 @@ def _validated_generated_profiles(
     requested_count: int,
     allocation: dict[str, object],
     voice_language: str,
-    preview_text_character_limit: int,
 ) -> list[dict[str, object]]:
     """
     @brief      Validate generated narrator profiles before persistence.
@@ -901,7 +897,6 @@ def _validated_generated_profiles(
     @param[in]  requested_count Requested narrator profile count.
     @param[in]  allocation Required gender allocation payload.
     @param[in]  voice_language Selected audiobook voice language code.
-    @param[in]  preview_text_character_limit Maximum accepted preview text characters.
     @details    Preview text whose length the accepted bounds refuse is replaced by the canonical
                 default for the selected language rather than failing the batch, because it is an
                 interchangeable sample script; an unusable prompt_text still rejects the whole
@@ -916,7 +911,6 @@ def _validated_generated_profiles(
     warnings: list[str] = []
     names: set[str] = set()
     gender_counts = {"male": 0, "female": 0}
-    preview_limit = max(1, int(preview_text_character_limit or config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
     min_preview_units = _minimum_preview_budget_units()
     max_preview_units = _maximum_preview_budget_units()
     for index, raw_profile in enumerate(raw_profiles, start=1):
@@ -949,8 +943,6 @@ def _validated_generated_profiles(
                 f"is too long for a narrator sample ({preview_budget_units} budget units, "
                 f"maximum {max_preview_units})"
             )
-        elif len(preview_text) > preview_limit:
-            unusable_preview_reason = f"exceeds {preview_limit} characters"
         if unusable_preview_reason:
             preview_text = narrator_definition_service.preview_text_for_language(voice_language)
             warnings.append(

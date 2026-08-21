@@ -1812,12 +1812,19 @@ def _resolve_scene_ambience_settings(
         int(config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE),
     )
     allowed_positions = _scene_ambience_allowed_positions(placement)
+    negative_prompt = str(
+        payload.get(
+            "scene_ambience_negative_prompt",
+            payload.get("negative_prompt", config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT),
+        )
+    ).strip()
     return {
         "enabled": enabled,
         "placement_policy": placement,
         "duration_seconds": duration_seconds,
         "max_blocks_per_sequence": max_blocks_per_sequence,
         "allowed_positions": allowed_positions,
+        "negative_prompt": negative_prompt or config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT,
     }
 
 
@@ -2397,6 +2404,7 @@ def _scene_ambience_user_prompt(
             "duration_seconds": str(float(scene_ambience_settings.get("duration_seconds", 10.0))),
             "max_blocks_per_sequence": str(int(scene_ambience_settings.get("max_blocks_per_sequence", 6))),
             "allowed_positions": ", ".join(allowed_positions),
+            "negative_prompt_core": _scene_ambience_negative_prompt_core(scene_ambience_settings),
             "speech_blocks_json": json.dumps(compact_blocks, indent=2, ensure_ascii=False),
         },
     )
@@ -2438,7 +2446,7 @@ def _normalize_scene_ambience_response(
         sequence_key = (ambience_position, after_speech_block_id if ambience_position == "scene_change" else "")
         negative_prompt = str(raw_block.get("negative_prompt", "")).strip()
         if not negative_prompt:
-            negative_prompt = "speech, voices, dialogue, singing, music, low quality, distorted"
+            negative_prompt = _scene_ambience_negative_prompt_core(scene_ambience_settings)
         remaining_slots = max_blocks_per_sequence - sequence_counts.get(sequence_key, 0)
         if remaining_slots <= 0:
             continue
@@ -2470,6 +2478,17 @@ def _normalize_scene_ambience_response(
                 }
             )
     return normalized_blocks
+
+
+def _scene_ambience_negative_prompt_core(scene_ambience_settings: dict[str, object]) -> str:
+    """
+    @brief      Resolve the exclusions applied to every Scene Ambience block whatever the scene.
+    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
+    @return     Universal exclusion list.
+    @exception  None
+    """
+    configured_core = str(scene_ambience_settings.get("negative_prompt", "")).strip()
+    return configured_core or config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT
 
 
 def _split_composed_scene_ambience_prompt(sound_prompt: str) -> list[str]:

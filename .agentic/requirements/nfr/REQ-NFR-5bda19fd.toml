@@ -61,6 +61,7 @@ affected_paths = [
 linked_tests = [
   "04_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py::test_ensure_model_active_loads_waits_and_returns_terminal_status",
   "04_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py::test_ensure_model_active_preserves_failure_and_wrong_model_errors",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_skips_reloading_an_already_active_clone_model",
 ]
 
 # --- optional below this line ---
@@ -72,4 +73,4 @@ priority = "normal"   # low | normal | high
 rationale = "The shared load-and-verify tail removes drift while clone budget selection and its runtime-effective early return remain explicit."
 
 created = 2026-08-10
-updated = 2026-08-10
+updated = 2026-08-20

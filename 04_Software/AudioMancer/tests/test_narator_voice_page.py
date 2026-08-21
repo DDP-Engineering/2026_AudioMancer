@@ -53,9 +53,9 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     assert page._generate_sample_button.minimumSizeHint().width() <= page._generate_sample_button.sizeHint().width()
 
 
-def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit(qtbot) -> None:
+def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_keep_preview_text(qtbot) -> None:
     """
-    @brief      Verify narrator prompt and preview editors use scrollbars and enforce preview text length.
+    @brief      Verify REQ-UX-571c3e2f the preview editor scrolls and never shortens preview text.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -90,7 +90,6 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
         can_select=False,
         preview_available=False,
         status_lines=[],
-        preview_text_character_limit=5,
     )
 
     assert page._designer_prompt.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
@@ -102,13 +101,13 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     assert page._designer_group.maximumHeight() > 1000
     assert page._preview_text_edit.maximumHeight() > 1000
     assert page._preview_group.maximumHeight() > 1000
-    assert page._preview_text_edit.toPlainText() == "abcde"
+    assert page._preview_text_edit.toPlainText() == "abcdef"
 
     page.begin_edit_mode()
     page._preview_text_edit.setPlainText("123456789")
 
-    assert page._preview_text_edit.toPlainText() == "12345"
-    assert page.current_editor_payload()["preview_text"] == "12345"
+    assert page._preview_text_edit.toPlainText() == "123456789"
+    assert page.current_editor_payload()["preview_text"] == "123456789"
 
 
 def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:

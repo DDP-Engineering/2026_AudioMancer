@@ -169,6 +169,45 @@ def test_tts_budget_split_preserves_whitespace_only_semantic_spans(
     assert "".join(hard_parts) == source_text
 
 
+def test_sentence_over_the_target_is_kept_whole_below_the_hard_ceiling() -> None:
+    """
+    @brief      Verify REQ-FUNC-79fd5f3a a sentence past the target survives intact under the ceiling.
+    @return     None.
+    @exception  None
+    """
+    long_sentence = "The narrator says " + " ".join(f"token{index}" for index in range(60)) + " finally."
+    source_text = f"Short opener. {long_sentence} Short closer."
+    blocks, _warnings = speech_blocks_normalization_service.split_over_budget_ai_blocks(
+        "chunk-0003",
+        [{"content_kind": "narration", "source_text": source_text, "text": source_text, "warning_flags": []}],
+        {"safe_word_count": 20, "hard_word_count": 200},
+    )
+
+    assert any(str(block["text"]).strip() == long_sentence for block in blocks)
+    assert all("tts_hard_split" not in list(block.get("warning_flags", [])) for block in blocks)
+
+
+def test_sentence_over_the_hard_ceiling_is_split_at_the_ceiling() -> None:
+    """
+    @brief      Verify REQ-FUNC-79fd5f3a a sentence past the ceiling is divided at the ceiling, not the target.
+    @return     None.
+    @exception  None
+    """
+    long_sentence = "The narrator says " + " ".join(f"token{index}" for index in range(60)) + " finally."
+    split_parts, used_hard_split = speech_blocks_normalization_service.split_text_for_tts_budget(
+        long_sentence,
+        "narration",
+        20,
+        30,
+    )
+
+    assert used_hard_split
+    assert len(split_parts) > 1
+    assert "".join(split_parts) == long_sentence
+    assert all(speech_blocks_normalization_service.tts_budget_unit_count(part) <= 30 for part in split_parts)
+    assert any(speech_blocks_normalization_service.tts_budget_unit_count(part) > 20 for part in split_parts)
+
+
 def test_dialogue_normalization_unwraps_every_authoritative_quote_pair() -> None:
     """
     @brief      Verify spoken dialogue unwrapping follows the splitter's authoritative quote pairs.

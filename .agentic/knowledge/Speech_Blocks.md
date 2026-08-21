@@ -44,9 +44,25 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Each block has a stable `speech_block_id`, content/speaker kind and identifiers, text or ambience prompt, duration, warning flags, and approval state.
 - Speech Block identifiers are unique within the authoritative current document, not across deleted history. A deleted identifier may be allocated again; the controller therefore removes the deleted Audio Blocks row and generated WAV before manifest refresh or any later insertion can reuse it. Service-only deletion callers must provide the same downstream cleanup.
 - Source selection preserves canonical ordering; normalization and splits preserve usable spoken text while keeping blocks within configured TTS limits.
-- Cached VoiceWeaver budgets use a persisted `max_new_tokens` generation-range
-  default when effective/default model parameters omit it, preserving the
-  runtime-reported split capacity (`REQ-FUNC-1fef6b33`).
+- Cached VoiceWeaver budgets plan against the model's reported
+  `recommended_maximum` token value, bounded by its `hard_maximum`, and fall
+  back to effective, default and range-default parameters in that order
+  (`REQ-FUNC-82401294`, `REQ-FUNC-1fef6b33`), then narrowed to the operator's
+  configured token ceiling, which may only lower it (`REQ-FUNC-8ee67d8f`). Audio seconds per token come from
+  the model's reported rate when it publishes one (`REQ-FUNC-9029b464`).
+- The operator's token ceiling is a packing target, not a cut. `split_over_budget_ai_blocks()`
+  reads both `safe_tts_word_count()` and `hard_tts_word_count()`, and
+  `split_text_for_tts_budget()` combines spans up to the safe count but emits a
+  span with no boundary left to divide on whole while it stays inside the hard
+  count. `hard_split_text_for_tts_budget()` still exists and still cuts without
+  regard for meaning, but only past the hard count, so `tts_hard_split` now marks
+  a genuinely unspeakable span rather than a merely long sentence
+  (`REQ-FUNC-79fd5f3a`). `plan_narrator_blocks()` already behaved this way and is
+  unchanged.
+- `resolve_narrator_only_budget()` returns the cached model budget directly.
+  The operator-selectable narration block target that used to narrow it is
+  retired: it could only shorten, the model budget capped it, and every value at
+  or above that cap behaved identically to its automatic setting.
 - Every TTS-budget split stores exact, ordered `source_text` slices whose
   concatenation reproduces the original block character-for-character,
   including leading or trailing whitespace-only spans. When model audio text
@@ -115,6 +131,24 @@ otherwise it uses the original Chunking document text through its shared reader.
 - Scene-ambience insertion remaps each matched `after_speech_block_id` from the
   spoken row's old identifier to its post-insertion identifier, including when
   opener ambience shifts every spoken row (REQ-DATA-f0eb775c).
+- One configured list is the only universal `negative_prompt`. It reaches the
+  rendered user prompt as `{negative_prompt_core}` and the omitted-field fallback
+  in `_normalize_scene_ambience_response()` through the single reader
+  `_scene_ambience_negative_prompt_core()`, so the prompt and the fallback cannot
+  drift apart as they previously had - the prompts instructed thirteen terms while
+  the fallback hardcoded a different seven. It is carried on the normalized
+  scene-ambience settings payload and is operator-editable
+  (`REQ-FUNC-a80dacf7`, `REQ-UX-c52f02c1`).
+- No shipped default excludes periodicity. `continuous beep`, `pure sine wave`,
+  `single tone`, `alarm`, `loud bass drone` and `harsh buzzing` were removed from
+  the universal list because they suppress any repeating source - a ticking clock,
+  dripping tap or idling engine - on every block regardless of scene. The prompts
+  now ask for a scene-specific exclusion only where it contradicts the sound that
+  block itself describes, and the collapse-avoidance rule distinguishes a
+  featureless sustained tone from legitimate rhythm.
+- `negative_prompt` sits in both `_build_audio_block_fingerprint()` and
+  `_build_input_fingerprint()`, so changing the configured core regenerates every
+  Scene Ambience clip.
 - The page stacks the Chunk List panel and the lower Selected Chunk / Speech
   Blocks splitter as the two non-collapsible panes of one vertical splitter.
   The Chunk List panel opens at the chunk action-button column height, which is

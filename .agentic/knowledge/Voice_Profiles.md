@@ -173,13 +173,13 @@ intelligibility, legal usability, or character fit. Operators must audition and
 approve samples. Malformed current narrator documents intentionally require
 operator action.
 
-The preview-text character limit is operator-settable from 64 upward, while the
-accepted word range needs roughly 250 characters. A limit set below that
-contradicts the range: every generated preview is replaced by the canonical
-default, which itself exceeds such a limit and is truncated for display. The
-shipped default of 512 leaves ample room, so this only affects a deliberately
-lowered setting. Raising the settings minimum to match the word range would
-remove the contradiction.
+The operator-settable preview-text character limit is removed
+(`REQ-UX-571c3e2f`). It applied only to Narrator Voice, truncated silently while
+the operator typed, and any value below roughly 250 characters contradicted the
+accepted word range outright: the editor trimmed preview text below the accepted
+minimum and generation then refused it, with nothing on screen explaining why.
+The accepted word range is now the only limit on preview length, on both pages,
+at save and at generation.
 
 A narrator profile written by an earlier version keeps its shorter preview text,
 which is preserved as authored text rather than migrated. Operators lengthen

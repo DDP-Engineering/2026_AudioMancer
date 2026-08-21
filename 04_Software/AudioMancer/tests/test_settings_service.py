@@ -56,6 +56,25 @@ def test_build_default_settings_uses_config_defined_factory_defaults() -> None:
     assert default_settings["play_completion_beep"] is config.DEFAULT_PLAY_COMPLETION_BEEP
 
 
+def test_settings_carry_no_retired_preview_limit_block_target_or_diagnostics() -> None:
+    """
+    @brief      Verify REQ-UX-571c3e2f and REQ-FUNC-361ae600 leave no persisted key behind.
+    @return     None.
+    @exception  None
+    """
+    retired_field_names = (
+        "tts_preview_text_character_limit",
+        "speech_block_target_audio_seconds",
+        "tts_runtime_device_diagnostics",
+    )
+    default_settings = settings_service.build_default_settings()
+    validated_settings = settings_service.validate_settings(dict.fromkeys(retired_field_names, 1))
+
+    for field_name in retired_field_names:
+        assert field_name not in default_settings
+        assert field_name not in validated_settings
+
+
 def test_committed_settings_example_uses_config_defined_factory_defaults() -> None:
     """
     @brief      Verify the shipped settings example agrees with shared factory defaults.
@@ -845,7 +864,6 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
         "invalid",
     ]
     candidate_settings["tts_runtime_active_model_id"] = "missing_model"
-    candidate_settings["tts_runtime_device_diagnostics"] = {"status_message": "CUDA active.", "bad": []}
 
     validated_settings = settings_service.validate_settings(candidate_settings)
 
@@ -853,7 +871,6 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
     assert len(validated_settings["tts_runtime_discovered_models"]) == 1
     assert "speaker_count" not in validated_settings["tts_runtime_discovered_models"][0]
     assert validated_settings["tts_runtime_active_model_id"] is None
-    assert validated_settings["tts_runtime_device_diagnostics"] == {"status_message": "CUDA active."}
 
 
 def test_validate_settings_uses_canonical_voiceweaver_model_normalization_without_aliases() -> None:
@@ -957,8 +974,8 @@ def test_voiceweaver_range_budget_survives_settings_save_and_load(tmp_path, monk
             "recommended_maximum": 4096,
         }
     }
-    assert resolved_budget["model_token_budget"] == 2048
-    assert resolved_budget["model_budget_source"] == "range_default"
+    assert resolved_budget["model_token_budget"] == 4096
+    assert resolved_budget["model_budget_source"] == "range_recommended_maximum"
 
 
 def test_load_settings_logs_repair_summary_only_when_repairs_occur(tmp_path, monkeypatch, caplog) -> None:
@@ -1018,7 +1035,6 @@ def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> Non
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["tts_audio_preview_timeout_seconds"] = 0
     candidate_settings["tts_audio_generation_timeout_seconds"] = "bad"
-    candidate_settings["tts_preview_text_character_limit"] = -1
     candidate_settings["scene_ambience_guidance_scale"] = "bad"
     candidate_settings["scene_ambience_max_blocks_per_sequence"] = 0
     candidate_settings["scene_ambience_num_inference_steps"] = 0
@@ -1033,7 +1049,6 @@ def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> Non
         validated_settings["tts_audio_generation_timeout_seconds"]
         == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
     )
-    assert validated_settings["tts_preview_text_character_limit"] == config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
     assert validated_settings["scene_ambience_guidance_scale"] == config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE
     assert (
         validated_settings["scene_ambience_max_blocks_per_sequence"]
@@ -1219,14 +1234,12 @@ def test_validate_settings_repairs_boolean_positive_integers() -> None:
         {
             "tts_audio_preview_timeout_seconds": True,
             "tts_audio_generation_timeout_seconds": True,
-            "tts_preview_text_character_limit": True,
             "llm_profiles": [profile],
         }
     )
 
     assert repaired["tts_audio_preview_timeout_seconds"] is not True
     assert repaired["tts_audio_generation_timeout_seconds"] is not True
-    assert repaired["tts_preview_text_character_limit"] is not True
     assert repaired["llm_profiles"][0]["context_window"] is not True
     assert repaired["llm_profiles"][0]["max_output_tokens"] is not True
     assert repaired["llm_profiles"][0]["request_timeout_seconds"] is not True

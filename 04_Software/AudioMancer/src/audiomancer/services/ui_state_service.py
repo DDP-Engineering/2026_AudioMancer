@@ -354,12 +354,10 @@ _UI_STRINGS = {
         "tts_settings.voice_assignment_with_characters": "Narrator + character voices",
         "tts_settings.preview_timeout": "Audio Preview Timeout (s)",
         "tts_settings.generation_timeout": "Audio Generation Timeout (s)",
-        "tts_settings.preview_text_limit": "Preview Text Limit (chars)",
-        "tts_settings.speech_block_target": "Narration Block Target (s)",
-        "tts_settings.speech_block_target_auto": "Auto",
-        "tts_settings.speech_block_target_tooltip": (
-            "Preferred spoken length of one same-narrator block. "
-            "The TTS model budget always stays the hard limit, so this can only shorten blocks."
+        "tts_settings.max_generation_tokens": "Max Block Tokens",
+        "tts_settings.max_generation_tokens_tooltip": (
+            "Largest generation-token budget one narration block is planned against. "
+            "The TTS model's own reported budget still applies, so this can only shorten blocks."
         ),
         "tts_settings.scene_ambience_enabled": "Scene Ambience Generation",
         "tts_settings.scene_ambience_placement": "Scene Ambience Placement",
@@ -368,6 +366,7 @@ _UI_STRINGS = {
         "tts_settings.scene_ambience_guidance": "Scene Ambience Guidance",
         "tts_settings.scene_ambience_steps": "Scene Ambience Steps",
         "tts_settings.scene_ambience_seed": "Scene Ambience Seed",
+        "tts_settings.scene_ambience_negative_prompt": "Scene Ambience Avoid",
         "tts_settings.scene_ambience_seed_random": "Random",
         "tts_settings.scene_ambience_placement_none": "None",
         "tts_settings.scene_ambience_placement_openers_and_closers": "Openers and closers",
@@ -1454,12 +1453,10 @@ _UI_STRINGS = {
         "tts_settings.voice_assignment_with_characters": "Narator + voci personaje",
         "tts_settings.preview_timeout": "Timeout Preview Audio (s)",
         "tts_settings.generation_timeout": "Timeout Generare Audio (s)",
-        "tts_settings.preview_text_limit": "Limita Text Previzualizare (caractere)",
-        "tts_settings.speech_block_target": "Tinta Bloc Naratiune (s)",
-        "tts_settings.speech_block_target_auto": "Automat",
-        "tts_settings.speech_block_target_tooltip": (
-            "Durata vorbita preferata pentru un bloc cu acelasi narator. "
-            "Bugetul modelului TTS ramane limita stricta, deci aceasta optiune poate doar scurta blocurile."
+        "tts_settings.max_generation_tokens": "Tokeni Maximi pe Bloc",
+        "tts_settings.max_generation_tokens_tooltip": (
+            "Cel mai mare buget de tokeni de generare cu care este planificat un bloc de naratiune. "
+            "Bugetul raportat de modelul TTS ramane valabil, deci aceasta optiune poate doar scurta blocurile."
         ),
         "tts_settings.scene_ambience_enabled": "Generare Ambienta Scena",
         "tts_settings.scene_ambience_placement": "Pozitionare Ambienta Scena",
@@ -1468,6 +1465,7 @@ _UI_STRINGS = {
         "tts_settings.scene_ambience_guidance": "Ghidaj Ambienta Scena",
         "tts_settings.scene_ambience_steps": "Pasi Ambienta Scena",
         "tts_settings.scene_ambience_seed": "Seed Ambienta Scena",
+        "tts_settings.scene_ambience_negative_prompt": "Sunete Evitate Ambienta",
         "tts_settings.scene_ambience_seed_random": "Aleatoriu",
         "tts_settings.scene_ambience_placement_none": "Fara",
         "tts_settings.scene_ambience_placement_openers_and_closers": "Deschideri si inchideri",

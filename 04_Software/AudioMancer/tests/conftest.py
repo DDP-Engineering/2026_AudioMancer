@@ -136,9 +136,7 @@ def default_settings_payload():
         "tts_runtime_probe_message": "",
         "tts_runtime_discovered_models": [],
         "tts_runtime_active_model_id": None,
-        "tts_runtime_device_diagnostics": {},
         "tts_audio_preview_timeout_seconds": 60,
-        "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
         "tts_audio_generation_timeout_seconds": 300,
     }
 

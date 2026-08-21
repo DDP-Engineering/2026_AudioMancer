@@ -1,0 +1,88 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-8ee67d8f"
+
+title = "The operator generation-token maximum shall only lower the runtime-reported budget"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+The TTS budget shall plan against the smaller of the operator's configured maximum generation-token budget and the value the runtime reports for the model, so the operator maximum can lower the planned budget but never raise it.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "A focused test resolves a budget from a model reporting a recommended maximum of 2048 with an operator maximum of 1024 and observes a resolved token budget of 1024; with an operator maximum of 4096 against the same model observes 2048; and with no operator maximum configured observes the shipped default of 1024 applied."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_operator_token_maximum_lowers_the_runtime_reported_budget",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_operator_token_maximum_never_raises_the_runtime_reported_budget",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_generation_token_limit_falls_back_to_the_shipped_default",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_round_trips_the_max_block_tokens_setting",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = """
+The runtime's recommended maximum is a ceiling it will attempt, not a quality guarantee: cloned voices drift audibly toward the end of a block generated near it. The operator hears that drift and the runtime cannot report it, so the choice of how far below the ceiling to plan belongs to the operator. It only ever lowers, because planning above what the model reports yields truncated or silent audio.
+"""
+
+created = 2026-08-20
+updated = 2026-08-20

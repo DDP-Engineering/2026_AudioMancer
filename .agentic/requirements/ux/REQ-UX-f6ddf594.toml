@@ -18,7 +18,7 @@ title = "Both offline user guides shall describe only controls the frontend actu
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
-status = "active"
+status = "retired"
 
 # Self-contained prose: a reader with no other context must be able to
 # understand and check it. No ticket numbers, no run IDs, no references
@@ -58,13 +58,15 @@ guide names, locate the widget that builds it in the corresponding page module
 and confirm the runtime string it resolves; a guide statement with no such
 widget fails. Both guides are read against the same page modules so the
 Romanian text describes the same frontend as the English text.
+
+Retired 2026-08-20: the project keeps no requirements or tests over help-file
+content. Both guides are still written to describe only controls the frontend
+presents, but as a convention maintained when the frontend changes, not as a
+tracked requirement.
 """
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = [
-  "05_SoftwareDocu/UserGuide/index.html",
-  "05_SoftwareDocu/UserGuide_ro/index.html",
-]
+affected_paths = []
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.

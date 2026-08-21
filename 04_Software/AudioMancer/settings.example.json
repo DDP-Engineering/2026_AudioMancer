@@ -62,15 +62,14 @@
   "tts_runtime_probe_message": "",
   "tts_runtime_discovered_models": [],
   "tts_runtime_active_model_id": null,
-  "tts_runtime_device_diagnostics": {},
   "tts_audio_preview_timeout_seconds": 120,
-  "tts_preview_text_character_limit": 512,
   "tts_audio_generation_timeout_seconds": 600,
-  "speech_block_target_audio_seconds": 0.0,
+  "speech_block_max_generation_tokens": 1024,
   "scene_ambience_placement": "openers_and_closers",
   "scene_ambience_duration_seconds": 10,
   "scene_ambience_max_blocks_per_sequence": 6,
   "scene_ambience_guidance_scale": 7.0,
   "scene_ambience_num_inference_steps": 100,
-  "scene_ambience_seed": null
+  "scene_ambience_seed": null,
+  "scene_ambience_negative_prompt": "speech, voices, dialogue, singing, music, melody, low quality, distorted"
 }

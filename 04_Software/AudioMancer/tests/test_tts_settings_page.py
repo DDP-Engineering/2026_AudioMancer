@@ -18,6 +18,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QSizePolicy, QStyle, QStyleOptionSpinBox
 
+from audiomancer import config
 from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
 
 
@@ -38,7 +39,6 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     settings_payload["tts_runtime_discovered_models"] = _minimum_qwen_models()
     settings_payload["tts_audio_preview_timeout_seconds"] = 75
     settings_payload["tts_audio_generation_timeout_seconds"] = 420
-    settings_payload["tts_preview_text_character_limit"] = 640
     settings_payload["scene_ambience_max_blocks_per_sequence"] = 4
     settings_payload["scene_ambience_guidance_scale"] = 8.5
     settings_payload["scene_ambience_num_inference_steps"] = 80
@@ -53,7 +53,6 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page._model_list.count() == 2
     assert page._preview_timeout_spin.value() == 75
     assert page._generation_timeout_spin.value() == 420
-    assert page._preview_text_limit_spin.value() == 640
     assert page._scene_ambience_max_blocks_spin.value() == 4
     assert page._scene_ambience_guidance_spin.value() == 8.5
     assert page._scene_ambience_steps_spin.value() == 80
@@ -69,7 +68,6 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page.build_tts_plan_payload() is None
     assert page.build_settings(default_settings_payload)["tts_audio_preview_timeout_seconds"] == 75
     assert page.build_settings(default_settings_payload)["tts_audio_generation_timeout_seconds"] == 420
-    assert page.build_settings(default_settings_payload)["tts_preview_text_character_limit"] == 640
     assert page.build_settings(default_settings_payload)["scene_ambience_guidance_scale"] == 8.5
     assert page.build_settings(default_settings_payload)["scene_ambience_max_blocks_per_sequence"] == 4
     assert page.build_settings(default_settings_payload)["scene_ambience_num_inference_steps"] == 80
@@ -84,9 +82,9 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page._save_button.text() == "Aplica"
 
 
-def test_tts_settings_page_round_trips_the_narration_block_target(qtbot, default_settings_payload) -> None:
+def test_tts_settings_page_round_trips_the_max_block_tokens_setting(qtbot, default_settings_payload) -> None:
     """
-    @brief      Verify the narration block target loads, saves, and exposes an automatic mode.
+    @brief      Verify REQ-FUNC-8ee67d8f the operator token ceiling loads, saves and clamps.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  default_settings_payload Shared default settings fixture.
     @return     None.
@@ -95,17 +93,80 @@ def test_tts_settings_page_round_trips_the_narration_block_target(qtbot, default
     page = TtsSettingsPage()
     qtbot.addWidget(page)
     settings_payload = dict(default_settings_payload)
-    settings_payload["speech_block_target_audio_seconds"] = 20.0
+    settings_payload["speech_block_max_generation_tokens"] = 640
 
     page.load_state(settings_payload, {"voice_assignment_mode": "same_narrator"}, True)
 
-    assert page._speech_block_target_spin.value() == 20.0
-    assert page.build_settings(default_settings_payload)["speech_block_target_audio_seconds"] == 20.0
+    assert page._max_generation_tokens_spin.value() == 640
+    assert page.build_settings(default_settings_payload)["speech_block_max_generation_tokens"] == 640
 
-    page._speech_block_target_spin.setValue(0.0)
+    settings_payload["speech_block_max_generation_tokens"] = 99_999
+    page.load_state(settings_payload, {"voice_assignment_mode": "same_narrator"}, True)
 
-    assert page._speech_block_target_spin.specialValueText() == "Auto"
-    assert page.build_settings(default_settings_payload)["speech_block_target_audio_seconds"] == 0.0
+    assert page._max_generation_tokens_spin.value() == config.SPEECH_BLOCK_MAX_GENERATION_TOKENS_MAXIMUM
+
+
+def test_tts_settings_page_round_trips_the_scene_ambience_exclusions(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify REQ-UX-c52f02c1 the universal exclusions load and save from the page.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    settings_payload = dict(default_settings_payload)
+    settings_payload["scene_ambience_negative_prompt"] = "kazoo, bagpipes"
+
+    page.load_state(settings_payload, {"voice_assignment_mode": "same_narrator"}, True)
+
+    assert page._scene_ambience_negative_prompt_edit.text() == "kazoo, bagpipes"
+
+    page._scene_ambience_negative_prompt_edit.setText("kazoo, bagpipes, theremin")
+
+    assert page.build_settings(default_settings_payload)["scene_ambience_negative_prompt"] == (
+        "kazoo, bagpipes, theremin"
+    )
+
+
+def test_cleared_scene_ambience_exclusions_fall_back_to_the_shipped_default(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify REQ-UX-c52f02c1 an emptied field restores the shipped list, not an empty one.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    page.load_state(dict(default_settings_payload), {"voice_assignment_mode": "same_narrator"}, True)
+    page._scene_ambience_negative_prompt_edit.setText("   ")
+
+    assert page.build_settings(default_settings_payload)["scene_ambience_negative_prompt"] == (
+        config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT
+    )
+
+
+def test_tts_settings_page_omits_retired_preview_and_block_target_settings(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify REQ-UX-571c3e2f and REQ-FUNC-361ae600 leave no retired control or persisted key.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+
+    page.load_state(dict(default_settings_payload), {"voice_assignment_mode": "same_narrator"}, True)
+    merged_settings = page.build_settings(default_settings_payload)
+
+    assert not hasattr(page, "_preview_text_limit_spin")
+    assert not hasattr(page, "_speech_block_target_spin")
+    assert "tts_preview_text_character_limit" not in merged_settings
+    assert "speech_block_target_audio_seconds" not in merged_settings
+    assert "tts_runtime_device_diagnostics" not in merged_settings
 
 
 def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> None:
@@ -126,7 +187,6 @@ def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> Non
             "message": "Connection successful.",
             "discovered_models": _minimum_qwen_models(),
             "active_model_id": None,
-            "device_diagnostics": {},
         }
     )
     assert page._runtime_status_label.text() == "Connected"
@@ -137,7 +197,6 @@ def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> Non
             "message": "Connection failed: timed out.",
             "discovered_models": [],
             "active_model_id": None,
-            "device_diagnostics": {},
         }
     )
     assert page._runtime_status_label.text() == "Connection failed"
@@ -201,7 +260,6 @@ def test_tts_settings_page_persists_only_probe_results_from_current_loaded_sessi
             "message": "Connection successful.",
             "discovered_models": _minimum_qwen_models(),
             "active_model_id": None,
-            "device_diagnostics": {},
         }
     )
     successful_settings = page.build_settings(original_settings)
@@ -214,7 +272,6 @@ def test_tts_settings_page_persists_only_probe_results_from_current_loaded_sessi
             "message": "",
             "discovered_models": [],
             "active_model_id": None,
-            "device_diagnostics": {},
         }
     )
     failed_settings = page.build_settings(original_settings)
@@ -267,7 +324,6 @@ def test_tts_settings_page_uses_compact_runtime_limit_controls(qtbot) -> None:
     compact_spinboxes = (
         page._preview_timeout_spin,
         page._generation_timeout_spin,
-        page._preview_text_limit_spin,
         page._scene_ambience_duration_spin,
         page._scene_ambience_max_blocks_spin,
         page._scene_ambience_guidance_spin,
@@ -281,7 +337,6 @@ def test_tts_settings_page_uses_compact_runtime_limit_controls(qtbot) -> None:
     numeric_labels = (
         page._preview_timeout_label,
         page._generation_timeout_label,
-        page._preview_text_limit_label,
     )
     for label in numeric_labels:
         assert label.minimumWidth() >= 200
@@ -308,7 +363,6 @@ def test_tts_settings_page_numeric_increment_arrows_change_values(qtbot) -> None
     spinboxes = (
         page._preview_timeout_spin,
         page._generation_timeout_spin,
-        page._preview_text_limit_spin,
         page._scene_ambience_duration_spin,
         page._scene_ambience_max_blocks_spin,
         page._scene_ambience_guidance_spin,

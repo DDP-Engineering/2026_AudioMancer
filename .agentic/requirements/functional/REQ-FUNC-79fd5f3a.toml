@@ -1,0 +1,82 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-79fd5f3a"
+
+title = "A sentence over the operator token target shall stay whole until the model hard maximum"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When a single sentence is longer than the operator's configured generation-token target but still fits the maximum the runtime reports the model will not exceed, every stage that divides text for speech generation shall emit that sentence whole rather than break it, so text is cut inside a sentence only when the sentence alone exceeds the model's own maximum.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "Focused tests feed a paragraph holding one 200-word sentence between two short ones, with a 170-word target and a 1706-word ceiling, to both the character-mode splitter and the generation-time splitter, and observe the long sentence returned as one undivided part with its final words intact; feeding a sentence longer than the ceiling to the same splitters observes it divided into parts no longer than the ceiling."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_sentence_over_the_target_is_kept_whole_below_the_hard_ceiling",
+  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_sentence_over_the_hard_ceiling_is_split_at_the_ceiling",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_split_keeps_a_sentence_whole_below_the_hard_ceiling",
+  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_split_breaks_a_sentence_only_above_the_hard_ceiling",
+  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_reports_the_model_hard_token_maximum_alongside_the_operator_target",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = """
+The operator lowers the token target because cloned voices drift toward the end of a long generation, not because a sentence becomes unspeakable past that point. Treating the target as a hard cut therefore buys nothing and costs the listener a seam: a sentence resumed in a fresh generation restarts its prosody mid-thought, which is more audible than the drift being avoided. The model's own maximum is the only length past which generation genuinely fails, so it is the only place a sentence may be broken.
+"""
+
+created = 2026-08-20
+updated = 2026-08-20

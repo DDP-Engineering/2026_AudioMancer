@@ -365,7 +365,6 @@ def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
         _MOCK_AI_PROFILE,
         2,
         "en",
-        config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     )
 
     profiles = narrator_definition_service.load_profiles(project_root)
@@ -388,7 +387,6 @@ def test_narrator_profile_generation_keeps_multi_line_preview_text() -> None:
         2,
         {"male": 1, "female": 1, "random": 0, "random_gender": ""},
         "en",
-        config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     )
 
     assert warnings == []
@@ -417,7 +415,6 @@ def test_narrator_profile_generation_preserves_latin_preview_budget_boundaries(
         2,
         {"male": 1, "female": 1, "random": 0, "random_gender": ""},
         "en",
-        config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     )
 
     assert len(profiles) == 2

@@ -656,9 +656,6 @@ DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS = 300
 # @brief Default timeout in seconds for polling long-running TTS operations.
 DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS = DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
 
-# @brief Default maximum narrator preview text length for TTS samples.
-DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT = 512
-
 # @brief Shortest estimated preview duration accepted for a narrator or character voice-clone reference.
 # @details Clone quality rises with reference duration up to roughly fifteen seconds; below ten
 #          seconds a reference carries timbre without settled rhythm.
@@ -682,11 +679,12 @@ DEFAULT_TTS_VOICE_ASSIGNMENT_MODE = "narrator_and_characters"
 TTS_VOICE_ASSIGNMENT_MODE_OPTIONS = ("same_narrator", "narrator_and_characters")
 
 # @brief Conservative fallback max_new_tokens budget used before the TTS model reports one.
-# @details Matches the VoiceWeaver clone-model cap, so an unprobed runtime is never planned
-#          for more audio than a clone model can actually generate.
+# @details Matches the clone model's own default, so an unprobed runtime is never planned for
+#          more audio than a clone model generates without being asked for more.
 DEFAULT_TTS_NARRATOR_ONLY_TOKEN_BUDGET = 512
 
-# @brief Approximate generated-audio seconds represented by one VoiceWeaver max_new_tokens unit.
+# @brief Fallback generated-audio seconds represented by one VoiceWeaver max_new_tokens unit.
+# @details Used only until the runtime reports the codec rate of the loaded model.
 DEFAULT_TTS_APPROX_AUDIO_SECONDS_PER_TOKEN = 0.08
 
 # @brief Safety factor applied when splitting narrator-only Speech Blocks.
@@ -697,16 +695,17 @@ DEFAULT_TTS_SPLIT_SAFETY_FACTOR = 0.80
 # @brief Approximate spoken-word rate used to convert audio token budget into text guidance.
 DEFAULT_TTS_WORDS_PER_AUDIO_SECOND = 2.5
 
-# @brief Operator target for one narration block, in generated audio seconds.
-# @details Zero means "follow the TTS model budget", which produces the widest safe blocks.
-#          Any positive value only ever shortens blocks; the model budget stays the hard cap.
-DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS = 0.0
+# @brief Operator ceiling on the generation-token budget one narration block is planned against.
+# @details The runtime's recommended maximum is a ceiling it will attempt, not one it sounds good
+#          at: a cloned voice drifts audibly late in a block generated near it. This only ever
+#          lowers the reported budget, because planning above it truncates or silences audio.
+DEFAULT_SPEECH_BLOCK_MAX_GENERATION_TOKENS = 1024
 
-# @brief Shortest operator-selectable narration block duration, in generated audio seconds.
-SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM = 5.0
+# @brief Smallest operator-selectable generation-token ceiling, matching the VoiceWeaver minimum.
+SPEECH_BLOCK_MAX_GENERATION_TOKENS_MINIMUM = 128
 
-# @brief Longest operator-selectable narration block duration, in generated audio seconds.
-SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM = 300.0
+# @brief Largest operator-selectable generation-token ceiling, matching the VoiceWeaver hard maximum.
+SPEECH_BLOCK_MAX_GENERATION_TOKENS_MAXIMUM = 8192
 
 # @brief Scene Ambience placement options used by Speech Blocks generation.
 SCENE_AMBIENCE_PLACEMENT_OPTIONS = (
@@ -732,6 +731,10 @@ DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS = 100
 
 # @brief Default Stable Audio seed for Scene Ambience sound generation; None lets the runtime randomize.
 DEFAULT_SCENE_AMBIENCE_SEED = None
+
+# @brief Sounds excluded from every Scene Ambience block, whatever the scene. Periodicity terms are
+#        deliberately absent: a ticking clock or dripping tap is a legitimate ambience source.
+DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT = "speech, voices, dialogue, singing, music, melody, low quality, distorted"
 
 # @brief Default semantic AI chunking strategy.
 DEFAULT_AI_CHUNKING_STRATEGY = "paragraph"

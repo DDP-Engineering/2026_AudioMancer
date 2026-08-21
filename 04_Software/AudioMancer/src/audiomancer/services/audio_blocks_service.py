@@ -20,6 +20,7 @@
 
 import hashlib
 import json
+from math import ceil
 from pathlib import Path
 import re
 
@@ -31,6 +32,7 @@ from audiomancer.services import (
     operation_runtime_service,
     project_workspace_service,
     speech_blocks_service,
+    tts_budget_service,
     voiceweaver_runtime_service,
     workflow_impact_service,
 )
@@ -1387,7 +1389,11 @@ def _resolve_generation_context(
             "Generate samples for every referenced character voice before starting Audio Blocks. Missing: "
             f"{missing_summary}"
         )
-    model_budget = _resolve_model_budget({}, clone_model)
+    model_budget = _resolve_model_budget(
+        {},
+        clone_model,
+        tts_budget_service.resolve_generation_token_limit(runtime_settings),
+    )
     fingerprint_budget = {
         **model_budget,
         "generate_scene_ambience_audio": generate_scene_ambience_audio,
@@ -1535,15 +1541,26 @@ def _requires_manual_reset(existing_state: dict[str, object], input_fingerprint:
 def _resolve_model_budget(
     status_payload: dict[str, object],
     clone_model_payload: dict[str, object],
+    max_generation_tokens: int = 0,
 ) -> dict[str, object]:
     """
     @brief      Resolve the clone-model generation budget used for Audio Blocks splitting.
+    @details    The runtime advertises a recommended maximum per model and reports its loaded
+                default as effective, so the recommended maximum is read first or it would be
+                masked by the very default it is meant to replace. The operator ceiling is
+                applied before anything is derived, and may only lower the result.
     @param[in]  status_payload Current normalized VoiceWeaver status payload.
     @param[in]  clone_model_payload Discovered clone-model payload.
+    @param[in]  max_generation_tokens Operator token ceiling, or zero for none.
     @return     Budget payload including token and audio-seconds limits.
     @exception  ValueError Raised when no positive `max_new_tokens` budget can be resolved.
     """
+    recommended_tokens, reported_seconds_per_token = tts_budget_service.model_generation_limits(clone_model_payload)
+    reported_hard_maximum = tts_budget_service.model_hard_token_maximum(clone_model_payload)
+    seconds_per_token = reported_seconds_per_token or _DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN
+    operator_token_maximum = max(0, int(max_generation_tokens))
     budget_source_candidates = (
+        ("range_recommended_maximum", {"max_new_tokens": recommended_tokens or 0}),
         ("runtime_effective", _status_effective_model_parameters(status_payload)),
         ("default_model_parameters", dict(clone_model_payload).get("default_model_parameters")),
         ("range_default", _parameter_range_default(dict(clone_model_payload).get("generation_parameter_ranges"))),
@@ -1552,12 +1569,20 @@ def _resolve_model_budget(
         token_budget = _positive_int_from_mapping(parameters, "max_new_tokens")
         if token_budget is None:
             continue
-        audio_seconds_budget = token_budget * _DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN
+        model_token_budget = token_budget
+        if operator_token_maximum > 0:
+            token_budget = min(token_budget, operator_token_maximum)
+        hard_token_maximum = max(model_token_budget, int(reported_hard_maximum or 0))
+        audio_seconds_budget = token_budget * seconds_per_token
+        hard_split_audio_seconds_budget = hard_token_maximum * seconds_per_token * _SPLIT_SAFETY_FACTOR
         return {
+            "operator_token_maximum": operator_token_maximum,
             "model_token_budget": token_budget,
+            "hard_token_maximum": hard_token_maximum,
             "model_audio_seconds_budget": audio_seconds_budget,
             "split_audio_seconds_budget": audio_seconds_budget * _SPLIT_SAFETY_FACTOR,
-            "approx_audio_seconds_per_token": _DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN,
+            "hard_word_count": max(1, int(hard_split_audio_seconds_budget * _WORDS_PER_AUDIO_SECOND)),
+            "approx_audio_seconds_per_token": seconds_per_token,
             "split_safety_factor": _SPLIT_SAFETY_FACTOR,
             "model_budget_source": budget_source,
         }
@@ -1708,8 +1733,12 @@ def _ensure_clone_model_loaded(
             "VoiceWeaver is still busy with a previous operation. Wait for the current runtime operation to finish, "
             "then start Audio Blocks again."
         )
-    initial_budget = _resolve_model_budget(initial_status, clone_model_payload)
-    if active_model_id == clone_model_id and initial_budget.get("model_budget_source") == "runtime_effective":
+    operator_token_maximum = tts_budget_service.resolve_generation_token_limit(runtime_settings)
+    initial_budget = _resolve_model_budget(initial_status, clone_model_payload, operator_token_maximum)
+    # The live active-model identity is the whole question here. Gating on which source supplied
+    # the token budget made this unreachable as soon as a runtime-reported budget outranked
+    # `runtime_effective`, and every run then reloaded an already-loaded model.
+    if active_model_id == clone_model_id:
         return initial_budget
     _ensure_model_active(
         runtime_settings,
@@ -1722,7 +1751,7 @@ def _ensure_clone_model_loaded(
         runtime_api_key,
         timeout_seconds=timeout_seconds,
     )
-    return _resolve_model_budget(loaded_status, clone_model_payload)
+    return _resolve_model_budget(loaded_status, clone_model_payload, operator_token_maximum)
 
 
 def _ensure_sound_model_loaded(
@@ -1931,7 +1960,7 @@ def _generate_audio_block(
             voice_clone_prompt,
             str(generation_context.get("voice_language", "")),
             part_text,
-            model_parameters={"max_new_tokens": int(generation_context.get("model_token_budget", 0))},
+            model_parameters={"max_new_tokens": _part_generation_token_budget(part_text, generation_context)},
             timeout_seconds=timeout_seconds,
         )
         final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
@@ -2125,6 +2154,10 @@ def _generate_scene_ambience_audio_block(
 def _plan_audio_block_splits(text: str, generation_context: dict[str, object]) -> dict[str, object]:
     """
     @brief      Split one Audio Blocks text into generation parts that fit the resolved model budget.
+    @details    The budget word count is a packing target, not a cut: a sentence longer than it is
+                emitted whole while it stays inside the hard word count, because resuming a
+                sentence in a fresh generation restarts its prosody mid-thought. Clause and
+                word-group cuts survive only for text past the hard count.
     @param[in]  text Original speech-block text.
     @param[in]  generation_context Validated generation-context payload with model budget fields.
     @return     Split plan containing ordered text parts and strategy name.
@@ -2134,24 +2167,49 @@ def _plan_audio_block_splits(text: str, generation_context: dict[str, object]) -
     if not normalized_text:
         return {"parts": [""], "strategy": "single"}
     max_words = max(1, int(float(generation_context.get("split_audio_seconds_budget", 0.0)) * _WORDS_PER_AUDIO_SECOND))
-    if _estimated_word_count(normalized_text) <= max_words:
+    hard_max_words = max(max_words, int(generation_context.get("hard_word_count", 0) or 0))
+    word_count = _estimated_word_count(normalized_text)
+    if word_count <= max_words:
         return {"parts": [normalized_text], "strategy": "single"}
-    for strategy, pattern in (
-        ("sentence", r"(?<=[.!?])\s+"),
-        ("clause", r"(?<=[,;:])\s+"),
-    ):
-        parts = _pack_text_units(re.split(pattern, normalized_text), max_words)
-        if len(parts) > 1 and all(_estimated_word_count(part) <= max_words for part in parts):
-            return {"parts": parts, "strategy": strategy}
-    return {"parts": _split_by_word_groups(normalized_text, max_words), "strategy": "word_group"}
+    sentence_parts = _pack_text_units(re.split(r"(?<=[.!?])\s+", normalized_text), max_words, hard_max_words)
+    if len(sentence_parts) > 1:
+        return {"parts": sentence_parts, "strategy": "sentence"}
+    if word_count <= hard_max_words:
+        return {"parts": [normalized_text], "strategy": "single"}
+    clause_parts = _pack_text_units(re.split(r"(?<=[,;:])\s+", normalized_text), hard_max_words, hard_max_words)
+    if len(clause_parts) > 1:
+        return {"parts": clause_parts, "strategy": "clause"}
+    return {"parts": _split_by_word_groups(normalized_text, hard_max_words), "strategy": "word_group"}
 
 
-def _pack_text_units(units: list[str], max_words: int) -> list[str]:
+def _part_generation_token_budget(part_text: str, generation_context: dict[str, object]) -> int:
+    """
+    @brief      Resolve the generation-token ceiling for one text part about to be sent.
+    @details    The runtime stops at whatever ceiling it is handed, finished or not, so a part the
+                splitter deliberately kept longer than the operator target needs a ceiling sized to
+                it or its closing words are lost. Parts inside the target keep the target.
+    @param[in]  part_text Text about to be generated.
+    @param[in]  generation_context Validated generation-context payload with model budget fields.
+    @return     Token ceiling for this part, never above the reported hard maximum.
+    @exception  None
+    """
+    operator_token_budget = max(1, int(generation_context.get("model_token_budget", 0)))
+    hard_token_maximum = max(operator_token_budget, int(generation_context.get("hard_token_maximum", 0) or 0))
+    seconds_per_token = float(generation_context.get("approx_audio_seconds_per_token", 0.0))
+    words_per_token = seconds_per_token * _SPLIT_SAFETY_FACTOR * _WORDS_PER_AUDIO_SECOND
+    if words_per_token <= 0.0:
+        return operator_token_budget
+    required_tokens = ceil(_estimated_word_count(part_text) / words_per_token)
+    return max(operator_token_budget, min(required_tokens, hard_token_maximum))
+
+
+def _pack_text_units(units: list[str], max_words: int, hard_max_words: int) -> list[str]:
     """
     @brief      Pack text units into budget-sized generation parts.
     @param[in]  units Ordered text units.
-    @param[in]  max_words Maximum estimated words per generated part.
-    @return     Packed text parts.
+    @param[in]  max_words Preferred maximum estimated words per generated part.
+    @param[in]  hard_max_words Word count past which a single unit cannot be sent whole.
+    @return     Packed text parts, or an empty list when one unit exceeds the hard maximum.
     @exception  None
     """
     parts: list[str] = []
@@ -2159,7 +2217,7 @@ def _pack_text_units(units: list[str], max_words: int) -> list[str]:
     for unit in (_normalize_split_text(item) for item in units):
         if not unit:
             continue
-        if _estimated_word_count(unit) > max_words:
+        if _estimated_word_count(unit) > hard_max_words:
             return []
         candidate = _normalize_split_text(" ".join([*current_units, unit]))
         if current_units and _estimated_word_count(candidate) > max_words:

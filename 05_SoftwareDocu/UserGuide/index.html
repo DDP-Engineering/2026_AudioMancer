@@ -301,8 +301,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </table>
                 <div class="note">
                     AudioMancer sends the model, context window, output budget, temperature, timeout, and &mdash; when
-                    <strong>Structured output</strong> is ticked &mdash; a structured-output hint. Sampling details such as
-                    top-p, top-k, repeat penalty, seed and reasoning mode belong to the LM Studio preset for the
+                    <strong>Structured output</strong> is ticked &mdash; a structured-output hint. You can
+                    configure top-p, top-k, repeat penalty, seed, and reasoning mode in LM Studio presets for the
                     loaded model. Keep online API keys private and enter them only in this dialog.
                 </div>
                 <figure>
@@ -334,7 +334,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     capabilities are available. Before a successful probe it asks you to test the connection first;
                     afterwards it either confirms the capabilities or names the ones that are missing.
                 </p>
-                <h3>Timing And Text Limits</h3>
+                <h3>Timeouts And Block Length</h3>
                 <table>
                     <thead>
                         <tr><th>Setting</th><th>Range</th><th>Default</th></tr>
@@ -342,20 +342,26 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <tbody>
                         <tr><td>Audio Preview Timeout (s)</td><td>10 - 3600</td><td>60</td></tr>
                         <tr><td>Audio Generation Timeout (s)</td><td>30 - 7200</td><td>300</td></tr>
-                        <tr><td>Preview Text Limit (chars)</td><td>64 - 8192</td><td>512</td></tr>
-                        <tr><td>Narration Block Target (s)</td><td>0 - 300, step 5</td><td>0 (<strong>Auto</strong>)</td></tr>
+                        <tr><td>Max Block Tokens</td><td>128 - 8192, step 128</td><td>1024</td></tr>
                     </tbody>
                 </table>
                 <p>
-                    <strong>Preview Text Limit</strong> is the hard ceiling on the preview text of a voice profile &mdash;
-                    the Narrator Voice and Character Voices editors stop accepting characters beyond it as you type.
+                    <strong>Max Block Tokens</strong> is the largest generation budget one narration block is
+                    planned against. The TTS model reports its own recommended budget and that still applies, so
+                    this setting can only make blocks shorter, never longer. Lower it if you hear a cloned voice
+                    drift or wander toward the end of a long block &mdash; a model will attempt everything up to its
+                    recommended ceiling, but voice quality can fall off well before reaching it.
                 </p>
                 <p>
-                    <strong>Narration Block Target</strong> asks for shorter same-narrator blocks than the model would
-                    otherwise allow. At its lowest setting it displays <strong>Auto</strong> and AudioMancer uses the
-                    widest safe block the discovered TTS model supports. This setting can only shorten blocks: the
-                    model's token budget stays the hard limit, because asking for more audio than the model can
-                    produce yields truncated or silent output. A non-zero value below five seconds is raised to five.
+                    Preview text length is not a setting. The Narrator Voice and Character Voices editors accept
+                    preview text within one fixed spoken-word range, which is the range that produces a usable
+                    voice-clone reference; both editors report the range if you leave it.
+                </p>
+                <p>
+                    AudioMancer asks the discovered TTS model what it recommends, plans blocks against the smaller
+                    of that and <strong>Max Block Tokens</strong>, and keeps a safety margin below the result.
+                    Asking for more audio than a model can produce yields truncated or silent output, so the model
+                    always has the last word.
                 </p>
                 <h3>Scene Ambience</h3>
                 <table>
@@ -369,6 +375,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><td>Scene Ambience Guidance</td><td>0.1 - 30.0, step 0.5</td><td>7.0</td></tr>
                         <tr><td>Scene Ambience Steps</td><td>1 - 300</td><td>100</td></tr>
                         <tr><td>Scene Ambience Seed</td><td>-1 - 2147483647</td><td>-1 (<strong>Random</strong>)</td></tr>
+                        <tr><td>Scene Ambience Avoid</td><td>Free text, comma separated</td><td>speech, voices, dialogue, singing, music, melody, low quality, distorted</td></tr>
                     </tbody>
                 </table>
                 <p>
@@ -380,6 +387,16 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Blocks</strong> is a ceiling, not a quota &mdash; the model may use fewer when fewer distinct sound
                     sources are useful. Set a fixed <strong>Seed</strong> when you want a repeatable sound, or leave
                     it at <strong>Random</strong>.
+                </p>
+                <p>
+                    <strong>Scene Ambience Avoid</strong> lists the sounds excluded from every ambience block,
+                    whatever the scene. The AI adds anything further per block only where it would contradict that
+                    block's own sound, so keep this list short &mdash; the sound model weighs all the avoid-terms
+                    together, and a handful pull harder than a dozen. Do not put rhythm here: excluding beeps,
+                    tones, alarms or drones also suppresses a ticking clock, a dripping tap and an idling engine.
+                    Clearing the field restores the shipped list. To override it for one block only, use the
+                    <strong>Negative Prompt</strong> box on the Speech Blocks page. Changing this list makes
+                    AudioMancer regenerate ambience audio that was already produced.
                 </p>
                 <p>
                     <strong>Cancel</strong>, <strong>Apply</strong> and <strong>OK</strong> behave as they do in
@@ -692,8 +709,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     <strong>Preview budget</strong> under the preview text shows the spoken units your text costs
                     against the safe limit of the active TTS model, and updates as you type. Generation is refused
-                    while you are over that limit. The preview text is also cut off at the <strong>Preview Text
-                    Limit</strong> from TTS Settings as you type, so it can never exceed the character ceiling.
+                    while you are over that limit.
                 </p>
                 <p>
                     The preview text is spoken to record the sample that every generated voice imitates, so its

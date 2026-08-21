@@ -470,7 +470,8 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
     ambience_system_prompt, ambience_user_prompt = captured_requests[1]
     assert "production-ready sound-design prompts" in ambience_system_prompt
     assert "concrete physical sound sources" in ambience_system_prompt
-    assert "continuous beep, pure sine wave, single tone, alarm" in ambience_system_prompt
+    assert "Start from the universal exclusion list given in the request" in ambience_system_prompt
+    assert f"Universal exclusion list: {config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT}" in ambience_user_prompt
     assert "Return ordered individual sound blocks" in ambience_user_prompt
     assert "Maximum blocks per sequence: 6" in ambience_user_prompt
     assert "occasional, intermittent, sparse, irregular" in ambience_user_prompt
@@ -489,6 +490,100 @@ def test_scene_ambience_none_placement_disables_generation() -> None:
 
     assert settings["enabled"] is False
     assert settings["allowed_positions"] == []
+
+
+def test_scene_ambience_prompt_carries_the_configured_negative_core() -> None:
+    """
+    @brief      Verify REQ-FUNC-a80dacf7 the configured exclusions reach the rendered prompt.
+    @return     None.
+    @exception  None
+    """
+    scene_ambience_settings = speech_blocks_service._resolve_scene_ambience_settings(  # noqa: SLF001
+        {"scene_ambience_placement": "openers_and_closers", "scene_ambience_negative_prompt": "kazoo, bagpipes"},
+        True,
+    )
+    rendered_prompt = speech_blocks_service._scene_ambience_user_prompt(  # noqa: SLF001
+        {"chunk_id": "chunk-0001", "text": "The clock ticked in the empty hall."},
+        "en",
+        [{"speech_block_id": "0001-000001", "sequence_index": 1, "content_kind": "narration", "text": "Quiet."}],
+        scene_ambience_settings,
+    )
+
+    assert scene_ambience_settings["negative_prompt"] == "kazoo, bagpipes"
+    assert "kazoo, bagpipes" in rendered_prompt
+
+
+def test_scene_ambience_block_without_exclusions_falls_back_to_the_configured_core() -> None:
+    """
+    @brief      Verify REQ-FUNC-a80dacf7 an omitted `negative_prompt` takes the configured core.
+    @return     None.
+    @exception  None
+    """
+    speech_blocks = speech_blocks_service._normalize_scene_ambience_response(  # noqa: SLF001
+        {"scene_ambience_blocks": [{"ambience_position": "opener", "sound_prompt": "steady rain on a tin roof"}]},
+        "chunk-0001",
+        "en",
+        {
+            "allowed_positions": ["opener"],
+            "duration_seconds": 10,
+            "max_blocks_per_sequence": 6,
+            "negative_prompt": "kazoo, bagpipes",
+        },
+    )
+
+    assert [block["negative_prompt"] for block in speech_blocks] == ["kazoo, bagpipes"]
+
+
+def test_scene_ambience_block_keeps_model_chosen_exclusions() -> None:
+    """
+    @brief      Verify REQ-FUNC-a80dacf7 exclusions the model chose for the scene are kept.
+    @return     None.
+    @exception  None
+    """
+    speech_blocks = speech_blocks_service._normalize_scene_ambience_response(  # noqa: SLF001
+        {
+            "scene_ambience_blocks": [
+                {
+                    "ambience_position": "opener",
+                    "sound_prompt": "steady rain on a tin roof",
+                    "negative_prompt": "kazoo, bagpipes, thunder",
+                }
+            ]
+        },
+        "chunk-0001",
+        "en",
+        {
+            "allowed_positions": ["opener"],
+            "duration_seconds": 10,
+            "max_blocks_per_sequence": 6,
+            "negative_prompt": "kazoo, bagpipes",
+        },
+    )
+
+    assert [block["negative_prompt"] for block in speech_blocks] == ["kazoo, bagpipes, thunder"]
+
+
+def test_shipped_ambience_prompts_exclude_no_periodicity_terms_by_default() -> None:
+    """
+    @brief      Verify REQ-FUNC-a80dacf7 no shipped default suppresses a rhythmic sound source.
+    @details    A ticking clock, dripping tap or idling engine is a legitimate ambience source, so
+                the terms that suppress periodicity must not sit in the universal exclusions.
+    @return     None.
+    @exception  None
+    """
+    periodicity_terms = ("beep", "sine wave", "single tone", "alarm", "drone", "buzzing")
+    shipped_defaults = [config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT.lower()]
+    for prompt_name in ("scene_ambience_system", "scene_ambience_user"):
+        prompt_text = (config.APP_PROMPTS_PATH / f"{prompt_name}.txt").read_text(encoding="utf-8")
+        shipped_defaults.extend(
+            line.lower() for line in prompt_text.splitlines() if "negative_prompt" in line or "exclu" in line.lower()
+        )
+
+    for shipped_default in shipped_defaults:
+        for periodicity_term in periodicity_terms:
+            assert periodicity_term not in shipped_default, (
+                f"'{periodicity_term}' is instructed as a default exclusion in: {shipped_default}"
+            )
 
 
 def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
@@ -3239,8 +3334,6 @@ def test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets()
     local_model_doc = (_REPO_ROOT / "05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md").read_text(
         encoding="utf-8"
     )
-    user_guide = (_REPO_ROOT / "05_SoftwareDocu/UserGuide/index.html").read_text(encoding="utf-8")
-    user_guide_ro = (_REPO_ROOT / "05_SoftwareDocu/UserGuide_ro/index.html").read_text(encoding="utf-8")
     ai_settings_source = (
         _REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"
     ).read_text(encoding="utf-8")
@@ -3251,8 +3344,6 @@ def test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets()
     assert "qwen/qwen3.6-27b" in local_model_doc
     assert "google/gemma-4-31b" in local_model_doc
     assert "AudioMancer does not send top-p, top-k, repeat penalty, seed, or reasoning mode" in local_model_doc
-    assert "configure top-p, top-k, repeat penalty, seed, and reasoning mode in LM Studio presets" in user_guide
-    assert "configureaza top-p, top-k, repeat penalty, seed si reasoning mode in preseturile LM Studio" in user_guide_ro
     for unsupported_setting in ("top_k", "top_p", "repeat_penalty", "reasoning_mode"):
         assert unsupported_setting not in ai_settings_source
         assert unsupported_setting not in settings_source

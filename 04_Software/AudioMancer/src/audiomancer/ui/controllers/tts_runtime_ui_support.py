@@ -61,7 +61,6 @@ def probe_runtime_and_persist_cache_from_settings(settings_payload: dict[str, ob
     updated_settings["tts_runtime_probe_message"] = str(probe_result.get("message", ""))
     updated_settings["tts_runtime_discovered_models"] = list(probe_result.get("discovered_models", []))
     updated_settings["tts_runtime_active_model_id"] = probe_result.get("active_model_id")
-    updated_settings["tts_runtime_device_diagnostics"] = dict(probe_result.get("device_diagnostics", {}))
     settings_service.save_settings(updated_settings)
     return probe_result
 
@@ -119,7 +118,6 @@ def persist_runtime_status_from_settings(
     if not updated_settings:
         updated_settings = dict(settings_payload)
     updated_settings["tts_runtime_active_model_id"] = active_model_id_from_status(status_payload)
-    updated_settings["tts_runtime_device_diagnostics"] = dict(status_payload.get("device_diagnostics", {}))
     settings_service.save_settings(updated_settings)
 
 

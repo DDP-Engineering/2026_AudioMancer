@@ -58,7 +58,6 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.NARRATOR_VOICE_FILE_NAME == "narrator_voice.json"
     assert config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
-    assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512
     assert config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
 
 

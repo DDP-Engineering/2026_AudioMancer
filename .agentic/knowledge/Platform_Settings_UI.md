@@ -154,9 +154,10 @@ instructions from the Chunking document.
   checkout Help paths retain the repository's `05_SoftwareDocu/UserGuide` and
   `05_SoftwareDocu/UserGuide_ro` entry points; shallow installed roots never
   require a second available ancestor during configuration initialization.
-- Both offline guides describe only controls the frontend actually builds
-  (`REQ-UX-f6ddf594`). The English and Romanian files are regenerated from the
-  page modules, not from `_UI_STRINGS`: the catalog retains keys for removed
+- Both offline guides describe only controls the frontend actually builds. This
+  is a convention, not a tracked requirement: the project keeps no requirements
+  or tests over help-file content. The English and Romanian files are
+  regenerated from the page modules, not from `_UI_STRINGS`: the catalog retains keys for removed
   controls - a theme editor (`settings.theme_new`, `theme_duplicate`,
   `theme_delete`, `theme_import`, `theme_export`), the Text Cleanup spacing
   categories and `apply_spacing`, a separate `text_cleanup.ai_clean` button,

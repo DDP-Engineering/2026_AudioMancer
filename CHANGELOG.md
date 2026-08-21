@@ -12,6 +12,61 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Scene Ambience no longer suppresses rhythmic sounds by default. Every ambience
+  block was being generated with the same fixed list of things to avoid, and six
+  entries on it - continuous beep, pure sine wave, single tone, alarm, loud bass
+  drone, harsh buzzing - work against any repeating source. A ticking clock, a
+  dripping tap, an idling engine or distant machinery was fought on every block,
+  whether or not the scene called for it. The list is now short and genuinely
+  universal - speech, voices, dialogue, singing, music, melody, low quality,
+  distorted - and the AI adds anything further only where it contradicts the
+  specific sound that block describes. Shorter also works better: the sound model
+  weighs all the avoid-terms together, so a handful pull harder than a dozen.
+- New **Scene Ambience Avoid** field in TTS Settings holds that universal list, so
+  you can tune it per book without editing anything else. Clearing it restores the
+  shipped list rather than removing all exclusions. The per-block Negative Prompt
+  box on Speech Blocks is unchanged and still overrides it for one block.
+- Because the avoid-list is part of what identifies a generated clip, existing
+  Scene Ambience audio is regenerated the next time you run Audio Blocks.
+- **Max Block Tokens** is now a target rather than a hard cut. A sentence longer
+  than the setting is spoken in one piece instead of being interrupted partway
+  through, and text is only ever divided mid-sentence when a single sentence
+  exceeds what the model can physically generate - a length real prose never
+  reaches. Blocks are still packed toward the setting wherever sentence
+  boundaries allow it, so it keeps doing what it was added for; it simply no
+  longer buys shorter blocks at the price of a seam in the middle of a thought.
+  Each generation request now asks for exactly the room its own text needs, so a
+  long sentence kept whole is not cut short by the runtime.
+- New **Max Block Tokens** setting in TTS Settings, default **1024**. It caps how
+  long one narration block may be planned, and only ever shortens: the TTS
+  model's own reported budget still applies, so this cannot ask for more audio
+  than the model can produce. Lower it if a cloned voice drifts toward the end of
+  a long block - a model will attempt everything up to its recommended ceiling,
+  but voice quality can fall off well before it.
+- Fixed: Audio Blocks reloaded the voice model before every run even when that
+  exact model was already loaded, adding a pointless wait to the start of each
+  generation.
+- Narration blocks are now as long as the TTS model says it can handle. Until now
+  AudioMancer planned every block against the model's starting value rather than
+  the larger value the model reports as recommended, so a book was cut into
+  roughly four times as many blocks as necessary, and each extra boundary is one
+  more place where two separately generated pieces of audio are joined. Blocks
+  now follow the recommended value, and never exceed the model's own hard limit.
+- The length of one generated second is now read from the TTS model instead of
+  being assumed. A model whose audio runs at a different rate is planned
+  correctly rather than approximately.
+- Removed the **Preview Text Limit** setting from TTS Settings. Sample text
+  length is already governed by the accepted word range, which both voice
+  editors enforce when you save and again when you generate. The character limit
+  was a second, weaker rule that applied only to Narrator Voice, quietly cut text
+  as you typed, and at its lower settings made valid sample text impossible to
+  write at all - the editor trimmed it below the accepted minimum and generation
+  then refused it, with nothing on screen explaining why.
+- Removed the **Narration Block Target** setting from TTS Settings. It could only
+  ask for shorter blocks and the model's own limit capped it, so every value
+  above that limit behaved exactly like **Auto**, and no value below it produced
+  a better audiobook. AudioMancer now always uses the longest block the model
+  supports.
 - Character voice samples are now written by the AI instead of being cut from the
   book. Until now the sample text for a character had to be their own dialogue,
   quoted word for word, so any character the book does not give enough lines to -

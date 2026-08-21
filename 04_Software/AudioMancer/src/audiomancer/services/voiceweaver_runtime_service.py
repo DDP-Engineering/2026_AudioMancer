@@ -327,25 +327,6 @@ def _normalize_status_payload(payload: dict[str, object]) -> dict[str, object]:
     return normalized_payload
 
 
-def normalize_device_diagnostics(candidate_payload: object) -> dict[str, object]:
-    """
-    @brief      Normalize one runtime device-diagnostics payload.
-    @param[in]  candidate_payload Candidate diagnostics payload.
-    @return     Normalized diagnostics dictionary.
-    @exception  None
-    """
-    if not isinstance(candidate_payload, dict):
-        return {}
-    normalized_payload: dict[str, object] = {}
-    for key, value in candidate_payload.items():
-        normalized_key = str(key).strip()
-        if not normalized_key:
-            continue
-        if value is None or isinstance(value, (bool, int, float, str)):
-            normalized_payload[normalized_key] = value
-    return normalized_payload
-
-
 def normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
     """
     @brief      Normalize one VoiceWeaver discovered-model payload.
@@ -447,7 +428,6 @@ def probe_runtime(
             message="Connection failed: Base URL is empty.",
             discovered_models=[],
             active_model_id=None,
-            device_diagnostics={},
         )
 
     headers = _build_request_headers(runtime_api_key)
@@ -459,7 +439,6 @@ def probe_runtime(
         discovered_models = _normalize_models_payload(models_payload)
         status_payload = _read_json(_endpoint_url(normalized_base_url, "/v1/status"), headers, timeout_seconds)
         active_model_id = _resolve_active_model_id(status_payload.get("active_model"))
-        device_diagnostics = normalize_device_diagnostics(status_payload.get("device_diagnostics"))
     except error.HTTPError as exception:
         if exception.code == 401:
             return _build_probe_result(
@@ -467,14 +446,12 @@ def probe_runtime(
                 message="Connection failed: invalid or missing runtime credentials.",
                 discovered_models=[],
                 active_model_id=None,
-                device_diagnostics={},
             )
         return _build_probe_result(
             success=False,
             message=f"Connection failed: HTTP {exception.code}.",
             discovered_models=[],
             active_model_id=None,
-            device_diagnostics={},
         )
     except error.URLError as exception:
         reason = getattr(exception, "reason", exception)
@@ -483,7 +460,6 @@ def probe_runtime(
             message=f"Connection failed: {reason}.",
             discovered_models=[],
             active_model_id=None,
-            device_diagnostics={},
         )
     except TimeoutError:
         return _build_probe_result(
@@ -491,7 +467,6 @@ def probe_runtime(
             message="Connection failed: request timed out.",
             discovered_models=[],
             active_model_id=None,
-            device_diagnostics={},
         )
     except ValueError as exception:
         return _build_probe_result(
@@ -499,7 +474,6 @@ def probe_runtime(
             message=f"Connection failed: {exception}.",
             discovered_models=[],
             active_model_id=None,
-            device_diagnostics={},
         )
 
     return _build_probe_result(
@@ -507,7 +481,6 @@ def probe_runtime(
         message=f"Connection successful. Discovered {len(discovered_models)} models.",
         discovered_models=discovered_models,
         active_model_id=active_model_id,
-        device_diagnostics=device_diagnostics,
     )
 
 
@@ -1154,7 +1127,6 @@ def _build_probe_result(
     message: str,
     discovered_models: list[VoiceWeaverModelPayload],
     active_model_id: str | None,
-    device_diagnostics: dict[str, object],
 ) -> VoiceWeaverProbeResult:
     """
     @brief      Build one normalized VoiceWeaver probe result payload.
@@ -1162,7 +1134,6 @@ def _build_probe_result(
     @param[in]  message Operator-facing probe message.
     @param[in]  discovered_models Normalized discovered-model list.
     @param[in]  active_model_id Active model identifier or None.
-    @param[in]  device_diagnostics Normalized runtime device-diagnostics payload.
     @return     Normalized runtime probe result dictionary.
     @exception  None
     """
@@ -1173,7 +1144,6 @@ def _build_probe_result(
         "discovered_models": list(discovered_models),
         "discovered_model_count": len(discovered_models),
         "active_model_id": active_model_id,
-        "device_diagnostics": dict(device_diagnostics),
         "capability_matrix": capability_matrix,
     }
 

@@ -307,9 +307,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </table>
                 <div class="note">
                     AudioMancer trimite modelul, fereastra de context, bugetul de iesire, temperatura, timeoutul si &mdash;
-                    cand <strong>Iesire structurata</strong> este bifata &mdash; un indiciu de iesire structurata. Detaliile
-                    de esantionare precum top-p, top-k, penalizarea de repetitie, seedul si modul de rationament
-                    apartin presetarii LM Studio a modelului incarcat. Tine cheile API online private si introdu-le
+                    cand <strong>Iesire structurata</strong> este bifata &mdash; un indiciu de iesire structurata. Pentru
+                    detaliile de esantionare, configureaza top-p, top-k, repeat penalty, seed si reasoning mode in preseturile LM Studio
+                    pentru modelul incarcat. Tine cheile API online private si introdu-le
                     doar in aceasta fereastra.
                 </div>
                 <figure>
@@ -342,7 +342,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Voice Designer necesare. Inainte de o testare reusita, iti cere sa testezi intai conexiunea; dupa
                     aceea fie confirma capabilitatile, fie le numeste pe cele care lipsesc.
                 </p>
-                <h3>Timpi si limite de text</h3>
+                <h3>Timpi de asteptare si lungimea blocurilor</h3>
                 <table>
                     <thead>
                         <tr><th>Setare</th><th>Interval</th><th>Implicit</th></tr>
@@ -350,22 +350,26 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <tbody>
                         <tr><td>Timeout Preview Audio (s)</td><td>10 - 3600</td><td>60</td></tr>
                         <tr><td>Timeout Generare Audio (s)</td><td>30 - 7200</td><td>300</td></tr>
-                        <tr><td>Limita Text Previzualizare (caractere)</td><td>64 - 8192</td><td>512</td></tr>
-                        <tr><td>Tinta Bloc Naratiune (s)</td><td>0 - 300, pas 5</td><td>0 (<strong>Automat</strong>)</td></tr>
+                        <tr><td>Tokeni Maximi pe Bloc</td><td>128 - 8192, pas 128</td><td>1024</td></tr>
                     </tbody>
                 </table>
                 <p>
-                    <strong>Limita Text Previzualizare</strong> este plafonul ferm al textului de previzualizare al
-                    unui profil de voce &mdash; editoarele din Voce Narator si Voci Personaje nu mai accepta caractere peste
-                    ea in timp ce scrii.
+                    <strong>Tokeni Maximi pe Bloc</strong> este cel mai mare buget de generare cu care este
+                    planificat un bloc de naratiune. Modelul TTS isi raporteaza propriul buget recomandat, iar acela
+                    ramane valabil, deci aceasta setare poate doar scurta blocurile, niciodata nu le lungeste.
+                    Coboar-o daca auzi vocea clonata deviind spre finalul unui bloc lung &mdash; un model incearca
+                    orice pana la plafonul lui recomandat, dar calitatea vocii poate scadea cu mult inainte de el.
                 </p>
                 <p>
-                    <strong>Tinta Bloc Naratiune</strong> cere blocuri mai scurte decat ar permite modelul in modul
-                    acelasi narator. La valoarea cea mai mica afiseaza <strong>Automat</strong> si AudioMancer
-                    foloseste cel mai larg bloc sigur pe care il sustine modelul TTS descoperit. Aceasta setare poate
-                    doar sa scurteze blocurile: bugetul de tokeni al modelului ramane limita ferma, pentru ca cerand
-                    mai mult audio decat poate produce modelul obtii iesire trunchiata sau tacuta. O valoare nenula sub
-                    cinci secunde este ridicata la cinci.
+                    Lungimea textului de previzualizare nu este o setare. Editoarele din Voce Narator si Voci
+                    Personaje accepta text de previzualizare intr-un singur interval fix de cuvinte rostite, cel care
+                    produce o mostra utila pentru clonarea vocii; ambele editoare anunta intervalul daca iesi din el.
+                </p>
+                <p>
+                    AudioMancer intreaba modelul TTS descoperit ce recomanda, planifica blocurile dupa cea mai mica
+                    dintre acea valoare si <strong>Tokeni Maximi pe Bloc</strong>, si pastreaza o marja de siguranta
+                    sub rezultat. Cerand mai mult audio decat poate produce modelul obtii iesire trunchiata sau
+                    tacuta, asa ca modelul are intotdeauna ultimul cuvant.
                 </p>
                 <h3>Ambienta Scena</h3>
                 <table>
@@ -379,6 +383,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><td>Ghidaj Ambienta Scena</td><td>0.1 - 30.0, pas 0.5</td><td>7.0</td></tr>
                         <tr><td>Pasi Ambienta Scena</td><td>1 - 300</td><td>100</td></tr>
                         <tr><td>Seed Ambienta Scena</td><td>-1 - 2147483647</td><td>-1 (<strong>Aleatoriu</strong>)</td></tr>
+                        <tr><td>Sunete Evitate Ambienta</td><td>Text liber, separat prin virgula</td><td>speech, voices, dialogue, singing, music, melody, low quality, distorted</td></tr>
                     </tbody>
                 </table>
                 <p>
@@ -390,6 +395,16 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Blocuri</strong> este un plafon, nu o cota &mdash; modelul poate folosi mai putine cand mai putine surse
                     distincte de sunet sunt utile. Fixeaza un <strong>Seed</strong> cand vrei un sunet repetabil sau
                     lasa-l pe <strong>Aleatoriu</strong>.
+                </p>
+                <p>
+                    <strong>Sunete Evitate Ambienta</strong> listeaza sunetele excluse din fiecare bloc de ambienta,
+                    indiferent de scena. AI-ul adauga altceva pe bloc doar acolo unde ar contrazice sunetul acelui
+                    bloc, deci tine lista scurta &mdash; modelul de sunet cantareste toti termenii evitati impreuna, iar
+                    cativa trag mai tare decat o duzina. Nu pune ritmul aici: excluderea bipurilor, tonurilor,
+                    alarmelor sau dronelor suprima si un ceas care ticaie, un robinet care picura sau un motor la
+                    ralanti. Golirea campului restaureaza lista livrata. Pentru a o suprascrie doar pentru un bloc,
+                    foloseste caseta <strong>Prompt Negativ</strong> din pagina Blocuri Vorbire. Modificarea acestei
+                    liste face AudioMancer sa regenereze ambienta deja produsa.
                 </p>
                 <p>
                     <strong>Anuleaza</strong>, <strong>Aplica</strong> si <strong>OK</strong> se comporta ca in Setari.
@@ -713,9 +728,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     <strong>Buget previzualizare</strong>, sub textul de previzualizare, arata cate unitati rostite
                     costa textul tau fata de limita sigura a modelului TTS activ si se actualizeaza in timp ce scrii.
-                    Generarea este refuzata cat timp esti peste acea limita. Textul de previzualizare este si taiat la
-                    <strong>Limita Text Previzualizare</strong> din Setari TTS in timp ce scrii, deci nu poate depasi
-                    niciodata plafonul de caractere.
+                    Generarea este refuzata cat timp esti peste acea limita.
                 </p>
                 <p>
                     Textul de previzualizare este rostit pentru a inregistra mostra pe care o imita fiecare voce

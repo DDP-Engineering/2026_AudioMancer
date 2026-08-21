@@ -383,9 +383,8 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     )
     if _selected_profile_id(window) == profile_id and not invalidate_audio_blocks:
         return
-    preview_text = _limited_preview_text(
-        window._narator_voice_page.current_editor_payload().get("preview_text", ""),
-        window._settings_payload,
+    preview_text = str(
+        window._narator_voice_page.current_editor_payload().get("preview_text", "") or ""
     ).strip()
     if not preview_text:
         QMessageBox.warning(
@@ -566,7 +565,6 @@ def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) ->
     if additional_profile_instructions is None:
         return
     voice_language = window._narator_voice_page.current_voice_language()
-    preview_limit = _preview_text_character_limit(window._settings_payload)
     operation_runner_controller.start_threaded_operation(
         window,
         "narrator_definition",
@@ -579,7 +577,6 @@ def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) ->
                 selected_profile,
                 profile_count,
                 voice_language,
-                preview_limit,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
                 additional_profile_instructions=additional_profile_instructions,
@@ -993,26 +990,6 @@ def _generate_and_store_sample(
     )
 
 
-def _limited_preview_text(preview_text: object, settings_payload: dict[str, object]) -> str:
-    """
-    @brief      Limit narrator sample preview text using the persisted TTS setting.
-    @param[in]  preview_text Candidate preview text.
-    @param[in]  settings_payload Current application settings payload.
-    @return     Preview text capped at the configured character limit.
-    @exception  None
-    """
-    try:
-        character_limit = int(
-            settings_payload.get(
-                "tts_preview_text_character_limit",
-                config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
-            )
-        )
-    except (TypeError, ValueError):
-        character_limit = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
-    return str(preview_text or "")[: max(character_limit, 1)]
-
-
 def _update_generation_progress(
     progress_callback,
     status_payload: dict[str, object],
@@ -1309,27 +1286,6 @@ def _profile_generation_count_default(operation_state: dict[str, object]) -> int
     if not 1 <= requested_count <= config.MAX_NARRATOR_PROFILE_GENERATION_COUNT:
         return fallback
     return requested_count
-
-
-def _preview_text_character_limit(settings_payload: dict[str, object] | None) -> int:
-    """
-    @brief      Resolve the configured narrator preview text character limit.
-    @param[in]  settings_payload Current application settings payload.
-    @return     Positive preview text character limit.
-    @exception  None
-    """
-    if not isinstance(settings_payload, dict):
-        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
-    try:
-        character_limit = int(
-            settings_payload.get(
-                "tts_preview_text_character_limit",
-                config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
-            )
-        )
-    except (TypeError, ValueError):
-        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
-    return character_limit if character_limit > 0 else config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
 
 
 def _show_name_validation_error(window: "MainWindow", language: str, error_code: str) -> None:

@@ -162,10 +162,9 @@ def test_each_persistent_page_localizes_audited_visible_text(qtbot) -> None:
     assert audio_blocks_page._title_label.text() == "<h2>Blocuri Audio</h2>"
 
     tts_page = _romanian_page(qtbot, TtsSettingsPage)
-    assert tts_page._speech_block_target_label.text() == "Tinta Bloc Naratiune (s)"
-    assert tts_page._speech_block_target_spin.specialValueText() == "Automat"
+    assert tts_page._preview_timeout_label.text() == "Timeout Preview Audio (s)"
+    assert tts_page._generation_timeout_label.text() == "Timeout Generare Audio (s)"
     assert tts_page._scene_ambience_seed_spin.specialValueText() == "Aleatoriu"
-    assert tts_page._speech_block_target_spin.toolTip().startswith("Durata vorbita preferata")
 
 
 def test_app_owned_dialog_calls_do_not_embed_operator_facing_literals() -> None:

@@ -38,7 +38,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services import ui_state_service, voiceweaver_runtime_service
+from audiomancer.services import tts_budget_service, ui_state_service, voiceweaver_runtime_service
 
 # CONSTANTS
 
@@ -71,7 +71,6 @@ class TtsSettingsPage(QWidget):
         self._current_language = config.DEFAULT_LANGUAGE
         self._project_active = False
         self._discovered_models: list[dict[str, object]] = []
-        self._device_diagnostics: dict[str, object] = {}
         self._capability_matrix: dict[str, object] = voiceweaver_runtime_service.build_capability_matrix([])
         self._probe_ran = False
         self._probe_succeeded = False
@@ -154,29 +153,21 @@ class TtsSettingsPage(QWidget):
         self._generation_timeout_spin.setValue(config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS)
         self._configure_limit_spinbox(self._generation_timeout_spin)
         numeric_limits_form.addRow(self._generation_timeout_label, self._generation_timeout_spin)
-        self._preview_text_limit_label = QLabel("Preview Text Limit (chars)", self)
-        self._configure_runtime_limit_label(self._preview_text_limit_label)
-        self._preview_text_limit_spin = QSpinBox(self)
-        self._preview_text_limit_spin.setRange(64, 8192)
-        self._preview_text_limit_spin.setValue(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT)
-        self._configure_limit_spinbox(self._preview_text_limit_spin)
-        numeric_limits_form.addRow(self._preview_text_limit_label, self._preview_text_limit_spin)
-        self._speech_block_target_label = QLabel("Narration Block Target (s)", self)
-        self._configure_runtime_limit_label(self._speech_block_target_label)
-        self._speech_block_target_spin = QDoubleSpinBox(self)
-        self._speech_block_target_spin.setRange(0.0, config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM)
-        self._speech_block_target_spin.setSingleStep(5.0)
-        self._speech_block_target_spin.setDecimals(0)
-        # The minimum doubles as "no operator preference", so the model budget decides.
-        # Kept short because this column is narrow; the tooltip carries the explanation.
-        self._speech_block_target_spin.setSpecialValueText("Auto")
-        self._speech_block_target_spin.setValue(config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS)
-        self._speech_block_target_spin.setToolTip(
-            "Preferred spoken length of one same-narrator block. "
-            "The TTS model budget always stays the hard limit, so this can only shorten blocks."
+        self._max_generation_tokens_label = QLabel("Max Block Tokens", self)
+        self._configure_runtime_limit_label(self._max_generation_tokens_label)
+        self._max_generation_tokens_spin = QSpinBox(self)
+        self._max_generation_tokens_spin.setRange(
+            config.SPEECH_BLOCK_MAX_GENERATION_TOKENS_MINIMUM,
+            config.SPEECH_BLOCK_MAX_GENERATION_TOKENS_MAXIMUM,
         )
-        self._configure_limit_spinbox(self._speech_block_target_spin)
-        numeric_limits_form.addRow(self._speech_block_target_label, self._speech_block_target_spin)
+        self._max_generation_tokens_spin.setSingleStep(128)
+        self._max_generation_tokens_spin.setValue(config.DEFAULT_SPEECH_BLOCK_MAX_GENERATION_TOKENS)
+        self._max_generation_tokens_spin.setToolTip(
+            "Largest generation-token budget one narration block is planned against. "
+            "The TTS model's own reported budget still applies, so this can only shorten blocks."
+        )
+        self._configure_limit_spinbox(self._max_generation_tokens_spin)
+        numeric_limits_form.addRow(self._max_generation_tokens_label, self._max_generation_tokens_spin)
         self._scene_ambience_placement_label = QLabel("Scene Ambience Placement", self)
         self._scene_ambience_placement_combo = QComboBox(self)
         self._scene_ambience_placement_combo.setMinimumWidth(140)
@@ -218,6 +209,18 @@ class TtsSettingsPage(QWidget):
         self._scene_ambience_seed_spin.setValue(-1)
         self._configure_limit_spinbox(self._scene_ambience_seed_spin)
         ambience_limits_form.addRow(self._scene_ambience_seed_label, self._scene_ambience_seed_spin)
+        self._scene_ambience_negative_prompt_label = QLabel("Scene Ambience Avoid", self)
+        self._scene_ambience_negative_prompt_edit = QLineEdit(self)
+        self._scene_ambience_negative_prompt_edit.setText(config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT)
+        self._scene_ambience_negative_prompt_edit.setToolTip(
+            "Sounds excluded from every Scene Ambience block, whatever the scene. "
+            "The AI adds further exclusions per block only where they contradict that block's own sound. "
+            "Keep this short: every extra term weakens the rest."
+        )
+        ambience_limits_form.addRow(
+            self._scene_ambience_negative_prompt_label,
+            self._scene_ambience_negative_prompt_edit,
+        )
         self._numeric_limits_column.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._ambience_limits_column.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._planning_columns_layout.addWidget(self._numeric_limits_column, 1)
@@ -279,22 +282,8 @@ class TtsSettingsPage(QWidget):
                 )
             )
         )
-        self._preview_text_limit_spin.setValue(
-            int(
-                settings_payload.get(
-                    "tts_preview_text_character_limit",
-                    config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
-                )
-            )
-        )
-        self._speech_block_target_spin.setValue(
-            float(
-                settings_payload.get(
-                    "speech_block_target_audio_seconds",
-                    config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS,
-                )
-                or 0.0
-            )
+        self._max_generation_tokens_spin.setValue(
+            tts_budget_service.resolve_generation_token_limit(settings_payload)
         )
         scene_ambience_placement = str(
             settings_payload.get(
@@ -339,6 +328,14 @@ class TtsSettingsPage(QWidget):
         )
         scene_ambience_seed = settings_payload.get("scene_ambience_seed", config.DEFAULT_SCENE_AMBIENCE_SEED)
         self._scene_ambience_seed_spin.setValue(-1 if scene_ambience_seed is None else int(scene_ambience_seed))
+        self._scene_ambience_negative_prompt_edit.setText(
+            str(
+                settings_payload.get(
+                    "scene_ambience_negative_prompt",
+                    config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT,
+                )
+            )
+        )
         self._active_model_id = (
             None
             if settings_payload.get("tts_runtime_active_model_id") in (None, "")
@@ -349,11 +346,6 @@ class TtsSettingsPage(QWidget):
             for model in settings_payload.get("tts_runtime_discovered_models", [])
             if isinstance(model, dict)
         ]
-        self._device_diagnostics = (
-            dict(settings_payload.get("tts_runtime_device_diagnostics", {}))
-            if isinstance(settings_payload.get("tts_runtime_device_diagnostics"), dict)
-            else {}
-        )
         self._capability_matrix = voiceweaver_runtime_service.build_capability_matrix(self._discovered_models)
         self._rebuild_model_list()
         self._runtime_status_label.setText(self._build_runtime_status_text())
@@ -376,11 +368,6 @@ class TtsSettingsPage(QWidget):
         self._discovered_models = [
             dict(model) for model in probe_result.get("discovered_models", []) if isinstance(model, dict)
         ]
-        self._device_diagnostics = (
-            dict(probe_result.get("device_diagnostics", {}))
-            if isinstance(probe_result.get("device_diagnostics"), dict)
-            else {}
-        )
         self._capability_matrix = voiceweaver_runtime_service.build_capability_matrix(self._discovered_models)
         self._rebuild_model_list()
         self._runtime_status_label.setText(self._build_runtime_status_text())
@@ -401,16 +388,9 @@ class TtsSettingsPage(QWidget):
             merged_settings["tts_runtime_probe_message"] = self._probe_message
         merged_settings["tts_runtime_discovered_models"] = [dict(model) for model in self._discovered_models]
         merged_settings["tts_runtime_active_model_id"] = self._active_model_id
-        merged_settings["tts_runtime_device_diagnostics"] = dict(self._device_diagnostics)
         merged_settings["tts_audio_preview_timeout_seconds"] = self._preview_timeout_spin.value()
         merged_settings["tts_audio_generation_timeout_seconds"] = self._generation_timeout_spin.value()
-        merged_settings["tts_preview_text_character_limit"] = self._preview_text_limit_spin.value()
-        speech_block_target = float(self._speech_block_target_spin.value())
-        merged_settings["speech_block_target_audio_seconds"] = (
-            0.0
-            if speech_block_target <= 0.0
-            else max(speech_block_target, float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM))
-        )
+        merged_settings["speech_block_max_generation_tokens"] = self._max_generation_tokens_spin.value()
         merged_settings.pop("scene_ambience_generation_enabled", None)
         merged_settings.pop("scene_ambience_audio_generation_enabled", None)
         merged_settings["scene_ambience_placement"] = str(
@@ -422,6 +402,9 @@ class TtsSettingsPage(QWidget):
         merged_settings["scene_ambience_num_inference_steps"] = self._scene_ambience_steps_spin.value()
         seed_value = self._scene_ambience_seed_spin.value()
         merged_settings["scene_ambience_seed"] = None if seed_value < 0 else seed_value
+        merged_settings["scene_ambience_negative_prompt"] = (
+            self._scene_ambience_negative_prompt_edit.text().strip() or config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT
+        )
         return merged_settings
 
     def build_tts_plan_payload(self) -> dict[str, object] | None:
@@ -448,15 +431,11 @@ class TtsSettingsPage(QWidget):
         self._planning_group.setTitle(ui_state_service.translate("tts_settings.plan_group", language))
         self._preview_timeout_label.setText(ui_state_service.translate("tts_settings.preview_timeout", language))
         self._generation_timeout_label.setText(ui_state_service.translate("tts_settings.generation_timeout", language))
-        self._preview_text_limit_label.setText(ui_state_service.translate("tts_settings.preview_text_limit", language))
-        self._speech_block_target_label.setText(
-            ui_state_service.translate("tts_settings.speech_block_target", language)
+        self._max_generation_tokens_label.setText(
+            ui_state_service.translate("tts_settings.max_generation_tokens", language)
         )
-        self._speech_block_target_spin.setSpecialValueText(
-            ui_state_service.translate("tts_settings.speech_block_target_auto", language)
-        )
-        self._speech_block_target_spin.setToolTip(
-            ui_state_service.translate("tts_settings.speech_block_target_tooltip", language)
+        self._max_generation_tokens_spin.setToolTip(
+            ui_state_service.translate("tts_settings.max_generation_tokens_tooltip", language)
         )
         self._scene_ambience_placement_label.setText(
             ui_state_service.translate("tts_settings.scene_ambience_placement", language)
@@ -478,6 +457,9 @@ class TtsSettingsPage(QWidget):
         )
         self._scene_ambience_seed_spin.setSpecialValueText(
             ui_state_service.translate("tts_settings.scene_ambience_seed_random", language)
+        )
+        self._scene_ambience_negative_prompt_label.setText(
+            ui_state_service.translate("tts_settings.scene_ambience_negative_prompt", language)
         )
         self._refresh_scene_ambience_placement_labels()
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))

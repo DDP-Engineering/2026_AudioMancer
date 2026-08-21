@@ -33,7 +33,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from audiomancer import config
 from audiomancer.services import tts_budget_service, ui_state_service
 
 _PROFILE_PANE_INITIAL_WIDTH = 400
@@ -88,9 +87,7 @@ class NaratorVoicePage(QWidget):
         self._can_select = False
         self._preview_available = False
         self._original_profile: dict[str, object] | None = None
-        self._preview_text_character_limit = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
         self._preview_text_safe_word_limit = 0
-        self._enforcing_preview_text_limit = False
 
         layout = QVBoxLayout(self)
         header_layout = QVBoxLayout()
@@ -259,7 +256,6 @@ class NaratorVoicePage(QWidget):
         can_select: bool,
         preview_available: bool,
         status_lines: list[str],
-        preview_text_character_limit: int = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
         preview_text_safe_word_limit: int = 0,
     ) -> None:
         """
@@ -280,7 +276,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  can_select True when the current profile may become the selected narator_voice.
         @param[in]  preview_available True when one stored preview sample may play.
         @param[in]  status_lines Bottom status-window lines.
-        @param[in]  preview_text_character_limit Maximum preview text length in characters.
         @param[in]  preview_text_safe_word_limit Safe preview text word limit from the active TTS model budget.
         @return     None.
         @exception  None
@@ -296,7 +291,6 @@ class NaratorVoicePage(QWidget):
         self._can_generate = can_generate
         self._can_select = can_select
         self._preview_available = preview_available
-        self._preview_text_character_limit = _positive_character_limit(preview_text_character_limit)
         self._preview_text_safe_word_limit = max(0, int(preview_text_safe_word_limit))
         self._dirty = False
         self._edit_mode = False
@@ -570,7 +564,7 @@ class NaratorVoicePage(QWidget):
         self._loading_profile = True
         self._profile_name_edit.setText(profile_name)
         self._designer_prompt.setPlainText(prompt_text)
-        self._preview_text_edit.setPlainText(self._limited_preview_text(preview_text))
+        self._preview_text_edit.setPlainText(str(preview_text or ""))
         self._loading_profile = False
         self._update_preview_budget_label()
 
@@ -588,14 +582,6 @@ class NaratorVoicePage(QWidget):
                 safe_word_count=safe_budget_units,
             )
         )
-
-    def _limited_preview_text(self, preview_text: object) -> str:
-        """
-        @brief      Limit preview text to the configured character budget.
-        @param[in]  preview_text Candidate preview text.
-        @return     Preview text truncated to the configured maximum length.
-        """
-        return str(preview_text or "")[: self._preview_text_character_limit]
 
     def _current_profile(self) -> dict[str, object] | None:
         """
@@ -640,21 +626,9 @@ class NaratorVoicePage(QWidget):
 
     def _handle_preview_text_changed(self) -> None:
         """
-        @brief      Enforce the configured preview text character limit and mark editor changes.
+        @brief      Refresh the preview budget readout and mark editor changes.
         @return     None.
         """
-        if self._enforcing_preview_text_limit:
-            return
-        preview_text = self._preview_text_edit.toPlainText()
-        limited_text = self._limited_preview_text(preview_text)
-        if limited_text != preview_text:
-            self._enforcing_preview_text_limit = True
-            cursor = self._preview_text_edit.textCursor()
-            cursor_position = min(cursor.position(), len(limited_text))
-            self._preview_text_edit.setPlainText(limited_text)
-            cursor.setPosition(cursor_position)
-            self._preview_text_edit.setTextCursor(cursor)
-            self._enforcing_preview_text_limit = False
         self._update_preview_budget_label()
         self._handle_editor_changed()
 
@@ -746,19 +720,6 @@ def _display_profile_name(display_name: str) -> str:
     """
     normalized_name = str(display_name).strip()
     return normalized_name
-
-
-def _positive_character_limit(value: object) -> int:
-    """
-    @brief      Normalize a configured character limit.
-    @param[in]  value Candidate character limit.
-    @return     Positive character limit or the configured default.
-    """
-    try:
-        resolved_value = int(value)
-    except (TypeError, ValueError):
-        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
-    return resolved_value if resolved_value > 0 else config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
 
 
 # END OF FILE

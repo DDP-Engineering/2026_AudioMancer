@@ -132,6 +132,35 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   the model has no effective or default token value, so Speech and Audio Blocks
   use the runtime-reported capacity instead of the configuration fallback
   (`REQ-FUNC-1fef6b33`).
+- `tts_budget_service.model_generation_limits()` is the single reader of the
+  reported `max_new_tokens` range, and both budget paths call it. It returns the
+  `recommended_maximum` bounded by `hard_maximum` (`REQ-FUNC-82401294`) and the
+  reported `approx_audio_seconds_per_token` (`REQ-FUNC-9029b464`), each `None`
+  when unreported. `_resolve_model_budget()` consults it ahead of
+  `runtime_effective`, because the loaded model reports its own default as
+  effective and would otherwise mask the recommended maximum.
+- `resolve_generation_token_limit()` reads the operator ceiling from settings and
+  both budget paths apply it to the token count before deriving anything from it,
+  so audio seconds, split seconds and the safe word count all follow from the one
+  token number the runtime is asked for (`REQ-FUNC-8ee67d8f`).
+- That operator ceiling is a packing target, not a cut. Both budget payloads also
+  carry `hard_token_maximum` and `hard_word_count`, derived from the runtime's
+  reported `hard_maximum` through `model_hard_token_maximum()` and never lowered
+  by the operator, because they mark where generation fails rather than where the
+  operator prefers blocks to end. `_plan_audio_block_splits()` packs sentences
+  toward the target but emits an over-target sentence whole while it stays inside
+  the hard count; clause and word-group cuts engage only past it
+  (`REQ-FUNC-79fd5f3a`).
+- `_part_generation_token_budget()` sizes `max_new_tokens` per request instead of
+  sending the operator target for every part. A part inside the target keeps the
+  target; a longer part gets the smallest ceiling covering its estimated spoken
+  length, bounded by the hard maximum. Sending the target for a deliberately
+  over-target part would truncate exactly the sentences the splitter kept intact
+  (`REQ-FUNC-46959c54`).
+- `_ensure_clone_model_loaded()` skips the load when the live active-model
+  identity already matches. It previously also required the budget to have come
+  from `runtime_effective`, which a runtime-reported budget made unreachable, so
+  every run reloaded an already-loaded model (`REQ-NFR-5bda19fd`).
 
 ## 7. Workflow Integration
 

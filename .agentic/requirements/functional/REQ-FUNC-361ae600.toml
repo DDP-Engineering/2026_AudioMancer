@@ -1,27 +1,22 @@
 schema = 1
 id = "REQ-FUNC-361ae600"
 title = "The operator-selectable narration block target shall only shorten"
-status = "active"
+status = "retired"
 
 requirement = """
 The operator-selectable narration block target shall only shorten blocks, never exceed the TTS model token budget.
+
+Retired 2026-08-20: the narration block target control is removed. Because it could only shorten and the model budget capped it, every value at or above the model's own block duration behaved identically to Auto, and no value below it improved on Auto.
 """
 
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Inspection: confirm the narration block target control, its configuration constants, its persisted setting and its budget-narrowing helpers are absent from the current implementation."
 
-affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
-]
-linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_fallback_budget_matches_the_voiceweaver_clone_cap",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_operator_target_only_ever_shortens_the_model_budget",
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_round_trips_the_narration_block_target",
-]
+affected_paths = []
+linked_tests = []
 
 priority = "normal"
 rationale = """
 VoiceWeaver caps clone models at 512 codec tokens; planning longer blocks makes the runtime truncate or fail on silent output.
 """
 created = 2026-07-26
-updated = 2026-07-26
+updated = 2026-08-20

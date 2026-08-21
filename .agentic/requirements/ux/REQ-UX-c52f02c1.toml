@@ -1,0 +1,79 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-UX-c52f02c1"
+
+title = "The operator shall be able to edit the default scene-ambience exclusions"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+The TTS Settings page shall present the universally applied scene-ambience exclusions as an editable field alongside the other scene-ambience controls, load the persisted value into it, and save what the operator typed, falling back to the shipped list when the field is left empty.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "A focused test loads the TTS Settings page from a payload carrying a distinctive exclusions value and observes it in the field; typing a different value and building the settings payload observes that value persisted; clearing the field and building again observes the shipped default restored rather than an empty string."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_round_trips_the_scene_ambience_exclusions",
+  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_cleared_scene_ambience_exclusions_fall_back_to_the_shipped_default",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = """
+Which sounds are never wanted in ambience depends on the book. A quiet domestic novel and a battlefield chapter disagree about whether machinery or impacts belong, and the operator hears the result while the model cannot. Exposing the list as a setting is what makes it tunable without editing a shipped prompt file, and it is the same value the fallback uses, so one field governs both paths. An empty field restores the shipped list rather than removing all exclusions, because a blank value is far more likely to be an accidental deletion than a deliberate request for unconstrained output.
+"""
+
+created = 2026-08-20
+updated = 2026-08-20

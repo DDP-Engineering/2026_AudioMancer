@@ -75,7 +75,6 @@ def build_narrator_definition_state(
     @return     Page-state payload consumed by the Narator Voice page.
     @exception  None
     """
-    preview_text_character_limit = _preview_text_character_limit(settings_payload)
     if project_root is None or manifest is None:
         return {
             "profiles": [],
@@ -87,7 +86,6 @@ def build_narrator_definition_state(
             "profile_name": "",
             "prompt_text": "",
             "preview_text": narrator_definition_service.DEFAULT_PREVIEW_TEXT,
-            "preview_text_character_limit": preview_text_character_limit,
             "is_editable": False,
             "can_edit": False,
             "can_delete": False,
@@ -169,7 +167,6 @@ def build_narrator_definition_state(
                 narrator_definition_service.preview_text_for_language(selected_voice_language),
             )
         ),
-        "preview_text_character_limit": preview_text_character_limit,
         "preview_text_safe_word_limit": preview_safe_word_limit,
         "is_editable": bool(current_profile),
         "can_edit": bool(current_profile),
@@ -188,27 +185,6 @@ def build_narrator_definition_state(
             preview_safe_word_limit,
         ),
     }
-
-
-def _preview_text_character_limit(settings_payload: dict[str, object] | None) -> int:
-    """
-    @brief      Resolve the configured TTS preview text character limit.
-    @param[in]  settings_payload Optional persisted application settings payload.
-    @return     Positive preview text character limit.
-    @exception  None
-    """
-    if not isinstance(settings_payload, dict):
-        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
-    try:
-        configured_limit = int(
-            settings_payload.get(
-                "tts_preview_text_character_limit",
-                config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
-            )
-        )
-    except (TypeError, ValueError):
-        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
-    return configured_limit if configured_limit > 0 else config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
 
 
 def build_narrator_definition_notes(

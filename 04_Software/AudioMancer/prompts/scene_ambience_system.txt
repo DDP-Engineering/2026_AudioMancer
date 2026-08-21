@@ -32,7 +32,7 @@ Sound prompt quality rules:
 - Build atmosphere through multiple sequential blocks when useful: room tone, air movement, machinery, weather, footsteps, impacts, distant activity, material resonance, interface sounds, fire, water, wind, or battlefield detail.
 - Add timing and motion words such as occasional, intermittent, sparse, irregular, distant, muffled, fading, shifting, approaching, receding, or low-volume.
 - Prefer natural, subtle, realistic, non-musical ambience unless the source text clearly calls for stylized sound.
-- Avoid prompts that can collapse into one continuous tone, low beep, pure oscillator, alarm, or generic drone.
+- Avoid prompts that can collapse into one featureless sustained tone, pure oscillator, or generic drone. A repeating or rhythmic source is not featureless: a ticking clock, dripping tap, idling engine or lapping water is a good block.
 - For scene_change cues, describe only the new or changed acoustic layer instead of restating the whole scene.
 - Use the requested block duration for every duration_seconds value.
 
@@ -45,6 +45,9 @@ Correct separate blocks:
 "occasional soft electronic whirring from computer hardware"
 
 Negative prompt rules:
-- Include "continuous beep, pure sine wave, single tone, alarm, music, melody, speech, voices, dialogue, singing, loud bass drone, harsh buzzing, distorted, low quality" unless the scene specifically requires one of those elements.
+- Start from the universal exclusion list given in the request and keep it intact.
+- Add an exclusion only when it would contradict the sound you just described in that block's sound_prompt, and name the contradicting source. A rain block may exclude thunder; a cellar block may exclude traffic.
+- Do not add exclusions that merely describe sounds absent from the scene. Every extra term weakens the ones that matter.
+- Never exclude rhythm or repetition as such. Ticking, dripping, footsteps, engine idle, machinery cycles, waves and heartbeat are legitimate ambience and must stay available.
 - If the scene needs crowd or human presence, ask for indistinct distant non-verbal murmur and still exclude clear speech, dialogue, singing, and vocals.
 Return an empty array when no useful cue is needed.

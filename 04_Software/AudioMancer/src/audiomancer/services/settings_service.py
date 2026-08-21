@@ -425,6 +425,19 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
                 repair_tracker=repairs_made,
             )
 
+    for retired_field_name, retirement_reason in (
+        ("tts_preview_text_character_limit", "the accepted preview word range is the only preview length limit"),
+        ("speech_block_target_audio_seconds", "narration blocks always follow the TTS model budget"),
+        ("tts_runtime_device_diagnostics", "runtime device diagnostics are no longer persisted"),
+    ):
+        if retired_field_name in normalized_settings:
+            normalized_settings.pop(retired_field_name, None)
+            _log_settings_repair(
+                f"Removed retired '{retired_field_name}' setting; {retirement_reason}.",
+                retired_field_name,
+                repair_tracker=repairs_made,
+            )
+
     normalized_ui_themes = ui_theme_service.normalize_theme_collection(normalized_settings.get("ui_themes"))
     if normalized_settings.get("ui_themes") != normalized_ui_themes:
         _log_settings_repair(
@@ -539,7 +552,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     for field_name in (
         "tts_audio_preview_timeout_seconds",
         "tts_audio_generation_timeout_seconds",
-        "tts_preview_text_character_limit",
+        "speech_block_max_generation_tokens",
         "scene_ambience_duration_seconds",
         "scene_ambience_max_blocks_per_sequence",
         "scene_ambience_num_inference_steps",
@@ -551,23 +564,6 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
                 repair_tracker=repairs_made,
             )
             normalized_settings[field_name] = defaults[field_name]
-
-    speech_block_target = normalized_settings["speech_block_target_audio_seconds"]
-    if not isinstance(speech_block_target, int | float) or isinstance(speech_block_target, bool):
-        _log_settings_repair(
-            "Repaired invalid 'speech_block_target_audio_seconds' using the default value.",
-            "speech_block_target_audio_seconds",
-            repair_tracker=repairs_made,
-        )
-        normalized_settings["speech_block_target_audio_seconds"] = defaults["speech_block_target_audio_seconds"]
-    elif float(speech_block_target) <= 0.0:
-        # Zero and any negative value both mean "follow the TTS model budget".
-        normalized_settings["speech_block_target_audio_seconds"] = 0.0
-    else:
-        normalized_settings["speech_block_target_audio_seconds"] = min(
-            max(float(speech_block_target), float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MINIMUM)),
-            float(config.SPEECH_BLOCK_TARGET_AUDIO_SECONDS_MAXIMUM),
-        )
 
     if (
         isinstance(normalized_settings["scene_ambience_guidance_scale"], bool)
@@ -594,6 +590,17 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         )
         normalized_settings["scene_ambience_seed"] = defaults["scene_ambience_seed"]
 
+    scene_ambience_negative_prompt = normalized_settings["scene_ambience_negative_prompt"]
+    if not isinstance(scene_ambience_negative_prompt, str) or not scene_ambience_negative_prompt.strip():
+        _log_settings_repair(
+            "Repaired invalid 'scene_ambience_negative_prompt' using the default value.",
+            "scene_ambience_negative_prompt",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["scene_ambience_negative_prompt"] = defaults["scene_ambience_negative_prompt"]
+    else:
+        normalized_settings["scene_ambience_negative_prompt"] = scene_ambience_negative_prompt.strip()
+
     normalized_settings["tts_runtime_discovered_models"] = _normalize_tts_runtime_models(
         normalized_settings.get("tts_runtime_discovered_models")
     )
@@ -615,9 +622,6 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             repair_tracker=repairs_made,
         )
         normalized_settings["tts_runtime_active_model_id"] = defaults["tts_runtime_active_model_id"]
-    normalized_settings["tts_runtime_device_diagnostics"] = voiceweaver_runtime_service.normalize_device_diagnostics(
-        normalized_settings.get("tts_runtime_device_diagnostics")
-    )
 
     candidate_profiles = normalized_settings.get("llm_profiles")
     if not isinstance(candidate_profiles, list):
@@ -712,17 +716,16 @@ def build_default_settings() -> dict[str, Any]:
         "tts_runtime_probe_message": "",
         "tts_runtime_discovered_models": [],
         "tts_runtime_active_model_id": None,
-        "tts_runtime_device_diagnostics": {},
         "tts_audio_preview_timeout_seconds": config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
         "tts_audio_generation_timeout_seconds": config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
-        "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
-        "speech_block_target_audio_seconds": config.DEFAULT_SPEECH_BLOCK_TARGET_AUDIO_SECONDS,
+        "speech_block_max_generation_tokens": config.DEFAULT_SPEECH_BLOCK_MAX_GENERATION_TOKENS,
         "scene_ambience_placement": config.DEFAULT_SCENE_AMBIENCE_PLACEMENT,
         "scene_ambience_duration_seconds": config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
         "scene_ambience_max_blocks_per_sequence": config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE,
         "scene_ambience_guidance_scale": config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE,
         "scene_ambience_num_inference_steps": config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS,
         "scene_ambience_seed": config.DEFAULT_SCENE_AMBIENCE_SEED,
+        "scene_ambience_negative_prompt": config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT,
     }
 
 

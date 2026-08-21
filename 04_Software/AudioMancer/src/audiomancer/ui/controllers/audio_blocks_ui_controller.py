@@ -32,6 +32,7 @@ from audiomancer.services import (
     project_workspace_service,
     speech_blocks_service,
     text_cleanup_state_service,
+    tts_budget_service,
     ui_state_service,
     workflow_impact_service,
 )
@@ -845,6 +846,9 @@ def _runtime_settings(
         "runtime_api_key": str(window._settings_payload.get("tts_runtime_api_key", "")),
         "timeout_seconds": timeout_seconds,
         "discovered_models": list(probe_result.get("discovered_models", [])),
+        "speech_block_max_generation_tokens": tts_budget_service.resolve_generation_token_limit(
+            window._settings_payload
+        ),
         "generate_scene_ambience_audio": bool(scene_ambience_audio_enabled),
         "scene_ambience_duration_seconds": float(
             window._settings_payload.get(
