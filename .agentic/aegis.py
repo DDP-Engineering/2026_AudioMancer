@@ -39,7 +39,7 @@ from pathlib import Path
 
 import tomllib
 
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 SCHEMA = 1
 
 AGENTIC = Path(__file__).resolve().parent
@@ -403,8 +403,13 @@ def parse_journal(text: str) -> dict:
             if match:
                 result["components"].append(
                     (match.group(1).lower() == "x", match.group(2)))
-        elif section == "log" and line.lstrip().startswith("- "):
-            result["log"].append(line.strip()[2:])
+        elif section == "log":
+            stripped = line.lstrip()
+            if stripped.startswith("- "):
+                result["log"].append(stripped[2:].strip())
+            elif stripped and result["log"] and line[:1].isspace():
+                # a wrapped line belongs to the entry above it, not to nothing
+                result["log"][-1] += " " + stripped
     return result
 
 
@@ -1193,6 +1198,8 @@ REQUIRED_FIELDS = ("schema", "id", "title", "status", "requirement", "verificati
 CODE_BY_FOLDER = {folder: code for folder, code in CATEGORIES.values()}
 REQ_STATUSES = ("draft", "active", "retired")
 REQ_ID_RE = re.compile(r"^REQ-[A-Z]{2,6}-[0-9a-f]{4,12}$")
+#: the same shape unanchored, for finding ids quoted inside prose.
+REQ_ID_SCAN_RE = re.compile(r"REQ-[A-Z]{2,6}-[0-9a-f]{4,12}")
 #: journal stage vocabulary: the six stages, adoption's phases, and done.
 KNOWN_STAGES = ("frame", "specify", "design", "build", "validate", "deliver", "done",
                 "survey", "components", "close")
@@ -2341,6 +2348,299 @@ def cmd_test(args: argparse.Namespace) -> int:
     return code
 
 
+#: Mermaid class per requirement, and what each one means in the register.
+COVERAGE_CLASSES = (
+    ("tested", "#2f8f5b", "#1c6640"),
+    ("manual", "#3a6ea8", "#254a73"),
+    ("uncovered", "#b03a3a", "#7d2626"),
+    ("retired", "#8a8a8a", "#5c5c5c"),
+)
+
+#: how wide a requirement title may be before the node label truncates it.
+LABEL_WIDTH = 38
+
+
+def coverage_class(record: dict) -> str:
+    """
+    @brief Which coverage class one requirement record belongs to.
+    @details Read straight off the fields `check` already judges by, so the
+             picture and the findings can never disagree: a linked test, or
+             else a `Manual:`/`Inspection:` method that names how, or else
+             nothing yet. Retired wins over all three - a behavior that was
+             deliberately removed is not an uncovered one.
+    """
+    if str(record.get("status", "") or "") == "retired":
+        return "retired"
+    if str_list(record.get("linked_tests")):
+        return "tested"
+    if manual_method(str(record.get("verification", "") or "")):
+        return "manual"
+    return "uncovered"
+
+
+def mermaid_label(text: str) -> str:
+    """
+    @brief One requirement title, safe inside a quoted Mermaid node label.
+    @details Mermaid reads `"` and `#` inside a label as syntax, so both are
+             replaced rather than escaped - a label is a caption, and a
+             caption that breaks the drawing is worse than one that lost a
+             quotation mark.
+    """
+    flat = " ".join(str(text).split()).replace('"', "'").replace("#", "no.")
+    return flat[:LABEL_WIDTH - 1] + "…" if len(flat) > LABEL_WIDTH else flat
+
+
+def mermaid_id(text: str) -> str:
+    """@brief A Mermaid node or subgraph id: letters, digits and underscores."""
+    return re.sub(r"[^A-Za-z0-9]", "_", str(text)) or "node"
+
+
+def knowledge_components() -> list[tuple[str, str, list[str]]]:
+    """
+    @brief Every component page as (stem, display name, claimed requirement ids).
+    @details Only two things are read out of the prose, both by strict
+             pattern: the first `# ` heading for the name, and the requirement
+             ids under `## Key behaviors`. The template calls those sections
+             recommended rather than mandatory, so nothing load-bearing is
+             parsed out of a page - a page missing its heading is still listed,
+             under its file name.
+    """
+    components: list[tuple[str, str, list[str]]] = []
+    for path in sorted((AGENTIC / "knowledge").glob("*.md")):
+        text = read_text(path)
+        heading = re.search(r"^# (.+)$", text, re.MULTILINE)
+        name = heading.group(1).strip() if heading else path.stem
+        claimed: list[str] = []
+        for block in re.split(r"^## +", text, flags=re.MULTILINE)[1:]:
+            title, _, body = block.partition("\n")
+            if title.strip().lower() != "key behaviors":
+                continue
+            for rid in REQ_ID_SCAN_RE.findall(body):
+                if rid not in claimed:
+                    claimed.append(rid)
+        components.append((path.stem, name, claimed))
+    return components
+
+
+def diagram_scope(args: argparse.Namespace,
+                  components: list[tuple[str, str, list[str]]]) -> set[str] | None:
+    """
+    @brief The requirement ids the diagram is restricted to, or None for all.
+    @raises UserError when the named component or task does not exist, so an
+            unknown scope reads as a mistake instead of an empty register.
+    """
+    if args.component:
+        wanted = args.component.removesuffix(".md")
+        for stem, name, claimed in components:
+            if wanted in (stem, name):
+                return set(claimed)
+        known = ", ".join(stem for stem, _n, _c in components) or "none"
+        raise UserError(f"no knowledge page for '{args.component}' (have: {known})")
+    if args.task:
+        _path, data = read_journal(args.task)
+        return set(split_ids(data["header"].get("requirements", "")))
+    return None
+
+
+def render_diagram(records: list[tuple[str, Path, dict]],
+                   components: list[tuple[str, str, list[str]]],
+                   scope: set[str] | None) -> str:
+    """
+    @brief The coverage flowchart for `records`, grouped by claiming component.
+    @details Left to right so the component groups sit side by side and each
+             one stacks its own behaviors; every node carries the class its
+             record earned. Requirements no page claims are grouped last
+             rather than dropped, because an unclaimed behavior is exactly
+             what a reader needs to see.
+    """
+    by_id = {str(data.get("id", "") or ""): data for _relpath, _path, data in records}
+    in_scope = {rid: data for rid, data in by_id.items()
+                if rid and (scope is None or rid in scope)}
+    lines = ["flowchart LR"]
+    grouped: set[str] = set()
+
+    for stem, name, claimed in components:
+        members = [rid for rid in claimed if rid in in_scope and rid not in grouped]
+        if not members:
+            continue
+        grouped.update(members)
+        lines.append(f'    subgraph {mermaid_id(stem)}["{mermaid_label(name)}"]')
+        lines.append("        direction TB")
+        for rid in members:
+            label = mermaid_label(in_scope[rid].get("title", ""))
+            lines.append(f'        {mermaid_id(rid)}["{rid}<br/>{label}"]'
+                         f":::{coverage_class(in_scope[rid])}")
+        lines.append("    end")
+
+    loose = [rid for rid in sorted(in_scope) if rid not in grouped]
+    if loose:
+        lines.append('    subgraph unclaimed["(no knowledge page)"]')
+        lines.append("        direction TB")
+        for rid in loose:
+            label = mermaid_label(in_scope[rid].get("title", ""))
+            lines.append(f'        {mermaid_id(rid)}["{rid}<br/>{label}"]'
+                         f":::{coverage_class(in_scope[rid])}")
+        lines.append("    end")
+
+    for name, fill, stroke in COVERAGE_CLASSES:
+        lines.append(f"    classDef {name} fill:{fill},stroke:{stroke},color:#fff")
+    return "\n".join(lines) + "\n"
+
+
+def cmd_diagram(args: argparse.Namespace) -> int:
+    """
+    @brief Draw the requirement register as a Mermaid coverage flowchart.
+    @details Derived entirely from records already in the repository, so it
+             needs no model, no network and no renderer: the output is text
+             that Git diffs and that Markdown viewers draw for themselves.
+             `--out` writes the file as UTF-8 explicitly - printing it would
+             leave the characters at the mercy of the console code page.
+    """
+    components = knowledge_components()
+    scope = diagram_scope(args, components)
+    records = scan_requirements(lambda *_a: None, lambda _p: False)
+    text = render_diagram(records, components, scope)
+    if not args.out:
+        print(text, end="")
+        return 0
+    target = Path(args.out)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8", newline="\n")
+    print(f"diagram written to {rel(target)}")
+    return 0
+
+
+#: the token an agent writes into the journal when it records a judgement call.
+DEVIATION_TOKEN = "DEVIATION"
+
+
+def recorded_deviations(text: str) -> list[str]:
+    """
+    @brief Every deviation a journal records, in the order it recorded them.
+    @details Reads the whole journal rather than only its `## Log` section: a
+             deviation filed under the wrong heading is still one the approver
+             has to see, and a delivery report that quietly dropped it would
+             be worse than no report. Wrapped lines are rejoined, so a
+             deviation is carried whole rather than cut at the margin. The
+             `DEVIATION` token is stripped from what is returned, which is
+             also what stops a second report from re-listing the first one's.
+    """
+    entries: list[str] = []
+    current = ""
+    for raw in text.replace("\r\n", "\n").split("\n"):
+        stripped = raw.lstrip()
+        if stripped.startswith("- "):
+            entries.append(current)
+            current = stripped[2:].strip()
+        elif current and stripped and raw[:1].isspace():
+            current += " " + stripped
+        else:
+            entries.append(current)
+            current = ""
+    entries.append(current)
+    found = []
+    for entry in entries:
+        index = entry.find(DEVIATION_TOKEN)
+        if index >= 0:
+            found.append(" ".join(entry[index + len(DEVIATION_TOKEN):].split()))
+    return found
+
+
+def repo_path_arg(value: str) -> str:
+    """
+    @brief One operator-supplied path as a repository-relative POSIX string.
+    @raises UserError when the path resolves outside the repository.
+    @details Takes whatever the shell handed over - native separators, an
+             absolute path, a leading `./` - because an operator pastes what
+             their terminal printed. Backslashes are translated on every
+             platform, not only on Windows, so the same argument means the
+             same thing in a Linux CI job as on the machine it was copied from.
+    """
+    raw = Path(value.strip().strip('"').replace("\\", "/"))
+    if raw.is_absolute():
+        try:
+            raw = raw.resolve().relative_to(ROOT)
+        except ValueError:
+            raise UserError(f"{value} is outside this repository") from None
+    text = raw.as_posix()
+    while text.startswith("./"):
+        text = text[2:]
+    text = text.strip("/")
+    if not text or text == "." or text.split("/")[0] == "..":
+        raise UserError(f"{value} is outside this repository")
+    return text
+
+
+def cmd_explain(args: argparse.Namespace) -> int:
+    """
+    @brief Report what governs one repository path, and what delivered it.
+    @details The register is written once per behavior and read almost never,
+             because nothing leads from a file back to it. This is that way
+             round: path to requirements, grouped by the component claiming
+             each, with how it is verified and the journals that carry it.
+             A path no requirement covers is stated plainly - ungoverned code
+             is a finding, not an empty answer.
+    """
+    target = repo_path_arg(args.path)
+    layout = cfg_table(load_config(), "layout")
+    area = file_area(target, str_list(layout.get("source")),
+                     str_list(layout.get("tests")))
+    records = scan_requirements(lambda *_a: None, lambda _p: False)
+
+    owner: dict[str, str] = {}
+    for _stem, name, claimed in knowledge_components():
+        for rid in claimed:
+            owner.setdefault(rid, name)
+
+    matched: list[tuple[str, dict]] = []
+    for _relpath, _path, data in records:
+        rid = str(data.get("id", "") or "")
+        if rid and match_any(target, str_list(data.get("affected_paths"))):
+            matched.append((rid, data))
+
+    exists = "" if (ROOT / target).exists() else "  (no longer in the tree)"
+    print(f"{target}  [{area}]{exists}")
+    if not matched:
+        print("\nno requirement covers this path.")
+        if area != "other":
+            print("that is a finding: it sits inside the configured "
+                  f"{area} globs, so something is expected to govern it.")
+        return 0
+
+    print(f"\ngoverned by {len(matched)} requirement(s):")
+    groups: dict[str, list[tuple[str, dict]]] = {}
+    for rid, data in matched:
+        groups.setdefault(owner.get(rid, "(no knowledge page)"), []).append((rid, data))
+    for name in sorted(groups, key=lambda n: (n == "(no knowledge page)", n)):
+        print(f"\n  {name}")
+        for rid, data in groups[name]:
+            print(f"    {rid}  {data.get('status', '')!s:8} "
+                  f"{coverage_class(data):9}  {data.get('title', '')}")
+            method = " ".join(str(data.get("verification", "") or "").split())
+            # ASCII: this output only ever reaches a console, and a console
+            # under a legacy code page mangles anything else
+            print(f"      verified by: {method[:76]}"
+                  + ("..." if len(method) > 76 else ""))
+            spec = str(data.get("spec", "") or "").strip()
+            if spec:
+                print(f"      spec: {spec}")
+
+    ids = {rid for rid, _data in matched}
+    listed = []
+    for _relpath, data in scan_journals(lambda *_a: None, lambda _p: False,
+                                        {str(d.get("id", "")) for _r, _p, d in records}):
+        if ids.intersection(split_ids(data["header"].get("requirements", ""))):
+            listed.append(data)
+    if not listed:
+        print("\nno task journal lists these requirements.")
+        return 0
+    print(f"\ndelivered by {len(listed)} task(s):")
+    for data in listed:
+        print(f"  {data['id']}  {data['header'].get('stage', '?'):9} "
+              f"{data['header'].get('opened', '?')}  {data['title']}")
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     """
     @brief Append the delivery summary section to a task journal.
@@ -2352,6 +2652,8 @@ def cmd_report(args: argparse.Namespace) -> int:
     cfg = load_config()
     path, data = read_journal(args.task)
     header = data["header"]
+    text = read_text(path)
+    deviations = recorded_deviations(text)
 
     titles = {
         str(record.get("id", "")): str(record.get("title", ""))
@@ -2386,6 +2688,11 @@ def cmd_report(args: argparse.Namespace) -> int:
          f" path: {header.get('path', '?')}; branch: {header.get('branch', '?')}"),
         "- requirements:" if req_lines else "- requirements: none linked",
         *req_lines,
+        # judgement before totals: a warning count says how much happened,
+        # never which calls were made on the approver's behalf
+        (f"- deviations: {len(deviations)} recorded" if deviations
+         else "- deviations: none recorded"),
+        *[f"  - {entry}" for entry in deviations],
         f"- diff vs {basis}: {diff_line}",
         (f"- checks: errors={counts['ERROR']} warnings={counts['WARN']}"
          f" notes={counts['NOTE']}"),
@@ -2397,7 +2704,6 @@ def cmd_report(args: argparse.Namespace) -> int:
         open_comps = [item for ticked, item in data["components"] if not ticked]
         lines.append(f"- components: {adopted}/{len(data['components'])} adopted"
                      + (f"; open: {'; '.join(open_comps)}" if open_comps else ""))
-    text = read_text(path)
     if not text.endswith("\n"):
         text += "\n"
     write_text(path, text + "\n".join(lines) + "\n")
@@ -2481,6 +2787,22 @@ def build_parser() -> argparse.ArgumentParser:
         "report", help="append the delivery summary to a task journal")
     report.add_argument("task", help="TASK-<id> or <id>")
     report.set_defaults(func=cmd_report)
+
+    diagram = subs.add_parser(
+        "diagram", help="draw the requirement register as a Mermaid coverage map")
+    # one scope at a time: silently honoring one and dropping the other would
+    # answer a question the operator did not ask
+    scope = diagram.add_mutually_exclusive_group()
+    scope.add_argument("--component",
+                       help="restrict to one knowledge page, by file stem or name")
+    scope.add_argument("--task", help="restrict to one journal's requirements")
+    diagram.add_argument("--out", help="write UTF-8 to this path instead of stdout")
+    diagram.set_defaults(func=cmd_diagram)
+
+    explain = subs.add_parser(
+        "explain", help="show what governs one repository path")
+    explain.add_argument("path", help="a repo-relative or absolute file or folder")
+    explain.set_defaults(func=cmd_explain)
 
     status = subs.add_parser("status", help="list open task journals, or show one")
     status.add_argument("task", nargs="?", help="TASK-<id> or <id>")

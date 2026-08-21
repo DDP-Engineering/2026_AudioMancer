@@ -30,7 +30,11 @@ prove the final tree before it is presented for publication.
 3. Update component knowledge. For every component whose behavior, interface,
    or file set materially changed, update or create
    `.agentic/knowledge/<component>.md` from the template. Keep **Purpose**,
-   **Public interface**, **Key behaviors**, and **Files** true.
+   **Public interface**, **Key behaviors**, **Architecture**, and **Files**
+   true. Where `design` drew the architecture as it was going to be, check
+   the built code against it now: reconcile any difference in the diagram's
+   favor only if the code is right, and delete the line naming it an intended
+   shape — from here the page describes what exists.
 4. Re-read each requirement. Confirm its status and prose describe the built
    behavior, its verification matches the observation, and all affected paths
    and linked tests are current. Correct them now.

@@ -175,4 +175,6 @@ python .agentic/aegis.py check                  # advisory report, always exits 
 python .agentic/aegis.py test --impacted --base HEAD   # fast loop in build
 python .agentic/aegis.py test                   # full suite, used at validate
 python .agentic/aegis.py report TASK-<id>       # delivery summary into the journal
+python .agentic/aegis.py diagram --component <name>    # coverage map, for a human
+python .agentic/aegis.py explain <path>         # what governs this file
 ```
