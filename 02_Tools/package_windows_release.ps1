@@ -114,11 +114,11 @@ function Copy-CleanSettingsFile {
     if ($settingsPayload.PSObject.Properties.Name -contains 'tts_runtime_active_model_id') {
         $settingsPayload.tts_runtime_active_model_id = $null
     }
-    if ($settingsPayload.PSObject.Properties.Name -contains 'tts_runtime_device_diagnostics') {
-        # Use a plain empty hashtable (serializes to {}) instead of a
-        # [pscustomobject] cast, which PowerShell ConstrainedLanguage mode blocks.
-        $settingsPayload.tts_runtime_device_diagnostics = @{}
-    }
+    # Retired settings keys are dropped rather than blanked. The application
+    # repairs an unknown key on load and rewrites the file, which makes the
+    # delivery smoke test fail its clean-load assertion.
+    $settingsPayload = $settingsPayload |
+        Select-Object -Property * -ExcludeProperty 'tts_runtime_device_diagnostics'
 
     $settingsPayload |
         ConvertTo-Json -Depth 100 |

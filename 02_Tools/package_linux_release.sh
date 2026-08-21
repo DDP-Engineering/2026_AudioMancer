@@ -85,7 +85,7 @@ settings_payload["tts_runtime_probe_succeeded"] = False
 settings_payload["tts_runtime_probe_message"] = ""
 settings_payload["tts_runtime_discovered_models"] = []
 settings_payload["tts_runtime_active_model_id"] = None
-settings_payload["tts_runtime_device_diagnostics"] = {}
+settings_payload.pop("tts_runtime_device_diagnostics", None)
 
 target_path.write_text(json.dumps(settings_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
