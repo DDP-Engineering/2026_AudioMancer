@@ -637,14 +637,17 @@ def test_voiceweaver_runtime_service_uses_simplified_status_and_model_routes(mon
         ("http://runtime", "/models/unload", None, 12),
         ("http://runtime", "/cancel", None, 13),
     ]
-def test_wait_for_terminal_operation_stops_before_status_read_when_cancelled(monkeypatch) -> None:
+
+
+def test_wait_for_terminal_operation_cancels_remotely_when_cancelled_before_the_first_poll(monkeypatch) -> None:
     """
-    @brief      Verify VoiceWeaver polling raises immediately when cancellation is already requested.
+    @brief      Verify a cancellation that beats the first status poll still stops the runtime operation.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     """
     status_reads = {"count": 0}
+    observed_cancel_calls: list[tuple[str, int]] = []
 
     def _fake_read_status(*_args, **_kwargs):
         """
@@ -653,21 +656,86 @@ def test_wait_for_terminal_operation_stops_before_status_read_when_cancelled(mon
         @exception  None
         """
         status_reads["count"] = int(status_reads["count"]) + 1
-        return {"operation": {"status": "running"}}
+        return {"operation": {"status": "running", "cancellable": True}}
 
     monkeypatch.setattr(voiceweaver_runtime_service, "read_status", _fake_read_status)
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "cancel_operation",
+        lambda base_url, timeout_seconds: observed_cancel_calls.append((base_url, timeout_seconds)),
+    )
 
-    try:
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
         voiceweaver_runtime_service.wait_for_terminal_operation(
             "http://127.0.0.1:8059",
             cancel_requested=lambda: True,
         )
-    except operation_runtime_service.OperationCancelledError:
-        pass
-    else:
-        raise AssertionError("Expected runtime polling to raise OperationCancelledError.")
 
-    assert status_reads["count"] == 0
+    assert status_reads["count"] == 1
+    assert observed_cancel_calls == [("http://127.0.0.1:8059", config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS)]
+
+
+def test_wait_for_terminal_operation_raises_cancellation_for_runtime_reported_cancel(monkeypatch) -> None:
+    """
+    @brief      Verify a terminal runtime-reported cancel ends the wait as a cancellation, not a payload.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    observed_cancel_calls: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {
+            "operation": {"status": "cancelled", "cancellable": True, "stage": "Cancellation requested."},
+        },
+    )
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "cancel_operation",
+        lambda base_url, timeout_seconds: observed_cancel_calls.append((base_url, timeout_seconds)),
+    )
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        voiceweaver_runtime_service.wait_for_terminal_operation(
+            "http://runtime",
+            timeout_seconds=90,
+        )
+
+    assert observed_cancel_calls == []
+
+
+def test_wait_for_terminal_operation_keeps_cancellation_when_remote_cancel_drops_the_connection(monkeypatch) -> None:
+    """
+    @brief      Verify a torn-down runtime during remote cancellation does not turn a cancel into a failure.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"operation": {"status": "running", "cancellable": True}},
+    )
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "_sleep_with_cancel",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            operation_runtime_service.OperationCancelledError("cancelled")
+        ),
+    )
+    monkeypatch.setattr(
+        voiceweaver_runtime_service,
+        "cancel_operation",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ConnectionResetError("runtime closed the connection")),
+    )
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        voiceweaver_runtime_service.wait_for_terminal_operation(
+            "http://runtime",
+            timeout_seconds=90,
+            cancel_requested=lambda: False,
+        )
 
 
 def test_wait_for_terminal_operation_posts_cancel_for_cancellable_runtime_operation(monkeypatch) -> None:

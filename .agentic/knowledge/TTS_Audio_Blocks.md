@@ -85,7 +85,20 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   preserve WAVs but reset Audio Assembly. Cancellation is cooperative around
   polling/checkpoints and calls `POST /cancel` when VoiceWeaver reports the
   current operation as cancellable; a non-cancellable request can still finish
-  remotely (`REQ-FUNC-a24e14cb`).
+  remotely (`REQ-FUNC-a24e14cb`). A cancel that arrives before the first status
+  poll reads the operation once so the request just submitted is still stopped,
+  and a `POST /cancel` that fails, including a runtime that drops the
+  connection mid-teardown, never converts the cancellation into a failure.
+- Cancellation has one outcome, whichever side observed it. The polling wait
+  raises the cooperative cancellation error both when the operator asks locally
+  and when `/status` reports the operation as terminal `cancelled`, so the
+  callers that test only for `completed` never report a deliberate cancel as a
+  generation failure (`REQ-FUNC-1a06b572`).
+- The busy gate before model loading treats every terminal operation status as
+  free. `/status` reports the most recent operation and latches its terminal
+  status until the next one starts, so counting `cancelled` as busy left the
+  runtime permanently unusable to Audio Blocks after any cancel
+  (`REQ-NFR-5bda19fd`).
 - Loading rebuilds every non-persisted field the same way generation first
   derived it, so a reloaded block equals a freshly initialized one. In
   particular `content_kind`, `text`, prompts, `special_block_status` and

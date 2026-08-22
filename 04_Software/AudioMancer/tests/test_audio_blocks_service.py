@@ -3134,3 +3134,44 @@ def test_audio_blocks_skips_reloading_an_already_active_clone_model(monkeypatch)
 
     assert load_model_calls == []
     assert model_budget["model_token_budget"] > 0
+
+
+def test_audio_blocks_resumes_after_a_latched_cancelled_runtime_operation(monkeypatch) -> None:
+    """
+    @brief      Verify REQ-NFR-5bda19fd a latched cancelled status does not read as a busy runtime.
+    @details    `/status` reports the most recent operation and its terminal status latches until the
+                next operation starts, so treating `cancelled` as busy blocks every restart after a
+                cancel until the VoiceWeaver process is restarted.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    clone_model_id = "Qwen3-TTS-12Hz-1.7B-Base"
+    cancelled_status = {
+        "active_model": {"model_id": clone_model_id, "effective_model_parameters": {"max_new_tokens": 512}},
+        "operation": {"status": "cancelled", "stage": "Cancellation requested."},
+    }
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: cancelled_status,
+    )
+
+    model_budget = audio_blocks_service._ensure_clone_model_loaded(
+        {"base_url": "http://127.0.0.1:8059", "timeout_seconds": 5},
+        clone_model_id,
+        {"model_id": clone_model_id},
+        None,
+        1,
+        0,
+    )
+
+    assert model_budget["model_token_budget"] > 0
+
+    audio_blocks_service._ensure_sound_model_loaded(
+        {"base_url": "http://127.0.0.1:8059", "timeout_seconds": 5},
+        clone_model_id,
+        None,
+        1,
+        0,
+    )

@@ -1643,6 +1643,9 @@ def _positive_int_from_mapping(value: object, field_name: str) -> int | None:
 def _runtime_operation_is_busy(status_payload: dict[str, object]) -> bool:
     """
     @brief      Return whether VoiceWeaver is currently running an operation.
+    @details    `/status` reports the most recent operation and latches its terminal status until the
+                next one starts, so every terminal status, cancelled included, means the runtime is
+                free rather than busy.
     @param[in]  status_payload Current normalized VoiceWeaver status payload.
     @return     True when the runtime reports a non-terminal operation.
     @exception  None
@@ -1651,7 +1654,7 @@ def _runtime_operation_is_busy(status_payload: dict[str, object]) -> bool:
     if not isinstance(operation_payload, dict):
         return False
     operation_status = str(operation_payload.get("status", operation_payload.get("kind", "idle"))).strip().lower()
-    return operation_status not in {"", "idle", "completed", "failed"}
+    return operation_status not in {"", "idle", "completed", "cancelled", "failed"}
 
 
 def _ensure_model_active(

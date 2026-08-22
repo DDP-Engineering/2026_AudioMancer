@@ -794,11 +794,12 @@ def wait_for_terminal_operation(
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Final runtime status payload.
     @exception  RuntimeError Raised when the poll times out.
-    @exception  OperationCancelledError Raised when cancellation is requested.
+    @exception  OperationCancelledError Raised when cancellation is requested locally or reported by the runtime.
     """
     deadline = time.monotonic() + timeout_seconds
     last_status_payload: dict[str, object] | None = None
     observed_active_operation = False
+    runtime_reported_cancellation = False
     while time.monotonic() <= deadline:
         try:
             raise_if_cancelled(cancel_requested)
@@ -816,15 +817,19 @@ def wait_for_terminal_operation(
                 .strip()
                 .lower()
             )
-            if operation_status in {"completed", "cancelled", "failed"}:
+            if operation_status in {"completed", "failed"}:
                 return last_status_payload
+            if operation_status == "cancelled":
+                runtime_reported_cancellation = True
+                raise OperationCancelledError("VoiceWeaver reported the current operation as cancelled.")
             if operation_status == "idle" and observed_active_operation:
                 return last_status_payload
             if operation_status != "idle":
                 observed_active_operation = True
             _sleep_with_cancel(max(poll_interval_seconds, 0.05), cancel_requested)
         except OperationCancelledError:
-            _cancel_last_observed_operation(base_url, last_status_payload)
+            if not runtime_reported_cancellation:
+                _cancel_last_observed_operation(base_url, last_status_payload)
             raise
     raise RuntimeError("Timed out while waiting for VoiceWeaver to finish the current operation.")
 
@@ -832,21 +837,46 @@ def wait_for_terminal_operation(
 def _cancel_last_observed_operation(base_url: str, status_payload: dict[str, object] | None) -> None:
     """
     @brief      Ask VoiceWeaver to stop the last observed operation when it advertised cancellation support.
+    @details    A cancellation requested before the first status poll has nothing observed yet, so the
+                operation is read once here; without it the request submitted a moment earlier would
+                keep running and refuse the next one as busy.
     @param[in]  base_url Operator-configured runtime base URL.
     @param[in]  status_payload Last normalized runtime status payload, if one was observed.
     @return     None.
-    @exception  None
+    @exception  OperationCancelledError Raised when the cancel request itself reports a cancellation.
     """
-    operation_payload = status_payload.get("operation", {}) if isinstance(status_payload, dict) else {}
+    resolved_status_payload = status_payload if status_payload is not None else _read_status_for_cancellation(base_url)
+    operation_payload = (
+        resolved_status_payload.get("operation", {}) if isinstance(resolved_status_payload, dict) else {}
+    )
     if not isinstance(operation_payload, dict) or not bool(operation_payload.get("cancellable", False)):
         return
     try:
         cancel_operation(base_url, config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS)
-    except RuntimeError as exception:
+    except OperationCancelledError:
+        raise
+    except Exception as exception:  # noqa: BLE001
         _VOICEWEAVER_RUNTIME_LOGGER.warning(
             "VoiceWeaver remote cancellation failed after local cancellation: %s",
             exception,
         )
+
+
+def _read_status_for_cancellation(base_url: str) -> dict[str, object] | None:
+    """
+    @brief      Read one runtime status while deciding whether an operation can still be cancelled remotely.
+    @param[in]  base_url Operator-configured runtime base URL.
+    @return     Normalized runtime status payload, or `None` when the runtime could not be read.
+    @exception  None
+    """
+    try:
+        return read_status(base_url, timeout_seconds=config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS)
+    except Exception as exception:  # noqa: BLE001
+        _VOICEWEAVER_RUNTIME_LOGGER.warning(
+            "VoiceWeaver status could not be read while cancelling the current operation: %s",
+            exception,
+        )
+        return None
 
 
 def _sleep_with_cancel(delay_seconds: float, cancel_requested) -> None:

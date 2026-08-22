@@ -12,6 +12,21 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Cancelling an audio run no longer blocks every later run. Until now, the
+  first Cancel left VoiceWeaver looking permanently occupied to AudioMancer:
+  Audio Blocks refused to start again with "VoiceWeaver is still busy with a
+  previous operation", and the only way out was to restart VoiceWeaver itself.
+  A cancelled run can now simply be resumed.
+- Cancelling is reported as cancelling, not as a failure. A Cancel could
+  previously end in an error dialog and the completion sound, with the
+  operation left looking like it was still running, whether because
+  VoiceWeaver acknowledged the cancellation itself or because the runtime
+  closed the connection while stopping. A cancel now always ends the run
+  quietly as cancelled, with the progress saved so it can be resumed.
+- A Cancel pressed in the first moment of Scene Ambience generation now
+  actually reaches VoiceWeaver. Previously it stopped only AudioMancer's own
+  waiting, while the sound kept being generated in the background and the next
+  attempt was refused as busy.
 - Projects whose voice language is Romanian can generate audio again. The
   VoiceWeaver runtime offers seven languages, Romanian is not one of them, and
   AudioMancer had started naming the chosen language on every request - so the

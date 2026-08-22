@@ -1,0 +1,1638 @@
+{
+  "anchor_id": "fcf6854e5c34a875",
+  "categories": {
+    ".gitattributes": "other",
+    ".gitignore": "other",
+    "01_Documentation/Code_Style.md": "other",
+    "01_Documentation/README.md": "other",
+    "01_Documentation/Repo_Setup.md": "other",
+    "01_Documentation/VoiceWeaver_REST_API_Interface.md": "other",
+    "01_Documentation/VoiceWeaver_Voice_Clone_Prompt_Format.md": "other",
+    "01_Documentation/qwen_tts_voice_designer_guide.txt": "other",
+    "02_Tools/README.md": "other",
+    "02_Tools/audiomancer_windows.spec": "other",
+    "02_Tools/audiomancer_windows_entry.py": "other",
+    "02_Tools/audits/audit_codestyle.py": "other",
+    "02_Tools/audits/audit_common.py": "other",
+    "02_Tools/audits/audit_logging_coverage.py": "other",
+    "02_Tools/make_synthetic_project.py": "other",
+    "02_Tools/package_linux_release.sh": "other",
+    "02_Tools/package_windows_release.ps1": "other",
+    "02_Tools/regenerate_help_screenshots.py": "other",
+    "02_Tools/validate_linux_delivery.sh": "other",
+    "04_Software/AudioMancer/LICENSE.txt": "other",
+    "04_Software/AudioMancer/LICENSE_NC.txt": "other",
+    "04_Software/AudioMancer/LICENSE_NC_ro.txt": "other",
+    "04_Software/AudioMancer/LICENSE_ro.txt": "other",
+    "04_Software/AudioMancer/README.MD": "other",
+    "04_Software/AudioMancer/prompts/character_discovery_system.txt": "other",
+    "04_Software/AudioMancer/prompts/character_discovery_window_user.txt": "other",
+    "04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt": "other",
+    "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt": "other",
+    "04_Software/AudioMancer/prompts/narrator_profile_style_system.txt": "other",
+    "04_Software/AudioMancer/prompts/narrator_profile_style_window_user.txt": "other",
+    "04_Software/AudioMancer/prompts/scene_ambience_system.txt": "other",
+    "04_Software/AudioMancer/prompts/scene_ambience_user.txt": "other",
+    "04_Software/AudioMancer/prompts/speech_blocks_system.txt": "other",
+    "04_Software/AudioMancer/prompts/speech_blocks_user.txt": "other",
+    "04_Software/AudioMancer/prompts/text_chunking_system.txt": "other",
+    "04_Software/AudioMancer/prompts/text_chunking_user.txt": "other",
+    "04_Software/AudioMancer/prompts/text_cleanup_adjudication_primary_system.txt": "other",
+    "04_Software/AudioMancer/prompts/text_cleanup_adjudication_verifier_system.txt": "other",
+    "04_Software/AudioMancer/prompts/text_translation_system.txt": "other",
+    "04_Software/AudioMancer/prompts/text_translation_user.txt": "other",
+    "04_Software/AudioMancer/pyproject.toml": "other",
+    "04_Software/AudioMancer/settings.example.json": "other",
+    "04_Software/AudioMancer/src/audiomancer/__init__.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/__main__.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/app.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer.ico": "source",
+    "04_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer_icon.png": "source",
+    "04_Software/AudioMancer/src/audiomancer/config.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/__init__.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/import_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/logging_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/settings_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/time_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/url_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/__init__.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/main_window.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py": "source",
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py": "source",
+    "04_Software/AudioMancer/tests/chunking_test_support.py": "tests",
+    "04_Software/AudioMancer/tests/cleanup_test_support.py": "tests",
+    "04_Software/AudioMancer/tests/conftest.py": "tests",
+    "04_Software/AudioMancer/tests/fixtures/cleanup_corpus.json": "tests",
+    "04_Software/AudioMancer/tests/test_aegis_workflow_artifacts.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_backend_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_budget_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_chunking_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_settings_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_state_note_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_translation_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_translation_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_translation_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_app_entrypoint.py": "tests",
+    "04_Software/AudioMancer/tests/test_atomic_io_contracts.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_assembly_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_assembly_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_blocks_main_window.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_blocks_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_blocks_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_blocks_performance_baseline.py": "tests",
+    "04_Software/AudioMancer/tests/test_character_discovery_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_character_discovery_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_character_voices_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_character_voices_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_character_voices_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_characters_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_characters_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py": "tests",
+    "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_cleanup_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_config_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_confirmation_consolidation.py": "tests",
+    "04_Software/AudioMancer/tests/test_controller_cancellation_wiring.py": "tests",
+    "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py": "tests",
+    "04_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py": "tests",
+    "04_Software/AudioMancer/tests/test_duplicate_service_consolidation.py": "tests",
+    "04_Software/AudioMancer/tests/test_home_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_home_presenter_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_home_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_import_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_llm_provider_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_localization_parity.py": "tests",
+    "04_Software/AudioMancer/tests/test_logging_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py": "tests",
+    "04_Software/AudioMancer/tests/test_main_window_home_exports.py": "tests",
+    "04_Software/AudioMancer/tests/test_main_window_lifecycle.py": "tests",
+    "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py": "tests",
+    "04_Software/AudioMancer/tests/test_main_window_project_flow.py": "tests",
+    "04_Software/AudioMancer/tests/test_misc_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_narator_voice_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_narrator_definition_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_navigation_sidebar.py": "tests",
+    "04_Software/AudioMancer/tests/test_operation_progress_dialog.py": "tests",
+    "04_Software/AudioMancer/tests/test_operation_runner_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_operation_runtime_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_operation_status_button.py": "tests",
+    "04_Software/AudioMancer/tests/test_operation_status_dialog.py": "tests",
+    "04_Software/AudioMancer/tests/test_package_import.py": "tests",
+    "04_Software/AudioMancer/tests/test_pcm_codec.py": "tests",
+    "04_Software/AudioMancer/tests/test_persistence_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_project_export_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_project_snapshot_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_project_stage_consistency.py": "tests",
+    "04_Software/AudioMancer/tests/test_project_workspace_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_prompt_template_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_pytest_runtime_configuration.py": "tests",
+    "04_Software/AudioMancer/tests/test_settings_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_settings_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_text_chunking_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_text_chunking_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_text_cleanup_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py": "tests",
+    "04_Software/AudioMancer/tests/test_text_extraction_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_token_usage_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_tts_budget_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py": "tests",
+    "04_Software/AudioMancer/tests/test_tts_settings_page.py": "tests",
+    "04_Software/AudioMancer/tests/test_ui_localization_coverage.py": "tests",
+    "04_Software/AudioMancer/tests/test_ui_page_contract.py": "tests",
+    "04_Software/AudioMancer/tests/test_ui_scroll_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ui_state_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_ui_theme_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_url_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_user_data_location.py": "tests",
+    "04_Software/AudioMancer/tests/test_voice_sample_import_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_workflow_controller_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_workflow_impact_service.py": "tests",
+    "04_Software/AudioMancer/tests/test_workflow_order_consistency.py": "tests",
+    "04_Software/AudioMancer/uv.lock": "other",
+    "04_Software/README.md": "other",
+    "05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md": "other",
+    "05_SoftwareDocu/AudioMancer_OpenAI_Online_Model_Recommendations.md": "other",
+    "05_SoftwareDocu/README.md": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/ai-settings-dialog.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/ai-translation.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/audio-assembly.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/audio-blocks.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/character-voices.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/characters.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/home-project.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/narator-voice.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/settings-dialog.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/speech-blocks.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/text-chunking.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/text-cleanup.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/screenshots/tts-settings-dialog.png": "other",
+    "05_SoftwareDocu/UserGuide/assets/styles/help.css": "other",
+    "05_SoftwareDocu/UserGuide/index.html": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/ai-settings-dialog.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/ai-translation.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/audio-assembly.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/audio-blocks.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/character-voices.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/characters.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/home-project.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/narator-voice.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/settings-dialog.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/speech-blocks.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/text-chunking.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/text-cleanup.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/tts-settings-dialog.png": "other",
+    "05_SoftwareDocu/UserGuide_ro/assets/styles/help.css": "other",
+    "05_SoftwareDocu/UserGuide_ro/index.html": "other",
+    "07_Delivery/AudioMancer_Hero_4x5_Vertical.png": "other",
+    "07_Delivery/AudioMancer_Hero_A4_Landscape.png": "other",
+    "07_Delivery/AudioMancer_Hero_A4_Portrait.png": "other",
+    "07_Delivery/AudioMancer_Hero_Square.png": "other",
+    "07_Delivery/AudioMancer_Linux_x64.AppImage": "other",
+    "07_Delivery/AudioMancer_Linux_x64.zip": "other",
+    "07_Delivery/AudioMancer_Windows_x64.zip": "other",
+    "07_Delivery/Public_GitHub_Page/README.md": "other",
+    "07_Delivery/Public_GitHub_Page/index.html": "other",
+    "07_Delivery/README.md": "other",
+    "07_Delivery/SHA256SUMS.txt": "other",
+    "07_Delivery/apply_agentic_overlay_fixed.ps1": "other",
+    "09_Others/README.md": "other",
+    "0_Planning/Overview.md": "other",
+    "0_Planning/README.md": "other",
+    "AGENTS.md": "other",
+    "CHANGELOG.md": "other",
+    "CLAUDE.md": "other",
+    "HowToTest.md": "other",
+    "LICENSE.txt": "other",
+    "LICENSE_NC.txt": "other",
+    "QWEN.md": "other",
+    "README.MD": "other"
+  },
+  "created_at": "2026-08-22T16:50:19.507109Z",
+  "files": {
+    ".gitattributes": {
+      "kind": "file",
+      "sha256": "73c7ade8429613f88e753dbc1c2710511a95510f59ea537b27fb6aa4b9f2f856"
+    },
+    ".gitignore": {
+      "kind": "file",
+      "sha256": "dc6d2dc01db1f331be6d93d7fa55416af386c00b57a3c3eed45ff53acb79429c"
+    },
+    "01_Documentation/Code_Style.md": {
+      "kind": "file",
+      "sha256": "7cb31d10d2afdabff7d878ec68e9dd37c9730c4400e3e659f613644c39eede1b"
+    },
+    "01_Documentation/README.md": {
+      "kind": "file",
+      "sha256": "82c93ff0d2ee403a591033091a68d77bfc1630a1c1c53e6d24283498a0be7bd0"
+    },
+    "01_Documentation/Repo_Setup.md": {
+      "kind": "file",
+      "sha256": "8fba55eb52e8dc7db290c4f25fe8d44b18a1a6f17c4439b4f67ac5f63fe9792f"
+    },
+    "01_Documentation/VoiceWeaver_REST_API_Interface.md": {
+      "kind": "file",
+      "sha256": "52f1c2bf68b9d80a1e56bcbb7feae56eb4c83e6efad80acce95354e04d1c8465"
+    },
+    "01_Documentation/VoiceWeaver_Voice_Clone_Prompt_Format.md": {
+      "kind": "file",
+      "sha256": "0b71d5f3e74c9f3f048f27ba77e2fd6d74fc5632b1d9c29d9755ec4685aa16a7"
+    },
+    "01_Documentation/qwen_tts_voice_designer_guide.txt": {
+      "kind": "file",
+      "sha256": "3cd760f8d1253d9d6aabac129d2320f258d774ea6647bf4d16d7aa01f597ef1d"
+    },
+    "02_Tools/README.md": {
+      "kind": "file",
+      "sha256": "b34dff0b3068f6abe4830331ddcea009c2440871f43c13e8bf2eaf5165a683f7"
+    },
+    "02_Tools/audiomancer_windows.spec": {
+      "kind": "file",
+      "sha256": "5b342164f5b98d4651518b3ebd63ae9f8c4a144743ad02ef16ac68601dd2ae38"
+    },
+    "02_Tools/audiomancer_windows_entry.py": {
+      "kind": "file",
+      "sha256": "27b6c11835b54ef6d3d9f4fce23c2c52b999d604944e335d86ebc9570ef562e6"
+    },
+    "02_Tools/audits/audit_codestyle.py": {
+      "kind": "file",
+      "sha256": "109676c438a584b573f0edef52bf3b110b8dbc7d02eead7822c0bc905141331c"
+    },
+    "02_Tools/audits/audit_common.py": {
+      "kind": "file",
+      "sha256": "c023838bce565f2ec0f5d3095db56f798032ee49e67265d6d1acbb7f8d3539df"
+    },
+    "02_Tools/audits/audit_logging_coverage.py": {
+      "kind": "file",
+      "sha256": "f40b842294ccb3571236324dfade6e0180d241650df8e4be84bdb2913dc65f32"
+    },
+    "02_Tools/make_synthetic_project.py": {
+      "kind": "file",
+      "sha256": "897d1354f6e972b7de64ff5612fbaf9b7519f97327377dcbaf29a7254c19b4db"
+    },
+    "02_Tools/package_linux_release.sh": {
+      "kind": "file",
+      "sha256": "4db24f3eb833200eccec0d2eee92c12f4d653985cd0898fc517b17e616b3f1a8"
+    },
+    "02_Tools/package_windows_release.ps1": {
+      "kind": "file",
+      "sha256": "75b0eac2f96d93315160d503f4f7bc916b344f5159a4ad3170e1501db93e7cf7"
+    },
+    "02_Tools/regenerate_help_screenshots.py": {
+      "kind": "file",
+      "sha256": "9a4db5525fa7cb8ac5ca16156cb8c121b5696f364c092beeda711cd781c67874"
+    },
+    "02_Tools/validate_linux_delivery.sh": {
+      "kind": "file",
+      "sha256": "659c994788f52bea11f100cf3a94e0ac244497989450b0dfe347ede2a1476935"
+    },
+    "04_Software/AudioMancer/LICENSE.txt": {
+      "kind": "file",
+      "sha256": "855b44a5e6315addb381fd0d8b102d1ca6a5fa0e963bae6175d440a2ec2a975e"
+    },
+    "04_Software/AudioMancer/LICENSE_NC.txt": {
+      "kind": "file",
+      "sha256": "11bb9c103cacaafd769a86ee3d16ee4b7f80389116c633fc2165a01ba4ff2b13"
+    },
+    "04_Software/AudioMancer/LICENSE_NC_ro.txt": {
+      "kind": "file",
+      "sha256": "ac3ee32cfe3aa8e8ccb8a8484a226b8658b1bc2a6eab1af53c30432056009c8c"
+    },
+    "04_Software/AudioMancer/LICENSE_ro.txt": {
+      "kind": "file",
+      "sha256": "14b6f73cbb681dff0a7eb7af75cdfbd898f7834d5d241e13e8df1dc3e66719bb"
+    },
+    "04_Software/AudioMancer/README.MD": {
+      "kind": "file",
+      "sha256": "c89f1553c10bc971863df43271b6811ca7d152003408d71018be57ce9628b8c6"
+    },
+    "04_Software/AudioMancer/prompts/character_discovery_system.txt": {
+      "kind": "file",
+      "sha256": "34628e5296d7e6f76f6e9c364814b671c7713fd18b518c2666c9739fb193d892"
+    },
+    "04_Software/AudioMancer/prompts/character_discovery_window_user.txt": {
+      "kind": "file",
+      "sha256": "bb641fbaeea13e29637e5a469a6a710e1d42751f643207299b9a0487e4fd59ba"
+    },
+    "04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt": {
+      "kind": "file",
+      "sha256": "7f5bd34307b4f6521ef893ef81e6f5586230a01f737318a1e4341796cd6d31a3"
+    },
+    "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt": {
+      "kind": "file",
+      "sha256": "4eef95ce45a9eec91c666e4cccc3041a7020dee63c069a655834442cf3962c72"
+    },
+    "04_Software/AudioMancer/prompts/narrator_profile_style_system.txt": {
+      "kind": "file",
+      "sha256": "b6a90461808f98dd8c0805dc1b4da861fba8c8d11d05250548fb33c931a7e41b"
+    },
+    "04_Software/AudioMancer/prompts/narrator_profile_style_window_user.txt": {
+      "kind": "file",
+      "sha256": "c15f3343fdc0961d3b7fa9cbbc3cd53dc83e8ac16e3a8112fc04b9fa634f3502"
+    },
+    "04_Software/AudioMancer/prompts/scene_ambience_system.txt": {
+      "kind": "file",
+      "sha256": "e4839e62fbe28cd91ee5a8b761506b3baff40ad3fb21d5bb01daa938092f26d3"
+    },
+    "04_Software/AudioMancer/prompts/scene_ambience_user.txt": {
+      "kind": "file",
+      "sha256": "7200803b157564625e1ec767475efb2a1ce1cf628259c8361a62e95ca406e4b9"
+    },
+    "04_Software/AudioMancer/prompts/speech_blocks_system.txt": {
+      "kind": "file",
+      "sha256": "e4f5b3b8e781e0089c5e79c81bcb3549791bb5bcb67d15ab9a7ddf692ce1cf85"
+    },
+    "04_Software/AudioMancer/prompts/speech_blocks_user.txt": {
+      "kind": "file",
+      "sha256": "b6da6308b4bef4b94c370f28e79dabef430a9e2156ceeb2099202e275f1847db"
+    },
+    "04_Software/AudioMancer/prompts/text_chunking_system.txt": {
+      "kind": "file",
+      "sha256": "f6043f764131a2efb26d35c06b7bc79171706072a6c6a16a82d43a4a4a31da0a"
+    },
+    "04_Software/AudioMancer/prompts/text_chunking_user.txt": {
+      "kind": "file",
+      "sha256": "3d89445eab40858b1716be98e30c287ecb8c6893e946b25258b272fa50342c24"
+    },
+    "04_Software/AudioMancer/prompts/text_cleanup_adjudication_primary_system.txt": {
+      "kind": "file",
+      "sha256": "66ee2c449e5a16a5ae89600f8fd1e0d52a0b22acf39be106970a4094e5636c1f"
+    },
+    "04_Software/AudioMancer/prompts/text_cleanup_adjudication_verifier_system.txt": {
+      "kind": "file",
+      "sha256": "1b4e7bc5f66dafaedc4b9a1147ba6081b9e6666db65c7f343aefcd8c4bbe0de0"
+    },
+    "04_Software/AudioMancer/prompts/text_translation_system.txt": {
+      "kind": "file",
+      "sha256": "d11c58cf140933c87776b04d17f20587b5c4de7465e7dcf253e02a68cb32b577"
+    },
+    "04_Software/AudioMancer/prompts/text_translation_user.txt": {
+      "kind": "file",
+      "sha256": "a0af6ef03b1da8875cae560189f8c8f213f5b057fcb3058518b04ec337d3142a"
+    },
+    "04_Software/AudioMancer/pyproject.toml": {
+      "kind": "file",
+      "sha256": "25ecfa399879960673ab46e9bce80b0b8eae4c515176f6eaee5f0f3606b24810"
+    },
+    "04_Software/AudioMancer/settings.example.json": {
+      "kind": "file",
+      "sha256": "b9433ed678683e53d4c3c5f1a3e46515853c1ad2c3cdc0dae6af92d6a135b864"
+    },
+    "04_Software/AudioMancer/src/audiomancer/__init__.py": {
+      "kind": "file",
+      "sha256": "5e09dc83c6103a0c9a2f4c63f01cf4e955f7760faabdae26310375d797c1f8d3"
+    },
+    "04_Software/AudioMancer/src/audiomancer/__main__.py": {
+      "kind": "file",
+      "sha256": "97d7390c3e0cec48d39326cad76d97b1e6ffc84d5db3c5b74653082538a4f032"
+    },
+    "04_Software/AudioMancer/src/audiomancer/app.py": {
+      "kind": "file",
+      "sha256": "64ad9a95cd1592171972f44e744875e7e5c40a2397c23dad94d53643dba06c99"
+    },
+    "04_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer.ico": {
+      "kind": "file",
+      "sha256": "12d330fbd6ca03a7c8f9aa87c988266cf7c3659a4475fdedc5f892cb0246952d"
+    },
+    "04_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer_icon.png": {
+      "kind": "file",
+      "sha256": "b108148900d666271ceba295c14e30e7cee1a14d324fb472633ce77ac548c400"
+    },
+    "04_Software/AudioMancer/src/audiomancer/config.py": {
+      "kind": "file",
+      "sha256": "a77bc114a5954d0cb7adb05957fed651a7458f5021b6ece3bed7509453f0c321"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/__init__.py": {
+      "kind": "file",
+      "sha256": "058943dc0bfbd8b01fc8ef2035bc9089228fba159e9a9eb764554ed3da05a11d"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py": {
+      "kind": "file",
+      "sha256": "ea8e72abb5830ae400f5f2819ae8938a87f53c73d916db197cd27d8c8f3ed861"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py": {
+      "kind": "file",
+      "sha256": "cb5858647a848bd1c8c916aa9fff5340e24b5144a7a3922981b8b220574f5d50"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py": {
+      "kind": "file",
+      "sha256": "6fb4eab6543fc6f43d8eaa7d168821f8bf7ec4c1005ed6e0e76d25b9f72fe39c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py": {
+      "kind": "file",
+      "sha256": "7fed4956ec5e6086fef68328a7f25c25befb82467ab269f8ec41bd5c2dd797cd"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py": {
+      "kind": "file",
+      "sha256": "cb08b343032700e59a9002931d68104e856a7e4885c980f11851ae8fe3bea902"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py": {
+      "kind": "file",
+      "sha256": "a30c0db37cf4169923f8d3b457d2bc43b5adce8909d7c4919c5b901829a24afb"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py": {
+      "kind": "file",
+      "sha256": "8eb2aec8c23828b0e83a838809283aadfd8638c49598040c99df06f9aac52aef"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py": {
+      "kind": "file",
+      "sha256": "c3074d2d2e5be7f32aa0c2fe91aa09f49aea4e5d6f3ae3a9b9311d4e16aecc6e"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py": {
+      "kind": "file",
+      "sha256": "3f5cece2109db5140fe35cd2efe00130093e3655dfd19f151c1367db30b79e48"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py": {
+      "kind": "file",
+      "sha256": "5806b6ac0cab43bce55a5861f4c38532fa3c02bc20ca2e710c636364c28357b6"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py": {
+      "kind": "file",
+      "sha256": "e24a9adf1be8489531a143f65d5a15fd3317c8e05eace8dba1067c46ecf08297"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py": {
+      "kind": "file",
+      "sha256": "f66b74d5a80ef63085e09d69d1c8861889d6111c81e5db0f3d4ebc517c90c268"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py": {
+      "kind": "file",
+      "sha256": "e56d4c65295372b09aee13b2a274e9a861919f61b4d1ae38936f17bc47ca7353"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py": {
+      "kind": "file",
+      "sha256": "7de0886424b41d3cd6ee1a687a3b043a2b1c2227ac8ecd74012deb997e06aac0"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py": {
+      "kind": "file",
+      "sha256": "4c437104ce0bbf38616ca967a387d4d162e8ff5597e1ee9e07b564889e1bb3de"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py": {
+      "kind": "file",
+      "sha256": "7b7e08261f33d18ac617a67e7afe40d1f6c83b7c9a52e13c4be5691dbefc9087"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py": {
+      "kind": "file",
+      "sha256": "25d0d125b44b759d34eafb27be02146b66eb8c28e4c84c8cd9e464ede5bff47f"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py": {
+      "kind": "file",
+      "sha256": "70ed30a0545797f451af984fe964f246546714091a67e3595897d887b47a3189"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py": {
+      "kind": "file",
+      "sha256": "80702eae74813da2ae901785dfa1a8b7b873a2648eb2ff6d267cae95559d223c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py": {
+      "kind": "file",
+      "sha256": "e4c5ab7a52975bfd2e58b6abdc78894f5bf780be860d715d71447effba3f2dcd"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py": {
+      "kind": "file",
+      "sha256": "0f20bbad651aa300634649ab355171d23e89ff4cf1f853baa84c6d7108c2d263"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py": {
+      "kind": "file",
+      "sha256": "e04e69e02653907f8c8b6a88bbeba67a25238812ce030bc0a79058c5fd844c91"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py": {
+      "kind": "file",
+      "sha256": "c0e058227baf647a4f0919c7c1822673b66f5ff9013c07874360c27c0263ae3c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/import_service.py": {
+      "kind": "file",
+      "sha256": "f849a94ec895747232a15d5979f43e44c376d70065d25523951674d52b7a70ad"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py": {
+      "kind": "file",
+      "sha256": "4ae54e0f23b6d798028c1a008fc33bb6189f71ced43924dfe7d80fdce5a4297f"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/logging_service.py": {
+      "kind": "file",
+      "sha256": "8d07c9fa44f252fbaa4aa8f654b45cbf00395802a2f2f433dcd941f77602a663"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py": {
+      "kind": "file",
+      "sha256": "006104d59937b5708ae96825f0464391f9b38a0c0be34b9982e54131947ab5a5"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py": {
+      "kind": "file",
+      "sha256": "965ce4a1ffe57ddae5c1fdc77183a6f0bed61d61e04f3914031953a4b91067cc"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py": {
+      "kind": "file",
+      "sha256": "df61e48c5829814bd7a7610372abbbb3e99200bc85f39b7e2074c70849cadac8"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py": {
+      "kind": "file",
+      "sha256": "720e59a97c476f77dddf51457b28a0536a6a23a192cdc1eaa4d45f2f25d1e345"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py": {
+      "kind": "file",
+      "sha256": "1a4c78bd7a4fd6531b014707b8183e400186d5e020de39ad12519f1083d97adc"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py": {
+      "kind": "file",
+      "sha256": "0eed23d766ebeb7f5bb072bd0434f07a7c5f7e6f1599c22514746608abbe6a2d"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py": {
+      "kind": "file",
+      "sha256": "bdbbe3fabdf31e002f54ad0d22744b64b075bd03f7ab5269095b54ca9913ba5c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py": {
+      "kind": "file",
+      "sha256": "242e8fafd46b85c66192bed70315db2233a4a2b7b2c97ba67b4979e7d3f1cc1c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py": {
+      "kind": "file",
+      "sha256": "96f1ecdd1151660924cd8624be677aea25be8cf864f815231c6da4e6b1056cdc"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py": {
+      "kind": "file",
+      "sha256": "455d2a5669e644a6055d2dac7129571fea7800fd5de0c8e5f07ed99474d74f8c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/settings_service.py": {
+      "kind": "file",
+      "sha256": "266a81447463beecdb9519620ec4cfceef57b7f41a325df0853ce1422088a0a5"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py": {
+      "kind": "file",
+      "sha256": "24a7a49a8b4e0a3ed062a293650aa611ec675ae981225fef650976022e39c3a1"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py": {
+      "kind": "file",
+      "sha256": "ec60317e7cdcf281f1f02439607e8e4a5e6f24f5379ec5ef5d9c343f99b38329"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py": {
+      "kind": "file",
+      "sha256": "5ee38bb59d0ea3c090430f4b265d6885b55591003740c24035580988d95a953c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py": {
+      "kind": "file",
+      "sha256": "8ee6110e1eb05817d585da89c5c00313319bafb23b659c15a8f56fafe22a5728"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py": {
+      "kind": "file",
+      "sha256": "3464cb888a0445daadc2b79fd329bbbdac522dd4f95cfaf93960f86691d0e84d"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py": {
+      "kind": "file",
+      "sha256": "4f033ba414a58a24b38e2d709a22100f9db1f5c98baeff293b53b17487528230"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py": {
+      "kind": "file",
+      "sha256": "ea31cd7174de5182da0bc7e224878b78269a7740e298a31a4a365e9383c94773"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py": {
+      "kind": "file",
+      "sha256": "8b21f2c34d41501a1f1a5996836d7d340e243f6b8dfb21f47f6d3b2492e21625"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py": {
+      "kind": "file",
+      "sha256": "c6c0771d61a8f344673d8463f53dd9b12c29becd4ea3a6d73d675a8658a476ce"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py": {
+      "kind": "file",
+      "sha256": "7024b057f67197ecc507efa977914a7f48548bb1f5d8f0ac9b81e255344ea133"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py": {
+      "kind": "file",
+      "sha256": "f16bf0cb07bbab07661616e36a7816244a8a6df2ef4f868270613ca775a2f9ed"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py": {
+      "kind": "file",
+      "sha256": "2cce726e5e05e985f48c3d29d4bc27dfec01a3c78153cbe84ec926818a1246ac"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/time_service.py": {
+      "kind": "file",
+      "sha256": "0b56d6875a31c192a4dbd155d9caab72121db5e202f47189d1cb3676d2ce77d0"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py": {
+      "kind": "file",
+      "sha256": "3befe0e8768397a3579ca7768b99a1c9422f347c2ab1977ba3175f42ce8356b7"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py": {
+      "kind": "file",
+      "sha256": "fbf74cdc1c3094c18dd26112bdc63201d9e10995bcc7b1c1978d9d88bc405ba6"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py": {
+      "kind": "file",
+      "sha256": "a2f74845e1c4c69bc1b758b9aa0c47a6c48486cf6aa5d07b22317d16ba544f9a"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py": {
+      "kind": "file",
+      "sha256": "4692938790b6a188e93752f152c8e0e8344f5da8928369ef87b41106376e8a65"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py": {
+      "kind": "file",
+      "sha256": "a5ef102a7b73a1d2f90dee006a953963fcde5fde021c0967f7f1df69b9e4f5f7"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/url_service.py": {
+      "kind": "file",
+      "sha256": "b0844d3416dfdb406f6859e7b26b0aa43ad299ee50d38d5bec107879e9b5f876"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py": {
+      "kind": "file",
+      "sha256": "075437d0ba7a03b2839db58a376b35deca87658c33b4bfa89ae5971f3932777b"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py": {
+      "kind": "file",
+      "sha256": "0672cf4810482f453c3def9058f940589b064cec62577c3c53d1d31c6795756f"
+    },
+    "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py": {
+      "kind": "file",
+      "sha256": "53b903d1a2a548216f1fe0f378b81a562a00a7cba53a262a5d8b9d4f656c2e7c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/__init__.py": {
+      "kind": "file",
+      "sha256": "66592ea00db48dcff3827152e64e2a54ee7fec85cc4bb08320933735d167e70e"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py": {
+      "kind": "file",
+      "sha256": "d9658c5e6a311000dd168a46fa09e92e8a76c65655eba6903f2c2b61a26783da"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py": {
+      "kind": "file",
+      "sha256": "37b4e3a0c5dc69616c32a09a22c6b8cd5ef9b12d9dd2b825d3b41d7df8cbdd82"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py": {
+      "kind": "file",
+      "sha256": "cab9d9944b04678e4e500514572627ed42744577d26888d06307c155e8c35db3"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py": {
+      "kind": "file",
+      "sha256": "d0572d419618c6a2f45544c9094d97ee45169d54c125ae73b3c809d76a466305"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py": {
+      "kind": "file",
+      "sha256": "122ed1654c4257f49aeb0d53cb65acc133d199cdeaa4c40be7e0a98969507ff6"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py": {
+      "kind": "file",
+      "sha256": "ead14eab4fb38d950cb69a1a696323d2bb445b55a6f28d82e1fc6c5f3f0818ae"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py": {
+      "kind": "file",
+      "sha256": "c27a468a0e2662f53ba7efabcf3064c29c8dea08f51bccd09bd4c0a2850cb880"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py": {
+      "kind": "file",
+      "sha256": "3adf557662695e622125d6226b53f45e6679b900c1d9a2ea5e7e59597ecc1841"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py": {
+      "kind": "file",
+      "sha256": "e03c9947567edf09b3b358361a0771f83eb6ba295c49dcc4c3b2c58956f80c91"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py": {
+      "kind": "file",
+      "sha256": "d65d3c36a283d5ea88e471b6ad109e7e062eb59c2ee3820758e6b2e946f01f64"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py": {
+      "kind": "file",
+      "sha256": "c8ba6afbf81112a9ff3a4d283868353c785916092ee1ac7168cc5be575c49338"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py": {
+      "kind": "file",
+      "sha256": "56550b5b846d0e29017be222a2ad2e68e1086d841717e07444b10bad43eec18e"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py": {
+      "kind": "file",
+      "sha256": "045de974b7176c6da3833d3a7cc0249b99ab2a03e89f1475b661b4ce3f238a65"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py": {
+      "kind": "file",
+      "sha256": "480f2fedd2fdafb849dff144c82297b1d8d2a26b81e624384c81e777e2870223"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py": {
+      "kind": "file",
+      "sha256": "54f0f9b1655bd60845ad0e913217daec34b1183b6e36bda6a9993097e8fb8350"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py": {
+      "kind": "file",
+      "sha256": "c743afadbdd5f271d04ea0c6d99bed3183da100b27d768641d680b05c5bd592b"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py": {
+      "kind": "file",
+      "sha256": "b2babf454972f839d39e2e27e2afb12592f0cf0933acc3560440b89086d29a6c"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py": {
+      "kind": "file",
+      "sha256": "f69ca27df6643e591886f2b528a900635cfbdcfd1c189dc212f58faa2c1b40ee"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/main_window.py": {
+      "kind": "file",
+      "sha256": "b5eec54731bd9914299981c271a1daff3d1b1816b3ff9b6eff444536bd3aa3ea"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py": {
+      "kind": "file",
+      "sha256": "61e5580a85bf502ec08580a98b280ede83f6169cd06d35d7bda682307da1234f"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py": {
+      "kind": "file",
+      "sha256": "6de98b083b923173bf356be4e82b461468450d9c7cef9dd377290669b3f97134"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py": {
+      "kind": "file",
+      "sha256": "35d877262aa6724fcd844539feedf74622120c28654f037d246a38f8a0ec88d6"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py": {
+      "kind": "file",
+      "sha256": "7581eee3696d31319805036234754d279c8c071b09ebd1c2c3112d8f4ed43505"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py": {
+      "kind": "file",
+      "sha256": "e69e21c0f324a3d5a8c31098dbfb8d9280d550c14103de108f9964e8488e6947"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py": {
+      "kind": "file",
+      "sha256": "2bb6de426ee99df4ad4b1dba02f073a497dadd795eac01910e8c0d1083c8c357"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py": {
+      "kind": "file",
+      "sha256": "8859db01ff2a7d3c740108741b2da258c588167a016c112c44ad9e66669409dd"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py": {
+      "kind": "file",
+      "sha256": "8c7b3b85ffbb961f26f46c8b2dac25c0ed3c48d8c2967cd5d3265c25090dd958"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py": {
+      "kind": "file",
+      "sha256": "d49e80edb354453f169d14191d445dfd275741652d7b5d68bd004625feeb8a0f"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py": {
+      "kind": "file",
+      "sha256": "62e598084589caedbb412e9043040117f32585d3bf3715881b518e54f5016c7d"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py": {
+      "kind": "file",
+      "sha256": "16032b5727bc84b554e2919028ed2fc68e31eae2d45110ecc9ca03faedef7ab2"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py": {
+      "kind": "file",
+      "sha256": "5d7f69b4f6fbc242a25b69c289ea7d8cf49f23e568a7a9a5018ee0342fa585f2"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py": {
+      "kind": "file",
+      "sha256": "fd61bdf5c4d2c24a98dd4fa96359ac811215c43075f3e0ec30b78b49c55d3ce0"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py": {
+      "kind": "file",
+      "sha256": "83d1cd72892a6afc1fe6b82fb637d46494b26e7521232df268e4d26234255d56"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py": {
+      "kind": "file",
+      "sha256": "63678f00f6b404c306e4fa8413ae32914e967d62b7efa8823239054be7bc778a"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py": {
+      "kind": "file",
+      "sha256": "9065637f08e0dc9736966b5ea5ad1aabca0c3f78630713fb63bd3de15562b5b1"
+    },
+    "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py": {
+      "kind": "file",
+      "sha256": "cf071734509cf4efd5f0499be69a9a10adb07ba375c38a85344c537b84ee966a"
+    },
+    "04_Software/AudioMancer/tests/chunking_test_support.py": {
+      "kind": "file",
+      "sha256": "dfb6ce5506bf98b87729c6304d05d478a5ae43b09b4f96fa154dbac71ff03ba3"
+    },
+    "04_Software/AudioMancer/tests/cleanup_test_support.py": {
+      "kind": "file",
+      "sha256": "1f4861a873dc845d1c5667d5880ee05a990a804d3c4a5c294c559495e354fbea"
+    },
+    "04_Software/AudioMancer/tests/conftest.py": {
+      "kind": "file",
+      "sha256": "14c06266ef286e351ea880713e35aa9027cff35e28d92995f0fc78fe4ddc1631"
+    },
+    "04_Software/AudioMancer/tests/fixtures/cleanup_corpus.json": {
+      "kind": "file",
+      "sha256": "421ce8910e3cf6ed38d3dfc525d355de340716e9723e67100742914b704732a8"
+    },
+    "04_Software/AudioMancer/tests/test_aegis_workflow_artifacts.py": {
+      "kind": "file",
+      "sha256": "090b7ff744d1316cfb4a4c9a23b5b9a9f2c5483c14c0bfe8e62ff68419727a29"
+    },
+    "04_Software/AudioMancer/tests/test_ai_backend_service.py": {
+      "kind": "file",
+      "sha256": "2359f402edca1da6770fdfeb8f83e39eede7428199adf8a2340c9a6dead79de0"
+    },
+    "04_Software/AudioMancer/tests/test_ai_budget_service.py": {
+      "kind": "file",
+      "sha256": "263149c6086aa76d98ba2a5c19155cafb938fd4a8cc4398502b249050ad6db0b"
+    },
+    "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py": {
+      "kind": "file",
+      "sha256": "3a75c236bf99f5c8049a9a1f363f8b0c20d1a12c0cb18748e38bca3d28581624"
+    },
+    "04_Software/AudioMancer/tests/test_ai_chunking_service.py": {
+      "kind": "file",
+      "sha256": "7c61f24f3584a8a444bb75592a80814507d11170d37bfd9e5f6c32d040a5dd2a"
+    },
+    "04_Software/AudioMancer/tests/test_ai_settings_page.py": {
+      "kind": "file",
+      "sha256": "90651a5015163c0aa0a6dc29fca4a0cce7340982e6480c425f650f1e69a48d6c"
+    },
+    "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py": {
+      "kind": "file",
+      "sha256": "456a307a8e3a107ca08d441e2bade673a54df81f1cbd3295a59dec46d5500c2f"
+    },
+    "04_Software/AudioMancer/tests/test_ai_state_note_service.py": {
+      "kind": "file",
+      "sha256": "f86123dfa1c5cf1fae67d72fe84ceb0958492dd386ecbcdf3c2c79d664154fe6"
+    },
+    "04_Software/AudioMancer/tests/test_ai_translation_page.py": {
+      "kind": "file",
+      "sha256": "0e294b2bb3224e9d3ff16545a5c9f33c9f0bda0724329b06da81721b5f3bb29a"
+    },
+    "04_Software/AudioMancer/tests/test_ai_translation_service.py": {
+      "kind": "file",
+      "sha256": "a213ff2c223ed95825db5c826a72c93c9b9f23cf9f0dee90256482a9dba6236f"
+    },
+    "04_Software/AudioMancer/tests/test_ai_translation_state_service.py": {
+      "kind": "file",
+      "sha256": "1ea853b0a3dbe6bc0a0ba779345c84616e2e00c7969462aef867e6992ea0acdb"
+    },
+    "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py": {
+      "kind": "file",
+      "sha256": "20094f9b9b0c14feaffd377446057a27c7b45a4fd3c9374c29221c98e3ca2fbe"
+    },
+    "04_Software/AudioMancer/tests/test_app_entrypoint.py": {
+      "kind": "file",
+      "sha256": "a1f7973617614ed18d713c081084bbcc11882f9a92b871890eb056bc5d3bfab8"
+    },
+    "04_Software/AudioMancer/tests/test_atomic_io_contracts.py": {
+      "kind": "file",
+      "sha256": "b1644148a387159211c226b96b9612d8b809c8e7d6d6d5a2d5a2fc27918372b8"
+    },
+    "04_Software/AudioMancer/tests/test_audio_assembly_page.py": {
+      "kind": "file",
+      "sha256": "2a0caba8c2c3cc98a5aecc6d367a9de3bed9f36ba0961e60803a6eddcddc28cd"
+    },
+    "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py": {
+      "kind": "file",
+      "sha256": "a5bf18c7548685bc4f94ccbea8e70f045544d8a343c35f5c1d07c21d204197f5"
+    },
+    "04_Software/AudioMancer/tests/test_audio_assembly_service.py": {
+      "kind": "file",
+      "sha256": "ee05769400797c869099b039b884105385085b500290ac2e8fa1de7ec1c2f3d3"
+    },
+    "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py": {
+      "kind": "file",
+      "sha256": "fadb45f68449b5db61f0eed575e0cc621c7f656b0627edd22eee8c57baec912b"
+    },
+    "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py": {
+      "kind": "file",
+      "sha256": "6f970e6af14f88b7de2569c46af76b784f03e926d38993934045e972b85c1031"
+    },
+    "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py": {
+      "kind": "file",
+      "sha256": "0c0ecc67406638625ad8c7d1803e032e70ea302b464c4306a4fefdcca623b557"
+    },
+    "04_Software/AudioMancer/tests/test_audio_blocks_main_window.py": {
+      "kind": "file",
+      "sha256": "99d521c3ae1cb44ede719b99b7836591fe358035eb81e7054cdff4dbede5a99b"
+    },
+    "04_Software/AudioMancer/tests/test_audio_blocks_page.py": {
+      "kind": "file",
+      "sha256": "681aebeffe0866e1f858aa1f8655c2927190ffbcdecce350b16dde4a1dd2bb39"
+    },
+    "04_Software/AudioMancer/tests/test_audio_blocks_service.py": {
+      "kind": "file",
+      "sha256": "92bd4e86c3ae58c9f13f1e7c51482f76465c2a04c58caa7858f33d465ae7cb39"
+    },
+    "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py": {
+      "kind": "file",
+      "sha256": "63f4501ee5200bb9a0023d01dc0367fcec77a7a04ce9fdb95999174577267b30"
+    },
+    "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py": {
+      "kind": "file",
+      "sha256": "0b8e3b4ac752774fdf5b31e73291e7997c1de7c465b9f11772059c55d67a91e0"
+    },
+    "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py": {
+      "kind": "file",
+      "sha256": "01195e6815d8741e2f0d74913720e1b959eb9535046d6dd7a5b5ef5cd6cedb6f"
+    },
+    "04_Software/AudioMancer/tests/test_blocks_performance_baseline.py": {
+      "kind": "file",
+      "sha256": "434e55d4b958aaff0e7f5d11788706725983860ff93c8ea7378265798ab2d076"
+    },
+    "04_Software/AudioMancer/tests/test_character_discovery_service.py": {
+      "kind": "file",
+      "sha256": "c0a8157fbe5d35db9925848356517200bd7336b3812912f7dc3df14c164d8bdf"
+    },
+    "04_Software/AudioMancer/tests/test_character_discovery_state_service.py": {
+      "kind": "file",
+      "sha256": "9ce8a3d92395c5b5cd55f2cd2fc4a0133132f43574a1949cebdaab7ae653f687"
+    },
+    "04_Software/AudioMancer/tests/test_character_voices_page.py": {
+      "kind": "file",
+      "sha256": "768d39e890bed613f2fffdc37159fe454584a2f13e0c7dcd724f18746996bf7f"
+    },
+    "04_Software/AudioMancer/tests/test_character_voices_service.py": {
+      "kind": "file",
+      "sha256": "a898ae282e425f6c2a95ce3a14944c21682ce8179ab10d783ea0951367fa14c4"
+    },
+    "04_Software/AudioMancer/tests/test_character_voices_state_service.py": {
+      "kind": "file",
+      "sha256": "b3db80712a9a719a539677694b1796cd949b728e8b8dc62dd2d3633b40d8c7d5"
+    },
+    "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py": {
+      "kind": "file",
+      "sha256": "aff387d7edd95cc8dcc1c69a23162a7a9b2369ced3b2e6ece4c285581df13dd6"
+    },
+    "04_Software/AudioMancer/tests/test_characters_page.py": {
+      "kind": "file",
+      "sha256": "e24a16e8608e7e0c8c5c5a2fef6304f5a3089e696f346f81feac52ec2e516b8b"
+    },
+    "04_Software/AudioMancer/tests/test_characters_ui_controller.py": {
+      "kind": "file",
+      "sha256": "3d713f665d8f31c86d14c7c72200d8c0eee5e80e5e40485c6553e8c2d021ae62"
+    },
+    "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py": {
+      "kind": "file",
+      "sha256": "a12a21b3a23427e851985ab4dffaa0920f27a6f1e2eade5ddc18392b710f5dfd"
+    },
+    "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py": {
+      "kind": "file",
+      "sha256": "e78743fb15b0d4d7c251eccd7a52f4a1795699caad39c3d3532fd7e807505355"
+    },
+    "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py": {
+      "kind": "file",
+      "sha256": "0f1021bdfaecff50c5bfd85499d80b38f5b0b446be6ec5f4621e24ade2c9c74e"
+    },
+    "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py": {
+      "kind": "file",
+      "sha256": "3e48842787da94f9ef6456be49841f4404ad11c78a3ee23deb2731f87b7b1658"
+    },
+    "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py": {
+      "kind": "file",
+      "sha256": "268761dfad6fbf8016390036c4fc89a740dbbea66057aa604636afd6d9194d61"
+    },
+    "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py": {
+      "kind": "file",
+      "sha256": "546a31c6ca72873ed48ba7eeb300aef4a3fc49c339fc46e4b92c3f50495d22c4"
+    },
+    "04_Software/AudioMancer/tests/test_cleanup_service.py": {
+      "kind": "file",
+      "sha256": "adf77a55b0d31968e1ed6719940cd1a731cc693de33dbfdaa4146e75ae0395fe"
+    },
+    "04_Software/AudioMancer/tests/test_config_contract.py": {
+      "kind": "file",
+      "sha256": "af6341a6a50cd5259e769e8a75b2e44725232a86faf404704e54fe5314983b39"
+    },
+    "04_Software/AudioMancer/tests/test_confirmation_consolidation.py": {
+      "kind": "file",
+      "sha256": "446d0c229106776b61f4c6994fca79ca597b45dafee2ff9e1de55b541de0aa9f"
+    },
+    "04_Software/AudioMancer/tests/test_controller_cancellation_wiring.py": {
+      "kind": "file",
+      "sha256": "21d93b4de3b779b3ebcf671a2387dee3243e6268ac27f5dae52bfb3de170d10b"
+    },
+    "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py": {
+      "kind": "file",
+      "sha256": "29e642605f96fe964635c95f7edde01adcc49114de563836550e8df294af59b7"
+    },
+    "04_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py": {
+      "kind": "file",
+      "sha256": "cf7069f76ebc6b657d39366effb6604299c317ff0549addbde7a7c56903668f6"
+    },
+    "04_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py": {
+      "kind": "file",
+      "sha256": "a55524025bd866b942e06f5e176e1fa84ff25046c369ef58eb7933fa618727a8"
+    },
+    "04_Software/AudioMancer/tests/test_duplicate_service_consolidation.py": {
+      "kind": "file",
+      "sha256": "8638a217c8fcb04ba0447978d0cd932ca0de67117c121e23f36a2ad32e32bc8f"
+    },
+    "04_Software/AudioMancer/tests/test_home_page.py": {
+      "kind": "file",
+      "sha256": "ef95c3a2cd643c0bc65ad865f6f32acc3db9a2dae532079651899b55d2c5ca55"
+    },
+    "04_Software/AudioMancer/tests/test_home_presenter_service.py": {
+      "kind": "file",
+      "sha256": "f3d15795807fb6fe2dd5d9485bd883502155d1da79915797c47b3504bbfc9421"
+    },
+    "04_Software/AudioMancer/tests/test_home_ui_controller.py": {
+      "kind": "file",
+      "sha256": "8a82ef09f04e936c0f00f8c7cb555ffdb0f69dc07d16816270eb02de925578b2"
+    },
+    "04_Software/AudioMancer/tests/test_import_service.py": {
+      "kind": "file",
+      "sha256": "9aa7173c6be7a6b06bf06f4dd0976a30e5c9f8f940c9630a3e96e949ab7fc697"
+    },
+    "04_Software/AudioMancer/tests/test_llm_provider_service.py": {
+      "kind": "file",
+      "sha256": "5391314bc1ba1d58794810a42769cb82ea31401ed7e52b66046cb725cec74a01"
+    },
+    "04_Software/AudioMancer/tests/test_localization_parity.py": {
+      "kind": "file",
+      "sha256": "bce051a9efc063b4a63bc9eab8ec3f7491da65e63fffb951288adaa1987c328a"
+    },
+    "04_Software/AudioMancer/tests/test_logging_service.py": {
+      "kind": "file",
+      "sha256": "4eb9f05b6b61b7910b8b72947a0c8bea430c1c02c854436fb6da28c5aaddc1b1"
+    },
+    "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py": {
+      "kind": "file",
+      "sha256": "bb6f183e0bdae0de6f9ac9a42393e0b3e22b87527d38ba0328bb8d515c86505f"
+    },
+    "04_Software/AudioMancer/tests/test_main_window_home_exports.py": {
+      "kind": "file",
+      "sha256": "202582e2b37ac4e4b4689908e2ec8a4c161dc83fc79ec17348a0cac6b378e7c8"
+    },
+    "04_Software/AudioMancer/tests/test_main_window_lifecycle.py": {
+      "kind": "file",
+      "sha256": "2c08b34602c9322ea3ecd74ec39064477adebd917a417614216cb94b15495094"
+    },
+    "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py": {
+      "kind": "file",
+      "sha256": "03e10490720b2a9e792cd57463e698f8120f73e4f98e68b75427809fe3a56df7"
+    },
+    "04_Software/AudioMancer/tests/test_main_window_project_flow.py": {
+      "kind": "file",
+      "sha256": "d92d6483a8b1a474d758a7d13b980521536d4fdf0e2536bca2babfbc6d551eda"
+    },
+    "04_Software/AudioMancer/tests/test_misc_ui_controller.py": {
+      "kind": "file",
+      "sha256": "3b86074e566a3d2af008715530671000e2e19ca6468afe72cb8c417c6ce48c75"
+    },
+    "04_Software/AudioMancer/tests/test_narator_voice_page.py": {
+      "kind": "file",
+      "sha256": "c2a1213d179917a064f86fded68ca32b02b101a89c82e580c077d247263569c1"
+    },
+    "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py": {
+      "kind": "file",
+      "sha256": "a0dfd06230a963c7a176e83a71912c484c719aee00c42a16298e9a2ff4faf51b"
+    },
+    "04_Software/AudioMancer/tests/test_narrator_definition_service.py": {
+      "kind": "file",
+      "sha256": "d5030b0e25fab2c122753fa31f625dc8fbc330799e6f6b6fb1e9dc68b439b146"
+    },
+    "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py": {
+      "kind": "file",
+      "sha256": "205eff30a4f2b13246f9cd51672f94d5077de11bce539617eb016d2e5e11900a"
+    },
+    "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py": {
+      "kind": "file",
+      "sha256": "500c7069a98444c12b303e833be769f413a8999d1e12678aa21ce3451b401467"
+    },
+    "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py": {
+      "kind": "file",
+      "sha256": "6fc3d70ecf085244e89de5ddcfe2c972cf4a381aece5186839f6f1f44f1e2712"
+    },
+    "04_Software/AudioMancer/tests/test_navigation_sidebar.py": {
+      "kind": "file",
+      "sha256": "75bbca5eaad3af9d21c6ebc365f0c0eaf379d679816b2a1c8cec928cb8fe32d2"
+    },
+    "04_Software/AudioMancer/tests/test_operation_progress_dialog.py": {
+      "kind": "file",
+      "sha256": "f7acda6e9c216bab517d9a955a11ab35bf3ba9ea66fe3891e6b5d910a3b57f80"
+    },
+    "04_Software/AudioMancer/tests/test_operation_runner_controller.py": {
+      "kind": "file",
+      "sha256": "a94ea595d3e43ba964868362de31020eaf94f41a9e2d774c83cb6b8e2258188a"
+    },
+    "04_Software/AudioMancer/tests/test_operation_runtime_service.py": {
+      "kind": "file",
+      "sha256": "fce4d04441291fe4fa5409800f5b59af3779c447cc72527077f6b66888900438"
+    },
+    "04_Software/AudioMancer/tests/test_operation_status_button.py": {
+      "kind": "file",
+      "sha256": "49edd30e3f6102a7597cd8e7e1d8b81f6b1ad11a96138b0b56b87d65774b827c"
+    },
+    "04_Software/AudioMancer/tests/test_operation_status_dialog.py": {
+      "kind": "file",
+      "sha256": "804dbf354e69d94a7f347577891099ab5d96a4b8b7affbe609aeca7372c5a618"
+    },
+    "04_Software/AudioMancer/tests/test_package_import.py": {
+      "kind": "file",
+      "sha256": "750bc13df4c72adabd2eaebf77722f90e61413cfe387e318d5fada707cc908b6"
+    },
+    "04_Software/AudioMancer/tests/test_pcm_codec.py": {
+      "kind": "file",
+      "sha256": "7cb4d96fdf5355bf780f8b969c1ce933162b11918dc3880c1c24d340347bb111"
+    },
+    "04_Software/AudioMancer/tests/test_persistence_service.py": {
+      "kind": "file",
+      "sha256": "ad20a608d2c6f0a2f5e5f2287c4ffd205a2f79d5c3132200392e61e46b7c74a0"
+    },
+    "04_Software/AudioMancer/tests/test_project_export_service.py": {
+      "kind": "file",
+      "sha256": "e26a1039566334ceb9ed361a6430708bb20b6d5ad719fa95bb8e25a8dabadc65"
+    },
+    "04_Software/AudioMancer/tests/test_project_snapshot_service.py": {
+      "kind": "file",
+      "sha256": "5db98f7793eff6aff4bc0f7c8855e2695c56c655276b78eb9d3f19fa74cb3192"
+    },
+    "04_Software/AudioMancer/tests/test_project_stage_consistency.py": {
+      "kind": "file",
+      "sha256": "ebb45bb36a993499b6c92a35154a5ac5b05e7f40a0b7ba3cbafa4671b8f63e70"
+    },
+    "04_Software/AudioMancer/tests/test_project_workspace_service.py": {
+      "kind": "file",
+      "sha256": "c136fccd82dfb902b8a4dcd0362e0f8f6a8e0dcb089a4d6e4f544fefb47c9b04"
+    },
+    "04_Software/AudioMancer/tests/test_prompt_template_service.py": {
+      "kind": "file",
+      "sha256": "299fdce6d52d2b56810d23487b2f9cdb5c1fd577d25d75f9c6e34bd9e763d956"
+    },
+    "04_Software/AudioMancer/tests/test_pytest_runtime_configuration.py": {
+      "kind": "file",
+      "sha256": "e45b0a1827b54fb21153427e9d84665ad824fcfcaadf20b264117aebfce91133"
+    },
+    "04_Software/AudioMancer/tests/test_settings_page.py": {
+      "kind": "file",
+      "sha256": "ac8c0194b37eaee6a8983a0a84919993c1adbc0ff2cbf518b7649fc41beb296f"
+    },
+    "04_Software/AudioMancer/tests/test_settings_service.py": {
+      "kind": "file",
+      "sha256": "b1e082d2947483e2e6be72ab37098f34e6848d96adbf88dfae6625443a395182"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py": {
+      "kind": "file",
+      "sha256": "55f26b3c90d82ba7a49718737c178090d8d90d2f0a39a76a806d18e7be2ff31c"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py": {
+      "kind": "file",
+      "sha256": "65b6f20e96f00e3b0a942c60fdbf32bf92c271a8ad54b46530ffe2573578690e"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_page.py": {
+      "kind": "file",
+      "sha256": "e4d0d0f0f11a90f4312bcebbbb330dce274b95280f2d951d695d1da4dc92b26e"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py": {
+      "kind": "file",
+      "sha256": "2c814b4ede2a435454f60177aad06c7c1469d27578fd8cafc2930f80f3e012c4"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_service.py": {
+      "kind": "file",
+      "sha256": "bab01fb29b0c3acae25bef92f9cadff3c454c6e4904e42de3062a2a53017a95a"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py": {
+      "kind": "file",
+      "sha256": "95d74e25418f6ffb441f9a2903f3bc0dc0ba996925de4fdd913447f085a10151"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py": {
+      "kind": "file",
+      "sha256": "7dbb20fd8226ce18a24441279b7f78bd5423e63646492bf8e5d1f61486480986"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py": {
+      "kind": "file",
+      "sha256": "d7a6b5b25194432770a08cf1f9cdb599737ad9bdee577043f1f3afe92ab08ad7"
+    },
+    "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py": {
+      "kind": "file",
+      "sha256": "1900d13704360649521f3d9d7601f801654ecfc4178ce2e79ef037e18d6d8096"
+    },
+    "04_Software/AudioMancer/tests/test_text_chunking_page.py": {
+      "kind": "file",
+      "sha256": "55cf4bbb13805ed9bf411155b67e15bfc2c982c3cf22c20665b943678c18df6e"
+    },
+    "04_Software/AudioMancer/tests/test_text_chunking_state_service.py": {
+      "kind": "file",
+      "sha256": "381e644ce9c9a276d219c5122c2ded8793eefda3a9f05e19eb965c116feda517"
+    },
+    "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py": {
+      "kind": "file",
+      "sha256": "ef1818be86780c748153efa2cb6dc4e25fb505ca60ccbc4d9a72a81a44476e86"
+    },
+    "04_Software/AudioMancer/tests/test_text_cleanup_page.py": {
+      "kind": "file",
+      "sha256": "63a45353d9c34898a90885a6ca410c62644fd48c43b99e611bfca7c1302e4d19"
+    },
+    "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py": {
+      "kind": "file",
+      "sha256": "97be3056e6bcaf5be26b38d74a6358023a0c0c1415fd1c3b1c1ac051ddfaacbc"
+    },
+    "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py": {
+      "kind": "file",
+      "sha256": "e44e868497ccbb1f88f0396dc2b9dc1addf236297509624525f447641bf8cbd6"
+    },
+    "04_Software/AudioMancer/tests/test_text_extraction_service.py": {
+      "kind": "file",
+      "sha256": "f9be84afe3d2707f0d35c54fa9a65ef28833688800c5593ba9685fbddef5d106"
+    },
+    "04_Software/AudioMancer/tests/test_token_usage_service.py": {
+      "kind": "file",
+      "sha256": "7d91dc8ea11fe2b095678fcdd520ef1686e69abb6af400e27da513c98ff8839f"
+    },
+    "04_Software/AudioMancer/tests/test_tts_budget_service.py": {
+      "kind": "file",
+      "sha256": "35f9184b1934c94721d92b582e3c53a3a0e3b6c5c9eb8fddf23f2dba05e630e0"
+    },
+    "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py": {
+      "kind": "file",
+      "sha256": "82f52d45c266b20e14e96c9949c8f8ae66550c0f0bcffcdf3e1af77c2036f866"
+    },
+    "04_Software/AudioMancer/tests/test_tts_settings_page.py": {
+      "kind": "file",
+      "sha256": "7c470bd7404cd40fbc4ea38fd17448761334dafb72c221fcdc234e666e39318f"
+    },
+    "04_Software/AudioMancer/tests/test_ui_localization_coverage.py": {
+      "kind": "file",
+      "sha256": "6cbc7f1b201073e70cadffd927793390609cf1a97b41b1b5eda8207cb692e33b"
+    },
+    "04_Software/AudioMancer/tests/test_ui_page_contract.py": {
+      "kind": "file",
+      "sha256": "1da2d100bc8ae160ef50e1fa17575ecb8446690175bdb257c03a2f0cd70dd992"
+    },
+    "04_Software/AudioMancer/tests/test_ui_scroll_service.py": {
+      "kind": "file",
+      "sha256": "2b40155f71a4ec8129c839bcd3a453378bf3662a9b3efd35cfad0a0e3240add7"
+    },
+    "04_Software/AudioMancer/tests/test_ui_state_service.py": {
+      "kind": "file",
+      "sha256": "50d2ed01c7027711ee1af0cc105a235647c63ebbf70b63b0a2e51aba22ca286c"
+    },
+    "04_Software/AudioMancer/tests/test_ui_theme_service.py": {
+      "kind": "file",
+      "sha256": "dbe78ca8f9cc1c02c3c5b358d559b255136b64fc10a4dc29474dc0c790239dac"
+    },
+    "04_Software/AudioMancer/tests/test_url_service.py": {
+      "kind": "file",
+      "sha256": "5af719451d6fbe3508b1ac7672f97aa377ced6c55aa4b1dbf0d6ff243da557fc"
+    },
+    "04_Software/AudioMancer/tests/test_user_data_location.py": {
+      "kind": "file",
+      "sha256": "ea02c4ff9ae301577211f3d2a478bf1e91821c6ce2c3753964d0b4e81e6c1131"
+    },
+    "04_Software/AudioMancer/tests/test_voice_sample_import_service.py": {
+      "kind": "file",
+      "sha256": "4af27e08dc8b7c6a33b9cb5e2f7ecca86d1a48fc84bd9ee611a37971cc0d2184"
+    },
+    "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py": {
+      "kind": "file",
+      "sha256": "51e0ae91c567793255bc0a20197cfd66211cd39a9e447a4754e041df99aecdd7"
+    },
+    "04_Software/AudioMancer/tests/test_workflow_controller_service.py": {
+      "kind": "file",
+      "sha256": "ffdcab89c0b107d6ebb3c3a811a836792f1b635a3ff7983dc7a800dca3165482"
+    },
+    "04_Software/AudioMancer/tests/test_workflow_impact_service.py": {
+      "kind": "file",
+      "sha256": "5690ee6be9e4ef7e95d1f12d8f12c3f12cef2f29814ac4be34fffbe803d2addb"
+    },
+    "04_Software/AudioMancer/tests/test_workflow_order_consistency.py": {
+      "kind": "file",
+      "sha256": "f047a052a3477236677635bc12f2ad9a814945f80542659446502531e9f5e130"
+    },
+    "04_Software/AudioMancer/uv.lock": {
+      "kind": "file",
+      "sha256": "679db96afbc26ea3f1a30ea994c68f2daad2c6b2df999040b8b31f80cbe841b9"
+    },
+    "04_Software/README.md": {
+      "kind": "file",
+      "sha256": "bbbae3e9fb26c25b3600e447fb8f7dab6b5a4e7484b55cc20ea7afa46f27debb"
+    },
+    "05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md": {
+      "kind": "file",
+      "sha256": "7d55701917ce2200917d3f3d502d27964445bc2bae678e8419aafc68cf259ede"
+    },
+    "05_SoftwareDocu/AudioMancer_OpenAI_Online_Model_Recommendations.md": {
+      "kind": "file",
+      "sha256": "12bc5ef523b364b1be56ac7df773f681c97c932e3c2d215d2bc6cb941e695c27"
+    },
+    "05_SoftwareDocu/README.md": {
+      "kind": "file",
+      "sha256": "d0786f9324a0a4520253e44357ec86cdd7e4e9c1a907c467d9a243e9d72f2ea0"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/ai-settings-dialog.png": {
+      "kind": "file",
+      "sha256": "17c058bdaecb528a621d512ed840b36a58febe7da026a93606254c65fbbabea0"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/ai-translation.png": {
+      "kind": "file",
+      "sha256": "3d16049ddac104be643a117b911e86341d4e2b7e3026069813644a2241949747"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/audio-assembly.png": {
+      "kind": "file",
+      "sha256": "3a3575e202ffebab0975a27b9e210091e9c0f8f043a64238d57bf3d8422240d3"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/audio-blocks.png": {
+      "kind": "file",
+      "sha256": "f6f916fe004d0a297865d0fc196a87557ebf7a7a417abba1145d7c135f9bdc25"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/character-voices.png": {
+      "kind": "file",
+      "sha256": "c83c992c2ad7b4dd17998b7824ff01346be1bb6586e16066d2512173de9ce4e5"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/characters.png": {
+      "kind": "file",
+      "sha256": "9adb6bc66ffda14f3661ebef42a5590e786d2d564964b235afd0f8379c01edd5"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/home-project.png": {
+      "kind": "file",
+      "sha256": "811fa596d60b489418ffe2300c6876d7c7b21c41b6b2a5dfcd8acda8ef75d89a"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/narator-voice.png": {
+      "kind": "file",
+      "sha256": "cd9c2975eabb64203e3ff23918472da1fe5dc0259e8fc33680b16cb54ed83ff3"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/settings-dialog.png": {
+      "kind": "file",
+      "sha256": "0bde914ed34f728c16274ca193fcf14ba2e508b942b5b78a700f4388d7048f94"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/speech-blocks.png": {
+      "kind": "file",
+      "sha256": "0bd21e9399d905d1b121d32dff71afdef2257f502c8d145d3a891e293c6e9919"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/text-chunking.png": {
+      "kind": "file",
+      "sha256": "11f92f6675fb04124d0cbd829d4f31f5cae2fe4302e4f9ecce3994dd909940f0"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/text-cleanup.png": {
+      "kind": "file",
+      "sha256": "1b0cf619a3476165ab85fb04331d6bc71ed5a1756eac376d2600bf7b27ba6818"
+    },
+    "05_SoftwareDocu/UserGuide/assets/screenshots/tts-settings-dialog.png": {
+      "kind": "file",
+      "sha256": "dbb09dd8bb405f919cf3759f49ca1cfb616cd3cd05bdcdf23f754dfb7492bd39"
+    },
+    "05_SoftwareDocu/UserGuide/assets/styles/help.css": {
+      "kind": "file",
+      "sha256": "a6811df053cd475d62bac20b86c1cea0f2a9dd77954d2dd01559e761d2b61ffc"
+    },
+    "05_SoftwareDocu/UserGuide/index.html": {
+      "kind": "file",
+      "sha256": "2b3f4b3f240a38f99ab83e34b399d32dbaa256f74515435dd72205539387edd4"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/ai-settings-dialog.png": {
+      "kind": "file",
+      "sha256": "17c058bdaecb528a621d512ed840b36a58febe7da026a93606254c65fbbabea0"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/ai-translation.png": {
+      "kind": "file",
+      "sha256": "3d16049ddac104be643a117b911e86341d4e2b7e3026069813644a2241949747"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/audio-assembly.png": {
+      "kind": "file",
+      "sha256": "3a3575e202ffebab0975a27b9e210091e9c0f8f043a64238d57bf3d8422240d3"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/audio-blocks.png": {
+      "kind": "file",
+      "sha256": "f6f916fe004d0a297865d0fc196a87557ebf7a7a417abba1145d7c135f9bdc25"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/character-voices.png": {
+      "kind": "file",
+      "sha256": "c83c992c2ad7b4dd17998b7824ff01346be1bb6586e16066d2512173de9ce4e5"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/characters.png": {
+      "kind": "file",
+      "sha256": "9adb6bc66ffda14f3661ebef42a5590e786d2d564964b235afd0f8379c01edd5"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/home-project.png": {
+      "kind": "file",
+      "sha256": "811fa596d60b489418ffe2300c6876d7c7b21c41b6b2a5dfcd8acda8ef75d89a"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/narator-voice.png": {
+      "kind": "file",
+      "sha256": "cd9c2975eabb64203e3ff23918472da1fe5dc0259e8fc33680b16cb54ed83ff3"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/settings-dialog.png": {
+      "kind": "file",
+      "sha256": "0bde914ed34f728c16274ca193fcf14ba2e508b942b5b78a700f4388d7048f94"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/speech-blocks.png": {
+      "kind": "file",
+      "sha256": "0bd21e9399d905d1b121d32dff71afdef2257f502c8d145d3a891e293c6e9919"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/text-chunking.png": {
+      "kind": "file",
+      "sha256": "11f92f6675fb04124d0cbd829d4f31f5cae2fe4302e4f9ecce3994dd909940f0"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/text-cleanup.png": {
+      "kind": "file",
+      "sha256": "1b0cf619a3476165ab85fb04331d6bc71ed5a1756eac376d2600bf7b27ba6818"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/screenshots/tts-settings-dialog.png": {
+      "kind": "file",
+      "sha256": "dbb09dd8bb405f919cf3759f49ca1cfb616cd3cd05bdcdf23f754dfb7492bd39"
+    },
+    "05_SoftwareDocu/UserGuide_ro/assets/styles/help.css": {
+      "kind": "file",
+      "sha256": "a6811df053cd475d62bac20b86c1cea0f2a9dd77954d2dd01559e761d2b61ffc"
+    },
+    "05_SoftwareDocu/UserGuide_ro/index.html": {
+      "kind": "file",
+      "sha256": "6337265951fd9c5a645fc2664db7fc98656722cad437192864d9a118262ea0f4"
+    },
+    "07_Delivery/AudioMancer_Hero_4x5_Vertical.png": {
+      "kind": "file",
+      "sha256": "2b3cb2019cf8ec636caa873ebf23e445da2bacb61af489e148d91f1d3bcb57c2"
+    },
+    "07_Delivery/AudioMancer_Hero_A4_Landscape.png": {
+      "kind": "file",
+      "sha256": "505bfd976c74cd9caaef699afb972b84696bb46c91da274b372f86b5e2531652"
+    },
+    "07_Delivery/AudioMancer_Hero_A4_Portrait.png": {
+      "kind": "file",
+      "sha256": "172235abb232359a5033a445db8dd39e50c71d29c8248ba0d43633a3d73c7f39"
+    },
+    "07_Delivery/AudioMancer_Hero_Square.png": {
+      "kind": "file",
+      "sha256": "e298dc1483aba3de888f89580f3c579ec98d60ca8873400fe9f7fd7cc1c61b99"
+    },
+    "07_Delivery/AudioMancer_Linux_x64.AppImage": {
+      "kind": "file",
+      "sha256": "50d921d304038a361390d677e9ead04611c3c6381b2ce0d22dc344fa789b2e3c"
+    },
+    "07_Delivery/AudioMancer_Linux_x64.zip": {
+      "kind": "file",
+      "sha256": "d2735598fe43d36b2bb8dd04fa014fbb40da43e99f891cfa5d30199ee71dd39b"
+    },
+    "07_Delivery/AudioMancer_Windows_x64.zip": {
+      "kind": "file",
+      "sha256": "6a22894c8c34dfe1729c11a0ef61340173f60aaadf41e28d748892b878446ca3"
+    },
+    "07_Delivery/Public_GitHub_Page/README.md": {
+      "kind": "file",
+      "sha256": "ce7f47f30a22dc0c7e8a945c1760faa4c524a95a59eb6e042a6eff19db68135c"
+    },
+    "07_Delivery/Public_GitHub_Page/index.html": {
+      "kind": "file",
+      "sha256": "112431ed1a2e0acb001add1f595aa509033896571c3004b62902a6b4ec570ffd"
+    },
+    "07_Delivery/README.md": {
+      "kind": "file",
+      "sha256": "f951f28a9b242932eac0d03cdc589017ea2b80ad1ce07ef6e80efcf7b4494ac7"
+    },
+    "07_Delivery/SHA256SUMS.txt": {
+      "kind": "file",
+      "sha256": "d69b0e87155fa3b84170736a3f3a41805732d33daa7f2979374e9adae79b76e0"
+    },
+    "07_Delivery/apply_agentic_overlay_fixed.ps1": {
+      "kind": "file",
+      "sha256": "540229a888e8e82d14445d95bb201fb6928721434d77bcc8f34cbe243431ef84"
+    },
+    "09_Others/README.md": {
+      "kind": "file",
+      "sha256": "245da59b1db0a3cb5330394fe078f8e73ccf3bb5f89a96c0b80eec5d5e0719c8"
+    },
+    "0_Planning/Overview.md": {
+      "kind": "file",
+      "sha256": "29e1e367304ad1c8574fc98872ebbf35e66ffd488ddb1a2ab2f42727bfd93926"
+    },
+    "0_Planning/README.md": {
+      "kind": "file",
+      "sha256": "06141e679bf043cd0a1ff2f1f8f2346f77e8dfc3ea09dd62f636d5e931d5fd41"
+    },
+    "AGENTS.md": {
+      "kind": "file",
+      "sha256": "9f5642c3cffc88a993040d811995f1a28feedfd244d0fdc45e4e9c0af1d76df5"
+    },
+    "CHANGELOG.md": {
+      "kind": "file",
+      "sha256": "5cfaf40918f44fc1941c74620631accdb1da23e4d425593203dc9fe3cdee8807"
+    },
+    "CLAUDE.md": {
+      "kind": "file",
+      "sha256": "cb5c8fb27d08e4fae8744806d8ba7e338424396a6732546e318f633e4ba6adfa"
+    },
+    "HowToTest.md": {
+      "kind": "file",
+      "sha256": "1803f6bde1d88821c261fadfcf70d00ce33206933bfc4e25d1bf9da52204b61b"
+    },
+    "LICENSE.txt": {
+      "kind": "file",
+      "sha256": "855b44a5e6315addb381fd0d8b102d1ca6a5fa0e963bae6175d440a2ec2a975e"
+    },
+    "LICENSE_NC.txt": {
+      "kind": "file",
+      "sha256": "11bb9c103cacaafd769a86ee3d16ee4b7f80389116c633fc2165a01ba4ff2b13"
+    },
+    "QWEN.md": {
+      "kind": "file",
+      "sha256": "c3975b71239189b90918148ecff9583b64ab5afd6fbd95135a9980b8875e6b4a"
+    },
+    "README.MD": {
+      "kind": "file",
+      "sha256": "ede76d5bd7a7b8e5583f121af788bea8d93fa6f42fbd00e39e60e883ab15feb5"
+    }
+  },
+  "head": "ab952538007b48d7a3d39dea812407ef6665f439",
+  "schema": 1,
+  "source_globs": [
+    "04_Software/AudioMancer/src/"
+  ],
+  "stage": "build",
+  "task": "TASK-0607cbea",
+  "test_globs": [
+    "04_Software/AudioMancer/tests/"
+  ]
+}
